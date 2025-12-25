@@ -1,6 +1,6 @@
 {
   "name": "@wundergraph/protographic",
-  "version": "0.12.6",
+  "version": "0.14.0",
   "module": "src/index.ts",
   "type": "module",
   "main": "dist/src/index.js",
@@ -21,6 +21,7 @@
   },
   "scripts": {
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:update": "vitest run -u",
     "build": "tsc",
     "bench": "vitest bench --run",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@types/lodash-es": "4.17.12",
     "@types/node": "^20.11.5",
+    "@vitest/coverage-v8": "3.2.4",
     "typescript": "^5.0.0",
     "vitest": "^3.2.4"
   },

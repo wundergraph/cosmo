@@ -120,7 +120,6 @@ function GraphCommandItem({
       )}
       value={value}
       onSelect={() => {
-        setNamespace(namespace.name);
         router.push({
           pathname,
           query: {
@@ -128,7 +127,7 @@ function GraphCommandItem({
             namespace: namespace.name,
             ...(isSubgraph ? { subgraphSlug: name } : { slug: name }),
           }
-        });
+        }).finally(() => setNamespace(namespace.name));
       }}
     >
       <span className="flex justify-between items-center gap-2 w-full">

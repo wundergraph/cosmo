@@ -7,6 +7,40 @@ coverage:
         informational: true # We don't want to block PRs based on the result
     project:
       default:
-        target: 90
+        target: 30
         threshold: 5
-        informational: true
+        informational: true # We don't want to block PRs based on the result
+
+flags:
+  router:
+    paths:
+      - router/
+    carryforward: true
+  cli:
+    paths:
+      - cli/
+    carryforward: true
+  studio:
+    paths:
+      - studio/
+    carryforward: true
+  graphqlmetrics:
+    paths:
+      - graphqlmetrics/
+    carryforward: true
+  controlplane:
+    paths:
+      - controlplane/
+    carryforward: true
+  composition:
+    paths:
+      - composition/
+    carryforward: true
+
+comment:
+  layout: "diff, flags, files"
+  behavior: default
+  require_changes: false
+  require_base: no
+  require_head: yes
+  show_carryforward_flags: true

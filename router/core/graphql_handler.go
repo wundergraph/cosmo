@@ -141,21 +141,19 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 	defer graphqlExecutionSpan.End()
 
-	resolveCtx := &resolve.Context{
-		Variables:      reqCtx.operation.variables,
-		RemapVariables: reqCtx.operation.remapVariables,
-		Files:          reqCtx.operation.files,
-		Request: resolve.Request{
-			Header: r.Header,
-		},
-		RenameTypeNames:  h.executor.RenameTypeNames,
-		TracingOptions:   reqCtx.operation.traceOptions,
-		InitialPayload:   reqCtx.operation.initialPayload,
-		Extensions:       reqCtx.operation.extensions,
-		ExecutionOptions: reqCtx.operation.executionOptions,
+	resolveCtx := resolve.NewContext(executionContext)
+	resolveCtx.Variables = reqCtx.operation.variables
+	resolveCtx.RemapVariables = reqCtx.operation.remapVariables
+	resolveCtx.Files = reqCtx.operation.files
+	resolveCtx.Request = resolve.Request{
+		Header: r.Header,
 	}
+	resolveCtx.RenameTypeNames = h.executor.RenameTypeNames
+	resolveCtx.TracingOptions = reqCtx.operation.traceOptions
+	resolveCtx.InitialPayload = reqCtx.operation.initialPayload
+	resolveCtx.Extensions = reqCtx.operation.extensions
+	resolveCtx.ExecutionOptions = reqCtx.operation.executionOptions
 
-	resolveCtx = resolveCtx.WithContext(executionContext)
 	if h.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.authorizer)
@@ -177,13 +175,10 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			resolveCtx = WithResponseHeaderPropagation(resolveCtx)
 		}
 
-		defer propagateSubgraphErrors(resolveCtx)
-
 		respBuf := bytes.Buffer{}
 
 		resp, err := h.executor.Resolver.ResolveGraphQLResponse(resolveCtx, p.Response, nil, &respBuf)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
-
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
 			h.WriteError(resolveCtx, err, p.Response, w)
@@ -191,6 +186,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if errs := resolveCtx.SubgraphErrors(); errs != nil {
+			trackFinalResponseError(resolveCtx.Context(), errs)
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 
