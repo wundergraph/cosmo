@@ -1014,7 +1014,7 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("publish", func(t *testing.T) {
+	t.Run("mutate", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
@@ -1061,6 +1061,31 @@ func TestNatsEvents(t *testing.T) {
 
 			// Send a query to receive the response from the NATS message
 			require.Equal(t, `{"data":{"updateEmployeeMyNats":{"success":true}}}`, resTwo.Body)
+		})
+	})
+
+	t.Run("mutate returns correct typename", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			sub, err := xEnv.NatsConnectionDefault.SubscribeSync(xEnv.GetPubSubName("employeeUpdatedMyNats.3"))
+			require.NoError(t, err)
+			require.NoError(t, xEnv.NatsConnectionDefault.Flush())
+
+			t.Cleanup(func() { _ = sub.Unsubscribe() })
+
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation UpdateEmployeeNats($update: UpdateEmployeeInput!) {
+							updateEmployeeMyNats(id: 3, update: $update) {__typename success}
+						}`,
+				Variables: json.RawMessage(`{"update":{"name":"Stefan Avramovic","email":"avramovic@wundergraph.com"}}`),
+			})
+
+			// Send a query to receive the response from the NATS message
+			require.Equal(t, `{"data":{"updateEmployeeMyNats":{"__typename":"edfs__PublishResult","success":true}}}`, resOne.Body)
 		})
 	})
 
