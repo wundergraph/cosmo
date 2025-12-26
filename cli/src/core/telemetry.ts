@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import os from 'node:os';
 import { PostHog } from 'posthog-node';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -149,13 +150,15 @@ export const captureCommandFailure = async (command: string, error: Error | stri
  * Get CLI metadata to include with all events
  */
 const getMetadata = (): Record<string, any> => {
+  const machineId = crypto.hash('sha256', os.hostname(), 'hex');
+
   return {
     cli_version: config.version,
     node_version: process.version,
     os_name: process.platform,
     os_version: process.release?.name || '',
     platform: process.arch,
-    machine_id: os.hostname(),
+    machine_id: machineId,
     is_ci: isCI(),
     is_cosmo_cloud: isTalkingToCosmoCloud(),
   };
