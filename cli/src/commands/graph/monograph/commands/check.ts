@@ -9,6 +9,8 @@ import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { verifyGitHubIntegration } from '../../../../github.js';
 import { handleCheckResult } from '../../../../handle-check-result.js';
 
+const maxLimit = 10_000;
+
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
   command.description('Checks for breaking changes and errors.');
@@ -19,6 +21,7 @@ export default (opts: BaseCommandOptions) => {
     '--skip-traffic-check',
     'This will skip checking for client traffic and any breaking change will fail the run.',
   );
+  command.option('-l, --limit [number]', 'The amount of entries shown in the schema checks output.', '50');
 
   command.action(async (name, options) => {
     const schemaFile = resolve(options.schema);
@@ -30,6 +33,11 @@ export default (opts: BaseCommandOptions) => {
         ),
       );
       return;
+    }
+
+    const limit = Number(options.limit);
+    if (Number.isNaN(limit) || limit <= 0 || limit > maxLimit) {
+      program.error(pc.red(`The limit must be a valid number between 1 and ${maxLimit}. Received: '${options.limit}'`));
     }
 
     const { gitInfo, ignoreErrorsDueToGitHubIntegration } = await verifyGitHubIntegration(opts.client);
@@ -63,13 +71,14 @@ export default (opts: BaseCommandOptions) => {
         gitInfo,
         delete: false,
         skipTrafficCheck: options.skipTrafficCheck,
+        limit,
       },
       {
         headers: getBaseHeaders(),
       },
     );
 
-    const success = handleCheckResult(resp);
+    const success = handleCheckResult(resp, limit);
 
     if (!success && !ignoreErrorsDueToGitHubIntegration) {
       process.exitCode = 1;

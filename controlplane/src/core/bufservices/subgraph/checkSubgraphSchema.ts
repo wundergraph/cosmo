@@ -24,8 +24,12 @@ import {
   handleError,
   isValidGraphName,
   isValidLabels,
+  limitCombinedArrays,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+
+const defaultRowLimit = 70_000;
+const maxRowLimit = 100_000;
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -251,24 +255,9 @@ export function checkSubgraphSchema(
     let limit = changeRetention?.limit ?? 7;
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
-    const {
-      response,
-      checkId: schemaCheckID,
-      breakingChanges,
-      nonBreakingChanges,
-      compositionErrors,
-      compositionWarnings,
-      operationUsageStats,
-      proposalMatchMessage,
-      hasClientTraffic,
-      checkedFederatedGraphs,
-      lintWarnings,
-      lintErrors,
-      graphPruneWarnings,
-      graphPruneErrors,
-      isCheckExtensionSkipped,
-      checkExtensionErrorMessage,
-    } = await subgraphRepo.performSchemaCheck({
+    const returnLimit = clamp(req.limit ?? defaultRowLimit, 1, maxRowLimit);
+
+    const checkResult = await subgraphRepo.performSchemaCheck({
       actorId: authContext.userId,
       blobStorage: opts.blobStorage,
       admissionConfig: { cdnBaseUrl: opts.cdnBaseUrl, jwtSecret: opts.jwtSecret },
@@ -290,6 +279,48 @@ export function checkSubgraphSchema(
       webhookService,
     });
 
+    // Extract variables from checkResult
+    const {
+      response,
+      checkId: schemaCheckID,
+      operationUsageStats,
+      proposalMatchMessage,
+      hasClientTraffic,
+      checkedFederatedGraphs,
+      isCheckExtensionSkipped,
+      checkExtensionErrorMessage,
+    } = checkResult;
+
+    const compositionErrors = checkResult.compositionErrors.slice(0, returnLimit);
+    const compositionWarnings = checkResult.compositionWarnings.slice(0, returnLimit);
+
+    const [breakingChanges, nonBreakingChanges] = limitCombinedArrays(
+      [checkResult.breakingChanges, checkResult.nonBreakingChanges],
+      returnLimit,
+    );
+
+    const [lintErrors, lintWarnings] = limitCombinedArrays(
+      [checkResult.lintErrors, checkResult.lintWarnings],
+      returnLimit,
+    );
+
+    const [graphPruneErrors, graphPruneWarnings] = limitCombinedArrays(
+      [checkResult.graphPruneErrors, checkResult.graphPruneWarnings],
+      returnLimit,
+    );
+
+    // Create counts object with total counts from the original checkResult
+    const counts = {
+      lintWarnings: checkResult.lintWarnings.length,
+      lintErrors: checkResult.lintErrors.length,
+      breakingChanges: checkResult.breakingChanges.length,
+      nonBreakingChanges: checkResult.nonBreakingChanges.length,
+      compositionErrors: checkResult.compositionErrors.length,
+      compositionWarnings: checkResult.compositionWarnings.length,
+      graphPruneErrors: checkResult.graphPruneErrors.length,
+      graphPruneWarnings: checkResult.graphPruneWarnings.length,
+    };
+
     if (response && response.code !== EnumStatusCode.OK) {
       return {
         response: {
@@ -309,6 +340,7 @@ export function checkSubgraphSchema(
         clientTrafficCheckSkipped: req.skipTrafficCheck,
         compositionWarnings,
         proposalMatchMessage,
+        counts,
       };
     }
 
@@ -338,6 +370,7 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
@@ -368,6 +401,7 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
@@ -429,6 +463,7 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
@@ -477,6 +512,7 @@ export function checkSubgraphSchema(
       isLinkedPruningCheckFailed,
       isCheckExtensionSkipped,
       checkExtensionErrorMessage,
+      counts,
     };
   });
 }

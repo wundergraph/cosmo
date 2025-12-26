@@ -471,6 +471,41 @@ export function createBatches<T>(array: T[], batchSize: number): T[][] {
   return batches;
 }
 
+/**
+ * Distributes a limit across multiple arrays that are logically grouped.
+ * Arrays are processed in order, with earlier arrays having priority.
+ *
+ * Example: limitCombinedArrays([errors, warnings], 50)
+ * - If errors has 70 items and warnings has 10 items: returns [50 errors, 0 warnings]
+ * - If errors has 30 items and warnings has 30 items: returns [30 errors, 20 warnings]
+ * - If errors has 10 items and warnings has 70 items: returns [10 errors, 40 warnings]
+ *
+ * @param arrays The arrays to limit (order determines priority)
+ * @param limit The combined maximum number of items across all arrays
+ * @returns The limited arrays in the same order as input
+ */
+export function limitCombinedArrays<T>(arrays: T[][], limit: number): T[][] {
+  if (arrays.length === 0) {
+    return [];
+  }
+
+  const result: T[][] = [];
+  let remaining = limit;
+
+  // Process arrays in order, taking as much as possible from each
+  for (const arr of arrays) {
+    if (remaining === 0) {
+      result.push([]);
+    } else {
+      const itemsToTake = Math.min(arr.length, remaining);
+      result.push(arr.slice(0, itemsToTake));
+      remaining -= itemsToTake;
+    }
+  }
+
+  return result;
+}
+
 export const checkIfLabelMatchersChanged = (data: {
   isContract: boolean;
   currentLabelMatchers: string[];
