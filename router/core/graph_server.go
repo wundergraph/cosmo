@@ -114,6 +114,21 @@ type BuildGraphMuxOptions struct {
 	RoutingUrlGroupings map[string]map[string]bool
 }
 
+func rateLimitOverridesFromConfig(source map[string]config.RateLimitSimpleOverride) map[string]RateLimitOverride {
+	if len(source) == 0 {
+		return nil
+	}
+	converted := make(map[string]RateLimitOverride, len(source))
+	for suffix, override := range source {
+		converted[suffix] = RateLimitOverride{
+			Rate:   override.Rate,
+			Burst:  override.Burst,
+			Period: override.Period,
+		}
+	}
+	return converted
+}
+
 func (b BuildGraphMuxOptions) IsBaseGraph() bool {
 	return b.FeatureFlagName == ""
 }
@@ -519,12 +534,12 @@ type graphMux struct {
 	validationCache             *ristretto.Cache[uint64, bool]
 	operationHashCache          *ristretto.Cache[uint64, string]
 
-	accessLogsFileLogger   *logging.BufferedLogger
-	metricStore            rmetric.Store
-	prometheusCacheMetrics *rmetric.CacheMetrics
-	otelCacheMetrics       *rmetric.CacheMetrics
-	streamMetricStore      rmetric.StreamMetricStore
-	prometheusMetricsExporter  *graphqlmetrics.PrometheusMetricsExporter
+	accessLogsFileLogger      *logging.BufferedLogger
+	metricStore               rmetric.Store
+	prometheusCacheMetrics    *rmetric.CacheMetrics
+	otelCacheMetrics          *rmetric.CacheMetrics
+	streamMetricStore         rmetric.StreamMetricStore
+	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -1404,6 +1419,7 @@ func (s *graphServer) buildGraphMux(
 			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
 			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
 			ExprManager:         exprManager,
+			Overrides:           rateLimitOverridesFromConfig(s.rateLimit.SimpleStrategy.Overrides),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
