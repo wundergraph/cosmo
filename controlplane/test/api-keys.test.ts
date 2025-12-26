@@ -110,20 +110,20 @@ describe('API Keys', (ctx) => {
     const orgGroupsResponse = await client.getOrganizationGroups({});
     expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    const adminGroup = orgGroupsResponse.groups.find((g) => g.name === 'admin')!;
     const developerGroup = orgGroupsResponse.groups.find((g) => g.name === 'developer')!;
+    const viewerGroup = orgGroupsResponse.groups.find((g) => g.name === 'viewer')!;
 
     authenticator.changeUserWithSuppliedContext({
       ...users[TestUser.adminAliceCompanyA],
       rbac: createTestRBACEvaluator(createTestGroup({ role: role as OrganizationRole })),
     });
 
-    // Create the API key with the `admin` group
+    // Create the API key with the `viewer` group
     const apiKeyName = uid();
     const createApiKeyResponse = await client.createAPIKey({
       name: apiKeyName,
       expires: ExpiresAt.NEVER,
-      groupId: adminGroup.groupId,
+      groupId: viewerGroup.groupId,
     });
 
     expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -136,7 +136,7 @@ describe('API Keys', (ctx) => {
 
     expect(updateApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    // Ensure that the API key have the correct group
+    // Ensure that the API key has the correct group
     let getApiKeysResponse = await client.getAPIKeys({});
     let apiKey = getApiKeysResponse.apiKeys?.find((k) => k.name === apiKeyName);
 
@@ -150,12 +150,110 @@ describe('API Keys', (ctx) => {
 
     expect(deleteApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    // Ensure the API key have been deleted
+    // Ensure the API key has been deleted
     getApiKeysResponse = await client.getAPIKeys({});
     apiKey = getApiKeysResponse.apiKeys?.find((k) => k.name === apiKeyName);
 
     expect(getApiKeysResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(apiKey).toBeUndefined();
+
+    await server.close();
+  });
+
+  test('that an "organization-apikey-manager" cannot create API keys with admin role', async () => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+
+    const orgGroupsResponse = await client.getOrganizationGroups({});
+    expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const adminGroup = orgGroupsResponse.groups.find((g) => g.name === 'admin')!;
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role: 'organization-apikey-manager' })),
+    });
+
+    // Create the API key with the `admin` group
+    const apiKeyName = uid();
+    const createApiKeyResponse = await client.createAPIKey({
+      name: apiKeyName,
+      expires: ExpiresAt.NEVER,
+      groupId: adminGroup.groupId,
+    });
+
+    expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(createApiKeyResponse.response?.details).toBe(`You don't have access to create an API key with the group "admin"`);
+
+    await server.close();
+  });
+
+  test('that an "organization-apikey-manager" cannot update API keys with admin role', async () => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+
+    const orgGroupsResponse = await client.getOrganizationGroups({});
+    expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const adminGroup = orgGroupsResponse.groups.find((g) => g.name === 'admin')!;
+    const viewerGroup = orgGroupsResponse.groups.find((g) => g.name === 'viewer')!;
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role: 'organization-apikey-manager' })),
+    });
+
+    // Create the API key with the `viewer` group
+    const apiKeyName = uid();
+    const createApiKeyResponse = await client.createAPIKey({
+      name: apiKeyName,
+      expires: ExpiresAt.NEVER,
+      groupId: viewerGroup.groupId,
+    });
+
+    expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Update the API key to the `admin` group
+    const updateApiKeyResponse = await client.updateAPIKey({
+      name: apiKeyName,
+      groupId: adminGroup.groupId,
+    });
+
+    expect(updateApiKeyResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(updateApiKeyResponse.response?.details).toBe(`You don't have access to update the API key group to "admin"`);
+
+    await server.close();
+  });
+
+  test('that an "organization-apikey-manager" cannot delete an API key with admin role', async () => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+
+    const orgGroupsResponse = await client.getOrganizationGroups({});
+    expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    const adminGroup = orgGroupsResponse.groups.find((g) => g.name === 'admin')!;
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+    });
+
+    // Create the API key with the `admin` group
+    const apiKeyName = uid();
+    const createApiKeyResponse = await client.createAPIKey({
+      name: apiKeyName,
+      expires: ExpiresAt.NEVER,
+      groupId: adminGroup.groupId,
+    });
+
+    expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Try to delete the API key
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role: 'organization-apikey-manager' })),
+    });
+
+    const deleteApiKeyResponse = await client.deleteAPIKey({ name: apiKeyName });
+
+    expect(deleteApiKeyResponse.response?.code).toBe(EnumStatusCode.ERR);
+    expect(deleteApiKeyResponse.response?.details).toBe(`You don't have access to remove the API key "${apiKeyName}"`);
 
     await server.close();
   });
