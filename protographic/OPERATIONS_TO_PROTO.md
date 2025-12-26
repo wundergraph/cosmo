@@ -716,6 +716,6 @@ Field number conflict in message X
 ## Limitations
 
 - **Named operations only**: All operations must have a name. Anonymous operations are not supported
-- **Single operation per document**: Multiple operations in one document are not supported for proto reversibility
-- **No root-level field aliases**: Field aliases at the root level break proto-to-GraphQL reversibility
+- **Single operation per document**: Multiple operations in one document are not supported for deterministic proto schema generation
+- **No root-level field aliases**: Field aliases at the root level break proto schema generation consistency (each GraphQL field must map to exactly one proto field name)
 - **Alpha status**: The API may change in future releases

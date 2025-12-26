@@ -2134,6 +2134,55 @@
         }
       }
     },
+    "connect_rpc": {
+      "type": "object",
+      "description": "The configuration for the ConnectRPC server. ConnectRPC allows gRPC, Connect, and gRPC-Web clients to interact with your GraphQL APIs through protocol transcoding. Proto files define RPC services that map to GraphQL operations.",
+      "additionalProperties": false,
+      "if": {
+        "properties": {
+          "enabled": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "required": ["services_provider_id"]
+      },
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the ConnectRPC server. If the value is true, the ConnectRPC server will be started."
+        },
+        "server": {
+          "type": "object",
+          "description": "Server configuration for the ConnectRPC server.",
+          "additionalProperties": false,
+          "properties": {
+            "listen_addr": {
+              "type": "string",
+              "description": "The address on which the ConnectRPC server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
+              "default": "localhost:5026",
+              "format": "hostname-port"
+            },
+            "base_url": {
+              "type": "string",
+              "description": "The base URL of the ConnectRPC server. This is used for service reflection and documentation. By default, the base URL is relative to the URL that the router is running on. The URL is specified as a string with the format 'scheme://host:port'.",
+              "format": "http-url"
+            }
+          }
+        },
+        "services_provider_id": {
+          "type": "string",
+          "description": "The ID of the storage provider to use for loading proto files and GraphQL operations for all services. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section. This provider points to the root services directory, and the router will recursively discover all proto files and their associated operations within that directory structure."
+        },
+        "graphql_endpoint": {
+          "type": "string",
+          "description": "Custom URL to use for the router GraphQL endpoint in ConnectRPC. Use this when your router is behind a proxy. This URL is used to forward RPC requests as GraphQL operations.",
+          "format": "url"
+        }
+      }
+    },
     "demo_mode": {
       "type": "boolean",
       "description": "Launch the router in demo mode. If no execution config is found, the router will start with a demo execution config and deploy a demo federated graph that can be used for testing purposes.",
