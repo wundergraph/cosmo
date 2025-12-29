@@ -18,7 +18,7 @@ import (
 // Operation represents a GraphQL operation with its AST document and schema information
 type Operation struct {
 	Name            string
-	ToolName        string // User-defined MCP tool name from @mcp(name: "...") directive (optional)
+	ToolName        string
 	FilePath        string
 	Document        ast.Document
 	OperationString string
