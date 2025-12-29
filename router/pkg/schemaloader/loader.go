@@ -18,6 +18,7 @@ import (
 // Operation represents a GraphQL operation with its AST document and schema information
 type Operation struct {
 	Name            string
+	ToolName        string
 	FilePath        string
 	Document        ast.Document
 	OperationString string
@@ -46,8 +47,7 @@ func NewOperationLoader(logger *zap.Logger, schemaDoc *ast.Document) *OperationL
 func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operation, error) {
 	var operations []Operation
 
-	// Create an operation validator
-	validator := astvalidation.DefaultOperationValidator()
+	validator := newMCPOperationValidator()
 
 	// Walk through the directory and process GraphQL files
 	err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
@@ -92,7 +92,10 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 			return nil
 		}
 
-		// Validate operation against schema
+		opDescription := extractOperationDescription(&opDoc)
+		toolName := extractMCPToolName(&opDoc)
+		stripMCPDirective(&opDoc)
+
 		validationReport := operationreport.Report{}
 		validationState := validator.Validate(&opDoc, l.SchemaDocument, &validationReport)
 		if validationState == astvalidation.Invalid {
@@ -116,12 +119,10 @@ func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operati
 			}
 		}
 
-		// Extract description from operation definition
-		opDescription := extractOperationDescription(&opDoc)
-
 		// Add to our list of operations
 		operations = append(operations, Operation{
 			Name:            opName,
+			ToolName:        toolName,
 			FilePath:        path,
 			Document:        opDoc,
 			OperationString: operationString,
@@ -186,7 +187,9 @@ func getOperationNameAndType(doc *ast.Document) (string, string, error) {
 	return "", "", fmt.Errorf("no operation found in document")
 }
 
-// extractOperationDescription extracts the description string from an operation definition
+// extractOperationDescription returns the description text of the first operation definition
+// in the document, trimmed of surrounding whitespace. If the document has no operation
+// description or no operation definition, an empty string is returned.
 func extractOperationDescription(doc *ast.Document) string {
 	for _, ref := range doc.RootNodes {
 		if ref.Kind == ast.NodeKindOperationDefinition {
@@ -199,4 +202,79 @@ func extractOperationDescription(doc *ast.Document) string {
 		}
 	}
 	return ""
+}
+
+var mcpDirectiveName = []byte("mcpTool")
+var mcpNameArgument = []byte("name")
+
+// subscription/root-field restrictions.
+func newMCPOperationValidator() *astvalidation.OperationValidator {
+	return astvalidation.NewOperationValidator([]astvalidation.Rule{
+		astvalidation.AllVariablesUsed(),
+		astvalidation.AllVariableUsesDefined(),
+		astvalidation.DocumentContainsExecutableOperation(),
+		astvalidation.OperationNameUniqueness(),
+		astvalidation.LoneAnonymousOperation(),
+		astvalidation.SubscriptionSingleRootField(),
+		astvalidation.FieldSelections(),
+		astvalidation.FieldSelectionMerging(),
+		astvalidation.KnownArguments(),
+		astvalidation.Values(),
+		astvalidation.ArgumentUniqueness(),
+		astvalidation.RequiredArguments(),
+		astvalidation.Fragments(),
+		astvalidation.DirectivesAreInValidLocations(),
+		astvalidation.DirectivesAreUniquePerLocation(),
+		astvalidation.VariableUniqueness(),
+		astvalidation.VariablesAreInputTypes(),
+	})
+}
+
+// extractMCPToolName extracts the MCP tool name from the first operation definition's
+// mcpTool directive, if present.
+// It returns the value of the directive's "name" argument when that argument is a string;
+// otherwise it returns an empty string.
+func extractMCPToolName(doc *ast.Document) string {
+	for _, ref := range doc.RootNodes {
+		if ref.Kind == ast.NodeKindOperationDefinition {
+			opDef := doc.OperationDefinitions[ref.Ref]
+			if !opDef.HasDirectives {
+				return ""
+			}
+
+			directiveRef, exists := doc.DirectiveWithNameBytes(opDef.Directives.Refs, mcpDirectiveName)
+			if !exists {
+				return ""
+			}
+
+			value, argExists := doc.DirectiveArgumentValueByName(directiveRef, mcpNameArgument)
+			if !argExists {
+				return ""
+			}
+
+			if value.Kind == ast.ValueKindString {
+				return doc.StringValueContentString(value.Ref)
+			}
+
+			return ""
+		}
+	}
+	return ""
+}
+
+// stripMCPDirective removes the `mcpTool` directive from the first operation definition in doc.
+// It mutates the document in-place: if the directive is present it is removed and the operation's
+// HasDirectives flag is updated; if no operation or no such directive exists the document is left unchanged.
+func stripMCPDirective(doc *ast.Document) {
+	for _, ref := range doc.RootNodes {
+		if ref.Kind == ast.NodeKindOperationDefinition {
+			opDef := &doc.OperationDefinitions[ref.Ref]
+			if !opDef.HasDirectives {
+				return
+			}
+			opDef.Directives.RemoveDirectiveByName(doc, "mcpTool")
+			opDef.HasDirectives = len(opDef.Directives.Refs) > 0
+			return
+		}
+	}
 }
