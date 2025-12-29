@@ -233,11 +233,18 @@ func (pl *ProtoLoader) parseProtoFiles(rootDir string, relativeFilenames []strin
 		zap.String("root_dir", rootDir),
 		zap.Int("file_count", len(relativeFilenames)))
 
-	// Create a compiler with the root directory as import path
+	// Create a source resolver with the root directory as import path
+	sourceResolver := &protocompile.SourceResolver{
+		ImportPaths: []string{rootDir},
+	}
+
+	// Wrap with standard imports to provide access to well-known proto files
+	// like google/protobuf/descriptor.proto, google/protobuf/wrappers.proto, etc.
+	resolverWithStandardImports := protocompile.WithStandardImports(sourceResolver)
+
+	// Create a compiler with the resolver that includes standard imports
 	compiler := protocompile.Compiler{
-		Resolver: &protocompile.SourceResolver{
-			ImportPaths: []string{rootDir},
-		},
+		Resolver: resolverWithStandardImports,
 		// Use a custom reporter to capture errors and warnings
 		Reporter: reporter.NewReporter(
 			func(err reporter.ErrorWithPos) error {
@@ -401,6 +408,28 @@ func getFieldByName(msg protoreflect.MessageDescriptor, name string) protoreflec
 	for i := 0; i < fields.Len(); i++ {
 		field := fields.Get(i)
 		if string(field.Name()) == name {
+			return field
+		}
+	}
+	return nil
+}
+
+// getFieldByJSONName finds a field in a message descriptor by its JSON name (camelCase).
+// Protobuf JSON uses camelCase field names, but descriptors store the original proto field names.
+// This function tries to match by JSON name first, then falls back to the original name.
+func getFieldByJSONName(msg protoreflect.MessageDescriptor, jsonName string) protoreflect.FieldDescriptor {
+	if msg == nil {
+		return nil
+	}
+	fields := msg.Fields()
+	for i := 0; i < fields.Len(); i++ {
+		field := fields.Get(i)
+		// Check if JSON name matches (protobuf automatically generates JSON names)
+		if field.JSONName() == jsonName {
+			return field
+		}
+		// Fallback: check if the original field name matches
+		if string(field.Name()) == jsonName {
 			return field
 		}
 	}

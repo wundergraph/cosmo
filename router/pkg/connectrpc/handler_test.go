@@ -20,12 +20,9 @@ func setupHandlerWithSchema(t *testing.T) *RPCHandler {
 	err := protoLoader.LoadFromDirectory(testdataDir)
 	require.NoError(t, err, "failed to load test proto files")
 
-	// Create validator with loaded schema
-	validator := NewMessageValidator(protoLoader)
-
 	return &RPCHandler{
-		logger:    logger,
-		validator: validator,
+		logger:      logger,
+		protoLoader: protoLoader,
 	}
 }
 
@@ -33,13 +30,15 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 	logger := zap.NewNop()
 	handler := &RPCHandler{logger: logger}
 
-	t.Run("converts snake_case to camelCase", func(t *testing.T) {
-		protoJSON := []byte(`{"employee_id": 1, "first_name": "John"}`)
+	t.Run("preserves camelCase field names from protobuf JSON", func(t *testing.T) {
+		// Protobuf JSON already provides camelCase field names
+		protoJSON := []byte(`{"employeeId": 1, "firstName": "John"}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables("test.Service", "TestMethod", protoJSON)
 		require.NoError(t, err)
 
+		// Field names should be preserved as-is (with ID capitalization)
 		assert.JSONEq(t, `{
-			"employeeID": 1,
+			"employeeId": 1,
 			"firstName": "John"
 		}`, string(result))
 	})
@@ -47,13 +46,14 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 	t.Run("strips proto enum prefixes with loaded schema", func(t *testing.T) {
 		handler := setupHandlerWithSchema(t)
 
-		protoJSON := []byte(`{"employee_id": "123", "mood": "MOOD_HAPPY"}`)
+		// Protobuf JSON provides camelCase field names
+		protoJSON := []byte(`{"employeeId": "123", "mood": "MOOD_HAPPY"}`)
 		result, err := handler.convertProtoJSONToGraphQLVariables("test.EmployeeService", "GetEmployee", protoJSON)
 		require.NoError(t, err)
 
 		// With schema loaded, MOOD_HAPPY should become HAPPY
 		assert.JSONEq(t, `{
-			"employeeID": "123",
+			"employeeId": "123",
 			"mood": "HAPPY"
 		}`, string(result))
 	})
@@ -70,13 +70,6 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 			"name": "John",
 			"status": "ACTIVE"
 		}`, string(result))
-
-		// Verify mood field is not present
-		var data map[string]any
-		err = json.Unmarshal(result, &data)
-		require.NoError(t, err)
-		_, hasMood := data["mood"]
-		assert.False(t, hasMood, "UNSPECIFIED enum should be omitted")
 	})
 
 	t.Run("preserves legitimate empty string fields", func(t *testing.T) {
@@ -105,15 +98,6 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		assert.JSONEq(t, `{
 			"name": "John"
 		}`, string(result))
-
-		// Verify both enum fields are not present
-		var data map[string]any
-		err = json.Unmarshal(result, &data)
-		require.NoError(t, err)
-		_, hasMood := data["mood"]
-		assert.False(t, hasMood, "MOOD_UNSPECIFIED should be omitted")
-		_, hasStatus := data["status"]
-		assert.False(t, hasStatus, "STATUS_UNSPECIFIED should be omitted")
 	})
 
 	t.Run("handles multiple enum values without schema", func(t *testing.T) {
@@ -238,41 +222,17 @@ func TestToUpperSnakeCase(t *testing.T) {
 	}
 }
 
-func TestSnakeToCamel(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected string
-	}{
-		{"simple snake_case", "employee_id", "employeeID"},
-		{"multiple underscores", "first_name_last", "firstNameLast"},
-		{"already camelCase", "employeeId", "employeeID"},
-		{"single word", "employee", "employee"},
-		{"empty string", "", ""},
-		{"underscore at start", "_employee", "Employee"},
-		{"underscore at end", "employee_", "employee"},
-		{"multiple consecutive underscores", "employee__id", "employeeID"},
-		{"all caps", "EMPLOYEE_ID", "EMPLOYEEID"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := snakeToCamel(tt.input)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
 func TestConvertKeysRecursiveWithTracking(t *testing.T) {
 	logger := zap.NewNop()
 	handler := &RPCHandler{logger: logger}
 
-	t.Run("converts nested maps", func(t *testing.T) {
+	t.Run("preserves nested maps with camelCase", func(t *testing.T) {
+		// Input already has camelCase from protobuf JSON
 		input := map[string]any{
-			"employee_id": 1,
-			"user_details": map[string]any{
-				"first_name": "John",
-				"last_name":  "Doe",
+			"employeeId": 1,
+			"userDetails": map[string]any{
+				"firstName": "John",
+				"lastName":  "Doe",
 			},
 		}
 
@@ -283,8 +243,9 @@ func TestConvertKeysRecursiveWithTracking(t *testing.T) {
 		resultJSON, err := json.Marshal(result)
 		require.NoError(t, err)
 
+		// Field names should be preserved as-is
 		assert.JSONEq(t, `{
-			"employeeID": 1,
+			"employeeId": 1,
 			"userDetails": {
 				"firstName": "John",
 				"lastName": "Doe"
@@ -292,10 +253,11 @@ func TestConvertKeysRecursiveWithTracking(t *testing.T) {
 		}`, string(resultJSON))
 	})
 
-	t.Run("converts arrays of maps", func(t *testing.T) {
+	t.Run("preserves arrays of maps with camelCase", func(t *testing.T) {
+		// Input already has camelCase from protobuf JSON
 		input := []any{
-			map[string]any{"employee_id": 1},
-			map[string]any{"employee_id": 2},
+			map[string]any{"employeeId": 1},
+			map[string]any{"employeeId": 2},
 		}
 
 		unspecifiedFields := make(map[string]bool)
@@ -305,9 +267,10 @@ func TestConvertKeysRecursiveWithTracking(t *testing.T) {
 		resultJSON, err := json.Marshal(result)
 		require.NoError(t, err)
 
+		// Field names should be preserved as-is
 		assert.JSONEq(t, `[
-			{"employeeID": 1},
-			{"employeeID": 2}
+			{"employeeId": 1},
+			{"employeeId": 2}
 		]`, string(resultJSON))
 	})
 
