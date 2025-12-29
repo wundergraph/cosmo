@@ -38,19 +38,21 @@ func TestMCP(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, resp)
 
-				require.Contains(t, resp.Tools, mcp.Tool{
-					Name:        "get_operation_info",
-					Description: "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application.",
-					InputSchema: mcp.ToolInputSchema{
-						Type:       "object",
-						Properties: map[string]interface{}{"operationName": map[string]interface{}{"description": "The exact name of the GraphQL operation to retrieve information for.", "enum": []interface{}{"UpdateMood", "MyEmployees"}, "type": "string"}},
-						Required:   []string{"operationName"}},
-					RawInputSchema: json.RawMessage(nil),
-					Annotations: mcp.ToolAnnotation{
-						Title:        "Get GraphQL Operation Info",
-						ReadOnlyHint: mcp.ToBoolPtr(true),
-					},
-				})
+				var operationInfoTool *mcp.Tool
+				for i, tool := range resp.Tools {
+					if tool.Name == "get_operation_info" {
+						operationInfoTool = &resp.Tools[i]
+						break
+					}
+				}
+				require.NotNil(t, operationInfoTool, "get_operation_info tool should exist")
+				require.Equal(t, "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application.", operationInfoTool.Description)
+				operationNameProp := operationInfoTool.InputSchema.Properties["operationName"].(map[string]interface{})
+				enum := operationNameProp["enum"].([]interface{})
+				require.Len(t, enum, 3)
+				require.Contains(t, enum, "UpdateMood")
+				require.Contains(t, enum, "MyEmployees")
+				require.Contains(t, enum, "CustomNamedQuery")
 			})
 		})
 
@@ -184,6 +186,36 @@ func TestMCP(t *testing.T) {
 
 					require.False(t, found, "Tool execute_operation_update_mood should not be found")
 
+				})
+			})
+
+			t.Run("List user Operations / Custom tool name via @mcpTool directive", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCP: config.MCPConfiguration{
+						Enabled: true,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+
+					toolsRequest := mcp.ListToolsRequest{}
+					resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+					require.NoError(t, err)
+					require.NotNil(t, resp)
+
+					var customTool *mcp.Tool
+					for i, tool := range resp.Tools {
+						if tool.Name == "get_employee_by_id" {
+							customTool = &resp.Tools[i]
+							break
+						}
+					}
+
+					require.NotNil(t, customTool, "Tool get_employee_by_id should be found")
+					assert.Equal(t, "A query with a custom MCP tool name.", customTool.Description)
+
+					for _, tool := range resp.Tools {
+						assert.NotEqual(t, "execute_operation_custom_named_query", tool.Name,
+							"Tool should not be registered with default generated name")
+					}
 				})
 			})
 

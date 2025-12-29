@@ -1,0 +1,11 @@
+"""
+A query with a custom MCP tool name.
+"""
+query CustomNamedQuery($id: Int!) @mcpTool(name: "get_employee_by_id") {
+  employee(id: $id) {
+    id
+    details {
+      forename
+    }
+  }
+}

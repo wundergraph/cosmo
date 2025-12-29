@@ -165,3 +165,107 @@ func TestLoadOperationsFromEmptyDirectory(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, operations, 0, "Empty directory should return no operations")
 }
+
+func TestExtractMCPToolName(t *testing.T) {
+	tests := []struct {
+		name     string
+		query    string
+		expected string
+	}{
+		{
+			name:     "with @mcpTool directive and name argument",
+			query:    `query Foo @mcpTool(name: "custom_foo") { bar }`,
+			expected: "custom_foo",
+		},
+		{
+			name:     "without directive",
+			query:    `query Foo { bar }`,
+			expected: "",
+		},
+		{
+			name:     "with @mcpTool but no name argument",
+			query:    `query Foo @mcpTool { bar }`,
+			expected: "",
+		},
+		{
+			name:     "with different directive",
+			query:    `query Foo @deprecated { bar }`,
+			expected: "",
+		},
+		{
+			name:     "with @mcpTool and other arguments but no name",
+			query:    `query Foo @mcpTool(other: "value") { bar }`,
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			doc, report := astparser.ParseGraphqlDocumentString(tt.query)
+			require.False(t, report.HasErrors())
+
+			result := extractMCPToolName(&doc)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestLoadOperationsWithMCPDirective(t *testing.T) {
+	tempDir := t.TempDir()
+
+	testFiles := map[string]string{
+		"WithCustomToolName.graphql": `"""Custom tool operation"""
+query MyQuery @mcpTool(name: "custom_tool_name") {
+	employee(id: "1") {
+		id
+		name
+	}
+}`,
+		"WithoutDirective.graphql": `query AnotherQuery {
+	employee(id: "1") {
+		id
+		name
+	}
+}`,
+	}
+
+	for filename, content := range testFiles {
+		err := os.WriteFile(filepath.Join(tempDir, filename), []byte(content), 0644)
+		require.NoError(t, err)
+	}
+
+	schemaStr := `
+directive @mcpTool(name: String) on QUERY | MUTATION
+
+type Query {
+	employee(id: ID!): Employee
+}
+
+type Employee {
+	id: ID!
+	name: String!
+}
+`
+	schemaDoc, report := astparser.ParseGraphqlDocumentString(schemaStr)
+	require.False(t, report.HasErrors())
+
+	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
+	require.NoError(t, err)
+
+	logger := zap.NewNop()
+	loader := NewOperationLoader(logger, &schemaDoc)
+	operations, err := loader.LoadOperationsFromDirectory(tempDir)
+	require.NoError(t, err)
+	require.Len(t, operations, 2)
+
+	opMap := make(map[string]Operation)
+	for _, op := range operations {
+		opMap[op.Name] = op
+	}
+
+	op1 := opMap["MyQuery"]
+	assert.Equal(t, "custom_tool_name", op1.ToolName)
+
+	op2 := opMap["AnotherQuery"]
+	assert.Empty(t, op2.ToolName)
+}

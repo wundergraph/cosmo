@@ -536,8 +536,14 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			compiledSchema: compiledSchema,
 		}
 
-		// Convert the operation name to snake_case for consistent tool naming
-		operationToolName := strcase.ToSnake(op.Name)
+		// Use custom tool name if provided via @mcpTool directive, otherwise generate default
+		var toolName string
+		if op.ToolName != "" {
+			toolName = op.ToolName
+		} else {
+			operationToolName := strcase.ToSnake(op.Name)
+			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
+		}
 
 		// Use the operation description directly if provided, otherwise generate a default description
 		var toolDescription string
@@ -546,8 +552,6 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		} else {
 			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s.", op.Name, op.OperationType)
 		}
-
-		toolName := fmt.Sprintf("execute_operation_%s", operationToolName)
 		tool := mcp.NewToolWithRawSchema(
 			toolName,
 			toolDescription,
