@@ -205,6 +205,7 @@ func extractOperationDescription(doc *ast.Document) string {
 var mcpDirectiveName = []byte("mcpTool")
 var mcpNameArgument = []byte("name")
 
+// newMCPOperationValidator creates an operation validator that allows the @mcpTool directive without schema definition
 func newMCPOperationValidator() *astvalidation.OperationValidator {
 	return astvalidation.NewOperationValidator([]astvalidation.Rule{
 		astvalidation.AllVariablesUsed(),
@@ -227,6 +228,7 @@ func newMCPOperationValidator() *astvalidation.OperationValidator {
 	})
 }
 
+// extractMCPToolName extracts the custom tool name from the @mcpTool directive on an operation
 func extractMCPToolName(doc *ast.Document) string {
 	for _, ref := range doc.RootNodes {
 		if ref.Kind == ast.NodeKindOperationDefinition {
@@ -255,6 +257,7 @@ func extractMCPToolName(doc *ast.Document) string {
 	return ""
 }
 
+// stripMCPDirective removes the @mcpTool directive from an operation before validation
 func stripMCPDirective(doc *ast.Document) {
 	for _, ref := range doc.RootNodes {
 		if ref.Kind == ast.NodeKindOperationDefinition {
