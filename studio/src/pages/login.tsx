@@ -1,6 +1,5 @@
 import { ProductCosmoStack } from "@/components/auth/cosmo-stack";
 import { AuthLayout } from "@/components/layout/auth-layout";
-import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { NextPageWithLayout } from "@/lib/page";
 import { ArrowRightIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
@@ -56,11 +55,7 @@ const LoginPage: NextPageWithLayout = () => {
   return (
     <div className="flex min-h-screen items-center justify-center xl:items-start xl:justify-start">
       <div className="relative z-10 m-4 flex w-full max-w-xl flex-col gap-y-4 rounded-lg border bg-gray-950/60 p-4 text-white shadow-xl backdrop-blur-xl md:p-10 lg:m-10 lg:mt-20 xl:mt-52 2xl:mt-60">
-        <a href="https://wundergraph.com" className="flex items-center gap-2">
-          <Logo width={40} height={40} />
-          <h1 className="text-lg font-bold">WunderGraph Cosmo</h1>
-        </a>
-        <div className="flex flex-col items-start pt-8 md:pt-16">
+        <div className="flex flex-col items-start pt-4 md:pt-8">
           <h2 className="mb-1 text-2xl font-medium">Sign in</h2>
           <div className="w-full">
             <p className="text-muted-foreground">
@@ -135,7 +130,7 @@ const LoginPage: NextPageWithLayout = () => {
           </div>
         </div>
       </div>
-      <div className="relative hidden flex-1 flex-col items-center gap-y-4 text-center text-white xl:flex xl:pt-40 2xl:pt-52">
+      <div className="relative hidden flex-1 flex-col items-center gap-y-4 text-center text-white xl:flex xl:pt-24 2xl:pt-36">
         <ProductCosmoStack />
       </div>
     </div>

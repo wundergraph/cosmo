@@ -538,14 +538,13 @@ export const ProductCosmoStack = () => {
       <div className="flex h-full w-full flex-col items-center">
         <div className="relative flex items-center px-4 text-center md:px-8 md:text-left">
           <div className="flex w-full flex-col justify-start md:mt-12">
-            <h3 className="hidden max-w-xl text-xl font-semibold text-gray-950 dark:text-white md:block md:text-3xl lg:text-[42px] lg:leading-[52px]">
-              Full Lifecycle (Federated) GraphQL API Management
+            <h3 className="hidden max-w-2xl text-xl font-semibold text-gray-950 dark:text-white md:block md:text-3xl lg:text-[42px] lg:leading-[52px]">
+              Open-Source GraphQL Federation for Platform Teams
             </h3>
             <p className="mt-4 max-w-xl text-sm font-medium text-muted-foreground  md:text-base">
-              Cosmo is a drop-in replacement to other services like Apollo
-              GraphOS. It&apos;s the only OSS solution that bundles everything
-              from Router to Schema Registry, Analytics and Tracing in one
-              package. Perfect for monolithic and Federated GraphQL APIs.
+              Federation grows more complex as enterprise graphs expand across
+              teams and services. Cosmo helps you scale by providing visibility,
+              flexibility, and control. No lock-in.
             </p>
             <div className="my-12 flex max-w-2xl flex-col gap-y-6 divide-y text-left dark:divide-gray-800 md:my-16 md:gap-y-8 md:divide-y-0">
               <div className="grid gap-y-6 divide-y dark:divide-gray-800 md:grid-cols-2 md:gap-y-8 md:divide-x md:divide-y-0">
@@ -555,8 +554,9 @@ export const ProductCosmoStack = () => {
                     Federation v1 and v2 compatible
                   </h4>
                   <p className="mt-4 text-sm font-medium text-muted-foreground md:text-base">
-                    All your existing GraphQL Services will work out of the box.
-                    Any framework, any language.
+                    All your existing GraphQL services will work out of the box;
+                    no migration needed. Great when switching from Apollo
+                    GraphOS.
                   </p>
                 </div>
                 <div className="pt-6 md:pl-6 md:pt-0">
@@ -565,8 +565,9 @@ export const ProductCosmoStack = () => {
                     Fast and Reliable Router
                   </h4>
                   <p className="mt-4 text-sm font-medium text-muted-foreground md:text-base">
-                    The fastest and most reliable Router for GraphQL with
-                    support for Subscriptions and JWT Auth.
+                    The fastest Router for GraphQL with support for
+                    Subscriptions, JWT auth, cache warming and more. Runs in
+                    your infrastructure for max compliance and cost efficiency.
                   </p>
                 </div>
               </div>
@@ -574,11 +575,11 @@ export const ProductCosmoStack = () => {
                 <div className="pt-6 md:pr-4 md:pt-0">
                   <h4 className="flex items-center gap-x-2 font-semibold text-gray-950 dark:text-white">
                     <DocumentCheckIcon className="h-5 w-5 text-purple-500" />
-                    Maximized compliance
+                    Integrates REST, gRPC and more
                   </h4>
                   <p className="mt-4 text-sm font-medium text-muted-foreground md:text-base">
-                    Deploy Cosmo 100% on-prem for strict compliance requirements
-                    or use our managed service.
+                    Cosmo removes the GraphQL barrier. Federate any API with
+                    Cosmo Connect.
                   </p>
                 </div>
                 <div className="pt-6 md:pl-6 md:pt-0">
