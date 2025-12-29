@@ -265,7 +265,7 @@ func stripMCPDirective(doc *ast.Document) {
 			if !opDef.HasDirectives {
 				return
 			}
-			opDef.Directives.RemoveDirectiveByName(doc, "mcpTool")
+			opDef.Directives.RemoveDirectiveByName(doc, string(mcpDirectiveName))
 			opDef.HasDirectives = len(opDef.Directives.Refs) > 0
 			return
 		}
