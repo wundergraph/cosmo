@@ -38,21 +38,26 @@ func TestMCP(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, resp)
 
-				var operationInfoTool *mcp.Tool
-				for i, tool := range resp.Tools {
-					if tool.Name == "get_operation_info" {
-						operationInfoTool = &resp.Tools[i]
-						break
-					}
-				}
-				require.NotNil(t, operationInfoTool, "get_operation_info tool should exist")
-				require.Equal(t, "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application.", operationInfoTool.Description)
-				operationNameProp := operationInfoTool.InputSchema.Properties["operationName"].(map[string]interface{})
-				enum := operationNameProp["enum"].([]interface{})
-				require.Len(t, enum, 3)
-				require.Contains(t, enum, "UpdateMood")
-				require.Contains(t, enum, "MyEmployees")
-				require.Contains(t, enum, "CustomNamedQuery")
+				require.Contains(t, resp.Tools, mcp.Tool{
+					Name:        "get_operation_info",
+					Description: "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application.",
+					InputSchema: mcp.ToolInputSchema{
+						Type: "object",
+						Properties: map[string]interface{}{
+							"operationName": map[string]interface{}{
+								"description": "The exact name of the GraphQL operation to retrieve information for.",
+								"enum":        []interface{}{"CustomNamedQuery", "UpdateMood", "MyEmployees"},
+								"type":        "string",
+							},
+						},
+						Required: []string{"operationName"},
+					},
+					RawInputSchema: json.RawMessage(nil),
+					Annotations: mcp.ToolAnnotation{
+						Title:        "Get GraphQL Operation Info",
+						ReadOnlyHint: mcp.ToBoolPtr(true),
+					},
+				})
 			})
 		})
 
