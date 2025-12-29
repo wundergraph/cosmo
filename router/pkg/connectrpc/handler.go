@@ -31,9 +31,13 @@ func withRequestHeaders(ctx context.Context, headers http.Header) context.Contex
 
 // headersFromContext extracts the request headers from the context
 func headersFromContext(ctx context.Context) (http.Header, error) {
-	headers, ok := ctx.Value(requestHeadersKey{}).(http.Header)
-	if !ok {
+	value := ctx.Value(requestHeadersKey{})
+	if value == nil {
 		return nil, fmt.Errorf("missing request headers")
+	}
+	headers, ok := value.(http.Header)
+	if !ok {
+		return nil, fmt.Errorf("invalid request headers type")
 	}
 	return headers, nil
 }
@@ -85,7 +89,7 @@ type RPCHandler struct {
 	httpClient        *http.Client
 	logger            *zap.Logger
 	operationRegistry *OperationRegistry
-	validator         *MessageValidator
+	protoLoader       *ProtoLoader
 }
 
 // HandlerConfig contains configuration for the RPC handler
@@ -129,47 +133,8 @@ func NewRPCHandler(config HandlerConfig) (*RPCHandler, error) {
 		httpClient:        config.HTTPClient,
 		logger:            config.Logger,
 		operationRegistry: config.OperationRegistry,
-		validator:         NewMessageValidator(config.ProtoLoader),
+		protoLoader:       config.ProtoLoader,
 	}, nil
-}
-
-func (h *RPCHandler) validateRequest(serviceName, methodName string, requestJSON []byte) error {
-	if h.validator == nil {
-		h.logger.Warn("validator is nil, skipping validation")
-		return nil
-	}
-
-	h.logger.Debug("validating proto message",
-		zap.String("service", serviceName),
-		zap.String("method", methodName))
-
-	err := h.validator.ValidateMessage(serviceName, methodName, requestJSON)
-	if err == nil {
-		h.logger.Debug("proto validation passed",
-			zap.String("service", serviceName),
-			zap.String("method", methodName),
-		)
-		return nil
-	}
-
-	var validationErr *ValidationError
-	if errors.As(err, &validationErr) {
-		h.logger.Warn("proto validation failed",
-			zap.String("service", serviceName),
-			zap.String("method", methodName),
-			zap.String("error", validationErr.Error()))
-		return connect.NewError(
-			connect.CodeInvalidArgument,
-			fmt.Errorf("invalid request: %s", validationErr.Error()),
-		)
-	}
-
-	// For other errors, log and continue (don't block on validation errors)
-	h.logger.Warn("validation check failed, continuing",
-		zap.String("service", serviceName),
-		zap.String("method", methodName),
-		zap.Error(err))
-	return nil
 }
 
 // HandleRPC processes an RPC request and returns a response
@@ -182,11 +147,6 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 		zap.String("service", serviceName),
 		zap.String("method", methodName),
 		zap.String("request_json", string(requestJSON)))
-
-	// Validate the proto message structure before processing
-	if err := h.validateRequest(serviceName, methodName, requestJSON); err != nil {
-		return nil, err
-	}
 
 	// Look up operation from registry scoped to this service
 	// This ensures operations can only be called from their owning service
@@ -212,8 +172,11 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 		zap.String("operation", operation.Name),
 		zap.String("type", operation.OperationType))
 
-	// Convert proto JSON (snake_case) to GraphQL variables (camelCase)
-	// Pass service and method info for schema-aware enum detection
+	// Convert proto JSON to GraphQL variables
+	// This handles:
+	// - Field name mapping via graphql_variable_name options (e.g., hasPets → HAS_PETS)
+	// - Enum prefix stripping (e.g., MOOD_HAPPY → HAPPY)
+	// - Omitting _UNSPECIFIED enum values
 	variables, err := h.convertProtoJSONToGraphQLVariables(serviceName, methodName, requestJSON)
 	if err != nil {
 		return nil, fmt.Errorf("failed to convert proto JSON to GraphQL variables: %w", err)
@@ -228,9 +191,28 @@ func (h *RPCHandler) HandleRPC(ctx context.Context, serviceName, methodName stri
 	return responseJSON, nil
 }
 
-// convertProtoJSONToGraphQLVariables converts proto JSON to GraphQL variables:
-// - Converts field names from snake_case to camelCase
-// - Strips proto enum prefixes (MOOD_HAPPY -> HAPPY)
+// convertProtoJSONToGraphQLVariables processes proto JSON for GraphQL compatibility.
+//
+// IMPORTANT: Field names ARE converted here when graphql_variable_name field options are present.
+// Protobuf JSON marshaling automatically converts field names from snake_case (in .proto files)
+// to camelCase (in JSON) per the protobuf JSON specification. By the time this function receives
+// the data, field names are already in camelCase format.
+//
+// This function performs two types of transformations:
+//  1. Field name mapping: Uses graphql_variable_name field options to rename fields
+//     Example: "hasPets" (proto JSON) → "HAS_PETS" (GraphQL variable)
+//  2. Enum value transformations:
+//     - Strips proto enum type prefixes: MOOD_HAPPY → HAPPY, STATUS_ACTIVE → ACTIVE
+//     - Omits _UNSPECIFIED enum values (proto default values that don't exist in GraphQL)
+//
+// DESIGN RATIONALE:
+// - Proto field options allow explicit mapping between proto JSON and GraphQL variable names
+// - Proto enums include type prefix for namespacing (MOOD_HAPPY, STATUS_ACTIVE)
+// - GraphQL enums omit the prefix for cleaner API (HAPPY, ACTIVE)
+// - _UNSPECIFIED is proto's zero value (doesn't exist in GraphQL schemas)
+//
+// This matches the behavior of tools like protographic which generate GraphQL schemas
+// from proto definitions.
 func (h *RPCHandler) convertProtoJSONToGraphQLVariables(serviceName, methodName string, protoJSON []byte) (json.RawMessage, error) {
 	if len(protoJSON) == 0 {
 		return json.RawMessage("{}"), nil
@@ -241,13 +223,38 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(serviceName, methodName 
 		return nil, fmt.Errorf("failed to unmarshal proto JSON: %w", err)
 	}
 
-	// Get proto message descriptor for to detect enums
-	var messageDesc protoreflect.MessageDescriptor
-	if h.validator != nil && h.validator.protoLoader != nil {
-		method, err := h.validator.protoLoader.GetMethod(serviceName, methodName)
-		if err == nil && method.InputMessageDescriptor != nil {
-			messageDesc = method.InputMessageDescriptor
-		}
+	// Get proto message descriptor for enum detection and field options
+	// If protoLoader is not available, we can't do transformations, so return as-is
+	if h.protoLoader == nil {
+		return protoJSON, nil
+	}
+
+	method, err := h.protoLoader.GetMethod(serviceName, methodName)
+	if err != nil {
+		// Method not found in proto loader - this shouldn't happen in production
+		// since operations are registered from proto definitions, but in tests
+		// or edge cases we may not have the full schema loaded
+		h.logger.Debug("method not found in proto loader, skipping transformations",
+			zap.String("service", serviceName),
+			zap.String("method", methodName),
+			zap.Error(err))
+		return protoJSON, nil
+	}
+
+	messageDesc := method.InputMessageDescriptor
+	if messageDesc == nil {
+		// This shouldn't happen with valid proto definitions
+		h.logger.Warn("input message descriptor is nil, skipping transformations",
+			zap.String("service", serviceName),
+			zap.String("method", methodName))
+		return protoJSON, nil
+	}
+
+	// Check if any transformations are actually needed
+	needsTransformation := h.needsTransformation(protoData, messageDesc)
+	if !needsTransformation {
+		// Input already matches expected format, return as-is
+		return protoJSON, nil
 	}
 
 	// Create a set to track fields that came from _UNSPECIFIED enums
@@ -263,20 +270,21 @@ func (h *RPCHandler) convertProtoJSONToGraphQLVariables(serviceName, methodName 
 	return graphqlJSON, nil
 }
 
-// convertKeysRecursiveWithTracking converts map keys from snake_case to camelCase
-// and strips proto enum prefixes using schema information when available.
+// convertKeysRecursiveWithTracking processes data recursively to:
+// 1. Rename fields based on graphql_variable_name field options
+// 2. Strip proto enum prefixes using schema information
 // Tracks fields that came from _UNSPECIFIED enums and omits only those when empty.
 func (h *RPCHandler) convertKeysRecursiveWithTracking(data any, messageDesc protoreflect.MessageDescriptor, pathPrefix string, unspecifiedFields map[string]bool) any {
 	switch v := data.(type) {
 	case map[string]any:
 		result := make(map[string]any)
 		for key, value := range v {
-			camelKey := snakeToCamel(key)
-			fieldPath := pathPrefix + camelKey
+			fieldPath := pathPrefix + key
 
 			var fieldDesc protoreflect.FieldDescriptor
 			if messageDesc != nil {
-				fieldDesc = getFieldByName(messageDesc, key)
+				// Try to find field descriptor - protobuf JSON uses camelCase, but descriptors use original names
+				fieldDesc = getFieldByJSONName(messageDesc, key)
 			}
 
 			convertedValue := h.convertValueRecursiveWithTracking(value, fieldDesc, fieldPath, unspecifiedFields)
@@ -290,7 +298,15 @@ func (h *RPCHandler) convertKeysRecursiveWithTracking(data any, messageDesc prot
 				// Otherwise, it's a legitimate empty string, keep it
 			}
 
-			result[camelKey] = convertedValue
+			// Check if field has graphql_variable_name option
+			outputKey := key
+			if fieldDesc != nil {
+				if graphqlVarName := getGraphQLVariableName(fieldDesc); graphqlVarName != "" {
+					outputKey = graphqlVarName
+				}
+			}
+
+			result[outputKey] = convertedValue
 		}
 		return result
 	case []any:
@@ -394,45 +410,6 @@ func toUpperSnakeCase(s string) string {
 		result.WriteRune(r)
 	}
 	return strings.ToUpper(result.String())
-}
-
-// snakeToCamel converts snake_case to camelCase with special ID handling
-func snakeToCamel(s string) string {
-	if s == "" {
-		return s
-	}
-
-	var builder strings.Builder
-	builder.Grow(len(s))
-
-	capitalizeNext := false
-	for i := 0; i < len(s); i++ {
-		ch := s[i]
-		if ch == '_' {
-			capitalizeNext = true
-			continue
-		}
-
-		if capitalizeNext {
-			if ch >= 'a' && ch <= 'z' {
-				builder.WriteByte(ch - ('a' - 'A'))
-			} else {
-				builder.WriteByte(ch)
-			}
-			capitalizeNext = false
-		} else {
-			builder.WriteByte(ch)
-		}
-	}
-
-	result := builder.String()
-
-	// Special handling for ID suffix: employeeId -> employeeID
-	if strings.HasSuffix(result, "Id") && len(result) > 2 {
-		result = result[:len(result)-2] + "ID"
-	}
-
-	return result
 }
 
 // makeCriticalGraphQLError creates a Connect error for GraphQL errors with no data (complete failure).
@@ -618,34 +595,91 @@ func (h *RPCHandler) GetOperationCount() int {
 	return h.operationRegistry.Count()
 }
 
-// GetOperations returns information about available operations.
-// The returned data should be treated as read-only.
-func (h *RPCHandler) GetOperations() any {
-	if h.operationRegistry == nil {
-		return nil
+// needsTransformation checks if any field in the data needs transformation
+// (either has graphql_variable_name option or contains _UNSPECIFIED enum values)
+func (h *RPCHandler) needsTransformation(data any, messageDesc protoreflect.MessageDescriptor) bool {
+	switch v := data.(type) {
+	case map[string]any:
+		for key, value := range v {
+			var fieldDesc protoreflect.FieldDescriptor
+			if messageDesc != nil {
+				fieldDesc = getFieldByJSONName(messageDesc, key)
+			}
+
+			// Check if this field has a graphql_variable_name option
+			if fieldDesc != nil {
+				if graphqlVarName := getGraphQLVariableName(fieldDesc); graphqlVarName != "" {
+					// Field needs renaming
+					return true
+				}
+
+				// Check if field is an enum (any enum value needs transformation for prefix stripping)
+				if enumDesc := getEnumType(fieldDesc); enumDesc != nil {
+					if strVal, ok := value.(string); ok && strVal != "" {
+						// Any non-empty enum string value needs transformation
+						// to strip the enum type prefix (e.g., MOOD_HAPPY -> HAPPY)
+						return true
+					}
+				}
+
+				// Recursively check nested messages
+				if msgDesc := getMessageType(fieldDesc); msgDesc != nil {
+					if h.needsTransformation(value, msgDesc) {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	case []any:
+		// Check array elements
+		for _, item := range v {
+			if h.needsTransformation(item, messageDesc) {
+				return true
+			}
+		}
+		return false
+	default:
+		return false
 	}
-	return h.operationRegistry.GetAllOperations()
 }
 
-// VerifyOperationExists checks if an operation is available for a specific service
-func (h *RPCHandler) VerifyOperationExists(serviceName, methodName string) error {
-	if h.operationRegistry == nil {
-		return fmt.Errorf("operation registry is not initialized")
+// getGraphQLVariableName extracts the graphql_variable_name field option if present
+func getGraphQLVariableName(fieldDesc protoreflect.FieldDescriptor) string {
+	if fieldDesc == nil {
+		return ""
 	}
-	if !h.operationRegistry.HasOperationForService(serviceName, methodName) {
-		return fmt.Errorf("operation not found for service %s: %s", serviceName, methodName)
-	}
-	return nil
-}
 
-// GetOperationInfo returns detailed information about a specific operation for a service
-func (h *RPCHandler) GetOperationInfo(serviceName, methodName string) (any, error) {
-	if h.operationRegistry == nil {
-		return nil, fmt.Errorf("operation registry is not initialized")
+	opts := fieldDesc.Options()
+	if opts == nil {
+		return ""
 	}
-	operation := h.operationRegistry.GetOperationForService(serviceName, methodName)
-	if operation == nil {
-		return nil, fmt.Errorf("operation not found for service %s: %s", serviceName, methodName)
+
+	// Get the descriptor for the options message
+	optsReflect := opts.ProtoReflect()
+	if !optsReflect.IsValid() {
+		return ""
 	}
-	return operation, nil
+
+	// The graphql_variable_name option is defined as field number 50001
+	// in the custom field option extension.
+	//
+	// Extension fields are stored in the message's extension fields, not in
+	// the descriptor's Extensions(). We need to iterate through the actual
+	// extension fields that are SET on this particular options instance.
+
+	// Range over all fields that are actually set on this options message
+	var result string
+	optsReflect.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+		// Check if this is an extension field with number 50001
+		if fd.IsExtension() && fd.Number() == 50001 {
+			if v.IsValid() {
+				result = v.String()
+			}
+			return false // Stop iteration
+		}
+		return true // Continue iteration
+	})
+
+	return result
 }
