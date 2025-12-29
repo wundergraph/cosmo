@@ -47,7 +47,7 @@ func NewOperationLoader(logger *zap.Logger, schemaDoc *ast.Document) *OperationL
 func (l *OperationLoader) LoadOperationsFromDirectory(dirPath string) ([]Operation, error) {
 	var operations []Operation
 
-	validator := newMCPOperationValidator()
+	validator := astvalidation.DefaultOperationValidator()
 
 	// Walk through the directory and process GraphQL files
 	err := filepath.WalkDir(dirPath, func(path string, d fs.DirEntry, err error) error {
@@ -204,29 +204,6 @@ func extractOperationDescription(doc *ast.Document) string {
 
 var mcpDirectiveName = []byte("mcpTool")
 var mcpNameArgument = []byte("name")
-
-// newMCPOperationValidator creates an operation validator that allows the @mcpTool directive without schema definition
-func newMCPOperationValidator() *astvalidation.OperationValidator {
-	return astvalidation.NewOperationValidator([]astvalidation.Rule{
-		astvalidation.AllVariablesUsed(),
-		astvalidation.AllVariableUsesDefined(),
-		astvalidation.DocumentContainsExecutableOperation(),
-		astvalidation.OperationNameUniqueness(),
-		astvalidation.LoneAnonymousOperation(),
-		astvalidation.SubscriptionSingleRootField(),
-		astvalidation.FieldSelections(),
-		astvalidation.FieldSelectionMerging(),
-		astvalidation.KnownArguments(),
-		astvalidation.Values(),
-		astvalidation.ArgumentUniqueness(),
-		astvalidation.RequiredArguments(),
-		astvalidation.Fragments(),
-		astvalidation.DirectivesAreInValidLocations(),
-		astvalidation.DirectivesAreUniquePerLocation(),
-		astvalidation.VariableUniqueness(),
-		astvalidation.VariablesAreInputTypes(),
-	})
-}
 
 // extractMCPToolName extracts the custom tool name from the @mcpTool directive on an operation
 func extractMCPToolName(doc *ast.Document) string {
