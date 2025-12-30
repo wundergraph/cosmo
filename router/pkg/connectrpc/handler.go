@@ -501,7 +501,9 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 	} else {
 		// Copy headers, skipping those that shouldn't be forwarded
 		for key, values := range headers {
-			if _, skip := httputil.SkippedHeaders[key]; skip {
+			// Normalize header key to canonical form for case-insensitive comparison
+			canonicalKey := http.CanonicalHeaderKey(key)
+			if _, skip := httputil.SkippedHeaders[canonicalKey]; skip {
 				continue
 			}
 			for _, value := range values {
