@@ -78,9 +78,14 @@ export function buildMessageFromSelectionSet(
   parentType: GraphQLObjectType | GraphQLInterfaceType | GraphQLUnionType,
   typeInfo: TypeInfo,
   options?: MessageBuilderOptions,
+  parentPath?: string,
 ): protobuf.Type {
   const message = new protobuf.Type(messageName);
   const fieldNumberManager = options?.fieldNumberManager;
+
+  // Build the full path for lock file tracking (e.g., "ParentMessage.ChildMessage")
+  // This is used for field number management to prevent collisions between nested messages
+  const fullPath = parentPath ? `${parentPath}.${messageName}` : messageName;
 
   // First pass: collect all field names that will be in this message
   const fieldNames: string[] = [];
@@ -168,14 +173,15 @@ export function buildMessageFromSelectionSet(
   collectFields(selectionSet.selections, parentType, currentDepth);
 
   // Reconcile field order using lock manager if available
+  // Use fullPath for lock file operations to track nested message hierarchy
   let orderedFieldNames = fieldNames;
   if (fieldNumberManager && 'reconcileFieldOrder' in fieldNumberManager) {
-    orderedFieldNames = fieldNumberManager.reconcileFieldOrder(messageName, fieldNames);
+    orderedFieldNames = fieldNumberManager.reconcileFieldOrder(fullPath, fieldNames);
   }
 
   // Second pass: process fields in reconciled order
   // Pre-assign field numbers from lock data if available
-  assignFieldNumbersFromLockData(messageName, orderedFieldNames, fieldNumberManager);
+  assignFieldNumbersFromLockData(fullPath, orderedFieldNames, fieldNumberManager);
 
   for (const protoFieldName of orderedFieldNames) {
     const fieldData = fieldSelections.get(protoFieldName);
@@ -184,7 +190,15 @@ export function buildMessageFromSelectionSet(
         ...options,
         _depth: currentDepth,
       };
-      processFieldSelection(fieldData.selection, message, fieldData.type, typeInfo, fieldOptions, fieldNumberManager);
+      processFieldSelection(
+        fieldData.selection,
+        message,
+        fieldData.type,
+        typeInfo,
+        fieldOptions,
+        fieldNumberManager,
+        fullPath,
+      );
     }
   }
 
@@ -195,23 +209,24 @@ export function buildMessageFromSelectionSet(
  * Gets or assigns a field number for a proto field
  */
 function getOrAssignFieldNumber(
-  message: protobuf.Type,
+  messagePath: string,
   protoFieldName: string,
   fieldNumberManager?: FieldNumberManager,
+  message?: protobuf.Type,
 ): number {
-  const existingFieldNumber = fieldNumberManager?.getFieldNumber(message.name, protoFieldName);
+  const existingFieldNumber = fieldNumberManager?.getFieldNumber(messagePath, protoFieldName);
 
   if (existingFieldNumber !== undefined) {
     return existingFieldNumber;
   }
 
   if (fieldNumberManager) {
-    const fieldNumber = fieldNumberManager.getNextFieldNumber(message.name);
-    fieldNumberManager.assignFieldNumber(message.name, protoFieldName, fieldNumber);
+    const fieldNumber = fieldNumberManager.getNextFieldNumber(messagePath);
+    fieldNumberManager.assignFieldNumber(messagePath, protoFieldName, fieldNumber);
     return fieldNumber;
   }
 
-  return message.fieldsArray.length + 1;
+  return message ? message.fieldsArray.length + 1 : 1;
 }
 
 /**
@@ -292,6 +307,7 @@ function processFieldSelection(
   typeInfo: TypeInfo,
   options?: MessageBuilderOptions,
   fieldNumberManager?: FieldNumberManager,
+  messagePath?: string,
 ): void {
   const fieldName = field.name.value;
 
@@ -332,6 +348,8 @@ function processFieldSelection(
     // Build nested message for object types
     const namedType = getNamedType(fieldType);
     if (isObjectType(namedType) || isInterfaceType(namedType) || isUnionType(namedType)) {
+      // Use clean nested message name (just the field name in PascalCase)
+      // The full path will be tracked separately for lock file operations
       const nestedMessageName = upperFirst(camelCase(fieldName));
 
       const nestedOptions = {
@@ -339,12 +357,16 @@ function processFieldSelection(
         _depth: (options?._depth ?? 0) + 1,
       };
 
+      // Pass the current message path to build the full hierarchy for lock file tracking
+      const currentPath = messagePath || message.name;
+
       const nestedMessage = buildMessageFromSelectionSet(
         nestedMessageName,
         field.selectionSet,
         namedType,
         typeInfo,
         nestedOptions,
+        currentPath, // Pass parent path for nested message tracking
       );
 
       message.add(nestedMessage);
@@ -373,7 +395,9 @@ function processFieldSelection(
 
   const { typeName, isRepeated } = resolveTypeNameAndRepetition(baseTypeName, protoTypeInfo, fieldType, options);
 
-  const fieldNumber = getOrAssignFieldNumber(message, protoFieldName, fieldNumberManager);
+  // Use the full message path for field number assignment to prevent collisions
+  const currentPath = messagePath || message.name;
+  const fieldNumber = getOrAssignFieldNumber(currentPath, protoFieldName, fieldNumberManager, message);
 
   const protoField = createProtoField(protoFieldName, fieldNumber, typeName, isRepeated, fieldDef, options);
 
