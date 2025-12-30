@@ -13,7 +13,6 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
-	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 // ServiceDefinition represents a parsed protobuf service
@@ -298,25 +297,25 @@ func (pl *ProtoLoader) processFileDescriptor(result linker.File) error {
 	}
 
 	// Mark this file as processed
-	pl.processedFiles[string(filePath)] = true
+	pl.processedFiles[filePath] = true
 
 	// Try to register the file descriptor in our local registry
-	_, err := pl.files.FindFileByPath(string(filePath))
+	_, err := pl.files.FindFileByPath(filePath)
 	if err == nil {
 		// File path already registered
 		pl.logger.Debug("file path already registered in local registry, skipping registration",
-			zap.String("file", string(filePath)))
+			zap.String("file", filePath))
 	} else {
 		// Register the file descriptor in our LOCAL registry (not global)
 		if err := pl.files.RegisterFile(fd); err != nil {
 			pl.logger.Error("file descriptor registration failed in local registry",
-				zap.String("file", string(filePath)),
+				zap.String("file", filePath),
 				zap.Error(err))
 			return fmt.Errorf("failed to register file descriptor in local registry: %w", err)
 		}
 
 		pl.logger.Debug("file descriptor registered successfully in local registry",
-			zap.String("file", string(filePath)))
+			zap.String("file", filePath))
 	}
 
 	// Extract services from this file descriptor
@@ -400,20 +399,6 @@ func (pl *ProtoLoader) GetFiles() *protoregistry.Files {
 	return pl.files
 }
 
-// Helper functions to work with protoreflect descriptors
-
-// getFieldByName finds a field in a message descriptor by name
-func getFieldByName(msg protoreflect.MessageDescriptor, name string) protoreflect.FieldDescriptor {
-	fields := msg.Fields()
-	for i := 0; i < fields.Len(); i++ {
-		field := fields.Get(i)
-		if string(field.Name()) == name {
-			return field
-		}
-	}
-	return nil
-}
-
 // getFieldByJSONName finds a field in a message descriptor by its JSON name (camelCase).
 // Protobuf JSON uses camelCase field names, but descriptors store the original proto field names.
 // This function tries to match by JSON name first, then falls back to the original name.
@@ -450,64 +435,4 @@ func getMessageType(field protoreflect.FieldDescriptor) protoreflect.MessageDesc
 		return field.Message()
 	}
 	return nil
-}
-
-// isRequired checks if a field is required (proto2 only)
-func isRequired(field protoreflect.FieldDescriptor) bool {
-	return field.Cardinality() == protoreflect.Required
-}
-
-// isRepeated checks if a field is repeated
-func isRepeated(field protoreflect.FieldDescriptor) bool {
-	return field.Cardinality() == protoreflect.Repeated && !field.IsMap()
-}
-
-// isMap checks if a field is a map
-func isMap(field protoreflect.FieldDescriptor) bool {
-	return field.IsMap()
-}
-
-// getFieldType returns the protobuf type of a field
-func getFieldType(field protoreflect.FieldDescriptor) descriptorpb.FieldDescriptorProto_Type {
-	kind := field.Kind()
-	switch kind {
-	case protoreflect.BoolKind:
-		return descriptorpb.FieldDescriptorProto_TYPE_BOOL
-	case protoreflect.EnumKind:
-		return descriptorpb.FieldDescriptorProto_TYPE_ENUM
-	case protoreflect.Int32Kind:
-		return descriptorpb.FieldDescriptorProto_TYPE_INT32
-	case protoreflect.Sint32Kind:
-		return descriptorpb.FieldDescriptorProto_TYPE_SINT32
-	case protoreflect.Uint32Kind:
-		return descriptorpb.FieldDescriptorProto_TYPE_UINT32
-	case protoreflect.Int64Kind:
-		return descriptorpb.FieldDescriptorProto_TYPE_INT64
-	case protoreflect.Sint64Kind:
-		return descriptorpb.FieldDescriptorProto_TYPE_SINT64
-	case protoreflect.Uint64Kind:
-		return descriptorpb.FieldDescriptorProto_TYPE_UINT64
-	case protoreflect.Sfixed32Kind:
-		return descriptorpb.FieldDescriptorProto_TYPE_SFIXED32
-	case protoreflect.Fixed32Kind:
-		return descriptorpb.FieldDescriptorProto_TYPE_FIXED32
-	case protoreflect.FloatKind:
-		return descriptorpb.FieldDescriptorProto_TYPE_FLOAT
-	case protoreflect.Sfixed64Kind:
-		return descriptorpb.FieldDescriptorProto_TYPE_SFIXED64
-	case protoreflect.Fixed64Kind:
-		return descriptorpb.FieldDescriptorProto_TYPE_FIXED64
-	case protoreflect.DoubleKind:
-		return descriptorpb.FieldDescriptorProto_TYPE_DOUBLE
-	case protoreflect.StringKind:
-		return descriptorpb.FieldDescriptorProto_TYPE_STRING
-	case protoreflect.BytesKind:
-		return descriptorpb.FieldDescriptorProto_TYPE_BYTES
-	case protoreflect.MessageKind:
-		return descriptorpb.FieldDescriptorProto_TYPE_MESSAGE
-	case protoreflect.GroupKind:
-		return descriptorpb.FieldDescriptorProto_TYPE_GROUP
-	default:
-		return descriptorpb.FieldDescriptorProto_TYPE_STRING
-	}
 }
