@@ -370,11 +370,17 @@ func (vs *VanguardService) GetServiceInfo(serviceName string) (*ServiceInfo, err
 	return info, nil
 }
 
-// GetFileDescriptors returns all file descriptors from the proto loader
+// GetFileDescriptors returns all unique file descriptors from the proto loader
 func (vs *VanguardService) GetFileDescriptors() []protoreflect.FileDescriptor {
 	descriptors := make([]protoreflect.FileDescriptor, 0)
+	seen := make(map[string]bool)
+
 	for _, service := range vs.protoLoader.GetServices() {
-		descriptors = append(descriptors, service.FileDescriptor)
+		path := service.FileDescriptor.Path()
+		if !seen[path] {
+			seen[path] = true
+			descriptors = append(descriptors, service.FileDescriptor)
+		}
 	}
 	return descriptors
 }
