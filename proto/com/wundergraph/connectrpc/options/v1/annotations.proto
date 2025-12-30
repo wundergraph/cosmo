@@ -16,9 +16,11 @@ extend google.protobuf.FieldOptions {
   // variables can use any naming convention (camelCase, SCREAMING_SNAKE_CASE, etc.).
   //
   // Example:
+  //   import "com/wundergraph/connectrpc/options/v1/annotations.proto";
+  //
   //   message FindEmployeesByCriteriaRequest {
-  //     bool has_pets = 1 [(wg.connectrpc.graphql_variable_name) = "HAS_PETS"];
-  //     Nationality nationality = 2 [(wg.connectrpc.graphql_variable_name) = "Nationality"];
+  //     bool has_pets = 1 [(com.wundergraph.connectrpc.options.v1.graphql_variable_name) = "HAS_PETS"];
+  //     Nationality nationality = 2 [(com.wundergraph.connectrpc.options.v1.graphql_variable_name) = "Nationality"];
   //   }
   //
   // This will map:

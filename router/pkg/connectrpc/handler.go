@@ -661,9 +661,7 @@ func getGraphQLVariableName(fieldDesc protoreflect.FieldDescriptor) string {
 		return ""
 	}
 
-	// The graphql_variable_name option is defined as field number 50001
-	// in the custom field option extension.
-	//
+	// The graphql_variable_name option is defined in proto/com/wundergraph/connectrpc/options/v1/annotations.proto
 	// Extension fields are stored in the message's extension fields, not in
 	// the descriptor's Extensions(). We need to iterate through the actual
 	// extension fields that are SET on this particular options instance.
@@ -671,8 +669,8 @@ func getGraphQLVariableName(fieldDesc protoreflect.FieldDescriptor) string {
 	// Range over all fields that are actually set on this options message
 	var result string
 	optsReflect.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
-		// Check if this is an extension field with number 50001
-		if fd.IsExtension() && fd.Number() == 50001 {
+		// Check if this is the graphql_variable_name extension field
+		if fd.IsExtension() && fd.Number() == GraphQLVariableNameFieldNumber {
 			if v.IsValid() {
 				result = v.String()
 			}

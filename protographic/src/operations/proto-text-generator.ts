@@ -309,7 +309,7 @@ export function formatField(field: protobuf.Field, options?: ProtoTextOptions, i
     const optionsStr = Object.entries(field.options)
       .map(([key, value]) => {
         // The key already includes parentheses if it's an extension option
-        // e.g., "(cosmo.connectrpc.graphql_variable_name)"
+        // e.g., "(graphql_variable_name)"
         // Handle string values with quotes
         const formattedValue = typeof value === 'string' ? `"${value}"` : value;
         return `${key} = ${formattedValue}`;
