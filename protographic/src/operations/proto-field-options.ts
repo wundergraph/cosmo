@@ -1,6 +1,6 @@
 /**
  * Protocol Buffer field option constants for ConnectRPC integration.
- * 
+ *
  * See proto/com/wundergraph/connectrpc/options/v1/annotations.proto for full documentation.
  */
 
