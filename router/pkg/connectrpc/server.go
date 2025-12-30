@@ -310,14 +310,11 @@ func (s *Server) Reload() error {
 	return nil
 }
 
-// initializeComponents initializes the server components with an empty operation registry.
-// Operations will be loaded separately after proto files are loaded.
+// initializeComponents initializes the server components using the caller-populated operation registry.
+// The operation registry must be set by the caller before calling this method.
 func (s *Server) initializeComponents() error {
-	// Create empty operation registry (will be replaced with populated one later)
-	s.operationRegistry = NewOperationRegistry(nil)
-
 	// Create RPC handler
-	// Note: ProtoLoader must be set before calling this during NewServer()
+	// Note: ProtoLoader and OperationRegistry must be set before calling this
 	var err error
 	s.rpcHandler, err = NewRPCHandler(HandlerConfig{
 		GraphQLEndpoint:   s.config.GraphQLEndpoint,
