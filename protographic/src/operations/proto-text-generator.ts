@@ -124,7 +124,7 @@ function generateHeader(root: protobuf.Root, options?: ProtoTextOptions): string
   if (usesGraphQLVariableName) {
     lines.push('// Field option extension for GraphQL variable name mapping');
     lines.push('extend google.protobuf.FieldOptions {');
-    lines.push('  string wg.connectrpc.graphql_variable_name = 50001;');
+    lines.push('  string graphql_variable_name = 50001;');
     lines.push('}');
     lines.push('');
   }

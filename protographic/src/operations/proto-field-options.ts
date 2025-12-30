@@ -15,5 +15,5 @@ export interface ProtoFieldOption {
  */
 export const GRAPHQL_VARIABLE_NAME: ProtoFieldOption = {
   fieldNumber: 50001,
-  optionName: '(wg.connectrpc.graphql_variable_name)',
+  optionName: '(graphql_variable_name)',
 } as const;
