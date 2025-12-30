@@ -22,7 +22,20 @@ type VanguardServiceConfig struct {
 	Logger      *zap.Logger
 }
 
-// VanguardService wraps the RPC handler and creates Vanguard services
+// VanguardService wraps the RPC handler and creates Vanguard services that enable
+// protocol-agnostic RPC handling. It uses the connectrpc.com/vanguard package to provide
+// automatic transcoding between different RPC protocols (gRPC, gRPC-Web, Connect, and REST)
+// and message formats (Protocol Buffers binary, JSON, etc.).
+//
+// The service acts as a protocol adapter that:
+//   - Accepts requests in any supported RPC protocol (gRPC, gRPC-Web, Connect, REST)
+//   - Transcodes incoming requests to Connect protocol with JSON encoding
+//   - Forwards the normalized request to the underlying RPCHandler for GraphQL execution
+//   - Transcodes the response back to the client's original protocol and format
+//
+// This allows clients to use their preferred RPC protocol while the router internally
+// processes all requests uniformly as Connect+JSON, simplifying the handler implementation
+// and enabling protocol interoperability.
 type VanguardService struct {
 	handler     *RPCHandler
 	protoLoader *ProtoLoader
