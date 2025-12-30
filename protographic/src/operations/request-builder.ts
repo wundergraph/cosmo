@@ -18,7 +18,9 @@ import {
   graphqlArgumentToProtoField,
   createEnumUnspecifiedValue,
   graphqlEnumValueToProtoEnumValue,
+  protoFieldToProtoJSON,
 } from '../naming-conventions.js';
+import { GRAPHQL_VARIABLE_NAME } from './proto-field-options.js';
 
 /**
  * Options for building request messages
@@ -153,6 +155,18 @@ export function buildVariableField(
 
   if (isRepeated) {
     field.repeated = true;
+  }
+
+  // Add wundergraph.connectrpc.graphql_variable_name option if the GraphQL variable name doesn't match
+  // the expected protobuf JSON format (camelCase of snake_case field name)
+  const expectedProtoJSON = protoFieldToProtoJSON(protoFieldName);
+  if (variableName !== expectedProtoJSON) {
+  	// Store the GraphQL variable name as a custom option
+  	// This will be used by the handler to map proto JSON to GraphQL variables
+  	if (!field.options) {
+  		field.options = {};
+  	}
+  	field.options[GRAPHQL_VARIABLE_NAME.optionName] = variableName;
   }
 
   return field;
