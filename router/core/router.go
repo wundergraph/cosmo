@@ -964,6 +964,10 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 		err = mcpss.Start()
 		if err != nil {
+			// Cleanup the server if Start() fails to prevent resource leaks
+			if stopErr := mcpss.Stop(ctx); stopErr != nil {
+				r.logger.Warn("Failed to stop MCP server during error cleanup", zap.Error(stopErr))
+			}
 			return fmt.Errorf("failed to start MCP server: %w", err)
 		}
 
@@ -1026,6 +1030,10 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		err = crpcServer.Start()
 		if err != nil {
 			r.logger.Error("Failed to start ConnectRPC server", zap.Error(err))
+			// Cleanup the server if Start() fails to prevent resource leaks
+			if stopErr := crpcServer.Stop(ctx); stopErr != nil {
+				r.logger.Warn("Failed to stop ConnectRPC server during error cleanup", zap.Error(stopErr))
+			}
 			return fmt.Errorf("failed to start ConnectRPC server: %w", err)
 		}
 
