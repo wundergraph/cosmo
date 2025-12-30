@@ -26,5 +26,5 @@ extend google.protobuf.FieldOptions {
   //   - Protobuf JSON field "nationality" → GraphQL variable "$Nationality"
   //
   // Field number 50001 is in the user-defined extension range (1000-536870911).
-  string wg.connectrpc.graphql_variable_name = 50001;
+  string graphql_variable_name = 50001;
 }
