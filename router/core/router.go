@@ -1019,6 +1019,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			ListenAddr:      r.connectRPC.Server.ListenAddr,
 			GraphQLEndpoint: routerGraphQLEndpoint,
 			Logger:          r.logger,
+			CorsConfig:      r.corsOptions,
 		}
 
 		crpcServer, err := connectrpc.NewServer(serverConfig)

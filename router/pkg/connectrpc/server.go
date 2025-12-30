@@ -16,6 +16,7 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
+	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 )
 
@@ -32,6 +33,8 @@ type ServerConfig struct {
 	Logger *zap.Logger
 	// RequestTimeout for HTTP requests
 	RequestTimeout time.Duration
+	// CorsConfig is the CORS configuration for the ConnectRPC server
+	CorsConfig *cors.Config
 }
 
 // Server is the main ConnectRPC server that handles gRPC/Connect/gRPC-Web requests
@@ -361,8 +364,15 @@ func (s *Server) createHandler() http.Handler {
 		s.transcoder.ServeHTTP(rw, r)
 	})
 
-	// Mount transcoder at root
-	mux.Handle("/", wrappedTranscoder)
+	// Apply CORS middleware if enabled
+	var handler http.Handler = wrappedTranscoder
+	if s.config.CorsConfig != nil && s.config.CorsConfig.Enabled {
+		corsMiddleware := cors.New(*s.config.CorsConfig)
+		handler = corsMiddleware(wrappedTranscoder)
+	}
+
+	// Mount handler at root
+	mux.Handle("/", handler)
 
 	return mux
 }
