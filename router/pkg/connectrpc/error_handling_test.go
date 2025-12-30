@@ -221,7 +221,7 @@ func TestErrorHandling(t *testing.T) {
 				GraphQLEndpoint:   "http://localhost:4000/graphql",
 				HTTPClient:        httpClient,
 				Logger:            zap.NewNop(),
-				OperationRegistry: NewOperationRegistry(zap.NewNop()),
+				OperationRegistry: NewOperationRegistry(nil),
 				ProtoLoader:       NewProtoLoader(zap.NewNop()),
 			})
 			require.NoError(t, err)
@@ -320,7 +320,7 @@ func TestSuccessfulGraphQLResponses(t *testing.T) {
 				GraphQLEndpoint:   "http://localhost:4000/graphql",
 				HTTPClient:        httpClient,
 				Logger:            zap.NewNop(),
-				OperationRegistry: NewOperationRegistry(zap.NewNop()),
+				OperationRegistry: NewOperationRegistry(nil),
 				ProtoLoader:       NewProtoLoader(zap.NewNop()),
 			})
 			require.NoError(t, err)
@@ -350,7 +350,7 @@ func TestResponseBodyNotInMetadata(t *testing.T) {
 		GraphQLEndpoint:   "http://localhost:4000/graphql",
 		HTTPClient:        httpClient,
 		Logger:            zap.NewNop(),
-		OperationRegistry: NewOperationRegistry(zap.NewNop()),
+		OperationRegistry: NewOperationRegistry(nil),
 		ProtoLoader:       NewProtoLoader(zap.NewNop()),
 	})
 	require.NoError(t, err)

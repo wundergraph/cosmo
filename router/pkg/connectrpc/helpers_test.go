@@ -71,18 +71,14 @@ func MockHTTPClient(statusCode int, responseBody string) *http.Client {
 	}
 }
 
-// registerOperationForTesting registers a single operation for a service in the registry.
-// This is a test-only helper that provides controlled access to the registry's internal state.
-func registerOperationForTesting(registry *OperationRegistry, serviceName, operationName string, op *schemaloader.Operation) {
-	registry.mu.Lock()
-	defer registry.mu.Unlock()
-
-	// Initialize service map if needed
-	if registry.operations[serviceName] == nil {
-		registry.operations[serviceName] = make(map[string]*schemaloader.Operation)
+// buildTestOperations creates a test operations map for a service.
+// This is a test-only helper that builds the operations map for the immutable registry.
+func buildTestOperations(serviceName, operationName string, op *schemaloader.Operation) map[string]map[string]*schemaloader.Operation {
+	return map[string]map[string]*schemaloader.Operation{
+		serviceName: {
+			operationName: op,
+		},
 	}
-
-	registry.operations[serviceName][operationName] = op
 }
 
 type mockRoundTripper struct {
@@ -102,16 +98,16 @@ func (m *mockRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 func NewTestRPCHandler(t *testing.T, protoLoader *ProtoLoader) *RPCHandler {
 	t.Helper()
 
-	// Create operation registry
-	opRegistry := NewOperationRegistry(zap.NewNop())
-
-	// Manually add test operations to the registry using service-scoped approach
+	// Build test operations map
 	serviceName := "employee.v1.EmployeeService"
-	registerOperationForTesting(opRegistry, serviceName, "GetEmployeeById", &schemaloader.Operation{
+	operations := buildTestOperations(serviceName, "GetEmployeeById", &schemaloader.Operation{
 		Name:            "GetEmployeeById",
 		OperationType:   "query",
 		OperationString: "query GetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
 	})
+
+	// Create immutable operation registry
+	opRegistry := NewOperationRegistry(operations)
 
 	handler, err := NewRPCHandler(HandlerConfig{
 		GraphQLEndpoint:   "http://localhost:4000/graphql",

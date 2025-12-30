@@ -247,7 +247,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 
 		// Create handler with mock server
 		protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
-		opRegistry := NewOperationRegistry(zap.NewNop())
+		opRegistry := NewOperationRegistry(nil)
 
 		// Manually add a test operation to the registry using service-scoped approach
 		serviceName := "employee.v1.EmployeeService"

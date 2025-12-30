@@ -28,7 +28,7 @@ func TestConstructorValidation(t *testing.T) {
 				return NewRPCHandler(HandlerConfig{
 					HTTPClient:        httpClient,
 					Logger:            logger,
-					OperationRegistry: NewOperationRegistry(logger),
+					OperationRegistry: NewOperationRegistry(nil),
 					ProtoLoader:       NewProtoLoader(logger),
 				})
 			},
@@ -40,7 +40,7 @@ func TestConstructorValidation(t *testing.T) {
 				return NewRPCHandler(HandlerConfig{
 					GraphQLEndpoint:   "http://localhost:4000/graphql",
 					Logger:            logger,
-					OperationRegistry: NewOperationRegistry(logger),
+					OperationRegistry: NewOperationRegistry(nil),
 					ProtoLoader:       NewProtoLoader(logger),
 				})
 			},
@@ -53,7 +53,7 @@ func TestConstructorValidation(t *testing.T) {
 					GraphQLEndpoint:   "http://localhost:4000/graphql",
 					HTTPClient:        httpClient,
 					Logger:            nil,
-					OperationRegistry: NewOperationRegistry(logger),
+					OperationRegistry: NewOperationRegistry(nil),
 					ProtoLoader:       NewProtoLoader(logger),
 				})
 			},
@@ -78,7 +78,7 @@ func TestConstructorValidation(t *testing.T) {
 					GraphQLEndpoint:   "http://localhost:4000/graphql",
 					HTTPClient:        httpClient,
 					Logger:            logger,
-					OperationRegistry: NewOperationRegistry(logger),
+					OperationRegistry: NewOperationRegistry(nil),
 				})
 			},
 			wantErr: "proto loader is required",
@@ -178,7 +178,7 @@ func TestConstructorDefaults(t *testing.T) {
 			GraphQLEndpoint:   "localhost:4000/graphql",
 			HTTPClient:        &http.Client{},
 			Logger:            zap.NewNop(),
-			OperationRegistry: NewOperationRegistry(zap.NewNop()),
+			OperationRegistry: NewOperationRegistry(nil),
 			ProtoLoader:       NewProtoLoader(zap.NewNop()),
 		})
 

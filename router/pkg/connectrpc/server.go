@@ -15,6 +15,8 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+
+	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 )
 
 // ServerConfig holds configuration for the ConnectRPC server
@@ -100,13 +102,7 @@ func NewServer(config ServerConfig) (*Server, error) {
 	// Create proto loader first (needed by handler)
 	server.protoLoader = NewProtoLoader(server.logger)
 
-	// Initialize components (requires protoLoader to be set)
-	if err := server.initializeComponents(); err != nil {
-		return nil, fmt.Errorf("failed to initialize components: %w", err)
-	}
-
-	// Load proto files and operations for each discovered service
-	totalOperations := 0
+	// Load proto files for each discovered service
 	packageServiceMap := make(map[string][]string) // package -> list of services
 
 	for _, service := range discoveredServices {
@@ -115,19 +111,36 @@ func NewServer(config ServerConfig) (*Server, error) {
 			return nil, fmt.Errorf("failed to load proto files for service %s: %w", service.FullName, err)
 		}
 
-		// Load operations for this service
-		if len(service.OperationFiles) > 0 {
-			if err := server.operationRegistry.LoadOperationsForService(service.FullName, service.OperationFiles); err != nil {
-				return nil, fmt.Errorf("failed to load operations for service %s: %w", service.FullName, err)
-			}
-			totalOperations += server.operationRegistry.CountForService(service.FullName)
-		} else {
+		// Track packages and services
+		packageServiceMap[service.Package] = append(packageServiceMap[service.Package], service.ServiceName)
+	}
+
+	// Build operations map for all services
+	operationsMap, err := server.buildOperationsMap(discoveredServices)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build operations map: %w", err)
+	}
+
+	// Count total operations
+	totalOperations := 0
+	for _, serviceOps := range operationsMap {
+		totalOperations += len(serviceOps)
+	}
+
+	// Warn about services with no operations
+	for _, service := range discoveredServices {
+		if len(service.OperationFiles) == 0 {
 			server.logger.Warn("no operations found for service",
 				zap.String("service", service.FullName))
 		}
+	}
 
-		// Track packages and services
-		packageServiceMap[service.Package] = append(packageServiceMap[service.Package], service.ServiceName)
+	// Create immutable operation registry with pre-built operations
+	server.operationRegistry = NewOperationRegistry(operationsMap)
+
+	// Initialize components (requires protoLoader and operationRegistry to be set)
+	if err := server.initializeComponents(); err != nil {
+		return nil, fmt.Errorf("failed to initialize components: %w", err)
 	}
 
 	// Create service wrapper
@@ -225,7 +238,8 @@ func (s *Server) Stop(ctx context.Context) error {
 	return nil
 }
 
-// Reload reloads the server configuration and operations
+// Reload reloads the server configuration and operations.
+// This creates entirely new instances of all components for atomic hot-reload.
 func (s *Server) Reload() error {
 	// Check if server has been started
 	if s.httpServer == nil {
@@ -243,29 +257,28 @@ func (s *Server) Reload() error {
 		return fmt.Errorf("failed to discover services: %w", err)
 	}
 
-	// Create a fresh proto loader before initializing components
-	// This ensures initializeComponents() (and the RPCHandler it constructs) receives the fresh ProtoLoader
+	// Create a fresh proto loader
 	s.protoLoader = NewProtoLoader(s.logger)
 
-	// Reinitialize components with the fresh proto loader
-	if err := s.initializeComponents(); err != nil {
-		return fmt.Errorf("failed to reinitialize components: %w", err)
-	}
-
-	// Reload proto files and operations for each service
-
+	// Load proto files for each service
 	for _, service := range discoveredServices {
-		// Load proto files for this service
 		if err := s.protoLoader.LoadFromDirectory(service.ServiceDir); err != nil {
 			return fmt.Errorf("failed to reload proto files for service %s: %w", service.FullName, err)
 		}
+	}
 
-		// Load operations for this service
-		if len(service.OperationFiles) > 0 {
-			if err := s.operationRegistry.LoadOperationsForService(service.FullName, service.OperationFiles); err != nil {
-				return fmt.Errorf("failed to reload operations for service %s: %w", service.FullName, err)
-			}
-		}
+	// Build operations map for all services
+	operationsMap, err := s.buildOperationsMap(discoveredServices)
+	if err != nil {
+		return fmt.Errorf("failed to build operations map: %w", err)
+	}
+
+	// Create new immutable operation registry with pre-built operations
+	s.operationRegistry = NewOperationRegistry(operationsMap)
+
+	// Reinitialize components with fresh proto loader and operation registry
+	if err := s.initializeComponents(); err != nil {
+		return fmt.Errorf("failed to reinitialize components: %w", err)
 	}
 
 	// Recreate service wrapper
@@ -294,10 +307,11 @@ func (s *Server) Reload() error {
 	return nil
 }
 
-// initializeComponents initializes the server components
+// initializeComponents initializes the server components with an empty operation registry.
+// Operations will be loaded separately after proto files are loaded.
 func (s *Server) initializeComponents() error {
-	// Create operation registry
-	s.operationRegistry = NewOperationRegistry(s.logger)
+	// Create empty operation registry (will be replaced with populated one later)
+	s.operationRegistry = NewOperationRegistry(nil)
 
 	// Create RPC handler
 	// Note: ProtoLoader must be set before calling this during NewServer()
@@ -314,6 +328,24 @@ func (s *Server) initializeComponents() error {
 	}
 
 	return nil
+}
+
+// buildOperationsMap builds the complete operations map for all services.
+// This should be called after proto files are loaded.
+func (s *Server) buildOperationsMap(discoveredServices []DiscoveredService) (map[string]map[string]*schemaloader.Operation, error) {
+	allOperations := make(map[string]map[string]*schemaloader.Operation)
+
+	for _, service := range discoveredServices {
+		if len(service.OperationFiles) > 0 {
+			serviceOps, err := LoadOperationsForService(service.FullName, service.OperationFiles, s.logger)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load operations for service %s: %w", service.FullName, err)
+			}
+			allOperations[service.FullName] = serviceOps
+		}
+	}
+
+	return allOperations, nil
 }
 
 // createHandler creates the HTTP handler

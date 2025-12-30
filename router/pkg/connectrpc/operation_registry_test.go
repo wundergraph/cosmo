@@ -9,28 +9,28 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 )
 
 func TestNewOperationRegistry(t *testing.T) {
 	t.Parallel()
 
-	t.Run("creates registry with logger", func(t *testing.T) {
+	t.Run("creates registry with operations", func(t *testing.T) {
 		t.Parallel()
-		logger := zap.NewNop()
-		registry := NewOperationRegistry(logger)
+		operations := make(map[string]map[string]*schemaloader.Operation)
+		registry := NewOperationRegistry(operations)
 
 		assert.NotNil(t, registry)
-		assert.NotNil(t, registry.logger)
 		assert.NotNil(t, registry.operations)
 		assert.Equal(t, 0, registry.Count())
 	})
 
-	t.Run("creates registry with nil logger", func(t *testing.T) {
+	t.Run("creates registry with nil operations", func(t *testing.T) {
 		t.Parallel()
 		registry := NewOperationRegistry(nil)
 
 		assert.NotNil(t, registry)
-		assert.NotNil(t, registry.logger)
 		assert.NotNil(t, registry.operations)
 	})
 }
@@ -71,11 +71,15 @@ func TestLoadOperationsForService(t *testing.T) {
 			operationFiles = append(operationFiles, filePath)
 		}
 
-		registry := NewOperationRegistry(zap.NewNop())
-		err := registry.LoadOperationsForService(serviceName, operationFiles)
-
+		serviceOps, err := LoadOperationsForService(serviceName, operationFiles, zap.NewNop())
 		require.NoError(t, err)
-		assert.Equal(t, 3, registry.CountForService(serviceName))
+		assert.Equal(t, 3, len(serviceOps))
+
+		// Create registry with loaded operations
+		allOps := map[string]map[string]*schemaloader.Operation{
+			serviceName: serviceOps,
+		}
+		registry := NewOperationRegistry(allOps)
 
 		// Verify operations are loaded for the service
 		assert.True(t, registry.HasOperationForService(serviceName, "GetEmployee"))
@@ -84,21 +88,19 @@ func TestLoadOperationsForService(t *testing.T) {
 	})
 
 	t.Run("returns error for empty service name", func(t *testing.T) {
-		registry := NewOperationRegistry(zap.NewNop())
-		err := registry.LoadOperationsForService("", []string{})
+		_, err := LoadOperationsForService("", []string{}, zap.NewNop())
 
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "service name cannot be empty")
 	})
 
 	t.Run("handles empty operation files list", func(t *testing.T) {
-		registry := NewOperationRegistry(zap.NewNop())
 		serviceName := "test.v1.TestService"
 
-		err := registry.LoadOperationsForService(serviceName, []string{})
+		serviceOps, err := LoadOperationsForService(serviceName, []string{}, zap.NewNop())
 
 		require.NoError(t, err)
-		assert.Equal(t, 0, registry.CountForService(serviceName))
+		assert.Equal(t, 0, len(serviceOps))
 	})
 
 	t.Run("loads operations for multiple services independently", func(t *testing.T) {
@@ -116,13 +118,17 @@ func TestLoadOperationsForService(t *testing.T) {
 		err = os.WriteFile(op2File, []byte(`query GetProduct { product { id } }`), 0644)
 		require.NoError(t, err)
 
-		registry := NewOperationRegistry(zap.NewNop())
-
-		err = registry.LoadOperationsForService(service1, []string{op1File})
+		service1Ops, err := LoadOperationsForService(service1, []string{op1File}, zap.NewNop())
 		require.NoError(t, err)
 
-		err = registry.LoadOperationsForService(service2, []string{op2File})
+		service2Ops, err := LoadOperationsForService(service2, []string{op2File}, zap.NewNop())
 		require.NoError(t, err)
+
+		allOps := map[string]map[string]*schemaloader.Operation{
+			service1: service1Ops,
+			service2: service2Ops,
+		}
+		registry := NewOperationRegistry(allOps)
 
 		// Verify operations are scoped to their services
 		assert.True(t, registry.HasOperationForService(service1, "GetEmployee"))
@@ -147,9 +153,13 @@ func TestGetOperationForService(t *testing.T) {
 		err := os.WriteFile(opFile, []byte(opContent), 0644)
 		require.NoError(t, err)
 
-		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadOperationsForService(serviceName, []string{opFile})
+		serviceOps, err := LoadOperationsForService(serviceName, []string{opFile}, zap.NewNop())
 		require.NoError(t, err)
+
+		allOps := map[string]map[string]*schemaloader.Operation{
+			serviceName: serviceOps,
+		}
+		registry := NewOperationRegistry(allOps)
 
 		op := registry.GetOperationForService(serviceName, "GetEmployee")
 		assert.NotNil(t, op)
@@ -159,14 +169,14 @@ func TestGetOperationForService(t *testing.T) {
 	})
 
 	t.Run("returns nil for non-existent operation", func(t *testing.T) {
-		registry := NewOperationRegistry(zap.NewNop())
+		registry := NewOperationRegistry(nil)
 		serviceName := "test.v1.TestService"
 		op := registry.GetOperationForService(serviceName, "NonExistent")
 		assert.Nil(t, op)
 	})
 
 	t.Run("returns nil for non-existent service", func(t *testing.T) {
-		registry := NewOperationRegistry(zap.NewNop())
+		registry := NewOperationRegistry(nil)
 		op := registry.GetOperationForService("nonexistent.Service", "AnyOperation")
 		assert.Nil(t, op)
 	})
@@ -181,20 +191,24 @@ func TestHasOperationForService(t *testing.T) {
 		err := os.WriteFile(opFile, []byte(opContent), 0644)
 		require.NoError(t, err)
 
-		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadOperationsForService(serviceName, []string{opFile})
+		serviceOps, err := LoadOperationsForService(serviceName, []string{opFile}, zap.NewNop())
 		require.NoError(t, err)
+
+		allOps := map[string]map[string]*schemaloader.Operation{
+			serviceName: serviceOps,
+		}
+		registry := NewOperationRegistry(allOps)
 
 		assert.True(t, registry.HasOperationForService(serviceName, "TestQuery"))
 	})
 
 	t.Run("returns false for non-existent operation", func(t *testing.T) {
-		registry := NewOperationRegistry(zap.NewNop())
+		registry := NewOperationRegistry(nil)
 		assert.False(t, registry.HasOperationForService("test.Service", "NonExistent"))
 	})
 
 	t.Run("returns false for non-existent service", func(t *testing.T) {
-		registry := NewOperationRegistry(zap.NewNop())
+		registry := NewOperationRegistry(nil)
 		assert.False(t, registry.HasOperationForService("nonexistent.Service", "AnyOperation"))
 	})
 }
@@ -217,9 +231,13 @@ func TestGetAllOperationsForService(t *testing.T) {
 			operationFiles = append(operationFiles, filePath)
 		}
 
-		registry := NewOperationRegistry(zap.NewNop())
-		err := registry.LoadOperationsForService(serviceName, operationFiles)
+		serviceOps, err := LoadOperationsForService(serviceName, operationFiles, zap.NewNop())
 		require.NoError(t, err)
+
+		allOps := map[string]map[string]*schemaloader.Operation{
+			serviceName: serviceOps,
+		}
+		registry := NewOperationRegistry(allOps)
 
 		operations := registry.GetAllOperationsForService(serviceName)
 		assert.Len(t, operations, 2)
@@ -234,7 +252,7 @@ func TestGetAllOperationsForService(t *testing.T) {
 	})
 
 	t.Run("returns empty slice for non-existent service", func(t *testing.T) {
-		registry := NewOperationRegistry(zap.NewNop())
+		registry := NewOperationRegistry(nil)
 		operations := registry.GetAllOperationsForService("nonexistent.Service")
 		assert.NotNil(t, operations)
 		assert.Len(t, operations, 0)
@@ -246,7 +264,7 @@ func TestCountForService(t *testing.T) {
 		tempDir := t.TempDir()
 		serviceName := "test.v1.TestService"
 
-		registry := NewOperationRegistry(zap.NewNop())
+		registry := NewOperationRegistry(nil)
 		assert.Equal(t, 0, registry.CountForService(serviceName))
 
 		// Add operations
@@ -254,13 +272,18 @@ func TestCountForService(t *testing.T) {
 		err := os.WriteFile(op1File, []byte(`query Op1 { test }`), 0644)
 		require.NoError(t, err)
 
-		err = registry.LoadOperationsForService(serviceName, []string{op1File})
+		serviceOps, err := LoadOperationsForService(serviceName, []string{op1File}, zap.NewNop())
 		require.NoError(t, err)
+
+		allOps := map[string]map[string]*schemaloader.Operation{
+			serviceName: serviceOps,
+		}
+		registry = NewOperationRegistry(allOps)
 		assert.Equal(t, 1, registry.CountForService(serviceName))
 	})
 
 	t.Run("returns zero for non-existent service", func(t *testing.T) {
-		registry := NewOperationRegistry(zap.NewNop())
+		registry := NewOperationRegistry(nil)
 		assert.Equal(t, 0, registry.CountForService("nonexistent.Service"))
 	})
 }
@@ -272,23 +295,31 @@ func TestCount(t *testing.T) {
 		service1 := "service1.v1.Service1"
 		service2 := "service2.v1.Service2"
 
-		registry := NewOperationRegistry(zap.NewNop())
+		registry := NewOperationRegistry(nil)
 		assert.Equal(t, 0, registry.Count())
 
 		// Add operations to service1
 		op1File := filepath.Join(tempDir, "Op1.graphql")
 		err := os.WriteFile(op1File, []byte(`query Op1 { test }`), 0644)
 		require.NoError(t, err)
-		err = registry.LoadOperationsForService(service1, []string{op1File})
+		service1Ops, err := LoadOperationsForService(service1, []string{op1File}, zap.NewNop())
 		require.NoError(t, err)
+
+		allOps := map[string]map[string]*schemaloader.Operation{
+			service1: service1Ops,
+		}
+		registry = NewOperationRegistry(allOps)
 		assert.Equal(t, 1, registry.Count())
 
 		// Add operations to service2
 		op2File := filepath.Join(tempDir, "Op2.graphql")
 		err = os.WriteFile(op2File, []byte(`query Op2 { test }`), 0644)
 		require.NoError(t, err)
-		err = registry.LoadOperationsForService(service2, []string{op2File})
+		service2Ops, err := LoadOperationsForService(service2, []string{op2File}, zap.NewNop())
 		require.NoError(t, err)
+
+		allOps[service2] = service2Ops
+		registry = NewOperationRegistry(allOps)
 		assert.Equal(t, 2, registry.Count())
 	})
 }
@@ -304,11 +335,16 @@ func TestGetServiceNames(t *testing.T) {
 		err := os.WriteFile(op1File, []byte(`query Op1 { test }`), 0644)
 		require.NoError(t, err)
 
-		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadOperationsForService(service1, []string{op1File})
+		service1Ops, err := LoadOperationsForService(service1, []string{op1File}, zap.NewNop())
 		require.NoError(t, err)
-		err = registry.LoadOperationsForService(service2, []string{op1File})
+		service2Ops, err := LoadOperationsForService(service2, []string{op1File}, zap.NewNop())
 		require.NoError(t, err)
+
+		allOps := map[string]map[string]*schemaloader.Operation{
+			service1: service1Ops,
+			service2: service2Ops,
+		}
+		registry := NewOperationRegistry(allOps)
 
 		names := registry.GetServiceNames()
 		assert.Len(t, names, 2)
@@ -317,74 +353,15 @@ func TestGetServiceNames(t *testing.T) {
 	})
 
 	t.Run("returns empty slice for empty registry", func(t *testing.T) {
-		registry := NewOperationRegistry(zap.NewNop())
+		registry := NewOperationRegistry(nil)
 		names := registry.GetServiceNames()
 		assert.NotNil(t, names)
 		assert.Len(t, names, 0)
 	})
 }
 
-func TestClear(t *testing.T) {
-	t.Run("clears all operations from all services", func(t *testing.T) {
-		tempDir := t.TempDir()
-		service1 := "service1.v1.Service1"
-		service2 := "service2.v1.Service2"
-
-		opFile := filepath.Join(tempDir, "Test.graphql")
-		err := os.WriteFile(opFile, []byte(`query Test { test }`), 0644)
-		require.NoError(t, err)
-
-		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadOperationsForService(service1, []string{opFile})
-		require.NoError(t, err)
-		err = registry.LoadOperationsForService(service2, []string{opFile})
-		require.NoError(t, err)
-		assert.Equal(t, 2, registry.Count())
-
-		registry.Clear()
-		assert.Equal(t, 0, registry.Count())
-		assert.False(t, registry.HasOperationForService(service1, "Test"))
-		assert.False(t, registry.HasOperationForService(service2, "Test"))
-	})
-
-	t.Run("can clear empty registry", func(t *testing.T) {
-		registry := NewOperationRegistry(zap.NewNop())
-		assert.Equal(t, 0, registry.Count())
-
-		registry.Clear()
-		assert.Equal(t, 0, registry.Count())
-	})
-}
-
-func TestClearService(t *testing.T) {
-	t.Run("clears operations for specific service only", func(t *testing.T) {
-		tempDir := t.TempDir()
-		service1 := "service1.v1.Service1"
-		service2 := "service2.v1.Service2"
-
-		opFile := filepath.Join(tempDir, "Test.graphql")
-		err := os.WriteFile(opFile, []byte(`query Test { test }`), 0644)
-		require.NoError(t, err)
-
-		registry := NewOperationRegistry(zap.NewNop())
-		err = registry.LoadOperationsForService(service1, []string{opFile})
-		require.NoError(t, err)
-		err = registry.LoadOperationsForService(service2, []string{opFile})
-		require.NoError(t, err)
-
-		assert.Equal(t, 2, registry.Count())
-
-		registry.ClearService(service1)
-
-		assert.Equal(t, 1, registry.Count())
-		assert.False(t, registry.HasOperationForService(service1, "Test"))
-		assert.True(t, registry.HasOperationForService(service2, "Test"))
-	})
-}
-
-// TestThreadSafety verifies that OperationRegistry is safe for concurrent use.
-// The registry is designed to support concurrent readers with occasional writers
-// (Clear, LoadOperationsForService), which is the expected usage pattern in production.
+// TestThreadSafety verifies that OperationRegistry is safe for concurrent reads.
+// With the immutable pattern, no locking is needed for concurrent reads.
 func TestThreadSafety(t *testing.T) {
 	tempDir := t.TempDir()
 	serviceName := "test.v1.TestService"
@@ -393,9 +370,13 @@ func TestThreadSafety(t *testing.T) {
 	err := os.WriteFile(opFile, []byte(opContent), 0644)
 	require.NoError(t, err)
 
-	registry := NewOperationRegistry(zap.NewNop())
-	err = registry.LoadOperationsForService(serviceName, []string{opFile})
+	serviceOps, err := LoadOperationsForService(serviceName, []string{opFile}, zap.NewNop())
 	require.NoError(t, err)
+
+	allOps := map[string]map[string]*schemaloader.Operation{
+		serviceName: serviceOps,
+	}
+	registry := NewOperationRegistry(allOps)
 
 	t.Run("concurrent reads are safe", func(t *testing.T) {
 		var wg sync.WaitGroup
@@ -409,33 +390,6 @@ func TestThreadSafety(t *testing.T) {
 					_ = registry.GetAllOperationsForService(serviceName)
 					_ = registry.Count()
 					_ = registry.CountForService(serviceName)
-				}
-			})
-		}
-
-		// Wait for all goroutines to complete
-		wg.Wait()
-	})
-
-	t.Run("concurrent read and clear are safe", func(t *testing.T) {
-		var wg sync.WaitGroup
-
-		// Start readers
-		for range 5 {
-			wg.Go(func() {
-				for range 50 {
-					_ = registry.GetOperationForService(serviceName, "Test")
-					_ = registry.HasOperationForService(serviceName, "Test")
-				}
-			})
-		}
-
-		// Start clearers (writers)
-		for range 5 {
-			wg.Go(func() {
-				for range 50 {
-					registry.Clear()
-					_ = registry.LoadOperationsForService(serviceName, []string{opFile})
 				}
 			})
 		}
@@ -463,13 +417,17 @@ func TestServiceScopedOperations(t *testing.T) {
 		err = os.WriteFile(op2File, []byte(`query GetEmployee { company2Employee { id name } }`), 0644)
 		require.NoError(t, err)
 
-		registry := NewOperationRegistry(zap.NewNop())
-
 		// Load operations for both services
-		err = registry.LoadOperationsForService(service1, []string{op1File})
+		service1Ops, err := LoadOperationsForService(service1, []string{op1File}, zap.NewNop())
 		require.NoError(t, err)
-		err = registry.LoadOperationsForService(service2, []string{op2File})
+		service2Ops, err := LoadOperationsForService(service2, []string{op2File}, zap.NewNop())
 		require.NoError(t, err)
+
+		allOps := map[string]map[string]*schemaloader.Operation{
+			service1: service1Ops,
+			service2: service2Ops,
+		}
+		registry := NewOperationRegistry(allOps)
 
 		// Verify both services have their own GetEmployee operation
 		op1 := registry.GetOperationForService(service1, "GetEmployee")
