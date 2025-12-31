@@ -203,7 +203,7 @@ async function generateCommandAction(name: string, options: CLIOptions) {
     const resultInfo: Record<string, string> = {
       'input file': inputFile,
       'output dir': options.output,
-      'service name': result.isOperationsMode ? name : upperFirst(camelCase(name)),
+      'service name': upperFirst(camelCase(name)),
       'generation mode': result.isOperationsMode ? 'operations-based' : 'SDL-based',
       generated: generatedFiles.join(', '),
     };
@@ -481,6 +481,7 @@ async function generateProtoAndMapping({
   maxDepth,
 }: GenerationOptions): Promise<GenerationResult> {
   const schema = await readFile(schemaFile, 'utf8');
+  const serviceName = upperFirst(camelCase(name));
 
   // Validate the GraphQL schema
   spinner.text = 'Validating GraphQL schema...';
@@ -489,9 +490,6 @@ async function generateProtoAndMapping({
 
   // Determine generation mode
   if (operationsDir) {
-    // For operations-based generation, use the service name as-is to preserve
-    // user-provided formatting including acronyms (e.g., HRService, APIService)
-    const serviceName = name;
     const operationsPath = resolve(operationsDir);
     return generateFromOperations(
       schema,
@@ -505,8 +503,6 @@ async function generateProtoAndMapping({
       maxDepth,
     );
   } else {
-    // For SDL-based generation, apply transformation to ensure proper casing
-    const serviceName = upperFirst(camelCase(name));
     return generateFromSDL(schema, serviceName, spinner, packageName, languageOptions, lockFile);
   }
 }
