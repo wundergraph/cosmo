@@ -415,6 +415,7 @@ function processInlineFragment(
   typeInfo: TypeInfo,
   options?: MessageBuilderOptions,
   fieldNumberManager?: FieldNumberManager,
+  messagePath?: string,
 ): void {
   // Determine the type for this inline fragment
   let fragmentType: GraphQLObjectType | GraphQLInterfaceType | GraphQLUnionType;
@@ -445,12 +446,12 @@ function processInlineFragment(
   if (fragment.selectionSet) {
     for (const selection of fragment.selectionSet.selections) {
       if (selection.kind === 'Field') {
-        processFieldSelection(selection, message, fragmentType, typeInfo, options, fieldNumberManager);
+        processFieldSelection(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
       } else if (selection.kind === 'InlineFragment') {
         // Nested inline fragment
-        processInlineFragment(selection, message, fragmentType, typeInfo, options, fieldNumberManager);
+        processInlineFragment(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
       } else if (selection.kind === 'FragmentSpread') {
-        processFragmentSpread(selection, message, fragmentType, typeInfo, options, fieldNumberManager);
+        processFragmentSpread(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
       }
     }
   }
@@ -467,6 +468,7 @@ function processFragmentSpread(
   typeInfo: TypeInfo,
   options?: MessageBuilderOptions,
   fieldNumberManager?: FieldNumberManager,
+  messagePath?: string,
 ): void {
   const fragmentName = spread.name.value;
   const fragments = options?.fragments;
@@ -500,12 +502,12 @@ function processFragmentSpread(
   // Process the fragment's selection set with the resolved type
   for (const selection of fragmentDef.selectionSet.selections) {
     if (selection.kind === 'Field') {
-      processFieldSelection(selection, message, type, typeInfo, options, fieldNumberManager);
+      processFieldSelection(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
     } else if (selection.kind === 'InlineFragment') {
-      processInlineFragment(selection, message, type, typeInfo, options, fieldNumberManager);
+      processInlineFragment(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
     } else if (selection.kind === 'FragmentSpread') {
       // Nested fragment spread (fragment inside fragment)
-      processFragmentSpread(selection, message, type, typeInfo, options, fieldNumberManager);
+      processFragmentSpread(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
     }
   }
 }
