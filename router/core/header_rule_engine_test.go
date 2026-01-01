@@ -10,11 +10,21 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 )
+
+// getSkippedHeaderNames returns a slice of header names from the SkippedHeaders map
+func getSkippedHeaderNames() []string {
+	names := make([]string, 0, len(headers.SkippedHeaders))
+	for name := range headers.SkippedHeaders {
+		names = append(names, name)
+	}
+	return names
+}
 
 func TestPropagateHeaderRule(t *testing.T) {
 
@@ -215,7 +225,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 			},
 		}
 
-		for _, name := range ignoredHeaders {
+		for _, name := range getSkippedHeaderNames() {
 			rules = append(rules, &config.RequestHeaderRule{
 				Operation: "propagate",
 				Named:     name,
@@ -235,7 +245,7 @@ func TestPropagateHeaderRule(t *testing.T) {
 		require.NoError(t, err)
 		clientReq.Header.Set("X-Test-1", "test1")
 
-		for i, name := range ignoredHeaders {
+		for i, name := range getSkippedHeaderNames() {
 			clientReq.Header.Set(name, fmt.Sprintf("test-%d", i))
 		}
 
@@ -383,7 +393,7 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 			},
 		}
 
-		for _, name := range ignoredHeaders {
+		for _, name := range getSkippedHeaderNames() {
 			rules = append(rules, &config.RequestHeaderRule{
 				Operation: "propagate",
 				Named:     fmt.Sprintf("X-Test-%s", name),
@@ -404,7 +414,7 @@ func TestRenamePropagateHeaderRule(t *testing.T) {
 		require.NoError(t, err)
 		clientReq.Header.Set("X-Test-Old", "test1")
 
-		for i, name := range ignoredHeaders {
+		for i, name := range getSkippedHeaderNames() {
 			clientReq.Header.Set(fmt.Sprintf("X-Test-%s", name), fmt.Sprintf("X-Test-%d", i))
 		}
 
@@ -444,7 +454,7 @@ func TestSkipAllIgnoredHeaders(t *testing.T) {
 	require.NoError(t, err)
 	clientReq.Header.Set("X-Test-1", "test1")
 
-	for i, header := range ignoredHeaders {
+	for i, header := range getSkippedHeaderNames() {
 		clientReq.Header.Set(header, fmt.Sprintf("test-%d", i))
 	}
 
@@ -459,7 +469,7 @@ func TestSkipAllIgnoredHeaders(t *testing.T) {
 		subgraphResolver: NewSubgraphResolver(nil),
 	})
 
-	for _, header := range ignoredHeaders {
+	for _, header := range getSkippedHeaderNames() {
 		assert.Empty(t, updatedClientReq.Header.Get(header), fmt.Sprintf("header %s should be empty", header))
 	}
 
@@ -587,7 +597,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 			},
 		}
 
-		for _, name := range ignoredHeaders {
+		for _, name := range getSkippedHeaderNames() {
 			rules = append(rules, &config.RequestHeaderRule{
 				Operation: "propagate",
 				Named:     name,
@@ -609,7 +619,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 		require.NoError(t, err)
 		clientReq.Header.Set("X-Test-Subgraph", "Test-Value")
 
-		for i, name := range ignoredHeaders {
+		for i, name := range getSkippedHeaderNames() {
 			clientReq.Header.Set(name, fmt.Sprintf("X-Test-%d", i))
 		}
 
@@ -650,7 +660,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 			},
 		}
 
-		for _, name := range ignoredHeaders {
+		for _, name := range getSkippedHeaderNames() {
 			rules = append(rules, &config.RequestHeaderRule{
 				Operation: "propagate",
 				Named:     fmt.Sprintf("X-Test-%s", name),
@@ -673,7 +683,7 @@ func TestSubgraphPropagateHeaderRule(t *testing.T) {
 		require.NoError(t, err)
 		clientReq.Header.Set("X-Test-Subgraph", "Test-Value")
 
-		for i, name := range ignoredHeaders {
+		for i, name := range getSkippedHeaderNames() {
 			clientReq.Header.Set(name, fmt.Sprintf("X-Test-%d", i))
 		}
 

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"strings"
 	"time"
 
 	"connectrpc.com/vanguard"
@@ -58,10 +57,6 @@ func NewServer(config ServerConfig) (*Server, error) {
 		return nil, fmt.Errorf("services directory must be provided")
 	}
 
-	if config.GraphQLEndpoint == "" {
-		return nil, fmt.Errorf("graphql endpoint cannot be empty")
-	}
-
 	if config.ListenAddr == "" {
 		config.ListenAddr = "0.0.0.0:5026"
 	}
@@ -72,11 +67,6 @@ func NewServer(config ServerConfig) (*Server, error) {
 
 	if config.RequestTimeout == 0 {
 		config.RequestTimeout = 30 * time.Second
-	}
-
-	// Add protocol if missing
-	if !strings.Contains(config.GraphQLEndpoint, "://") {
-		config.GraphQLEndpoint = "http://" + config.GraphQLEndpoint
 	}
 
 	// Create HTTP client with retry

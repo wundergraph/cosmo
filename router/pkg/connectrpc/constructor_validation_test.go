@@ -186,17 +186,6 @@ func TestConstructorDefaults(t *testing.T) {
 		assert.Equal(t, "http://localhost:4000/graphql", handler.graphqlEndpoint)
 	})
 
-	t.Run("Server: adds protocol to endpoint", func(t *testing.T) {
-		server, err := NewServer(ServerConfig{
-			ServicesDir:     "samples/services",
-			GraphQLEndpoint: "localhost:4000/graphql",
-			Logger:          zap.NewNop(),
-		})
-
-		require.NoError(t, err)
-		assert.Equal(t, "http://localhost:4000/graphql", server.config.GraphQLEndpoint)
-	})
-
 	t.Run("Server: uses default listen address", func(t *testing.T) {
 		server, err := NewServer(ServerConfig{
 			ServicesDir:     "samples/services",

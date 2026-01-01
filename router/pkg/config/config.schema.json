@@ -1376,7 +1376,8 @@
       "type": "string",
       "description": "The URL of the control plane. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'.",
       "default": "https://cosmo-cp.wundergraph.com",
-      "format": "http-url"
+      "format": "uri",
+      "pattern": "^https?://"
     },
     "playground": {
       "type": "object",
@@ -2179,7 +2180,8 @@
         "graphql_endpoint": {
           "type": "string",
           "description": "Custom URL to use for the router GraphQL endpoint in ConnectRPC. Use this when your router is behind a proxy. This URL is used to forward RPC requests as GraphQL operations.",
-          "format": "url"
+          "format": "uri",
+          "pattern": "^https?://"
         }
       }
     },

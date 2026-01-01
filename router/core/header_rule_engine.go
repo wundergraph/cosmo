@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -16,6 +15,7 @@ import (
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -27,27 +27,6 @@ import (
 
 var (
 	_              EnginePreOriginHandler = (*HeaderPropagation)(nil)
-	
-	ignoredHeaders = []string{
-		"Alt-Svc",
-		"Connection",
-		"Proxy-Connection",
-		"Keep-Alive",
-		"Proxy-Authenticate",
-		"Proxy-Authorization",
-		"Te",
-		"Trailer",
-		"Transfer-Encoding",
-		"Upgrade",
-		"Content-Type",
-		"Accept-Encoding",
-		"Accept-Charset",
-		"Accept",
-		"Sec-Websocket-Extensions",
-		"Sec-Websocket-Key",
-		"Sec-Websocket-Protocol",
-		"Sec-Websocket-Version",
-	}
 	
 	cacheControlKey       = "Cache-Control"
 	expiresKey            = "Expires"
@@ -328,7 +307,7 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 	}
 
 	if rule.Named != "" {
-		if slices.Contains(ignoredHeaders, rule.Named) {
+		if _, ok := headers.SkippedHeaders[rule.Named]; ok {
 			return
 		}
 
@@ -348,7 +327,7 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 					result = !result
 				}
 				if result {
-					if slices.Contains(ignoredHeaders, name) {
+					if _, ok := headers.SkippedHeaders[name]; ok {
 						continue
 					}
 					values := res.Header.Values(name)
@@ -421,7 +400,7 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 
 	if rule.Rename != "" && rule.Named != "" {
 		// Ignore the rule when the target header is in the ignored list
-		if slices.Contains(ignoredHeaders, rule.Rename) {
+		if _, ok := headers.SkippedHeaders[rule.Rename]; ok {
 			return
 		}
 
@@ -444,7 +423,7 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 	 */
 
 	if rule.Named != "" {
-		if slices.Contains(ignoredHeaders, rule.Named) {
+		if _, ok := headers.SkippedHeaders[rule.Named]; ok {
 			return
 		}
 
@@ -477,7 +456,7 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 				 */
 				if rule.Rename != "" && rule.Named == "" {
 
-					if slices.Contains(ignoredHeaders, rule.Rename) {
+					if _, ok := headers.SkippedHeaders[rule.Rename]; ok {
 						continue
 					}
 
@@ -496,7 +475,7 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 				/**
 				 *	Propagate the header as is
 				 */
-				if slices.Contains(ignoredHeaders, name) {
+				if _, ok := headers.SkippedHeaders[name]; ok {
 					continue
 				}
 				request.Header.Set(name, ctx.Request().Header.Get(name))
