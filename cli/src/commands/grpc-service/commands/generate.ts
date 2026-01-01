@@ -344,8 +344,8 @@ async function generateFromOperations(
   // Load lock data for field number stability
   let currentLockData = await fetchLockData(lockFile);
 
-  // Process each operation file separately to maintain proto schema consistency
-  // Collect the AST roots instead of proto strings
+  // Process each operation file separately, updating lock data sequentially for field number stability.
+  // Collect AST roots for merging rather than proto strings.
   const roots: protobuf.Root[] = [];
 
   for (const { filename, content } of operationFiles) {
