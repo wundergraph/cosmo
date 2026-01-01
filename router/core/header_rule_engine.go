@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"io"
 	"net/http"
 	"reflect"
@@ -20,6 +19,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -27,34 +27,28 @@ import (
 
 var (
 	_              EnginePreOriginHandler = (*HeaderPropagation)(nil)
-	ignoredHeaders                        = []string{
+	
+	ignoredHeaders = []string{
 		"Alt-Svc",
 		"Connection",
-		"Proxy-Connection", // non-standard but still sent by libcurl and rejected by e.g. google
-
-		// Hop-by-hop headers
-		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection
+		"Proxy-Connection",
 		"Keep-Alive",
 		"Proxy-Authenticate",
 		"Proxy-Authorization",
-		"Te",      // canonicalized version of "TE"
-		"Trailer", // not Trailers per URL above; https://www.rfc-editor.org/errata_search.php?eid=4522
+		"Te",
+		"Trailer",
 		"Transfer-Encoding",
 		"Upgrade",
-
-		// Content Negotiation. We must never propagate the client headers to the upstream
-		// The router has to decide on its own what to send to the upstream
 		"Content-Type",
 		"Accept-Encoding",
 		"Accept-Charset",
 		"Accept",
-
-		// Web Socket negotiation headers. We must never propagate the client headers to the upstream.
 		"Sec-Websocket-Extensions",
 		"Sec-Websocket-Key",
 		"Sec-Websocket-Protocol",
 		"Sec-Websocket-Version",
 	}
+	
 	cacheControlKey       = "Cache-Control"
 	expiresKey            = "Expires"
 	noCache               = "no-cache"

@@ -16,8 +16,8 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
-	"github.com/wundergraph/cosmo/router/pkg/httputil"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
@@ -688,14 +688,14 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 
 	// Forward all headers from the original MCP request to the GraphQL server
 	// The router's header forwarding rules will then determine what gets sent to subgraphs
-	headers, err := headersFromContext(ctx)
+	reqHeaders, err := headersFromContext(ctx)
 	if err != nil {
 		s.logger.Debug("failed to get headers from context", zap.Error(err))
 	} else {
 		// Copy all headers from the MCP request
-		for key, values := range headers {
+		for key, values := range reqHeaders {
 			// Skip headers that should not be forwarded
-			if _, ok := httputil.SkippedHeaders[key]; ok {
+			if _, ok := headers.SkippedHeaders[key]; ok {
 				continue
 			}
 			for _, value := range values {

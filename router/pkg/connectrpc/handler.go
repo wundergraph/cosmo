@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
-	"github.com/wundergraph/cosmo/router/pkg/httputil"
+	"github.com/wundergraph/cosmo/router/internal/headers"
 )
 
 var (
@@ -495,15 +495,15 @@ func (h *RPCHandler) executeGraphQL(ctx context.Context, query string, variables
 	}
 
 	// Forward headers from the original RPC request
-	headers, err := headersFromContext(ctx)
+	reqHeaders, err := headersFromContext(ctx)
 	if err != nil {
 		h.logger.Debug("no headers in context", zap.Error(err))
 	} else {
 		// Copy headers, skipping those that shouldn't be forwarded
-		for key, values := range headers {
+		for key, values := range reqHeaders {
 			// Normalize header key to canonical form for case-insensitive comparison
 			canonicalKey := http.CanonicalHeaderKey(key)
-			if _, skip := httputil.SkippedHeaders[canonicalKey]; skip {
+			if _, skip := headers.SkippedHeaders[canonicalKey]; skip {
 				continue
 			}
 			for _, value := range values {
