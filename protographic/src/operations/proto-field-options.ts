@@ -1,7 +1,7 @@
 /**
  * Protocol Buffer field option constants for ConnectRPC integration.
  *
- * See proto/com/wundergraph/connectrpc/options/v1/annotations.proto for full documentation.
+ * These options are defined using `extend google.protobuf.FieldOptions` in generated proto files.
  */
 
 export interface ProtoFieldOption {
