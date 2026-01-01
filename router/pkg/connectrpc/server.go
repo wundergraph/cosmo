@@ -342,10 +342,10 @@ func (s *Server) buildOperationsMap(discoveredServices []DiscoveredService) (map
 func (s *Server) createHandler() http.Handler {
 	mux := http.NewServeMux()
 
-	// Wrap transcoder to capture response status
+	// Wrap transcoder with response writer that implements required interfaces
 	wrappedTranscoder := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Create a response writer that captures the status code and implements required interfaces
-		rw := &responseWriter{ResponseWriter: w, statusCode: 200}
+		// Create a response writer that implements required interfaces for gRPC streaming
+		rw := &responseWriter{ResponseWriter: w}
 
 		// The transcoder handles protocol translation and routing
 		s.transcoder.ServeHTTP(rw, r)
@@ -380,15 +380,12 @@ func (s *Server) GetServiceNames() []string {
 	return s.vanguardService.GetServiceNames()
 }
 
-// responseWriter wraps http.ResponseWriter to capture status code
-// and implements required interfaces for gRPC streaming
+// responseWriter wraps http.ResponseWriter and implements required interfaces for gRPC streaming
 type responseWriter struct {
 	http.ResponseWriter
-	statusCode int
 }
 
 func (rw *responseWriter) WriteHeader(code int) {
-	rw.statusCode = code
 	rw.ResponseWriter.WriteHeader(code)
 }
 
