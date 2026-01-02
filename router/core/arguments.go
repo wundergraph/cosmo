@@ -2,13 +2,15 @@ package core
 
 import "github.com/wundergraph/astjson"
 
+// fieldArgs is a collection of field arguments with their names
+// as keys and their corresponding values.
+type fieldArgs map[string]*astjson.Value
+
 // Arguments allow access to GraphQL field arguments used by clients.
 type Arguments struct {
-	// First key is the path to the field in dot notation
-	// i.e. root_field.subfield1.subfield2.
-	// Second argument is the name of the argument of that field.
-	// This map can be nil if no arguments are mapped.
-	data map[string]map[string]*astjson.Value
+	// data holds a map which contains all field arguments
+	// for any given field of an operation.
+	data map[string]fieldArgs
 }
 
 // Get will return the value of argument a from field f.
@@ -28,6 +30,7 @@ type Arguments struct {
 //			field1
 //			field2(arg1: "val3", arg2: "val4")
 //		}
+//	}
 //
 // You need to call Get("mySub.field2", "arg1") .
 //

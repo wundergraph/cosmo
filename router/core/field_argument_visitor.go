@@ -18,7 +18,7 @@ type fieldArgumentsVisitor struct {
 	definition     *ast.Document
 	variables      *astjson.Value
 	remapVariables map[string]string
-	fieldArguments map[string]map[string]*astjson.Value
+	fieldArguments map[string]fieldArgs
 	logger         *zap.Logger
 }
 
@@ -147,7 +147,7 @@ func mapFieldArguments(opts mapFieldArgumentsOpts) Arguments {
 		walker:         &walker,
 		variables:      opts.vars,
 		remapVariables: opts.remapVariables,
-		fieldArguments: make(map[string]map[string]*astjson.Value),
+		fieldArguments: make(map[string]fieldArgs),
 		logger:         logger,
 	}
 
