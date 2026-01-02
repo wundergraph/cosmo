@@ -177,7 +177,7 @@ export class UsageRepository {
       params.namedType = input.namedType;
       whereSql += ` AND NamedType = {namedType:String}`;
     }
-    whereSql += ` AND IsIndirectFieldUsage = false`;
+    whereSql += ` AND IsIndirectFieldUsage = false AND IsNull = false`;
 
     const [requestSeries, clients, meta] = await Promise.all([
       this.getUsageRequestSeries(whereSql, timeFilters, params),
