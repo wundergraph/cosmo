@@ -1077,4 +1077,95 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }"
     `);
   });
+  test('should generate rpc method for required field', () => {
+    const sdl = `
+      type Product @key(fields: "id") {
+        id: ID!
+        manufacturerId: ID! @external
+        productCode: String! @external
+        name: String! @required(fields: "manufacturerId productCode")
+        price: Float!
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        // Lookup Product entity by id
+        rpc LookupProductById(LookupProductByIdRequest) returns (LookupProductByIdResponse) {}
+        rpc RequireProductNameById(RequireProductNameByIdRequest) returns (RequireProductNameByIdResponse) {}
+      }
+
+      // Key message for Product entity lookup
+      message LookupProductByIdRequestKey {
+        // Key field for Product entity lookup.
+        string id = 1;
+      }
+
+      // Request message for Product entity lookup.
+      message LookupProductByIdRequest {
+        /*
+         * List of keys to look up Product entities.
+         * Order matters - each key maps to one entity in LookupProductByIdResponse.
+         */
+        repeated LookupProductByIdRequestKey keys = 1;
+      }
+
+      // Response message for Product entity lookup.
+      message LookupProductByIdResponse {
+        /*
+         * List of Product entities in the same order as the keys in LookupProductByIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
+        repeated Product result = 1;
+      }
+
+      message RequireProductNameByIdRequest {
+        // RequireProductNameByIdContext provides the context for the required fields method RequireProductNameById.
+        repeated RequireProductNameByIdContext context = 1;
+      }
+
+      message RequireProductNameByIdContext {
+        LookupProductByIdRequestKey key = 1;
+        RequireProductNameByIdFields fields = 2;
+      }
+
+      message RequireProductNameByIdResponse {
+        // RequireProductNameByIdResult provides the result for the required fields method RequireProductNameById.
+        repeated RequireProductNameByIdResult result = 1;
+      }
+
+      message RequireProductNameByIdResult {
+        string name = 1;
+      }
+
+      message RequireProductNameByIdFields {
+        string manufacturer_id = 1;
+        string product_code = 2;
+      }
+
+      message Product {
+        string id = 1;
+        double price = 2;
+      }"
+    `);
+  });
 });

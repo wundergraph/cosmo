@@ -21,7 +21,7 @@ import {
 import { CompositeMessageKind, ProtoMessage, RPCMethod } from './types';
 import { KEY_DIRECTIVE_NAME } from './string-constants';
 import {
-  createEntityLookupMethodName,
+  createEntityLookupRequestKeyMessageName,
   createRequestMessageName,
   createRequiredFieldsMethodName,
   createResponseMessageName,
@@ -172,13 +172,14 @@ export class RequiredFieldsVisitor {
     });
 
     const fieldsMessageName = `${requiredFieldsMethodName}Fields`;
-    const entityKeyMessageName = `${createEntityLookupMethodName(this.objectType.name, keyFieldsString)}Key`;
+    const entityKeyRequestMessageName = createEntityLookupRequestKeyMessageName(this.objectType.name, keyFieldsString);
+
     this.messageDefinitions.push({
       messageName: contextMessageName,
       fields: [
         {
           fieldName: 'key',
-          typeName: entityKeyMessageName,
+          typeName: entityKeyRequestMessageName,
           fieldNumber: 1,
         },
         {

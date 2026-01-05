@@ -40,7 +40,7 @@ import {
 } from './naming-conventions.js';
 import { camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
-import { CONNECT_FIELD_RESOLVER, CONTEXT, FIELD_ARGS, RESULT } from './string-constants.js';
+import { CONNECT_FIELD_RESOLVER, CONTEXT, EXTERNAL_DIRECTIVE_NAME, FIELD_ARGS, KEY_DIRECTIVE_NAME, REQUIRED_DIRECTIVE_NAME, RESULT } from './string-constants.js';
 import { buildProtoOptions, type ProtoOptions } from './proto-options.js';
 import { ProtoFieldType, ProtoMessage, ProtoMessageField } from './types.js';
 import {
@@ -51,6 +51,7 @@ import {
   listNameByNestingLevel,
   renderRPCMethod,
 } from './proto-utils.js';
+import { RequiredFieldsVisitor } from './required-fields-visitor.js';
 
 /**
  * Generic structure for returning RPC and message definitions
@@ -211,6 +212,7 @@ export class GraphQLToProtoTextVisitor {
   public visit(): string {
     // Collect RPC methods and message definitions from all sources
     const resolverResult = this.collectResolverRpcMethods();
+    const requiredFieldResult = this.collectRequiredFieldRpcMethods();
     const entityResult = this.collectEntityRpcMethods();
     const queryResult = this.collectQueryRpcMethods();
     const mutationResult = this.collectMutationRpcMethods();
@@ -221,12 +223,14 @@ export class GraphQLToProtoTextVisitor {
       ...queryResult.rpcMethods,
       ...mutationResult.rpcMethods,
       ...resolverResult.rpcMethods,
+      ...requiredFieldResult.rpcMethods,
     ];
     const allMethodNames = [
       ...entityResult.methodNames,
       ...queryResult.methodNames,
       ...mutationResult.methodNames,
       ...resolverResult.methodNames,
+      ...requiredFieldResult.methodNames,
     ];
 
     const allMessageDefinitions = [
@@ -234,6 +238,7 @@ export class GraphQLToProtoTextVisitor {
       ...queryResult.messageDefinitions,
       ...mutationResult.messageDefinitions,
       ...resolverResult.messageDefinitions,
+      ...requiredFieldResult.messageDefinitions,
     ];
 
     // Add all types from the schema to the queue that weren't already queued
@@ -1046,7 +1051,16 @@ Example:
    * @returns Array of all key directives found
    */
   private getKeyDirectives(type: GraphQLObjectType): DirectiveNode[] {
-    return type.astNode?.directives?.filter((d) => d.name.value === 'key') || [];
+    return type.astNode?.directives?.filter((d) => d.name.value === KEY_DIRECTIVE_NAME) || [];
+  }
+
+  /**
+   * Checks if a type has a @key directive
+   * @param type - The type to check
+   * @returns True if the type has a @key directive, false otherwise
+   */
+  private hasKeyDirective(type: GraphQLObjectType): boolean {
+    return type.astNode?.directives?.some((d) => d.name.value === KEY_DIRECTIVE_NAME) ?? false;
   }
 
   /**
@@ -1113,6 +1127,46 @@ Example:
     });
 
     return result;
+  }
+
+  private collectRequiredFieldRpcMethods(): CollectionResult {
+    const typeMap = this.schema.getTypeMap();
+    const result: CollectionResult = { rpcMethods: [], methodNames: [], messageDefinitions: [] };
+
+    const entityTypes = Object.values(typeMap).filter((type) => this.isEntityType(type))
+
+    for (const entity of entityTypes) {
+      const requiredFields = Object.values(entity.getFields()).filter(field => field.astNode?.directives?.some(d => d.name.value === REQUIRED_DIRECTIVE_NAME))
+
+      if (requiredFields.length === 0) {
+        continue;
+      }
+
+      for (const requiredField of requiredFields) {
+        const fieldSet = this.getRequiredFieldSet(requiredField);
+        const visitor = new RequiredFieldsVisitor(this.schema, entity, requiredField, fieldSet);
+        visitor.visit();
+
+        const rpcMethods = visitor.getRPCMethods()
+        const messageDefinitions = visitor.getMessageDefinitions()
+
+        result.rpcMethods.push(...rpcMethods.map(m => renderRPCMethod(this.includeComments, m).join('\n')));
+        result.methodNames.push(...rpcMethods.map(m => m.name));
+        let messageLines = messageDefinitions.map(m => buildProtoMessage(this.includeComments, m)).flat();
+        result.messageDefinitions.push(...messageLines);
+      }
+    }
+
+    return result;
+  }
+
+  private getRequiredFieldSet(field: GraphQLField<any, any>): string {
+    const node = field.astNode?.directives?.find((d) => d.name.value === REQUIRED_DIRECTIVE_NAME)?.arguments?.find((arg: ArgumentNode) => arg.name.value === 'fields')?.value as StringValueNode
+    if (!node) {
+      throw new Error(`Required field set not found for field ${field.name}`);
+    }
+
+    return node.value;
   }
 
   private getFieldContext(
@@ -1356,6 +1410,15 @@ Example:
   }
 
   /**
+   * Checks if a type is an entity type
+   * @param type - The type to check
+   * @returns True if the type is an entity type, false otherwise
+   */
+  private isEntityType(type: GraphQLNamedType): type is GraphQLObjectType {
+    return isObjectType(type) && !this.isOperationType(type) && this.hasKeyDirective(type);
+  }
+
+  /**
    * Queue all types from the schema that need processing
    */
   private queueAllSchemaTypes(): void {
@@ -1442,9 +1505,11 @@ Example:
       return;
     }
 
+    const allFields = Object.values(type.getFields());
     // Filter out fields that have arguments as those are handled in separate resolver rpcs
-    const validFields = Object.values(type.getFields()).filter((field) => field.args.length === 0);
-    // TODO: if we are inside of an entity type, we need to filter out fields that have @requires and @external directives
+    const validFields = allFields
+      .filter((field) => field.args.length === 0)
+      .filter((field) => !field.astNode?.directives?.some((directive) => directive.name.value === EXTERNAL_DIRECTIVE_NAME || directive.name.value === REQUIRED_DIRECTIVE_NAME));
 
     // Check for field removals if lock data exists for this type
     const lockData = this.lockManager.getLockData();
@@ -1473,7 +1538,7 @@ Example:
     const fields = type.getFields();
 
     // Get field names and order them using the lock manager
-    const fieldNames = Object.keys(fields);
+    const fieldNames = Object.keys(fields).filter((fieldName) => validFields.some((field) => field.name === fieldName));
     const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(type.name, fieldNames);
 
     for (const fieldName of orderedFieldNames) {
@@ -1906,7 +1971,6 @@ Example:
 
     return protoFieldType;
   }
-
 
   /**
    * Get the generated lock data after visiting

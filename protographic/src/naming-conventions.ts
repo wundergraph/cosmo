@@ -59,6 +59,17 @@ export function createEntityLookupMethodName(typeName: string, keyString: string
   return `Lookup${typeName}${normalizedKey}`;
 }
 
+/**
+ * Creates a key message name for an entity lookup request
+ * @param typeName - The name of the entity type
+ * @param keyString - The key string
+ * @returns The name of the key message
+ */
+export function createEntityLookupRequestKeyMessageName(typeName: string, keyString: string = 'id'): string {
+  const requestName = createRequestMessageName(createEntityLookupMethodName(typeName, keyString));
+  return `${requestName}Key`;
+}
+
 
 /**
  * Creates a required fields method name for an entity type
