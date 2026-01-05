@@ -87,6 +87,7 @@ export class ApiKeyRepository {
         expiresAt: apiKeys.expiresAt,
         createdBy: users.email,
         creatorUserID: users.id,
+        groupId: apiKeys.groupId,
       })
       .from(apiKeys)
       .innerJoin(users, eq(users.id, apiKeys.userId))
@@ -105,6 +106,7 @@ export class ApiKeyRepository {
       expiresAt: key[0].expiresAt?.toISOString() ?? '',
       createdBy: key[0].createdBy,
       creatorUserID: key[0].creatorUserID,
+      group: { id: key[0].groupId },
     } as APIKeyDTO;
   }
 
