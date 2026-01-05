@@ -293,7 +293,6 @@ export class RequiredFieldsVisitor {
     } else {
       this.current.compositeType.implementingTypes.push(currentInlineFragment?.typeCondition?.name.value ?? '');
     }
-
   }
 
   private onEnterSelectionSet(ctx: VisitContext<SelectionSetNode>): void {
@@ -306,7 +305,6 @@ export class RequiredFieldsVisitor {
         // TODO: handle this case. Could be a union or interface type.
         return;
       }
-
     } else if (this.isInlineFragmentNode(ctx.parent)) {
       const typeName = ctx.parent.typeCondition?.name.value;
       if (!typeName) return;
@@ -360,7 +358,7 @@ export class RequiredFieldsVisitor {
 
     const namedType = getNamedType(field.type);
     if (isObjectType(namedType)) {
-      return namedType; 
+      return namedType;
     }
 
     return undefined;

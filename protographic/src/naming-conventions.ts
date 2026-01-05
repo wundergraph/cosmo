@@ -70,7 +70,6 @@ export function createEntityLookupRequestKeyMessageName(typeName: string, keyStr
   return `${requestName}Key`;
 }
 
-
 /**
  * Creates a required fields method name for an entity type
  * @param typeName - The name of the entity type

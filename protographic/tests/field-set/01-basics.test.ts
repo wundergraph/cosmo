@@ -817,18 +817,18 @@ describe('Field Set Visitor', () => {
     const descriptionMessage = fieldMessage?.nestedMessages?.[0];
     expect(descriptionMessage?.messageName).toBe('Description');
     expect(descriptionMessage?.fields).toHaveLength(3);
-    
+
     // Check Description fields
     expect(descriptionMessage?.fields[0].fieldName).toBe('title');
     expect(descriptionMessage?.fields[0].typeName).toBe('string');
     expect(descriptionMessage?.fields[0].fieldNumber).toBe(1);
     expect(descriptionMessage?.fields[0].isRepeated).toBe(false);
-    
+
     expect(descriptionMessage?.fields[1].fieldName).toBe('score');
     expect(descriptionMessage?.fields[1].typeName).toBe('int32');
     expect(descriptionMessage?.fields[1].fieldNumber).toBe(2);
     expect(descriptionMessage?.fields[1].isRepeated).toBe(false);
-    
+
     expect(descriptionMessage?.fields[2].fieldName).toBe('pet');
     expect(descriptionMessage?.fields[2].typeName).toBe('Animal');
     expect(descriptionMessage?.fields[2].fieldNumber).toBe(3);
@@ -844,9 +844,7 @@ describe('Field Set Visitor', () => {
     expect(unionMessageDefinition.memberTypes).toHaveLength(2);
     expect(unionMessageDefinition.memberTypes).toEqual(expect.arrayContaining(['Cat', 'Dog']));
 
-    let resultMessage = messageDefinitions.find(
-      (message) => message.messageName === 'RequireUserDetailsByIdResult',
-    );
+    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
     expect(resultMessage).toBeDefined();
     expect(resultMessage?.fields).toHaveLength(1);
     expect(resultMessage?.fields[0].fieldName).toBe('details');

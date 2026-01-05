@@ -30,7 +30,6 @@ export const SCALAR_WRAPPER_TYPE_MAP: Record<string, string> = {
   Boolean: 'google.protobuf.BoolValue',
 };
 
-
 /**
  * Protocol Buffer idempotency levels for RPC methods
  * @see https://protobuf.dev/reference/protobuf/google.protobuf/#idempotency-level
@@ -46,7 +45,7 @@ export interface MethodWithIdempotency extends protobuf.Method {
 
 /**
  * Represents a gRPC method definition
- * 
+ *
  * example: rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
  */
 export type RPCMethod = {
@@ -54,7 +53,7 @@ export type RPCMethod = {
   request: string;
   response: string;
   description?: string | null;
-}
+};
 
 /**
  * Represents a field in a proto message
@@ -99,13 +98,12 @@ export interface ListWrapper {
 /**
  * Data structure for formatting message fields
  */
-export type ProtoFieldType ={
+export type ProtoFieldType = {
   typeName: string;
   isWrapper: boolean;
   isRepeated: boolean;
   listWrapper?: ListWrapper;
-}
-
+};
 
 export enum CompositeMessageKind {
   INTERFACE,
@@ -119,16 +117,18 @@ export type InterfaceMessageDefinition = {
   description?: string;
   typeName: string;
   implementingTypes: string[];
-}
+};
 
 export type UnionMessageDefinition = {
   kind: CompositeMessageKind.UNION;
   description?: string;
   typeName: string;
   memberTypes: string[];
-}
+};
 
-export function isInterfaceMessageDefinition(message: CompositeMessageDefinition): message is InterfaceMessageDefinition {
+export function isInterfaceMessageDefinition(
+  message: CompositeMessageDefinition,
+): message is InterfaceMessageDefinition {
   return message.kind === CompositeMessageKind.INTERFACE;
 }
 

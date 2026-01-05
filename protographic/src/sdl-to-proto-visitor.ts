@@ -40,7 +40,15 @@ import {
 } from './naming-conventions.js';
 import { camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
-import { CONNECT_FIELD_RESOLVER, CONTEXT, EXTERNAL_DIRECTIVE_NAME, FIELD_ARGS, KEY_DIRECTIVE_NAME, REQUIRED_DIRECTIVE_NAME, RESULT } from './string-constants.js';
+import {
+  CONNECT_FIELD_RESOLVER,
+  CONTEXT,
+  EXTERNAL_DIRECTIVE_NAME,
+  FIELD_ARGS,
+  KEY_DIRECTIVE_NAME,
+  REQUIRED_DIRECTIVE_NAME,
+  RESULT,
+} from './string-constants.js';
 import { buildProtoOptions, type ProtoOptions } from './proto-options.js';
 import { ProtoFieldType, ProtoMessage, ProtoMessageField } from './types.js';
 import {
@@ -1133,10 +1141,12 @@ Example:
     const typeMap = this.schema.getTypeMap();
     const result: CollectionResult = { rpcMethods: [], methodNames: [], messageDefinitions: [] };
 
-    const entityTypes = Object.values(typeMap).filter((type) => this.isEntityType(type))
+    const entityTypes = Object.values(typeMap).filter((type) => this.isEntityType(type));
 
     for (const entity of entityTypes) {
-      const requiredFields = Object.values(entity.getFields()).filter(field => field.astNode?.directives?.some(d => d.name.value === REQUIRED_DIRECTIVE_NAME))
+      const requiredFields = Object.values(entity.getFields()).filter((field) =>
+        field.astNode?.directives?.some((d) => d.name.value === REQUIRED_DIRECTIVE_NAME),
+      );
 
       if (requiredFields.length === 0) {
         continue;
@@ -1147,12 +1157,12 @@ Example:
         const visitor = new RequiredFieldsVisitor(this.schema, entity, requiredField, fieldSet);
         visitor.visit();
 
-        const rpcMethods = visitor.getRPCMethods()
-        const messageDefinitions = visitor.getMessageDefinitions()
+        const rpcMethods = visitor.getRPCMethods();
+        const messageDefinitions = visitor.getMessageDefinitions();
 
-        result.rpcMethods.push(...rpcMethods.map(m => renderRPCMethod(this.includeComments, m).join('\n')));
-        result.methodNames.push(...rpcMethods.map(m => m.name));
-        let messageLines = messageDefinitions.map(m => buildProtoMessage(this.includeComments, m)).flat();
+        result.rpcMethods.push(...rpcMethods.map((m) => renderRPCMethod(this.includeComments, m).join('\n')));
+        result.methodNames.push(...rpcMethods.map((m) => m.name));
+        let messageLines = messageDefinitions.map((m) => buildProtoMessage(this.includeComments, m)).flat();
         result.messageDefinitions.push(...messageLines);
       }
     }
@@ -1161,7 +1171,9 @@ Example:
   }
 
   private getRequiredFieldSet(field: GraphQLField<any, any>): string {
-    const node = field.astNode?.directives?.find((d) => d.name.value === REQUIRED_DIRECTIVE_NAME)?.arguments?.find((arg: ArgumentNode) => arg.name.value === 'fields')?.value as StringValueNode
+    const node = field.astNode?.directives
+      ?.find((d) => d.name.value === REQUIRED_DIRECTIVE_NAME)
+      ?.arguments?.find((arg: ArgumentNode) => arg.name.value === 'fields')?.value as StringValueNode;
     if (!node) {
       throw new Error(`Required field set not found for field ${field.name}`);
     }
@@ -1509,7 +1521,13 @@ Example:
     // Filter out fields that have arguments as those are handled in separate resolver rpcs
     const validFields = allFields
       .filter((field) => field.args.length === 0)
-      .filter((field) => !field.astNode?.directives?.some((directive) => directive.name.value === EXTERNAL_DIRECTIVE_NAME || directive.name.value === REQUIRED_DIRECTIVE_NAME));
+      .filter(
+        (field) =>
+          !field.astNode?.directives?.some(
+            (directive) =>
+              directive.name.value === EXTERNAL_DIRECTIVE_NAME || directive.name.value === REQUIRED_DIRECTIVE_NAME,
+          ),
+      );
 
     // Check for field removals if lock data exists for this type
     const lockData = this.lockManager.getLockData();
