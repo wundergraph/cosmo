@@ -155,6 +155,8 @@ export class UsageRepository {
     dateRange?: DateRange;
     organizationId: string;
     federatedGraphId: string;
+    isArgument: boolean;
+    isInput: boolean;
   }) {
     const timeFilters = parseTimeFilters(input.dateRange, input.range);
 
@@ -177,6 +179,13 @@ export class UsageRepository {
       params.namedType = input.namedType;
       whereSql += ` AND NamedType = {namedType:String}`;
     }
+
+    params.isArgument = input.isArgument;
+    whereSql += ` AND IsArgument = {isArgument:Boolean}`;
+
+    params.isInput = input.isInput;
+    whereSql += ` AND IsInput = {isInput:Boolean}`;
+
     whereSql += ` AND IsIndirectFieldUsage = false`;
 
     const [requestSeries, clients, meta] = await Promise.all([
