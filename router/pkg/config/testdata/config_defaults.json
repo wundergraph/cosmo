@@ -80,19 +80,9 @@
   },
   "CORS": {
     "Enabled": true,
-    "AllowOrigins": [
-      "*"
-    ],
-    "AllowMethods": [
-      "HEAD",
-      "GET",
-      "POST"
-    ],
-    "AllowHeaders": [
-      "Origin",
-      "Content-Length",
-      "Content-Type"
-    ],
+    "AllowOrigins": ["*"],
+    "AllowMethods": ["HEAD", "GET", "POST"],
+    "AllowHeaders": ["Origin", "Content-Length", "Content-Type"],
     "AllowCredentials": true,
     "MaxAge": 300000000000
   },
@@ -137,7 +127,7 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "OmitOperationPrefix": false,
+    "StripToolNamePrefix": false,
     "RouterURL": ""
   },
   "DemoMode": false,
@@ -214,9 +204,7 @@
     },
     "Router": {
       "Fields": null,
-      "IgnoreQueryParamsList": [
-        "variables"
-      ]
+      "IgnoreQueryParamsList": ["variables"]
     },
     "Subgraphs": {
       "Enabled": false,
@@ -409,15 +397,11 @@
     },
     "ForwardUpgradeHeaders": {
       "Enabled": true,
-      "AllowList": [
-        "Authorization"
-      ]
+      "AllowList": ["Authorization"]
     },
     "ForwardUpgradeQueryParams": {
       "Enabled": true,
-      "AllowList": [
-        "Authorization"
-      ]
+      "AllowList": ["Authorization"]
     },
     "ForwardInitialPayload": true,
     "Authentication": {
@@ -451,9 +435,7 @@
     "AttachServiceName": true,
     "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
     "AllowAllExtensionFields": false,
-    "AllowedExtensionFields": [
-      "code"
-    ],
+    "AllowedExtensionFields": ["code"],
     "AllowedFields": null
   },
   "StorageProviders": {

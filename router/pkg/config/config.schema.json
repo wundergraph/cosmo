@@ -2132,10 +2132,10 @@
           "default": false,
           "description": "Expose the full GraphQL schema through MCP. When enabled, AI models can request the complete schema of your API."
         },
-        "omit_operation_prefix": {
+        "strip_tool_name_prefix": {
           "type": "boolean",
           "default": false,
-          "description": "When true, MCP tool names for GraphQL operations will be generated without the 'execute_operation_' prefix. For example, an operation named 'GetUser' will become 'get_user' instead of 'execute_operation_get_user'. This provides cleaner tool names for AI models but may break existing integrations."
+          "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'. This produces cleaner tool names for AI models."
         }
       }
     },

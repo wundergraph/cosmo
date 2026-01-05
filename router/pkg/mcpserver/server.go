@@ -90,8 +90,8 @@ type Options struct {
 	EnableArbitraryOperations bool
 	// ExposeSchema determines whether the GraphQL schema is exposed
 	ExposeSchema bool
-	// OmitOperationPrefix determines whether to omit the "execute_operation_" prefix from tool names
-	OmitOperationPrefix bool
+	// StripToolNamePrefix removes the "execute_operation_" prefix from MCP tool names
+	StripToolNamePrefix bool
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
 	// CorsConfig is the CORS configuration for the MCP server
@@ -112,7 +112,7 @@ type GraphQLSchemaServer struct {
 	excludeMutations          bool
 	enableArbitraryOperations bool
 	exposeSchema              bool
-	omitOperationPrefix       bool
+	stripToolNamePrefix       bool
 	stateless                 bool
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
@@ -243,7 +243,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		excludeMutations:          options.ExcludeMutations,
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
-		omitOperationPrefix:       options.OmitOperationPrefix,
+		stripToolNamePrefix:       options.StripToolNamePrefix,
 		stateless:                 options.Stateless,
 		corsConfig:                options.CorsConfig,
 	}
@@ -311,10 +311,10 @@ func WithStateless(stateless bool) func(*Options) {
 	}
 }
 
-// WithOmitOperationPrefix sets the omit operation prefix option
-func WithOmitOperationPrefix(omitOperationPrefix bool) func(*Options) {
+// WithStripToolNamePrefix sets the strip tool name prefix option
+func WithStripToolNamePrefix(stripToolNamePrefix bool) func(*Options) {
 	return func(o *Options) {
-		o.OmitOperationPrefix = omitOperationPrefix
+		o.StripToolNamePrefix = stripToolNamePrefix
 	}
 }
 
@@ -559,7 +559,7 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		}
 
 		var toolName string
-		if s.omitOperationPrefix {
+		if s.stripToolNamePrefix {
 			toolName = operationToolName
 		} else {
 			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
