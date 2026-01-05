@@ -2392,6 +2392,209 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
+	t.Run("compression enabled on server and client", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Compression.Enabled = true
+				cfg.Compression.Level = 6
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Use the compression-enabled dialer
+			conn, resp := xEnv.InitGraphQLWebSocketConnectionWithCompression(nil, nil, nil)
+
+			// Check that compression was negotiated via the Sec-WebSocket-Extensions header
+			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
+			require.Contains(t, extensions, "permessage-deflate", "Expected compression to be negotiated")
+
+			// Verify the connection works correctly with compression
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"{ employees { id } }"}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(res.Payload))
+
+			var complete testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+
+	t.Run("compression negotiation does not add no_context_takeover when not requested", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Compression.Enabled = true
+				cfg.Compression.Level = 6
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			wsURL, err := url.Parse(xEnv.GraphQLWebSocketSubscriptionURL())
+			require.NoError(t, err)
+
+			switch wsURL.Scheme {
+			case "ws":
+				wsURL.Scheme = "http"
+			case "wss":
+				wsURL.Scheme = "https"
+			default:
+				t.Fatalf("unexpected websocket scheme: %s", wsURL.Scheme)
+			}
+
+			req, err := http.NewRequest(http.MethodGet, wsURL.String(), nil)
+			require.NoError(t, err)
+			req.Header.Set("Connection", "Upgrade")
+			req.Header.Set("Upgrade", "websocket")
+			req.Header.Set("Sec-WebSocket-Version", "13")
+			req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+			req.Header.Set("Sec-WebSocket-Protocol", "graphql-transport-ws")
+			req.Header.Set("Sec-WebSocket-Extensions", "permessage-deflate")
+
+			client := &http.Client{Timeout: 5 * time.Second}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				_ = resp.Body.Close()
+			})
+			require.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+
+			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
+			require.Contains(t, extensions, "permessage-deflate", "Expected compression to be negotiated")
+			require.NotContains(t, extensions, "server_no_context_takeover", "Expected server not to add server_no_context_takeover when not requested")
+			require.NotContains(t, extensions, "client_no_context_takeover", "Expected server not to add client_no_context_takeover when not requested")
+		})
+	})
+
+	t.Run("compression disabled on server but enabled on client", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Compression.Enabled = false
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Use the compression-enabled dialer, but server has compression disabled
+			conn, resp := xEnv.InitGraphQLWebSocketConnectionWithCompression(nil, nil, nil)
+
+			// Check that compression was NOT negotiated
+			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
+			require.NotContains(t, extensions, "permessage-deflate", "Expected compression NOT to be negotiated when disabled on server")
+
+			// Verify the connection still works correctly without compression
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"{ employees { id } }"}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(res.Payload))
+
+			var complete testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+
+	t.Run("compression enabled on server but client does not support it", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Compression.Enabled = true
+				cfg.Compression.Level = 6
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Use a standard dialer WITHOUT compression (the default)
+			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+
+			// Verify the connection works correctly without compression even
+			// though the server has compression enabled.
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"{ employees { id } }"}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(res.Payload))
+
+			var complete testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+
+	t.Run("compression with custom level", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Compression.Enabled = true
+				cfg.Compression.Level = 9 // Best compression
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			conn, resp := xEnv.InitGraphQLWebSocketConnectionWithCompression(nil, nil, nil)
+
+			// Check that compression was negotiated
+			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
+			require.Contains(t, extensions, "permessage-deflate", "Expected compression to be negotiated")
+
+			// Run a subscription query to verify it works with max compression
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"{ employees { id details { forename surname } } }"}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`, string(res.Payload))
+
+			var complete testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+
 }
 
 func TestFlakyWebSockets(t *testing.T) {
