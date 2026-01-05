@@ -404,6 +404,9 @@ websocket:
       export_token:
         enabled: true
         header_key: 'Authorization'
+  compression:
+    enabled: true
+    level: 6
 
 storage_providers:
   file_system:
