@@ -599,6 +599,25 @@
               }
             }
           }
+        },
+        "compression": {
+          "type": "object",
+          "description": "Configuration for WebSocket per-message compression (permessage-deflate extension).",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable permessage-deflate compression for WebSocket connections. When enabled, the server will negotiate compression with clients that support it. The default value is false."
+            },
+            "level": {
+              "type": "integer",
+              "default": 6,
+              "minimum": 1,
+              "maximum": 9,
+              "description": "The compression level (1-9). Level 1 is fastest with least compression, level 9 provides best compression but is slowest. The default value is 6."
+            }
+          }
         }
       }
     },
