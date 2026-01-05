@@ -55,6 +55,33 @@ export function createResponseMessageName(methodName: string): string {
  * Creates an entity lookup method name for an entity type
  */
 export function createEntityLookupMethodName(typeName: string, keyString: string = 'id'): string {
+  const normalizedKey = createMethodSuffixFromEntityKey(keyString);
+  return `Lookup${typeName}${normalizedKey}`;
+}
+
+
+/**
+ * Creates a required fields method name for an entity type
+ * @param typeName - The name of the entity type
+ * @param fieldName - The name of the field that is required
+ * @param keyString - The key string
+ * @returns The name of the required fields method
+ * @example
+ * createRequiredFieldsMethodName('User', 'post', 'id') // => 'RequireUserPostById'
+ * createRequiredFieldsMethodName('User', 'post', 'id name') // => 'RequireUserPostByIdAndName'
+ * createRequiredFieldsMethodName('User', 'post', 'name,id') // => 'RequireUserPostByNameAndId'
+ */
+export function createRequiredFieldsMethodName(typeName: string, fieldName: string, keyString: string = 'id'): string {
+  const normalizedKey = createMethodSuffixFromEntityKey(keyString);
+  return `Require${typeName}${upperFirst(camelCase(fieldName))}${normalizedKey}`;
+}
+
+/**
+ * Creates a method suffix from an entity key string
+ * @param keyString - The key string
+ * @returns The method suffix
+ */
+export function createMethodSuffixFromEntityKey(keyString: string = 'id'): string {
   const normalizedKey = keyString
     .split(/[,\s]+/)
     .filter((field) => field.length > 0)
@@ -62,7 +89,7 @@ export function createEntityLookupMethodName(typeName: string, keyString: string
     .sort()
     .join('And');
 
-  return `Lookup${typeName}By${normalizedKey}`;
+  return `By${normalizedKey}`;
 }
 
 /**
