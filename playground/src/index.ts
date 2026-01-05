@@ -2,9 +2,6 @@ export { Playground } from '@/components/playground';
 export type {
   PlaygroundExtension,
   PlaygroundExtensionContext,
-  ToolbarButtonExtension,
-  HeaderExtension,
-  FooterExtension,
   PanelExtension,
-  ResponseViewExtension,
+  PlaygroundExtensionHooks,
 } from '@/components/playground/types';

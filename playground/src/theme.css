@@ -264,3 +264,30 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
 .graphiql-container .CodeMirror-cursor {
   border-left: 2px solid gray !important;
 }
+
+/* Panel Extensions - Slide in from left like Docs panel */
+.playground-panel-extensions {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 400px;
+  z-index: 50;
+  background-color: hsl(var(--background));
+  border-right: 1px solid hsl(var(--border));
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  pointer-events: all;
+}
+
+/* Hide when empty */
+.playground-panel-extensions:empty {
+  display: none;
+  pointer-events: none;
+}
+
+.playground-panel-extension {
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+}

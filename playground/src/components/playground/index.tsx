@@ -30,11 +30,7 @@ import {
   PlaygroundView,
   PlaygroundExtension,
   PlaygroundExtensionContext,
-  ToolbarButtonExtension,
-  HeaderExtension,
-  FooterExtension,
   PanelExtension,
-  ResponseViewExtension,
 } from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
@@ -362,26 +358,6 @@ const ToggleClientValidation = () => {
   );
 };
 
-const ExtensionToolbarButtons = ({
-  extensions,
-  context,
-}: {
-  extensions: ToolbarButtonExtension[];
-  context: PlaygroundExtensionContext;
-}) => {
-  if (!extensions || extensions.length === 0) return null;
-
-  return (
-    <>
-      {extensions.map((ext) => (
-        <div key={ext.id} className="graphiql-toolbar-extension">
-          {ext.render(context)}
-        </div>
-      ))}
-    </>
-  );
-};
-
 const PlaygroundPortal = ({
   extensions,
   context,
@@ -393,30 +369,21 @@ const PlaygroundPortal = ({
   const artDiv = document.getElementById('art-visualization');
   const plannerDiv = document.getElementById('planner-visualization');
   const toggleClientValidation = document.getElementById('toggle-client-validation');
-  const extensionsToolbar = document.getElementById('extensions-toolbar');
   const logo = document.getElementById('graphiql-wg-logo');
   const scriptsSection = document.getElementById('scripts-section');
   const preFlightScriptSection = document.getElementById('pre-flight-script-section');
-  const headerSection = document.getElementById('playground-header-extensions');
-  const footerSection = document.getElementById('playground-footer-extensions');
 
+  // Logo is optional (when hideLogo is true, it won't exist)
   if (
     !responseToolbar ||
     !artDiv ||
     !plannerDiv ||
     !toggleClientValidation ||
-    !logo ||
     !scriptsSection ||
     !preFlightScriptSection
   ) {
     return null;
   }
-
-  // Filter extensions by type
-  const toolbarExtensions =
-    (extensions?.filter((ext) => ext.type === 'toolbar-button') as ToolbarButtonExtension[]) || [];
-  const headerExtensions = (extensions?.filter((ext) => ext.type === 'header') as HeaderExtension[]) || [];
-  const footerExtensions = (extensions?.filter((ext) => ext.type === 'footer') as FooterExtension[]) || [];
 
   return (
     <>
@@ -424,51 +391,29 @@ const PlaygroundPortal = ({
       {createPortal(<PlanView />, plannerDiv)}
       {createPortal(<TraceView />, artDiv)}
       {createPortal(<ToggleClientValidation />, toggleClientValidation)}
-      {extensionsToolbar &&
-        toolbarExtensions.length > 0 &&
-        createPortal(<ExtensionToolbarButtons extensions={toolbarExtensions} context={context} />, extensionsToolbar)}
       {createPortal(<CustomScripts />, scriptsSection)}
       {createPortal(<PreFlightScript />, preFlightScriptSection)}
-      {headerSection &&
-        headerExtensions.length > 0 &&
+      {logo &&
         createPortal(
-          <div className="playground-header-extensions">
-            {headerExtensions.map((ext) => (
-              <div key={ext.id}>{ext.render(context)}</div>
-            ))}
-          </div>,
-          headerSection,
+          <a href="https://wundergraph.com">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 1080 1080"
+              className="mt-3 mx-auto"
+              width="35"
+              height="35"
+              fill="none"
+            >
+              <path
+                fillRule="evenodd"
+                clipRule="evenodd"
+                d="M447.099 231.913C405.967 244.337 367.742 264.878 334.682 292.323C320.832 268.71 298.796 251.002 272.754 242.557C313.865 205.575 362.202 177.525 414.709 160.178C467.216 142.832 522.751 136.567 577.803 141.781C632.855 146.994 686.227 163.571 734.544 190.465C746.769 197.27 758.603 204.698 770.004 212.711C770.394 212.542 770.785 212.376 771.179 212.213C785.976 206.085 802.259 204.482 817.967 207.607C833.676 210.733 848.105 218.446 859.429 229.771C870.754 241.096 878.465 255.525 881.589 271.233C884.712 286.941 883.107 303.223 876.976 318.018C870.845 332.814 860.464 345.459 847.146 354.355C833.828 363.252 818.171 367.999 802.154 367.997C791.52 367.997 780.991 365.902 771.167 361.833C761.343 357.763 752.417 351.799 744.898 344.28C737.379 336.76 731.415 327.834 727.347 318.01C723.279 308.186 721.186 297.657 721.187 287.024C721.187 282.871 721.506 278.742 722.135 274.672C713.657 268.849 704.889 263.426 695.859 258.426C658.269 237.612 616.889 224.541 574.163 219.988C531.437 215.434 488.232 219.489 447.099 231.913ZM319.489 348.564C319.489 363.809 315.185 378.728 307.094 391.613L323.693 420.326C307.59 439.476 285.501 452.638 260.995 457.683L244.582 429.298C237.31 429.844 229.959 429.408 222.73 427.971C207.024 424.848 192.597 417.138 181.273 405.816C169.949 394.495 162.237 380.069 159.112 364.365C155.986 348.661 157.588 332.382 163.715 317.588C169.841 302.794 180.217 290.149 193.531 281.251C206.845 272.354 222.498 267.604 238.511 267.601C249.145 267.6 259.674 269.693 269.499 273.761C279.324 277.829 288.251 283.793 295.77 291.311C303.29 298.829 309.255 307.755 313.325 317.578C317.394 327.402 319.489 337.931 319.489 348.564ZM260.998 457.685L400.599 699.132L442.692 772.036L484.794 699.132L537.279 608.237L589.621 698.805L631.691 771.687L673.783 698.794L744.391 576.462H859.708C861.079 564.36 861.767 552.19 861.769 540.01C861.771 527.83 861.08 515.66 859.697 503.558H702.288L694.971 516.229L631.67 625.857L579.327 535.278L537.235 462.374L495.208 535.289L442.692 626.184L323.7 420.328C307.596 439.478 285.506 452.64 260.998 457.685ZM861.77 540.003C861.768 552.183 861.08 564.353 859.709 576.455H937.128V503.551H859.709C861.088 515.653 861.776 527.823 861.77 540.003ZM937.154 503.558H938.332C939.411 515.563 940 527.721 940 540.01C940 760.902 760.967 940 540.027 940C319.088 940 140 760.924 140 540.031C139.942 500.879 145.66 461.933 156.968 424.449C175.493 444.394 200.696 456.845 227.794 459.44C221.851 485.163 218.231 515.061 218.231 540.01C218.231 717.668 362.259 861.764 540.038 861.764C705.462 861.764 841.629 736.99 859.731 576.462H937.154V503.558Z"
+                className="fill-foreground"
+              ></path>
+            </svg>
+          </a>,
+          logo,
         )}
-      {footerSection &&
-        footerExtensions.length > 0 &&
-        createPortal(
-          <div className="playground-footer-extensions">
-            {footerExtensions.map((ext) => (
-              <div key={ext.id}>{ext.render(context)}</div>
-            ))}
-          </div>,
-          footerSection,
-        )}
-      {createPortal(
-        <a href="https://wundergraph.com">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 1080 1080"
-            className="mt-3 mx-auto"
-            width="35"
-            height="35"
-            fill="none"
-          >
-            <path
-              fillRule="evenodd"
-              clipRule="evenodd"
-              d="M447.099 231.913C405.967 244.337 367.742 264.878 334.682 292.323C320.832 268.71 298.796 251.002 272.754 242.557C313.865 205.575 362.202 177.525 414.709 160.178C467.216 142.832 522.751 136.567 577.803 141.781C632.855 146.994 686.227 163.571 734.544 190.465C746.769 197.27 758.603 204.698 770.004 212.711C770.394 212.542 770.785 212.376 771.179 212.213C785.976 206.085 802.259 204.482 817.967 207.607C833.676 210.733 848.105 218.446 859.429 229.771C870.754 241.096 878.465 255.525 881.589 271.233C884.712 286.941 883.107 303.223 876.976 318.018C870.845 332.814 860.464 345.459 847.146 354.355C833.828 363.252 818.171 367.999 802.154 367.997C791.52 367.997 780.991 365.902 771.167 361.833C761.343 357.763 752.417 351.799 744.898 344.28C737.379 336.76 731.415 327.834 727.347 318.01C723.279 308.186 721.186 297.657 721.187 287.024C721.187 282.871 721.506 278.742 722.135 274.672C713.657 268.849 704.889 263.426 695.859 258.426C658.269 237.612 616.889 224.541 574.163 219.988C531.437 215.434 488.232 219.489 447.099 231.913ZM319.489 348.564C319.489 363.809 315.185 378.728 307.094 391.613L323.693 420.326C307.59 439.476 285.501 452.638 260.995 457.683L244.582 429.298C237.31 429.844 229.959 429.408 222.73 427.971C207.024 424.848 192.597 417.138 181.273 405.816C169.949 394.495 162.237 380.069 159.112 364.365C155.986 348.661 157.588 332.382 163.715 317.588C169.841 302.794 180.217 290.149 193.531 281.251C206.845 272.354 222.498 267.604 238.511 267.601C249.145 267.6 259.674 269.693 269.499 273.761C279.324 277.829 288.251 283.793 295.77 291.311C303.29 298.829 309.255 307.755 313.325 317.578C317.394 327.402 319.489 337.931 319.489 348.564ZM260.998 457.685L400.599 699.132L442.692 772.036L484.794 699.132L537.279 608.237L589.621 698.805L631.691 771.687L673.783 698.794L744.391 576.462H859.708C861.079 564.36 861.767 552.19 861.769 540.01C861.771 527.83 861.08 515.66 859.697 503.558H702.288L694.971 516.229L631.67 625.857L579.327 535.278L537.235 462.374L495.208 535.289L442.692 626.184L323.7 420.328C307.596 439.478 285.506 452.64 260.998 457.685ZM861.77 540.003C861.768 552.183 861.08 564.353 859.709 576.455H937.128V503.551H859.709C861.088 515.653 861.776 527.823 861.77 540.003ZM937.154 503.558H938.332C939.411 515.563 940 527.721 940 540.01C940 760.902 760.967 940 540.027 940C319.088 940 140 760.924 140 540.031C139.942 500.879 145.66 461.933 156.968 424.449C175.493 444.394 200.696 456.845 227.794 459.44C221.851 485.163 218.231 515.061 218.231 540.01C218.231 717.668 362.259 861.764 540.038 861.764C705.462 861.764 841.629 736.99 859.731 576.462H937.154V503.558Z"
-              className="fill-foreground"
-            ></path>
-          </svg>
-        </a>,
-        logo,
-      )}
     </>
   );
 };
@@ -564,6 +509,43 @@ export const Playground = (input: {
     }),
     [query, setQuery, headers, setHeaders, response, view, setView, status, statusText, schema],
   );
+
+  // Convert panel extensions to GraphiQL plugins
+  const graphiqlPlugins = useMemo(() => {
+    const plugins: any[] = [
+      explorerPlugin({
+        showAttribution: false,
+      }),
+    ];
+
+    // Add panel extensions as GraphiQL plugins
+    const panelExtensions = (input.extensions?.filter((ext) => ext.type === 'panel') as PanelExtension[]) || [];
+
+    panelExtensions.forEach((ext) => {
+      plugins.push({
+        title: ext.title,
+        icon: () => (
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.5}
+            stroke="currentColor"
+            style={{ width: '1rem', height: '1rem' }}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
+            />
+          </svg>
+        ),
+        content: () => ext.render(extensionContext),
+      });
+    });
+
+    return plugins;
+  }, [input.extensions, extensionContext]);
 
   useEffect(() => {
     const responseToolbar = document.getElementById('response-toolbar');
@@ -670,35 +652,6 @@ export const Playground = (input: {
       const toggleClientValidation = document.createElement('div');
       toggleClientValidation.id = 'toggle-client-validation';
       toolbar.append(toggleClientValidation);
-
-      // Add extensions toolbar container
-      if (input.extensions && input.extensions.length > 0) {
-        const extensionsToolbar = document.createElement('div');
-        extensionsToolbar.id = 'extensions-toolbar';
-        extensionsToolbar.className = 'flex items-center gap-x-1';
-        toolbar.append(extensionsToolbar);
-      }
-    }
-
-    // Add header and footer extension containers
-    const container = document.getElementsByClassName('graphiql-container')[0] as any as HTMLDivElement;
-    if (container && input.extensions && input.extensions.length > 0) {
-      const hasHeader = input.extensions.some((ext) => ext.type === 'header');
-      const hasFooter = input.extensions.some((ext) => ext.type === 'footer');
-
-      if (hasHeader && !document.getElementById('playground-header-extensions')) {
-        const headerSection = document.createElement('div');
-        headerSection.id = 'playground-header-extensions';
-        headerSection.className = 'playground-header-section';
-        container.prepend(headerSection);
-      }
-
-      if (hasFooter && !document.getElementById('playground-footer-extensions')) {
-        const footerSection = document.createElement('div');
-        footerSection.id = 'playground-footer-extensions';
-        footerSection.className = 'playground-footer-section';
-        container.append(footerSection);
-      }
     }
 
     setIsMounted(true);
@@ -909,11 +862,7 @@ export const Playground = (input: {
 }`}
             onEditHeaders={setHeaders}
             onTabChange={setTabsState}
-            plugins={[
-              explorerPlugin({
-                showAttribution: false,
-              }),
-            ]}
+            plugins={graphiqlPlugins}
             forcedTheme={input.theme}
           />
           {isMounted && <PlaygroundPortal extensions={input.extensions} context={extensionContext} />}

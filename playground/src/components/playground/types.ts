@@ -90,32 +90,7 @@ export type PlaygroundExtensionHooks = {
   onSchemaChange?: (schema: any, context: PlaygroundExtensionContext) => void;
 };
 
-// Toolbar button extension
-export type ToolbarButtonExtension = {
-  type: 'toolbar-button';
-  id: string;
-  position?: 'left' | 'right'; // Position in toolbar (default: 'right')
-  render: (context: PlaygroundExtensionContext) => ReactNode;
-  hooks?: PlaygroundExtensionHooks;
-};
-
-// Header extension (adds content above the playground)
-export type HeaderExtension = {
-  type: 'header';
-  id: string;
-  render: (context: PlaygroundExtensionContext) => ReactNode;
-  hooks?: PlaygroundExtensionHooks;
-};
-
-// Footer extension (adds content below the playground)
-export type FooterExtension = {
-  type: 'footer';
-  id: string;
-  render: (context: PlaygroundExtensionContext) => ReactNode;
-  hooks?: PlaygroundExtensionHooks;
-};
-
-// Panel extension (adds a new tab in the editor tools)
+// Panel extension (adds a new tab in the sidebar via GraphiQL plugins)
 export type PanelExtension = {
   type: 'panel';
   id: string;
@@ -124,22 +99,7 @@ export type PanelExtension = {
   hooks?: PlaygroundExtensionHooks;
 };
 
-// Response view extension (adds a new view option for responses)
-export type ResponseViewExtension = {
-  type: 'response-view';
-  id: string;
-  label: string;
-  icon?: ReactNode;
-  render: (context: PlaygroundExtensionContext) => ReactNode;
-  hooks?: PlaygroundExtensionHooks;
-};
-
-export type PlaygroundExtension =
-  | ToolbarButtonExtension
-  | HeaderExtension
-  | FooterExtension
-  | PanelExtension
-  | ResponseViewExtension;
+export type PlaygroundExtension = PanelExtension;
 
 export type PlaygroundScript = {
   id: string;
