@@ -1,50 +1,42 @@
-import { TraceContext, TraceView } from '@/components/playground/trace-view';
-import { explorerPlugin } from '@graphiql/plugin-explorer';
-import { createGraphiQLFetcher } from '@graphiql/toolkit';
-import { GraphiQL } from 'graphiql';
-import {
-  GraphQLSchema,
-  Kind,
-  OperationTypeNode,
-  buildClientSchema,
-  getIntrospectionQuery,
-  parse,
-  validate,
-} from 'graphql';
-import { useContext, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { FaNetworkWired } from 'react-icons/fa';
-import { PiBracketsCurly } from 'react-icons/pi';
-import { TbDevicesCheck } from 'react-icons/tb';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { LuLayoutDashboard } from 'react-icons/lu';
-import { sentenceCase } from 'change-case';
-import { PlanView } from './plan-view';
-import {
-  PlaygroundContext,
-  QueryPlan,
-  TabsState,
-  PlaygroundView,
-  PlaygroundExtension,
-  PlaygroundExtensionContext,
-  PanelExtension,
-} from './types';
-import { useDebounce } from 'use-debounce';
-import { useLocalStorage } from '@/lib/use-local-storage';
 import {
   attachPlaygroundAPI,
   CustomScripts,
   detachPlaygroundAPI,
   PreFlightScript,
 } from '@/components/playground/custom-scripts';
+import { TraceContext, TraceView } from '@/components/playground/trace-view';
 import { Badge } from '@/components/ui/badge';
-import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import 'graphiql/graphiql.css';
-import '@graphiql/plugin-explorer/dist/style.css';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useLocalStorage } from '@/lib/use-local-storage';
+import { cn } from '@/lib/utils';
 import '@/theme.css';
+import { explorerPlugin } from '@graphiql/plugin-explorer';
+import '@graphiql/plugin-explorer/dist/style.css';
+import { createGraphiQLFetcher } from '@graphiql/toolkit';
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { sentenceCase } from 'change-case';
+import { GraphiQL } from 'graphiql';
+import 'graphiql/graphiql.css';
+import { buildClientSchema, getIntrospectionQuery, GraphQLSchema, parse, validate } from 'graphql';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { FaNetworkWired } from 'react-icons/fa';
+import { LuLayoutDashboard, LuSparkles } from 'react-icons/lu';
+import { PiBracketsCurly } from 'react-icons/pi';
+import { TbDevicesCheck } from 'react-icons/tb';
+import { useDebounce } from 'use-debounce';
+import { PlanView } from './plan-view';
+import {
+  PanelExtension,
+  PlaygroundContext,
+  PlaygroundExtension,
+  PlaygroundExtensionContext,
+  PlaygroundView,
+  QueryPlan,
+  TabsState,
+} from './types';
 
 const validateHeaders = (headers: Record<string, string>) => {
   for (const headersKey in headers) {
@@ -524,22 +516,7 @@ export const Playground = (input: {
     panelExtensions.forEach((ext) => {
       plugins.push({
         title: ext.title,
-        icon: () => (
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={1.5}
-            stroke="currentColor"
-            style={{ width: '1rem', height: '1rem' }}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
-            />
-          </svg>
-        ),
+        icon: () => <LuSparkles />,
         content: () => ext.render(extensionContext),
       });
     });
@@ -666,7 +643,10 @@ export const Playground = (input: {
         }),
       }),
       method: 'POST',
-      headers: JSON.parse(headers),
+      headers: {
+        'Content-Type': 'application/json',
+        ...JSON.parse(headers),
+      },
     });
     setSchema(buildClientSchema((await res.json()).data));
   };
