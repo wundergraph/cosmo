@@ -137,6 +137,7 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
+    "OmitOperationPrefix": false,
     "RouterURL": ""
   },
   "DemoMode": false,
