@@ -161,6 +161,71 @@ func TestMCP(t *testing.T) {
 				})
 			})
 
+			t.Run("List user Operations / Tool names omit prefix when OmitOperationPrefix is enabled", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCP: config.MCPConfiguration{
+						Enabled:             true,
+						OmitOperationPrefix: true,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+
+					toolsRequest := mcp.ListToolsRequest{}
+					resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+					require.NoError(t, err)
+					require.NotNil(t, resp)
+
+					var foundMyEmployees, foundUpdateMood bool
+					var foundPrefixedMyEmployees, foundPrefixedUpdateMood bool
+
+					for _, tool := range resp.Tools {
+						switch tool.Name {
+						case "my_employees":
+							foundMyEmployees = true
+						case "update_mood":
+							foundUpdateMood = true
+						case "execute_operation_my_employees":
+							foundPrefixedMyEmployees = true
+						case "execute_operation_update_mood":
+							foundPrefixedUpdateMood = true
+						}
+					}
+
+					require.True(t, foundMyEmployees, "Tool 'my_employees' should be registered when OmitOperationPrefix is true")
+					require.True(t, foundUpdateMood, "Tool 'update_mood' should be registered when OmitOperationPrefix is true")
+
+					require.False(t, foundPrefixedMyEmployees, "Tool 'execute_operation_my_employees' should NOT be registered when OmitOperationPrefix is true")
+					require.False(t, foundPrefixedUpdateMood, "Tool 'execute_operation_update_mood' should NOT be registered when OmitOperationPrefix is true")
+				})
+			})
+
+			t.Run("Execute operation using short tool name when OmitOperationPrefix is enabled", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCP: config.MCPConfiguration{
+						Enabled:             true,
+						OmitOperationPrefix: true,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+
+					req := mcp.CallToolRequest{}
+					req.Params.Name = "my_employees"
+					req.Params.Arguments = map[string]interface{}{
+						"criteria": map[string]interface{}{},
+					}
+
+					resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+					assert.NoError(t, err)
+					assert.NotNil(t, resp)
+
+					assert.Len(t, resp.Content, 1)
+
+					content, ok := resp.Content[0].(mcp.TextContent)
+					assert.True(t, ok)
+
+					assert.Equal(t, content.Type, "text")
+					assert.Contains(t, content.Text, "findEmployees")
+				})
+			})
+
 			t.Run("List user Operations / Static operations of type mutation aren't exposed when excludeMutations is set", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
 					MCP: config.MCPConfiguration{
