@@ -1,42 +1,42 @@
+import { TraceContext, TraceView } from '@/components/playground/trace-view';
+import { explorerPlugin } from '@graphiql/plugin-explorer';
+import { createGraphiQLFetcher } from '@graphiql/toolkit';
+import { GraphiQL } from 'graphiql';
+import {
+  GraphQLSchema,
+  Kind,
+  OperationTypeNode,
+  buildClientSchema,
+  getIntrospectionQuery,
+  parse,
+  validate,
+} from 'graphql';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { FaNetworkWired } from 'react-icons/fa';
+import { PiBracketsCurly } from 'react-icons/pi';
+import { TbDevicesCheck } from 'react-icons/tb';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { LuLayoutDashboard, LuSparkles } from 'react-icons/lu';
+import { sentenceCase } from 'change-case';
+import { PlanView } from './plan-view';
+import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView, PlaygroundExtension, PlaygroundExtensionContext, PanelExtension } from './types';
+import { useDebounce } from 'use-debounce';
+import { useLocalStorage } from '@/lib/use-local-storage';
 import {
   attachPlaygroundAPI,
   CustomScripts,
   detachPlaygroundAPI,
   PreFlightScript,
 } from '@/components/playground/custom-scripts';
-import { TraceContext, TraceView } from '@/components/playground/trace-view';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useLocalStorage } from '@/lib/use-local-storage';
-import { cn } from '@/lib/utils';
-import '@/theme.css';
-import { explorerPlugin } from '@graphiql/plugin-explorer';
-import '@graphiql/plugin-explorer/dist/style.css';
-import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
-import { sentenceCase } from 'change-case';
-import { GraphiQL } from 'graphiql';
 import 'graphiql/graphiql.css';
-import { buildClientSchema, getIntrospectionQuery, GraphQLSchema, parse, validate } from 'graphql';
-import { useContext, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { FaNetworkWired } from 'react-icons/fa';
-import { LuLayoutDashboard, LuSparkles } from 'react-icons/lu';
-import { PiBracketsCurly } from 'react-icons/pi';
-import { TbDevicesCheck } from 'react-icons/tb';
-import { useDebounce } from 'use-debounce';
-import { PlanView } from './plan-view';
-import {
-  PanelExtension,
-  PlaygroundContext,
-  PlaygroundExtension,
-  PlaygroundExtensionContext,
-  PlaygroundView,
-  QueryPlan,
-  TabsState,
-} from './types';
+import '@graphiql/plugin-explorer/dist/style.css';
+import '@/theme.css';
 
 const validateHeaders = (headers: Record<string, string>) => {
   for (const headersKey in headers) {
