@@ -27,7 +27,6 @@ type CLIOptions = {
   customScalarMapping?: string;
   customScalarMappingFile?: string;
   maxDepth?: string;
-  prefixOperationType?: boolean;
 } & ProtoOptions;
 
 export default (opts: BaseCommandOptions) => {
@@ -71,11 +70,6 @@ export default (opts: BaseCommandOptions) => {
     '--max-depth <number>',
     'Maximum recursion depth for processing nested selections and fragments (default: 50). ' +
       'Increase this if you have deeply nested queries or decrease to catch potential circular references earlier.',
-  );
-  command.option(
-    '--prefix-operation-type',
-    'Prefix RPC method names with the operation type (Query/Mutation). Only applies with --with-operations. ' +
-      'Subscriptions are not prefixed.',
   );
   command.action(generateCommandAction);
 
@@ -163,11 +157,6 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       maxDepth = parsed;
     }
 
-    // Validate prefix-operation-type usage
-    if (options.prefixOperationType && !options.withOperations) {
-      spinner.warn('--prefix-operation-type flag is ignored when not using --with-operations');
-    }
-
     const languageOptions: ProtoOptions = {
       goPackage: options.goPackage,
       javaPackage: options.javaPackage,
@@ -192,7 +181,6 @@ async function generateCommandAction(name: string, options: CLIOptions) {
       operationsDir: options.withOperations,
       customScalarMappings,
       maxDepth,
-      prefixOperationType: options.prefixOperationType,
     });
 
     // Write the generated files
@@ -244,7 +232,6 @@ type GenerationOptions = {
   operationsDir?: string;
   customScalarMappings?: Record<string, string>;
   maxDepth?: number;
-  prefixOperationType?: boolean;
 };
 
 /**
@@ -335,7 +322,6 @@ function mergeProtoRoots(roots: protobuf.Root[], serviceName: string): protobuf.
  * @param lockFile - Path to the proto lock file
  * @param customScalarMappings - Custom scalar type mappings
  * @param maxDepth - Maximum recursion depth
- * @param prefixOperationType - Whether to prefix operation types
  * @returns Generation result with proto content and lock data
  * @note All Query operations are automatically marked with NO_SIDE_EFFECTS idempotency level
  */
@@ -349,7 +335,6 @@ async function generateFromOperations(
   lockFile: string,
   customScalarMappings?: Record<string, string>,
   maxDepth?: number,
-  prefixOperationType?: boolean,
 ): Promise<GenerationResult> {
   spinner.text = 'Reading operation files...';
   const operationFiles = await readOperationFiles(operationsPath);
@@ -359,8 +344,8 @@ async function generateFromOperations(
   // Load lock data for field number stability
   let currentLockData = await fetchLockData(lockFile);
 
-  // Process each operation file separately to maintain reversibility
-  // Collect the AST roots instead of proto strings
+  // Process each operation file separately, updating lock data sequentially for field number stability.
+  // Collect AST roots for merging rather than proto strings.
   const roots: protobuf.Root[] = [];
 
   for (const { filename, content } of operationFiles) {
@@ -376,7 +361,6 @@ async function generateFromOperations(
         lockData: currentLockData,
         customScalarMappings,
         maxDepth,
-        prefixOperationType,
       });
 
       // Keep the AST root instead of the string
@@ -495,7 +479,6 @@ async function generateProtoAndMapping({
   operationsDir,
   customScalarMappings,
   maxDepth,
-  prefixOperationType,
 }: GenerationOptions): Promise<GenerationResult> {
   const schema = await readFile(schemaFile, 'utf8');
   const serviceName = upperFirst(camelCase(name));
@@ -518,7 +501,6 @@ async function generateProtoAndMapping({
       lockFile,
       customScalarMappings,
       maxDepth,
-      prefixOperationType,
     );
   } else {
     return generateFromSDL(schema, serviceName, spinner, packageName, languageOptions, lockFile);
