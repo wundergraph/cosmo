@@ -97,9 +97,32 @@ export type PanelExtension = {
   title: string;
   render: (context: PlaygroundExtensionContext) => ReactNode;
   hooks?: PlaygroundExtensionHooks;
+  /** Whether this panel should be visible by default when the playground loads */
+  visibleByDefault?: boolean;
 };
 
 export type PlaygroundExtension = PanelExtension;
+
+/**
+ * Playground configuration types
+ */
+
+export type GraphiQLScripts = {
+  transformHeaders?: (headers: Record<string, string>) => Record<string, string>;
+};
+
+export type PlaygroundProps = {
+  /** The GraphQL endpoint URL. If not provided, it will be inferred from the current URL. */
+  routingUrl?: string;
+  /** Whether to hide the WunderGraph logo in the sidebar */
+  hideLogo?: boolean;
+  /** Force a specific theme (light or dark) */
+  theme?: 'light' | 'dark' | undefined;
+  /** Custom scripts for header transformation */
+  scripts?: GraphiQLScripts;
+  /** Extensions to enhance playground functionality */
+  extensions?: PlaygroundExtension[];
+};
 
 export type PlaygroundScript = {
   id: string;

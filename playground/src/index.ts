@@ -4,4 +4,6 @@ export type {
   PlaygroundExtensionContext,
   PanelExtension,
   PlaygroundExtensionHooks,
+  PlaygroundProps,
+  GraphiQLScripts,
 } from '@/components/playground/types';

@@ -23,7 +23,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { LuLayoutDashboard, LuSparkles } from 'react-icons/lu';
 import { sentenceCase } from 'change-case';
 import { PlanView } from './plan-view';
-import { PlaygroundContext, QueryPlan, TabsState, PlaygroundView, PlaygroundExtension, PlaygroundExtensionContext, PanelExtension } from './types';
+import {
+  PlaygroundContext,
+  QueryPlan,
+  TabsState,
+  PlaygroundView,
+  PlaygroundExtension,
+  PlaygroundExtensionContext,
+  PanelExtension,
+  GraphiQLScripts,
+  PlaygroundProps,
+} from './types';
 import { useDebounce } from 'use-debounce';
 import { useLocalStorage } from '@/lib/use-local-storage';
 import {
@@ -141,10 +151,6 @@ const executePostScripts = async (graphId: string, requestBody: any, responseBod
     await executeScript(script.content, graphId);
     detachPlaygroundAPI();
   }
-};
-
-type GraphiQLScripts = {
-  transformHeaders?: (headers: Record<string, string>) => Record<string, string>;
 };
 
 const graphiQLFetch = async (
@@ -428,13 +434,7 @@ function constructGraphQLURL(location: string, graphqlURL: string, playgroundPat
   return baseURL + graphqlURL;
 }
 
-export const Playground = (input: {
-  routingUrl?: string;
-  hideLogo?: boolean;
-  theme?: 'light' | 'dark' | undefined;
-  scripts?: GraphiQLScripts;
-  extensions?: PlaygroundExtension[];
-}) => {
+export const Playground = (input: PlaygroundProps) => {
   const url =
     input.routingUrl ||
     import.meta.env.VITE_ROUTING_URL ||
@@ -523,6 +523,13 @@ export const Playground = (input: {
 
     return plugins;
   }, [input.extensions, extensionContext]);
+
+  // Find the plugin that should be visible by default
+  const defaultVisiblePlugin = useMemo(() => {
+    const panelExtensions = (input.extensions?.filter((ext) => ext.type === 'panel') as PanelExtension[]) || [];
+    const defaultExt = panelExtensions.find((ext) => ext.visibleByDefault);
+    return defaultExt ? defaultExt.title : undefined;
+  }, [input.extensions]);
 
   useEffect(() => {
     const responseToolbar = document.getElementById('response-toolbar');
@@ -843,6 +850,7 @@ export const Playground = (input: {
             onEditHeaders={setHeaders}
             onTabChange={setTabsState}
             plugins={graphiqlPlugins}
+            visiblePlugin={defaultVisiblePlugin}
             forcedTheme={input.theme}
           />
           {isMounted && <PlaygroundPortal extensions={input.extensions} context={extensionContext} />}
