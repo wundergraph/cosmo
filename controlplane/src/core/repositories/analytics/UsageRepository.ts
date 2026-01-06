@@ -186,7 +186,7 @@ export class UsageRepository {
     params.isInput = input.isInput;
     whereSql += ` AND IsInput = {isInput:Boolean}`;
 
-    whereSql += ` AND IsIndirectFieldUsage = false`;
+    whereSql += ` AND IsIndirectFieldUsage = false AND IsNull = false`;
 
     const [requestSeries, clients, meta] = await Promise.all([
       this.getUsageRequestSeries(whereSql, timeFilters, params),
@@ -255,6 +255,7 @@ export class UsageRepository {
                 Timestamp >= startDate AND Timestamp <= endDate
                 AND OrganizationID = {organizationId:String}
                 AND FederatedGraphID = {federatedGraphId:String}
+                AND IsNull = false
             GROUP BY
                 FieldName, TypeName
         )
@@ -343,6 +344,7 @@ export class UsageRepository {
                 Timestamp >= startDate AND Timestamp <= endDate
                 AND OrganizationID = {organizationId:String}
                 AND FederatedGraphID = {federatedGraphId:String}
+                AND IsNull = false
             GROUP BY
                 FieldName, TypeName
         )
@@ -441,6 +443,7 @@ export class UsageRepository {
         AND FederatedGraphID = {federatedGraphId:String}
         AND OperationHash = {operationHash:String}
         AND hasAny(TypeNames, df.TypeNames) = 1
+        AND IsNull = false
         ${operationName === undefined ? '' : 'AND OperationName = {operationName:String}'}
     `;
 
