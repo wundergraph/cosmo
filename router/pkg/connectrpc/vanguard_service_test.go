@@ -247,18 +247,19 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 
 		// Create handler with mock server
 		protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
-		opRegistry := NewOperationRegistry(nil)
-
-		// Manually add a test operation to the registry using service-scoped approach
+		
+		// Build operations map with service-scoped approach before creating registry
 		serviceName := "employee.v1.EmployeeService"
-		if opRegistry.operations[serviceName] == nil {
-			opRegistry.operations[serviceName] = make(map[string]*schemaloader.Operation)
+		operations := map[string]map[string]*schemaloader.Operation{
+			serviceName: {
+				"GetEmployeeById": &schemaloader.Operation{
+					Name:            "GetEmployeeById",
+					OperationType:   "query",
+					OperationString: "query GetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
+				},
+			},
 		}
-		opRegistry.operations[serviceName]["GetEmployeeById"] = &schemaloader.Operation{
-			Name:            "GetEmployeeById",
-			OperationType:   "query",
-			OperationString: "query GetEmployeeById($id: Int!) { employee(id: $id) { id name } }",
-		}
+		opRegistry := NewOperationRegistry(operations)
 
 		handler, err := NewRPCHandler(HandlerConfig{
 			GraphQLEndpoint:   graphqlServer.URL,
