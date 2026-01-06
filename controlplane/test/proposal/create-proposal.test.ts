@@ -878,22 +878,7 @@ describe('Create proposal tests', () => {
     // Try to enable proposals for the namespace
     const enableResponse = await enableProposalsForNamespace(client);
     expect(enableResponse.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
-    expect(enableResponse.response?.details).toContain('Upgrade to a scale plan to enable proposals');
-
-    await server.close();
-  });
-
-  test('should fail to enable proposals with launch billing plan', async () => {
-    const { client, server } = await SetupTest({
-      dbname,
-      chClient,
-      setupBilling: { plan: 'launch@1' },
-    });
-
-    // Try to enable proposals for the namespace
-    const enableResponse = await enableProposalsForNamespace(client);
-    expect(enableResponse.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
-    expect(enableResponse.response?.details).toContain('Upgrade to a scale plan to enable proposals');
+    expect(enableResponse.response?.details).toContain('Upgrade to a launch plan to enable proposals');
 
     await server.close();
   });
