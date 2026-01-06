@@ -3,12 +3,14 @@ package integration
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"net"
 	"net/http"
 	"sync/atomic"
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	employeev1 "github.com/wundergraph/cosmo/router-tests/testdata/connectrpc/client/employee.v1"
@@ -32,6 +34,13 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 
 	baseURL := "http://" + ts.Addr().String()
 
+	g := goldie.New(
+		t,
+		goldie.WithFixtureDir("testdata/connectrpc"),
+		goldie.WithNameSuffix(".json"),
+		goldie.WithDiffEngine(goldie.ClassicDiff),
+	)
+
 	t.Run("Connect protocol", func(t *testing.T) {
 		client := employeev1connect.NewEmployeeServiceClient(
 			http.DefaultClient,
@@ -47,13 +56,9 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp.Msg.Employee)
 
-		assert.Equal(t, int32(1), resp.Msg.Employee.Id)
-		assert.Equal(t, "employee-1", resp.Msg.Employee.Tag)
-		assert.Equal(t, "John", resp.Msg.Employee.Details.Forename)
-		assert.Equal(t, "Doe", resp.Msg.Employee.Details.Surname)
-		assert.Len(t, resp.Msg.Employee.Details.Pets, 1)
-		assert.Equal(t, "Fluffy", resp.Msg.Employee.Details.Pets[0].Name)
-		assert.Equal(t, "San Francisco", resp.Msg.Employee.Details.Location.Key.Name)
+		employeeJSON, err := json.MarshalIndent(resp.Msg.Employee, "", "  ")
+		require.NoError(t, err)
+		g.Assert(t, "employee_response", employeeJSON)
 	})
 
 	t.Run("gRPC protocol", func(t *testing.T) {
@@ -84,8 +89,9 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp.Msg.Employee)
 
-		assert.Equal(t, int32(1), resp.Msg.Employee.Id)
-		assert.Equal(t, "John", resp.Msg.Employee.Details.Forename)
+		employeeJSON, err := json.MarshalIndent(resp.Msg.Employee, "", "  ")
+		require.NoError(t, err)
+		g.Assert(t, "employee_response", employeeJSON)
 	})
 
 	t.Run("gRPC-Web protocol", func(t *testing.T) {
@@ -103,14 +109,22 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp.Msg.Employee)
 
-		assert.Equal(t, int32(1), resp.Msg.Employee.Id)
-		assert.Equal(t, "John", resp.Msg.Employee.Details.Forename)
+		employeeJSON, err := json.MarshalIndent(resp.Msg.Employee, "", "  ")
+		require.NoError(t, err)
+		g.Assert(t, "employee_response", employeeJSON)
 	})
 }
 
 // TestConnectRPC_ClientErrorHandling tests error scenarios with generated client
 func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 	t.Parallel()
+
+	g := goldie.New(
+		t,
+		goldie.WithFixtureDir("testdata/connectrpc"),
+		goldie.WithNameSuffix(".json"),
+		goldie.WithDiffEngine(goldie.ClassicDiff),
+	)
 
 	t.Run("GraphQL error with no data returns CRITICAL", func(t *testing.T) {
 		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
@@ -137,6 +151,14 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		// GraphQL errors use CodeUnknown (not CodeInternal which implies server bugs)
 		assert.Equal(t, connect.CodeUnknown, connectErr.Code())
 		assert.Contains(t, connectErr.Message(), "Employee not found")
+
+		// Capture error structure for golden test
+		errorJSON, err := json.MarshalIndent(map[string]interface{}{
+			"code":    connectErr.Code().String(),
+			"message": connectErr.Message(),
+		}, "", "  ")
+		require.NoError(t, err)
+		g.Assert(t, "error_no_data", errorJSON)
 	})
 
 	t.Run("GraphQL error with partial data returns error", func(t *testing.T) {
@@ -145,7 +167,7 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		handler := func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{
+			_, _ = w.Write([]byte(`{
 				"data": {
 					"employee": {
 						"id": 1,
@@ -184,6 +206,14 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		require.ErrorAs(t, err, &connectErr)
 		assert.Equal(t, connect.CodeUnknown, connectErr.Code())
 		assert.Contains(t, connectErr.Message(), "GraphQL partial success with errors")
+
+		// Capture error structure for golden test
+		errorJSON, err := json.MarshalIndent(map[string]interface{}{
+			"code":    connectErr.Code().String(),
+			"message": connectErr.Message(),
+		}, "", "  ")
+		require.NoError(t, err)
+		g.Assert(t, "error_partial_data", errorJSON)
 	})
 
 	t.Run("HTTP 404 maps to CodeNotFound", func(t *testing.T) {
@@ -209,6 +239,14 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		var connectErr *connect.Error
 		require.ErrorAs(t, err, &connectErr)
 		assert.Equal(t, connect.CodeNotFound, connectErr.Code())
+
+		// Capture error structure for golden test
+		errorJSON, err := json.MarshalIndent(map[string]interface{}{
+			"code":    connectErr.Code().String(),
+			"message": connectErr.Message(),
+		}, "", "  ")
+		require.NoError(t, err)
+		g.Assert(t, "error_http_404", errorJSON)
 	})
 
 	t.Run("HTTP 500 maps to CodeInternal", func(t *testing.T) {
@@ -234,6 +272,14 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		var connectErr *connect.Error
 		require.ErrorAs(t, err, &connectErr)
 		assert.Equal(t, connect.CodeInternal, connectErr.Code())
+
+		// Capture error structure for golden test
+		errorJSON, err := json.MarshalIndent(map[string]interface{}{
+			"code":    connectErr.Code().String(),
+			"message": connectErr.Message(),
+		}, "", "  ")
+		require.NoError(t, err)
+		g.Assert(t, "error_http_500", errorJSON)
 	})
 }
 
@@ -241,12 +287,19 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 func TestConnectRPC_ClientConcurrency(t *testing.T) {
 	t.Parallel()
 
+	g := goldie.New(
+		t,
+		goldie.WithFixtureDir("testdata/connectrpc"),
+		goldie.WithNameSuffix(".json"),
+		goldie.WithDiffEngine(goldie.ClassicDiff),
+	)
+
 	var requestCount int64
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt64(&requestCount, 1)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"data": {
 				"employee": {
 					"id": 1,
@@ -275,13 +328,19 @@ func TestConnectRPC_ClientConcurrency(t *testing.T) {
 	// Make 10 concurrent requests
 	const numRequests = 10
 	results := make(chan error, numRequests)
+	type responseData struct {
+		resp *connect.Response[employeev1.GetEmployeeByIdResponse]
+		err  error
+	}
+	responses := make(chan responseData, numRequests)
 
 	for i := 0; i < numRequests; i++ {
 		go func() {
 			req := connect.NewRequest(&employeev1.GetEmployeeByIdRequest{
 				EmployeeId: 1,
 			})
-			_, err := client.GetEmployeeById(context.Background(), req)
+			resp, err := client.GetEmployeeById(context.Background(), req)
+			responses <- responseData{resp: resp, err: err}
 			results <- err
 		}()
 	}
@@ -293,4 +352,18 @@ func TestConnectRPC_ClientConcurrency(t *testing.T) {
 	}
 
 	assert.Equal(t, int64(numRequests), atomic.LoadInt64(&requestCount), "should have made all requests")
+
+	// Verify response consistency by checking one of the responses
+	select {
+	case respData := <-responses:
+		if respData.err == nil && respData.resp != nil && respData.resp.Msg != nil && respData.resp.Msg.Employee != nil {
+			employeeJSON, err := json.MarshalIndent(respData.resp.Msg.Employee, "", "  ")
+			require.NoError(t, err)
+			g.Assert(t, "concurrent_response", employeeJSON)
+		} else {
+			t.Fatal("invalid response received")
+		}
+	default:
+		t.Fatal("no responses received")
+	}
 }

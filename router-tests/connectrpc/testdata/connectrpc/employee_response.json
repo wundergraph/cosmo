@@ -1,0 +1,18 @@
+{
+  "id": 1,
+  "tag": "employee-1",
+  "details": {
+    "forename": "John",
+    "surname": "Doe",
+    "pets": [
+      {
+        "name": "Fluffy"
+      }
+    ],
+    "location": {
+      "key": {
+        "name": "San Francisco"
+      }
+    }
+  }
+}

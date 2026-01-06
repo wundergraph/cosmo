@@ -27,40 +27,39 @@ func NewMockGraphQLServer(handler http.HandlerFunc) *MockGraphQLServer {
 	m := &MockGraphQLServer{
 		handler: handler,
 	}
-	
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/graphql", func(w http.ResponseWriter, r *http.Request) {
 		// Log the incoming request for debugging
 		body, _ := io.ReadAll(r.Body)
-		r.Body.Close()
+		_ = r.Body.Close()
 		r.Body = io.NopCloser(bytes.NewBuffer(body))
-		
+
 		if m.handler != nil {
 			m.handler(w, r)
 		}
 	})
-	
+
 	// Also handle root path for simpler tests
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if m.handler != nil {
 			m.handler(w, r)
 		}
 	})
-	
+
 	m.server = &http.Server{
 		Handler: mux,
 		Addr:    "127.0.0.1:0",
 	}
-	
+
 	listener, err := net.Listen("tcp", m.server.Addr)
 	if err != nil {
 		panic(err)
 	}
-	
+
 	m.URL = "http://" + listener.Addr().String()
-	
-	go m.server.Serve(listener)
-	
+	go m.server.Serve(listener) //nolint:errcheck // test server
+
 	return m
 }
 
@@ -69,7 +68,7 @@ func (m *MockGraphQLServer) Close() {
 	if m.server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		m.server.Shutdown(ctx)
+		_ = m.server.Shutdown(ctx)
 	}
 }
 
@@ -84,16 +83,16 @@ type ConnectRPCServerOptions struct {
 
 // TestConnectRPCServer wraps a ConnectRPC server for testing
 type TestConnectRPCServer struct {
-	Server          *connectrpc.Server
-	GraphQLServer   *MockGraphQLServer
-	t               *testing.T
-	cleanupDone     bool
+	Server        *connectrpc.Server
+	GraphQLServer *MockGraphQLServer
+	t             *testing.T
+	cleanupDone   bool
 }
 
 // NewTestConnectRPCServer creates a new test ConnectRPC server with automatic cleanup
 func NewTestConnectRPCServer(t *testing.T, opts ConnectRPCServerOptions) *TestConnectRPCServer {
 	t.Helper()
-	
+
 	// Set defaults
 	if opts.ServicesDir == "" {
 		opts.ServicesDir = "../testdata/connectrpc/services"
@@ -104,7 +103,7 @@ func NewTestConnectRPCServer(t *testing.T, opts ConnectRPCServerOptions) *TestCo
 	if opts.Logger == nil {
 		opts.Logger = zap.NewNop()
 	}
-	
+
 	// Create mock GraphQL server if endpoint not provided
 	var graphqlServer *MockGraphQLServer
 	if opts.GraphQLEndpoint == "" {
@@ -114,13 +113,13 @@ func NewTestConnectRPCServer(t *testing.T, opts ConnectRPCServerOptions) *TestCo
 			handler = func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"data":{}}`))
+				_, _ = w.Write([]byte(`{"data":{}}`))
 			}
 		}
 		graphqlServer = NewMockGraphQLServer(handler)
 		opts.GraphQLEndpoint = graphqlServer.URL + "/graphql"
 	}
-	
+
 	server, err := connectrpc.NewServer(connectrpc.ServerConfig{
 		ServicesDir:     opts.ServicesDir,
 		GraphQLEndpoint: opts.GraphQLEndpoint,
@@ -128,18 +127,18 @@ func NewTestConnectRPCServer(t *testing.T, opts ConnectRPCServerOptions) *TestCo
 		Logger:          opts.Logger,
 	})
 	require.NoError(t, err)
-	
+
 	ts := &TestConnectRPCServer{
 		Server:        server,
 		GraphQLServer: graphqlServer,
 		t:             t,
 	}
-	
+
 	// Register cleanup
 	t.Cleanup(func() {
 		ts.Close()
 	})
-	
+
 	return ts
 }
 
@@ -159,13 +158,13 @@ func (ts *TestConnectRPCServer) Close() {
 		return
 	}
 	ts.cleanupDone = true
-	
+
 	if ts.Server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		ts.Server.Stop(ctx)
+		_ = ts.Server.Stop(ctx)
 	}
-	
+
 	if ts.GraphQLServer != nil {
 		ts.GraphQLServer.Close()
 	}
@@ -214,7 +213,7 @@ func SimpleGraphQLHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"data":{}}`))
+		_, _ = w.Write([]byte(`{"data":{}}`))
 	}
 }
 
@@ -223,7 +222,7 @@ func EmployeeGraphQLHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(DefaultGraphQLResponse()))
+		_, _ = w.Write([]byte(DefaultGraphQLResponse()))
 	}
 }
 
@@ -232,7 +231,7 @@ func ErrorGraphQLHandler(message string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(fmt.Sprintf(`{"errors": [{"message": "%s"}]}`, message)))
+		_, _ = fmt.Fprintf(w, `{"errors": [{"message": "%s"}]}`, message)
 	}
 }
 
@@ -240,6 +239,6 @@ func ErrorGraphQLHandler(message string) http.HandlerFunc {
 func HTTPErrorHandler(statusCode int, message string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(statusCode)
-		w.Write([]byte(message))
+		_, _ = w.Write([]byte(message))
 	}
 }
