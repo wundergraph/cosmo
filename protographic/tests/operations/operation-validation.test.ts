@@ -178,8 +178,8 @@ describe('Operation Validation', () => {
     });
   });
 
-  describe('Reversibility Considerations', () => {
-    test('should allow single operation for proto-to-graphql reversibility', () => {
+  describe('Proto Schema Consistency', () => {
+    test('should allow single operation for deterministic proto schema generation', () => {
       const operation = `
         query GetUser {
           user {
@@ -195,6 +195,168 @@ describe('Operation Validation', () => {
       expect(result.proto).toContain('rpc GetUser');
       expect(result.proto).toContain('message GetUserRequest');
       expect(result.proto).toContain('message GetUserResponse');
+    });
+  });
+
+  describe('Operation Name PascalCase Validation', () => {
+    test('should accept PascalCase operation names', () => {
+      const operation = `
+        query GetUser {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).not.toThrow();
+    });
+
+    test('should accept PascalCase with numbers', () => {
+      const operation = `
+        query GetUser123 {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).not.toThrow();
+    });
+
+    test('should reject camelCase operation names', () => {
+      const operation = `
+        query getUser {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).toThrow(/Operation name "getUser" must start with an uppercase letter/);
+    });
+
+    test('should reject snake_case operation names', () => {
+      const operation = `
+        query get_user {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).toThrow(/Operation name "get_user" must start with an uppercase letter/);
+    });
+
+    test('should accept all-UPPERCASE operation names', () => {
+      const operation = `
+        query GETUSER {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).not.toThrow();
+    });
+
+    test('should accept operation names with only uppercase and numbers', () => {
+      const operation = `
+        query GET123USER {
+          user {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).not.toThrow();
+    });
+
+    test('should provide helpful error message for camelCase', () => {
+      const operation = `
+        query getUserById {
+          user {
+            id
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, schema);
+      }).toThrow(/must start with an uppercase letter.*Examples: GetUser, CreatePost, HRService, GETUSER/);
+    });
+
+    test('should validate mutation operation names', () => {
+      const mutationSchema = `
+        type Mutation {
+          createUser(name: String!): User
+        }
+        
+        type User {
+          id: ID!
+          name: String
+        }
+      `;
+
+      const operation = `
+        mutation createUser($name: String!) {
+          createUser(name: $name) {
+            id
+            name
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, mutationSchema);
+      }).toThrow(/Operation name "createUser" must start with an uppercase letter/);
+    });
+
+    test('should validate subscription operation names', () => {
+      const subscriptionSchema = `
+        type Query {
+          ping: String
+        }
+        
+        type Subscription {
+          messageAdded: Message
+        }
+        
+        type Message {
+          id: ID!
+          content: String
+        }
+      `;
+
+      const operation = `
+        subscription onMessageAdded {
+          messageAdded {
+            id
+            content
+          }
+        }
+      `;
+
+      expect(() => {
+        compileOperationsToProto(operation, subscriptionSchema);
+      }).toThrow(/Operation name "onMessageAdded" must start with an uppercase letter/);
     });
   });
 

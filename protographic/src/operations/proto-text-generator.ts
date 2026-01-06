@@ -1,6 +1,7 @@
 import protobuf from 'protobufjs';
 import { buildProtoOptions } from '../proto-options.js';
 import { MethodWithIdempotency } from '../types.js';
+import { GRAPHQL_VARIABLE_NAME } from './proto-field-options.js';
 
 /**
  * Helper to format indentation
@@ -94,6 +95,13 @@ function generateHeader(root: protobuf.Root, options?: ProtoTextOptions): string
   // Imports
   const imports = new Set<string>();
 
+  // Check if any field uses graphql_variable_name option
+  const usesGraphQLVariableName = detectGraphQLVariableNameUsage(root);
+  if (usesGraphQLVariableName) {
+    // Import descriptor.proto for field option extension
+    imports.add('google/protobuf/descriptor.proto');
+  }
+
   // Only add wrapper types import if actually used
   if (detectWrapperTypeUsage(root)) {
     imports.add('google/protobuf/wrappers.proto');
@@ -109,6 +117,15 @@ function generateHeader(root: protobuf.Root, options?: ProtoTextOptions): string
   }
 
   if (imports.size > 0) {
+    lines.push('');
+  }
+
+  // Add field option extension if used
+  if (usesGraphQLVariableName) {
+    lines.push('// Field option extension for GraphQL variable name mapping');
+    lines.push('extend google.protobuf.FieldOptions {');
+    lines.push('  string graphql_variable_name = 50001;');
+    lines.push('}');
     lines.push('');
   }
 
@@ -285,7 +302,24 @@ export function formatField(field: protobuf.Field, options?: ProtoTextOptions, i
 
   // Build field line
   const repeated = field.repeated ? 'repeated ' : '';
-  lines.push(formatIndent(indent, `${repeated}${field.type} ${field.name} = ${field.id};`));
+
+  // Check if field has options
+  if (field.options && Object.keys(field.options).length > 0) {
+    // Field with options - format with brackets
+    const optionsStr = Object.entries(field.options)
+      .map(([key, value]) => {
+        // The key already includes parentheses if it's an extension option
+        // e.g., "(graphql_variable_name)"
+        // Handle string values with quotes
+        const formattedValue = typeof value === 'string' ? `"${value}"` : value;
+        return `${key} = ${formattedValue}`;
+      })
+      .join(', ');
+    lines.push(formatIndent(indent, `${repeated}${field.type} ${field.name} = ${field.id} [${optionsStr}];`));
+  } else {
+    // Field without options
+    lines.push(formatIndent(indent, `${repeated}${field.type} ${field.name} = ${field.id};`));
+  }
 
   return lines;
 }
@@ -411,6 +445,43 @@ function messageUsesWrapperTypes(message: protobuf.Type): boolean {
   for (const nested of message.nestedArray) {
     if (nested instanceof protobuf.Type) {
       if (messageUsesWrapperTypes(nested)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Detects if any field in the root uses the graphql_variable_name option
+ */
+function detectGraphQLVariableNameUsage(root: protobuf.Root): boolean {
+  for (const nested of root.nestedArray) {
+    if (nested instanceof protobuf.Type) {
+      if (messageUsesGraphQLVariableName(nested)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Recursively checks if a message or its nested messages use graphql_variable_name option
+ */
+function messageUsesGraphQLVariableName(message: protobuf.Type): boolean {
+  // Check fields in this message
+  for (const field of message.fieldsArray) {
+    if (field.options && field.options[GRAPHQL_VARIABLE_NAME.optionName]) {
+      return true;
+    }
+  }
+
+  // Check nested messages recursively
+  for (const nested of message.nestedArray) {
+    if (nested instanceof protobuf.Type) {
+      if (messageUsesGraphQLVariableName(nested)) {
         return true;
       }
     }
