@@ -2080,6 +2080,8 @@ message GetFieldUsageRequest {
   DateRange dateRange = 6;
   string namespace = 7;
   optional string feature_flag_name = 8;
+  bool is_argument = 9;
+  bool is_input = 10;
 }
 
 message ClientWithOperations {
