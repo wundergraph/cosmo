@@ -1088,11 +1088,15 @@ message APIKey{
   optional Group group = 7;
 }
 
-message GetAPIKeysRequest {}
+message GetAPIKeysRequest {
+  int32 limit = 1;
+  int32 offset = 2;
+}
 
 message GetAPIKeysResponse {
   Response response = 1;
   repeated APIKey apiKeys = 2;
+  int32 count = 3;
 }
 
 enum ExpiresAt {
