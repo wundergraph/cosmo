@@ -68,7 +68,7 @@ export class QueueInactiveOrganizationsDeletionQueue implements IQueue<QueueInac
     return this.queue.upsertJobScheduler(
       WorkerName,
       {
-        pattern: '0 0 * * * *',
+        pattern: '0 0 0 1 * *',
       },
       {
         name: '',
