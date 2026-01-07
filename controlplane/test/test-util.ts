@@ -44,7 +44,6 @@ import { DeactivateOrganizationQueue } from '../src/core/workers/DeactivateOrgan
 import { DeleteUserQueue } from '../src/core/workers/DeleteUserQueue.js';
 import { ReactivateOrganizationQueue } from '../src/core/workers/ReactivateOrganizationWorker.js';
 import { DeleteOrganizationAuditLogsQueue } from '../src/core/workers/DeleteOrganizationAuditLogsWorker.js';
-import { NotifyOrganizationDeletionQueuedQueue } from "../src/core/workers/NotifyOrganizationDeletionQueuedWorker.js";
 
 export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
@@ -152,7 +151,6 @@ export const SetupTest = async function ({
   const deactivateOrganizationQueue = new DeactivateOrganizationQueue(log, server.redisForQueue);
   const deleteUserQueue = new DeleteUserQueue(log, server.redisForQueue);
   const reactivateOrganizationQueue = new ReactivateOrganizationQueue(log, server.redisForQueue);
-  const notifyOrganizationDeletionQueuedQueue = new NotifyOrganizationDeletionQueuedQueue(log, server.redisForQueue);
 
   const blobStorage = new InMemoryBlobStorage();
   await server.register(fastifyConnectPlugin, {
@@ -183,7 +181,6 @@ export const SetupTest = async function ({
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,
-        notifyOrganizationDeletionQueuedQueue,
       },
     }),
   });
@@ -416,7 +413,6 @@ export const SetupTest = async function ({
       deactivateOrganizationQueue,
       deleteUserQueue,
       reactivateOrganizationQueue,
-      notifyOrganizationDeletionQueuedQueue,
     },
   };
 };
