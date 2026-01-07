@@ -129,7 +129,7 @@ class QueueInactiveOrganizationsDeletionWorker implements IWorker {
       if (auditLogs.length > 0 && auditLogs[0].count > 0) {
         // The organization has had activity registered in the audit, at least once in the last `MIN_INACTIVITY_DAYS` days,
         // so we don't need to consider it for deletion
-        // continue;
+        continue;
       }
 
       // If the organization hasn't had any activity, we should check the last time the user logged in
