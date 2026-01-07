@@ -4,6 +4,8 @@ import { buildSchema, GraphQLObjectType, StringValueNode, visit } from 'graphql'
 import { buildProtoMessage } from '../../src/proto-utils';
 import {
   CompositeMessageKind,
+  InterfaceMessageDefinition,
+  isInterfaceMessageDefinition,
   isUnionMessageDefinition,
   ProtoMessageField,
   UnionMessageDefinition,
@@ -11,6 +13,60 @@ import {
 
 describe('Field Set Visitor', () => {
   it('should visit a field set for a scalar type', () => {
+    const sdl = `
+    type User @key(fields: "id") {
+      id: ID!
+      name: String! @external
+      age: Int @requires(fields: "name")
+    }
+  `;
+
+    const schema = buildSchema(sdl, {
+      assumeValid: true,
+      assumeValidSDL: true,
+    });
+
+    const typeMap = schema.getTypeMap();
+    const entity = typeMap['User'] as GraphQLObjectType | undefined;
+    if (!entity) {
+      throw new Error('Entity not found');
+    }
+
+    const requiredField = entity.getFields()['age'];
+    expect(requiredField).toBeDefined();
+
+    const fieldSet = (
+      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
+        .value as StringValueNode
+    ).value;
+
+    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
+    visitor.visit();
+    const rpcMethods = visitor.getRPCMethods();
+    const messageDefinitions = visitor.getMessageDefinitions();
+
+    expect(rpcMethods).toHaveLength(1);
+    expect(rpcMethods[0].name).toBe('RequireUserAgeById');
+    expect(messageDefinitions).toHaveLength(5);
+    expect(messageDefinitions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ messageName: 'RequireUserAgeByIdRequest' }),
+        expect.objectContaining({ messageName: 'RequireUserAgeByIdContext' }),
+        expect.objectContaining({ messageName: 'RequireUserAgeByIdResponse' }),
+        expect.objectContaining({ messageName: 'RequireUserAgeByIdResult' }),
+        expect.objectContaining({ messageName: 'RequireUserAgeByIdFields' }),
+      ]),
+    );
+
+    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserAgeByIdFields');
+    expect(fieldMessage).toBeDefined();
+    expect(fieldMessage?.fields).toHaveLength(1);
+    expect(fieldMessage?.fields?.[0].fieldName).toBe('name');
+    expect(fieldMessage?.fields?.[0].typeName).toBe('string');
+    expect(fieldMessage?.fields?.[0].fieldNumber).toBe(1);
+    expect(fieldMessage?.fields?.[0].isRepeated).toBe(false);
+  });
+  it('should visit a field set for a scalar type and deduplicate fields', () => {
     const sdl = `
     type User @key(fields: "id") {
       id: ID!
@@ -686,30 +742,6 @@ describe('Field Set Visitor', () => {
     });
 
     const messageLines = buildProtoMessage(true, fieldMessage!).join('\n');
-
-    /*
-  message RequireUserDetailsByIdFields {
-    mesage Cat {
-      string name = 1;
-      string catBreed = 2;
-    }
-
-    message Dog {
-      string name = 1;
-      string dogBreed = 2;
-    }
-
-    message Animal {
-      oneof value {
-        Cat cat = 1;
-        Dog dog = 2;
-      }
-    }
-
-    Animal pet = 1;
-  }
-  */
-
     expect(messageLines).toMatchInlineSnapshot(`
       "message RequireUserDetailsByIdFields {
         message Cat {
@@ -734,7 +766,260 @@ describe('Field Set Visitor', () => {
       "
     `);
   });
+  it('should visit a field set for an interface type', () => {
+    const sdl = `
+    type User @key(fields: "id") {
+      id: ID!
+      pet: Animal! @external
+      name: String! @external
+      details: Details! @requires(fields: "pet { ... on Cat { name catBreed } ... on Dog { name dogBreed } } name")
+    }
 
+    interface Animal {
+      name: String!
+    }
+
+    type Cat implements Animal {
+      name: String!
+      catBreed: String!
+    }
+
+    type Dog implements Animal {
+      name: String!
+      dogBreed: String!
+    }
+
+    type Details {
+      firstName: String!
+      lastName: String!
+    }
+  `;
+
+    const schema = buildSchema(sdl, {
+      assumeValid: true,
+      assumeValidSDL: true,
+    });
+
+    const typeMap = schema.getTypeMap();
+    const entity = typeMap['User'] as GraphQLObjectType | undefined;
+    if (!entity) {
+      throw new Error('Entity not found');
+    }
+
+    const requiredField = entity.getFields()['details'];
+    expect(requiredField).toBeDefined();
+
+    const fieldSet = (
+      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
+        .value as StringValueNode
+    ).value;
+
+    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
+    visitor.visit();
+    const rpcMethods = visitor.getRPCMethods();
+    const messageDefinitions = visitor.getMessageDefinitions();
+
+    expect(rpcMethods).toHaveLength(1);
+    expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
+    expect(messageDefinitions).toHaveLength(5);
+    expect(messageDefinitions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
+        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
+        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
+        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
+        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
+      ]),
+    );
+
+    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    expect(fieldMessage).toBeDefined();
+    expect(fieldMessage?.fields).toHaveLength(2);
+    assertFieldMessage(fieldMessage?.fields[0], {
+      fieldName: 'pet',
+      typeName: 'Animal',
+      fieldNumber: 1,
+      isRepeated: false,
+    });
+    assertFieldMessage(fieldMessage?.fields[1], {
+      fieldName: 'name',
+      typeName: 'string',
+      fieldNumber: 2,
+      isRepeated: false,
+    });
+
+    const compositeType = fieldMessage?.compositeType;
+    expect(compositeType).toBeDefined();
+    expect(compositeType?.kind).toBe(CompositeMessageKind.INTERFACE);
+    expect(compositeType?.typeName).toBe('Animal');
+    expect(isInterfaceMessageDefinition(compositeType!)).toBe(true);
+    const interfaceMessageDefinition = compositeType! as InterfaceMessageDefinition;
+    expect(interfaceMessageDefinition.implementingTypes).toHaveLength(2);
+    expect(interfaceMessageDefinition.implementingTypes[0]).toBe('Cat');
+    expect(interfaceMessageDefinition.implementingTypes[1]).toBe('Dog');
+
+    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    expect(resultMessage).toBeDefined();
+    expect(resultMessage?.fields).toHaveLength(1);
+    assertFieldMessage(resultMessage?.fields[0], {
+      fieldName: 'details',
+      typeName: 'Details',
+      fieldNumber: 1,
+      isRepeated: false,
+    });
+
+    const messageLines = buildProtoMessage(true, fieldMessage!).join('\n');
+    expect(messageLines).toMatchInlineSnapshot(`
+      "message RequireUserDetailsByIdFields {
+        message Cat {
+          string name = 1;
+          string cat_breed = 2;
+        }
+
+        message Dog {
+          string name = 1;
+          string dog_breed = 2;
+        }
+
+        message Animal {
+          oneof instance {
+            Cat cat = 1;
+            Dog dog = 2;
+          }
+        }
+        Animal pet = 1;
+        string name = 2;
+      }
+      "
+    `);
+  });
+  it('should visit a field set for an interface type with extraced interface field', () => {
+    const sdl = `
+    type User @key(fields: "id") {
+      id: ID!
+      pet: Animal! @external
+      name: String! @external
+      details: Details! @requires(fields: "pet { name ... on Cat { catBreed } ... on Dog { dogBreed } } name")
+    }
+
+    interface Animal {
+      name: String!
+    }
+
+    type Cat implements Animal {
+      name: String!
+      catBreed: String!
+    }
+
+    type Dog implements Animal {
+      name: String!
+      dogBreed: String!
+    }
+
+    type Details {
+      firstName: String!
+      lastName: String!
+    }
+  `;
+
+    const schema = buildSchema(sdl, {
+      assumeValid: true,
+      assumeValidSDL: true,
+    });
+
+    const typeMap = schema.getTypeMap();
+    const entity = typeMap['User'] as GraphQLObjectType | undefined;
+    if (!entity) {
+      throw new Error('Entity not found');
+    }
+
+    const requiredField = entity.getFields()['details'];
+    expect(requiredField).toBeDefined();
+
+    const fieldSet = (
+      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
+        .value as StringValueNode
+    ).value;
+
+    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
+    visitor.visit();
+    const rpcMethods = visitor.getRPCMethods();
+    const messageDefinitions = visitor.getMessageDefinitions();
+
+    expect(rpcMethods).toHaveLength(1);
+    expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
+    expect(messageDefinitions).toHaveLength(5);
+    expect(messageDefinitions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
+        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
+        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
+        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
+        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
+      ]),
+    );
+
+    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    expect(fieldMessage).toBeDefined();
+    expect(fieldMessage?.fields).toHaveLength(2);
+    assertFieldMessage(fieldMessage?.fields[0], {
+      fieldName: 'pet',
+      typeName: 'Animal',
+      fieldNumber: 1,
+      isRepeated: false,
+    });
+    assertFieldMessage(fieldMessage?.fields[1], {
+      fieldName: 'name',
+      typeName: 'string',
+      fieldNumber: 2,
+      isRepeated: false,
+    });
+
+    const compositeType = fieldMessage?.compositeType;
+    expect(compositeType).toBeDefined();
+    expect(compositeType?.kind).toBe(CompositeMessageKind.INTERFACE);
+    expect(compositeType?.typeName).toBe('Animal');
+    expect(isInterfaceMessageDefinition(compositeType!)).toBe(true);
+    const interfaceMessageDefinition = compositeType! as InterfaceMessageDefinition;
+    expect(interfaceMessageDefinition.implementingTypes).toHaveLength(2);
+    expect(interfaceMessageDefinition.implementingTypes[0]).toBe('Cat');
+    expect(interfaceMessageDefinition.implementingTypes[1]).toBe('Dog');
+
+    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    expect(resultMessage).toBeDefined();
+    expect(resultMessage?.fields).toHaveLength(1);
+    assertFieldMessage(resultMessage?.fields[0], {
+      fieldName: 'details',
+      typeName: 'Details',
+      fieldNumber: 1,
+      isRepeated: false,
+    });
+
+    const messageLines = buildProtoMessage(true, fieldMessage!).join('\n');
+    expect(messageLines).toMatchInlineSnapshot(`
+      "message RequireUserDetailsByIdFields {
+        message Cat {
+          string name = 1;
+          string cat_breed = 2;
+        }
+
+        message Dog {
+          string name = 1;
+          string dog_breed = 2;
+        }
+
+        message Animal {
+          oneof instance {
+            Cat cat = 1;
+            Dog dog = 2;
+          }
+        }
+        Animal pet = 1;
+        string name = 2;
+      }
+      "
+    `);
+  });
   it('should visit a field set with nested field selections and a union type', () => {
     const sdl = `
     type User @key(fields: "id") {

@@ -1,6 +1,13 @@
-import { LargeNumberLike } from 'crypto';
-import { GraphQLNamedType } from 'graphql';
+import { ASTNode, GraphQLNamedType } from 'graphql';
 import protobuf from 'protobufjs';
+
+export type VisitContext<T extends ASTNode> = {
+  node: T;
+  key: string | number | undefined;
+  parent: ASTNode | ReadonlyArray<ASTNode> | undefined;
+  path: ReadonlyArray<string | number>;
+  ancestors: ReadonlyArray<ASTNode | ReadonlyArray<ASTNode>>;
+};
 
 /**
  * Maps GraphQL scalar types to Protocol Buffer types

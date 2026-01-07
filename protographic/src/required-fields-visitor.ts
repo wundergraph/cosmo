@@ -18,7 +18,7 @@ import {
   SelectionSetNode,
   visit,
 } from 'graphql';
-import { CompositeMessageKind, ProtoMessage, RPCMethod } from './types';
+import { CompositeMessageKind, ProtoMessage, RPCMethod, VisitContext } from './types';
 import { KEY_DIRECTIVE_NAME } from './string-constants';
 import {
   createEntityLookupRequestKeyMessageName,
@@ -28,14 +28,7 @@ import {
   graphqlFieldToProtoField,
 } from './naming-conventions';
 import { getProtoTypeFromGraphQL } from './proto-utils';
-
-type VisitContext<T extends ASTNode> = {
-  node: T;
-  key: string | number | undefined;
-  parent: ASTNode | ReadonlyArray<ASTNode> | undefined;
-  path: ReadonlyArray<string | number>;
-  ancestors: ReadonlyArray<ASTNode | ReadonlyArray<ASTNode>>;
-};
+import { AbstractSelectionRewriter } from './abstract-selection-rewriter';
 
 type RequiredFieldsVisitorOptions = {
   includeComments: boolean;
@@ -73,6 +66,7 @@ export class RequiredFieldsVisitor {
   ) {
     this.resolveKeyDirectives();
     this.fieldSetDoc = parse(`{ ${fieldSet} }`);
+    this.normalizeOperation();
     this.visitor = this.createASTVisitor();
   }
 
@@ -81,6 +75,11 @@ export class RequiredFieldsVisitor {
       this.currentKey = keyDirective;
       visit(this.fieldSetDoc, this.visitor);
     }
+  }
+
+  private normalizeOperation(): void {
+    const visitor = new AbstractSelectionRewriter(this.fieldSetDoc, this.schema, this.objectType);
+    visitor.normalize();
   }
 
   public getMessageDefinitions(): ProtoMessage[] {
@@ -250,30 +249,6 @@ export class RequiredFieldsVisitor {
     });
   }
 
-  private handleCompositeType(fieldDefinition: GraphQLField<any, any, any>): void {
-    if (!this.current) return;
-    const compositeType = getNamedType(fieldDefinition.type);
-
-    if (isInterfaceType(compositeType)) {
-      this.current.compositeType = {
-        kind: CompositeMessageKind.INTERFACE,
-        implementingTypes: [],
-        typeName: compositeType.name,
-      };
-      return;
-    }
-
-    if (isUnionType(compositeType)) {
-      this.current.compositeType = {
-        kind: CompositeMessageKind.UNION,
-        memberTypes: [],
-        typeName: compositeType.name,
-      };
-
-      return;
-    }
-  }
-
   private onEnterInlineFragment(ctx: VisitContext<InlineFragmentNode>): void {
     if (this.currentInlineFragment) {
       this.inlineFragmentStack.push(this.currentInlineFragment);
@@ -290,8 +265,6 @@ export class RequiredFieldsVisitor {
 
     if (this.current.compositeType.kind === CompositeMessageKind.UNION) {
       this.current.compositeType.memberTypes.push(currentInlineFragment?.typeCondition?.name.value ?? '');
-    } else {
-      this.current.compositeType.implementingTypes.push(currentInlineFragment?.typeCondition?.name.value ?? '');
     }
   }
 
@@ -338,6 +311,31 @@ export class RequiredFieldsVisitor {
   private onLeaveSelectionSet(ctx: VisitContext<SelectionSetNode>): void {
     this.currentType = this.ancestors.pop() ?? this.currentType;
     this.current = this.stack.pop();
+  }
+
+  private handleCompositeType(fieldDefinition: GraphQLField<any, any, any>): void {
+    if (!this.current) return;
+    const compositeType = getNamedType(fieldDefinition.type);
+
+    if (isInterfaceType(compositeType)) {
+      this.current.compositeType = {
+        kind: CompositeMessageKind.INTERFACE,
+        implementingTypes: this.schema.getImplementations(compositeType).objects.map((o) => o.name),
+        typeName: compositeType.name,
+      };
+
+      return;
+    }
+
+    if (isUnionType(compositeType)) {
+      this.current.compositeType = {
+        kind: CompositeMessageKind.UNION,
+        memberTypes: [],
+        typeName: compositeType.name,
+      };
+
+      return;
+    }
   }
 
   private isFieldNode(node: ASTNode | ReadonlyArray<ASTNode>): node is FieldNode {
