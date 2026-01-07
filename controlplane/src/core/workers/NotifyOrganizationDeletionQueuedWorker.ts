@@ -6,8 +6,8 @@ import Mailer from '../services/Mailer.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import { IQueue, IWorker } from './Worker.js';
 
-const QueueName = 'organization.send-deletion-queued-message';
-const WorkerName = 'SendOrganizationDeletionQueuedWorker';
+const QueueName = 'organization.notify-organization-deletion-queued-queue';
+const WorkerName = 'NotifyOrganizationDeletionQueuedQueue';
 
 export interface NotifyOrganizationDeletionQueuedInput {
   organizationId: string;
@@ -80,7 +80,8 @@ class NotifyOrganizationDeletionQueuedWorker implements IWorker {
       const orgRepo = new OrganizationRepository(this.input.logger, this.input.db);
       const org = await orgRepo.byId(job.data.organizationId);
       if (!org) {
-        throw new Error('Organization not found');
+        // The organization has already been deleted
+        return;
       }
 
       const organizationMembers = await orgRepo.getMembers({ organizationID: org.id });
@@ -125,7 +126,7 @@ export const createNotifyOrganizationDeletionQueuedWorker = (input: {
     (job) => new NotifyOrganizationDeletionQueuedWorker(input).handler(job),
     {
       connection: input.redisConnection,
-      concurrency: 10,
+      concurrency: 100,
     },
   );
   worker.on('stalled', (job) => {

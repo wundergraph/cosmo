@@ -54,6 +54,10 @@ import {
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
 import {
+  QueueInactiveOrganizationsDeletionQueue,
+  createQueueInactiveOrganizationsDeletionWorker,
+} from './workers/QueueInactiveOrganizationsDeletionWorker.js';
+import {
   createNotifyOrganizationDeletionQueuedWorker,
   NotifyOrganizationDeletionQueuedQueue,
 } from './workers/NotifyOrganizationDeletionQueuedWorker.js';
@@ -411,6 +415,24 @@ export default async function build(opts: BuildConfig) {
     }),
   );
 
+  const queueInactiveOrganizationsDeletionQueue = new QueueInactiveOrganizationsDeletionQueue(
+    logger,
+    fastify.redisForQueue,
+  );
+  bullWorkers.push(
+    createQueueInactiveOrganizationsDeletionWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      realm: opts.keycloak.realm,
+      keycloak: keycloakClient,
+      deleteOrganizationQueue,
+      notifyOrganizationDeletionQueuedQueue,
+      logger,
+    }),
+  );
+
+  await queueInactiveOrganizationsDeletionQueue.scheduleJob();
+
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
     field: 'rawBody',
@@ -516,7 +538,6 @@ export default async function build(opts: BuildConfig) {
         deactivateOrganizationQueue,
         reactivateOrganizationQueue,
         deleteUserQueue,
-        notifyOrganizationDeletionQueuedQueue,
       },
       stripeSecretKey: opts.stripe?.secret,
       admissionWebhookJWTSecret: opts.admissionWebhook.secret,
