@@ -759,6 +759,7 @@ message CheckFederatedGraphRequest {
   repeated string label_matchers = 2;
   string namespace = 3;
   optional bool disable_resolvability_validation = 4;
+  optional int32 limit = 5;
 }
 
 message CheckFederatedGraphResponse {
@@ -766,6 +767,7 @@ message CheckFederatedGraphResponse {
   repeated CompositionError compositionErrors = 2;
   repeated Subgraph subgraphs = 3;
   repeated CompositionWarning compositionWarnings = 4;
+  optional SchemaCheckCounts counts = 5;
 }
 
 
