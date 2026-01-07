@@ -3,10 +3,10 @@ import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/re
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { uid } from 'uid';
 import { FastifyBaseLogger } from 'fastify';
+import { decodeJwt } from 'jose';
 import { MemberRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 import { AuthenticationError } from '../errors/errors.js';
-import { decodeJwt } from "jose";
 
 export default class Keycloak {
   client: KeycloakAdminClient;
