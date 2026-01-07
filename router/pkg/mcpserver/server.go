@@ -558,10 +558,8 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s.", op.Name, op.OperationType)
 		}
 
-		var toolName string
-		if s.stripToolNamePrefix {
-			toolName = operationToolName
-		} else {
+		toolName := operationToolName
+		if !s.stripToolNamePrefix {
 			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
 		}
 		tool := mcp.NewToolWithRawSchema(
