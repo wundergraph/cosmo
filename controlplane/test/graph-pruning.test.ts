@@ -276,16 +276,19 @@ describe('Graph Pruning Tests', (ctx) => {
         ruleName: 'UNUSED_FIELDS',
         severityLevel: LintSeverity.error,
         gracePeriodInDays: 7,
+        schemaUsageCheckPeriodInDays: 7,
       }),
       new GraphPruningConfig({
         ruleName: 'DEPRECATED_FIELDS',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
+        schemaUsageCheckPeriodInDays: 7,
       }),
       new GraphPruningConfig({
         ruleName: 'REQUIRE_DEPRECATION_BEFORE_DELETION',
         severityLevel: LintSeverity.warn,
         gracePeriodInDays: 7,
+        schemaUsageCheckPeriodInDays: 7,
       }),
     ];
 
