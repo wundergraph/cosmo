@@ -6,6 +6,7 @@ import { FastifyBaseLogger } from 'fastify';
 import { MemberRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 import { AuthenticationError } from '../errors/errors.js';
+import { decodeJwt } from "jose";
 
 export default class Keycloak {
   client: KeycloakAdminClient;
@@ -37,6 +38,29 @@ export default class Keycloak {
   }
 
   public async authenticateClient() {
+    if (this.client.accessToken) {
+      // We already have an access token, determine whether the token still valid before trying to authenticate again
+      try {
+        const { exp } = decodeJwt(this.client.accessToken);
+        if (!exp || exp * 1000 > Date.now()) {
+          // Either the access token never expires or it hasn't expired
+          return;
+        }
+
+        if (this.client.refreshToken) {
+          await this.client.auth({
+            grantType: 'refresh_token',
+            refreshToken: this.client.refreshToken,
+            clientId: 'admin-cli',
+          });
+
+          return;
+        }
+      } catch {
+        // ignore
+      }
+    }
+
     try {
       await this.client.auth({
         grantType: 'password',
