@@ -124,7 +124,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				jwksetHTTPClientOptions.RateLimitWaitMax = c.RefreshUnknownKID.MaxWait
 			}
 
-			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, getUseWhitelist(c.AllowedUse))
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, toJwksetUseType(c.AllowedUse))
 			if err != nil {
 				return nil, err
 			}
@@ -179,7 +179,7 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				PrioritizeHTTP: false,
 			}
 
-			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, getUseWhitelist(c.AllowedUse))
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, toJwksetUseType(c.AllowedUse))
 			if err != nil {
 				return nil, err
 			}
@@ -252,8 +252,8 @@ func getAudienceSet(audiences []string) audienceSet {
 	return audSet
 }
 
-func getUseWhitelist(allowedUse []string) []jwkset.USE {
-	if allowedUse == nil {
+func toJwksetUseType(allowedUse []string) []jwkset.USE {
+	if len(allowedUse) == 0 {
 		return []jwkset.USE{jwkset.UseSig}
 	}
 
