@@ -16032,6 +16032,16 @@ export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {
    */
   featureFlagName?: string;
 
+  /**
+   * @generated from field: bool is_argument = 9;
+   */
+  isArgument = false;
+
+  /**
+   * @generated from field: bool is_input = 10;
+   */
+  isInput = false;
+
   constructor(data?: PartialMessage<GetFieldUsageRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16048,6 +16058,8 @@ export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {
     { no: 6, name: "dateRange", kind: "message", T: DateRange },
     { no: 7, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "feature_flag_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "is_argument", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "is_input", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFieldUsageRequest {

@@ -194,6 +194,10 @@ const FieldUsageColumn = ({
   const graph = useContext(GraphContext);
   const router = useRouter();
   const featureFlagName = router.query.featureFlag as string;
+  const { ast } = useContext(ExplorerContext);
+
+  const category = getCategoryForType(ast, typename);
+  const isInput = category === "inputs";
 
   const { data: usageData } = useQuery(
     getFieldUsage,
@@ -208,6 +212,7 @@ const FieldUsageColumn = ({
         end: formatISO(dateRange.end),
       },
       featureFlagName,
+      isInput,
     },
     {
       enabled: !!graph?.graph?.name,
@@ -494,7 +499,8 @@ const Type = (props: {
   endLineNo?: number;
 }) => {
   const router = useRouter();
-  const isAuthenticatedType = props.authenticated || !!props.requiresScopes?.length;
+  const isAuthenticatedType =
+    props.authenticated || !!props.requiresScopes?.length;
 
   return (
     <div className="flex h-full flex-col">
@@ -546,7 +552,12 @@ const Type = (props: {
 
             {props.requiresScopes?.length && (
               <AuthenticatedScopes isType scopes={props.requiresScopes} asChild>
-                <button type="button" className={badgeVariants({ className: "w-max" })}>View scopes</button>
+                <button
+                  type="button"
+                  className={badgeVariants({ className: "w-max" })}
+                >
+                  View scopes
+                </button>
               </AuthenticatedScopes>
             )}
           </div>
@@ -763,7 +774,11 @@ const DeprecatedBadge = ({ reason }: { reason: string | undefined | null }) => {
   );
 };
 
-const AuthenticatedBadge = ({ isType, authenticated, requiresScopes }: {
+const AuthenticatedBadge = ({
+  isType,
+  authenticated,
+  requiresScopes,
+}: {
   isType: boolean;
   authenticated?: boolean;
   requiresScopes?: string[][];
@@ -778,7 +793,9 @@ const AuthenticatedBadge = ({ isType, authenticated, requiresScopes }: {
         <LockClosedIcon className="h-3 w-3 flex-shrink-0" />
         Authenticated
       </span>
-      {!!requiresScopes?.length && <AuthenticatedScopes isType={isType} scopes={requiresScopes} />}
+      {!!requiresScopes?.length && (
+        <AuthenticatedScopes isType={isType} scopes={requiresScopes} />
+      )}
     </p>
   );
 };
@@ -797,17 +814,18 @@ const AuthenticatedScopes = ({
   return (
     <Popover>
       <PopoverTrigger asChild={asChild}>
-        {children
-          ? children
-          : (
-            <Button variant="link" size="sm" className="h-auto p-0">
-              View scopes
-            </Button>
-          )}
+        {children ? (
+          children
+        ) : (
+          <Button variant="link" size="sm" className="h-auto p-0">
+            View scopes
+          </Button>
+        )}
       </PopoverTrigger>
       <PopoverContent className="px-0">
         <div className="mb-3 border-b border-border px-4 pb-3">
-          The following scope(s) are required to access this {isType ? "type" : "field"}:
+          The following scope(s) are required to access this{" "}
+          {isType ? "type" : "field"}:
         </div>
 
         {scopes
@@ -1408,7 +1426,9 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const user = useUser();
 
   const organizationSlug = user?.currentOrganization.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const graphName = router.query.slug as string;
   const selectedCategory = (router.query.category as string) ?? "query";
   const typename = router.query.typename as string;
@@ -1431,9 +1451,18 @@ const SchemaExplorerPage: NextPageWithLayout = () => {
   const { ast, doc, isParsing } = useParseSchema(schema);
   const parsedTypes = useMemo(() => (doc ? getParsedTypes(doc) : []), [doc]);
 
-  const typeCounts = useMemo(() => (ast ? getTypeCounts(ast) : undefined), [ast],);
-  const [deprecatedTypesCount, deprecatedTypes] = useMemo(() => getDeprecatedTypes(parsedTypes), [parsedTypes]);
-  const [authenticatedTypesCount, authenticatedTypes] = useMemo(() => getAuthenticatedTypes(parsedTypes), [parsedTypes]);
+  const typeCounts = useMemo(
+    () => (ast ? getTypeCounts(ast) : undefined),
+    [ast],
+  );
+  const [deprecatedTypesCount, deprecatedTypes] = useMemo(
+    () => getDeprecatedTypes(parsedTypes),
+    [parsedTypes],
+  );
+  const [authenticatedTypesCount, authenticatedTypes] = useMemo(
+    () => getAuthenticatedTypes(parsedTypes),
+    [parsedTypes],
+  );
 
   const isLoadingAST = isLoading || isParsing;
 
