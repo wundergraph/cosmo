@@ -27,8 +27,7 @@ import {
   limitCombinedArrays,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
-
-const maxRowLimit = 100_000;
+import { maxRowLimitForChecks } from '../../constants.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -255,7 +254,7 @@ export function checkSubgraphSchema(
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
     // If req.limit is not provided, we return all rows
-    const returnLimit = req.limit === undefined ? null : clamp(req.limit, 1, maxRowLimit);
+    const returnLimit = req.limit === undefined ? null : clamp(req.limit, 1, maxRowLimitForChecks);
 
     const checkResult = await subgraphRepo.performSchemaCheck({
       actorId: authContext.userId,

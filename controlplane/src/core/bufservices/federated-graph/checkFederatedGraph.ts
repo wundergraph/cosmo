@@ -24,8 +24,7 @@ import {
   newCompositionOptions,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
-
-const maxRowLimit = 100_000;
+import { maxRowLimitForChecks } from '../../constants.js';
 
 export function checkFederatedGraph(
   opts: RouterOptions,
@@ -114,7 +113,7 @@ export function checkFederatedGraph(
     );
 
     // If req.limit is not provided, we return all rows
-    const returnLimit = req.limit === undefined ? null : clamp(req.limit, 1, maxRowLimit);
+    const returnLimit = req.limit === undefined ? null : clamp(req.limit, 1, maxRowLimitForChecks);
 
     const counts = {
       compositionErrors: 0,
