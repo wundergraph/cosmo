@@ -27,6 +27,14 @@ export function graphqlArgumentToProtoField(argName: string): string {
 }
 
 /**
+ * Converts a proto field name (snake_case) to the expected protobuf JSON format (camelCase)
+ * This matches how protobuf JSON marshaling automatically converts field names
+ */
+export function protoFieldToProtoJSON(protoFieldName: string): string {
+  return camelCase(protoFieldName);
+}
+
+/**
  * Creates an operation method name from an operation type and field name
  */
 export function createOperationMethodName(operationType: OperationTypeName, fieldName: string): string {
