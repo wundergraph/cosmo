@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.14.0...@wundergraph/protographic@0.15.0) (2026-01-07)
+
+### Features
+
+* **cli,protographic:** improvements to operation validation and proto generation ([#2436](https://github.com/wundergraph/cosmo/issues/2436)) ([da0342d](https://github.com/wundergraph/cosmo/commit/da0342d308f6b4003749f61fbd51cde35337d4bf)) (@asoorm)
+
 # [0.14.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.13.0...@wundergraph/protographic@0.14.0) (2025-12-15)
 
 ### Features
