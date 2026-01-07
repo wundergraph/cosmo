@@ -291,8 +291,10 @@ export function checkSubgraphSchema(
       checkExtensionErrorMessage,
     } = checkResult;
 
-    const compositionErrors = returnLimit == null ? checkResult.compositionErrors : checkResult.compositionErrors.slice(0, returnLimit);
-    const compositionWarnings = returnLimit == null ? checkResult.compositionWarnings : checkResult.compositionWarnings.slice(0, returnLimit);
+    const compositionErrors =
+      returnLimit == null ? checkResult.compositionErrors : checkResult.compositionErrors.slice(0, returnLimit);
+    const compositionWarnings =
+      returnLimit == null ? checkResult.compositionWarnings : checkResult.compositionWarnings.slice(0, returnLimit);
 
     const [breakingChanges, nonBreakingChanges] = limitCombinedArrays(
       [checkResult.breakingChanges, checkResult.nonBreakingChanges],
