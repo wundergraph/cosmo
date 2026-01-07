@@ -262,7 +262,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
           if (studioCheckDestination !== '') {
             moreEntriesAvailableMessage += `\n\n`;
           }
-          moreEntriesAvailableMessage = pc.red(
+          moreEntriesAvailableMessage += pc.red(
             `Some results were truncated due to exceeding the limit of ${rowLimit} rows.`,
           );
           if (studioCheckDestination !== '') {
