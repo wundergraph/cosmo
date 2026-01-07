@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.103.1](https://github.com/wundergraph/cosmo/compare/wgc@0.103.0...wgc@0.103.1) (2026-01-07)
+
+**Note:** Version bump only for package wgc
+
+# [0.103.0](https://github.com/wundergraph/cosmo/compare/wgc@0.102.6...wgc@0.103.0) (2026-01-07)
+
+### Features
+
+* **cli,protographic:** improvements to operation validation and proto generation ([#2436](https://github.com/wundergraph/cosmo/issues/2436)) ([da0342d](https://github.com/wundergraph/cosmo/commit/da0342d308f6b4003749f61fbd51cde35337d4bf)) (@asoorm)
+* mask hostname in cli telemetry ([#2416](https://github.com/wundergraph/cosmo/issues/2416)) ([f8cedae](https://github.com/wundergraph/cosmo/commit/f8cedaed8ee0e364e2e04d9b017cbb72dff67237)) (@pepol)
+
 ## [0.102.6](https://github.com/wundergraph/cosmo/compare/wgc@0.102.5...wgc@0.102.6) (2025-12-16)
 
 ### Bug Fixes
