@@ -255,7 +255,7 @@ export function checkSubgraphSchema(
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
     // If req.limit is not provided, we return all rows
-    const returnLimit = req.limit ? clamp(req.limit, 1, maxRowLimit) : null;
+    const returnLimit = req.limit === undefined ? null : clamp(req.limit, 1, maxRowLimit);
 
     const checkResult = await subgraphRepo.performSchemaCheck({
       actorId: authContext.userId,

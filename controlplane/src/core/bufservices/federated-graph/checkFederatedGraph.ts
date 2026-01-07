@@ -114,7 +114,7 @@ export function checkFederatedGraph(
     );
 
     // If req.limit is not provided, we return all rows
-    const returnLimit = req.limit ? clamp(req.limit, 1, maxRowLimit) : null;
+    const returnLimit = req.limit === undefined ? null : clamp(req.limit, 1, maxRowLimit);
 
     const counts = {
       compositionErrors: 0,
