@@ -484,9 +484,13 @@ export function createBatches<T>(array: T[], batchSize: number): T[][] {
  * @param limit The combined maximum number of items across all arrays
  * @returns The limited arrays in the same order as input
  */
-export function limitCombinedArrays<T>(arrays: T[][], limit: number): T[][] {
+export function limitCombinedArrays<T>(arrays: T[][], limit: number | null): T[][] {
   if (arrays.length === 0) {
     return [];
+  }
+
+  if (limit == null) {
+    return arrays;
   }
 
   const result: T[][] = [];

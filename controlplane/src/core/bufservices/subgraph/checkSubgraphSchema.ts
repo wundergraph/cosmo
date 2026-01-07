@@ -28,7 +28,6 @@ import {
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
-const defaultRowLimit = 70_000;
 const maxRowLimit = 100_000;
 
 export function checkSubgraphSchema(
@@ -255,7 +254,8 @@ export function checkSubgraphSchema(
     let limit = changeRetention?.limit ?? 7;
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
-    const returnLimit = clamp(req.limit ?? defaultRowLimit, 1, maxRowLimit);
+    // If req.limit is not provided, we return all rows
+    const returnLimit = req.limit ? clamp(req.limit, 1, maxRowLimit) : null;
 
     const checkResult = await subgraphRepo.performSchemaCheck({
       actorId: authContext.userId,
@@ -291,8 +291,8 @@ export function checkSubgraphSchema(
       checkExtensionErrorMessage,
     } = checkResult;
 
-    const compositionErrors = checkResult.compositionErrors.slice(0, returnLimit);
-    const compositionWarnings = checkResult.compositionWarnings.slice(0, returnLimit);
+    const compositionErrors = returnLimit == null ? checkResult.compositionErrors : checkResult.compositionErrors.slice(0, returnLimit);
+    const compositionWarnings = returnLimit == null ? checkResult.compositionWarnings : checkResult.compositionWarnings.slice(0, returnLimit);
 
     const [breakingChanges, nonBreakingChanges] = limitCombinedArrays(
       [checkResult.breakingChanges, checkResult.nonBreakingChanges],
