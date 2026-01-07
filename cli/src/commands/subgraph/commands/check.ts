@@ -54,7 +54,9 @@ export default (opts: BaseCommandOptions) => {
 
     const limit = Number(options.limit);
     if (Number.isNaN(limit) || limit <= 0 || limit > limitMaxValue) {
-      program.error(pc.red(`The limit must be a valid number between 1 and ${limitMaxValue}. Received: '${options.limit}'`));
+      program.error(
+        pc.red(`The limit must be a valid number between 1 and ${limitMaxValue}. Received: '${options.limit}'`),
+      );
     }
 
     const { gitInfo, ignoreErrorsDueToGitHubIntegration } = await verifyGitHubIntegration(opts.client);
