@@ -124,7 +124,12 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				jwksetHTTPClientOptions.RateLimitWaitMax = c.RefreshUnknownKID.MaxWait
 			}
 
-			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, toJwksetUseType(c.AllowedUse))
+			useWhitelist, err := toJwksetUseType(c.AllowedUse)
+			if err != nil {
+				return nil, fmt.Errorf("invalid allowedUse for JWK URL %s: %w", c.URL, err)
+			}
+
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, useWhitelist)
 			if err != nil {
 				return nil, err
 			}
@@ -179,14 +184,20 @@ func NewJwksTokenDecoder(ctx context.Context, logger *zap.Logger, configs []JWKS
 				PrioritizeHTTP: false,
 			}
 
-			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, toJwksetUseType(c.AllowedUse))
+			useWhitelist, err := toJwksetUseType(c.AllowedUse)
+			if err != nil {
+				return nil, fmt.Errorf("invalid allowedUse for JWK keyid %s: %w", c.KeyId, err)
+			}
+
+			jwks, err := createKeyFunc(ctx, jwksetHTTPClientOptions, useWhitelist)
 			if err != nil {
 				return nil, err
 			}
 			entries = append(entries, keyFuncEntry{
-				jwks:       jwks,
-				aud:        audiencesMap[key],
-				allowedUse: c.AllowedUse,
+				jwks:              jwks,
+				aud:               audiencesMap[key],
+				allowedAlgorithms: c.AllowedAlgorithms,
+				allowedUse:        c.AllowedUse,
 			})
 		}
 	}
@@ -252,16 +263,20 @@ func getAudienceSet(audiences []string) audienceSet {
 	return audSet
 }
 
-func toJwksetUseType(allowedUse []string) []jwkset.USE {
+func toJwksetUseType(allowedUse []string) ([]jwkset.USE, error) {
 	if len(allowedUse) == 0 {
-		return []jwkset.USE{jwkset.UseSig}
+		return []jwkset.USE{jwkset.UseSig}, nil
 	}
 
 	useWhitelist := make([]jwkset.USE, len(allowedUse))
 	for i, u := range allowedUse {
-		useWhitelist[i] = jwkset.USE(u)
+		use := jwkset.USE(u)
+		if !use.IANARegistered() {
+			return nil, fmt.Errorf("unsupported JWK use: %s", u)
+		}
+		useWhitelist[i] = use
 	}
-	return useWhitelist
+	return useWhitelist, nil
 }
 
 func createKeyFunc(ctx context.Context, options jwkset.HTTPClientOptions, useWhitelist []jwkset.USE) (keyfunc.Keyfunc, error) {
