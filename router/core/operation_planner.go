@@ -62,6 +62,14 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 		preparedPlan plan.Plan
 	)
 
+	var e bool
+	if ctx.executionOptions.IncludeQueryPlanInResponse {
+		e = true
+	}
+	if e {
+		e = false
+	}
+
 	// create and postprocess the plan
 	// planning uses the router schema
 	if ctx.executionOptions.IncludeQueryPlanInResponse {
