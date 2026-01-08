@@ -161,11 +161,11 @@ func TestMCP(t *testing.T) {
 				})
 			})
 
-			t.Run("List user Operations / Tool names omit prefix when StripToolNamePrefix is enabled", func(t *testing.T) {
+			t.Run("List user Operations / Tool names omit prefix when OmitToolNamePrefix is enabled", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
 					MCP: config.MCPConfiguration{
-						Enabled:             true,
-						StripToolNamePrefix: true,
+						Enabled:            true,
+						OmitToolNamePrefix: true,
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 
@@ -190,19 +190,19 @@ func TestMCP(t *testing.T) {
 						}
 					}
 
-					require.True(t, foundMyEmployees, "Tool 'my_employees' should be registered when StripToolNamePrefix is true")
-					require.True(t, foundUpdateMood, "Tool 'update_mood' should be registered when StripToolNamePrefix is true")
+					require.True(t, foundMyEmployees, "Tool 'my_employees' should be registered when OmitToolNamePrefix is true")
+					require.True(t, foundUpdateMood, "Tool 'update_mood' should be registered when OmitToolNamePrefix is true")
 
-					require.False(t, foundPrefixedMyEmployees, "Tool 'execute_operation_my_employees' should NOT be registered when StripToolNamePrefix is true")
-					require.False(t, foundPrefixedUpdateMood, "Tool 'execute_operation_update_mood' should NOT be registered when StripToolNamePrefix is true")
+					require.False(t, foundPrefixedMyEmployees, "Tool 'execute_operation_my_employees' should NOT be registered when OmitToolNamePrefix is true")
+					require.False(t, foundPrefixedUpdateMood, "Tool 'execute_operation_update_mood' should NOT be registered when OmitToolNamePrefix is true")
 				})
 			})
 
-			t.Run("Execute operation using short tool name when StripToolNamePrefix is enabled", func(t *testing.T) {
+			t.Run("Execute operation using short tool name when OmitToolNamePrefix is enabled", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
 					MCP: config.MCPConfiguration{
-						Enabled:             true,
-						StripToolNamePrefix: true,
+						Enabled:            true,
+						OmitToolNamePrefix: true,
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
 

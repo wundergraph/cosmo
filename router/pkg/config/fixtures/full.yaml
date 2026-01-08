@@ -45,7 +45,7 @@ mcp:
   expose_schema: false
   enable_arbitrary_operations: false
   exclude_mutations: false
-  strip_tool_name_prefix: false
+  omit_tool_name_prefix: false
   graph_name: cosmo
   router_url: https://cosmo-router.wundergraph.com
   server:

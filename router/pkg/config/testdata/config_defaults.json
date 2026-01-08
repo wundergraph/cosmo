@@ -127,7 +127,7 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "StripToolNamePrefix": false,
+    "OmitToolNamePrefix": false,
     "RouterURL": ""
   },
   "DemoMode": false,
