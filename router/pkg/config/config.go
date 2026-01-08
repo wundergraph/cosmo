@@ -360,25 +360,25 @@ func (r *ResponseHeaderRule) GetMatching() string {
 }
 
 type EngineDebugConfiguration struct {
-	PrintOperationTransformations                bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_OPERATION_TRANSFORMATIONS" yaml:"print_operation_transformations"`
-	PrintOperationEnableASTRefs                  bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS" yaml:"print_operation_enable_ast_refs"`
-	PrintPlanningPaths                           bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_PLANNING_PATHS" yaml:"print_planning_paths"`
-	PrintQueryPlans                              bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_QUERY_PLANS" yaml:"print_query_plans"`
-	PrintIntermediateQueryPlans                  bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_INTERMEDIATE_QUERY_PLANS" yaml:"print_intermediate_query_plans"`
-	PrintNodeSuggestions                         bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS" yaml:"print_node_suggestions"`
-	ConfigurationVisitor                         bool `envDefault:"false" env:"ENGINE_DEBUG_CONFIGURATION_VISITOR" yaml:"configuration_visitor"`
-	PlanningVisitor                              bool `envDefault:"false" env:"ENGINE_DEBUG_PLANNING_VISITOR" yaml:"planning_visitor"`
-	DatasourceVisitor                            bool `envDefault:"false" env:"ENGINE_DEBUG_DATASOURCE_VISITOR" yaml:"datasource_visitor"`
-	ReportWebSocketConnections                   bool `envDefault:"false" env:"ENGINE_DEBUG_REPORT_WEBSOCKET_CONNECTIONS" yaml:"report_websocket_connections"`
-	ReportMemoryUsage                            bool `envDefault:"false" env:"ENGINE_DEBUG_REPORT_MEMORY_USAGE" yaml:"report_memory_usage"`
-	EnableResolverDebugging                      bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_RESOLVER_DEBUGGING" yaml:"enable_resolver_debugging"`
+	PrintOperationTransformations bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_OPERATION_TRANSFORMATIONS" yaml:"print_operation_transformations"`
+	PrintOperationEnableASTRefs   bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS" yaml:"print_operation_enable_ast_refs"`
+	PrintPlanningPaths            bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_PLANNING_PATHS" yaml:"print_planning_paths"`
+	PrintQueryPlans               bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_QUERY_PLANS" yaml:"print_query_plans"`
+	PrintIntermediateQueryPlans   bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_INTERMEDIATE_QUERY_PLANS" yaml:"print_intermediate_query_plans"`
+	PrintNodeSuggestions          bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS" yaml:"print_node_suggestions"`
+	ConfigurationVisitor          bool `envDefault:"false" env:"ENGINE_DEBUG_CONFIGURATION_VISITOR" yaml:"configuration_visitor"`
+	PlanningVisitor               bool `envDefault:"false" env:"ENGINE_DEBUG_PLANNING_VISITOR" yaml:"planning_visitor"`
+	DatasourceVisitor             bool `envDefault:"false" env:"ENGINE_DEBUG_DATASOURCE_VISITOR" yaml:"datasource_visitor"`
+	ReportWebSocketConnections    bool `envDefault:"false" env:"ENGINE_DEBUG_REPORT_WEBSOCKET_CONNECTIONS" yaml:"report_websocket_connections"`
+	ReportMemoryUsage             bool `envDefault:"false" env:"ENGINE_DEBUG_REPORT_MEMORY_USAGE" yaml:"report_memory_usage"`
+	EnableResolverDebugging       bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_RESOLVER_DEBUGGING" yaml:"enable_resolver_debugging"`
 	// EnablePersistedOperationsCacheResponseHeader is deprecated, use EnableCacheResponseHeaders instead.
 	EnablePersistedOperationsCacheResponseHeader bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_PERSISTED_OPERATIONS_CACHE_RESPONSE_HEADER" yaml:"enable_persisted_operations_cache_response_header"`
 	// EnableNormalizationCacheResponseHeader is deprecated, use EnableCacheResponseHeaders instead.
-	EnableNormalizationCacheResponseHeader       bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_NORMALIZATION_CACHE_RESPONSE_HEADER" yaml:"enable_normalization_cache_response_header"`
-	EnableCacheResponseHeaders                   bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_CACHE_RESPONSE_HEADERS" yaml:"enable_cache_response_headers"`
-	AlwaysIncludeQueryPlan                       bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_INCLUDE_QUERY_PLAN" yaml:"always_include_query_plan"`
-	AlwaysSkipLoader                             bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_SKIP_LOADER" yaml:"always_skip_loader"`
+	EnableNormalizationCacheResponseHeader bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_NORMALIZATION_CACHE_RESPONSE_HEADER" yaml:"enable_normalization_cache_response_header"`
+	EnableCacheResponseHeaders             bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_CACHE_RESPONSE_HEADERS" yaml:"enable_cache_response_headers"`
+	AlwaysIncludeQueryPlan                 bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_INCLUDE_QUERY_PLAN" yaml:"always_include_query_plan"`
+	AlwaysSkipLoader                       bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_SKIP_LOADER" yaml:"always_skip_loader"`
 }
 
 type EngineExecutionConfiguration struct {
@@ -1013,6 +1013,18 @@ type MCPServer struct {
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
 }
 
+type ConnectRPCConfiguration struct {
+	Enabled            bool             `yaml:"enabled" envDefault:"false" env:"CONNECT_RPC_ENABLED"`
+	Server             ConnectRPCServer `yaml:"server,omitempty" envPrefix:"CONNECT_RPC_SERVER_"`
+	ServicesProviderID string           `yaml:"services_provider_id,omitempty" env:"CONNECT_RPC_SERVICES_PROVIDER_ID"`
+	GraphQLEndpoint    string           `yaml:"graphql_endpoint,omitempty" env:"CONNECT_RPC_GRAPHQL_ENDPOINT"`
+}
+
+type ConnectRPCServer struct {
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5026" env:"LISTEN_ADDR"`
+	BaseURL    string `yaml:"base_url,omitempty" env:"BASE_URL"`
+}
+
 type PluginsConfiguration struct {
 	Enabled  bool                        `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	Path     string                      `yaml:"path" envDefault:"plugins" env:"PATH"`
@@ -1031,17 +1043,18 @@ type IntrospectionConfiguration struct {
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
-	InstanceID     string             `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
-	Graph          Graph              `yaml:"graph,omitempty"`
-	Telemetry      Telemetry          `yaml:"telemetry,omitempty"`
-	GraphqlMetrics GraphqlMetrics     `yaml:"graphql_metrics,omitempty"`
-	CORS           CORS               `yaml:"cors,omitempty"`
-	Cluster        Cluster            `yaml:"cluster,omitempty"`
-	Compliance     ComplianceConfig   `yaml:"compliance,omitempty"`
-	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
-	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
-	MCP            MCPConfiguration   `yaml:"mcp,omitempty"`
-	DemoMode       bool               `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
+	InstanceID     string                  `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
+	Graph          Graph                   `yaml:"graph,omitempty"`
+	Telemetry      Telemetry               `yaml:"telemetry,omitempty"`
+	GraphqlMetrics GraphqlMetrics          `yaml:"graphql_metrics,omitempty"`
+	CORS           CORS                    `yaml:"cors,omitempty"`
+	Cluster        Cluster                 `yaml:"cluster,omitempty"`
+	Compliance     ComplianceConfig        `yaml:"compliance,omitempty"`
+	TLS            TLSConfiguration        `yaml:"tls,omitempty"`
+	CacheControl   CacheControlPolicy      `yaml:"cache_control_policy"`
+	MCP            MCPConfiguration        `yaml:"mcp,omitempty"`
+	ConnectRPC     ConnectRPCConfiguration `yaml:"connect_rpc,omitempty"`
+	DemoMode       bool                    `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`
