@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.103.2](https://github.com/wundergraph/cosmo/compare/wgc@0.103.1...wgc@0.103.2) (2026-01-08)
+
+### Bug Fixes
+
+* limit the number of entries shown in the table for schema checks on the cli ([#2417](https://github.com/wundergraph/cosmo/issues/2417)) ([2a2cd52](https://github.com/wundergraph/cosmo/commit/2a2cd5207d1575518cf459bd05c702406d7f6ef6)) (@SkArchon)
+
 ## [0.103.1](https://github.com/wundergraph/cosmo/compare/wgc@0.103.0...wgc@0.103.1) (2026-01-07)
 
 **Note:** Version bump only for package wgc
