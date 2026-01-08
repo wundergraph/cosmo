@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 	"sync"
+	"time"
 
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 
@@ -30,15 +32,32 @@ type CosmoRateLimiterOptions struct {
 
 	KeySuffixExpression string
 	ExprManager         *expr.Manager
+	Overrides           map[string]RateLimitOverride
 }
 
 func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, err error) {
 	limiter := redis_rate.NewLimiter(opts.RedisClient)
+	var overrides map[string]redis_rate.Limit
+	if len(opts.Overrides) > 0 {
+		overrides = make(map[string]redis_rate.Limit, len(opts.Overrides))
+		for rawKey, override := range opts.Overrides {
+			key := strings.TrimSpace(rawKey)
+			if key == "" {
+				continue
+			}
+			overrides[key] = redis_rate.Limit{
+				Rate:   override.Rate,
+				Burst:  override.Burst,
+				Period: override.Period,
+			}
+		}
+	}
 	rl = &CosmoRateLimiter{
 		client:           opts.RedisClient,
 		limiter:          limiter,
 		debug:            opts.Debug,
 		rejectStatusCode: opts.RejectStatusCode,
+		keyOverrides:     overrides,
 	}
 	if rl.rejectStatusCode == 0 {
 		rl.rejectStatusCode = 200
@@ -54,12 +73,23 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 
 type CosmoRateLimiter struct {
 	client  rd.RDCloser
-	limiter *redis_rate.Limiter
+	limiter redisLimiter
 	debug   bool
 
 	rejectStatusCode int
 
 	keySuffixProgram *vm.Program
+	keyOverrides     map[string]redis_rate.Limit
+}
+
+type redisLimiter interface {
+	AllowN(ctx context.Context, key string, limit redis_rate.Limit, n int) (*redis_rate.Result, error)
+}
+
+type RateLimitOverride struct {
+	Rate   int
+	Burst  int
+	Period time.Duration
 }
 
 func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve.FetchInfo, input json.RawMessage) (result *resolve.RateLimitDeny, err error) {
@@ -67,15 +97,11 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 		return nil, nil
 	}
 	requestRate := c.calculateRate()
-	limit := redis_rate.Limit{
-		Rate:   ctx.RateLimitOptions.Rate,
-		Burst:  ctx.RateLimitOptions.Burst,
-		Period: ctx.RateLimitOptions.Period,
-	}
-	key, err := c.generateKey(ctx)
+	key, _, err := c.generateKey(ctx)
 	if err != nil {
 		return nil, err
 	}
+	limit := c.limitFor(ctx, key)
 	allow, err := c.limiter.AllowN(ctx.Context(), key, limit, requestRate)
 	if err != nil {
 		return nil, err
@@ -90,23 +116,35 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 	return &resolve.RateLimitDeny{}, nil
 }
 
-func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (string, error) {
+func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (string, string, error) {
 	if c.keySuffixProgram == nil {
-		return ctx.RateLimitOptions.RateLimitKey, nil
+		return ctx.RateLimitOptions.RateLimitKey, "", nil
 	}
 	rc := getRequestContext(ctx.Context())
 	if rc == nil {
-		return "", errors.New("no request context")
+		return "", "", errors.New("no request context")
 	}
 	str, err := expr.ResolveStringExpression(c.keySuffixProgram, rc.expressionContext)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
+		return "", "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
 	}
 	buf := bytes.NewBuffer(make([]byte, 0, len(ctx.RateLimitOptions.RateLimitKey)+len(str)+1))
 	_, _ = buf.WriteString(ctx.RateLimitOptions.RateLimitKey)
 	_ = buf.WriteByte(':')
 	_, _ = buf.WriteString(str)
-	return buf.String(), nil
+	return buf.String(), str, nil
+}
+
+func (c *CosmoRateLimiter) limitFor(ctx *resolve.Context, key string) redis_rate.Limit {
+	limit := redis_rate.Limit{
+		Rate:   ctx.RateLimitOptions.Rate,
+		Burst:  ctx.RateLimitOptions.Burst,
+		Period: ctx.RateLimitOptions.Period,
+	}
+	if override, ok := c.keyOverrides[key]; ok {
+		return override
+	}
+	return limit
 }
 
 func (c *CosmoRateLimiter) RejectStatusCode() int {
