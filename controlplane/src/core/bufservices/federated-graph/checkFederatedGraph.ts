@@ -15,6 +15,7 @@ import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
+  clamp,
   convertToSubgraphType,
   enrichLogger,
   getLogger,
@@ -23,6 +24,7 @@ import {
   newCompositionOptions,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { maxRowLimitForChecks } from '../../constants.js';
 
 export function checkFederatedGraph(
   opts: RouterOptions,
@@ -110,8 +112,25 @@ export function checkFederatedGraph(
       newCompositionOptions(req.disableResolvabilityValidation),
     );
 
+    // If req.limit is not provided, we return all rows
+    const returnLimit = req.limit === undefined ? null : clamp(req.limit, 1, maxRowLimitForChecks);
+
+    const counts = {
+      compositionErrors: 0,
+      compositionWarnings: 0,
+      lintWarnings: 0,
+      lintErrors: 0,
+      breakingChanges: 0,
+      nonBreakingChanges: 0,
+      graphPruneErrors: 0,
+      graphPruneWarnings: 0,
+    };
+
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
-    for (const warning of result.warnings) {
+    counts.compositionWarnings = result.warnings.length;
+
+    const clampedWarnings = returnLimit ? result.warnings.slice(0, returnLimit) : result.warnings;
+    for (const warning of clampedWarnings) {
       compositionWarnings.push({
         message: warning.message,
         federatedGraphName: req.name,
@@ -122,7 +141,10 @@ export function checkFederatedGraph(
 
     if (!result.success) {
       const compositionErrors: PlainMessage<CompositionError>[] = [];
-      for (const error of result.errors) {
+      counts.compositionErrors = result.errors.length;
+
+      const clampedErrors = returnLimit ? result.errors.slice(0, returnLimit) : result.errors;
+      for (const error of clampedErrors) {
         compositionErrors.push({
           message: error.message,
           federatedGraphName: req.name,
@@ -139,6 +161,7 @@ export function checkFederatedGraph(
           compositionErrors,
           subgraphs: subgraphsDetails,
           compositionWarnings,
+          counts,
         };
       }
     }
@@ -150,6 +173,7 @@ export function checkFederatedGraph(
       compositionErrors: [],
       subgraphs: subgraphsDetails,
       compositionWarnings,
+      counts,
     };
   });
 }
