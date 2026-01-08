@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -560,6 +561,13 @@ func (s *GraphQLSchemaServer) registerTools() error {
 
 		toolName := operationToolName
 		if !s.omitToolNamePrefix {
+			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
+		} else if slices.Contains(s.registeredTools, operationToolName) {
+			s.logger.Warn("Operation name collides with built-in MCP tool, using prefixed name",
+				zap.String("operation", op.Name),
+				zap.String("conflicting_tool", operationToolName),
+				zap.String("using_name", fmt.Sprintf("execute_operation_%s", operationToolName)),
+			)
 			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
 		}
 		tool := mcp.NewToolWithRawSchema(

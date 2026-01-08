@@ -226,6 +226,36 @@ func TestMCP(t *testing.T) {
 				})
 			})
 
+			t.Run("Tool name collision with built-in tool uses prefixed name when OmitToolNamePrefix is enabled", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCPOperationsPath: "testdata/mcp_operations_collision",
+					MCP: config.MCPConfiguration{
+						Enabled:            true,
+						OmitToolNamePrefix: true,
+						ExposeSchema:       true,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					toolsRequest := mcp.ListToolsRequest{}
+					resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+					require.NoError(t, err)
+					require.NotNil(t, resp)
+
+					var foundBuiltInGetSchema, foundPrefixedGetSchema bool
+
+					for _, tool := range resp.Tools {
+						switch tool.Name {
+						case "get_schema":
+							foundBuiltInGetSchema = true
+						case "execute_operation_get_schema":
+							foundPrefixedGetSchema = true
+						}
+					}
+
+					require.True(t, foundBuiltInGetSchema, "Built-in 'get_schema' tool should be registered")
+					require.True(t, foundPrefixedGetSchema, "Conflicting operation should use prefixed name 'execute_operation_get_schema'")
+				})
+			})
+
 			t.Run("List user Operations / Static operations of type mutation aren't exposed when excludeMutations is set", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
 					MCP: config.MCPConfiguration{
