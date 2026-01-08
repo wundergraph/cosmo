@@ -6,7 +6,7 @@ import logSymbols from 'log-symbols';
 import pc from 'picocolors';
 import { config } from './core/config.js';
 
-export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
+export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: number) => {
   const changesTable = new Table({
     head: [pc.bold(pc.white('CHANGE')), pc.bold(pc.white('TYPE')), pc.bold(pc.white('DESCRIPTION'))],
     wordWrap: true,
@@ -249,6 +249,28 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
         finalStatement += `\n${logSymbols.error} Subgraph extension check failed with message: ${resp.checkExtensionErrorMessage}`;
       }
 
+      let moreEntriesAvailableMessage = '';
+      if (resp.counts) {
+        const hasExceeded =
+          resp.counts.lintWarnings + resp.counts.lintErrors > rowLimit ||
+          resp.counts.breakingChanges + resp.counts.nonBreakingChanges > rowLimit ||
+          resp.counts.graphPruneErrors + resp.counts.graphPruneWarnings > rowLimit ||
+          resp.counts.compositionErrors > rowLimit ||
+          resp.counts.compositionWarnings > rowLimit;
+
+        if (hasExceeded) {
+          if (studioCheckDestination !== '') {
+            moreEntriesAvailableMessage += `\n\n`;
+          }
+          moreEntriesAvailableMessage += pc.red(
+            `Some results were truncated due to exceeding the limit of ${rowLimit} rows.`,
+          );
+          if (studioCheckDestination !== '') {
+            moreEntriesAvailableMessage += ` They can be viewed in the studio dashboard.`;
+          }
+        }
+      }
+
       if (success) {
         console.log(
           '\n' +
@@ -256,6 +278,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
             pc.green(` Schema check passed. ${finalStatement}`) +
             '\n\n' +
             studioCheckDestination +
+            moreEntriesAvailableMessage +
             '\n',
         );
       } else {
@@ -263,7 +286,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
           '\n' +
             logSymbols.error +
             pc.red(
-              ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.\n${studioCheckDestination}\n`,
+              ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.\n${studioCheckDestination}${moreEntriesAvailableMessage}\n`,
             ) +
             '\n',
         );
