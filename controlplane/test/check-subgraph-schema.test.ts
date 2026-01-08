@@ -1222,6 +1222,296 @@ type Category {
     await server.close();
   });
 
+  describe('Schema check with limit parameter', () => {
+    test('Should return all results when no limit is provided', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const subgraphName = genID('subgraph1');
+      const label = genUniqueLabel();
+
+      // Create subgraph
+      await client.createFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      // Publish initial schema
+      await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        schema: 'type Query { field1: String! field2: String! field3: String! field4: String! field5: String! }',
+      });
+
+      // Check with a schema that has multiple breaking and non-breaking changes
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Uint8Array.from(
+          Buffer.from(
+            'type Query { field6: String! field7: String! field8: String! field9: String! field10: String! }',
+          ),
+        ),
+        // No limit provided
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      // Should have 5 breaking changes (removed fields) and 5 non-breaking changes (added fields)
+      expect(checkResp.breakingChanges.length).toBe(5);
+      expect(checkResp.nonBreakingChanges.length).toBe(5);
+      expect(checkResp.counts?.breakingChanges).toBe(5);
+      expect(checkResp.counts?.nonBreakingChanges).toBe(5);
+
+      await server.close();
+    });
+
+    test('Should limit breaking and non-breaking changes combined when limit is provided', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const subgraphName = genID('subgraph1');
+      const label = genUniqueLabel();
+
+      await client.createFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        schema: 'type Query { field1: String! field2: String! field3: String! field4: String! field5: String! }',
+      });
+
+      // Check with limit of 3
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Uint8Array.from(
+          Buffer.from(
+            'type Query { field6: String! field7: String! field8: String! field9: String! field10: String! }',
+          ),
+        ),
+        limit: 3,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      // Should have max 3 items combined (breaking changes have priority)
+      const totalReturned = checkResp.breakingChanges.length + checkResp.nonBreakingChanges.length;
+      expect(totalReturned).toBeLessThanOrEqual(3);
+      // Counts should still reflect the full count
+      expect(checkResp.counts?.breakingChanges).toBe(5);
+      expect(checkResp.counts?.nonBreakingChanges).toBe(5);
+
+      await server.close();
+    });
+
+    test('Should respect limit of 1 for combined arrays', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const subgraphName = genID('subgraph1');
+      const label = genUniqueLabel();
+
+      await client.createFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        schema: 'type Query { field1: String! field2: String! }',
+      });
+
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Uint8Array.from(Buffer.from('type Query { field3: String! field4: String! }')),
+        limit: 1,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      // Should have exactly 1 item returned (will be a breaking change since it has priority)
+      const totalReturned = checkResp.breakingChanges.length + checkResp.nonBreakingChanges.length;
+      expect(totalReturned).toBe(1);
+      expect(checkResp.breakingChanges.length).toBe(1);
+      expect(checkResp.nonBreakingChanges.length).toBe(0);
+      // Counts should still be correct
+      expect(checkResp.counts?.breakingChanges).toBe(2);
+      expect(checkResp.counts?.nonBreakingChanges).toBe(2);
+
+      await server.close();
+    });
+
+    test('Should limit composition errors separately from other arrays', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const federatedGraphName = genID('fedGraph');
+      const subgraphName = genID('subgraph1');
+      const label = genUniqueLabel();
+
+      await client.createFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: [joinLabel(label)],
+        routingUrl: 'http://localhost:8081',
+      });
+
+      await client.createFederatedSubgraph({
+        name: subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labels: [label],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+        schema: 'type Query { hello: String! }',
+      });
+
+      // Check with schema that causes composition errors
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+        schema: Uint8Array.from(
+          Buffer.from(
+            'type Query { hello: String! } extend type Product { hello: String! } extend type User { field: String! }',
+          ),
+        ),
+        limit: 1,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      // Composition errors should be limited to 1
+      expect(checkResp.compositionErrors.length).toBe(1);
+      // But counts should reflect the actual total
+      expect(checkResp.counts?.compositionErrors).toBe(2);
+
+      await server.close();
+    });
+
+    test('Should clamp limit to maximum allowed value', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const subgraphName = genID('subgraph1');
+      const label = genUniqueLabel();
+
+      await client.createFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        schema: 'type Query { field1: String! }',
+      });
+
+      // Pass a limit greater than the max (100,000)
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Uint8Array.from(Buffer.from('type Query { field2: String! }')),
+        limit: 200_000, // Greater than maxRowLimit
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      // Should still work, limit will be clamped to 100,000
+      expect(checkResp.breakingChanges.length).toBe(1);
+      expect(checkResp.nonBreakingChanges.length).toBe(1);
+
+      await server.close();
+    });
+
+    test('Should clamp limit of 0 to minimum of 1', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const subgraphName = genID('subgraph1');
+      const label = genUniqueLabel();
+
+      await client.createFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        schema: 'type Query { field1: String! }',
+      });
+
+      // Check with limit of 0 - should be clamped to minimum of 1
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Uint8Array.from(Buffer.from('type Query { field2: String! }')),
+        limit: 0,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      // When limit is 0, it gets clamped to minimum of 1
+      const totalReturned = checkResp.breakingChanges.length + checkResp.nonBreakingChanges.length;
+      expect(totalReturned).toBe(1);
+      // Counts should still reflect the actual totals
+      expect(checkResp.counts?.breakingChanges).toBe(1);
+      expect(checkResp.counts?.nonBreakingChanges).toBe(1);
+
+      await server.close();
+    });
+
+    test('Should return counts object even when there are no changes', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const subgraphName = genID('subgraph1');
+      const label = genUniqueLabel();
+
+      await client.createFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        schema: 'type Query { hello: String! }',
+      });
+
+      // Check with same schema
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: 'default',
+        schema: Uint8Array.from(Buffer.from('type Query { hello: String! }')),
+        limit: 10,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.breakingChanges.length).toBe(0);
+      expect(checkResp.nonBreakingChanges.length).toBe(0);
+      // Counts should be present and all zero
+      expect(checkResp.counts?.breakingChanges).toBe(0);
+      expect(checkResp.counts?.nonBreakingChanges).toBe(0);
+      expect(checkResp.counts?.compositionErrors).toBe(0);
+      expect(checkResp.counts?.compositionWarnings).toBe(0);
+      expect(checkResp.counts?.lintErrors).toBe(0);
+      expect(checkResp.counts?.lintWarnings).toBe(0);
+      expect(checkResp.counts?.graphPruneErrors).toBe(0);
+      expect(checkResp.counts?.graphPruneWarnings).toBe(0);
+
+      await server.close();
+    });
+  });
+
   describe('Schema check with linked subgraphs', () => {
     test('Should perform schema check on both source and target linked subgraphs', async () => {
       const { client, server } = await SetupTest({ dbname, chClient });
