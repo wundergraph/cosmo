@@ -398,11 +398,13 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			handler.request, err = h.accessController.Access(w, r)
 			if err != nil {
 				statusCode := http.StatusForbidden
+				errorMessage := err
 				if errors.Is(err, ErrUnauthorized) {
 					statusCode = http.StatusUnauthorized
+					errorMessage = ErrUnauthorized
 				}
 				http.Error(handler.w, http.StatusText(statusCode), statusCode)
-				_ = handler.writeErrorMessage(requestID, err)
+				_ = handler.writeErrorMessage(requestID, errorMessage)
 				handler.Close(false)
 				return
 			}
