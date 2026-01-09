@@ -104,6 +104,11 @@ spec:
                 secretKeyRef:
                   name: {{ include "controlplane.secretName" . }}
                   key: jwtSessionSecret
+            - name: AUTH_SSO_COOKIE_DOMAIN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "controlplane.secretName" . }}
+                  key: authSsoCookieDomain
             - name: DB_URL
               valueFrom:
                 secretKeyRef:
