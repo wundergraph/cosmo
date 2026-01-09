@@ -596,7 +596,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 
 // newGraphServer creates a new server.
 func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error {
-	server, err := newGraphServer(ctx, r, cfg, r.proxy)
+	var plans map[uint64]string
+	if r.httpServer.graphServer != nil {
+		plans = r.httpServer.graphServer.operationPlanner.getPlans()
+	}
+
+	server, err := newGraphServer(ctx, r, cfg, r.proxy, plans)
 	if err != nil {
 		r.logger.Error("Failed to create graph server. Keeping the old server", zap.Error(err))
 		return err

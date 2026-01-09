@@ -26,6 +26,7 @@ type planWithMetaData struct {
 type OperationPlanner struct {
 	sf             singleflight.Group
 	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
+	plans          map[uint64]string
 	executor       *Executor
 	trackUsageInfo bool
 }
@@ -44,7 +45,12 @@ func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64
 		planCache:      planCache,
 		executor:       executor,
 		trackUsageInfo: executor.TrackUsageInfo,
+		plans:          make(map[uint64]string),
 	}
+}
+
+func (p *OperationPlanner) getPlans() map[uint64]string {
+	return p.plans
 }
 
 func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData, error) {
@@ -125,6 +131,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 	operationID := opContext.internalHash
 	// try to get a prepared plan for this operation ID from the cache
 	cachedPlan, ok := p.planCache.Get(operationID)
+
 	if ok && cachedPlan != nil {
 		// re-use a prepared plan
 		opContext.preparedPlan = cachedPlan
@@ -139,6 +146,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 				return nil, err
 			}
 			p.planCache.Set(operationID, prepared, 1)
+			p.plans[operationID] = opContext.Content()
 			return prepared, nil
 		})
 		if err != nil {
