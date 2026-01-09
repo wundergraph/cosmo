@@ -1362,7 +1362,7 @@ func (r *Router) Start(ctx context.Context) error {
 		)
 	}
 
-	handler := func(newConfig *nodev1.RouterConfig, oldVersion string) error {
+	r.configPoller.Subscribe(ctx, func(newConfig *nodev1.RouterConfig, oldVersion string) error {
 		if r.shutdown.Load() {
 			r.logger.Warn("Router is in shutdown state. Skipping config update")
 			return nil
@@ -1375,8 +1375,7 @@ func (r *Router) Start(ctx context.Context) error {
 		}
 
 		return nil
-	}
-	r.configPoller.Subscribe(ctx, handler)
+	})
 
 	// Mark the server as ready
 	r.httpServer.healthcheck.SetReady(true)

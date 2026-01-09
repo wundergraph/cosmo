@@ -754,7 +754,6 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
 	s.planCache.Close()
-	//s.planCache.Get()
 	s.persistedOperationCache.Close()
 	s.normalizationCache.Close()
 	s.variablesNormalizationCache.Close()
@@ -805,10 +804,6 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		return fmt.Errorf("shutdown graph mux: %w", err)
 	}
 
-	return nil
-}
-
-func (s *graphServer) getManifestCache() map[uint64]string {
 	return nil
 }
 
