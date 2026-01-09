@@ -54,8 +54,8 @@ const LoginPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center xl:items-start xl:justify-start">
-      <div className="relative z-10 m-4 flex w-full max-w-xl flex-col gap-y-4 rounded-lg border bg-gray-950/60 p-4 text-white shadow-xl backdrop-blur-xl md:p-10 lg:m-10 lg:mt-20 xl:mt-52 2xl:mt-60">
-        <div className="flex flex-col items-start pt-4 md:pt-8">
+      <div className="relative z-10 m-4 flex w-full max-w-xl flex-col gap-y-4 rounded-lg border bg-gray-950/60 p-4 text-white shadow-xl backdrop-blur-xl md:p-10 lg:m-10 lg:mt-20 xl:mt-48 2xl:mt-56">
+        <div className="flex flex-col items-start pt-2">
           <h2 className="mb-1 text-2xl font-medium">Sign in</h2>
           <div className="w-full">
             <p className="text-muted-foreground">
@@ -126,6 +126,18 @@ const LoginPage: NextPageWithLayout = () => {
                   <ArrowRightIcon className="ms-2 transition-all group-hover:translate-x-1" />
                 </Link>
               </Button>
+            </div>
+            <div className="mt-6 flex w-full items-center justify-center text-center">
+              <p className="text-sm text-muted-foreground">
+                For more information, explore our
+              </p>
+              <div>
+                <Button variant="link" size="sm" className="px-[5px]" asChild>
+                  <Link href="https://cosmo-docs.wundergraph.com">
+                    documentation.
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </div>

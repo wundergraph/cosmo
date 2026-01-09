@@ -39,12 +39,8 @@ const SignupPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center xl:items-start xl:justify-start">
-      <div className="relative z-10 m-4 flex w-full max-w-xl flex-col gap-y-4 rounded-lg border bg-gray-950/60 p-4 text-white shadow-xl backdrop-blur-xl md:p-10 lg:m-10 lg:mt-20 xl:mt-52 2xl:mt-60">
-        <a href="https://wundergraph.com" className="flex items-center gap-2">
-          <Logo width={40} height={40} />
-          <h1 className="text-lg font-bold">WunderGraph Cosmo</h1>
-        </a>
-        <div className="flex flex-col items-start pt-8 md:pt-16">
+      <div className="relative z-10 m-4 flex w-full max-w-xl flex-col gap-y-4 rounded-lg border bg-gray-950/60 p-4 text-white shadow-xl backdrop-blur-xl md:p-10 lg:m-10 lg:mt-20 xl:mt-48 2xl:mt-56">
+        <div className="flex flex-col items-start pt-2">
           <h2 className="mb-1 text-2xl font-medium">Sign up</h2>
           <p className="text-muted-foreground">
             Already have an account?{" "}
@@ -93,20 +89,32 @@ const SignupPage: NextPageWithLayout = () => {
             </div>
 
             <Button
-              variant="outline"
+              variant="default"
               size="lg"
               className="text-md group w-full truncate px-12 py-6"
               asChild
             >
               <Link href={constructSignupURL({ redirectURL })}>
-                Continue with Email{" "}
+                Sign up with Email{" "}
                 <ArrowRightIcon className="ms-2 transition-all group-hover:translate-x-1" />
               </Link>
             </Button>
           </div>
+          <div className="mt-6 flex w-full items-center justify-center text-center">
+            <p className="text-sm text-muted-foreground">
+              For more information, explore our
+            </p>
+            <div>
+              <Button variant="link" size="sm" className="px-[5px]" asChild>
+                <Link href="https://cosmo-docs.wundergraph.com">
+                  documentation.
+                </Link>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
-      <div className="relative hidden flex-1 flex-col items-center gap-y-4 text-center text-white xl:flex xl:pt-40 2xl:pt-52">
+      <div className="relative hidden flex-1 flex-col items-center gap-y-4 text-center text-white xl:flex xl:pt-24 2xl:pt-36">
         <ProductCosmoStack />
       </div>
     </div>

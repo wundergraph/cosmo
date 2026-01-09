@@ -20,8 +20,8 @@ export const AuthLayout = ({ children }: LayoutProps) => {
             href="https://wundergraph.com"
             className="flex items-center gap-3 text-white"
           >
-            <Logo width={36} height={36} />
-            <h1 className="text-lg font-bold">WunderGraph Cosmo</h1>
+            <Logo width={40} height={40} />
+            <h1 className="text-xl font-bold">WunderGraph Cosmo</h1>
           </a>
         </div>
       </header>
