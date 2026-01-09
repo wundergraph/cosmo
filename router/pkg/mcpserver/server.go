@@ -17,12 +17,16 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"go.uber.org/zap"
+
 	"github.com/wundergraph/cosmo/router/internal/headers"
+	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
-	"go.uber.org/zap"
 )
 
 // requestHeadersKey is a custom context key for storing request headers.
@@ -76,6 +80,10 @@ type Options struct {
 	Stateless bool
 	// CorsConfig is the CORS configuration for the MCP server
 	CorsConfig cors.Config
+	// OAuthConfig is the OAuth/JWKS configuration for authentication
+	OAuthConfig *config.MCPOAuthConfiguration
+	// ServerBaseURL is the base URL of this MCP server (for resource metadata)
+	ServerBaseURL string
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -98,6 +106,11 @@ type GraphQLSchemaServer struct {
 	schemaCompiler            *SchemaCompiler
 	registeredTools           []string
 	corsConfig                cors.Config
+	ctx                       context.Context
+	cancel                    context.CancelFunc
+	oauthConfig               *config.MCPOAuthConfiguration
+	serverBaseURL             string
+	authMiddleware            *MCPAuthMiddleware
 }
 
 type graphqlRequest struct {
@@ -170,7 +183,6 @@ type GraphQLResponse struct {
 
 // NewGraphQLSchemaServer creates a new GraphQL schema server
 func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)) (*GraphQLSchemaServer, error) {
-
 	if routerGraphQLEndpoint == "" {
 		return nil, fmt.Errorf("routerGraphQLEndpoint cannot be empty")
 	}
@@ -196,14 +208,119 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		opt(options)
 	}
 
-	// Create the MCP server
-	mcpServer := server.NewMCPServer(
-		"wundergraph-cosmo-"+strcase.ToKebab(options.GraphName),
-		"0.0.1",
-		// Prompt, Resources aren't supported yet in any of the popular platforms
+	// Create a cancellable context for managing the server lifecycle
+	ctx, cancel := context.WithCancel(context.Background())
+
+	// Prepare server options
+	var serverOpts []server.ServerOption
+	serverOpts = append(serverOpts,
 		server.WithToolCapabilities(true),
 		server.WithPaginationLimit(100),
 		server.WithRecovery(),
+	)
+
+	// Add authentication middleware if OAuth is configured
+	if options.OAuthConfig != nil && options.OAuthConfig.Enabled && len(options.OAuthConfig.JWKS) > 0 {
+		// Convert config.JWKSConfiguration to authentication.JWKSConfig
+		authConfigs := make([]authentication.JWKSConfig, 0, len(options.OAuthConfig.JWKS))
+		for _, jwks := range options.OAuthConfig.JWKS {
+			authConfigs = append(authConfigs, authentication.JWKSConfig{
+				URL:               jwks.URL,
+				RefreshInterval:   jwks.RefreshInterval,
+				AllowedAlgorithms: jwks.Algorithms,
+				Secret:            jwks.Secret,
+				Algorithm:         jwks.Algorithm,
+				KeyId:             jwks.KeyId,
+				Audiences:         jwks.Audiences,
+				RefreshUnknownKID: authentication.RefreshUnknownKIDConfig{
+					Enabled:  jwks.RefreshUnknownKID.Enabled,
+					MaxWait:  jwks.RefreshUnknownKID.MaxWait,
+					Interval: jwks.RefreshUnknownKID.Interval,
+					Burst:    jwks.RefreshUnknownKID.Burst,
+				},
+			})
+		}
+
+		// Create token decoder using the managed context for proper lifecycle management
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(
+			ctx,
+			options.Logger,
+			authConfigs,
+		)
+		if err != nil {
+			cancel() // Clean up the context if initialization fails
+			return nil, fmt.Errorf("failed to create token decoder: %w", err)
+		}
+
+		// Build resource metadata URL for WWW-Authenticate header
+		resourceMetadataURL := ""
+		if options.ServerBaseURL != "" {
+			resourceMetadataURL = fmt.Sprintf("%s/.well-known/oauth-protected-resource", options.ServerBaseURL)
+		}
+
+		// Get HTTP-level required scopes from the "initialize" key
+		// These scopes are required for ANY HTTP request (including initialize)
+		httpRequiredScopes := options.OAuthConfig.ScopesRequired["initialize"]
+		if httpRequiredScopes == nil {
+			httpRequiredScopes = []string{}
+		}
+
+		// Create authentication middleware with HTTP-level required scopes
+		// Per-tool scope authorization happens at the tool level
+		authMiddleware, err := NewMCPAuthMiddleware(tokenDecoder, true, resourceMetadataURL, httpRequiredScopes)
+		if err != nil {
+			cancel() // Clean up the context if initialization fails
+			return nil, fmt.Errorf("failed to create auth middleware: %w", err)
+		}
+
+		// Store auth middleware for HTTP-level protection
+		// Note: We don't use WithToolHandlerMiddleware here because per MCP spec,
+		// ALL HTTP requests must be authenticated, not just tool calls
+		options.Logger.Info("MCP OAuth authentication enabled",
+			zap.Int("jwks_providers", len(options.OAuthConfig.JWKS)),
+			zap.String("authorization_server", options.OAuthConfig.AuthorizationServerURL))
+
+		// Create the MCP server with all options
+		mcpServer := server.NewMCPServer(
+			"wundergraph-cosmo-"+strcase.ToKebab(options.GraphName),
+			"0.0.1",
+			serverOpts...,
+		)
+
+		retryClient := retryablehttp.NewClient()
+		retryClient.Logger = nil
+		httpClient := retryClient.StandardClient()
+		httpClient.Timeout = 60 * time.Second
+
+		gs := &GraphQLSchemaServer{
+			server:                    mcpServer,
+			graphName:                 options.GraphName,
+			operationsDir:             options.OperationsDir,
+			listenAddr:                options.ListenAddr,
+			logger:                    options.Logger,
+			httpClient:                httpClient,
+			requestTimeout:            options.RequestTimeout,
+			routerGraphQLEndpoint:     routerGraphQLEndpoint,
+			excludeMutations:          options.ExcludeMutations,
+			enableArbitraryOperations: options.EnableArbitraryOperations,
+			exposeSchema:              options.ExposeSchema,
+			stateless:                 options.Stateless,
+			corsConfig:                options.CorsConfig,
+			ctx:                       ctx,
+			cancel:                    cancel,
+			oauthConfig:               options.OAuthConfig,
+			serverBaseURL:             options.ServerBaseURL,
+			authMiddleware:            authMiddleware,
+		}
+
+		return gs, nil
+	}
+
+	// Create the MCP server with all options
+	mcpServer := server.NewMCPServer(
+		"wundergraph-cosmo-"+strcase.ToKebab(options.GraphName),
+		"0.0.1",
+		serverOpts...,
 	)
 
 	retryClient := retryablehttp.NewClient()
@@ -226,6 +343,11 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		omitToolNamePrefix:        options.OmitToolNamePrefix,
 		stateless:                 options.Stateless,
 		corsConfig:                options.CorsConfig,
+		ctx:                       ctx,
+		cancel:                    cancel,
+		oauthConfig:               options.OAuthConfig,
+		serverBaseURL:             options.ServerBaseURL,
+		authMiddleware:            nil, // No auth middleware when OAuth is disabled
 	}
 
 	return gs, nil
@@ -311,6 +433,20 @@ func WithCORS(corsCfg cors.Config) func(*Options) {
 	}
 }
 
+// WithOAuth sets the OAuth configuration
+func WithOAuth(oauthCfg *config.MCPOAuthConfiguration) func(*Options) {
+	return func(o *Options) {
+		o.OAuthConfig = oauthCfg
+	}
+}
+
+// WithServerBaseURL sets the server base URL for OAuth discovery
+func WithServerBaseURL(baseURL string) func(*Options) {
+	return func(o *Options) {
+		o.ServerBaseURL = baseURL
+	}
+}
+
 // Serve starts the server with the configured options and returns a streamable HTTP server.
 func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 	// Create custom HTTP server
@@ -333,10 +469,29 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 
 	mux := http.NewServeMux()
 
-	// No OAuth protection - original behavior
-	mux.Handle("/mcp", middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	// OAuth 2.0 Protected Resource Metadata endpoint (RFC 9728)
+	// This endpoint is required for MCP clients to discover the authorization server
+	// This endpoint is NOT protected by authentication (it's public discovery)
+	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
+		mux.Handle("/.well-known/oauth-protected-resource", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
+		s.logger.Info("OAuth 2.0 Protected Resource Metadata endpoint enabled",
+			zap.String("path", "/.well-known/oauth-protected-resource"),
+			zap.String("authorization_server", s.oauthConfig.AuthorizationServerURL))
+	}
+
+	// MCP endpoint with HTTP-level authentication
+	// Per MCP spec: "authorization MUST be included in every HTTP request from client to server"
+	mcpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		streamableHTTPServer.ServeHTTP(w, r)
-	})))
+	})
+
+	// Apply authentication middleware if OAuth is enabled
+	if s.authMiddleware != nil {
+		mux.Handle("/mcp", middleware(s.authMiddleware.HTTPMiddleware(mcpHandler)))
+		s.logger.Info("MCP endpoint protected with OAuth authentication at HTTP level")
+	} else {
+		mux.Handle("/mcp", middleware(mcpHandler))
+	}
 
 	// Set the handler for the custom HTTP server
 	httpServer.Handler = mux
@@ -367,7 +522,6 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 
 // Start loads operations and starts the server
 func (s *GraphQLSchemaServer) Start() error {
-
 	ss, err := s.Serve()
 	if err != nil {
 		return fmt.Errorf("failed to create HTTP server: %w", err)
@@ -380,7 +534,6 @@ func (s *GraphQLSchemaServer) Start() error {
 
 // Reload reloads the operations and schema
 func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
-
 	if s.server == nil {
 		return fmt.Errorf("server is not started")
 	}
@@ -411,6 +564,11 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 
 	s.logger.Debug("shutting down MCP server")
 
+	// Cancel the server's context to stop background operations (e.g., JWKS key refresh)
+	if s.cancel != nil {
+		s.cancel()
+	}
+
 	// Create a shutdown context with timeout
 	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -424,18 +582,28 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 
 // registerTools registers all tools for the MCP server
 func (s *GraphQLSchemaServer) registerTools() error {
-
 	// Only register the schema tool if exposeSchema is enabled
 	if s.exposeSchema {
+		// Create a schema with empty properties since get_schema takes no input
+		// Note: We omit "required" field to get nil instead of empty array
+		getSchemaInputSchema := []byte(`{
+			"type": "object",
+			"properties": {}
+		}`)
+
+		tool := mcp.NewToolWithRawSchema(
+			"get_schema",
+			"Provides the full GraphQL schema of the API.",
+			getSchemaInputSchema,
+		)
+
+		tool.Annotations = mcp.ToolAnnotation{
+			Title:        "Get GraphQL Schema",
+			ReadOnlyHint: mcp.ToBoolPtr(true),
+		}
+
 		s.server.AddTool(
-			mcp.NewTool(
-				"get_schema",
-				mcp.WithDescription("Provides the full GraphQL schema of the API."),
-				mcp.WithToolAnnotation(mcp.ToolAnnotation{
-					Title:        "Get GraphQL Schema",
-					ReadOnlyHint: mcp.ToBoolPtr(true),
-				}),
-			),
+			tool,
 			s.handleGetGraphQLSchema(),
 		)
 
@@ -487,7 +655,6 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		)
 
 		s.registeredTools = append(s.registeredTools, "execute_graphql")
-
 	}
 
 	// Get operations filtered by the excludeMutations setting
@@ -595,6 +762,13 @@ func (s *GraphQLSchemaServer) registerTools() error {
 // handleOperation handles a specific operation
 func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// Log authenticated user if OAuth is enabled
+		if claims, ok := GetClaimsFromContext(ctx); ok {
+			s.logger.Debug("operation called by authenticated user",
+				zap.String("sub", getClaimString(claims, "sub")),
+				zap.String("email", getClaimString(claims, "email")),
+				zap.String("operation", handler.operation.Name))
+		}
 
 		jsonBytes, err := json.Marshal(request.GetArguments())
 		if err != nil {
@@ -772,6 +946,13 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 // handleExecuteGraphQL returns a handler function that executes arbitrary GraphQL queries
 func (s *GraphQLSchemaServer) handleExecuteGraphQL() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		// Log authenticated user if OAuth is enabled
+		if claims, ok := GetClaimsFromContext(ctx); ok {
+			s.logger.Debug("arbitrary GraphQL query called by authenticated user",
+				zap.String("sub", getClaimString(claims, "sub")),
+				zap.String("email", getClaimString(claims, "email")))
+		}
+
 		// Parse the JSON input
 		jsonBytes, err := json.Marshal(request.GetArguments())
 		if err != nil {
@@ -808,4 +989,86 @@ func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context,
 
 		return mcp.NewToolResultText(schemaStr), nil
 	}
+}
+
+// getClaimString safely extracts a string value from claims
+func getClaimString(claims authentication.Claims, key string) string {
+	if val, ok := claims[key]; ok {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
+// ProtectedResourceMetadata represents the OAuth 2.0 Protected Resource Metadata (RFC 9728)
+type ProtectedResourceMetadata struct {
+	Resource               string   `json:"resource"`
+	AuthorizationServers   []string `json:"authorization_servers"`
+	BearerMethodsSupported []string `json:"bearer_methods_supported,omitempty"`
+	ResourceDocumentation  string   `json:"resource_documentation,omitempty"`
+	ScopesSupported        []string `json:"scopes_supported"`
+}
+
+// handleProtectedResourceMetadata handles the OAuth 2.0 Protected Resource Metadata endpoint
+// as specified in RFC 9728. This endpoint allows MCP clients to discover the authorization
+// server(s) associated with this resource server.
+func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Determine the resource URL (this MCP server's base URL)
+	resourceURL := s.serverBaseURL
+	if resourceURL == "" {
+		// Fallback: construct from request if not configured
+		scheme := "http"
+		if r.TLS != nil {
+			scheme = "https"
+		}
+		resourceURL = fmt.Sprintf("%s://%s", scheme, r.Host)
+	}
+
+	// Build scopes_supported from all required scopes (union of all scopes in the map)
+	scopesSet := make(map[string]bool)
+	for _, requiredScopes := range s.oauthConfig.ScopesRequired {
+		for _, scope := range requiredScopes {
+			scopesSet[scope] = true
+		}
+	}
+
+	// Convert set to sorted slice for consistent output
+	scopes := make([]string, 0, len(scopesSet))
+	for scope := range scopesSet {
+		scopes = append(scopes, scope)
+	}
+	if len(scopes) == 0 {
+		scopes = []string{} // Ensure non-nil for JSON encoding
+	}
+
+	metadata := ProtectedResourceMetadata{
+		Resource:               resourceURL,
+		AuthorizationServers:   []string{s.oauthConfig.AuthorizationServerURL},
+		BearerMethodsSupported: []string{"header"},
+		ResourceDocumentation:  fmt.Sprintf("%s/mcp", resourceURL),
+		ScopesSupported:        scopes, // Automatically derived from required scopes
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(metadata); err != nil {
+		s.logger.Error("failed to encode protected resource metadata", zap.Error(err))
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+}
+
+// GetResourceMetadataURL returns the URL for the OAuth 2.0 Protected Resource Metadata endpoint
+func (s *GraphQLSchemaServer) GetResourceMetadataURL() string {
+	if s.serverBaseURL != "" {
+		return fmt.Sprintf("%s/.well-known/oauth-protected-resource", s.serverBaseURL)
+	}
+	return ""
 }

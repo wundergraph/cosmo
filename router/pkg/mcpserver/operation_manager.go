@@ -3,9 +3,11 @@ package mcpserver
 import (
 	"fmt"
 
-	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 )
 
 // OperationsManager handles the loading and preparation of GraphQL operations

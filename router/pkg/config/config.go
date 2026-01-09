@@ -1023,18 +1023,35 @@ type CacheWarmupConfiguration struct {
 }
 
 type MCPConfiguration struct {
-	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
-	Server                    MCPServer        `yaml:"server,omitempty"`
-	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
-	Session                   MCPSessionConfig `yaml:"session,omitempty"`
-	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
-	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
-	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
-	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
-	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	Enabled                   bool                  `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer             `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig      `yaml:"storage,omitempty"`
+	Session                   MCPSessionConfig      `yaml:"session,omitempty"`
+	GraphName                 string                `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool                  `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool                  `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool                  `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+	RouterURL                 string                `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
 	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
-	OmitToolNamePrefix bool `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	OmitToolNamePrefix        bool                  `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	OAuth                     MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
+}
+
+type MCPOAuthConfiguration struct {
+	Enabled                bool                   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	JWKS                   []JWKSConfiguration    `yaml:"jwks"`
+	AuthorizationServerURL string                 `yaml:"authorization_server_url,omitempty" env:"AUTHORIZATION_SERVER_URL"`
+	// ScopesRequired maps tool names or special keys to their required scopes.
+	// Special key "initialize" specifies scopes required for HTTP-level access (all requests).
+	// Tool names (e.g., "get_schema", "execute_operation_employees") specify per-tool scopes.
+	// All scopes from this map are automatically unioned into scopes_supported for OAuth metadata.
+	// Example:
+	//   scopes_required:
+	//     initialize: ["mcp:init"]
+	//     get_schema: ["mcp:tools:read"]
+	//     execute_operation_create_employee: ["write:employees"]
+	ScopesRequired         map[string][]string    `yaml:"scopes_required,omitempty"`
 }
 
 type MCPSessionConfig struct {
