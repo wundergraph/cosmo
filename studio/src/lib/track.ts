@@ -17,7 +17,7 @@ const resetTracking = () => {
   }
 
   posthog.reset();
-  window.ko?.reset;
+  window.ko?.reset();
 };
 
 const identify = ({
