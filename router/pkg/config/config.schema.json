@@ -2135,7 +2135,7 @@
         "omit_tool_name_prefix": {
           "type": "boolean",
           "default": false,
-          "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'. This produces cleaner tool names for AI models."
+          "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
         }
       }
     },
