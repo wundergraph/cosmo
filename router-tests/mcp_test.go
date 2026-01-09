@@ -229,19 +229,13 @@ func TestMCP(t *testing.T) {
 					require.NoError(t, err)
 					require.NotNil(t, resp)
 
-					var foundBuiltInGetSchema, foundPrefixedGetSchema bool
-
-					for _, tool := range resp.Tools {
-						switch tool.Name {
-						case "get_schema":
-							foundBuiltInGetSchema = true
-						case "execute_operation_get_schema":
-							foundPrefixedGetSchema = true
-						}
+					toolNames := make([]string, len(resp.Tools))
+					for i, tool := range resp.Tools {
+						toolNames[i] = tool.Name
 					}
 
-					require.True(t, foundBuiltInGetSchema, "Built-in 'get_schema' tool should be registered")
-					require.True(t, foundPrefixedGetSchema, "Conflicting operation should use prefixed name 'execute_operation_get_schema'")
+					assert.Contains(t, toolNames, "get_schema")                   // built-in tool (ExposeSchema=true)
+					assert.Contains(t, toolNames, "execute_operation_get_schema") // collision uses prefix
 				})
 			})
 
