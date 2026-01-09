@@ -195,8 +195,8 @@ func TestMCP(t *testing.T) {
 					req := mcp.CallToolRequest{
 						Params: mcp.CallToolParams{
 							Name: "my_employees",
-							Arguments: map[string]interface{}{
-								"criteria": map[string]interface{}{},
+							Arguments: map[string]any{
+								"criteria": map[string]any{},
 							},
 						},
 					}
