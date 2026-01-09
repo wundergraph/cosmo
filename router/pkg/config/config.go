@@ -722,6 +722,16 @@ type WebSocketConfiguration struct {
 	Authentication WebSocketAuthenticationConfiguration `yaml:"authentication,omitempty"`
 	// SetClientInfoFromInitialPayload configuration for the WebSocket Connection
 	ClientInfoFromInitialPayload WebSocketClientInfoFromInitialPayloadConfiguration `yaml:"client_info_from_initial_payload"`
+	// Compression configuration for WebSocket per-message compression (permessage-deflate)
+	Compression WebSocketCompressionConfiguration `yaml:"compression,omitempty"`
+}
+
+// WebSocketCompressionConfiguration configures permessage-deflate compression for WebSocket connections
+type WebSocketCompressionConfiguration struct {
+	// Enabled enables permessage-deflate compression for WebSocket connections
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"WEBSOCKETS_COMPRESSION_ENABLED"`
+	// Level is the compression level (1-9, where 1 is fastest and 9 is best compression)
+	Level int `yaml:"level" envDefault:"6" env:"WEBSOCKETS_COMPRESSION_LEVEL"`
 }
 
 type WebSocketClientInfoFromInitialPayloadConfiguration struct {
