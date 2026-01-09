@@ -110,9 +110,19 @@
   },
   "CORS": {
     "Enabled": true,
-    "AllowOrigins": ["*"],
-    "AllowMethods": ["HEAD", "GET", "POST"],
-    "AllowHeaders": ["Origin", "Content-Length", "Content-Type"],
+    "AllowOrigins": [
+      "*"
+    ],
+    "AllowMethods": [
+      "HEAD",
+      "GET",
+      "POST"
+    ],
+    "AllowHeaders": [
+      "Origin",
+      "Content-Length",
+      "Content-Type"
+    ],
     "AllowCredentials": true,
     "MaxAge": 300000000000
   },
@@ -162,8 +172,8 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "OmitToolNamePrefix": false,
-    "RouterURL": "https://cosmo-router.wundergraph.com"
+    "RouterURL": "https://cosmo-router.wundergraph.com",
+    "OmitToolNamePrefix": false
   },
   "DemoMode": true,
   "Modules": {
@@ -297,7 +307,10 @@
         ]
       }
     },
-    "CookieWhitelist": ["cookie1", "cookie2"]
+    "CookieWhitelist": [
+      "cookie1",
+      "cookie2"
+    ]
   },
   "TrafficShaping": {
     "All": {
@@ -420,7 +433,10 @@
           }
         }
       ],
-      "IgnoreQueryParamsList": ["variables", "anothervalue"]
+      "IgnoreQueryParamsList": [
+        "variables",
+        "anothervalue"
+      ]
     },
     "Subgraphs": {
       "Enabled": true,
@@ -474,7 +490,9 @@
       "JWKS": [
         {
           "URL": "https://example.com/.well-known/jwks.json",
-          "Algorithms": ["RS256"],
+          "Algorithms": [
+            "RS256"
+          ],
           "RefreshInterval": 60000000000,
           "RefreshUnknownKID": {
             "Enabled": false,
@@ -489,7 +507,10 @@
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
-          "Algorithms": ["RS256", "ES256"],
+          "Algorithms": [
+            "RS256",
+            "ES256"
+          ],
           "RefreshInterval": 120000000000,
           "RefreshUnknownKID": {
             "Enabled": true,
@@ -524,7 +545,10 @@
         {
           "Type": "header",
           "Name": "X-Authorization",
-          "ValuePrefixes": ["Bearer", "Token"]
+          "ValuePrefixes": [
+            "Bearer",
+            "Token"
+          ]
         },
         {
           "Type": "header",
@@ -551,7 +575,10 @@
       "HideStatsFromResponseExtension": false
     },
     "Storage": {
-      "URLs": ["test@localhost:8000", "test2@localhost:8001"],
+      "URLs": [
+        "test@localhost:8000",
+        "test2@localhost:8001"
+      ],
       "ClusterEnabled": true,
       "KeyPrefix": "cosmo_rate_limit"
     },
@@ -591,7 +618,9 @@
       "Kafka": [
         {
           "ID": "my-kafka",
-          "Brokers": ["localhost:9092"],
+          "Brokers": [
+            "localhost:9092"
+          ],
           "Authentication": {
             "SASLPlain": {
               "Password": "admin",
@@ -612,7 +641,9 @@
       "Redis": [
         {
           "ID": "my-redis",
-          "URLs": ["redis://localhost:6379/11"],
+          "URLs": [
+            "redis://localhost:6379/11"
+          ],
           "ClusterEnabled": true
         }
       ]
@@ -758,11 +789,15 @@
     },
     "ForwardUpgradeHeaders": {
       "Enabled": true,
-      "AllowList": ["Authorization"]
+      "AllowList": [
+        "Authorization"
+      ]
     },
     "ForwardUpgradeQueryParams": {
       "Enabled": true,
-      "AllowList": ["Authorization"]
+      "AllowList": [
+        "Authorization"
+      ]
     },
     "ForwardInitialPayload": true,
     "Authentication": {
@@ -796,7 +831,10 @@
     "AttachServiceName": true,
     "DefaultExtensionCode": "DOWNSTREAM_SERVICE_ERROR",
     "AllowAllExtensionFields": true,
-    "AllowedExtensionFields": ["field1", "field2"],
+    "AllowedExtensionFields": [
+      "field1",
+      "field2"
+    ],
     "AllowedFields": null
   },
   "StorageProviders": {
@@ -815,7 +853,10 @@
     "Redis": [
       {
         "ID": "my_redis",
-        "URLs": ["test@localhost:8000", "test2@localhost:8001"],
+        "URLs": [
+          "test@localhost:8000",
+          "test2@localhost:8001"
+        ],
         "ClusterEnabled": false
       }
     ],
