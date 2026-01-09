@@ -137,7 +137,13 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "RouterURL": ""
+    "RouterURL": "",
+    "OAuth": {
+      "Enabled": false,
+      "JWKS": null,
+      "AuthorizationServerURL": "",
+      "ScopesSupported": null
+    }
   },
   "DemoMode": false,
   "Modules": null,

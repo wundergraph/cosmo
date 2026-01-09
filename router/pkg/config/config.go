@@ -360,25 +360,25 @@ func (r *ResponseHeaderRule) GetMatching() string {
 }
 
 type EngineDebugConfiguration struct {
-	PrintOperationTransformations                bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_OPERATION_TRANSFORMATIONS" yaml:"print_operation_transformations"`
-	PrintOperationEnableASTRefs                  bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS" yaml:"print_operation_enable_ast_refs"`
-	PrintPlanningPaths                           bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_PLANNING_PATHS" yaml:"print_planning_paths"`
-	PrintQueryPlans                              bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_QUERY_PLANS" yaml:"print_query_plans"`
-	PrintIntermediateQueryPlans                  bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_INTERMEDIATE_QUERY_PLANS" yaml:"print_intermediate_query_plans"`
-	PrintNodeSuggestions                         bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS" yaml:"print_node_suggestions"`
-	ConfigurationVisitor                         bool `envDefault:"false" env:"ENGINE_DEBUG_CONFIGURATION_VISITOR" yaml:"configuration_visitor"`
-	PlanningVisitor                              bool `envDefault:"false" env:"ENGINE_DEBUG_PLANNING_VISITOR" yaml:"planning_visitor"`
-	DatasourceVisitor                            bool `envDefault:"false" env:"ENGINE_DEBUG_DATASOURCE_VISITOR" yaml:"datasource_visitor"`
-	ReportWebSocketConnections                   bool `envDefault:"false" env:"ENGINE_DEBUG_REPORT_WEBSOCKET_CONNECTIONS" yaml:"report_websocket_connections"`
-	ReportMemoryUsage                            bool `envDefault:"false" env:"ENGINE_DEBUG_REPORT_MEMORY_USAGE" yaml:"report_memory_usage"`
-	EnableResolverDebugging                      bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_RESOLVER_DEBUGGING" yaml:"enable_resolver_debugging"`
+	PrintOperationTransformations bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_OPERATION_TRANSFORMATIONS" yaml:"print_operation_transformations"`
+	PrintOperationEnableASTRefs   bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_OPERATION_ENABLE_AST_REFS" yaml:"print_operation_enable_ast_refs"`
+	PrintPlanningPaths            bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_PLANNING_PATHS" yaml:"print_planning_paths"`
+	PrintQueryPlans               bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_QUERY_PLANS" yaml:"print_query_plans"`
+	PrintIntermediateQueryPlans   bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_INTERMEDIATE_QUERY_PLANS" yaml:"print_intermediate_query_plans"`
+	PrintNodeSuggestions          bool `envDefault:"false" env:"ENGINE_DEBUG_PRINT_NODE_SUGGESTIONS" yaml:"print_node_suggestions"`
+	ConfigurationVisitor          bool `envDefault:"false" env:"ENGINE_DEBUG_CONFIGURATION_VISITOR" yaml:"configuration_visitor"`
+	PlanningVisitor               bool `envDefault:"false" env:"ENGINE_DEBUG_PLANNING_VISITOR" yaml:"planning_visitor"`
+	DatasourceVisitor             bool `envDefault:"false" env:"ENGINE_DEBUG_DATASOURCE_VISITOR" yaml:"datasource_visitor"`
+	ReportWebSocketConnections    bool `envDefault:"false" env:"ENGINE_DEBUG_REPORT_WEBSOCKET_CONNECTIONS" yaml:"report_websocket_connections"`
+	ReportMemoryUsage             bool `envDefault:"false" env:"ENGINE_DEBUG_REPORT_MEMORY_USAGE" yaml:"report_memory_usage"`
+	EnableResolverDebugging       bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_RESOLVER_DEBUGGING" yaml:"enable_resolver_debugging"`
 	// EnablePersistedOperationsCacheResponseHeader is deprecated, use EnableCacheResponseHeaders instead.
 	EnablePersistedOperationsCacheResponseHeader bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_PERSISTED_OPERATIONS_CACHE_RESPONSE_HEADER" yaml:"enable_persisted_operations_cache_response_header"`
 	// EnableNormalizationCacheResponseHeader is deprecated, use EnableCacheResponseHeaders instead.
-	EnableNormalizationCacheResponseHeader       bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_NORMALIZATION_CACHE_RESPONSE_HEADER" yaml:"enable_normalization_cache_response_header"`
-	EnableCacheResponseHeaders                   bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_CACHE_RESPONSE_HEADERS" yaml:"enable_cache_response_headers"`
-	AlwaysIncludeQueryPlan                       bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_INCLUDE_QUERY_PLAN" yaml:"always_include_query_plan"`
-	AlwaysSkipLoader                             bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_SKIP_LOADER" yaml:"always_skip_loader"`
+	EnableNormalizationCacheResponseHeader bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_NORMALIZATION_CACHE_RESPONSE_HEADER" yaml:"enable_normalization_cache_response_header"`
+	EnableCacheResponseHeaders             bool `envDefault:"false" env:"ENGINE_DEBUG_ENABLE_CACHE_RESPONSE_HEADERS" yaml:"enable_cache_response_headers"`
+	AlwaysIncludeQueryPlan                 bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_INCLUDE_QUERY_PLAN" yaml:"always_include_query_plan"`
+	AlwaysSkipLoader                       bool `envDefault:"false" env:"ENGINE_DEBUG_ALWAYS_SKIP_LOADER" yaml:"always_skip_loader"`
 }
 
 type EngineExecutionConfiguration struct {
@@ -989,15 +989,26 @@ type CacheWarmupConfiguration struct {
 }
 
 type MCPConfiguration struct {
-	Enabled                   bool             `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
-	Server                    MCPServer        `yaml:"server,omitempty"`
-	Storage                   MCPStorageConfig `yaml:"storage,omitempty"`
-	Session                   MCPSessionConfig `yaml:"session,omitempty"`
-	GraphName                 string           `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
-	ExcludeMutations          bool             `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
-	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
-	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
-	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	Enabled                   bool                  `yaml:"enabled" envDefault:"false" env:"MCP_ENABLED"`
+	Server                    MCPServer             `yaml:"server,omitempty"`
+	Storage                   MCPStorageConfig      `yaml:"storage,omitempty"`
+	Session                   MCPSessionConfig      `yaml:"session,omitempty"`
+	GraphName                 string                `yaml:"graph_name" envDefault:"mygraph" env:"MCP_GRAPH_NAME"`
+	ExcludeMutations          bool                  `yaml:"exclude_mutations" envDefault:"false" env:"MCP_EXCLUDE_MUTATIONS"`
+	EnableArbitraryOperations bool                  `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
+	ExposeSchema              bool                  `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
+	RouterURL                 string                `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	OAuth                     MCPOAuthConfiguration `yaml:"oauth,omitempty" envPrefix:"MCP_OAUTH_"`
+}
+
+type MCPOAuthConfiguration struct {
+	Enabled                bool                `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	JWKS                   []JWKSConfiguration `yaml:"jwks"`
+	AuthorizationServerURL string              `yaml:"authorization_server_url,omitempty" env:"AUTHORIZATION_SERVER_URL"`
+	// ScopesSupported represents the minimal set of scopes required for basic functionality.
+	// These scopes are advertised to MCP clients via the OAuth 2.0 Protected Resource Metadata endpoint
+	// to inform clients which scopes they should request during authorization.
+	ScopesSupported        []string            `yaml:"scopes_supported" env:"SCOPES_SUPPORTED"`
 }
 
 type MCPSessionConfig struct {
