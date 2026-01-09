@@ -271,7 +271,7 @@ body.graphiql-dark [data-radix-popper-content-wrapper] {
   top: 0;
   left: 0;
   height: 100%;
-  width: 400px;
+  min-width: 450px; /* Minimum width for panel extensions */
   z-index: 50;
   background-color: hsl(var(--background));
   border-right: 1px solid hsl(var(--border));

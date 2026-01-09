@@ -11,7 +11,7 @@ import {
   parse,
   validate,
 } from 'graphql';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
 import { PiBracketsCurly } from 'react-icons/pi';
@@ -446,6 +446,7 @@ export const Playground = (input: PlaygroundProps) => {
   const [schema, setSchema] = useState<GraphQLSchema | null>(null);
 
   const [query, setQuery] = useState<string | undefined>(undefined);
+  const [variables, setVariables] = useState<string | undefined>(undefined);
 
   const [storedHeaders, setStoredHeaders] = useLocalStorage('graphiql:headers', '', {
     deserializer(value) {
@@ -485,11 +486,77 @@ export const Playground = (input: PlaygroundProps) => {
   const [status, setStatus] = useState<number>();
   const [statusText, setStatusText] = useState<string>();
 
+  const [tabsState, setTabsState] = useState<TabsState>({
+    activeTabIndex: 0,
+    tabs: [],
+  });
+
+  // Ref to track pending query/variables to set after tab creation
+  // This enables a clean async workflow: trigger tab creation -> wait for tab -> apply content
+  const pendingQueryRef = useRef<{ query: string; variables?: string } | null>(null);
+
+  // Monitor tab changes to apply pending queries
+  // When GraphiQL creates a new tab, this effect detects it and applies the pending query/variables
+  useEffect(() => {
+    if (pendingQueryRef.current && tabsState.tabs.length > 0) {
+      const { query: pendingQuery, variables: pendingVars } = pendingQueryRef.current;
+      pendingQueryRef.current = null;
+
+      // Apply the query and variables to the new tab
+      setTimeout(() => {
+        setQuery(pendingQuery);
+        if (pendingVars) {
+          setVariables(pendingVars);
+        }
+      }, 50);
+    }
+  }, [tabsState.tabs.length, tabsState.activeTabIndex]);
+
+  // Smart setQuery that creates a new tab if current tab has a query
+  const setQuerySmart = useCallback(
+    (newQuery: string) => {
+      const currentTab = tabsState.tabs[tabsState.activeTabIndex];
+
+      // If current tab has a query, create a new tab
+      if (currentTab && currentTab.query && currentTab.query.trim()) {
+        // Store the query to be applied after tab creation
+        pendingQueryRef.current = { query: newQuery };
+
+        // Trigger the new tab button in GraphiQL via DOM
+        const addTabButton = document.querySelector('button[aria-label="Add tab"]') as HTMLButtonElement;
+        if (addTabButton) {
+          addTabButton.click();
+        } else {
+          // Fallback: just set the query in current tab
+          setQuery(newQuery);
+          pendingQueryRef.current = null;
+        }
+      } else {
+        // Current tab is empty or no tabs yet, just set the query normally
+        setQuery(newQuery);
+      }
+    },
+    [tabsState],
+  );
+
+  // Smart setVariables that works with setQuerySmart
+  const setVariablesSmart = useCallback((newVariables: string) => {
+    // If we have a pending query (tab being created), attach variables to it
+    if (pendingQueryRef.current) {
+      pendingQueryRef.current.variables = newVariables;
+    } else {
+      // Otherwise just set variables normally
+      setVariables(newVariables);
+    }
+  }, []);
+
   // Build extension context
   const extensionContext: PlaygroundExtensionContext = useMemo(
     () => ({
       query,
-      setQuery,
+      setQuery: setQuerySmart,
+      variables,
+      setVariables: setVariablesSmart,
       headers,
       setHeaders,
       response,
@@ -499,7 +566,20 @@ export const Playground = (input: PlaygroundProps) => {
       statusText,
       schema,
     }),
-    [query, setQuery, headers, setHeaders, response, view, setView, status, statusText, schema],
+    [
+      query,
+      setQuerySmart,
+      variables,
+      setVariablesSmart,
+      headers,
+      setHeaders,
+      response,
+      view,
+      setView,
+      status,
+      statusText,
+      schema,
+    ],
   );
 
   // Convert panel extensions to GraphiQL plugins
@@ -732,11 +812,6 @@ export const Playground = (input: PlaygroundProps) => {
     getPlan();
   }, [debouncedQuery, debouncedHeaders, url, schema, view]);
 
-  const [tabsState, setTabsState] = useState<TabsState>({
-    activeTabIndex: 0,
-    tabs: [],
-  });
-
   // Invoke extension lifecycle hooks
   useEffect(() => {
     if (!input.extensions) return;
@@ -769,6 +844,17 @@ export const Playground = (input: PlaygroundProps) => {
       }
     });
   }, [query, input.extensions]);
+
+  // Call onVariablesChange hooks
+  useEffect(() => {
+    if (!input.extensions) return;
+
+    input.extensions.forEach((ext) => {
+      if (ext.hooks?.onVariablesChange) {
+        ext.hooks.onVariablesChange(variables, extensionContext);
+      }
+    });
+  }, [variables, input.extensions]);
 
   // Call onHeadersChange hooks
   useEffect(() => {
@@ -843,7 +929,10 @@ export const Playground = (input: PlaygroundProps) => {
             shouldPersistHeaders
             showPersistHeadersSettings={false}
             fetcher={fetcher}
+            query={query}
             onEditQuery={setQuery}
+            variables={variables}
+            onEditVariables={setVariables}
             defaultHeaders={`{
   "X-WG-TRACE" : "true"
 }`}

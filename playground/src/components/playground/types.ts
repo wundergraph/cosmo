@@ -42,6 +42,8 @@ export const PlaygroundContext = createContext<PlaygroundContextType>({
 export type PlaygroundExtensionContext = {
   query?: string;
   setQuery: (query: string) => void;
+  variables?: string;
+  setVariables: (variables: string) => void;
   headers?: string;
   setHeaders: (headers: string) => void;
   response?: string;
@@ -58,6 +60,11 @@ export type PlaygroundExtensionHooks = {
    * Called when the query changes
    */
   onQueryChange?: (query: string | undefined, context: PlaygroundExtensionContext) => void;
+
+  /**
+   * Called when the variables change
+   */
+  onVariablesChange?: (variables: string | undefined, context: PlaygroundExtensionContext) => void;
 
   /**
    * Called when the headers change

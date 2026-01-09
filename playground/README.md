@@ -21,18 +21,18 @@ npm install @wundergraph/playground
 ## Basic Usage
 
 ```tsx
-import { Playground } from "@wundergraph/playground"
-import "@wundergraph/playground/styles"
+import { Playground } from '@wundergraph/playground';
+import '@wundergraph/playground/styles';
 
 export const YourComponent = () => {
   return (
-    <Playground 
+    <Playground
       routingUrl="https://your-api.com/graphql" // the endpoint of the router
       hideLogo={false} // boolean to hide the wundergraph logo
       theme="dark" // 'light' or 'dark'
     />
   );
-}
+};
 ```
 
 ## Extensions API
@@ -42,30 +42,21 @@ The playground supports a powerful extension system that allows you to add custo
 ### Quick Example
 
 ```tsx
-import { Playground, PlaygroundExtension } from "@wundergraph/playground"
-import "@wundergraph/playground/styles"
+import { Playground, PlaygroundExtension } from '@wundergraph/playground';
+import '@wundergraph/playground/styles';
 
 const extensions: PlaygroundExtension[] = [
   {
     type: 'toolbar-button',
     id: 'ai-assist',
     position: 'right',
-    render: (context) => (
-      <button onClick={() => console.log(context.query)}>
-        AI Assist
-      </button>
-    )
-  }
+    render: (context) => <button onClick={() => console.log(context.query)}>AI Assist</button>,
+  },
 ];
 
 export const YourComponent = () => {
-  return (
-    <Playground 
-      routingUrl="https://your-api.com/graphql"
-      extensions={extensions}
-    />
-  );
-}
+  return <Playground routingUrl="https://your-api.com/graphql" extensions={extensions} />;
+};
 ```
 
 ### Extension Types
@@ -84,6 +75,8 @@ All extension render functions receive a context object with:
 interface PlaygroundExtensionContext {
   query?: string;
   setQuery: (query: string) => void;
+  variables?: string;
+  setVariables: (variables: string) => void;
   headers?: string;
   setHeaders: (headers: string) => void;
   response?: string;
@@ -96,16 +89,49 @@ interface PlaygroundExtensionContext {
 ```
 
 For complete documentation, see:
+
 - [EXTENSIONS.md](./EXTENSIONS.md) - Full extensions API documentation
 - [EXAMPLE.tsx](./EXAMPLE.tsx) - Working code examples
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture
 
 ## Advanced Usage
 
+### Setting Query and Variables Programmatically
+
+The playground intelligently manages tabs when setting queries:
+
+- **Empty Tab**: If the current tab is empty, the query is set in that tab
+- **Filled Tab**: If the current tab already has a query, a new tab is automatically created
+
+```tsx
+const extensions: PlaygroundExtension[] = [
+  {
+    type: 'panel',
+    id: 'query-loader',
+    title: 'Quick Load',
+    render: (context) => (
+      <div>
+        <button
+          onClick={() => {
+            // Sets query in current tab if empty, creates new tab if filled
+            context.setQuery('query GetUser($id: ID!) { user(id: $id) { name email } }');
+            context.setVariables('{\n  "id": "123"\n}');
+          }}
+        >
+          Load User Query
+        </button>
+      </div>
+    ),
+  },
+];
+
+<Playground routingUrl="https://your-api.com/graphql" extensions={extensions} />;
+```
+
 ### Query Change Callback
 
 ```tsx
-<Playground 
+<Playground
   routingUrl="https://your-api.com/graphql"
   onQueryChange={(setQuery) => {
     // You can now programmatically set queries
@@ -117,13 +143,13 @@ For complete documentation, see:
 ### Custom Scripts
 
 ```tsx
-<Playground 
+<Playground
   routingUrl="https://your-api.com/graphql"
   scripts={{
     transformHeaders: (headers) => {
       // Modify headers before requests
       return { ...headers, 'X-Custom': 'value' };
-    }
+    },
   }}
 />
 ```
@@ -131,10 +157,7 @@ For complete documentation, see:
 ### Custom Fetch
 
 ```tsx
-<Playground 
-  routingUrl="https://your-api.com/graphql"
-  fetch={customFetchFunction}
-/>
+<Playground routingUrl="https://your-api.com/graphql" fetch={customFetchFunction} />
 ```
 
 ## Development
@@ -176,4 +199,3 @@ import type {
 ## TODO
 
 This uses components and design language taken from the studio. For now we need to replicate work done for the custom playground in the studio to here. Move common components into its own package to avoid replicating work.
-
