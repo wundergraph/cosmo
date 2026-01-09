@@ -19,6 +19,9 @@ export default (opts: BaseCommandOptions) => {
   command.addCommand(deleteCommand(opts));
 
   command.hook('preAction', async (thisCmd) => {
+    if (['generate', 'init', 'list-templates'].includes(thisCmd.args[0])) {
+      return;
+    }
     await checkAuth();
   });
 
