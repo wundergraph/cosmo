@@ -3683,7 +3683,7 @@ export class NormalizationFactory {
             this.isSubgraphVersionTwo
               ? this.errors.push(externalInterfaceFieldsError(parentTypeName, externalInterfaceFieldNames))
               : this.warnings.push(
-                  externalInterfaceFieldsWarning(this.subgraphName, parentTypeName, externalInterfaceFieldNames),
+                  externalInterfaceFieldsWarning(this.subgraphName, parentTypeName, [...externalInterfaceFieldNames]),
                 );
           }
           const newParentTypeName = getParentTypeName(parentData);

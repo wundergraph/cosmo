@@ -5,7 +5,7 @@ import { SingleFederatedInputFieldOneOfWarningParams, SingleSubgraphInputFieldOn
 export function invalidOverrideTargetSubgraphNameWarning(
   targetSubgraphName: string,
   parentTypeName: string,
-  fieldNames: string[],
+  fieldNames: Array<string>,
   originSubgraphName: string,
 ): Warning {
   return new Warning({
