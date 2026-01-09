@@ -102,6 +102,7 @@ type (
 		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
+		operationPlanner        *OperationPlanner
 	}
 )
 
@@ -112,6 +113,7 @@ type BuildGraphMuxOptions struct {
 	EngineConfig        *nodev1.EngineConfiguration
 	ConfigSubgraphs     []*nodev1.Subgraph
 	RoutingUrlGroupings map[string]map[string]bool
+	Plans               map[uint64]string
 }
 
 func (b BuildGraphMuxOptions) IsBaseGraph() bool {
@@ -119,7 +121,7 @@ func (b BuildGraphMuxOptions) IsBaseGraph() bool {
 }
 
 // newGraphServer creates a new server instance.
-func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
+func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc, plans map[uint64]string) (*graphServer, error) {
 	/* Older versions of composition will not populate a compatibility version.
 	 * Currently, all "old" router execution configurations are compatible as there have been no breaking
 	 * changes.
@@ -273,6 +275,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		EngineConfig:        routerConfig.GetEngineConfig(),
 		ConfigSubgraphs:     routerConfig.GetSubgraphs(),
 		RoutingUrlGroupings: routingUrlGroupings,
+		Plans:               plans,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
@@ -283,7 +286,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap)
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap, plans)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
@@ -433,6 +436,7 @@ func (s *graphServer) buildMultiGraphHandler(
 	ctx context.Context,
 	baseMux *chi.Mux,
 	featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig,
+	plans map[uint64]string,
 ) (http.HandlerFunc, error) {
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
@@ -447,6 +451,7 @@ func (s *graphServer) buildMultiGraphHandler(
 			RouterConfigVersion: executionConfig.GetVersion(),
 			EngineConfig:        executionConfig.GetEngineConfig(),
 			ConfigSubgraphs:     executionConfig.Subgraphs,
+			Plans:               plans,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
@@ -519,12 +524,12 @@ type graphMux struct {
 	validationCache             *ristretto.Cache[uint64, bool]
 	operationHashCache          *ristretto.Cache[uint64, string]
 
-	accessLogsFileLogger   *logging.BufferedLogger
-	metricStore            rmetric.Store
-	prometheusCacheMetrics *rmetric.CacheMetrics
-	otelCacheMetrics       *rmetric.CacheMetrics
-	streamMetricStore      rmetric.StreamMetricStore
-	prometheusMetricsExporter  *graphqlmetrics.PrometheusMetricsExporter
+	accessLogsFileLogger      *logging.BufferedLogger
+	metricStore               rmetric.Store
+	prometheusCacheMetrics    *rmetric.CacheMetrics
+	otelCacheMetrics          *rmetric.CacheMetrics
+	streamMetricStore         rmetric.StreamMetricStore
+	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -749,6 +754,7 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
 	s.planCache.Close()
+	//s.planCache.Get()
 	s.persistedOperationCache.Close()
 	s.normalizationCache.Close()
 	s.variablesNormalizationCache.Close()
@@ -799,6 +805,10 @@ func (s *graphMux) Shutdown(ctx context.Context) error {
 		return fmt.Errorf("shutdown graph mux: %w", err)
 	}
 
+	return nil
+}
+
+func (s *graphServer) getManifestCache() map[uint64]string {
 	return nil
 }
 
@@ -1297,6 +1307,7 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
+	s.operationPlanner = operationPlanner
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
@@ -1305,7 +1316,7 @@ func (s *graphServer) buildGraphMux(
 		}
 	}
 
-	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {
+	if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled || opts.Plans != nil {
 
 		if s.graphApiToken == "" {
 			return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
@@ -1346,16 +1357,20 @@ func (s *graphServer) buildGraphMux(
 			)
 		}
 
-		if s.Config.cacheWarmup.Source.Filesystem != nil {
-			warmupConfig.Source = NewFileSystemSource(&FileSystemSourceConfig{
-				RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
-			})
-		} else {
-			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create cdn source: %w", err)
+		if s.Config.cacheWarmup != nil && s.Config.cacheWarmup.Enabled {
+			if s.Config.cacheWarmup.Source.Filesystem != nil {
+				warmupConfig.Source = NewFileSystemSource(&FileSystemSourceConfig{
+					RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
+				})
+			} else {
+				cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
+				if err != nil {
+					return nil, fmt.Errorf("failed to create cdn source: %w", err)
+				}
+				warmupConfig.Source = cdnSource
 			}
-			warmupConfig.Source = cdnSource
+		} else if opts.Plans != nil {
+			warmupConfig.Source = NewPlanSource(opts.Plans)
 		}
 
 		err = WarmupCaches(ctx, warmupConfig)
