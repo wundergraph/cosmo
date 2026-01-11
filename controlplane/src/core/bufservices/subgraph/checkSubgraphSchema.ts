@@ -24,8 +24,10 @@ import {
   handleError,
   isValidGraphName,
   isValidLabels,
+  limitCombinedArrays,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
+import { maxRowLimitForChecks } from '../../constants.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -251,24 +253,10 @@ export function checkSubgraphSchema(
     let limit = changeRetention?.limit ?? 7;
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
-    const {
-      response,
-      checkId: schemaCheckID,
-      breakingChanges,
-      nonBreakingChanges,
-      compositionErrors,
-      compositionWarnings,
-      operationUsageStats,
-      proposalMatchMessage,
-      hasClientTraffic,
-      checkedFederatedGraphs,
-      lintWarnings,
-      lintErrors,
-      graphPruneWarnings,
-      graphPruneErrors,
-      isCheckExtensionSkipped,
-      checkExtensionErrorMessage,
-    } = await subgraphRepo.performSchemaCheck({
+    // If req.limit is not provided, we return all rows
+    const returnLimit = req.limit === undefined ? null : clamp(req.limit, 1, maxRowLimitForChecks);
+
+    const checkResult = await subgraphRepo.performSchemaCheck({
       actorId: authContext.userId,
       blobStorage: opts.blobStorage,
       admissionConfig: { cdnBaseUrl: opts.cdnBaseUrl, jwtSecret: opts.jwtSecret },
@@ -290,6 +278,50 @@ export function checkSubgraphSchema(
       webhookService,
     });
 
+    // Extract variables from checkResult
+    const {
+      response,
+      checkId: schemaCheckID,
+      operationUsageStats,
+      proposalMatchMessage,
+      hasClientTraffic,
+      checkedFederatedGraphs,
+      isCheckExtensionSkipped,
+      checkExtensionErrorMessage,
+    } = checkResult;
+
+    const compositionErrors =
+      returnLimit == null ? checkResult.compositionErrors : checkResult.compositionErrors.slice(0, returnLimit);
+    const compositionWarnings =
+      returnLimit == null ? checkResult.compositionWarnings : checkResult.compositionWarnings.slice(0, returnLimit);
+
+    const [breakingChanges, nonBreakingChanges] = limitCombinedArrays(
+      [checkResult.breakingChanges, checkResult.nonBreakingChanges],
+      returnLimit,
+    );
+
+    const [lintErrors, lintWarnings] = limitCombinedArrays(
+      [checkResult.lintErrors, checkResult.lintWarnings],
+      returnLimit,
+    );
+
+    const [graphPruneErrors, graphPruneWarnings] = limitCombinedArrays(
+      [checkResult.graphPruneErrors, checkResult.graphPruneWarnings],
+      returnLimit,
+    );
+
+    // Create counts object with total counts from the original checkResult
+    const counts = {
+      lintWarnings: checkResult.lintWarnings.length,
+      lintErrors: checkResult.lintErrors.length,
+      breakingChanges: checkResult.breakingChanges.length,
+      nonBreakingChanges: checkResult.nonBreakingChanges.length,
+      compositionErrors: checkResult.compositionErrors.length,
+      compositionWarnings: checkResult.compositionWarnings.length,
+      graphPruneErrors: checkResult.graphPruneErrors.length,
+      graphPruneWarnings: checkResult.graphPruneWarnings.length,
+    };
+
     if (response && response.code !== EnumStatusCode.OK) {
       return {
         response: {
@@ -309,6 +341,7 @@ export function checkSubgraphSchema(
         clientTrafficCheckSkipped: req.skipTrafficCheck,
         compositionWarnings,
         proposalMatchMessage,
+        counts,
       };
     }
 
@@ -338,6 +371,7 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
@@ -368,6 +402,7 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
@@ -429,6 +464,7 @@ export function checkSubgraphSchema(
           proposalMatchMessage,
           isLinkedTrafficCheckFailed: false,
           isLinkedPruningCheckFailed: false,
+          counts,
         };
       }
 
@@ -477,6 +513,7 @@ export function checkSubgraphSchema(
       isLinkedPruningCheckFailed,
       isCheckExtensionSkipped,
       checkExtensionErrorMessage,
+      counts,
     };
   });
 }

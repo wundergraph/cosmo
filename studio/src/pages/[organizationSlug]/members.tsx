@@ -132,7 +132,7 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
       </div>
 
       <div className="space-y-2">
-        <span>What group should the member be added to?</span>
+        <span>What group(s) should the member be added to?</span>
         <MultiGroupSelect
           disabled={isPending}
           value={selectedGroups}

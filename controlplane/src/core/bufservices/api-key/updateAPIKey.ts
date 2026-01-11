@@ -8,6 +8,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { RBACEvaluator } from '../../services/RBACEvaluator.js';
 
 export function updateAPIKey(
   opts: RouterOptions,
@@ -56,8 +57,18 @@ export function updateAPIKey(
       };
     }
 
-    await apiKeyRepo.updateAPIKeyGroup({ apiKeyId: apiKey.id, groupId: orgGroup.groupId });
+    const rbac = new RBACEvaluator([orgGroup]);
+    if (rbac.isOrganizationAdmin && !authContext.rbac.isOrganizationAdmin) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `You don't have access to update the API key group to "${orgGroup.name}"`,
+        },
+        apiKey: '',
+      };
+    }
 
+    await apiKeyRepo.updateAPIKeyGroup({ apiKeyId: apiKey.id, groupId: orgGroup.groupId });
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,
