@@ -262,6 +262,14 @@ func TestHeartbeats(t *testing.T) {
 			})
 
 			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
+				assert.Equal(t, "event: complete", line)
+			})
+
+			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
+				assert.Equal(t, "data: ", line)
+			})
+
+			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
 				assert.Equal(t, "", line)
 			})
 		})
