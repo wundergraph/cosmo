@@ -4,6 +4,40 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.274.0](https://github.com/wundergraph/cosmo/compare/router@0.273.3...router@0.274.0) (2026-01-12)
+
+### Bug Fixes
+
+* **infra:** ensure base images use target platform ([#2401](https://github.com/wundergraph/cosmo/issues/2401)) ([45d65c4](https://github.com/wundergraph/cosmo/commit/45d65c4c260e7888ecfc46fb46db0d73d33fc75e)) (@endigma)
+
+### Features
+
+* improve logging of authorization errors and allow use customization ([#2431](https://github.com/wundergraph/cosmo/issues/2431)) ([c8f945d](https://github.com/wundergraph/cosmo/commit/c8f945d54f7d028f0edee670fdf50003f463f96a)) (@alepane21)
+
+## [0.273.3](https://github.com/wundergraph/cosmo/compare/router@0.273.2...router@0.273.3) (2025-12-22)
+
+### Bug Fixes
+
+* handle any invalid locations gracefully ([#2427](https://github.com/wundergraph/cosmo/issues/2427)) ([e15b640](https://github.com/wundergraph/cosmo/commit/e15b640e74f200132fd238cd74d99c8b68dc52c9)) (@SkArchon)
+
+## [0.273.2](https://github.com/wundergraph/cosmo/compare/router@0.273.1...router@0.273.2) (2025-12-18)
+
+### Bug Fixes
+
+* use the correct cgroup policy to work on most of the systems ([#2421](https://github.com/wundergraph/cosmo/issues/2421)) ([e647984](https://github.com/wundergraph/cosmo/commit/e6479844cc2c72a501b9925496d0905fb0ad16d5)) (@alepane21)
+
+## [0.273.1](https://github.com/wundergraph/cosmo/compare/router@0.273.0...router@0.273.1) (2025-12-18)
+
+### Bug Fixes
+
+* make error accessible to custom modules ([#2420](https://github.com/wundergraph/cosmo/issues/2420)) ([8980fa8](https://github.com/wundergraph/cosmo/commit/8980fa8c9497cc496e53db71fe76792806e1b04f)) (@SkArchon)
+
+# [0.273.0](https://github.com/wundergraph/cosmo/compare/router@0.272.0...router@0.273.0) (2025-12-15)
+
+### Features
+
+* add coverage for other services with tests ([#2405](https://github.com/wundergraph/cosmo/issues/2405)) ([a53bb35](https://github.com/wundergraph/cosmo/commit/a53bb351336dc400b8b28b235a28725704a83919)) (@SkArchon)
+
 # [0.272.0](https://github.com/wundergraph/cosmo/compare/router@0.271.1...router@0.272.0) (2025-12-10)
 
 ### Bug Fixes
