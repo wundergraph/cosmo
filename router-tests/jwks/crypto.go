@@ -18,6 +18,7 @@ type Crypto interface {
 	SigningMethod() jwt.SigningMethod
 	PrivateKey() privateKey
 	MarshalJWK() (jwkset.JWK, error)
+	MarshalJWKWithUse(use jwkset.USE) (jwkset.JWK, error)
 	KID() string
 }
 
@@ -37,7 +38,7 @@ func (b *baseCrypto) SigningMethod() jwt.SigningMethod {
 	return jwt.GetSigningMethod(b.alg.String())
 }
 
-func (b *baseCrypto) MarshalJWK() (jwkset.JWK, error) {
+func (b *baseCrypto) MarshalJWKWithUse(use jwkset.USE) (jwkset.JWK, error) {
 	marshalOptions := jwkset.JWKMarshalOptions{
 		Private: false,
 	}
@@ -45,7 +46,7 @@ func (b *baseCrypto) MarshalJWK() (jwkset.JWK, error) {
 	meta := jwkset.JWKMetadataOptions{
 		ALG: b.alg,
 		KID: b.kID,
-		USE: jwkset.UseSig,
+		USE: use,
 	}
 
 	options := jwkset.JWKOptions{
@@ -54,6 +55,11 @@ func (b *baseCrypto) MarshalJWK() (jwkset.JWK, error) {
 	}
 
 	return jwkset.NewJWKFromKey(b.pk, options)
+}
+
+func (b *baseCrypto) MarshalJWK() (jwkset.JWK, error) {
+	// Delegate to the new method with default signature use.
+	return b.MarshalJWKWithUse(jwkset.UseSig)
 }
 
 func (b *baseCrypto) KID() string {
@@ -112,6 +118,10 @@ func NewHMACCrypto(kID string, alg jwkset.ALG) (Crypto, error) {
 }
 
 func (b *hmacCrypto) MarshalJWK() (jwkset.JWK, error) {
+	return b.MarshalJWKWithUse(jwkset.UseSig)
+}
+
+func (b *hmacCrypto) MarshalJWKWithUse(use jwkset.USE) (jwkset.JWK, error) {
 	marshalOptions := jwkset.JWKMarshalOptions{
 		Private: true,
 	}
@@ -119,7 +129,7 @@ func (b *hmacCrypto) MarshalJWK() (jwkset.JWK, error) {
 	meta := jwkset.JWKMetadataOptions{
 		ALG: b.alg,
 		KID: b.kID,
-		USE: jwkset.UseSig,
+		USE: use,
 	}
 
 	options := jwkset.JWKOptions{
