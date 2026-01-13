@@ -1576,9 +1576,25 @@ func (s *graphServer) setupConnector(
 
 		pluginConfig := grpcConfig.GetPlugin()
 		if pluginConfig == nil {
+			// Extract header forwarding configuration for this subgraph
+			var headersToForward []string
+			if s.headerRules != nil {
+				dataSourceRules := FetchURLRules(s.headerRules, configSubgraphs, sg.RoutingUrl)
+				forwardedHeaders, _, err := PropagatedHeaders(dataSourceRules)
+				if err != nil {
+					s.logger.Warn("error parsing header rules for gRPC subgraph, headers will not be forwarded",
+						zap.String("subgraph", sg.Name),
+						zap.Error(err),
+					)
+				} else {
+					headersToForward = forwardedHeaders
+				}
+			}
+
 			remoteProvider, err := grpcremote.NewRemoteGRPCProvider(grpcremote.RemoteGRPCProviderConfig{
-				Logger:   s.logger,
-				Endpoint: sg.RoutingUrl,
+				Logger:           s.logger,
+				Endpoint:         sg.RoutingUrl,
+				HeadersToForward: headersToForward,
 			})
 
 			if err != nil {

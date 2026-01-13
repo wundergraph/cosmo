@@ -18,14 +18,17 @@ type RemoteGRPCProviderConfig struct {
 	Logger *zap.Logger
 	// Endpoint is the URL of the gRPC server to connect to.
 	Endpoint string
+	// HeadersToForward is a list of HTTP header names to forward as gRPC metadata.
+	HeadersToForward []string
 }
 
 // RemoteGRPCProvider is a client provider that manages a gRPC client connection to a standalone gRPC server.
 // It is used to connect to a standalone gRPC server that is not part of the cosmo cluster.
 // The provider maintains a single client connection and provides thread-safe access to it.
 type RemoteGRPCProvider struct {
-	logger   *zap.Logger
-	endpoint string
+	logger           *zap.Logger
+	endpoint         string
+	headersToForward []string
 
 	cc grpc.ClientConnInterface
 	mu sync.RWMutex
@@ -46,8 +49,9 @@ func NewRemoteGRPCProvider(config RemoteGRPCProviderConfig) (*RemoteGRPCProvider
 	}
 
 	return &RemoteGRPCProvider{
-		logger:   config.Logger,
-		endpoint: config.Endpoint,
+		logger:           config.Logger,
+		endpoint:         config.Endpoint,
+		headersToForward: config.HeadersToForward,
 	}, nil
 }
 
@@ -64,7 +68,13 @@ func (g *RemoteGRPCProvider) GetClient() grpc.ClientConnInterface {
 // It parses the endpoint URL and creates a new insecure gRPC connection.
 func (g *RemoteGRPCProvider) Start(ctx context.Context) error {
 	if g.cc == nil {
-		clientConn, err := grpc.NewClient(g.endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		// Create gRPC client with header forwarding interceptor
+		opts := []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithUnaryInterceptor(HeaderForwardingInterceptor(g.headersToForward)),
+		}
+
+		clientConn, err := grpc.NewClient(g.endpoint, opts...)
 		if err != nil {
 			return fmt.Errorf("failed to create client connection: %w", err)
 		}
