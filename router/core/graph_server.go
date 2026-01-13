@@ -523,12 +523,12 @@ type graphMux struct {
 	validationCache             *ristretto.Cache[uint64, bool]
 	operationHashCache          *ristretto.Cache[uint64, string]
 
-	accessLogsFileLogger   *logging.BufferedLogger
-	metricStore            rmetric.Store
-	prometheusCacheMetrics *rmetric.CacheMetrics
-	otelCacheMetrics       *rmetric.CacheMetrics
-	streamMetricStore      rmetric.StreamMetricStore
-	prometheusMetricsExporter  *graphqlmetrics.PrometheusMetricsExporter
+	accessLogsFileLogger      *logging.BufferedLogger
+	metricStore               rmetric.Store
+	prometheusCacheMetrics    *rmetric.CacheMetrics
+	otelCacheMetrics          *rmetric.CacheMetrics
+	streamMetricStore         rmetric.StreamMetricStore
+	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -1301,7 +1301,7 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
 
-	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.SwitchoverConfig.inMemorySwitchOverCache != nil)
+	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.SwitchoverConfig.inMemorySwitchOverCache.enabled)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
