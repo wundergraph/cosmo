@@ -528,7 +528,8 @@ type graphMux struct {
 	prometheusCacheMetrics *rmetric.CacheMetrics
 	otelCacheMetrics       *rmetric.CacheMetrics
 	streamMetricStore      rmetric.StreamMetricStore
-	prometheusMetricsExporter  *graphqlmetrics.PrometheusMetricsExporter}
+	prometheusMetricsExporter  *graphqlmetrics.PrometheusMetricsExporter
+}
 
 // buildOperationCaches creates the caches for the graph mux.
 // The caches are created based on the engine configuration.
