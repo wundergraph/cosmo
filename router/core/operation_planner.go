@@ -21,14 +21,19 @@ type planWithMetaData struct {
 	operationDocument, schemaDocument *ast.Document
 	typeFieldUsageInfo                []*graphqlschemausage.TypeFieldUsageInfo
 	argumentUsageInfo                 []*graphqlmetricsv1.ArgumentUsageInfo
+	content                           string
 }
 
 type OperationPlanner struct {
-	sf                 singleflight.Group
-	planCache          ExecutionPlanCache[uint64, *planWithMetaData]
-	executor           *Executor
-	trackUsageInfo     bool
-	cacheWarmerQueries *ringBuffer
+	sf             singleflight.Group
+	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
+	executor       *Executor
+	trackUsageInfo bool
+	storeContent   bool
+}
+
+type operationPlannerOpts struct {
+	storeContent bool
 }
 
 type ExecutionPlanCache[K any, V any] interface {
@@ -36,20 +41,22 @@ type ExecutionPlanCache[K any, V any] interface {
 	Get(key K) (V, bool)
 	// Set the value in the cache with a cost. The cost depends on the cache implementation
 	Set(key K, value V, cost int64) bool
+	// Iterate over all items in the cache (non-deterministic)
+	Iter(cb func(k any, v V) (stop bool))
 	// Close the cache and free resources
 	Close()
 }
 
-func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], cacheWarmerQueries *ringBuffer) *OperationPlanner {
+func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], storeContent bool) *OperationPlanner {
 	return &OperationPlanner{
-		planCache:          planCache,
-		executor:           executor,
-		trackUsageInfo:     executor.TrackUsageInfo,
-		cacheWarmerQueries: cacheWarmerQueries,
+		planCache:      planCache,
+		executor:       executor,
+		trackUsageInfo: executor.TrackUsageInfo,
+		storeContent:   storeContent,
 	}
 }
 
-func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData, error) {
+func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlannerOpts) (*planWithMetaData, error) {
 	doc, report := astparser.ParseGraphqlDocumentString(ctx.content)
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
@@ -83,6 +90,10 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 		schemaDocument:    p.executor.RouterSchema,
 	}
 
+	if opts.storeContent {
+		out.content = ctx.Content()
+	}
+
 	if p.trackUsageInfo {
 		out.typeFieldUsageInfo = graphqlschemausage.GetTypeFieldUsageInfo(preparedPlan)
 		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(&doc, p.executor.RouterSchema, ctx.variables, preparedPlan, ctx.remapVariables)
@@ -108,7 +119,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 	skipCache := options.TraceOptions.Enable || options.ExecutionOptions.IncludeQueryPlanInResponse
 
 	if skipCache {
-		prepared, err := p.preparePlan(opContext)
+		prepared, err := p.preparePlan(opContext, operationPlannerOpts{storeContent: false})
 		if err != nil {
 			return err
 		}
@@ -137,14 +148,11 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		// this ensures that we only prepare the plan once for this operation ID
 		operationIDStr := strconv.FormatUint(operationID, 10)
 		sharedPreparedPlan, err, _ := p.sf.Do(operationIDStr, func() (interface{}, error) {
-			prepared, err := p.preparePlan(opContext)
+			prepared, err := p.preparePlan(opContext, operationPlannerOpts{storeContent: p.storeContent})
 			if err != nil {
 				return nil, err
 			}
 			p.planCache.Set(operationID, prepared, 1)
-			if p.cacheWarmerQueries != nil {
-				p.cacheWarmerQueries.Add(opContext.content)
-			}
 			return prepared, nil
 		})
 		if err != nil {

@@ -1301,8 +1301,7 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
 
-	cacheWarmerQueries := opts.SwitchoverConfig.CacheWarmerQueries.getOrCreateBuffer(opts.FeatureFlagName)
-	operationPlanner := NewOperationPlanner(executor, gm.planCache, cacheWarmerQueries)
+	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.SwitchoverConfig.CacheWarmerQueries != nil)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
@@ -1357,7 +1356,8 @@ func (s *graphServer) buildGraphMux(
 				RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
 			})
 		} else if s.Config.cacheWarmup.Source.InMemorySwitchover.Enabled {
-			warmupConfig.Source = NewPlanSource(cacheWarmerQueries)
+			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.CacheWarmerQueries.getPlanCacheForFF(opts.FeatureFlagName))
+			opts.SwitchoverConfig.CacheWarmerQueries.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 		} else {
 			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {

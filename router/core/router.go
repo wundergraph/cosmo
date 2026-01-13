@@ -605,7 +605,7 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 
 	r.httpServer.SwapGraphServer(ctx, server)
 
-	// Cleanup feature flags
+	// Cleanup any unused feature flags
 	r.switchoverConfig.CleanupFeatureFlags(cfg)
 
 	return nil

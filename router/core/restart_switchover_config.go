@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/dgraph-io/ristretto/v2"
 	"sync"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -11,10 +12,11 @@ type SwitchoverConfig struct {
 	CacheWarmerQueries *CacheWarmerQueries
 }
 
+type planCache *ristretto.Cache[uint64, *planWithMetaData]
+
 type CacheWarmerQueries struct {
-	maxSize               int // Maximum size of the ring buffer per feature flag
 	mu                    sync.RWMutex
-	queriesForFeatureFlag map[string]*ringBuffer // Map of feature flag key to ring buffer ("" is default)
+	queriesForFeatureFlag map[string]planCache
 }
 
 func NewSwitchoverConfig(config *Config) *SwitchoverConfig {
@@ -24,8 +26,7 @@ func NewSwitchoverConfig(config *Config) *SwitchoverConfig {
 
 	if inMemorySwitchoverCacheWarmerEnabled {
 		switchoverConfig.CacheWarmerQueries = &CacheWarmerQueries{
-			maxSize:               config.cacheWarmup.Source.InMemorySwitchover.MaxEntries,
-			queriesForFeatureFlag: make(map[string]*ringBuffer),
+			queriesForFeatureFlag: make(map[string]planCache),
 		}
 	}
 
@@ -33,40 +34,41 @@ func NewSwitchoverConfig(config *Config) *SwitchoverConfig {
 }
 
 func (s *SwitchoverConfig) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
-	// If not initialized will do nothing
-	if s == nil {
-		return
-	}
-
 	s.CacheWarmerQueries.cleanupUnusedFeatureFlags(routerCfg)
 }
 
-func (c *CacheWarmerQueries) getOrCreateBuffer(featureFlagKey string) *ringBuffer {
+func (c *CacheWarmerQueries) getPlanCacheForFF(featureFlagKey string) planCache {
+	c.mu.RLock()
+	warmer, _ := c.queriesForFeatureFlag[featureFlagKey]
+	c.mu.RUnlock()
+	return warmer
+}
+
+func (c *CacheWarmerQueries) setPlanCacheForFF(featureFlagKey string, cache planCache) bool {
 	// If not initialized will return nil
-	if c == nil {
-		return nil
+	if c == nil || cache == nil {
+		return false
 	}
 
 	c.mu.RLock()
-	buf, exists := c.queriesForFeatureFlag[featureFlagKey]
+	_, exists := c.queriesForFeatureFlag[featureFlagKey]
 	c.mu.RUnlock()
 
 	if exists {
-		return buf
+		return true
 	}
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	// Double-check in case another goroutine created it while we were waiting for the write lock
-	buf, exists = c.queriesForFeatureFlag[featureFlagKey]
+	_, exists = c.queriesForFeatureFlag[featureFlagKey]
 	if exists {
-		return buf
+		return true
 	}
 
-	buf = newRingBuffer(c.maxSize)
-	c.queriesForFeatureFlag[featureFlagKey] = buf
-	return buf
+	c.queriesForFeatureFlag[featureFlagKey] = cache
+	return true
 }
 
 func (c *CacheWarmerQueries) cleanupUnusedFeatureFlags(routerCfg *nodev1.RouterConfig) {
@@ -87,45 +89,4 @@ func (c *CacheWarmerQueries) cleanupUnusedFeatureFlags(routerCfg *nodev1.RouterC
 			delete(c.queriesForFeatureFlag, ffName)
 		}
 	}
-}
-
-type ringBuffer struct {
-	mu      sync.Mutex
-	ring    []string // Ring buffer to track queries
-	head    int      // Index where next item will be written
-	maxSize int      // Maximum size of the ring buffer
-}
-
-func newRingBuffer(maxSize int) *ringBuffer {
-	return &ringBuffer{
-		ring:    make([]string, 0, maxSize),
-		head:    0,
-		maxSize: maxSize,
-	}
-}
-
-func (rb *ringBuffer) Add(query string) {
-	rb.mu.Lock()
-	defer rb.mu.Unlock()
-
-	// If ring buffer is not yet full, append to it
-	if len(rb.ring) < rb.maxSize {
-		rb.ring = append(rb.ring, query)
-		return
-	}
-
-	// Add new entry at head position
-	rb.ring[rb.head] = query
-
-	// Move head to next position (wrap around)
-	rb.head = (rb.head + 1) % rb.maxSize
-}
-
-func (rb *ringBuffer) Snapshot() []string {
-	rb.mu.Lock()
-	defer rb.mu.Unlock()
-
-	snapshot := make([]string, len(rb.ring))
-	copy(snapshot, rb.ring)
-	return snapshot
 }
