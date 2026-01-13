@@ -1356,6 +1356,8 @@ func (s *graphServer) buildGraphMux(
 				RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
 			})
 		} else if s.Config.cacheWarmup.Source.InMemorySwitchover.Enabled {
+			// We first utilize the plan cache (if it was already set, so not on first starts) to create a list of queries
+			// and reset the plan cache to the new plan cache for this start afterwords
 			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
 			opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 		} else {

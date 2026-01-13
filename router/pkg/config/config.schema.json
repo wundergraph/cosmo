@@ -2387,11 +2387,25 @@
                   "format": "file-path"
                 }
               }
+            },
+            "in_memory_switchover": {
+              "type": "object",
+              "description": "The in memory switchover which reuses query plans for subsequent starts.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Is in memory switchover enabled"
+                }
+              }
             }
           },
           "oneOf": [
             {
               "required": ["filesystem"]
+            },
+            {
+              "required": ["in_memory_switchover"]
             }
           ]
         },

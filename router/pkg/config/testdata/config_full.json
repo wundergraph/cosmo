@@ -657,7 +657,10 @@
   "CacheWarmup": {
     "Enabled": false,
     "Source": {
-      "Filesystem": null
+      "Filesystem": null,
+      "InMemorySwitchover": {
+        "Enabled": false
+      }
     },
     "Workers": 8,
     "ItemsPerSecond": 50,

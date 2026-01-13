@@ -9,15 +9,9 @@ import (
 
 type planCache *ristretto.Cache[uint64, *planWithMetaData]
 
-// This file describes any configuration which should persist or be shared across router restarts
+// SwitchoverConfig This file describes any configuration which should persist or be shared across router restarts
 type SwitchoverConfig struct {
 	inMemorySwitchOverCache *InMemorySwitchOverCache
-}
-
-type InMemorySwitchOverCache struct {
-	enabled               bool
-	mu                    sync.RWMutex
-	queriesForFeatureFlag map[string]planCache
 }
 
 func NewSwitchoverConfig(config *Config) *SwitchoverConfig {
@@ -28,9 +22,7 @@ func NewSwitchoverConfig(config *Config) *SwitchoverConfig {
 	}
 
 	if switchoverConfig.inMemorySwitchOverCache.enabled {
-		switchoverConfig.inMemorySwitchOverCache = &InMemorySwitchOverCache{
-			queriesForFeatureFlag: make(map[string]planCache),
-		}
+		switchoverConfig.inMemorySwitchOverCache.queriesForFeatureFlag = make(map[string]planCache)
 	}
 
 	return switchoverConfig
@@ -40,18 +32,23 @@ func (s *SwitchoverConfig) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
 	s.inMemorySwitchOverCache.cleanupUnusedFeatureFlags(routerCfg)
 }
 
+type InMemorySwitchOverCache struct {
+	enabled               bool
+	mu                    sync.RWMutex
+	queriesForFeatureFlag map[string]planCache
+}
+
 func (c *InMemorySwitchOverCache) getPlanCacheForFF(featureFlagKey string) planCache {
 	if !c.enabled {
 		return nil
 	}
 
 	c.mu.RLock()
-	warmer, _ := c.queriesForFeatureFlag[featureFlagKey]
-	c.mu.RUnlock()
-	return warmer
+	defer c.mu.RUnlock()
+	return c.queriesForFeatureFlag[featureFlagKey]
 }
 
-func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache planCache) {
+func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache *ristretto.Cache[uint64, *planWithMetaData]) {
 	if !c.enabled || cache == nil {
 		return
 	}
@@ -59,12 +56,14 @@ func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.queriesForFeatureFlag[featureFlagKey] = cache
-
-	return
 }
 
 func (c *InMemorySwitchOverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.RouterConfig) {
-	if c == nil {
+	if !c.enabled {
+		return
+	}
+
+	if routerCfg.FeatureFlagConfigs == nil {
 		return
 	}
 
