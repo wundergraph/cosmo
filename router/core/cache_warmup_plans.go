@@ -14,13 +14,18 @@ type PlanSource struct {
 }
 
 func NewPlanSource(switchoverCacheWarmerQueries *ristretto.Cache[uint64, *planWithMetaData]) *PlanSource {
+	// Extract the items on creation so that the previous planCache can be garbage collected as we won't hold a reference
 	items := make([]*nodev1.Operation, 0)
-	switchoverCacheWarmerQueries.Iter(func(k any, v *planWithMetaData) (stop bool) {
-		items = append(items, &nodev1.Operation{
-			Request: &nodev1.OperationRequest{Query: v.content},
+
+	if switchoverCacheWarmerQueries != nil {
+		switchoverCacheWarmerQueries.Iter(func(k any, v *planWithMetaData) (stop bool) {
+			items = append(items, &nodev1.Operation{
+				Request: &nodev1.OperationRequest{Query: v.content},
+			})
+			return false
 		})
-		return false
-	})
+	}
+
 	return &PlanSource{queries: items}
 }
 

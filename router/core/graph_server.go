@@ -523,13 +523,12 @@ type graphMux struct {
 	validationCache             *ristretto.Cache[uint64, bool]
 	operationHashCache          *ristretto.Cache[uint64, string]
 
-	accessLogsFileLogger      *logging.BufferedLogger
-	metricStore               rmetric.Store
-	prometheusCacheMetrics    *rmetric.CacheMetrics
-	otelCacheMetrics          *rmetric.CacheMetrics
-	streamMetricStore         rmetric.StreamMetricStore
-	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
-}
+	accessLogsFileLogger   *logging.BufferedLogger
+	metricStore            rmetric.Store
+	prometheusCacheMetrics *rmetric.CacheMetrics
+	otelCacheMetrics       *rmetric.CacheMetrics
+	streamMetricStore      rmetric.StreamMetricStore
+	prometheusMetricsExporter  *graphqlmetrics.PrometheusMetricsExporter}
 
 // buildOperationCaches creates the caches for the graph mux.
 // The caches are created based on the engine configuration.
@@ -1301,7 +1300,7 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
 
-	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.SwitchoverConfig.CacheWarmerQueries != nil)
+	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.SwitchoverConfig.inMemorySwitchOverCache != nil)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
@@ -1356,8 +1355,8 @@ func (s *graphServer) buildGraphMux(
 				RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
 			})
 		} else if s.Config.cacheWarmup.Source.InMemorySwitchover.Enabled {
-			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.CacheWarmerQueries.getPlanCacheForFF(opts.FeatureFlagName))
-			opts.SwitchoverConfig.CacheWarmerQueries.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
+			opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 		} else {
 			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
