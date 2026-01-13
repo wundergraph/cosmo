@@ -24,11 +24,11 @@ type planWithMetaData struct {
 }
 
 type OperationPlanner struct {
-	sf             singleflight.Group
-	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
-	plans          map[uint64]string
-	executor       *Executor
-	trackUsageInfo bool
+	sf                 singleflight.Group
+	planCache          ExecutionPlanCache[uint64, *planWithMetaData]
+	executor           *Executor
+	trackUsageInfo     bool
+	cacheWarmerQueries *ringBuffer
 }
 
 type ExecutionPlanCache[K any, V any] interface {
@@ -40,17 +40,13 @@ type ExecutionPlanCache[K any, V any] interface {
 	Close()
 }
 
-func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData]) *OperationPlanner {
+func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], cacheWarmerQueries *ringBuffer) *OperationPlanner {
 	return &OperationPlanner{
-		planCache:      planCache,
-		executor:       executor,
-		trackUsageInfo: executor.TrackUsageInfo,
-		plans:          make(map[uint64]string),
+		planCache:          planCache,
+		executor:           executor,
+		trackUsageInfo:     executor.TrackUsageInfo,
+		cacheWarmerQueries: cacheWarmerQueries,
 	}
-}
-
-func (p *OperationPlanner) getPlans() map[uint64]string {
-	return p.plans
 }
 
 func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData, error) {
@@ -146,7 +142,9 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 				return nil, err
 			}
 			p.planCache.Set(operationID, prepared, 1)
-			p.plans[operationID] = opContext.Content()
+			if p.cacheWarmerQueries != nil {
+				p.cacheWarmerQueries.Add(opContext.content)
+			}
 			return prepared, nil
 		})
 		if err != nil {

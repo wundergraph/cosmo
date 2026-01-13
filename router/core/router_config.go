@@ -314,6 +314,8 @@ func (c *Config) Usage() map[string]any {
 	if c.cacheWarmup != nil && c.cacheWarmup.Enabled {
 		if c.cacheWarmup.Source.Filesystem != nil {
 			usage["cache_warmup_source"] = "filesystem"
+		} else if c.cacheWarmup.Source.InMemorySwitchover {
+			usage["cache_warmup_source"] = "in_memory_switchover"
 		} else {
 			usage["cache_warmup_source"] = "cdn"
 		}
