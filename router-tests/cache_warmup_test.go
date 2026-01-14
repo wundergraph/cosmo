@@ -1101,8 +1101,8 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { hello }`,
 				})
-				require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
-				require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+				assert.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+				assert.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
 			}, 2*time.Second, 100*time.Millisecond)
 		})
 	})
