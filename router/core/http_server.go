@@ -36,7 +36,6 @@ type httpServerOptions struct {
 	livenessCheckPath  string
 	readinessCheckPath string
 	healthCheckPath    string
-	switchoverConfig   *SwitchoverConfig
 }
 
 func newServer(opts *httpServerOptions) *server {

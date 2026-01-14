@@ -22,19 +22,7 @@ func NewSwitchoverConfig() *SwitchoverConfig {
 }
 
 func (s *SwitchoverConfig) UpdateSwitchoverConfig(config *Config) {
-	s.inMemorySwitchOverCache.enabled = config.cacheWarmup != nil &&
-		config.cacheWarmup.Enabled &&
-		config.cacheWarmup.Source.InMemorySwitchover.Enabled
-
-	if s.inMemorySwitchOverCache.enabled {
-		// Only initialize if its nil (because its a first start or it was disabled before)
-		if s.inMemorySwitchOverCache.queriesForFeatureFlag == nil {
-			s.inMemorySwitchOverCache.queriesForFeatureFlag = make(map[string]planCache)
-		}
-		s.inMemorySwitchOverCache.testValue++
-	} else {
-		s.inMemorySwitchOverCache.queriesForFeatureFlag = nil
-	}
+	s.inMemorySwitchOverCache.UpdateInMemorySwitchOverCacheForConfigChanges(config)
 }
 
 func (s *SwitchoverConfig) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
@@ -44,8 +32,26 @@ func (s *SwitchoverConfig) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
 type InMemorySwitchOverCache struct {
 	enabled               bool
 	mu                    sync.RWMutex
-	testValue             int
 	queriesForFeatureFlag map[string]planCache
+}
+
+func (c *InMemorySwitchOverCache) UpdateInMemorySwitchOverCacheForConfigChanges(config *Config) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	c.enabled = config.cacheWarmup != nil &&
+		config.cacheWarmup.Enabled &&
+		config.cacheWarmup.Source.InMemorySwitchover.Enabled
+
+	// If the configuration change occurred which disabled or enabled the switchover cache, we need to update the internal state
+	if c.enabled {
+		// Only initialize if its nil (because its a first start or it was disabled before)
+		if c.queriesForFeatureFlag == nil {
+			c.queriesForFeatureFlag = make(map[string]planCache)
+		}
+	} else {
+		c.queriesForFeatureFlag = nil
+	}
 }
 
 func (c *InMemorySwitchOverCache) getPlanCacheForFF(featureFlagKey string) planCache {
@@ -81,11 +87,11 @@ func (c *InMemorySwitchOverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.Ro
 	defer c.mu.Unlock()
 
 	ffNames := make(map[string]struct{})
-	for ffName, _ := range routerCfg.FeatureFlagConfigs.ConfigByFeatureFlagName {
+	for ffName := range routerCfg.FeatureFlagConfigs.ConfigByFeatureFlagName {
 		ffNames[ffName] = struct{}{}
 	}
 
-	for ffName, _ := range c.queriesForFeatureFlag {
+	for ffName := range c.queriesForFeatureFlag {
 		// Skip the base which is ""
 		if ffName == "" {
 			continue
