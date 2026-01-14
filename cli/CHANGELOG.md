@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.103.4](https://github.com/wundergraph/cosmo/compare/wgc@0.103.3...wgc@0.103.4) (2026-01-09)
+
+**Note:** Version bump only for package wgc
+
+## [0.103.3](https://github.com/wundergraph/cosmo/compare/wgc@0.103.2...wgc@0.103.3) (2026-01-09)
+
+### Bug Fixes
+
+* perform auth for all the commands of grpc which requires controlplane ([#2447](https://github.com/wundergraph/cosmo/issues/2447)) ([eb6a5cc](https://github.com/wundergraph/cosmo/commit/eb6a5ccbc02a2b402b75984a1cb36349d15768da)) (@JivusAyrus)
+
 ## [0.103.2](https://github.com/wundergraph/cosmo/compare/wgc@0.103.1...wgc@0.103.2) (2026-01-08)
 
 ### Bug Fixes

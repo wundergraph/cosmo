@@ -293,6 +293,7 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 			URL:               jwks.URL,
 			RefreshInterval:   jwks.RefreshInterval,
 			AllowedAlgorithms: jwks.Algorithms,
+			AllowedUse:        jwks.AllowedUse,
 
 			Secret:    jwks.Secret,
 			Algorithm: jwks.Algorithm,
