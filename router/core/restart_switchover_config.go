@@ -1,8 +1,9 @@
 package core
 
 import (
-	"github.com/dgraph-io/ristretto/v2"
 	"sync"
+
+	"github.com/dgraph-io/ristretto/v2"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
@@ -14,18 +15,26 @@ type SwitchoverConfig struct {
 	inMemorySwitchOverCache *InMemorySwitchOverCache
 }
 
-func NewSwitchoverConfig(config *Config) *SwitchoverConfig {
-	switchoverConfig := &SwitchoverConfig{
-		inMemorySwitchOverCache: &InMemorySwitchOverCache{
-			enabled: config.cacheWarmup.Enabled && config.cacheWarmup.Source.InMemorySwitchover.Enabled,
-		},
+func NewSwitchoverConfig() *SwitchoverConfig {
+	return &SwitchoverConfig{
+		inMemorySwitchOverCache: &InMemorySwitchOverCache{},
 	}
+}
 
-	if switchoverConfig.inMemorySwitchOverCache.enabled {
-		switchoverConfig.inMemorySwitchOverCache.queriesForFeatureFlag = make(map[string]planCache)
+func (s *SwitchoverConfig) UpdateSwitchoverConfig(config *Config) {
+	s.inMemorySwitchOverCache.enabled = config.cacheWarmup != nil &&
+		config.cacheWarmup.Enabled &&
+		config.cacheWarmup.Source.InMemorySwitchover.Enabled
+
+	if s.inMemorySwitchOverCache.enabled {
+		// Only initialize if its nil (because its a first start or it was disabled before)
+		if s.inMemorySwitchOverCache.queriesForFeatureFlag == nil {
+			s.inMemorySwitchOverCache.queriesForFeatureFlag = make(map[string]planCache)
+		}
+		s.inMemorySwitchOverCache.testValue++
+	} else {
+		s.inMemorySwitchOverCache.queriesForFeatureFlag = nil
 	}
-
-	return switchoverConfig
 }
 
 func (s *SwitchoverConfig) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
@@ -35,6 +44,7 @@ func (s *SwitchoverConfig) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
 type InMemorySwitchOverCache struct {
 	enabled               bool
 	mu                    sync.RWMutex
+	testValue             int
 	queriesForFeatureFlag map[string]planCache
 }
 
@@ -76,6 +86,10 @@ func (c *InMemorySwitchOverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.Ro
 	}
 
 	for ffName, _ := range c.queriesForFeatureFlag {
+		// Skip the base which is ""
+		if ffName == "" {
+			continue
+		}
 		if _, exists := ffNames[ffName]; !exists {
 			delete(c.queriesForFeatureFlag, ffName)
 		}

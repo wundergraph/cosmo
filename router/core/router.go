@@ -1174,7 +1174,11 @@ func (r *Router) Start(ctx context.Context) error {
 		healthCheckPath:    r.healthCheckPath,
 	})
 
-	r.switchoverConfig = NewSwitchoverConfig(&r.Config)
+	if r.switchoverConfig == nil {
+		// This is only applicable for tests since we do not call here via the sueprvisor
+		r.switchoverConfig = NewSwitchoverConfig()
+	}
+	r.switchoverConfig.UpdateSwitchoverConfig(&r.Config)
 
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
@@ -2047,6 +2051,12 @@ func WithTracingAttributes(attributes []config.CustomAttribute) Option {
 func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
 	return func(r *Router) {
 		r.routerConfigPollerConfig = cfg
+	}
+}
+
+func WithSwitchoverConfig(cfg *SwitchoverConfig) Option {
+	return func(r *Router) {
+		r.switchoverConfig = cfg
 	}
 }
 

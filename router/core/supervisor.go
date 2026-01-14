@@ -30,15 +30,17 @@ type RouterSupervisor struct {
 
 // RouterResources is a struct for holding resources used by the router.
 type RouterResources struct {
-	Config *config.Config
-	Logger *zap.Logger
+	Config           *config.Config
+	Logger           *zap.Logger
+	SwitchoverConfig *SwitchoverConfig
 }
 
 // RouterSupervisorOpts is a struct for configuring the router supervisor.
 type RouterSupervisorOpts struct {
-	BaseLogger    *zap.Logger
-	ConfigFactory func() (*config.Config, error)
-	RouterFactory func(ctx context.Context, res *RouterResources) (*Router, error)
+	BaseLogger       *zap.Logger
+	ConfigFactory    func() (*config.Config, error)
+	RouterFactory    func(ctx context.Context, res *RouterResources) (*Router, error)
+	SwitchoverConfig *SwitchoverConfig
 }
 
 // NewRouterSupervisor creates a new RouterSupervisor instance.
@@ -48,7 +50,8 @@ func NewRouterSupervisor(opts *RouterSupervisorOpts) (*RouterSupervisor, error) 
 		logger:        opts.BaseLogger.With(zap.String("component", "supervisor")),
 		configFactory: opts.ConfigFactory,
 		resources: &RouterResources{
-			Logger: opts.BaseLogger,
+			Logger:           opts.BaseLogger,
+			SwitchoverConfig: opts.SwitchoverConfig,
 		},
 	}
 
