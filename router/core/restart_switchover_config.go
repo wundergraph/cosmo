@@ -36,8 +36,8 @@ type InMemorySwitchOverCache struct {
 }
 
 func (c *InMemorySwitchOverCache) UpdateInMemorySwitchOverCacheForConfigChanges(config *Config) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	c.enabled = config.cacheWarmup != nil &&
 		config.cacheWarmup.Enabled &&
