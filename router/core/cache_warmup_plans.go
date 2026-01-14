@@ -18,7 +18,7 @@ func NewPlanSource(switchoverCacheWarmerQueries *ristretto.Cache[uint64, *planWi
 	items := make([]*nodev1.Operation, 0)
 
 	if switchoverCacheWarmerQueries != nil {
-		switchoverCacheWarmerQueries.Iter(func(k any, v *planWithMetaData) (stop bool) {
+		switchoverCacheWarmerQueries.Iter(func(_ any, v *planWithMetaData) (stop bool) {
 			items = append(items, &nodev1.Operation{
 				Request: &nodev1.OperationRequest{Query: v.content},
 			})
@@ -29,6 +29,6 @@ func NewPlanSource(switchoverCacheWarmerQueries *ristretto.Cache[uint64, *planWi
 	return &PlanSource{queries: items}
 }
 
-func (c *PlanSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.Operation, error) {
+func (c *PlanSource) LoadItems(_ context.Context, _ *zap.Logger) ([]*nodev1.Operation, error) {
 	return c.queries, nil
 }

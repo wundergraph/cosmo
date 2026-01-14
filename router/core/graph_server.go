@@ -1351,16 +1351,17 @@ func (s *graphServer) buildGraphMux(
 			)
 		}
 
-		if s.Config.cacheWarmup.Source.Filesystem != nil {
+		switch {
+		case s.cacheWarmup.Source.Filesystem != nil:
 			warmupConfig.Source = NewFileSystemSource(&FileSystemSourceConfig{
 				RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
 			})
-		} else if s.Config.cacheWarmup.Source.InMemorySwitchover.Enabled {
+		case s.cacheWarmup.Source.InMemorySwitchover.Enabled:
 			// We first utilize the plan cache (if it was already set, so not on first starts) to create a list of queries
 			// and reset the plan cache to the new plan cache for this start afterwords
 			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
 			opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
-		} else {
+		default:
 			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create cdn source: %w", err)
