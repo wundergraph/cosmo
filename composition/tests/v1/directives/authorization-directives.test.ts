@@ -2,7 +2,9 @@ import { describe, expect, test } from 'vitest';
 import {
   AuthorizationData,
   FieldAuthorizationData,
+  INTERFACE,
   MAX_OR_SCOPES,
+  OBJECT,
   orScopesLimitError,
   parse,
   QUERY,
@@ -507,26 +509,27 @@ describe('Authorization directives tests', () => {
   });
 
   describe('Federation tests', () => {
-    test('that @authenticated is persisted in the federated schema', () => {
-      const { fieldConfigurations, federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
-        [faa, fab],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(fieldConfigurations).toStrictEqual([
-        {
-          argumentNames: [],
-          fieldName: 'object',
-          typeName: QUERY,
-          requiresAuthentication: true,
-          requiredScopes: [],
-          requiredScopesByOR: [],
-        },
-      ]);
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            AUTHENTICATED_DIRECTIVE +
-            `
+    describe('@authenticated tests', () => {
+      test('that @authenticated is persisted in the federated schema', () => {
+        const { fieldConfigurations, federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+          [faa, fab],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'object',
+            typeName: QUERY,
+            requiresAuthentication: true,
+            requiredScopes: [],
+            requiredScopesByOR: [],
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              AUTHENTICATED_DIRECTIVE +
+              `
           type Object @authenticated {
             age: Int!
             id: ID!
@@ -537,12 +540,12 @@ describe('Authorization directives tests', () => {
             object: Object!
           }
         `,
-        ),
-      );
-      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            `
+          ),
+        );
+        expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              `
           type Object {
             age: Int!
             id: ID!
@@ -553,30 +556,344 @@ describe('Authorization directives tests', () => {
             object: Object!
           }
         `,
-        ),
-      );
+          ),
+        );
+      });
+
+      test('that @authenticated on an Enum type generates the correct router configuration', () => {
+        const { fieldConfigurations, federatedGraphSchema } = federateSubgraphsSuccess(
+          [fiaa, fiab],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'a',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+          {
+            argumentNames: [],
+            fieldName: 'b',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+          {
+            argumentNames: [],
+            fieldName: 'c',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              AUTHENTICATED_DIRECTIVE +
+              `
+            enum Enum @authenticated {
+              A
+            }
+            
+            type Query {
+              a: Enum!
+              b: Enum!
+              c: Enum!
+            }
+          `,
+          ),
+        );
+      });
+
+      test('that @authenticated on an Interface type generates the correct router configuration', () => {
+        const { fieldConfigurations, federatedGraphSchema } = federateSubgraphsSuccess(
+          [fjaa, fjab],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'a',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+          {
+            argumentNames: [],
+            fieldName: 'b',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+          {
+            argumentNames: [],
+            fieldName: 'd',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              AUTHENTICATED_DIRECTIVE +
+              `
+            interface Interface @authenticated {
+              a: ID
+            }
+            
+            type Object implements Interface {
+              a: ID
+            }
+            
+            type Query {
+              a: Interface!
+              b: Interface!
+              c: Object!
+              d: Interface!
+              e: Object!
+            }
+          `,
+          ),
+        );
+      });
+
+      test('that @authenticated on an Object type generates the correct router configuration', () => {
+        const { fieldConfigurations, federatedGraphSchema } = federateSubgraphsSuccess(
+          [fkaa, fkab],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'a',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+          {
+            argumentNames: [],
+            fieldName: 'b',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+          {
+            argumentNames: [],
+            fieldName: 'c',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              AUTHENTICATED_DIRECTIVE +
+              `
+            type Object @authenticated {
+              a: ID
+            }
+            
+            type Query {
+              a: Object!
+              b: Object!
+              c: Object!
+            }
+          `,
+          ),
+        );
+      });
+
+      test('that @authenticated on a Scalar type generates the correct router configuration', () => {
+        const { fieldConfigurations, federatedGraphSchema } = federateSubgraphsSuccess(
+          [flaa, flab],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'a',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+          {
+            argumentNames: [],
+            fieldName: 'b',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+          {
+            argumentNames: [],
+            fieldName: 'c',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: QUERY,
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              AUTHENTICATED_DIRECTIVE +
+              `
+            type Query {
+              a: Scalar!
+              b: Scalar!
+              c: Scalar!
+            }
+            
+            scalar Scalar @authenticated
+          `,
+          ),
+        );
+      });
+
+      test('that @authenticated on an Interface field generates the correct router configuration', () => {
+        const { fieldConfigurations, federatedGraphSchema } = federateSubgraphsSuccess(
+          [fmaa, fmab],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'a',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: INTERFACE,
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              AUTHENTICATED_DIRECTIVE +
+              `
+            interface Interface {
+              a: ID @authenticated
+            }
+            
+            type Object implements Interface {
+              a: ID
+            }
+            
+            type Query {
+              a: Interface!
+              b: Interface!
+              c: Object!
+              d: Interface!
+              e: Object!
+            }
+          `,
+          ),
+        );
+      });
+
+      test('that @authenticated on an Object field generates the correct router configuration', () => {
+        const { fieldConfigurations, federatedGraphSchema } = federateSubgraphsSuccess(
+          [fnaa, fnab],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'a',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: OBJECT,
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              AUTHENTICATED_DIRECTIVE +
+              `            
+            type Object {
+              a: ID @authenticated
+            }
+            
+            type Query {
+              a: Object!
+              b: Object!
+              c: Object!
+            }
+          `,
+          ),
+        );
+      });
+
+      test('that @authenticated on an Object field generates the correct router configuration', () => {
+        const { fieldConfigurations, federatedGraphSchema } = federateSubgraphsSuccess(
+          [fnaa, fnab],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'a',
+            requiredScopes: [],
+            requiredScopesByOR: [],
+            requiresAuthentication: true,
+            typeName: OBJECT,
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              AUTHENTICATED_DIRECTIVE +
+              `            
+            type Object {
+              a: ID @authenticated
+            }
+            
+            type Query {
+              a: Object!
+              b: Object!
+              c: Object!
+            }
+          `,
+          ),
+        );
+      });
     });
 
-    test('that @requiresScopes is persisted in the federated schema', () => {
-      const { fieldConfigurations, federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
-        [fab, fac],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(fieldConfigurations).toStrictEqual([
-        {
-          argumentNames: [],
-          fieldName: 'object',
-          typeName: QUERY,
-          requiresAuthentication: false,
-          requiredScopes: [['b']],
-          requiredScopesByOR: [['b']],
-        },
-      ]);
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            REQUIRES_SCOPES_DIRECTIVE +
-            `
+    describe('@requiresScopes tests', () => {
+      test('that @requiresScopes is persisted in the federated schema', () => {
+        const { fieldConfigurations, federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+          [fab, fac],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'object',
+            typeName: QUERY,
+            requiresAuthentication: false,
+            requiredScopes: [['b']],
+            requiredScopesByOR: [['b']],
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              REQUIRES_SCOPES_DIRECTIVE +
+              `
           type Object @requiresScopes(scopes: [["b"]]) {
             age: Int!
             id: ID!
@@ -587,13 +904,13 @@ describe('Authorization directives tests', () => {
             object: Object!
           }
         ` +
-            OPENFED_SCOPE,
-        ),
-      );
-      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            `
+              OPENFED_SCOPE,
+          ),
+        );
+        expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              `
           type Object {
             age: Int!
             id: ID!
@@ -604,8 +921,82 @@ describe('Authorization directives tests', () => {
             object: Object!
           }
         `,
-        ),
-      );
+          ),
+        );
+      });
+
+      test('that @requiresScopes defined on an Interface field does not affect its implementations', () => {
+        const { fieldConfigurations, federatedGraphClientSchema, federatedGraphSchema } = federateSubgraphsSuccess(
+          [foaa],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'id',
+            typeName: INTERFACE,
+            requiresAuthentication: false,
+            requiredScopes: [['read:id']],
+            requiredScopesByOR: [['read:id']],
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              REQUIRES_SCOPES_DIRECTIVE +
+              `
+            interface Interface {
+              id: ID! @requiresScopes(scopes: [["read:id"]])
+              name: String!
+            }
+            
+            type Object implements Interface {
+              id: ID!
+              name: String!
+            }
+            
+            type Query {
+              interfaces: [Interface!]!
+              objects: [Object!]!
+            }
+        ` +
+              OPENFED_SCOPE,
+          ),
+        );
+        expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              `
+            interface Interface {
+              id: ID!
+              name: String!
+            }
+            
+            type Object implements Interface {
+              id: ID!
+              name: String!
+            }
+            
+            type Query {
+              interfaces: [Interface!]!
+              objects: [Object!]!
+            }
+        `,
+          ),
+        );
+      });
+
+      test('that an error is returned if the limit of @requiresScopes scopes is exceeded after federation #1.1', () => {
+        const result = federateSubgraphsFailure([fba, fbb], ROUTER_COMPATIBILITY_VERSION_ONE);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toStrictEqual(orScopesLimitError(MAX_OR_SCOPES, ['Query.entity', 'Interface.enum']));
+      });
+
+      test('that an error is returned if the limit of @requiresScopes scopes is exceeded after federation #1.2', () => {
+        const result = federateSubgraphsFailure([fbb, fba], ROUTER_COMPATIBILITY_VERSION_ONE);
+        expect(result.errors).toHaveLength(1);
+        expect(result.errors[0]).toStrictEqual(orScopesLimitError(MAX_OR_SCOPES, ['Query.entity', 'Interface.enum']));
+      });
     });
 
     test('that authorization directives generate the correct router configuration', () => {
@@ -647,18 +1038,6 @@ describe('Authorization directives tests', () => {
             OPENFED_SCOPE,
         ),
       );
-    });
-
-    test('that an error is returned if the limit of @requiresScopes scopes is exceeded after federation #1.1', () => {
-      const result = federateSubgraphsFailure([fba, fbb], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(orScopesLimitError(MAX_OR_SCOPES, ['Query.entity', 'Interface.enum']));
-    });
-
-    test('that an error is returned if the limit of @requiresScopes scopes is exceeded after federation #1.2', () => {
-      const result = federateSubgraphsFailure([fbb, fba], ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(orScopesLimitError(MAX_OR_SCOPES, ['Query.entity', 'Interface.enum']));
     });
 
     test('that the federated graph and its router configuration are generated correctly', () => {
@@ -1894,18 +2273,213 @@ const fhb: Subgraph = {
   `),
 };
 
-const subgraphQ: Subgraph = {
-  name: 'subgraph-q',
+const fiaa: Subgraph = {
+  name: 'fiaa',
+  url: '',
+  definitions: parse(`
+    enum Enum @authenticated {
+      A
+    }
+    
+    type Query {
+      a: Enum!
+      b: Enum!
+    }
+  `),
+};
+
+const fiab: Subgraph = {
+  name: 'fiab',
+  url: '',
+  definitions: parse(`
+    enum Enum {
+      A
+    }
+    
+    type Query {
+      c: Enum!
+    }
+  `),
+};
+
+const fjaa: Subgraph = {
+  name: 'fjaa',
+  url: '',
+  definitions: parse(`
+    interface Interface @authenticated {
+      a: ID
+    }
+    
+    type Object implements Interface @shareable {
+      a: ID
+    }
+    
+    type Query {
+      a: Interface!
+      b: Interface!
+      c: Object!
+    }
+  `),
+};
+
+const fjab: Subgraph = {
+  name: 'fjab',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      a: ID
+    }
+    
+    type Object implements Interface {
+      a: ID
+    }
+    
+    type Query {
+      d: Interface!
+      e: Object!
+    }
+  `),
+};
+
+const fkaa: Subgraph = {
+  name: 'fkaa',
+  url: '',
+  definitions: parse(`
+    type Object @authenticated @shareable {
+      a: ID
+    }
+    
+    type Query {
+      a: Object!
+      b: Object!
+    }
+  `),
+};
+
+const fkab: Subgraph = {
+  name: 'fkab',
+  url: '',
+  definitions: parse(`
+    type Object {
+      a: ID
+    }
+    
+    type Query {
+      c: Object!
+    }
+  `),
+};
+
+const flaa: Subgraph = {
+  name: 'flaa',
   url: '',
   definitions: parse(`
     type Query {
-      object: Object @authenticated @requiresScopes(scopes: [["a"], ["b"]])
+      a: Scalar!
+      b: Scalar!
     }
-    type Object @authenticated @requiresScopes(scopes: [["b", "c"], ["d"]]) {
-      b: Boolean! @authenticated @requiresScopes(scopes: [["f"], ["c"]])
-      s: Scalar!
-    }
+    
+    scalar Scalar @authenticated
+  `),
+};
 
-    scalar Scalar @authenticated @requiresScopes(scopes: [["c", "e"], ["d"]])
+const flab: Subgraph = {
+  name: 'flab',
+  url: '',
+  definitions: parse(`
+    type Query {
+      c: Scalar!
+    }
+    
+    scalar Scalar
+  `),
+};
+
+const fmaa: Subgraph = {
+  name: 'fmaa',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      a: ID @authenticated
+    }
+    
+    type Object implements Interface @shareable {
+      a: ID
+    }
+    
+    type Query {
+      a: Interface!
+      b: Interface!
+      c: Object!
+    }
+  `),
+};
+
+const fmab: Subgraph = {
+  name: 'fmab',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      a: ID
+    }
+    
+    type Object implements Interface {
+      a: ID
+    }
+    
+    type Query {
+      d: Interface!
+      e: Object!
+    }
+  `),
+};
+
+const fnaa: Subgraph = {
+  name: 'fnaa',
+  url: '',
+  definitions: parse(`
+    type Object @shareable {
+      a: ID @authenticated
+    }
+    
+    type Query {
+      a: Object!
+      b: Object!
+    }
+  `),
+};
+
+const fnab: Subgraph = {
+  name: 'fnab',
+  url: '',
+  definitions: parse(`
+    type Object {
+      a: ID
+    }
+    
+    type Query {
+      c: Object!
+    }
+  `),
+};
+
+const foaa: Subgraph = {
+  name: 'foaa',
+  url: '',
+  definitions: parse(`
+    interface Interface {
+      id: ID! @requiresScopes(scopes: [["read:id"]])
+      name: String!
+    }
+    
+    type Object implements Interface {
+      id: ID!
+      name: String!
+    }
+    
+    type Query {
+      interfaces: [Interface!]!
+      objects: [Object!]!
+    }
   `),
 };
