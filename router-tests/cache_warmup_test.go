@@ -994,7 +994,7 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
-			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, 200, res.Response.StatusCode)
 			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
 			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 
@@ -1007,8 +1007,8 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
-			require.Equal(t, res.Response.StatusCode, 200)
-			require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "updated")
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
 			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 		})
 	})
@@ -1042,7 +1042,7 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id customDetails: details { forename } } }`,
 			})
-			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, 200, res.Response.StatusCode)
 			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
 			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 
@@ -1055,8 +1055,8 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id customDetails: details { forename } } }`,
 			})
-			require.Equal(t, res.Response.StatusCode, 200)
-			require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "updated")
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
 			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 		})
 	})
@@ -1091,7 +1091,7 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { hello }`,
 			})
-			require.Equal(t, res.Response.StatusCode, 200)
+			require.Equal(t, 200, res.Response.StatusCode)
 			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
 			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 
