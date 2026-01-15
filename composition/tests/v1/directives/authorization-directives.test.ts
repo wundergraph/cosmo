@@ -997,6 +997,58 @@ describe('Authorization directives tests', () => {
         expect(result.errors).toHaveLength(1);
         expect(result.errors[0]).toStrictEqual(orScopesLimitError(MAX_OR_SCOPES, ['Query.entity', 'Interface.enum']));
       });
+
+      test('that inter-subgraph scopes reduce correctly #1', () => {
+        const result = federateSubgraphsSuccess([fqab, fqaa], ROUTER_COMPATIBILITY_VERSION_ONE);
+        expect(result.fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'ids',
+            typeName: QUERY,
+            requiresAuthentication: false,
+            requiredScopes: [['a'], ['b']],
+            requiredScopesByOR: [['a'], ['b']],
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              REQUIRES_SCOPES_DIRECTIVE +
+              `
+          type Query {
+            ids: [ID!]! @requiresScopes(scopes: [["a"], ["b"]])
+          }
+        ` +
+              OPENFED_SCOPE,
+          ),
+        );
+      });
+
+      test('that inter-subgraph scopes reduce correctly #2', () => {
+        const result = federateSubgraphsSuccess([fqac, fqaa], ROUTER_COMPATIBILITY_VERSION_ONE);
+        expect(result.fieldConfigurations).toStrictEqual([
+          {
+            argumentNames: [],
+            fieldName: 'ids',
+            typeName: QUERY,
+            requiresAuthentication: false,
+            requiredScopes: [['a'], ['b']],
+            requiredScopesByOR: [['a'], ['b'], ['c']],
+          },
+        ]);
+        expect(schemaToSortedNormalizedString(result.federatedGraphSchema)).toBe(
+          normalizeString(
+            SCHEMA_QUERY_DEFINITION +
+              REQUIRES_SCOPES_DIRECTIVE +
+              `
+          type Query {
+            ids: [ID!]! @requiresScopes(scopes: [["a"], ["b"]])
+          }
+        ` +
+              OPENFED_SCOPE,
+          ),
+        );
+      });
     });
 
     test('that authorization directives generate the correct router configuration', () => {
@@ -2480,6 +2532,60 @@ const foaa: Subgraph = {
     type Query {
       interfaces: [Interface!]!
       objects: [Object!]!
+    }
+  `),
+};
+
+const fpaa: Subgraph = {
+  name: 'fpaa',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      scalars: [Scalar!]! @requiresScopes(scopes: [["a", "b"], ["c"]])
+    }
+    
+    scalar Scalar @requiresScopes(scopes: [["d", "e"], ["f"]])
+  `),
+};
+
+const fpab: Subgraph = {
+  name: 'fpab',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      scalars: [Scalar!]! @requiresScopes(scopes: [["g", "h"], ["i"]])
+    }
+    
+    scalar Scalar @requiresScopes(scopes: [["j", "k"], ["l"]])
+  `),
+};
+
+const fqaa: Subgraph = {
+  name: 'fqaa',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      ids: [ID!]! @requiresScopes(scopes: [["a"], ["b"]])
+    }
+  `),
+};
+
+const fqab: Subgraph = {
+  name: 'fqab',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      ids: [ID!]! @requiresScopes(scopes: [["a"], ["b"]])
+    }
+  `),
+};
+
+const fqac: Subgraph = {
+  name: 'fqac',
+  url: '',
+  definitions: parse(`
+    type Query @shareable {
+      ids: [ID!]! @requiresScopes(scopes: [["a"], ["b"], ["c"]])
     }
   `),
 };
