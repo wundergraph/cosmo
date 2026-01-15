@@ -103,7 +103,7 @@ export function incompatibleInputValueDefaultValuesError(
 
 export function incompatibleSharedEnumError(parentName: string): Error {
   return new Error(
-    `Enum "${parentName}" was used as both an input and output but was inconsistently defined across inclusive subgraphs.`,
+    `Enum "${parentName}" was used as both an input and output but was inconsistently defined across inclusive subgraphs. You should add the new value as @inaccessible in the origin graph, define it without the directive in other graphs, and then remove @inaccessible once all subgraphs are updated.`,
   );
 }
 
