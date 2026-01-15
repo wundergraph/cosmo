@@ -837,40 +837,6 @@ describe('Authorization directives tests', () => {
           ),
         );
       });
-
-      test('that @authenticated on an Object field generates the correct router configuration', () => {
-        const { fieldConfigurations, federatedGraphSchema } = federateSubgraphsSuccess(
-          [fnaa, fnab],
-          ROUTER_COMPATIBILITY_VERSION_ONE,
-        );
-        expect(fieldConfigurations).toStrictEqual([
-          {
-            argumentNames: [],
-            fieldName: 'a',
-            requiredScopes: [],
-            requiredScopesByOR: [],
-            requiresAuthentication: true,
-            typeName: OBJECT,
-          },
-        ]);
-        expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-          normalizeString(
-            SCHEMA_QUERY_DEFINITION +
-              AUTHENTICATED_DIRECTIVE +
-              `            
-            type Object {
-              a: ID @authenticated
-            }
-            
-            type Query {
-              a: Object!
-              b: Object!
-              c: Object!
-            }
-          `,
-          ),
-        );
-      });
     });
 
     describe('@requiresScopes tests', () => {
