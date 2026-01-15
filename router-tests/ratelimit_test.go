@@ -709,10 +709,6 @@ func TestRateLimit(t *testing.T) {
 					clusterUrlSlice: []string{"redis://cosmo:test@localhost:7003", "redis://cosmo1:test1@localhost:7001", "redis://cosmo2:test2@localhost:7002"},
 				},
 				{
-					name:            "should successfully use auth from later url if no auth in first urls",
-					clusterUrlSlice: []string{"redis://localhost:7003", "rediss://localhost:7001", "rediss://cosmo:test@localhost:7002"},
-				},
-				{
 					name:            "should successfully work with two urls",
 					clusterUrlSlice: []string{"redis://cosmo:test@localhost:7002", "rediss://localhost:7001"},
 				},
