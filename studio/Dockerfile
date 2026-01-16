@@ -47,19 +47,22 @@ RUN pnpm run --filter=./connect --filter=./shared --filter=./studio --filter=./c
 
 FROM --platform=${TARGETPLATFORM} node:lts-alpine
 
+RUN apk add --no-cache --upgrade bash
+
+USER node
+
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Fetch built artifacts
-COPY --from=builder /app/studio/.next/standalone ./
-COPY --from=builder /app/studio/public/ ./studio/public
-COPY --from=builder /app/studio/.next/static ./studio/.next/static
-COPY --from=builder /app/studio/entrypoint.sh .
-COPY --from=builder /app/studio/.env.production .
+COPY --from=builder --chown=node:node /app/studio/.next/standalone ./
+COPY --from=builder --chown=node:node /app/studio/public/ ./studio/public
+COPY --from=builder --chown=node:node /app/studio/.next/static ./studio/.next/static
+COPY --from=builder --chown=node:node /app/studio/entrypoint.sh .
+COPY --from=builder --chown=node:node /app/studio/.env.production .
 
-RUN apk add --no-cache --upgrade bash
 RUN ["chmod", "+x", "./entrypoint.sh"]
 ENTRYPOINT ["./entrypoint.sh"]
 
