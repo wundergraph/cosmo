@@ -999,6 +999,9 @@ type MCPConfiguration struct {
 	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
 	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
 	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
+	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
+	OmitToolNamePrefix bool `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
 }
 
 type MCPSessionConfig struct {
