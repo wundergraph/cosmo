@@ -972,11 +972,16 @@ type ClientHeader struct {
 }
 
 type CacheWarmupSource struct {
-	Filesystem *CacheWarmupFileSystemSource `yaml:"filesystem,omitempty"`
+	Filesystem         *CacheWarmupFileSystemSource  `yaml:"filesystem,omitempty"`
+	InMemorySwitchover CacheWarmupInMemorySwitchover `yaml:"in_memory_switchover,omitempty"`
 }
 
 type CacheWarmupFileSystemSource struct {
 	Path string `yaml:"path" env:"CACHE_WARMUP_SOURCE_FILESYSTEM_PATH"`
+}
+
+type CacheWarmupInMemorySwitchover struct {
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_IN_MEMORY_SWITCHOVER_ENABLED"`
 }
 
 type CacheWarmupCDNSource struct{}

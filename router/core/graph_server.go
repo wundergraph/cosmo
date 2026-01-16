@@ -112,6 +112,7 @@ type BuildGraphMuxOptions struct {
 	EngineConfig        *nodev1.EngineConfiguration
 	ConfigSubgraphs     []*nodev1.Subgraph
 	RoutingUrlGroupings map[string]map[string]bool
+	SwitchoverConfig    *SwitchoverConfig
 }
 
 func (b BuildGraphMuxOptions) IsBaseGraph() bool {
@@ -119,7 +120,7 @@ func (b BuildGraphMuxOptions) IsBaseGraph() bool {
 }
 
 // newGraphServer creates a new server instance.
-func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc) (*graphServer, error) {
+func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterConfig, proxy ProxyFunc, switchoverConfig *SwitchoverConfig) (*graphServer, error) {
 	/* Older versions of composition will not populate a compatibility version.
 	 * Currently, all "old" router execution configurations are compatible as there have been no breaking
 	 * changes.
@@ -273,6 +274,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		EngineConfig:        routerConfig.GetEngineConfig(),
 		ConfigSubgraphs:     routerConfig.GetSubgraphs(),
 		RoutingUrlGroupings: routingUrlGroupings,
+		SwitchoverConfig:    switchoverConfig,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
@@ -283,7 +285,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap)
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap, switchoverConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
@@ -433,6 +435,7 @@ func (s *graphServer) buildMultiGraphHandler(
 	ctx context.Context,
 	baseMux *chi.Mux,
 	featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig,
+	switchoverConfig *SwitchoverConfig,
 ) (http.HandlerFunc, error) {
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
@@ -447,6 +450,7 @@ func (s *graphServer) buildMultiGraphHandler(
 			RouterConfigVersion: executionConfig.GetVersion(),
 			EngineConfig:        executionConfig.GetEngineConfig(),
 			ConfigSubgraphs:     executionConfig.Subgraphs,
+			SwitchoverConfig:    switchoverConfig,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
@@ -519,12 +523,12 @@ type graphMux struct {
 	validationCache             *ristretto.Cache[uint64, bool]
 	operationHashCache          *ristretto.Cache[uint64, string]
 
-	accessLogsFileLogger   *logging.BufferedLogger
-	metricStore            rmetric.Store
-	prometheusCacheMetrics *rmetric.CacheMetrics
-	otelCacheMetrics       *rmetric.CacheMetrics
-	streamMetricStore      rmetric.StreamMetricStore
-	prometheusMetricsExporter  *graphqlmetrics.PrometheusMetricsExporter
+	accessLogsFileLogger      *logging.BufferedLogger
+	metricStore               rmetric.Store
+	prometheusCacheMetrics    *rmetric.CacheMetrics
+	otelCacheMetrics          *rmetric.CacheMetrics
+	streamMetricStore         rmetric.StreamMetricStore
+	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
 }
 
 // buildOperationCaches creates the caches for the graph mux.
@@ -1296,7 +1300,8 @@ func (s *graphServer) buildGraphMux(
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
-	operationPlanner := NewOperationPlanner(executor, gm.planCache)
+
+	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.SwitchoverConfig.inMemorySwitchOverCache.enabled)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
@@ -1346,11 +1351,17 @@ func (s *graphServer) buildGraphMux(
 			)
 		}
 
-		if s.Config.cacheWarmup.Source.Filesystem != nil {
+		switch {
+		case s.cacheWarmup.Source.Filesystem != nil:
 			warmupConfig.Source = NewFileSystemSource(&FileSystemSourceConfig{
 				RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
 			})
-		} else {
+		case s.cacheWarmup.Source.InMemorySwitchover.Enabled:
+			// We first utilize the plan cache (if it was already set, so not on first starts) to create a list of queries
+			// and reset the plan cache to the new plan cache for this start afterwords
+			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
+			opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+		default:
 			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create cdn source: %w", err)

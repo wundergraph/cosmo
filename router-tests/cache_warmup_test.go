@@ -2,6 +2,8 @@ package integration
 
 import (
 	"context"
+	"github.com/stretchr/testify/assert"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"net/http"
 	"testing"
 	"time"
@@ -912,6 +914,199 @@ func TestCacheWarmup(t *testing.T) {
 			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, m, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
+}
+
+func TestInMemorySwitchoverCaching(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Verify the plan is cached on config restart when in memory switchover is enabled", func(t *testing.T) {
+		t.Parallel()
+
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled: true,
+					Source: config.CacheWarmupSource{
+						InMemorySwitchover: config.CacheWarmupInMemorySwitchover{
+							Enabled: true,
+						},
+					},
+				}),
+				core.WithConfigVersionHeader(true),
+			},
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
+			require.JSONEq(t, employeesIDData, res.Body)
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+
+			// Wait for the config poller to be ready
+			<-pm.ready
+
+			pm.initConfig.Version = "updated"
+			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+			require.JSONEq(t, employeesIDData, res.Body)
+			require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+
+		})
+	})
+
+	t.Run("Verify the plan is not cached on config restart when in cache warmer is disabled", func(t *testing.T) {
+		t.Parallel()
+
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled: false,
+				}),
+				core.WithConfigVersionHeader(true),
+			},
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+
+			// Wait for the config poller to be ready
+			<-pm.ready
+
+			pm.initConfig.Version = "updated"
+			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+		})
+	})
+
+	t.Run("Verify the plan is not cached on config restart when using default cache warmer", func(t *testing.T) {
+		t.Parallel()
+
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled: true,
+					Source: config.CacheWarmupSource{
+						InMemorySwitchover: config.CacheWarmupInMemorySwitchover{
+							Enabled: false,
+						},
+					},
+				}),
+				core.WithConfigVersionHeader(true),
+			},
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id customDetails: details { forename } } }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+
+			// Wait for the config poller to be ready
+			<-pm.ready
+
+			pm.initConfig.Version = "updated"
+			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id customDetails: details { forename } } }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+		})
+	})
+
+	t.Run("Verify plan is cached when static execution config is reloaded", func(t *testing.T) {
+		t.Parallel()
+
+		// Create a temporary file for the router config
+		configFile := t.TempDir() + "/config.json"
+
+		// Initial config with just the employees subgraph
+		writeTestConfig(t, "initial", configFile)
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithExecutionConfig(&core.ExecutionConfig{
+					Path:          configFile,
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled: true,
+					Source: config.CacheWarmupSource{
+						InMemorySwitchover: config.CacheWarmupInMemorySwitchover{
+							Enabled: true,
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+
+			writeTestConfig(t, "updated", configFile)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				assert.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+				assert.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+			}, 2*time.Second, 100*time.Millisecond)
+		})
+	})
+
 }
 
 // findDataPoint finds a data point in a slice of histogram data points by matching
