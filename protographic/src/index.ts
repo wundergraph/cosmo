@@ -92,6 +92,7 @@ export function validateGraphQLSDL(sdl: string): ValidationResult {
 
 export * from './sdl-to-mapping-visitor.js';
 export { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
+export { RequiredFieldsVisitor } from './required-fields-visitor.js';
 export { ProtoLockManager } from './proto-lock.js';
 export { SDLValidationVisitor } from './sdl-validation-visitor.js';
 
