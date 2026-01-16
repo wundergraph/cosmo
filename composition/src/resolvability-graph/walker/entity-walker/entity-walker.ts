@@ -189,6 +189,7 @@ export class EntityWalker {
         originData.addResolvedFieldName(fieldName);
         if (areDescendantsResolved) {
           originData.resolvedDescendantNames.add(fieldName);
+          this.removeUnresolvablePaths({ selectionPath: `.${fieldName}`, removeDescendantPaths: true });
         }
       }
       return;

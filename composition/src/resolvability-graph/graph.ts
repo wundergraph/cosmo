@@ -181,7 +181,7 @@ export class Graph {
     }
     // Because of shared entity descendant paths, we can only assess the errors after checking all nested entities.
     for (const [nestedEntityNodeName, selectionPath] of walker.selectionPathByEntityNodeName) {
-      /* Short circuiting on failures here can cause false positives.
+      /* Short-circuiting on failures here can cause false positives.
        * For example, an Object that is an entity at least one graph and defines at least one unique (nested) field.
        * If that Object has no accessible keys but is accessible through an ancestor, short-circuiting here would
        * produce an error before that shared path has been visited.
