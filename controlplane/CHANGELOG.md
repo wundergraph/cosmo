@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.184.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.183.4...controlplane@0.184.0) (2026-01-14)
+
+### Features
+
+* add namespace in the slack notification ([#2452](https://github.com/wundergraph/cosmo/issues/2452)) ([8721174](https://github.com/wundergraph/cosmo/commit/87211748d0ece37984bb44dc9ef71b0a4c58d10d)) (@alepane21)
+
+## [0.183.4](https://github.com/wundergraph/cosmo/compare/controlplane@0.183.3...controlplane@0.183.4) (2026-01-12)
+
+### Bug Fixes
+
+* **infra:** ensure base images use target platform ([#2401](https://github.com/wundergraph/cosmo/issues/2401)) ([45d65c4](https://github.com/wundergraph/cosmo/commit/45d65c4c260e7888ecfc46fb46db0d73d33fc75e)) (@endigma)
+
+## [0.183.3](https://github.com/wundergraph/cosmo/compare/controlplane@0.183.2...controlplane@0.183.3) (2026-01-09)
+
+**Note:** Version bump only for package controlplane
+
 ## [0.183.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.183.1...controlplane@0.183.2) (2026-01-08)
 
 ### Bug Fixes
