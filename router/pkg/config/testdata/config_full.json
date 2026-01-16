@@ -490,6 +490,7 @@
       "JWKS": [
         {
           "URL": "https://example.com/.well-known/jwks.json",
+          "AllowedUse": null,
           "Algorithms": [
             "RS256"
           ],
@@ -507,6 +508,7 @@
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
+          "AllowedUse": null,
           "Algorithms": [
             "RS256",
             "ES256"
@@ -525,6 +527,7 @@
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
+          "AllowedUse": null,
           "Algorithms": null,
           "RefreshInterval": 0,
           "RefreshUnknownKID": {
