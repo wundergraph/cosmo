@@ -4,6 +4,33 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.103.4](https://github.com/wundergraph/cosmo/compare/wgc@0.103.3...wgc@0.103.4) (2026-01-09)
+
+**Note:** Version bump only for package wgc
+
+## [0.103.3](https://github.com/wundergraph/cosmo/compare/wgc@0.103.2...wgc@0.103.3) (2026-01-09)
+
+### Bug Fixes
+
+* perform auth for all the commands of grpc which requires controlplane ([#2447](https://github.com/wundergraph/cosmo/issues/2447)) ([eb6a5cc](https://github.com/wundergraph/cosmo/commit/eb6a5ccbc02a2b402b75984a1cb36349d15768da)) (@JivusAyrus)
+
+## [0.103.2](https://github.com/wundergraph/cosmo/compare/wgc@0.103.1...wgc@0.103.2) (2026-01-08)
+
+### Bug Fixes
+
+* limit the number of entries shown in the table for schema checks on the cli ([#2417](https://github.com/wundergraph/cosmo/issues/2417)) ([2a2cd52](https://github.com/wundergraph/cosmo/commit/2a2cd5207d1575518cf459bd05c702406d7f6ef6)) (@SkArchon)
+
+## [0.103.1](https://github.com/wundergraph/cosmo/compare/wgc@0.103.0...wgc@0.103.1) (2026-01-07)
+
+**Note:** Version bump only for package wgc
+
+# [0.103.0](https://github.com/wundergraph/cosmo/compare/wgc@0.102.6...wgc@0.103.0) (2026-01-07)
+
+### Features
+
+* **cli,protographic:** improvements to operation validation and proto generation ([#2436](https://github.com/wundergraph/cosmo/issues/2436)) ([da0342d](https://github.com/wundergraph/cosmo/commit/da0342d308f6b4003749f61fbd51cde35337d4bf)) (@asoorm)
+* mask hostname in cli telemetry ([#2416](https://github.com/wundergraph/cosmo/issues/2416)) ([f8cedae](https://github.com/wundergraph/cosmo/commit/f8cedaed8ee0e364e2e04d9b017cbb72dff67237)) (@pepol)
+
 ## [0.102.6](https://github.com/wundergraph/cosmo/compare/wgc@0.102.5...wgc@0.102.6) (2025-12-16)
 
 ### Bug Fixes
