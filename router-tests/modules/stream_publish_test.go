@@ -120,9 +120,9 @@ func TestPublishHook(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			events.KafkaEnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { success } }`,
+				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { __typename success } }`,
 			})
-			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":true}}}`, resOne.Body)
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"__typename": "edfs__PublishResult", "success":true}}}`, resOne.Body)
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
 		})
