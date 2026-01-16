@@ -3,8 +3,9 @@ package grpccommon
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/otel/trace"
 	"io"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"sync"
 	"sync/atomic"
