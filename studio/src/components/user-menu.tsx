@@ -32,7 +32,6 @@ function removeLocalStorageItems() {
   }
 
   for (const key of localStorageKeysToRemove) {
-    console.log(key);
     window.localStorage.removeItem(key);
   }
 }
