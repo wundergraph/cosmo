@@ -104,7 +104,9 @@ export const ChangesTable = ({
             <TableHead className="w-[200px]">Change</TableHead>
             <TableHead>Description</TableHead>
             {changes[0].subgraphName && <TableHead>Subgraph</TableHead>}
-            {operationHash && !hasIgnoreAll && <TableHead>Override</TableHead>}
+            {operationHash && !hasIgnoreAll && (
+              <TableHead>Overrides</TableHead>
+            )}
             <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -250,35 +252,43 @@ const Row = ({
                   onCheckedChange={() =>
                     hasOverride
                       ? removeOverrides({
-                          graphName: graphContext?.graph?.name,
-                          namespace: graphContext?.graph?.namespace,
-                          operationHash,
-                          changes: [
-                            {
-                              changeType,
-                              path,
-                            },
-                          ],
-                        })
+                        graphName: graphContext?.graph?.name,
+                        namespace: graphContext?.graph?.namespace,
+                        operationHash,
+                        changes: [
+                          {
+                            changeType,
+                            path,
+                          },
+                        ],
+                      })
                       : createOverrides({
-                          graphName: graphContext?.graph?.name,
-                          namespace: graphContext?.graph?.namespace,
-                          operationHash,
-                          operationName,
-                          changes: [
-                            {
-                              changeType,
-                              path,
-                            },
-                          ],
-                        })
+                        graphName: graphContext?.graph?.name,
+                        namespace: graphContext?.graph?.namespace,
+                        operationHash,
+                        operationName,
+                        changes: [
+                          {
+                            changeType,
+                            path,
+                          },
+                        ],
+                      })
                   }
                 />
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              Mark this change to {path} as {hasOverride ? "unsafe" : "safe"}{" "}
-              for future checks
+              {hasOverride ? (
+                <>
+                  Override active: future checks will <strong>not</strong>{" "}
+                  treat change to {path} as breaking for this operation.
+                </>
+              ) : (
+                <>
+                  Toggle to avoid future checks from treating this change to {path} as breaking for this operation.
+                </>
+              )}
             </TooltipContent>
           </Tooltip>
         </TableCell>
@@ -298,14 +308,14 @@ const Row = ({
                   href={
                     path
                       ? {
-                          pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
-                          query: {
-                            organizationSlug,
-                            namespace,
-                            slug: router.query.slug,
-                            typename: path?.split(".")?.[0],
-                          },
-                        }
+                        pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
+                        query: {
+                          organizationSlug,
+                          namespace,
+                          slug: router.query.slug,
+                          typename: path?.split(".")?.[0],
+                        },
+                      }
                       : "#"
                   }
                 >
