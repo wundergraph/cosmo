@@ -352,8 +352,8 @@ github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 h1:8/D7f8gKxTB
 github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.242 h1:0ieQmRxYz0nbJEbaaA4Cx2RPcxlomhQ8KI31uuevWx0=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.242/go.mod h1:mX25ASEQiKamxaFSK6NZihh0oDCigIuzro30up4mFH4=
-github.com/wundergraph/ristretto/v2 v2.0.0-20260113151003-f7231509ad4d h1:FlfUZzJbnc8+bgSKJ2jCqozn9CS08ToZe/JJxh4DPGo=
-github.com/wundergraph/ristretto/v2 v2.0.0-20260113151003-f7231509ad4d/go.mod h1:0KsrXtXvnv0EqnzyowllbVJB8yBonswa2lTCK2gGo9E=
+github.com/wundergraph/ristretto/v2 v2.0.0-20260118191717-5112a101c70c h1:NHsm70rt2oJON5EiEODrv7f2jCTv8Tipb40DXUjWGIY=
+github.com/wundergraph/ristretto/v2 v2.0.0-20260118191717-5112a101c70c/go.mod h1:0KsrXtXvnv0EqnzyowllbVJB8yBonswa2lTCK2gGo9E=
 github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 h1:FnBeRrxr7OU4VvAzt5X7s6266i6cSVkkFPS0TuXWbIg=
 github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
 github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=

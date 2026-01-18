@@ -196,4 +196,4 @@ replace (
 
 //replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
 
-replace github.com/dgraph-io/ristretto/v2 => github.com/wundergraph/ristretto/v2 v2.0.0-20260113151003-f7231509ad4d
+replace github.com/dgraph-io/ristretto/v2 => github.com/wundergraph/ristretto/v2 v2.0.0-20260118191717-5112a101c70c

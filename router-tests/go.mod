@@ -204,7 +204,7 @@ replace (
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
 replace (
-	github.com/dgraph-io/ristretto/v2 => github.com/wundergraph/ristretto/v2 v2.0.0-20260113151003-f7231509ad4d
+	github.com/dgraph-io/ristretto/v2 => github.com/wundergraph/ristretto/v2 v2.0.0-20260118191717-5112a101c70c
 	github.com/wundergraph/cosmo/demo => ../demo
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects => ../demo/pkg/subgraphs/projects
 	github.com/wundergraph/cosmo/router => ../router
