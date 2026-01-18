@@ -42,7 +42,7 @@ type ExecutionPlanCache[K any, V any] interface {
 	// Set the value in the cache with a cost. The cost depends on the cache implementation
 	Set(key K, value V, cost int64) bool
 	// Iterate over all items in the cache (non-deterministic)
-	Iter(cb func(k any, v V) (stop bool))
+	IterValues(cb func(v V) (stop bool))
 	// Close the cache and free resources
 	Close()
 }
