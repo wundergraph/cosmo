@@ -343,7 +343,7 @@ export const CheckOperations = () => {
             >
               {doAllOperationsHaveAllTheirChangesMarkedSafe
                 ? "Remove all changes overrides"
-                : "Ignore all changes overrides"}
+                : "Ignore all changes"}
               <p className="max-w-xs text-xs text-muted-foreground">
                 {doAllOperationsHaveAllTheirChangesMarkedSafe
                   ? "Future checks will fail if any of these changes are breaking."
@@ -525,7 +525,7 @@ export const CheckOperations = () => {
                                   }}
                                   className="cursor-pointer flex-col items-start gap-1"
                                 >
-                                  Exclude operation
+                                  Ignore operation
                                   <p className="max-w-xs text-xs text-muted-foreground">
                                     This operation will be ignored in future checks
                                   </p>
@@ -538,10 +538,10 @@ export const CheckOperations = () => {
                       {hasIgnoreAllOverride && (
                         <Alert>
                           <AlertTitle>
-                            Operation excluded from future checks
+                            Operation ignored in future checks
                           </AlertTitle>
                           <AlertDescription>
-                            This operation will not be used in future checks.
+                            This operation will be ignored in future checks.
                             You can remove the override to include it again and manage
                             per-change overrides.
                           </AlertDescription>
@@ -558,7 +558,7 @@ export const CheckOperations = () => {
                               })
                             }
                           >
-                            Remove operation override
+                            Don't ignore operation
                           </Button>
                         </Alert>
                       )}
