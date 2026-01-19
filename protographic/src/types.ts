@@ -71,6 +71,8 @@ export interface ProtoMessageField {
   fieldNumber: number;
   isRepeated?: boolean;
   description?: string;
+  // The original name of the field in the GraphQL schema
+  graphqlName?: string;
 }
 
 /**

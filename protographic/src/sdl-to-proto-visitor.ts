@@ -46,7 +46,7 @@ import {
   EXTERNAL_DIRECTIVE_NAME,
   FIELD_ARGS,
   KEY_DIRECTIVE_NAME,
-  REQUIRED_DIRECTIVE_NAME,
+  REQUIRES_DIRECTIVE_NAME,
   RESULT,
 } from './string-constants.js';
 import { buildProtoOptions, type ProtoOptions } from './proto-options.js';
@@ -1145,7 +1145,7 @@ Example:
 
     for (const entity of entityTypes) {
       const requiredFields = Object.values(entity.getFields()).filter((field) =>
-        field.astNode?.directives?.some((d) => d.name.value === REQUIRED_DIRECTIVE_NAME),
+        field.astNode?.directives?.some((d) => d.name.value === REQUIRES_DIRECTIVE_NAME),
       );
 
       if (requiredFields.length === 0) {
@@ -1172,7 +1172,7 @@ Example:
 
   private getRequiredFieldSet(field: GraphQLField<any, any>): string {
     const node = field.astNode?.directives
-      ?.find((d) => d.name.value === REQUIRED_DIRECTIVE_NAME)
+      ?.find((d) => d.name.value === REQUIRES_DIRECTIVE_NAME)
       ?.arguments?.find((arg: ArgumentNode) => arg.name.value === 'fields')?.value as StringValueNode;
     if (!node) {
       throw new Error(`Required field set not found for field ${field.name}`);
@@ -1525,7 +1525,7 @@ Example:
         (field) =>
           !field.astNode?.directives?.some(
             (directive) =>
-              directive.name.value === EXTERNAL_DIRECTIVE_NAME || directive.name.value === REQUIRED_DIRECTIVE_NAME,
+              directive.name.value === EXTERNAL_DIRECTIVE_NAME || directive.name.value === REQUIRES_DIRECTIVE_NAME,
           ),
       );
 

@@ -47,6 +47,11 @@ describe('SDL Validation', () => {
             matrix: [[Matrix!]]!
             tags: [[String!]]
         }
+
+        type Matrix {
+            id: ID!
+            name: String!
+        }
     `;
 
     const visitor = new SDLValidationVisitor(sdl);
@@ -110,7 +115,7 @@ describe('SDL Validation', () => {
     expect(result.errors[0]).toContain('Nested key directives are not supported');
   });
 
-  test('should return a warning if a field has a requires directive', () => {
+  test('should not return a warning if a field has a requires directive', () => {
     const sdl = `
         type Query {
             user: User!
@@ -127,8 +132,7 @@ describe('SDL Validation', () => {
     const result = visitor.visit();
 
     expect(result.errors).toHaveLength(0);
-    expect(result.warnings).toHaveLength(1);
-    expect(result.warnings[0]).toContain('Use of requires is not supported yet');
+    expect(result.warnings).toHaveLength(0);
   });
 
   test('should return an error if a field has an invalid resolver context', () => {
@@ -169,6 +173,10 @@ describe('SDL Validation', () => {
 
         type User {
             id: ID!
+            name: String!
+        }
+
+        input UserInput {
             name: String!
         }
     `;
@@ -474,5 +482,61 @@ describe('SDL Validation', () => {
     expect(result.errors[2]).toContain(
       '[Error] Cycle detected in context: field "baz" is referenced in the following path: "baz.bar.foo"',
     );
+  });
+
+  test('should return an error if an abstract type is used in a requires directive', () => {
+    const sdl = `
+        type Query {
+            user: User!
+        }
+
+        type User @key(fields: "id name") {
+            id: ID!
+            pet: Animal! @external
+            name: String! @requires(fields: "pet { ... on Cat { name } }")
+        }
+
+        type Cat {
+            name: String!
+        }
+
+        type Dog {
+            name: String!
+        }
+
+        union Animal = Cat | Dog
+    `;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(1);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.errors[0]).toContain(
+      '[Error] Abstract types are not allowed in requires directives. Found Animal in User.pet at',
+    );
+  });
+
+  test('should correctly handle nested fields in requires directives', () => {
+    const sdl = `
+    type Warehouse @key(fields: "id") {
+      id: ID!
+      name: String!
+      location: String!
+      inventoryCount: Int! @external
+      restockData: RestockData! @external
+      stockHealthScore: Float! @requires(fields: "inventoryCount restockData { lastRestockDate }")
+    }
+
+    type RestockData {
+        lastRestockDate: String!
+    }
+`;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
   });
 });

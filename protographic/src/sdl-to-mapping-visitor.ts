@@ -1,4 +1,5 @@
 import {
+  ArgumentNode,
   DirectiveNode,
   GraphQLEnumType,
   GraphQLField,
@@ -10,11 +11,13 @@ import {
   isInputObjectType,
   isObjectType,
   Kind,
+  StringValueNode,
 } from 'graphql';
 import {
   createEntityLookupMethodName,
   createOperationMethodName,
   createRequestMessageName,
+  createRequiredFieldsMethodName,
   createResolverMethodName,
   createResponseMessageName,
   graphqlArgumentToProtoField,
@@ -34,10 +37,12 @@ import {
   LookupType,
   OperationMapping,
   OperationType,
+  RequiredFieldMapping,
   TypeFieldMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { Maybe } from 'graphql/jsutils/Maybe.js';
-
+import { EXTERNAL_DIRECTIVE_NAME, REQUIRES_DIRECTIVE_NAME } from './string-constants';
+import { RequiredFieldsVisitor } from './required-fields-visitor.js';
 /**
  * Visitor that converts a GraphQL schema to gRPC mapping definitions
  *
@@ -128,10 +133,64 @@ export class GraphQLToProtoVisitor {
           if (key) {
             // Create entity mapping for each key combination
             this.createEntityMapping(typeName, key);
+            // todo: add required fields mapping
           }
         }
+
+        this.createRequiredFieldsMapping(type);
       }
     }
+  }
+
+  private createRequiredFieldsMapping(type: GraphQLObjectType): void {
+    const fields = Object.values(type.getFields()).filter((field) =>
+      field.astNode?.directives?.some((d) => d.name.value === REQUIRES_DIRECTIVE_NAME),
+    );
+    if (fields.length === 0) return;
+
+    for (const field of fields) {
+      const visitor = new RequiredFieldsVisitor(this.schema, type, field, this.getRequiredFieldSet(field));
+      visitor.visit();
+      const mapping = visitor.getMapping();
+
+      for (const [key, value] of Object.entries(mapping)) {
+        value.typeFieldMappings?.forEach((t) => {
+          if (t.fieldMappings?.length === 0) return;
+
+          const typeFieldMapping = this.mapping.typeFieldMappings.find((tfm) => tfm.type === t.type);
+          if (!typeFieldMapping) {
+            this.mapping.typeFieldMappings.push(t);
+          }
+
+          typeFieldMapping?.fieldMappings.push(...t.fieldMappings);
+        });
+
+        const em = this.mapping.entityMappings.find((em) => em.typeName === type.name && em.key === key);
+        if (!em) {
+          throw new Error(`Entity mapping not found for type ${type.name} and key ${key}`);
+        }
+
+        em.requiredFieldMappings.push(
+          new RequiredFieldMapping({
+            fieldMapping: value.requiredFieldMapping,
+            request: value.rpc?.request ?? '',
+            response: value.rpc?.response ?? '',
+            rpc: value.rpc?.name ?? '',
+          }),
+        );
+      }
+    }
+  }
+
+  private getRequiredFieldSet(field: GraphQLField<any, any>): string {
+    const node = field.astNode?.directives
+      ?.find((d) => d.name.value === REQUIRES_DIRECTIVE_NAME)
+      ?.arguments?.find((arg) => arg.name.value === 'fields')?.value as StringValueNode;
+    if (!node) {
+      throw new Error(`Required field set not found for field ${field.name}`);
+    }
+
+    return node.value;
   }
 
   /**
@@ -163,6 +222,7 @@ export class GraphQLToProtoVisitor {
       rpc: rpc,
       request: createRequestMessageName(rpc),
       response: createResponseMessageName(rpc),
+      requiredFieldMappings: [],
     });
 
     this.mapping.entityMappings.push(entityMapping);
@@ -373,6 +433,9 @@ export class GraphQLToProtoVisitor {
 
     for (const fieldName in fields) {
       const field = fields[fieldName];
+
+      if (this.shouldSkipField(field)) continue;
+
       const fieldMapping = this.createFieldMapping(field);
       typeFieldMapping.fieldMappings.push(fieldMapping);
     }
@@ -381,6 +444,20 @@ export class GraphQLToProtoVisitor {
     if (typeFieldMapping.fieldMappings.length > 0) {
       this.mapping.typeFieldMappings.push(typeFieldMapping);
     }
+  }
+
+  /**
+   * Determines if a field should be skipped during processing
+   *
+   * @param field - The GraphQL field to check
+   * @returns True if the field should be skipped, false otherwise
+   */
+  private shouldSkipField(field: GraphQLField<any, any>): boolean {
+    return (
+      field.astNode?.directives?.some(
+        (d) => d.name.value === REQUIRES_DIRECTIVE_NAME || d.name.value === EXTERNAL_DIRECTIVE_NAME,
+      ) ?? false
+    );
   }
 
   /**

@@ -986,4 +986,205 @@ describe('GraphQL Federation to Proto Mapping', () => {
       }
     `);
   });
+
+  it('maps entity with required and external fields', () => {
+    const sdl = `
+      directive @key(fields: String!) on OBJECT
+      
+      type Product @key(fields: "id") {
+        id: ID!
+        price: Float! @external
+        itemCount: Int! @external
+        stockHealthScore: Float! @requires(fields: "itemCount price")
+      }
+      
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'ProductService');
+
+    // RequireWarehouseStockHealthScoreByIdFields.RestockData
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "item_count",
+                "original": "itemCount",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+            ],
+            "type": "RequireProductStockHealthScoreByIdFields",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
+
+  it('maps entity with required and external fields with nested fields', () => {
+    const sdl = `
+      directive @key(fields: String!) on OBJECT
+      
+      type Product @key(fields: "id") {
+        id: ID!
+        name: String!
+        price: Float! @external
+        itemCount: Int! @external
+        restockData: RestockData! @external
+        stockHealthScore: Float! @requires(fields: "itemCount restockData { lastRestockDate } price")
+      }
+
+      type RestockData {
+        lastRestockDate: String!
+      }
+      
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'ProductService');
+
+    // RequireWarehouseStockHealthScoreByIdFields.RestockData
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "requiredFieldMappings": [
+              {
+                "fieldMapping": {
+                  "mapped": "stock_health_score",
+                  "original": "stockHealthScore",
+                },
+                "request": "RequireProductStockHealthScoreByIdRequest",
+                "response": "RequireProductStockHealthScoreByIdResponse",
+                "rpc": "RequireProductStockHealthScoreById",
+              },
+            ],
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "last_restock_date",
+                "original": "lastRestockDate",
+              },
+            ],
+            "type": "RequireProductStockHealthScoreByIdFields.RestockData",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "item_count",
+                "original": "itemCount",
+              },
+              {
+                "mapped": "restock_data",
+                "original": "restockData",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+            ],
+            "type": "RequireProductStockHealthScoreByIdFields",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "name",
+                "original": "name",
+              },
+            ],
+            "type": "Product",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "last_restock_date",
+                "original": "lastRestockDate",
+              },
+            ],
+            "type": "RestockData",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
 });

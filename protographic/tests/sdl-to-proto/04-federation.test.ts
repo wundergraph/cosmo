@@ -1083,7 +1083,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
         id: ID!
         manufacturerId: ID! @external
         productCode: String! @external
-        name: String! @required(fields: "manufacturerId productCode")
+        name: String! @requires(fields: "manufacturerId productCode")
         price: Float!
       }
     `;
@@ -1174,7 +1174,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
         id: ID!
         manufacturerId: ID! @external
         details: ProductDetails! @external
-        name: String! @required(fields: "manufacturerId details { description reviewSummary { status message } }")
+        name: String! @requires(fields: "manufacturerId details { description reviewSummary { status message } }")
         price: Float!
       }
 
@@ -1299,7 +1299,7 @@ describe('SDL to Proto - Federation and Special Types', () => {
         id: ID!
         manufacturerId: ID! @external
         details: ProductDetails! @external
-        name: String! @required(fields: "details { description reviewSummary { message status } } manufacturerId")
+        name: String! @requires(fields: "details { description reviewSummary { message status } } manufacturerId")
         price: Float!
       }
 
