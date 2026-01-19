@@ -591,6 +591,6 @@ export const CheckOperations = () => {
           options={[10, 20, 30, 40, 50, 100, 200]}
         />
       </div>
-    </div >
+    </div>
   );
 };
