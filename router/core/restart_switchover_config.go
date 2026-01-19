@@ -119,8 +119,10 @@ func (c *InMemorySwitchOverCache) processOnConfigChangeRestart() {
 	defer c.mu.Unlock()
 
 	switchoverMap := make(map[string]any)
-	for k, data := range c.queriesForFeatureFlag {
-		switchoverMap[k] = convertToNodeOperation(data.(planCache))
+	for k, v := range c.queriesForFeatureFlag {
+		if cache, ok := v.(planCache); ok {
+			switchoverMap[k] = convertToNodeOperation(cache)
+		}
 	}
 	c.queriesForFeatureFlag = switchoverMap
 }

@@ -314,11 +314,10 @@ func (c *Config) Usage() map[string]any {
 	if c.cacheWarmup != nil && c.cacheWarmup.Enabled {
 		if c.cacheWarmup.Source.Filesystem != nil {
 			usage["cache_warmup_source"] = "filesystem"
-		} else if c.cacheWarmup.InMemorySwitchoverFallback {
-			usage["cache_warmup_source"] = "in_memory_switchover"
 		} else {
 			usage["cache_warmup_source"] = "cdn"
 		}
+		usage["cache_warmup_in_memory_switchover_enabled"] = c.cacheWarmup.InMemorySwitchoverFallback
 		usage["cache_warmup_workers"] = c.cacheWarmup.Workers
 		usage["cache_warmup_items_per_second"] = c.cacheWarmup.ItemsPerSecond
 		usage["cache_warmup_timeout"] = c.cacheWarmup.Timeout.String()
