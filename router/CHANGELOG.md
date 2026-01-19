@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.274.1](https://github.com/wundergraph/cosmo/compare/router@0.274.0...router@0.274.1) (2026-01-16)
+
+### Bug Fixes
+
+* **router:** return typename on Cosmo Streams mutations ([#2422](https://github.com/wundergraph/cosmo/issues/2422)) ([27ec7b7](https://github.com/wundergraph/cosmo/commit/27ec7b72224a8928302be9f46b504a876ec9605f)) (@dkorittki)
+
+# [0.274.0](https://github.com/wundergraph/cosmo/compare/router@0.273.3...router@0.274.0) (2026-01-12)
+
+### Bug Fixes
+
+* **infra:** ensure base images use target platform ([#2401](https://github.com/wundergraph/cosmo/issues/2401)) ([45d65c4](https://github.com/wundergraph/cosmo/commit/45d65c4c260e7888ecfc46fb46db0d73d33fc75e)) (@endigma)
+
+### Features
+
+* improve logging of authorization errors and allow use customization ([#2431](https://github.com/wundergraph/cosmo/issues/2431)) ([c8f945d](https://github.com/wundergraph/cosmo/commit/c8f945d54f7d028f0edee670fdf50003f463f96a)) (@alepane21)
+
 ## [0.273.3](https://github.com/wundergraph/cosmo/compare/router@0.273.2...router@0.273.3) (2025-12-22)
 
 ### Bug Fixes

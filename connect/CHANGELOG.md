@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.127.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.127.2...@wundergraph/cosmo-connect@0.127.3) (2026-01-08)
+
+### Bug Fixes
+
+* limit the number of entries shown in the table for schema checks on the cli ([#2417](https://github.com/wundergraph/cosmo/issues/2417)) ([2a2cd52](https://github.com/wundergraph/cosmo/commit/2a2cd5207d1575518cf459bd05c702406d7f6ef6)) (@SkArchon)
+
+## [0.127.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.127.1...@wundergraph/cosmo-connect@0.127.2) (2026-01-07)
+
+### Bug Fixes
+
+* field usage when arguments have the same name as root fields ([#2440](https://github.com/wundergraph/cosmo/issues/2440)) ([2b77baf](https://github.com/wundergraph/cosmo/commit/2b77baf4fc17170133a64d789c5623e2de44dcf6)) (@JivusAyrus)
+
 ## [0.127.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.127.0...@wundergraph/cosmo-connect@0.127.1) (2025-12-04)
 
 ### Bug Fixes

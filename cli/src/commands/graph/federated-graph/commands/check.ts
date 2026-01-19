@@ -1,11 +1,12 @@
 import Table from 'cli-table3';
-import { Command } from 'commander';
+import { Command, program } from 'commander';
 import logSymbols from 'log-symbols';
 import pc from 'picocolors';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { BaseCommandOptions } from '../../../../core/types/types.js';
 import { getBaseHeaders } from '../../../../core/config.js';
+import { limitMaxValue } from '../../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('check');
@@ -24,15 +25,25 @@ export default (opts: BaseCommandOptions) => {
     '--disable-resolvability-validation',
     'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
   );
+  command.option('-l, --limit [number]', 'The amount of entries shown in the schema checks output.', '50');
 
   command.action(async (name, options) => {
     let success = false;
+
+    const limit = Number(options.limit);
+    if (Number.isNaN(limit) || limit <= 0 || limit > limitMaxValue) {
+      program.error(
+        pc.red(`The limit must be a valid number between 1 and ${limitMaxValue}. Received: '${options.limit}'`),
+      );
+    }
+
     const resp = await opts.client.platform.checkFederatedGraph(
       {
         disableResolvabilityValidation: options.disableResolvabilityValidation,
         labelMatchers: options.labelMatcher,
         name,
         namespace: options.namespace,
+        limit,
       },
       {
         headers: getBaseHeaders(),
@@ -95,6 +106,9 @@ export default (opts: BaseCommandOptions) => {
         }
         console.log(compositionErrorsTable.toString());
         console.log(logSymbols.error + pc.red(' Schema check failed.'));
+        if (resp.counts && resp.counts.compositionErrors > limit) {
+          console.log(pc.red(`Some results were truncated due to exceeding the limit of ${limit} rows.`));
+        }
         break;
       }
       default: {
@@ -112,6 +126,9 @@ export default (opts: BaseCommandOptions) => {
         compositionWarningsTable.push([compositionWarning.message]);
       }
       console.log(compositionWarningsTable.toString());
+      if (resp.counts && resp.counts.compositionWarnings > limit) {
+        console.log(pc.red(`Some results were truncated due to exceeding the limit of ${limit} rows.`));
+      }
     }
 
     if (!success) {
