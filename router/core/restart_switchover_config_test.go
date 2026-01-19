@@ -19,12 +19,8 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 		cache := &InMemorySwitchOverCache{}
 		cfg := &Config{
 			cacheWarmup: &config.CacheWarmupConfiguration{
-				Enabled: true,
-				Source: config.CacheWarmupSource{
-					InMemorySwitchover: config.CacheWarmupInMemorySwitchover{
-						Enabled: true,
-					},
-				},
+				Enabled:                    true,
+				InMemorySwitchoverFallback: true,
 			},
 		}
 
@@ -67,12 +63,8 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 
 		cfg := &Config{
 			cacheWarmup: &config.CacheWarmupConfiguration{
-				Enabled: true,
-				Source: config.CacheWarmupSource{
-					InMemorySwitchover: config.CacheWarmupInMemorySwitchover{
-						Enabled: true,
-					},
-				},
+				Enabled:                    true,
+				InMemorySwitchoverFallback: true,
 			},
 		}
 
@@ -120,18 +112,14 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 		require.Nil(t, cache.queriesForFeatureFlag)
 	})
 
-	t.Run("cacheWarmup enabled but InMemorySwitchover disabled", func(t *testing.T) {
+	t.Run("cacheWarmup enabled but InMemorySwitchoverFallback disabled", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemorySwitchOverCache{}
 
 		cfg := &Config{
 			cacheWarmup: &config.CacheWarmupConfiguration{
-				Enabled: true,
-				Source: config.CacheWarmupSource{
-					InMemorySwitchover: config.CacheWarmupInMemorySwitchover{
-						Enabled: false,
-					},
-				},
+				Enabled:                    true,
+				InMemorySwitchoverFallback: false,
 			},
 		}
 
@@ -379,5 +367,146 @@ func TestInMemorySwitchOverCache_CleanupUnusedFeatureFlags(t *testing.T) {
 		// Should still have ff1 because FeatureFlagConfigs is nil
 		require.Len(t, cache.queriesForFeatureFlag, 1)
 		require.Contains(t, cache.queriesForFeatureFlag, "ff1")
+	})
+}
+
+func TestInMemorySwitchOverCache_DeletePlanCacheForFF(t *testing.T) {
+	t.Parallel()
+	t.Run("deletes cache for feature flag when enabled", func(t *testing.T) {
+		t.Parallel()
+		mockCache, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
+			MaxCost:     100,
+			NumCounters: 10000,
+			BufferItems: 64,
+		})
+		require.NoError(t, err)
+
+		cache := &InMemorySwitchOverCache{
+			enabled:               true,
+			queriesForFeatureFlag: make(map[string]any),
+		}
+		cache.queriesForFeatureFlag["test-ff"] = mockCache
+
+		cache.deletePlanCacheForFF("test-ff")
+
+		require.NotContains(t, cache.queriesForFeatureFlag, "test-ff")
+	})
+
+	t.Run("does not delete when cache is disabled", func(t *testing.T) {
+		t.Parallel()
+		mockCache, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
+			MaxCost:     100,
+			NumCounters: 10000,
+			BufferItems: 64,
+		})
+		require.NoError(t, err)
+
+		cache := &InMemorySwitchOverCache{
+			enabled:               false,
+			queriesForFeatureFlag: make(map[string]any),
+		}
+		cache.queriesForFeatureFlag["test-ff"] = mockCache
+
+		cache.deletePlanCacheForFF("test-ff")
+
+		require.Contains(t, cache.queriesForFeatureFlag, "test-ff")
+	})
+
+	t.Run("deleting non-existent key does not cause error", func(t *testing.T) {
+		t.Parallel()
+		cache := &InMemorySwitchOverCache{
+			enabled:               true,
+			queriesForFeatureFlag: make(map[string]any),
+		}
+
+		require.NotPanics(t, func() {
+			cache.deletePlanCacheForFF("non-existent")
+		})
+	})
+}
+
+func TestInMemorySwitchOverCache_ProcessOnConfigChangeRestart(t *testing.T) {
+	t.Parallel()
+	t.Run("converts ristretto caches to operation slices", func(t *testing.T) {
+		t.Parallel()
+		mockCache1, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
+			MaxCost:            10000,
+			NumCounters:        10000000,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		})
+		require.NoError(t, err)
+
+		mockCache2, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
+			MaxCost:            10000,
+			NumCounters:        10000000,
+			IgnoreInternalCost: true,
+			BufferItems:        64,
+		})
+		require.NoError(t, err)
+
+		query1 := "query { test1 }"
+		query2 := "query { test2 }"
+
+		mockCache1.Set(1, &planWithMetaData{content: query1}, 1)
+		mockCache1.Wait()
+		mockCache2.Set(2, &planWithMetaData{content: query2}, 1)
+		mockCache2.Wait()
+
+		cache := &InMemorySwitchOverCache{
+			enabled:               true,
+			queriesForFeatureFlag: make(map[string]any),
+		}
+		cache.queriesForFeatureFlag["ff1"] = mockCache1
+		cache.queriesForFeatureFlag["ff2"] = mockCache2
+
+		cache.processOnConfigChangeRestart()
+
+		// Verify both caches have been converted to operation slices
+		require.IsType(t, []*nodev1.Operation{}, cache.queriesForFeatureFlag["ff1"])
+		require.IsType(t, []*nodev1.Operation{}, cache.queriesForFeatureFlag["ff2"])
+
+		ff1Ops := cache.queriesForFeatureFlag["ff1"].([]*nodev1.Operation)
+		ff2Ops := cache.queriesForFeatureFlag["ff2"].([]*nodev1.Operation)
+
+		require.Len(t, ff1Ops, 1)
+		require.Len(t, ff2Ops, 1)
+		require.Equal(t, query1, ff1Ops[0].Request.Query)
+		require.Equal(t, query2, ff2Ops[0].Request.Query)
+	})
+
+	t.Run("does nothing when cache is disabled", func(t *testing.T) {
+		t.Parallel()
+		mockCache, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
+			MaxCost:     100,
+			NumCounters: 10000,
+			BufferItems: 64,
+		})
+		require.NoError(t, err)
+
+		cache := &InMemorySwitchOverCache{
+			enabled:               false,
+			queriesForFeatureFlag: make(map[string]any),
+		}
+		cache.queriesForFeatureFlag["test-ff"] = mockCache
+
+		cache.processOnConfigChangeRestart()
+
+		// Should remain as ristretto cache since processing is skipped
+		require.IsType(t, mockCache, cache.queriesForFeatureFlag["test-ff"])
+	})
+
+	t.Run("handles empty cache", func(t *testing.T) {
+		t.Parallel()
+		cache := &InMemorySwitchOverCache{
+			enabled:               true,
+			queriesForFeatureFlag: make(map[string]any),
+		}
+
+		require.NotPanics(t, func() {
+			cache.processOnConfigChangeRestart()
+		})
+
+		require.Empty(t, cache.queriesForFeatureFlag)
 	})
 }

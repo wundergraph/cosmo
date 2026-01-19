@@ -2439,6 +2439,11 @@
           "duration": {
             "minimum": "1s"
           }
+        },
+        "in_memory_switchover_fallback": {
+          "type": "boolean",
+          "description": "Enable in-memory switchover fallback. When enabled, the router will cache query plans in memory and reuse them on restarts. This is useful when deploying new router configurations without downtime. The default value is true.",
+          "default": true
         }
       }
     },

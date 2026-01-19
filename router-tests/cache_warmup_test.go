@@ -2,14 +2,15 @@ package integration
 
 import (
 	"context"
-	"github.com/stretchr/testify/assert"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"net/http"
 	"os"
 	"path/filepath"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -932,12 +933,8 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-					Enabled: true,
-					Source: config.CacheWarmupSource{
-						InMemorySwitchover: config.CacheWarmupInMemorySwitchover{
-							Enabled: true,
-						},
-					},
+					Enabled:                    true,
+					InMemorySwitchoverFallback: true,
 				}),
 				core.WithConfigVersionHeader(true),
 			},
@@ -1026,12 +1023,8 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-					Enabled: true,
-					Source: config.CacheWarmupSource{
-						InMemorySwitchover: config.CacheWarmupInMemorySwitchover{
-							Enabled: false,
-						},
-					},
+					Enabled:                    true,
+					InMemorySwitchoverFallback: false,
 				}),
 				core.WithConfigVersionHeader(true),
 			},
@@ -1082,12 +1075,8 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 					WatchInterval: 100 * time.Millisecond,
 				}),
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-					Enabled: true,
-					Source: config.CacheWarmupSource{
-						InMemorySwitchover: config.CacheWarmupInMemorySwitchover{
-							Enabled: true,
-						},
-					},
+					Enabled:                    true,
+					InMemorySwitchoverFallback: true,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1132,9 +1121,7 @@ readiness_check_path: "/` + listenString + `"
 
 cache_warmup:
   enabled: true
-  source:
-    in_memory_switchover:
-      enabled: true
+  in_memory_switchover_fallback: true
 
 engine: 
   debug:

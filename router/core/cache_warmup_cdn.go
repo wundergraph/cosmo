@@ -5,11 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"net/http"
 	"net/url"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"

@@ -107,12 +107,13 @@ type (
 
 // BuildGraphMuxOptions contains the configuration options for building a graph mux.
 type BuildGraphMuxOptions struct {
-	FeatureFlagName     string
-	RouterConfigVersion string
-	EngineConfig        *nodev1.EngineConfiguration
-	ConfigSubgraphs     []*nodev1.Subgraph
-	RoutingUrlGroupings map[string]map[string]bool
-	SwitchoverConfig    *SwitchoverConfig
+	FeatureFlagName         string
+	RouterConfigVersion     string
+	EngineConfig            *nodev1.EngineConfiguration
+	ConfigSubgraphs         []*nodev1.Subgraph
+	RoutingUrlGroupings     map[string]map[string]bool
+	SwitchoverConfig        *SwitchoverConfig
+	CosmoCacheWarmerEnabled bool
 }
 
 func (b BuildGraphMuxOptions) IsBaseGraph() bool {
@@ -269,12 +270,18 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, err
 	}
 
+	cosmoCacheWarmerEnabled := false
+	if r.registrationInfo != nil {
+		cosmoCacheWarmerEnabled = r.registrationInfo.IsCacheWarmerEnabled
+	}
+
 	gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
-		RouterConfigVersion: s.baseRouterConfigVersion,
-		EngineConfig:        routerConfig.GetEngineConfig(),
-		ConfigSubgraphs:     routerConfig.GetSubgraphs(),
-		RoutingUrlGroupings: routingUrlGroupings,
-		SwitchoverConfig:    switchoverConfig,
+		RouterConfigVersion:     s.baseRouterConfigVersion,
+		EngineConfig:            routerConfig.GetEngineConfig(),
+		ConfigSubgraphs:         routerConfig.GetSubgraphs(),
+		RoutingUrlGroupings:     routingUrlGroupings,
+		SwitchoverConfig:        switchoverConfig,
+		CosmoCacheWarmerEnabled: cosmoCacheWarmerEnabled,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
@@ -1356,7 +1363,8 @@ func (s *graphServer) buildGraphMux(
 			warmupConfig.Source = NewFileSystemSource(&FileSystemSourceConfig{
 				RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
 			})
-		case s.cacheWarmup.Source.InMemorySwitchover.Enabled:
+		// We want to enable this only whenever there is no registering with cosmo
+		case s.cacheWarmup.InMemorySwitchoverFallback && (s.selfRegister == nil || !opts.CosmoCacheWarmerEnabled):
 			// We first utilize the plan cache (if it was already set, so not on first starts) to create a list of queries
 			// and reset the plan cache to the new plan cache for this start afterwords
 			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))

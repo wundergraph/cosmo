@@ -660,14 +660,12 @@
   "CacheWarmup": {
     "Enabled": false,
     "Source": {
-      "Filesystem": null,
-      "InMemorySwitchover": {
-        "Enabled": false
-      }
+      "Filesystem": null
     },
     "Workers": 8,
     "ItemsPerSecond": 50,
-    "Timeout": 30000000000
+    "Timeout": 30000000000,
+    "InMemorySwitchoverFallback": true
   },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,

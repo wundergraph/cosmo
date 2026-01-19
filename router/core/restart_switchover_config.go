@@ -54,7 +54,7 @@ func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config) {
 
 	c.enabled = config.cacheWarmup != nil &&
 		config.cacheWarmup.Enabled &&
-		config.cacheWarmup.Source.InMemorySwitchover.Enabled
+		config.cacheWarmup.InMemorySwitchoverFallback
 
 	// If the configuration change occurred which disabled or enabled the switchover cache, we need to update the internal state
 	if c.enabled {
@@ -98,6 +98,16 @@ func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.queriesForFeatureFlag[featureFlagKey] = cache
+}
+
+func (c *InMemorySwitchOverCache) deletePlanCacheForFF(featureFlagKey string) {
+	if !c.enabled {
+		return
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.queriesForFeatureFlag, featureFlagKey)
 }
 
 func (c *InMemorySwitchOverCache) processOnConfigChangeRestart() {
