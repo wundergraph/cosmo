@@ -527,7 +527,7 @@ export const CheckOperations = () => {
                                 >
                                   Exclude operation
                                   <p className="max-w-xs text-xs text-muted-foreground">
-                                    Future checks will ignore all current and new breaking changes for this operation
+                                    This operation will be ignored in future checks
                                   </p>
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -542,8 +542,8 @@ export const CheckOperations = () => {
                           </AlertTitle>
                           <AlertDescription>
                             This operation will not be used in future checks.
-                            Remove this exclusion to include it again and manage
-                            per-change breaking-change overrides.
+                            You can remove the override to include it again and manage
+                            per-change overrides.
                           </AlertDescription>
                           <Button
                             size="sm"
