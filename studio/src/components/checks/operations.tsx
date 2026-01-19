@@ -558,7 +558,7 @@ export const CheckOperations = () => {
                               })
                             }
                           >
-                            Don't ignore operation
+                            Don&apos;t ignore this operation
                           </Button>
                         </Alert>
                       )}
