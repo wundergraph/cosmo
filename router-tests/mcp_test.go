@@ -161,6 +161,84 @@ func TestMCP(t *testing.T) {
 				})
 			})
 
+			t.Run("List user Operations / Tool names omit prefix when OmitToolNamePrefix is enabled", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCP: config.MCPConfiguration{
+						Enabled:            true,
+						OmitToolNamePrefix: true,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+
+					toolsRequest := mcp.ListToolsRequest{}
+					resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+					require.NoError(t, err)
+					require.NotNil(t, resp)
+
+					toolNames := make([]string, len(resp.Tools))
+					for i, tool := range resp.Tools {
+						toolNames[i] = tool.Name
+					}
+
+					expectedToolNames := []string{"get_operation_info", "my_employees", "update_mood"}
+					assert.ElementsMatch(t, expectedToolNames, toolNames)
+				})
+			})
+
+			t.Run("Execute operation using short tool name when OmitToolNamePrefix is enabled", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCP: config.MCPConfiguration{
+						Enabled:            true,
+						OmitToolNamePrefix: true,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+
+					req := mcp.CallToolRequest{
+						Params: mcp.CallToolParams{
+							Name: "my_employees",
+							Arguments: map[string]any{
+								"criteria": map[string]any{},
+							},
+						},
+					}
+
+					resp, err := xEnv.MCPClient.CallTool(xEnv.Context, req)
+					assert.NoError(t, err)
+					assert.NotNil(t, resp)
+
+					assert.Len(t, resp.Content, 1)
+
+					content, ok := resp.Content[0].(mcp.TextContent)
+					assert.True(t, ok)
+
+					assert.Equal(t, content.Type, "text")
+					assert.Contains(t, content.Text, "findEmployees")
+				})
+			})
+
+			t.Run("Tool name collision with built-in tool uses prefixed name when OmitToolNamePrefix is enabled", func(t *testing.T) {
+				testenv.Run(t, &testenv.Config{
+					MCPOperationsPath: "testdata/mcp_operations_collision",
+					MCP: config.MCPConfiguration{
+						Enabled:            true,
+						OmitToolNamePrefix: true,
+						ExposeSchema:       true,
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					toolsRequest := mcp.ListToolsRequest{}
+					resp, err := xEnv.MCPClient.ListTools(xEnv.Context, toolsRequest)
+					require.NoError(t, err)
+					require.NotNil(t, resp)
+
+					toolNames := make([]string, len(resp.Tools))
+					for i, tool := range resp.Tools {
+						toolNames[i] = tool.Name
+					}
+
+					assert.Contains(t, toolNames, "get_schema")                   // built-in tool (ExposeSchema=true)
+					assert.Contains(t, toolNames, "execute_operation_get_schema") // collision uses prefix
+				})
+			})
+
 			t.Run("List user Operations / Static operations of type mutation aren't exposed when excludeMutations is set", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
 					MCP: config.MCPConfiguration{
