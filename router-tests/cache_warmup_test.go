@@ -5,6 +5,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"net/http"
+	"os"
+	"path/filepath"
+	"syscall"
 	"testing"
 	"time"
 
@@ -1105,6 +1108,62 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 				assert.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
 			}, 2*time.Second, 100*time.Millisecond)
 		})
+	})
+
+	t.Run("Successfully persists cache across config change restarts", func(t *testing.T) {
+		updateConfig := func(t *testing.T, xEnv *testenv.Environment, ctx context.Context, listenString string, config string) {
+			f, err := os.Create(filepath.Join(xEnv.GetRouterProcessCwd(), "config.yaml"))
+			require.NoError(t, err)
+
+			_, err = f.WriteString(config)
+			require.NoError(t, err)
+			require.NoError(t, f.Close())
+
+			err = xEnv.SignalRouterProcess(syscall.SIGHUP)
+			require.NoError(t, err)
+			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/"+listenString, 600, 60), "healthcheck post-reload failed")
+		}
+
+		getConfigString := func(listenString string) string {
+			return `
+version: "1"
+
+readiness_check_path: "/` + listenString + `"
+
+cache_warmup:
+  enabled: true
+  source:
+    in_memory_switchover:
+      enabled: true
+
+engine: 
+  debug:
+    enable_cache_response_headers: true
+`
+		}
+
+		err := testenv.RunRouterBinary(t, &testenv.Config{
+			DemoMode: true,
+		}, testenv.RunRouterBinConfigOptions{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Verify initial start
+			t.Logf("running router binary, cwd: %s", xEnv.GetRouterProcessCwd())
+			ctx := context.Background()
+			require.NoError(t, xEnv.WaitForServer(ctx, xEnv.RouterURL+"/health/ready", 600, 60), "healthcheck pre-reload failed")
+
+			// Enable cache response headers first
+			listenString1 := "after1"
+			updateConfig(t, xEnv, ctx, listenString1, getConfigString(listenString1))
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { hello }`})
+			assert.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+
+			// Verify cache persisted on restart
+			listenString2 := "after2"
+			updateConfig(t, xEnv, ctx, listenString2, getConfigString(listenString2))
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { hello }`})
+			assert.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+		})
+
+		require.NoError(t, err)
 	})
 
 }

@@ -157,6 +157,11 @@ func (rs *RouterSupervisor) Start() error {
 		shutdown := <-rs.shutdownChan
 
 		rs.logger.Debug("Got shutdown signal", zap.Bool("shutdown", shutdown))
+
+		if !shutdown {
+			rs.router.switchoverConfig.ProcessOnConfigChangeRestart()
+		}
+
 		if err := rs.stopRouter(); err != nil {
 			if errors.Is(err, context.DeadlineExceeded) {
 				rs.logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")

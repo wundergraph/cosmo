@@ -151,7 +151,7 @@ func Main() {
 
 	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
 		BaseLogger:       baseLogger,
-		SwitchoverConfig: core.NewSwitchoverConfig(),
+		SwitchoverConfig: core.NewSwitchoverConfig(baseLogger),
 		ConfigFactory: func() (*config.Config, error) {
 			result, err := config.LoadConfig(*configPathFlag)
 			if err != nil {
