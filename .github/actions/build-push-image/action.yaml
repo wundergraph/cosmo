@@ -105,7 +105,7 @@ runs:
         target: ${{ inputs.docker_build_target }}
         outputs:
           type=image,name=target,annotation-index.org.opencontainers.image.description=${{ inputs.image_description }}
-          type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/wundergraph/cosmo
+          type=image,name=target,annotation-index.org.opencontainers.image.source=https://github.com/avrythink/cosmo
           type=image,name=target,annotation-index.org.opencontainers.image.licenses=Apache-2.0
         build-args: |
           VERSION=${{ github.sha }}
