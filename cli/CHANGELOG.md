@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.104.0](https://github.com/wundergraph/cosmo/compare/wgc@0.103.4...wgc@0.104.0) (2026-01-16)
+
+### Features
+
+* hide posthog errors from cli output if debug not enabled ([#2458](https://github.com/wundergraph/cosmo/issues/2458)) ([afb499c](https://github.com/wundergraph/cosmo/commit/afb499cb75b628b5f514a8d468dc81d08e5e3a9d)) (@alepane21)
+
 ## [0.103.4](https://github.com/wundergraph/cosmo/compare/wgc@0.103.3...wgc@0.103.4) (2026-01-09)
 
 **Note:** Version bump only for package wgc

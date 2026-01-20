@@ -172,7 +172,8 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "RouterURL": "https://cosmo-router.wundergraph.com"
+    "RouterURL": "https://cosmo-router.wundergraph.com",
+    "OmitToolNamePrefix": false
   },
   "DemoMode": true,
   "Modules": {
