@@ -2,6 +2,7 @@ package core
 
 import (
 	"sync"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 
@@ -45,14 +46,14 @@ func (s *SwitchoverConfig) ProcessOnConfigChangeRestart() {
 }
 
 type InMemorySwitchOverCache struct {
-	enabled               bool
+	enabled               atomic.Bool
 	mu                    sync.RWMutex
 	queriesForFeatureFlag map[string]any
 	logger                *zap.Logger
 }
 
 func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config, isCosmoCacheWarmerEnabled bool) {
-	c.enabled = config.cacheWarmup != nil &&
+	enabled := config.cacheWarmup != nil &&
 		!isCosmoCacheWarmerEnabled && // We only enable in-memory switchover cache if the cosmo cache warmer is not enabled
 		config.cacheWarmup.Enabled &&
 		config.cacheWarmup.InMemorySwitchoverFallback
@@ -60,8 +61,10 @@ func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config, isCosmoC
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	c.enabled.Store(enabled)
+
 	// If the configuration change occurred which disabled or enabled the switchover cache, we need to update the internal state
-	if c.enabled {
+	if enabled {
 		// Only initialize if its nil (because its a first start or it was disabled before)
 		if c.queriesForFeatureFlag == nil {
 			c.queriesForFeatureFlag = make(map[string]any)
@@ -72,7 +75,7 @@ func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config, isCosmoC
 }
 
 func (c *InMemorySwitchOverCache) getPlanCacheForFF(featureFlagKey string) []*nodev1.Operation {
-	if !c.enabled {
+	if !c.enabled.Load() {
 		return nil
 	}
 
@@ -95,7 +98,7 @@ func (c *InMemorySwitchOverCache) getPlanCacheForFF(featureFlagKey string) []*no
 }
 
 func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache planCache) {
-	if !c.enabled || cache == nil {
+	if !c.enabled.Load() || cache == nil {
 		return
 	}
 
@@ -105,7 +108,7 @@ func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache
 }
 
 func (c *InMemorySwitchOverCache) processOnConfigChangeRestart() {
-	if !c.enabled {
+	if !c.enabled.Load() {
 		return
 	}
 
@@ -122,7 +125,7 @@ func (c *InMemorySwitchOverCache) processOnConfigChangeRestart() {
 }
 
 func (c *InMemorySwitchOverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.RouterConfig) {
-	if !c.enabled || routerCfg.FeatureFlagConfigs == nil {
+	if !c.enabled.Load() || routerCfg.FeatureFlagConfigs == nil {
 		return
 	}
 
