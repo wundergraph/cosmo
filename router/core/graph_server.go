@@ -1308,7 +1308,7 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
 
-	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.SwitchoverConfig.inMemorySwitchOverCache.enabled)
+	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.SwitchoverConfig.inMemorySwitchOverCache.enabled.Load())
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
