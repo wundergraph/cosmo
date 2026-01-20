@@ -413,3 +413,25 @@ func TestInMemorySwitchOverCache_ProcessOnConfigChangeRestart(t *testing.T) {
 		require.Empty(t, cache.queriesForFeatureFlag)
 	})
 }
+
+func TestInMemorySwitchOverCache_IsEnabled(t *testing.T) {
+	t.Parallel()
+	t.Run("returns true when cache is enabled", func(t *testing.T) {
+		t.Parallel()
+		cache := &InMemorySwitchOverCache{
+			queriesForFeatureFlag: make(map[string]any),
+		}
+
+		require.True(t, cache.IsEnabled())
+	})
+
+	t.Run("returns false when cache is disabled", func(t *testing.T) {
+		t.Parallel()
+		cache := &InMemorySwitchOverCache{
+			queriesForFeatureFlag: nil,
+		}
+
+		require.False(t, cache.IsEnabled())
+	})
+
+}

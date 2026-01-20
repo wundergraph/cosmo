@@ -71,6 +71,13 @@ func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config, isCosmoC
 	}
 }
 
+func (c *InMemorySwitchOverCache) IsEnabled() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	return c.queriesForFeatureFlag != nil
+}
+
 func (c *InMemorySwitchOverCache) getPlanCacheForFF(featureFlagKey string) []*nodev1.Operation {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -147,6 +154,10 @@ func (c *InMemorySwitchOverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.Ro
 
 func convertToNodeOperation(data planCache) []*nodev1.Operation {
 	items := make([]*nodev1.Operation, 0)
+
+	// Ensure any buffered writes have been applied
+	data.Wait()
+
 	data.IterValues(func(v *planWithMetaData) (stop bool) {
 		items = append(items, &nodev1.Operation{
 			Request: &nodev1.OperationRequest{Query: v.content},
