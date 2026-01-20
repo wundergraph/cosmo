@@ -26,15 +26,14 @@ const move = async (src: string, dest: string) => {
   try {
     await rename(src, dest);
   } catch (error: unknown) {
-    if (typeof error === 'object' && error !== null && 'code' in error) {
-      if (error.code === 'EXDEV') {
-        // fallback for cross-device moves
-        await cp(src, dest, { recursive: true });
-        await rm(src, { recursive: true, force: true });
-      } else {
-        throw error;
-      }
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'EXDEV') {
+      // fallback for cross-device moves
+      await cp(src, dest, { recursive: true });
+      await rm(src, { recursive: true, force: true });
+      return;
     }
+
+    throw error;
   }
 };
 
