@@ -4,7 +4,7 @@
 // - protoc             v5.29.3
 // source: generated/service.proto
 
-package projects
+package plugin
 
 import (
 	context "context"
@@ -52,6 +52,7 @@ const (
 	ProjectsService_ResolveProjectCriticalDeadline_FullMethodName           = "/service.ProjectsService/ResolveProjectCriticalDeadline"
 	ProjectsService_ResolveProjectEstimatedDaysRemaining_FullMethodName     = "/service.ProjectsService/ResolveProjectEstimatedDaysRemaining"
 	ProjectsService_ResolveProjectFilteredTasks_FullMethodName              = "/service.ProjectsService/ResolveProjectFilteredTasks"
+	ProjectsService_ResolveProjectSubProjects_FullMethodName                = "/service.ProjectsService/ResolveProjectSubProjects"
 	ProjectsService_ResolveProjectTopPriorityItem_FullMethodName            = "/service.ProjectsService/ResolveProjectTopPriorityItem"
 	ProjectsService_ResolveTaskIsBlocked_FullMethodName                     = "/service.ProjectsService/ResolveTaskIsBlocked"
 	ProjectsService_ResolveTaskTotalEffort_FullMethodName                   = "/service.ProjectsService/ResolveTaskTotalEffort"
@@ -101,6 +102,7 @@ type ProjectsServiceClient interface {
 	ResolveProjectCriticalDeadline(ctx context.Context, in *ResolveProjectCriticalDeadlineRequest, opts ...grpc.CallOption) (*ResolveProjectCriticalDeadlineResponse, error)
 	ResolveProjectEstimatedDaysRemaining(ctx context.Context, in *ResolveProjectEstimatedDaysRemainingRequest, opts ...grpc.CallOption) (*ResolveProjectEstimatedDaysRemainingResponse, error)
 	ResolveProjectFilteredTasks(ctx context.Context, in *ResolveProjectFilteredTasksRequest, opts ...grpc.CallOption) (*ResolveProjectFilteredTasksResponse, error)
+	ResolveProjectSubProjects(ctx context.Context, in *ResolveProjectSubProjectsRequest, opts ...grpc.CallOption) (*ResolveProjectSubProjectsResponse, error)
 	ResolveProjectTopPriorityItem(ctx context.Context, in *ResolveProjectTopPriorityItemRequest, opts ...grpc.CallOption) (*ResolveProjectTopPriorityItemResponse, error)
 	ResolveTaskIsBlocked(ctx context.Context, in *ResolveTaskIsBlockedRequest, opts ...grpc.CallOption) (*ResolveTaskIsBlockedResponse, error)
 	ResolveTaskTotalEffort(ctx context.Context, in *ResolveTaskTotalEffortRequest, opts ...grpc.CallOption) (*ResolveTaskTotalEffortResponse, error)
@@ -444,6 +446,16 @@ func (c *projectsServiceClient) ResolveProjectFilteredTasks(ctx context.Context,
 	return out, nil
 }
 
+func (c *projectsServiceClient) ResolveProjectSubProjects(ctx context.Context, in *ResolveProjectSubProjectsRequest, opts ...grpc.CallOption) (*ResolveProjectSubProjectsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveProjectSubProjectsResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ResolveProjectSubProjects_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *projectsServiceClient) ResolveProjectTopPriorityItem(ctx context.Context, in *ResolveProjectTopPriorityItemRequest, opts ...grpc.CallOption) (*ResolveProjectTopPriorityItemResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResolveProjectTopPriorityItemResponse)
@@ -518,6 +530,7 @@ type ProjectsServiceServer interface {
 	ResolveProjectCriticalDeadline(context.Context, *ResolveProjectCriticalDeadlineRequest) (*ResolveProjectCriticalDeadlineResponse, error)
 	ResolveProjectEstimatedDaysRemaining(context.Context, *ResolveProjectEstimatedDaysRemainingRequest) (*ResolveProjectEstimatedDaysRemainingResponse, error)
 	ResolveProjectFilteredTasks(context.Context, *ResolveProjectFilteredTasksRequest) (*ResolveProjectFilteredTasksResponse, error)
+	ResolveProjectSubProjects(context.Context, *ResolveProjectSubProjectsRequest) (*ResolveProjectSubProjectsResponse, error)
 	ResolveProjectTopPriorityItem(context.Context, *ResolveProjectTopPriorityItemRequest) (*ResolveProjectTopPriorityItemResponse, error)
 	ResolveTaskIsBlocked(context.Context, *ResolveTaskIsBlockedRequest) (*ResolveTaskIsBlockedResponse, error)
 	ResolveTaskTotalEffort(context.Context, *ResolveTaskTotalEffortRequest) (*ResolveTaskTotalEffortResponse, error)
@@ -629,6 +642,9 @@ func (UnimplementedProjectsServiceServer) ResolveProjectEstimatedDaysRemaining(c
 }
 func (UnimplementedProjectsServiceServer) ResolveProjectFilteredTasks(context.Context, *ResolveProjectFilteredTasksRequest) (*ResolveProjectFilteredTasksResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectFilteredTasks not implemented")
+}
+func (UnimplementedProjectsServiceServer) ResolveProjectSubProjects(context.Context, *ResolveProjectSubProjectsRequest) (*ResolveProjectSubProjectsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectSubProjects not implemented")
 }
 func (UnimplementedProjectsServiceServer) ResolveProjectTopPriorityItem(context.Context, *ResolveProjectTopPriorityItemRequest) (*ResolveProjectTopPriorityItemResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectTopPriorityItem not implemented")
@@ -1254,6 +1270,24 @@ func _ProjectsService_ResolveProjectFilteredTasks_Handler(srv interface{}, ctx c
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_ResolveProjectSubProjects_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveProjectSubProjectsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ResolveProjectSubProjects(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ResolveProjectSubProjects_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ResolveProjectSubProjects(ctx, req.(*ResolveProjectSubProjectsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_ResolveProjectTopPriorityItem_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ResolveProjectTopPriorityItemRequest)
 	if err := dec(in); err != nil {
@@ -1446,6 +1480,10 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResolveProjectFilteredTasks",
 			Handler:    _ProjectsService_ResolveProjectFilteredTasks_Handler,
+		},
+		{
+			MethodName: "ResolveProjectSubProjects",
+			Handler:    _ProjectsService_ResolveProjectSubProjects_Handler,
 		},
 		{
 			MethodName: "ResolveProjectTopPriorityItem",

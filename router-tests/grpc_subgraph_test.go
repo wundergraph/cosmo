@@ -238,6 +238,26 @@ func TestGRPCSubgraph(t *testing.T) {
 				query:    `query { project(id:1) { topPriorityItem { __typename ... on Task { name priority status } } } }`,
 				expected: `{"data":{"project":{"topPriorityItem":{"__typename":"Task","name":"Database Migration","priority":"HIGH","status":"TODO"}}}}`,
 			},
+			{
+				name:     "query project with recursive field resolver",
+				query:    `query { project(id:1) { subProjects { id name status } } }`,
+				expected: `{"data":{"project":{"subProjects":[{"id":"2","name":"Microservices Revolution","status":"ACTIVE"},{"id":"3","name":"AI-Powered Analytics","status":"ACTIVE"}]}}}`,
+			},
+			{
+				name:     "query project with recursive field resolver with multiple levels of recursion",
+				query:    `query { project(id:1) { subProjects { id name status subProjects { id status } } } }`,
+				expected: `{"data":{"project":{"subProjects":[{"id":"2","name":"Microservices Revolution","status":"ACTIVE","subProjects":[{"id":"4","status":"PLANNING"},{"id":"5","status":"ON_HOLD"}]},{"id":"3","name":"AI-Powered Analytics","status":"ACTIVE","subProjects":[{"id":"6","status":"ACTIVE"},{"id":"7","status":"ACTIVE"}]}]}}}`,
+			},
+			{
+				name:     "query project with normal and recursive field resolver and aliases",
+				query:    `query { project(id:2) { id name urgent: topPriorityItem(category: "task") { __typename } nextDeadline: criticalDeadline(withinDays: 10000) { __typename } subsub: subProjects { id name status } } }`,
+				expected: `{"data":{"project":{"id":"2","name":"Microservices Revolution","urgent":{"__typename":"Task"},"nextDeadline":{"__typename":"Milestone"},"subsub":[{"id":"4","name":"DevOps Transformation","status":"PLANNING"},{"id":"5","name":"Security Overhaul","status":"ON_HOLD"}]}}}`,
+			},
+			{
+				name:     "query project with normal and recursive field resolver and aliases and multiple levels of recursion and aliases",
+				query:    `query { project(id:2) { id name urgent: topPriorityItem(category: "task") { __typename } nextDeadline: criticalDeadline(withinDays: 10000) { __typename } subsub: subProjects { id name status } } }`,
+				expected: `{"data":{"project":{"id":"2","name":"Microservices Revolution","urgent":{"__typename":"Task"},"nextDeadline":{"__typename":"Milestone"},"subsub":[{"id":"4","name":"DevOps Transformation","status":"PLANNING"},{"id":"5","name":"Security Overhaul","status":"ON_HOLD"}]}}}`,
+			},
 		}
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
