@@ -1,5 +1,5 @@
 /* eslint-disable import/no-named-as-default-member */
-import { access, mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, rename, rm, writeFile, cp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { Command, program } from 'commander';
@@ -16,6 +16,25 @@ import GoTemplates from '../templates/go.js';
 import TsTemplates from '../templates/typescript.js';
 import { renderResultTree } from '../helper.js';
 import { getGoModulePathProtoOption } from '../toolchain.js';
+
+// This is because the rename function does not work across different filesystems.
+// The underlying OS rename operation fails with an EXDEV error.
+// The fallback is to copy the files and then remove the source.
+const move = async (src: string, dest: string) => {
+  try {
+    await rename(src, dest);
+  } catch (error: unknown) {
+    if (typeof error === 'object' && error !== null && 'code' in error) {
+      if (error.code === 'EXDEV') {
+        // fallback for cross-device moves
+        await cp(src, dest, { recursive: true });
+        await rm(src, { recursive: true, force: true });
+      } else {
+        throw error;
+      }
+    }
+  }
+};
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('init');
@@ -182,7 +201,7 @@ export default (opts: BaseCommandOptions) => {
         await mkdir(projectDir, { recursive: true });
       }
 
-      await rename(tempDir, pluginDir);
+      await move(tempDir, pluginDir);
 
       const endTime = performance.now();
       const elapsedTimeMs = endTime - startTime;
