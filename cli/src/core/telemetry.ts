@@ -13,6 +13,49 @@ let client: PostHog | null = null;
 
 let apiClient: ReturnType<typeof CreateClient> | null = null;
 
+type PostHogFetchOptions = {
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH';
+  mode?: 'no-cors';
+  credentials?: 'omit';
+  headers: {
+    [key: string]: string;
+  };
+  body?: string;
+  signal?: AbortSignal;
+};
+
+type PostHogFetchResponse = {
+  status: number;
+  text: () => Promise<string>;
+  json: () => Promise<any>;
+};
+
+const buildPostHogOkResponse = () => ({
+  status: 200,
+  text: () => Promise.resolve(''),
+  json: () => Promise.resolve({}),
+});
+
+// PostHog logs flush failures directly; treat network issues as no-ops for CLI UX.
+// This will also make the retry mechanism ineffective.
+async function safePostHogFetch(url: string, options: PostHogFetchOptions): Promise<PostHogFetchResponse> {
+  try {
+    const response = await fetch(url, options);
+    if (response.status < 200 || response.status >= 400) {
+      if (process.env.DEBUG) {
+        console.error(`PostHog request failed with status ${response.status}.`);
+      }
+      return buildPostHogOkResponse();
+    }
+    return response;
+  } catch (err) {
+    if (process.env.DEBUG) {
+      console.error('PostHog request failed.', err);
+    }
+    return buildPostHogOkResponse();
+  }
+}
+
 // Detect if running in a CI environment
 const isCI = (): boolean => {
   return Boolean(
@@ -51,6 +94,7 @@ export const initTelemetry = () => {
     flushAt: 1, // For CLI, we want to send events immediately
     flushInterval: 0, // Don't wait to flush events
     disableGeoip: false,
+    fetch: safePostHogFetch,
   });
 
   const proxyUrl = process.env.HTTPS_PROXY || process.env.HTTP_PROXY;

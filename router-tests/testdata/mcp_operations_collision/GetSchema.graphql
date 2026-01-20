@@ -1,0 +1,5 @@
+query GetSchema {
+  employees {
+    id
+  }
+}

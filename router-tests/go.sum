@@ -350,9 +350,8 @@ github.com/wk8/go-ordered-map/v2 v2.1.8 h1:5h/BUHu93oj4gIdvHHHGsScSTMijfx5PeYkE/
 github.com/wk8/go-ordered-map/v2 v2.1.8/go.mod h1:5nJHM5DyteebpVlHnWMV0rPz6Zp7+xBAnxjb1X5vnTw=
 github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083 h1:8/D7f8gKxTBjW+SZK4mhxTTBVpxcqeBgWF1Rfmltbfk=
 github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083/go.mod h1:eOTL6acwctsN4F3b7YE+eE2t8zcJ/doLm9sZzsxxxrE=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.242 h1:0ieQmRxYz0nbJEbaaA4Cx2RPcxlomhQ8KI31uuevWx0=
-github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.242/go.mod h1:mX25ASEQiKamxaFSK6NZihh0oDCigIuzro30up4mFH4=
-github.com/wundergraph/ristretto/v2 v2.0.0-20260118191717-5112a101c70c h1:NHsm70rt2oJON5EiEODrv7f2jCTv8Tipb40DXUjWGIY=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.243 h1:yNchVRa9agA6JtK/X9ZBv8BW/8sm4kl2eaFD6rh6D90=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.243/go.mod h1:mX25ASEQiKamxaFSK6NZihh0oDCigIuzro30up4mFH4=github.com/wundergraph/ristretto/v2 v2.0.0-20260118191717-5112a101c70c h1:NHsm70rt2oJON5EiEODrv7f2jCTv8Tipb40DXUjWGIY=
 github.com/wundergraph/ristretto/v2 v2.0.0-20260118191717-5112a101c70c/go.mod h1:0KsrXtXvnv0EqnzyowllbVJB8yBonswa2lTCK2gGo9E=
 github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 h1:FnBeRrxr7OU4VvAzt5X7s6266i6cSVkkFPS0TuXWbIg=
 github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
