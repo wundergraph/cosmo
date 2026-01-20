@@ -1180,7 +1180,8 @@ func (r *Router) Start(ctx context.Context) error {
 		r.switchoverConfig = NewSwitchoverConfig(r.logger)
 	}
 
-	r.switchoverConfig.UpdateSwitchoverConfig(&r.Config, r.registrationInfo.IsCacheWarmerEnabled)
+	isCacheWarmerEnabled := r.registrationInfo != nil && r.registrationInfo.IsCacheWarmerEnabled
+	r.switchoverConfig.UpdateSwitchoverConfig(&r.Config, isCacheWarmerEnabled)
 
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
