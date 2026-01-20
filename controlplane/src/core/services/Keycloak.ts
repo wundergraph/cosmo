@@ -42,8 +42,8 @@ export default class Keycloak {
       // We already have an access token, determine whether the token still valid before trying to authenticate again
       try {
         const { exp } = decodeJwt(this.client.accessToken);
-        if (!exp || exp * 1000 > Date.now()) {
-          // Either the access token never expires or it hasn't expired
+        if (exp && exp * 1000 > Date.now()) {
+          // The access token hasn't expired
           return;
         }
 
