@@ -25,8 +25,8 @@ func NewSwitchoverConfig(logger *zap.Logger) *SwitchoverConfig {
 	}
 }
 
-func (s *SwitchoverConfig) UpdateSwitchoverConfig(config *Config) {
-	s.inMemorySwitchOverCache.updateStateFromConfig(config)
+func (s *SwitchoverConfig) UpdateSwitchoverConfig(config *Config, isCosmoCacheWarmerEnabled bool) {
+	s.inMemorySwitchOverCache.updateStateFromConfig(config, isCosmoCacheWarmerEnabled)
 }
 
 func (s *SwitchoverConfig) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
@@ -38,6 +38,9 @@ func (s *SwitchoverConfig) ProcessOnConfigChangeRestart() {
 	// graph mux, because we need to initialize everything from the start
 	// This causes problems in using the previous planCache reference as it gets closed, so we need to
 	// copy it over before it gets closed, and we restart with config changes
+
+	// There can be inflight requests when this is called even though it's called in the restart path,
+	// This is because this is called before the router instance is shutdown before being reloaded
 	s.inMemorySwitchOverCache.processOnConfigChangeRestart()
 }
 
@@ -48,13 +51,14 @@ type InMemorySwitchOverCache struct {
 	logger                *zap.Logger
 }
 
-func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
+func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config, isCosmoCacheWarmerEnabled bool) {
 	c.enabled = config.cacheWarmup != nil &&
+		!isCosmoCacheWarmerEnabled && // We only enable in-memory switchover cache if the cosmo cache warmer is not enabled
 		config.cacheWarmup.Enabled &&
 		config.cacheWarmup.InMemorySwitchoverFallback
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	// If the configuration change occurred which disabled or enabled the switchover cache, we need to update the internal state
 	if c.enabled {
@@ -100,16 +104,6 @@ func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache
 	c.queriesForFeatureFlag[featureFlagKey] = cache
 }
 
-func (c *InMemorySwitchOverCache) deletePlanCacheForFF(featureFlagKey string) {
-	if !c.enabled {
-		return
-	}
-
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	delete(c.queriesForFeatureFlag, featureFlagKey)
-}
-
 func (c *InMemorySwitchOverCache) processOnConfigChangeRestart() {
 	if !c.enabled {
 		return
@@ -128,11 +122,7 @@ func (c *InMemorySwitchOverCache) processOnConfigChangeRestart() {
 }
 
 func (c *InMemorySwitchOverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.RouterConfig) {
-	if !c.enabled {
-		return
-	}
-
-	if routerCfg.FeatureFlagConfigs == nil {
+	if !c.enabled || routerCfg.FeatureFlagConfigs == nil {
 		return
 	}
 

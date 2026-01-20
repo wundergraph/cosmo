@@ -24,7 +24,7 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 			},
 		}
 
-		cache.updateStateFromConfig(cfg)
+		cache.updateStateFromConfig(cfg, false)
 
 		require.True(t, cache.enabled)
 		require.NotNil(t, cache.queriesForFeatureFlag)
@@ -45,7 +45,7 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 			},
 		}
 
-		cache.updateStateFromConfig(cfg)
+		cache.updateStateFromConfig(cfg, false)
 
 		require.False(t, cache.enabled)
 		require.Nil(t, cache.queriesForFeatureFlag)
@@ -68,7 +68,7 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 			},
 		}
 
-		cache.updateStateFromConfig(cfg)
+		cache.updateStateFromConfig(cfg, false)
 
 		require.True(t, cache.enabled)
 		require.NotNil(t, cache.queriesForFeatureFlag)
@@ -89,7 +89,7 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 			},
 		}
 
-		cache.updateStateFromConfig(cfg)
+		cache.updateStateFromConfig(cfg, false)
 
 		require.False(t, cache.enabled)
 		require.Nil(t, cache.queriesForFeatureFlag)
@@ -106,7 +106,7 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 			cacheWarmup: nil,
 		}
 
-		cache.updateStateFromConfig(cfg)
+		cache.updateStateFromConfig(cfg, false)
 
 		require.False(t, cache.enabled)
 		require.Nil(t, cache.queriesForFeatureFlag)
@@ -123,7 +123,7 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 			},
 		}
 
-		cache.updateStateFromConfig(cfg)
+		cache.updateStateFromConfig(cfg, false)
 
 		require.False(t, cache.enabled)
 		require.Nil(t, cache.queriesForFeatureFlag)
@@ -367,61 +367,6 @@ func TestInMemorySwitchOverCache_CleanupUnusedFeatureFlags(t *testing.T) {
 		// Should still have ff1 because FeatureFlagConfigs is nil
 		require.Len(t, cache.queriesForFeatureFlag, 1)
 		require.Contains(t, cache.queriesForFeatureFlag, "ff1")
-	})
-}
-
-func TestInMemorySwitchOverCache_DeletePlanCacheForFF(t *testing.T) {
-	t.Parallel()
-	t.Run("deletes cache for feature flag when enabled", func(t *testing.T) {
-		t.Parallel()
-		mockCache, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
-			MaxCost:     100,
-			NumCounters: 10000,
-			BufferItems: 64,
-		})
-		require.NoError(t, err)
-
-		cache := &InMemorySwitchOverCache{
-			enabled:               true,
-			queriesForFeatureFlag: make(map[string]any),
-		}
-		cache.queriesForFeatureFlag["test-ff"] = mockCache
-
-		cache.deletePlanCacheForFF("test-ff")
-
-		require.NotContains(t, cache.queriesForFeatureFlag, "test-ff")
-	})
-
-	t.Run("does not delete when cache is disabled", func(t *testing.T) {
-		t.Parallel()
-		mockCache, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
-			MaxCost:     100,
-			NumCounters: 10000,
-			BufferItems: 64,
-		})
-		require.NoError(t, err)
-
-		cache := &InMemorySwitchOverCache{
-			enabled:               false,
-			queriesForFeatureFlag: make(map[string]any),
-		}
-		cache.queriesForFeatureFlag["test-ff"] = mockCache
-
-		cache.deletePlanCacheForFF("test-ff")
-
-		require.Contains(t, cache.queriesForFeatureFlag, "test-ff")
-	})
-
-	t.Run("deleting non-existent key does not cause error", func(t *testing.T) {
-		t.Parallel()
-		cache := &InMemorySwitchOverCache{
-			enabled:               true,
-			queriesForFeatureFlag: make(map[string]any),
-		}
-
-		require.NotPanics(t, func() {
-			cache.deletePlanCacheForFF("non-existent")
-		})
 	})
 }
 
