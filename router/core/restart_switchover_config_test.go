@@ -26,7 +26,6 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg, false)
 
-		require.True(t, cache.enabled.Load())
 		require.NotNil(t, cache.queriesForFeatureFlag)
 		require.Empty(t, cache.queriesForFeatureFlag)
 	})
@@ -36,7 +35,6 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 		cache.queriesForFeatureFlag["test"] = nil
 
 		cfg := &Config{
@@ -47,7 +45,6 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg, false)
 
-		require.False(t, cache.enabled.Load())
 		require.Nil(t, cache.queriesForFeatureFlag)
 	})
 
@@ -59,7 +56,6 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: existingMap,
 		}
-		cache.enabled.Store(true)
 
 		cfg := &Config{
 			cacheWarmup: &config.CacheWarmupConfiguration{
@@ -70,7 +66,6 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg, false)
 
-		require.True(t, cache.enabled.Load())
 		require.NotNil(t, cache.queriesForFeatureFlag)
 		require.Len(t, cache.queriesForFeatureFlag, 1)
 		require.Contains(t, cache.queriesForFeatureFlag, "test")
@@ -81,7 +76,6 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: nil,
 		}
-		cache.enabled.Store(false)
 
 		cfg := &Config{
 			cacheWarmup: &config.CacheWarmupConfiguration{
@@ -91,7 +85,6 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg, false)
 
-		require.False(t, cache.enabled.Load())
 		require.Nil(t, cache.queriesForFeatureFlag)
 	})
 
@@ -100,7 +93,6 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 
 		cfg := &Config{
 			cacheWarmup: nil,
@@ -108,7 +100,6 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg, false)
 
-		require.False(t, cache.enabled.Load())
 		require.Nil(t, cache.queriesForFeatureFlag)
 	})
 
@@ -125,7 +116,6 @@ func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg, false)
 
-		require.False(t, cache.enabled.Load())
 		require.Nil(t, cache.queriesForFeatureFlag)
 	})
 }
@@ -152,7 +142,6 @@ func TestInMemorySwitchOverCache_GetPlanCacheForFF(t *testing.T) {
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 		cache.queriesForFeatureFlag["test-ff"] = mockCache
 
 		result := cache.getPlanCacheForFF("test-ff")
@@ -179,7 +168,6 @@ func TestInMemorySwitchOverCache_GetPlanCacheForFF(t *testing.T) {
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 		cache.queriesForFeatureFlag["test-ff"] = expectedOps
 
 		result := cache.getPlanCacheForFF("test-ff")
@@ -194,7 +182,6 @@ func TestInMemorySwitchOverCache_GetPlanCacheForFF(t *testing.T) {
 			logger:                zap.NewNop(),
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 
 		result := cache.getPlanCacheForFF("non-existent")
 
@@ -204,18 +191,9 @@ func TestInMemorySwitchOverCache_GetPlanCacheForFF(t *testing.T) {
 
 	t.Run("returns nil when cache is disabled", func(t *testing.T) {
 		t.Parallel()
-		mockCache, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
-			MaxCost:     100,
-			NumCounters: 10000,
-			BufferItems: 64,
-		})
-		require.NoError(t, err)
-
 		cache := &InMemorySwitchOverCache{
-			queriesForFeatureFlag: make(map[string]any),
+			queriesForFeatureFlag: nil,
 		}
-		cache.enabled.Store(false)
-		cache.queriesForFeatureFlag["test-ff"] = mockCache
 
 		result := cache.getPlanCacheForFF("test-ff")
 
@@ -237,7 +215,6 @@ func TestInMemorySwitchOverCache_SetPlanCacheForFF(t *testing.T) {
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 
 		cache.setPlanCacheForFF("test-ff", mockCache)
 
@@ -256,13 +233,12 @@ func TestInMemorySwitchOverCache_SetPlanCacheForFF(t *testing.T) {
 		require.NoError(t, err)
 
 		cache := &InMemorySwitchOverCache{
-			queriesForFeatureFlag: make(map[string]any),
+			queriesForFeatureFlag: nil,
 		}
-		cache.enabled.Store(false)
 
 		cache.setPlanCacheForFF("test-ff", mockCache)
 
-		require.NotContains(t, cache.queriesForFeatureFlag, "test-ff")
+		require.Nil(t, cache.queriesForFeatureFlag)
 	})
 
 	t.Run("does not set nil cache", func(t *testing.T) {
@@ -270,7 +246,6 @@ func TestInMemorySwitchOverCache_SetPlanCacheForFF(t *testing.T) {
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 
 		cache.setPlanCacheForFF("test-ff", nil)
 
@@ -285,7 +260,6 @@ func TestInMemorySwitchOverCache_CleanupUnusedFeatureFlags(t *testing.T) {
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 		cache.queriesForFeatureFlag["ff1"] = nil
 		cache.queriesForFeatureFlag["ff2"] = nil
 		cache.queriesForFeatureFlag["ff3"] = nil
@@ -312,7 +286,6 @@ func TestInMemorySwitchOverCache_CleanupUnusedFeatureFlags(t *testing.T) {
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 		cache.queriesForFeatureFlag[""] = nil
 		cache.queriesForFeatureFlag["ff1"] = nil
 
@@ -332,10 +305,8 @@ func TestInMemorySwitchOverCache_CleanupUnusedFeatureFlags(t *testing.T) {
 	t.Run("does nothing when cache is disabled", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemorySwitchOverCache{
-			queriesForFeatureFlag: make(map[string]any),
+			queriesForFeatureFlag: nil,
 		}
-		cache.enabled.Store(false)
-		cache.queriesForFeatureFlag["ff1"] = nil
 
 		routerCfg := &nodev1.RouterConfig{
 			FeatureFlagConfigs: &nodev1.FeatureFlagRouterExecutionConfigs{
@@ -345,9 +316,8 @@ func TestInMemorySwitchOverCache_CleanupUnusedFeatureFlags(t *testing.T) {
 
 		cache.cleanupUnusedFeatureFlags(routerCfg)
 
-		// Should still have ff1 because cleanup is skipped when disabled
-		require.Len(t, cache.queriesForFeatureFlag, 1)
-		require.Contains(t, cache.queriesForFeatureFlag, "ff1")
+		// Should still be nil because cleanup is skipped when disabled
+		require.Nil(t, cache.queriesForFeatureFlag)
 	})
 
 	t.Run("does nothing when FeatureFlagConfigs is nil", func(t *testing.T) {
@@ -355,7 +325,6 @@ func TestInMemorySwitchOverCache_CleanupUnusedFeatureFlags(t *testing.T) {
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 		cache.queriesForFeatureFlag["ff1"] = nil
 
 		routerCfg := &nodev1.RouterConfig{
@@ -401,7 +370,6 @@ func TestInMemorySwitchOverCache_ProcessOnConfigChangeRestart(t *testing.T) {
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 		cache.queriesForFeatureFlag["ff1"] = mockCache1
 		cache.queriesForFeatureFlag["ff2"] = mockCache2
 
@@ -422,23 +390,14 @@ func TestInMemorySwitchOverCache_ProcessOnConfigChangeRestart(t *testing.T) {
 
 	t.Run("does nothing when cache is disabled", func(t *testing.T) {
 		t.Parallel()
-		mockCache, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
-			MaxCost:     100,
-			NumCounters: 10000,
-			BufferItems: 64,
-		})
-		require.NoError(t, err)
-
 		cache := &InMemorySwitchOverCache{
-			queriesForFeatureFlag: make(map[string]any),
+			queriesForFeatureFlag: nil,
 		}
-		cache.enabled.Store(false)
-		cache.queriesForFeatureFlag["test-ff"] = mockCache
 
 		cache.processOnConfigChangeRestart()
 
-		// Should remain as ristretto cache since processing is skipped
-		require.IsType(t, mockCache, cache.queriesForFeatureFlag["test-ff"])
+		// Should remain nil since processing is skipped
+		require.Nil(t, cache.queriesForFeatureFlag)
 	})
 
 	t.Run("handles empty cache", func(t *testing.T) {
@@ -446,7 +405,6 @@ func TestInMemorySwitchOverCache_ProcessOnConfigChangeRestart(t *testing.T) {
 		cache := &InMemorySwitchOverCache{
 			queriesForFeatureFlag: make(map[string]any),
 		}
-		cache.enabled.Store(true)
 
 		require.NotPanics(t, func() {
 			cache.processOnConfigChangeRestart()

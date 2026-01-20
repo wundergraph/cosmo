@@ -1,10 +1,8 @@
 package core
 
 import (
-	"sync"
-	"sync/atomic"
-
 	"go.uber.org/zap"
+	"sync"
 
 	"github.com/dgraph-io/ristretto/v2"
 
@@ -46,7 +44,6 @@ func (s *SwitchoverConfig) ProcessOnConfigChangeRestart() {
 }
 
 type InMemorySwitchOverCache struct {
-	enabled               atomic.Bool
 	mu                    sync.RWMutex
 	queriesForFeatureFlag map[string]any
 	logger                *zap.Logger
@@ -61,26 +58,26 @@ func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config, isCosmoC
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	c.enabled.Store(enabled)
-
 	// If the configuration change occurred which disabled or enabled the switchover cache, we need to update the internal state
 	if enabled {
-		// Only initialize if its nil (because its a first start or it was disabled before)
+		// Only initialize if its nil because its a first start, we dont want to override any old data in a map
 		if c.queriesForFeatureFlag == nil {
 			c.queriesForFeatureFlag = make(map[string]any)
 		}
+		return
 	} else {
+		// Reset the map to free up memory
 		c.queriesForFeatureFlag = nil
 	}
 }
 
 func (c *InMemorySwitchOverCache) getPlanCacheForFF(featureFlagKey string) []*nodev1.Operation {
-	if !c.enabled.Load() {
-		return nil
-	}
-
 	c.mu.RLock()
 	defer c.mu.RUnlock()
+
+	if c.queriesForFeatureFlag == nil {
+		return nil
+	}
 
 	switch cache := c.queriesForFeatureFlag[featureFlagKey].(type) {
 	case planCache:
@@ -98,22 +95,22 @@ func (c *InMemorySwitchOverCache) getPlanCacheForFF(featureFlagKey string) []*no
 }
 
 func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache planCache) {
-	if !c.enabled.Load() || cache == nil {
-		return
-	}
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if c.queriesForFeatureFlag == nil || cache == nil {
+		return
+	}
 	c.queriesForFeatureFlag[featureFlagKey] = cache
 }
 
 func (c *InMemorySwitchOverCache) processOnConfigChangeRestart() {
-	if !c.enabled.Load() {
-		return
-	}
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if c.queriesForFeatureFlag == nil {
+		return
+	}
 
 	switchoverMap := make(map[string]any)
 	for k, v := range c.queriesForFeatureFlag {
@@ -125,12 +122,12 @@ func (c *InMemorySwitchOverCache) processOnConfigChangeRestart() {
 }
 
 func (c *InMemorySwitchOverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.RouterConfig) {
-	if !c.enabled.Load() || routerCfg.FeatureFlagConfigs == nil {
-		return
-	}
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
+
+	if c.queriesForFeatureFlag == nil || routerCfg.FeatureFlagConfigs == nil {
+		return
+	}
 
 	ffNames := make(map[string]struct{})
 	for ffName := range routerCfg.FeatureFlagConfigs.ConfigByFeatureFlagName {
