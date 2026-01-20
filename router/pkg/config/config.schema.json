@@ -1756,6 +1756,19 @@
                     "type": "string",
                     "description": "The KID header of the JWK token created using the secret"
                   },
+                  "allowed_use": {
+                    "type": "array",
+                    "description": "The allowed value of the use parameter for the JWKs. If not specified, only keys with use set to 'sig' will be used. If your server provides no use, you can add an empty value to allow those keys.",
+                    "default": ["sig"],
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "sig",
+                        "enc",
+                        ""
+                      ]
+                    }
+                  },
                   "algorithms": {
                     "type": "array",
                     "description": "The allowed algorithms for the keys that are retrieved from the JWKs. An empty list means that all algorithms are allowed.",
@@ -2131,6 +2144,11 @@
           "type": "boolean",
           "default": false,
           "description": "Expose the full GraphQL schema through MCP. When enabled, AI models can request the complete schema of your API."
+        },
+        "omit_tool_name_prefix": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
         }
       }
     },

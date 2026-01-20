@@ -88,7 +88,7 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 				})).Return(nil)
 			},
 			expectError:     false,
-			expectedOutput:  `{"success": true}`,
+			expectedOutput:  `{"__typename": "edfs__PublishResult", "success": true}`,
 			expectPublished: true,
 		},
 		{
@@ -98,7 +98,7 @@ func TestRedisPublishDataSource_Load(t *testing.T) {
 				m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
-			expectedOutput:  `{"success": false}`,
+			expectedOutput:  `{"__typename": "edfs__PublishResult", "success": false}`,
 			expectPublished: true,
 		},
 		{

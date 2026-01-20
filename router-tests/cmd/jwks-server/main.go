@@ -42,9 +42,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"github.com/MicahParks/jwkset"
-	"github.com/golang-jwt/jwt/v5"
-	"github.com/wundergraph/cosmo/router-tests/jwks"
 	"log"
 	"net/http"
 	"os"
@@ -52,6 +49,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/MicahParks/jwkset"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/cosmo/router-tests/jwks"
 )
 
 var (

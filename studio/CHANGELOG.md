@@ -4,6 +4,36 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.149.5](https://github.com/wundergraph/cosmo/compare/studio@0.149.4...studio@0.149.5) (2026-01-16)
+
+**Note:** Version bump only for package studio
+
+## [0.149.4](https://github.com/wundergraph/cosmo/compare/studio@0.149.3...studio@0.149.4) (2026-01-12)
+
+### Bug Fixes
+
+* **infra:** ensure base images use target platform ([#2401](https://github.com/wundergraph/cosmo/issues/2401)) ([45d65c4](https://github.com/wundergraph/cosmo/commit/45d65c4c260e7888ecfc46fb46db0d73d33fc75e)) (@endigma)
+
+## [0.149.3](https://github.com/wundergraph/cosmo/compare/studio@0.149.2...studio@0.149.3) (2026-01-09)
+
+**Note:** Version bump only for package studio
+
+## [0.149.2](https://github.com/wundergraph/cosmo/compare/studio@0.149.1...studio@0.149.2) (2026-01-08)
+
+**Note:** Version bump only for package studio
+
+## [0.149.1](https://github.com/wundergraph/cosmo/compare/studio@0.149.0...studio@0.149.1) (2026-01-07)
+
+### Bug Fixes
+
+* field usage when arguments have the same name as root fields ([#2440](https://github.com/wundergraph/cosmo/issues/2440)) ([2b77baf](https://github.com/wundergraph/cosmo/commit/2b77baf4fc17170133a64d789c5623e2de44dcf6)) (@JivusAyrus)
+
+# [0.149.0](https://github.com/wundergraph/cosmo/compare/studio@0.148.0...studio@0.149.0) (2026-01-07)
+
+### Features
+
+* prevent privilege escalation ([#2428](https://github.com/wundergraph/cosmo/issues/2428)) ([bd68eec](https://github.com/wundergraph/cosmo/commit/bd68eecadf83159a1606b5b307c41cac34fb8b10)) (@wilsonrivera)
+
 # [0.148.0](https://github.com/wundergraph/cosmo/compare/studio@0.147.0...studio@0.148.0) (2025-12-15)
 
 ### Features
