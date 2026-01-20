@@ -56,8 +56,8 @@ export default class Keycloak {
 
           return;
         }
-      } catch {
-        // ignore
+      } catch (error: unknown) {
+        this.logger.warn(error, 'Failed to refresh the existing access token, a new token will be requested');
       }
     }
 
