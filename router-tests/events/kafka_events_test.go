@@ -946,6 +946,23 @@ func TestKafkaEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("mutate returns correct typename", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"employeeUpdated"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyKafka(employeeID: 3, update: {name: "name test"}) { __typename success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"__typename":"edfs__PublishResult","success":true}}}`, resOne.Body)
+		})
+	})
+
 	t.Run("kafka startup and shutdown with wrong broker should not stop router from starting indefinitely", func(t *testing.T) {
 		t.Parallel()
 
