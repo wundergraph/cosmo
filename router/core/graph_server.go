@@ -292,7 +292,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap, switchoverConfig)
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap, switchoverConfig, cosmoCacheWarmerEnabled)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
@@ -443,6 +443,7 @@ func (s *graphServer) buildMultiGraphHandler(
 	baseMux *chi.Mux,
 	featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig,
 	switchoverConfig *SwitchoverConfig,
+	cosmoCacheWarmerEnabled bool,
 ) (http.HandlerFunc, error) {
 	if len(featureFlagConfigs) == 0 {
 		return baseMux.ServeHTTP, nil
@@ -453,11 +454,12 @@ func (s *graphServer) buildMultiGraphHandler(
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
 	for featureFlagName, executionConfig := range featureFlagConfigs {
 		gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
-			FeatureFlagName:     featureFlagName,
-			RouterConfigVersion: executionConfig.GetVersion(),
-			EngineConfig:        executionConfig.GetEngineConfig(),
-			ConfigSubgraphs:     executionConfig.Subgraphs,
-			SwitchoverConfig:    switchoverConfig,
+			FeatureFlagName:         featureFlagName,
+			RouterConfigVersion:     executionConfig.GetVersion(),
+			EngineConfig:            executionConfig.GetEngineConfig(),
+			ConfigSubgraphs:         executionConfig.Subgraphs,
+			SwitchoverConfig:        switchoverConfig,
+			CosmoCacheWarmerEnabled: cosmoCacheWarmerEnabled,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
