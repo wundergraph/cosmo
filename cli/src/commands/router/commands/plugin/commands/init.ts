@@ -17,9 +17,11 @@ import TsTemplates from '../templates/typescript.js';
 import { renderResultTree } from '../helper.js';
 import { getGoModulePathProtoOption } from '../toolchain.js';
 
-// This is because the rename function does not work across different filesystems.
-// The underlying OS rename operation fails with an EXDEV error.
-// The fallback is to copy the files and then remove the source.
+// The move function is a wrapper around the fs/promises rename operation.
+// This is necessary because the OS-level rename will fail with an EXDEV error
+// when trying to move a file or directory across different filesystems.
+// In such cases, move falls back to recursively copying the source to the destination
+// and then removing the original source directory or file.
 const move = async (src: string, dest: string) => {
   try {
     await rename(src, dest);
