@@ -10,9 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
-
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 )
 
@@ -64,33 +61,6 @@ func NewMCPAuthMiddleware(tokenDecoder authentication.TokenDecoder, enabled bool
 		resourceMetadataURL: resourceMetadataURL,
 		scopesRequired:      scopesRequired,
 	}, nil
-}
-
-// ToolMiddleware wraps tool handlers with authentication
-func (m *MCPAuthMiddleware) ToolMiddleware(next server.ToolHandlerFunc) server.ToolHandlerFunc {
-	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		if !m.enabled {
-			return next(ctx, req)
-		}
-
-		// Extract and validate token
-		claims, err := m.authenticateRequest(ctx)
-		if err != nil {
-			// Return authentication error with WWW-Authenticate challenge information
-			// Per RFC 9728, we should indicate the resource metadata URL
-			errorMsg := fmt.Sprintf("Authentication failed: %v", err)
-			if m.resourceMetadataURL != "" {
-				errorMsg = fmt.Sprintf("Authentication required. Resource metadata available at: %s. Error: %v",
-					m.resourceMetadataURL, err)
-			}
-			return mcp.NewToolResultError(errorMsg), nil
-		}
-
-		// Add claims to context
-		ctx = context.WithValue(ctx, userClaimsContextKey, claims)
-
-		return next(ctx, req)
-	}
 }
 
 // authenticateRequest extracts and validates the JWT token using the existing
@@ -150,31 +120,36 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Step 2: Parse JSON-RPC request to check for tool-specific scopes
-		// Read body to extract tool name
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			m.sendUnauthorizedResponse(w, fmt.Errorf("failed to read request body"))
-			return
-		}
-		// Restore body for downstream handlers
-		r.Body = io.NopCloser(bytes.NewBuffer(body))
-
-		// Try to parse as JSON-RPC request
-		var jsonRPCReq struct {
-			Method string          `json:"method"`
-			Params json.RawMessage `json:"params"`
-		}
-		if err := json.Unmarshal(body, &jsonRPCReq); err == nil && jsonRPCReq.Method == "tools/call" {
-			// Extract tool name from params
-			var toolCallParams struct {
-				Name string `json:"name"`
+		// Read body to extract tool name (only if body exists)
+		var body []byte
+		if r.Body != nil {
+			body, err = io.ReadAll(r.Body)
+			if err != nil {
+				m.sendUnauthorizedResponse(w, fmt.Errorf("failed to read request body"))
+				return
 			}
-			if err := json.Unmarshal(jsonRPCReq.Params, &toolCallParams); err == nil && toolCallParams.Name != "" {
-				// Check if this tool has specific scope requirements
-				if toolScopes, exists := m.scopesRequired[toolCallParams.Name]; exists && len(toolScopes) > 0 {
-					if err := m.validateScopesForRequest(claims, toolScopes); err != nil {
-						m.sendInsufficientScopeResponse(w, toolScopes, err)
-						return
+			// Restore body for downstream handlers
+			r.Body = io.NopCloser(bytes.NewBuffer(body))
+		}
+
+		// Try to parse as JSON-RPC request (only if we have body content)
+		if len(body) > 0 {
+			var jsonRPCReq struct {
+				Method string          `json:"method"`
+				Params json.RawMessage `json:"params"`
+			}
+			if err := json.Unmarshal(body, &jsonRPCReq); err == nil && jsonRPCReq.Method == "tools/call" {
+				// Extract tool name from params
+				var toolCallParams struct {
+					Name string `json:"name"`
+				}
+				if err := json.Unmarshal(jsonRPCReq.Params, &toolCallParams); err == nil && toolCallParams.Name != "" {
+					// Check if this tool has specific scope requirements
+					if toolScopes, exists := m.scopesRequired[toolCallParams.Name]; exists && len(toolScopes) > 0 {
+						if err := m.validateScopesForRequest(claims, toolScopes); err != nil {
+							m.sendInsufficientScopeResponse(w, toolScopes, err)
+							return
+						}
 					}
 				}
 			}
