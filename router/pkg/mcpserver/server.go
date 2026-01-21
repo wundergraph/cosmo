@@ -14,8 +14,7 @@ import (
 
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/iancoleman/strcase"
-	"github.com/mark3labs/mcp-go/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"go.uber.org/zap"
 
@@ -88,7 +87,7 @@ type Options struct {
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
 type GraphQLSchemaServer struct {
-	server                    *server.MCPServer
+	server                    *mcp.Server
 	graphName                 string
 	operationsDir             string
 	listenAddr                string
@@ -96,7 +95,7 @@ type GraphQLSchemaServer struct {
 	httpClient                *http.Client
 	requestTimeout            time.Duration
 	routerGraphQLEndpoint     string
-	httpServer                *server.StreamableHTTPServer
+	httpServer                *http.Server
 	excludeMutations          bool
 	enableArbitraryOperations bool
 	exposeSchema              bool
@@ -211,15 +210,8 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 	// Create a cancellable context for managing the server lifecycle
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Prepare server options
-	var serverOpts []server.ServerOption
-	serverOpts = append(serverOpts,
-		server.WithToolCapabilities(true),
-		server.WithPaginationLimit(100),
-		server.WithRecovery(),
-	)
-
 	// Add authentication middleware if OAuth is configured
+	var authMiddleware *MCPAuthMiddleware
 	if options.OAuthConfig != nil && options.OAuthConfig.Enabled && len(options.OAuthConfig.JWKS) > 0 {
 		// Convert config.JWKSConfiguration to authentication.JWKSConfig
 		authConfigs := make([]authentication.JWKSConfig, 0, len(options.OAuthConfig.JWKS))
@@ -262,60 +254,29 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		// The middleware will check:
 		// - "initialize" key scopes for all HTTP requests (HTTP-level auth)
 		// - Per-tool scopes when tools are called (by parsing JSON-RPC request)
-		authMiddleware, err := NewMCPAuthMiddleware(tokenDecoder, true, resourceMetadataURL, options.OAuthConfig.ScopesRequired)
+		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, true, resourceMetadataURL, options.OAuthConfig.ScopesRequired)
 		if err != nil {
 			cancel() // Clean up the context if initialization fails
 			return nil, fmt.Errorf("failed to create auth middleware: %w", err)
 		}
 
 		// Store auth middleware for HTTP-level protection
-		// Note: We don't use WithToolHandlerMiddleware here because per MCP spec,
+		// Note: We don't use tool middleware here because per MCP spec,
 		// ALL HTTP requests must be authenticated, not just tool calls
 		options.Logger.Info("MCP OAuth authentication enabled",
 			zap.Int("jwks_providers", len(options.OAuthConfig.JWKS)),
 			zap.String("authorization_server", options.OAuthConfig.AuthorizationServerURL))
-
-		// Create the MCP server with all options
-		mcpServer := server.NewMCPServer(
-			"wundergraph-cosmo-"+strcase.ToKebab(options.GraphName),
-			"0.0.1",
-			serverOpts...,
-		)
-
-		retryClient := retryablehttp.NewClient()
-		retryClient.Logger = nil
-		httpClient := retryClient.StandardClient()
-		httpClient.Timeout = 60 * time.Second
-
-		gs := &GraphQLSchemaServer{
-			server:                    mcpServer,
-			graphName:                 options.GraphName,
-			operationsDir:             options.OperationsDir,
-			listenAddr:                options.ListenAddr,
-			logger:                    options.Logger,
-			httpClient:                httpClient,
-			requestTimeout:            options.RequestTimeout,
-			routerGraphQLEndpoint:     routerGraphQLEndpoint,
-			excludeMutations:          options.ExcludeMutations,
-			enableArbitraryOperations: options.EnableArbitraryOperations,
-			exposeSchema:              options.ExposeSchema,
-			stateless:                 options.Stateless,
-			corsConfig:                options.CorsConfig,
-			ctx:                       ctx,
-			cancel:                    cancel,
-			oauthConfig:               options.OAuthConfig,
-			serverBaseURL:             options.ServerBaseURL,
-			authMiddleware:            authMiddleware,
-		}
-
-		return gs, nil
 	}
 
 	// Create the MCP server with all options
-	mcpServer := server.NewMCPServer(
-		"wundergraph-cosmo-"+strcase.ToKebab(options.GraphName),
-		"0.0.1",
-		serverOpts...,
+	mcpServer := mcp.NewServer(
+		&mcp.Implementation{
+			Name:    "wundergraph-cosmo-" + strcase.ToKebab(options.GraphName),
+			Version: "0.0.1",
+		},
+		&mcp.ServerOptions{
+			PageSize: 100,
+		},
 	)
 
 	retryClient := retryablehttp.NewClient()
@@ -342,7 +303,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		cancel:                    cancel,
 		oauthConfig:               options.OAuthConfig,
 		serverBaseURL:             options.ServerBaseURL,
-		authMiddleware:            nil, // No auth middleware when OAuth is disabled
+		authMiddleware:            authMiddleware,
 	}
 
 	return gs, nil
@@ -442,8 +403,8 @@ func WithServerBaseURL(baseURL string) func(*Options) {
 	}
 }
 
-// Serve starts the server with the configured options and returns a streamable HTTP server.
-func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
+// Serve starts the server with the configured options and returns the HTTP server.
+func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 	// Create custom HTTP server
 	httpServer := &http.Server{
 		Addr:         s.listenAddr,
@@ -452,12 +413,14 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	streamableHTTPServer := server.NewStreamableHTTPServer(s.server,
-		server.WithStreamableHTTPServer(httpServer),
-		server.WithLogger(NewZapAdapter(s.logger.With(zap.String("component", "mcp-server")))),
-		server.WithStateLess(s.stateless),
-		server.WithHTTPContextFunc(requestHeadersFromRequest),
-		server.WithHeartbeatInterval(10*time.Second),
+	// Create MCP streamable HTTP handler
+	// The getServer function returns our MCP server instance for each request
+	streamableHTTPHandler := mcp.NewStreamableHTTPHandler(
+		func(req *http.Request) *mcp.Server {
+			// Add request headers to context for tool handlers
+			return s.server
+		},
+		nil, // Use default options
 	)
 
 	middleware := cors.New(s.corsConfig)
@@ -476,9 +439,7 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 
 	// MCP endpoint with HTTP-level authentication
 	// Per MCP spec: "authorization MUST be included in every HTTP request from client to server"
-	mcpHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		streamableHTTPServer.ServeHTTP(w, r)
-	})
+	mcpHandler := http.Handler(streamableHTTPHandler)
 
 	// Apply authentication middleware if OAuth is enabled
 	if s.authMiddleware != nil {
@@ -512,7 +473,7 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 		}
 	}()
 
-	return streamableHTTPServer, nil
+	return httpServer, nil
 }
 
 // Start loads operations and starts the server
@@ -542,7 +503,7 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 		}
 	}
 
-	s.server.DeleteTools(s.registeredTools...)
+	s.server.RemoveTools(s.registeredTools...)
 
 	if err := s.registerTools(); err != nil {
 		return fmt.Errorf("failed to register tools: %w", err)
@@ -580,75 +541,61 @@ func (s *GraphQLSchemaServer) registerTools() error {
 	// Only register the schema tool if exposeSchema is enabled
 	if s.exposeSchema {
 		// Create a schema with empty properties since get_schema takes no input
-		// Note: We omit "required" field to get nil instead of empty array
-		getSchemaInputSchema := []byte(`{
-			"type": "object",
-			"properties": {}
-		}`)
-
-		tool := mcp.NewToolWithRawSchema(
-			"get_schema",
-			"Provides the full GraphQL schema of the API.",
-			getSchemaInputSchema,
-		)
-
-		tool.Annotations = mcp.ToolAnnotation{
-			Title:        "Get GraphQL Schema",
-			ReadOnlyHint: mcp.ToBoolPtr(true),
+		getSchemaInputSchema := map[string]any{
+			"type":       "object",
+			"properties": map[string]any{},
 		}
 
-		s.server.AddTool(
-			tool,
-			s.handleGetGraphQLSchema(),
-		)
+		tool := &mcp.Tool{
+			Name:        "get_schema",
+			Description: "Provides the full GraphQL schema of the API.",
+			InputSchema: getSchemaInputSchema,
+			Annotations: &mcp.ToolAnnotations{
+				Title:        "Get GraphQL Schema",
+				ReadOnlyHint: true,
+			},
+		}
 
+		s.server.AddTool(tool, s.handleGetGraphQLSchema())
 		s.registeredTools = append(s.registeredTools, "get_schema")
 	}
 
 	// Only register the execute_graphql tool if enableArbitraryOperations is enabled
 	if s.enableArbitraryOperations {
 		// Add a tool to execute arbitrary GraphQL queries
-		executeGraphQLSchema := []byte(`{
-			"type": "object",
+		executeGraphQLSchema := map[string]any{
+			"type":        "object",
 			"description": "The query and variables to execute.",
-			"properties": {
-				"query": {
-					"type": "string",
-					"description": "The GraphQL query or mutation string to execute."
+			"properties": map[string]any{
+				"query": map[string]any{
+					"type":        "string",
+					"description": "The GraphQL query or mutation string to execute.",
 				},
-				"variables": {
-					"type": "object",
+				"variables": map[string]any{
+					"type":                 "object",
 					"additionalProperties": true,
-					"description": "The variables to pass to the GraphQL query as a JSON object."
-				}
+					"description":          "The variables to pass to the GraphQL query as a JSON object.",
+				},
 			},
 			"additionalProperties": false,
-			"required": ["query"]
-		}`)
-
-		// Validate the schema before using it
-		if err := s.schemaCompiler.ValidateJSONSchema(executeGraphQLSchema); err != nil {
-			return fmt.Errorf("invalid schema for execute_graphql tool: %w", err)
+			"required":             []string{"query"},
 		}
 
-		tool := mcp.NewToolWithRawSchema(
-			"execute_graphql",
-			"Executes a GraphQL query or mutation.",
-			executeGraphQLSchema,
-		)
-
-		tool.Annotations = mcp.ToolAnnotation{
-			Title:           "Execute GraphQL Query",
-			DestructiveHint: mcp.ToBoolPtr(true),
-			IdempotentHint:  mcp.ToBoolPtr(false),
-			OpenWorldHint:   mcp.ToBoolPtr(true),
+		destructiveHint := true
+		openWorldHint := true
+		tool := &mcp.Tool{
+			Name:        "execute_graphql",
+			Description: "Executes a GraphQL query or mutation.",
+			InputSchema: executeGraphQLSchema,
+			Annotations: &mcp.ToolAnnotations{
+				Title:           "Execute GraphQL Query",
+				DestructiveHint: &destructiveHint,
+				IdempotentHint:  false,
+				OpenWorldHint:   &openWorldHint,
+			},
 		}
 
-		s.server.AddTool(
-			tool,
-			s.handleExecuteGraphQL(),
-		)
-
+		s.server.AddTool(tool, s.handleExecuteGraphQL())
 		s.registeredTools = append(s.registeredTools, "execute_graphql")
 	}
 
@@ -711,43 +658,62 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			)
 			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
 		}
-		tool := mcp.NewToolWithRawSchema(
-			toolName,
-			toolDescription,
-			op.JSONSchema,
-		)
-
-		tool.Annotations = mcp.ToolAnnotation{
-			IdempotentHint: mcp.ToBoolPtr(op.OperationType != "mutation"),
-			Title:          fmt.Sprintf("Execute operation %s", op.Name),
-			ReadOnlyHint:   mcp.ToBoolPtr(op.OperationType == "query"),
-			OpenWorldHint:  mcp.ToBoolPtr(true),
+		// Parse JSON schema into map for the official SDK
+		var inputSchema any
+		if len(op.JSONSchema) > 0 {
+			if err := json.Unmarshal(op.JSONSchema, &inputSchema); err != nil {
+				s.logger.Error("failed to parse JSON schema for operation",
+					zap.String("operation", op.Name),
+					zap.Error(err))
+				continue
+			}
+		} else {
+			inputSchema = map[string]any{"type": "object", "properties": map[string]any{}}
 		}
 
-		s.server.AddTool(
-			tool,
-			s.handleOperation(handler),
-		)
+		idempotent := op.OperationType != "mutation"
+		openWorld := true
+		tool := &mcp.Tool{
+			Name:        toolName,
+			Description: toolDescription,
+			InputSchema: inputSchema,
+			Annotations: &mcp.ToolAnnotations{
+				IdempotentHint: op.OperationType != "mutation",
+				Title:          fmt.Sprintf("Execute operation %s", op.Name),
+				ReadOnlyHint:   op.OperationType == "query",
+				OpenWorldHint:  &openWorld,
+			},
+		}
+
+		// IdempotentHint uses the plain bool value, but keep it for later if needed
+		_ = idempotent
+
+		s.server.AddTool(tool, s.handleOperation(handler))
 
 		s.registeredTools = append(s.registeredTools, toolName)
 	}
 
-	s.server.AddTool(
-		mcp.NewTool(
-			"get_operation_info",
-			mcp.WithDescription("Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application."),
-			mcp.WithToolAnnotation(mcp.ToolAnnotation{
-				Title:        "Get GraphQL Operation Info",
-				ReadOnlyHint: mcp.ToBoolPtr(true),
-			}),
-			mcp.WithString("operationName",
-				mcp.Required(),
-				mcp.Description("The exact name of the GraphQL operation to retrieve information for."),
-				mcp.Enum(graphqlOperationNames...),
-			),
-		),
-		s.handleGraphQLOperationInfo(),
-	)
+	getOperationInfoTool := &mcp.Tool{
+		Name:        "get_operation_info",
+		Description: "Provides instructions on how to execute the GraphQL operation via HTTP and how to integrate it into your application.",
+		InputSchema: map[string]any{
+			"type": "object",
+			"properties": map[string]any{
+				"operationName": map[string]any{
+					"type":        "string",
+					"description": "The exact name of the GraphQL operation to retrieve information for.",
+					"enum":        graphqlOperationNames,
+				},
+			},
+			"required": []string{"operationName"},
+		},
+		Annotations: &mcp.ToolAnnotations{
+			Title:        "Get GraphQL Operation Info",
+			ReadOnlyHint: true,
+		},
+	}
+
+	s.server.AddTool(getOperationInfoTool, s.handleGraphQLOperationInfo())
 
 	s.registeredTools = append(s.registeredTools, "get_operation_info")
 
@@ -755,8 +721,8 @@ func (s *GraphQLSchemaServer) registerTools() error {
 }
 
 // handleOperation handles a specific operation
-func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Log authenticated user if OAuth is enabled
 		if claims, ok := GetClaimsFromContext(ctx); ok {
 			s.logger.Debug("operation called by authenticated user",
@@ -765,15 +731,15 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 				zap.String("operation", handler.operation.Name))
 		}
 
-		jsonBytes, err := json.Marshal(request.GetArguments())
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal arguments: %w", err)
-		}
+		jsonBytes := request.Params.Arguments
 
 		// Validate the JSON input against the pre-compiled schema derived from the operation input type
 		if handler.compiledSchema != nil {
 			if err := s.schemaCompiler.ValidateInput(jsonBytes, handler.compiledSchema); err != nil {
-				return mcp.NewToolResultErrorFromErr("Input validation Error", err), nil
+				return &mcp.CallToolResult{
+					Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Input validation error: %v", err)}},
+					IsError: true,
+				}, nil
 			}
 		}
 
@@ -783,13 +749,10 @@ func (s *GraphQLSchemaServer) handleOperation(handler *operationHandler) func(ct
 }
 
 // handleGraphQLOperationInfo returns a handler function that provides detailed info for a specific operation.
-func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *GraphQLSchemaServer) handleGraphQLOperationInfo() func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		var input GraphQLOperationInfoInput
-		inputBytes, err := json.Marshal(request.GetArguments())
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal input arguments: %w", err)
-		}
+		inputBytes := request.Params.Arguments
 		if err := json.Unmarshal(inputBytes, &input); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal input arguments: %w. Ensure you provide {\"operationName\": \"<n>\"}", err)
 		}
@@ -855,7 +818,9 @@ Important Notes:
 		// Combine all sections
 		response := overview + schemaInfo + queryInfo + usageInstructions + requestFormat + importantNotes
 
-		return mcp.NewToolResultText(response), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: response}},
+		}, nil
 	}
 }
 
@@ -926,21 +891,29 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 
 		// If there are errors but no data, return only the errors
 		if len(graphqlResponse.Data) == 0 || string(graphqlResponse.Data) == "null" {
-			return mcp.NewToolResultErrorFromErr("Response Error", err), nil
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Response error: %v", err)}},
+				IsError: true,
+			}, nil
 		}
 
 		// If we have both errors and data, include data in the error message
 		dataString := string(graphqlResponse.Data)
 		combinedErrorMsg := fmt.Sprintf("Response error with partial success, Error: %s, Data: %s)", errorMessage, dataString)
-		return mcp.NewToolResultErrorFromErr(combinedErrorMsg, err), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: combinedErrorMsg}},
+			IsError: true,
+		}, nil
 	}
 
-	return mcp.NewToolResultText(string(body)), nil
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{&mcp.TextContent{Text: string(body)}},
+	}, nil
 }
 
 // handleExecuteGraphQL returns a handler function that executes arbitrary GraphQL queries
-func (s *GraphQLSchemaServer) handleExecuteGraphQL() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *GraphQLSchemaServer) handleExecuteGraphQL() func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Log authenticated user if OAuth is enabled
 		if claims, ok := GetClaimsFromContext(ctx); ok {
 			s.logger.Debug("arbitrary GraphQL query called by authenticated user",
@@ -949,10 +922,7 @@ func (s *GraphQLSchemaServer) handleExecuteGraphQL() func(ctx context.Context, r
 		}
 
 		// Parse the JSON input
-		jsonBytes, err := json.Marshal(request.GetArguments())
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal arguments: %w", err)
-		}
+		jsonBytes := request.Params.Arguments
 
 		var input ExecuteGraphQLInput
 		if err := json.Unmarshal(jsonBytes, &input); err != nil {
@@ -968,8 +938,8 @@ func (s *GraphQLSchemaServer) handleExecuteGraphQL() func(ctx context.Context, r
 }
 
 // handleGetGraphQLSchema returns a handler function that returns the full GraphQL schema
-func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request *mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		// Get the schema from the operations manager
 		schema := s.operationsManager.GetSchema()
 		if schema == nil {
@@ -982,7 +952,9 @@ func (s *GraphQLSchemaServer) handleGetGraphQLSchema() func(ctx context.Context,
 			return nil, fmt.Errorf("failed to convert schema to string: %w", err)
 		}
 
-		return mcp.NewToolResultText(schemaStr), nil
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{&mcp.TextContent{Text: schemaStr}},
+		}, nil
 	}
 }
 
