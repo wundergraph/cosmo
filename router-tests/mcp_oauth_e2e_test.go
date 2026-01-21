@@ -20,7 +20,7 @@ import (
 // 4. Client can upgrade token and retry on the same MCP session
 func TestMCPOAuthScopeUpgrade(t *testing.T) {
 	// Start JWKS test server
-	jwksServer, err := testutil.NewJWKSTestServer(t, "8765")
+	jwksServer, err := testutil.NewJWKSTestServer(t)
 	require.NoError(t, err, "failed to start JWKS server")
 	defer jwksServer.Close() //nolint:errcheck
 
@@ -99,7 +99,7 @@ func TestMCPOAuthScopeUpgrade(t *testing.T) {
 // TestMCPOAuthInvalidToken tests that invalid JWT tokens are rejected with HTTP 401
 func TestMCPOAuthInvalidToken(t *testing.T) {
 	// Start JWKS test server
-	jwksServer, err := testutil.NewJWKSTestServer(t, "8766")
+	jwksServer, err := testutil.NewJWKSTestServer(t)
 	require.NoError(t, err, "failed to start JWKS server")
 	defer jwksServer.Close() //nolint:errcheck
 
@@ -144,7 +144,7 @@ func TestMCPOAuthInvalidToken(t *testing.T) {
 // TestMCPOAuthMissingToken tests that missing Authorization header is rejected
 func TestMCPOAuthMissingToken(t *testing.T) {
 	// Start JWKS test server
-	jwksServer, err := testutil.NewJWKSTestServer(t, "8767")
+	jwksServer, err := testutil.NewJWKSTestServer(t)
 	require.NoError(t, err, "failed to start JWKS server")
 	defer jwksServer.Close() //nolint:errcheck
 
@@ -183,5 +183,166 @@ func TestMCPOAuthMissingToken(t *testing.T) {
 			assert.NotEmpty(t, authErr.ResourceMetadataURL, "should include resource_metadata for OAuth discovery")
 			t.Logf("✓ Request without token rejected with HTTP 401: %v", authErr)
 		}
+	})
+}
+
+// TestMCPOAuthPerToolScopes tests per-tool scope requirements
+// This test verifies:
+// 1. HTTP-level scopes (from "initialize" key) are checked on all requests
+// 2. Per-tool scopes are checked when specific tools are called
+// 3. HTTP 403 with WWW-Authenticate header is returned for insufficient scopes
+func TestMCPOAuthPerToolScopes(t *testing.T) {
+	// Start JWKS test server
+	jwksServer, err := testutil.NewJWKSTestServer(t)
+	require.NoError(t, err, "failed to start JWKS server")
+	defer jwksServer.Close() //nolint:errcheck
+
+	// Create token with basic scopes for initialization
+	initToken, err := jwksServer.CreateTokenWithScopes("test-user", []string{"mcp:connect"})
+	require.NoError(t, err, "failed to create init token")
+
+	testenv.Run(t, &testenv.Config{
+		MCP: config.MCPConfiguration{
+			Enabled:                   true,
+			ExposeSchema:              true, // Enable get_schema tool
+			EnableArbitraryOperations: true, // Enable execute_graphql tool
+			OAuth: config.MCPOAuthConfiguration{
+				Enabled: true,
+				JWKS: []config.JWKSConfiguration{
+					{
+						URL: jwksServer.JWKSURL(),
+					},
+				},
+				AuthorizationServerURL: jwksServer.Issuer(),
+				ScopesRequired: map[string][]string{
+					"initialize":      {"mcp:connect"},           // HTTP-level: required for all requests
+					"get_schema":      {"mcp:tools:read"},        // Per-tool: read-only tool
+					"execute_graphql": {"mcp:tools:write"},       // Per-tool: write tool
+				},
+			},
+		},
+		MCPAuthToken: initToken, // Pass token for testenv initialization
+	}, func(t *testing.T, xEnv *testenv.Environment) {
+		ctx := context.Background()
+
+		t.Run("HTTP-level scopes are enforced on all requests", func(t *testing.T) {
+			// Token without "mcp:connect" scope should fail at HTTP level
+			noConnectToken, err := jwksServer.CreateTokenWithScopes("test-user", []string{"mcp:tools:read"})
+			require.NoError(t, err)
+
+			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), noConnectToken)
+			err = client.Connect(ctx)
+			require.Error(t, err, "should fail to connect without HTTP-level scopes")
+
+			// Check if it's an auth error with HTTP 403
+			authErr, ok := err.(*AuthError)
+			if ok {
+				// Could be 401 or 403 depending on whether token is valid
+				assert.True(t, authErr.StatusCode == http.StatusUnauthorized || authErr.StatusCode == http.StatusForbidden)
+				t.Logf("✓ HTTP-level scope enforcement: %v", authErr)
+			}
+		})
+
+		t.Run("Per-tool scopes are enforced on tool calls", func(t *testing.T) {
+			// Token with connect but no read scope
+			connectOnlyToken, err := jwksServer.CreateTokenWithScopes("test-user", []string{"mcp:connect"})
+			require.NoError(t, err)
+
+			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), connectOnlyToken)
+			err = client.Connect(ctx)
+			require.NoError(t, err, "should connect with HTTP-level scopes")
+			defer client.Close() //nolint:errcheck
+
+			t.Log("✓ Connected with HTTP-level scopes only")
+
+			// Try to call get_schema (requires mcp:tools:read)
+			_, err = client.CallTool(ctx, "get_schema", nil)
+			require.Error(t, err, "should fail without per-tool scopes")
+
+			authErr, ok := err.(*AuthError)
+			require.True(t, ok, "should return AuthError")
+			assert.Equal(t, http.StatusForbidden, authErr.StatusCode, "should return HTTP 403")
+			assert.Equal(t, "insufficient_scope", authErr.ErrorCode)
+			assert.Contains(t, authErr.RequiredScopes, "mcp:tools:read")
+			t.Logf("✓ Per-tool scope enforcement: %v", authErr)
+		})
+
+		t.Run("Token with correct per-tool scopes succeeds", func(t *testing.T) {
+			// Token with both connect and read scopes
+			readToken, err := jwksServer.CreateTokenWithScopes("test-user", []string{"mcp:connect", "mcp:tools:read"})
+			require.NoError(t, err)
+
+			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), readToken)
+			err = client.Connect(ctx)
+			require.NoError(t, err)
+			defer client.Close() //nolint:errcheck
+
+			// Call get_schema (requires mcp:tools:read) - should succeed
+			result, err := client.CallTool(ctx, "get_schema", nil)
+			require.NoError(t, err, "should succeed with correct scopes")
+			require.NotNil(t, result)
+			t.Log("✓ Tool call succeeded with correct per-tool scopes")
+		})
+
+		t.Run("Different tools require different scopes", func(t *testing.T) {
+			// Token with read but no write scopes
+			readToken, err := jwksServer.CreateTokenWithScopes("test-user", []string{"mcp:connect", "mcp:tools:read"})
+			require.NoError(t, err)
+
+			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), readToken)
+			err = client.Connect(ctx)
+			require.NoError(t, err)
+			defer client.Close() //nolint:errcheck
+
+			// Call get_schema (read) - should succeed
+			_, err = client.CallTool(ctx, "get_schema", nil)
+			require.NoError(t, err, "read tool should succeed")
+			t.Log("✓ Read tool succeeded")
+
+			// Call execute_graphql (write) - should fail
+			_, err = client.CallTool(ctx, "execute_graphql", map[string]any{
+				"query": "query { __typename }",
+			})
+			require.Error(t, err, "write tool should fail without write scopes")
+
+			authErr, ok := err.(*AuthError)
+			require.True(t, ok)
+			assert.Equal(t, http.StatusForbidden, authErr.StatusCode)
+			assert.Contains(t, authErr.RequiredScopes, "mcp:tools:write")
+			t.Log("✓ Write tool rejected without write scopes")
+		})
+
+		t.Run("Scope upgrade on same session works", func(t *testing.T) {
+			// Start with read-only token
+			readToken, err := jwksServer.CreateTokenWithScopes("test-user", []string{"mcp:connect", "mcp:tools:read"})
+			require.NoError(t, err)
+
+			client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), readToken)
+			err = client.Connect(ctx)
+			require.NoError(t, err)
+			defer client.Close() //nolint:errcheck
+
+			// Try write operation - should fail
+			_, err = client.CallTool(ctx, "execute_graphql", map[string]any{
+				"query": "query { __typename }",
+			})
+			require.Error(t, err, "should fail without write scopes")
+			t.Log("✓ Write operation failed with read-only token")
+
+			// Upgrade to token with write scopes
+			writeToken, err := jwksServer.CreateTokenWithScopes("test-user", []string{"mcp:connect", "mcp:tools:read", "mcp:tools:write"})
+			require.NoError(t, err)
+
+			client.SetToken(writeToken)
+			t.Log("✓ Upgraded token on same session")
+
+			// Retry write operation - should succeed
+			result, err := client.CallTool(ctx, "execute_graphql", map[string]any{
+				"query": "query { __typename }",
+			})
+			require.NoError(t, err, "should succeed after scope upgrade")
+			require.NotNil(t, result)
+			t.Log("✓ Write operation succeeded after token upgrade")
+		})
 	})
 }

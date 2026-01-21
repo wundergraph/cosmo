@@ -9,6 +9,7 @@ import (
 
 	"github.com/MicahParks/jwkset"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 )
 
@@ -25,8 +26,13 @@ type JWKSTestServer struct {
 }
 
 // NewJWKSTestServer creates a new JWKS test server with RSA keys
-func NewJWKSTestServer(t *testing.T, port string) (*JWKSTestServer, error) {
+// The server will automatically allocate a free port and return it when the test ends
+func NewJWKSTestServer(t *testing.T) (*JWKSTestServer, error) {
 	t.Helper()
+
+	// Get a free port using the freeport package
+	port := freeport.GetOne(t)
+	portStr := fmt.Sprintf("%d", port)
 
 	keyID := "test_rsa"
 	provider, err := jwks.NewRSACrypto(keyID, jwkset.AlgRS256, 2048)
@@ -50,9 +56,9 @@ func NewJWKSTestServer(t *testing.T, port string) (*JWKSTestServer, error) {
 		t:        t,
 		provider: provider,
 		keyID:    keyID,
-		issuer:   fmt.Sprintf("http://localhost:%s", port),
+		issuer:   fmt.Sprintf("http://localhost:%s", portStr),
 		audience: "test-audience",
-		jwksURL:  fmt.Sprintf("http://localhost:%s/.well-known/jwks.json", port),
+		jwksURL:  fmt.Sprintf("http://localhost:%s/.well-known/jwks.json", portStr),
 		storage:  storage,
 	}
 
@@ -61,7 +67,7 @@ func NewJWKSTestServer(t *testing.T, port string) (*JWKSTestServer, error) {
 	mux.HandleFunc("/.well-known/jwks.json", server.handleJWKS)
 
 	httpServer := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + portStr,
 		Handler: mux,
 	}
 

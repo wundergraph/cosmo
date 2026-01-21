@@ -134,7 +134,7 @@ func TestNewMCPAuthMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(tt.decoder, tt.enabled, testMetadataURL, []string{"mcp:tools"})
+			middleware, err := NewMCPAuthMiddleware(tt.decoder, tt.enabled, testMetadataURL, map[string][]string{"initialize": {"mcp:tools"}})
 			if tt.wantErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errContains)
@@ -277,7 +277,7 @@ func TestMCPAuthMiddleware_MissingHeaders(t *testing.T) {
 		},
 	}
 
-	middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, []string{})
+	middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, map[string][]string{})
 	require.NoError(t, err)
 
 	handler := middleware.ToolMiddleware(func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -363,7 +363,7 @@ func TestMCPAuthMiddleware_Integration(t *testing.T) {
 		},
 	}
 
-	middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, []string{})
+	middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, map[string][]string{})
 	require.NoError(t, err)
 
 	handler := middleware.ToolMiddleware(func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -487,7 +487,12 @@ func TestMCPAuthMiddleware_ScopeValidation(t *testing.T) {
 				},
 			}
 
-			middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, tt.requiredScopes)
+			// Convert requiredScopes array to map format for new API
+			scopesRequired := map[string][]string{}
+			if len(tt.requiredScopes) > 0 {
+				scopesRequired["initialize"] = tt.requiredScopes
+			}
+			middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, scopesRequired)
 			require.NoError(t, err)
 
 			handler := middleware.ToolMiddleware(func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -758,7 +763,12 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(tt.setupDecoder(), true, testMetadataURL, tt.requiredScopes)
+			// Convert requiredScopes array to map format for new API
+			scopesRequired := map[string][]string{}
+			if len(tt.requiredScopes) > 0 {
+				scopesRequired["initialize"] = tt.requiredScopes
+			}
+			middleware, err := NewMCPAuthMiddleware(tt.setupDecoder(), true, testMetadataURL, scopesRequired)
 			require.NoError(t, err)
 
 			// Create a test handler that sets status 200 if reached
@@ -807,7 +817,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware_WWWAuthenticateFormat(t *testing.T) {
 			},
 		}
 
-		middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, []string{})
+		middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, map[string][]string{})
 		require.NoError(t, err)
 
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -848,7 +858,8 @@ func TestMCPAuthMiddleware_HTTPMiddleware_WWWAuthenticateFormat(t *testing.T) {
 		}
 
 		requiredScopes := []string{"mcp:tools:write", "mcp:admin"}
-		middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, requiredScopes)
+		scopesRequired := map[string][]string{"initialize": requiredScopes}
+		middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, scopesRequired)
 		require.NoError(t, err)
 
 		testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

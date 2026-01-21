@@ -258,16 +258,11 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 			resourceMetadataURL = fmt.Sprintf("%s/.well-known/oauth-protected-resource", options.ServerBaseURL)
 		}
 
-		// Get HTTP-level required scopes from the "initialize" key
-		// These scopes are required for ANY HTTP request (including initialize)
-		httpRequiredScopes := options.OAuthConfig.ScopesRequired["initialize"]
-		if httpRequiredScopes == nil {
-			httpRequiredScopes = []string{}
-		}
-
-		// Create authentication middleware with HTTP-level required scopes
-		// Per-tool scope authorization happens at the tool level
-		authMiddleware, err := NewMCPAuthMiddleware(tokenDecoder, true, resourceMetadataURL, httpRequiredScopes)
+		// Create authentication middleware with per-tool scope configuration
+		// The middleware will check:
+		// - "initialize" key scopes for all HTTP requests (HTTP-level auth)
+		// - Per-tool scopes when tools are called (by parsing JSON-RPC request)
+		authMiddleware, err := NewMCPAuthMiddleware(tokenDecoder, true, resourceMetadataURL, options.OAuthConfig.ScopesRequired)
 		if err != nil {
 			cancel() // Clean up the context if initialization fails
 			return nil, fmt.Errorf("failed to create auth middleware: %w", err)
