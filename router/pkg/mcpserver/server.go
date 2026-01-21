@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -90,6 +91,8 @@ type Options struct {
 	EnableArbitraryOperations bool
 	// ExposeSchema determines whether the GraphQL schema is exposed
 	ExposeSchema bool
+	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names
+	OmitToolNamePrefix bool
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
 	// CorsConfig is the CORS configuration for the MCP server
@@ -110,6 +113,7 @@ type GraphQLSchemaServer struct {
 	excludeMutations          bool
 	enableArbitraryOperations bool
 	exposeSchema              bool
+	omitToolNamePrefix        bool
 	stateless                 bool
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
@@ -240,6 +244,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		excludeMutations:          options.ExcludeMutations,
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
+		omitToolNamePrefix:        options.OmitToolNamePrefix,
 		stateless:                 options.Stateless,
 		corsConfig:                options.CorsConfig,
 	}
@@ -304,6 +309,13 @@ func WithExposeSchema(exposeSchema bool) func(*Options) {
 func WithStateless(stateless bool) func(*Options) {
 	return func(o *Options) {
 		o.Stateless = stateless
+	}
+}
+
+// WithOmitToolNamePrefix sets the omit tool name prefix option
+func WithOmitToolNamePrefix(omitToolNamePrefix bool) func(*Options) {
+	return func(o *Options) {
+		o.OmitToolNamePrefix = omitToolNamePrefix
 	}
 }
 
@@ -547,7 +559,17 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s.", op.Name, op.OperationType)
 		}
 
-		toolName := fmt.Sprintf("execute_operation_%s", operationToolName)
+		toolName := operationToolName
+		if !s.omitToolNamePrefix {
+			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
+		} else if slices.Contains(s.registeredTools, operationToolName) {
+			s.logger.Warn("Operation name collides with built-in MCP tool, using prefixed name",
+				zap.String("operation", op.Name),
+				zap.String("conflicting_tool", operationToolName),
+				zap.String("using_name", fmt.Sprintf("execute_operation_%s", operationToolName)),
+			)
+			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
+		}
 		tool := mcp.NewToolWithRawSchema(
 			toolName,
 			toolDescription,

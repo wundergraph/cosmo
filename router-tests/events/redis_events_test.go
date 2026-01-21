@@ -936,6 +936,22 @@ func TestRedisEvents(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("mutate returns correct typename", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
+			EnableRedis:              true,
+			NoRetryClient:            true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// send a mutation to trigger the first subscription
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "name test"}) { __typename success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyRedis":{"__typename":"edfs__PublishResult","success":true}}}`, resOne.Body)
+		})
+	})
 }
 
 func TestRedisClusterEvents(t *testing.T) {
