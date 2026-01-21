@@ -1,8 +1,11 @@
 package mcpserver
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"slices"
 	"strings"
@@ -33,12 +36,12 @@ type MCPAuthMiddleware struct {
 	authenticator       authentication.Authenticator
 	enabled             bool
 	resourceMetadataURL string
-	requiredScopes      []string // Minimal scopes required for any access
+	scopesRequired      map[string][]string // Per-tool scope requirements; "initialize" key = HTTP-level scopes
 }
 
 // NewMCPAuthMiddleware creates a new authentication middleware using the existing
 // authentication infrastructure from the router
-func NewMCPAuthMiddleware(tokenDecoder authentication.TokenDecoder, enabled bool, resourceMetadataURL string, requiredScopes []string) (*MCPAuthMiddleware, error) {
+func NewMCPAuthMiddleware(tokenDecoder authentication.TokenDecoder, enabled bool, resourceMetadataURL string, scopesRequired map[string][]string) (*MCPAuthMiddleware, error) {
 	if tokenDecoder == nil {
 		return nil, fmt.Errorf("token decoder must be provided")
 	}
@@ -59,7 +62,7 @@ func NewMCPAuthMiddleware(tokenDecoder authentication.TokenDecoder, enabled bool
 		authenticator:       authenticator,
 		enabled:             enabled,
 		resourceMetadataURL: resourceMetadataURL,
-		requiredScopes:      requiredScopes,
+		scopesRequired:      scopesRequired,
 	}, nil
 }
 
@@ -112,10 +115,8 @@ func (m *MCPAuthMiddleware) authenticateRequest(ctx context.Context) (authentica
 		return nil, fmt.Errorf("authentication failed: no valid credentials provided")
 	}
 
-	// Validate required scopes
-	if err := m.validateScopes(claims); err != nil {
-		return nil, err
-	}
+	// Note: Scope validation is now handled at HTTP level, not here
+	// This is per MCP spec: authorization must be at HTTP level
 
 	return claims, nil
 }
@@ -139,10 +140,44 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		// Validate required scopes
-		if err := m.validateScopes(claims); err != nil {
-			m.sendInsufficientScopeResponse(w, err)
+		// Step 1: Validate HTTP-level required scopes (from "initialize" key)
+		initScopes := m.scopesRequired["initialize"]
+		if len(initScopes) > 0 {
+			if err := m.validateScopesForRequest(claims, initScopes); err != nil {
+				m.sendInsufficientScopeResponse(w, initScopes, err)
+				return
+			}
+		}
+
+		// Step 2: Parse JSON-RPC request to check for tool-specific scopes
+		// Read body to extract tool name
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			m.sendUnauthorizedResponse(w, fmt.Errorf("failed to read request body"))
 			return
+		}
+		// Restore body for downstream handlers
+		r.Body = io.NopCloser(bytes.NewBuffer(body))
+
+		// Try to parse as JSON-RPC request
+		var jsonRPCReq struct {
+			Method string          `json:"method"`
+			Params json.RawMessage `json:"params"`
+		}
+		if err := json.Unmarshal(body, &jsonRPCReq); err == nil && jsonRPCReq.Method == "tools/call" {
+			// Extract tool name from params
+			var toolCallParams struct {
+				Name string `json:"name"`
+			}
+			if err := json.Unmarshal(jsonRPCReq.Params, &toolCallParams); err == nil && toolCallParams.Name != "" {
+				// Check if this tool has specific scope requirements
+				if toolScopes, exists := m.scopesRequired[toolCallParams.Name]; exists && len(toolScopes) > 0 {
+					if err := m.validateScopesForRequest(claims, toolScopes); err != nil {
+						m.sendInsufficientScopeResponse(w, toolScopes, err)
+						return
+					}
+				}
+			}
 		}
 
 		// Add claims to request context for downstream handlers
@@ -175,10 +210,10 @@ func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, err 
 
 // sendInsufficientScopeResponse sends a 403 Forbidden response per RFC 6750
 // when the token is valid but lacks required scopes
-func (m *MCPAuthMiddleware) sendInsufficientScopeResponse(w http.ResponseWriter, err error) {
+func (m *MCPAuthMiddleware) sendInsufficientScopeResponse(w http.ResponseWriter, requiredScopes []string, err error) {
 	// Build WWW-Authenticate header with error and scope information
 	// Per RFC 6750 Section 3.1 and MCP spec: error, scope, resource_metadata, error_description
-	scopeList := strings.Join(m.requiredScopes, " ")
+	scopeList := strings.Join(requiredScopes, " ")
 
 	authHeader := fmt.Sprintf(`Bearer error="insufficient_scope", scope="%s"`, scopeList)
 
@@ -199,10 +234,10 @@ func (m *MCPAuthMiddleware) sendInsufficientScopeResponse(w http.ResponseWriter,
 	// No JSON-RPC response body is returned
 }
 
-// validateScopes checks if the token contains all required scopes
-func (m *MCPAuthMiddleware) validateScopes(claims authentication.Claims) error {
+// validateScopesForRequest checks if the token contains all required scopes
+func (m *MCPAuthMiddleware) validateScopesForRequest(claims authentication.Claims, requiredScopes []string) error {
 	// If no scopes are required, skip validation
-	if len(m.requiredScopes) == 0 {
+	if len(requiredScopes) == 0 {
 		return nil
 	}
 
@@ -211,7 +246,7 @@ func (m *MCPAuthMiddleware) validateScopes(claims authentication.Claims) error {
 
 	// Check if all required scopes are present
 	var missingScopes []string
-	for _, requiredScope := range m.requiredScopes {
+	for _, requiredScope := range requiredScopes {
 		if !contains(tokenScopes, requiredScope) {
 			missingScopes = append(missingScopes, requiredScope)
 		}
