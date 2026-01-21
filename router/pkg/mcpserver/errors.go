@@ -3,9 +3,9 @@ package mcpserver
 // JSON-RPC 2.0 and MCP error codes
 //
 // Error code ranges:
-// - Standard JSON-RPC 2.0: -32768 to -32000
-// - Server errors (implementation-defined): -32000 to -32099
-// - Application errors: -32768 to -32000 (excluding reserved range)
+// - Standard JSON-RPC 2.0: -32768 to -32000 (reserved by JSON-RPC spec)
+// - Server errors (implementation-defined): -32000 to -32099 (within JSON-RPC reserved range)
+// - Application errors: Must use codes outside -32768 to -32000 to avoid conflicts with JSON-RPC reserved codes
 const (
 	// Standard JSON-RPC 2.0 error codes
 	ErrorCodeParseError     = -32700 // Invalid JSON was received by the server
