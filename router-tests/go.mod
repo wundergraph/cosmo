@@ -63,7 +63,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/dgraph-io/ristretto/v2 v2.1.0 // indirect
+	github.com/dgraph-io/ristretto/v2 v2.4.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/docker/cli v28.2.2+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
@@ -204,7 +204,6 @@ replace (
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
 replace (
-	github.com/dgraph-io/ristretto/v2 => github.com/wundergraph/ristretto/v2 v2.0.0-20260118191717-5112a101c70c
 	github.com/wundergraph/cosmo/demo => ../demo
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects => ../demo/pkg/subgraphs/projects
 	github.com/wundergraph/cosmo/router => ../router
