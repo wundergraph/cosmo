@@ -246,11 +246,13 @@ export function deleteFederatedSubgraph(
             actor_id: authContext.userId,
             published_proposals:
               proposalDetailsList.length > 0
-                ? proposalDetailsList.map((p) => ({
-                    id: p.id,
-                    name: p.name,
-                    namespace: p.namespace,
-                  }))
+                ? proposalDetailsList
+                    .filter((p) => p.federatedGraphId === affectedFederatedGraph.id)
+                    .map((p) => ({
+                      id: p.id,
+                      name: p.name,
+                      namespace: p.namespace,
+                    }))
                 : undefined,
           },
         },
