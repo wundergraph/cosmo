@@ -23,10 +23,13 @@ func NewSwitchoverConfig(logger *zap.Logger) *SwitchoverConfig {
 	}
 }
 
+// UpdateSwitchoverConfig updates the switchover config based on the provided config.
 func (s *SwitchoverConfig) UpdateSwitchoverConfig(config *Config, isCosmoCacheWarmerEnabled bool) {
 	s.inMemorySwitchOverCache.updateStateFromConfig(config, isCosmoCacheWarmerEnabled)
 }
 
+// CleanupFeatureFlags cleans up anything related to unused feature flags due to being now excluded
+// from the execution config
 func (s *SwitchoverConfig) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
 	s.inMemorySwitchOverCache.cleanupUnusedFeatureFlags(routerCfg)
 }
@@ -42,12 +45,14 @@ func (s *SwitchoverConfig) ProcessOnConfigChangeRouterInstanceRestart() {
 	s.inMemorySwitchOverCache.extractQueriesAndOverridePlanCache()
 }
 
+// InMemorySwitchOverCache is a store that stores either queries or references to the planner cache for use with the cache warmer
 type InMemorySwitchOverCache struct {
 	mu                    sync.RWMutex
 	queriesForFeatureFlag map[string]any
 	logger                *zap.Logger
 }
 
+// updateStateFromConfig updates the internal state of the in-memory switchover cache based on the provided config
 func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config, isCosmoCacheWarmerEnabled bool) {
 	enabled := config.cacheWarmup != nil &&
 		!isCosmoCacheWarmerEnabled && // We only enable in-memory switchover cache if the cosmo cache warmer is not enabled
@@ -70,6 +75,7 @@ func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config, isCosmoC
 	}
 }
 
+// IsEnabled returns whether the in-memory switchover cache is enabled
 func (c *InMemorySwitchOverCache) IsEnabled() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -77,6 +83,7 @@ func (c *InMemorySwitchOverCache) IsEnabled() bool {
 	return c.queriesForFeatureFlag != nil
 }
 
+// getPlanCacheForFF gets the plan cache in the []*nodev1.Operation format for a specific feature flag key
 func (c *InMemorySwitchOverCache) getPlanCacheForFF(featureFlagKey string) []*nodev1.Operation {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -90,16 +97,17 @@ func (c *InMemorySwitchOverCache) getPlanCacheForFF(featureFlagKey string) []*no
 		return convertToNodeOperation(cache)
 	case []*nodev1.Operation:
 		return cache
+	// This would occur during the first start (we add this case to specifically log any other cases)
 	case nil:
-		// This would occur during the first start
-		return make([]*nodev1.Operation, 0)
+		return nil
+	// This should not happen as we cannot have any types other than the above
 	default:
-		// This should not happen as we cannot have any types other than the above
 		c.logger.Error("unexpected type")
-		return make([]*nodev1.Operation, 0)
+		return nil
 	}
 }
 
+// setPlanCacheForFF sets the plan cache for a specific feature flag key
 func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache planCache) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -110,6 +118,7 @@ func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache
 	c.queriesForFeatureFlag[featureFlagKey] = cache
 }
 
+// extractQueriesAndOverridePlanCache extracts the queries from the plan cache and overrides the internal map
 func (c *InMemorySwitchOverCache) extractQueriesAndOverridePlanCache() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -127,6 +136,8 @@ func (c *InMemorySwitchOverCache) extractQueriesAndOverridePlanCache() {
 	c.queriesForFeatureFlag = switchoverMap
 }
 
+// cleanupUnusedFeatureFlags removes any feature flags from the in-memory switchover cache
+// this is useful in case where the updated execution config excludes a feature flag
 func (c *InMemorySwitchOverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.RouterConfig) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
