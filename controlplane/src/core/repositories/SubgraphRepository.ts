@@ -482,8 +482,9 @@ export class SubgraphRepository {
       compositionWarnings.push(...cWarnings);
 
       // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+      const refreshedGraphs = await Promise.all(updatedFederatedGraphs.map((g) => fedGraphRepo.byId(g.id)));
       for (let i = 0; i < updatedFederatedGraphs.length; i++) {
-        const refreshedGraph = await fedGraphRepo.byId(updatedFederatedGraphs[i].id);
+        const refreshedGraph = refreshedGraphs[i];
         if (refreshedGraph) {
           updatedFederatedGraphs[i] = refreshedGraph;
         }
@@ -570,8 +571,9 @@ export class SubgraphRepository {
       });
 
       // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+      const refreshedGraphs = await Promise.all(updatedFederatedGraphs.map((g) => fedGraphRepo.byId(g.id)));
       for (let i = 0; i < updatedFederatedGraphs.length; i++) {
-        const refreshedGraph = await fedGraphRepo.byId(updatedFederatedGraphs[i].id);
+        const refreshedGraph = refreshedGraphs[i];
         if (refreshedGraph) {
           updatedFederatedGraphs[i] = refreshedGraph;
         }

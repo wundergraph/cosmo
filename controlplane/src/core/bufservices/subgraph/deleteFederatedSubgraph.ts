@@ -187,8 +187,9 @@ export function deleteFederatedSubgraph(
         });
 
         // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+        const refreshedGraphs = await Promise.all(affectedFederatedGraphs.map((g) => fedGraphRepo.byId(g.id)));
         for (let i = 0; i < affectedFederatedGraphs.length; i++) {
-          const refreshedGraph = await fedGraphRepo.byId(affectedFederatedGraphs[i].id);
+          const refreshedGraph = refreshedGraphs[i];
           if (refreshedGraph) {
             affectedFederatedGraphs[i] = refreshedGraph;
           }
