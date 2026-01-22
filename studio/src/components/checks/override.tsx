@@ -353,7 +353,7 @@ export const ConfigureOverride = () => {
               <EmptyState
                 className="z-50 -mt-44"
                 icon={<InformationCircleIcon />}
-                title="Operation excluded"
+                title="Operation ignored"
               />
             </div>
           )}
