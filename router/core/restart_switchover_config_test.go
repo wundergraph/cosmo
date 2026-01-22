@@ -3,13 +3,11 @@ package core
 import (
 	"testing"
 
-	"go.uber.org/zap"
-
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/stretchr/testify/require"
-
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.uber.org/zap"
 )
 
 func TestInMemorySwitchOverCache_UpdateInMemorySwitchOverCacheForConfigChanges(t *testing.T) {

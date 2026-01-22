@@ -1,12 +1,11 @@
 package core
 
 import (
-	"go.uber.org/zap"
 	"sync"
 
 	"github.com/dgraph-io/ristretto/v2"
-
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"go.uber.org/zap"
 )
 
 type planCache = *ristretto.Cache[uint64, *planWithMetaData]

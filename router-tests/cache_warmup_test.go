@@ -10,24 +10,18 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
-
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-
-	"github.com/wundergraph/cosmo/router/pkg/otel"
-
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
+	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.uber.org/zap"
 )
 
 func TestCacheWarmup(t *testing.T) {
@@ -1141,13 +1135,13 @@ engine:
 			listenString1 := "after1"
 			updateConfig(t, xEnv, ctx, listenString1, getConfigString(listenString1))
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { hello }`})
-			assert.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 
 			// Verify cache persisted on restart
 			listenString2 := "after2"
 			updateConfig(t, xEnv, ctx, listenString2, getConfigString(listenString2))
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: `query { hello }`})
-			assert.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+			require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
 		})
 
 		require.NoError(t, err)
