@@ -56,6 +56,7 @@ export interface FederatedGraphSchemaUpdate {
       id: string;
       name: string;
       namespace: string;
+      composedSchemaVersionId?: string;
     };
     organization: {
       id: string;
@@ -63,6 +64,11 @@ export interface FederatedGraphSchemaUpdate {
     };
     errors: boolean;
     actor_id?: string;
+    published_proposals?: {
+      id: string;
+      name: string;
+      namespace: string;
+    }[];
   };
 }
 

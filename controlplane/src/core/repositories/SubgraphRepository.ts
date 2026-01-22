@@ -480,6 +480,14 @@ export class SubgraphRepository {
       compositionErrors.push(...cErrors);
       deploymentErrors.push(...dErrors);
       compositionWarnings.push(...cWarnings);
+
+      // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+      for (let i = 0; i < updatedFederatedGraphs.length; i++) {
+        const refreshedGraph = await fedGraphRepo.byId(updatedFederatedGraphs[i].id);
+        if (refreshedGraph) {
+          updatedFederatedGraphs[i] = refreshedGraph;
+        }
+      }
     });
 
     return {
@@ -560,6 +568,14 @@ export class SubgraphRepository {
         chClient,
         compositionOptions,
       });
+
+      // Re-fetch the federated graphs to get the updated composedSchemaVersionId
+      for (let i = 0; i < updatedFederatedGraphs.length; i++) {
+        const refreshedGraph = await fedGraphRepo.byId(updatedFederatedGraphs[i].id);
+        if (refreshedGraph) {
+          updatedFederatedGraphs[i] = refreshedGraph;
+        }
+      }
 
       return { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings };
     });
@@ -1880,7 +1896,7 @@ export class SubgraphRepository {
     if (namespace.enableProposals && !isTargetCheck) {
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
-        const match = await proposalRepo.matchSchemaWithProposal({
+        const matches = await proposalRepo.matchSchemaWithProposals({
           subgraphName,
           namespaceId: namespace.id,
           schemaSDL: newSchemaSDL,
@@ -1891,9 +1907,10 @@ export class SubgraphRepository {
 
         await schemaCheckRepo.update({
           schemaCheckID,
-          proposalMatch: match ? 'success' : proposalConfig.checkSeverityLevel === 'warn' ? 'warn' : 'error',
+          proposalMatch:
+            matches.length > 0 ? 'success' : proposalConfig.checkSeverityLevel === 'warn' ? 'warn' : 'error',
         });
-        if (!match) {
+        if (matches.length === 0) {
           const message = isDeleted
             ? `The subgraph ${subgraphName} is not proposed to be deleted in any of the approved proposals.`
             : `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`;

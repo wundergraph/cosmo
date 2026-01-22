@@ -125,25 +125,23 @@ export function publishFederatedSubgraph(
     }
 
     let proposalMatchMessage: string | undefined;
-    let matchedEntity:
-      | {
-          proposalId: string;
-          proposalSubgraphId: string;
-        }
-      | undefined;
+    const matchedProposalEntities: {
+      proposalId: string;
+      proposalSubgraphId: string;
+    }[] = [];
 
     // if the subgraph is a feature subgraph, we don't need to check for proposal matches for now.
     if (namespace.enableProposals && !subgraph?.isFeatureSubgraph) {
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
-        const match = await proposalRepo.matchSchemaWithProposal({
+        const matches = await proposalRepo.matchSchemaWithProposals({
           subgraphName: req.name,
           namespaceId: namespace.id,
           schemaSDL: subgraphSchemaSDL,
           routerCompatibilityVersion,
           isDeleted: false,
         });
-        if (!match) {
+        if (matches.length === 0) {
           const message = `The subgraph ${req.name}'s schema does not match to this subgraph's schema in any approved proposal.`;
           if (proposalConfig.publishSeverityLevel === 'warn') {
             proposalMatchMessage = message;
@@ -160,7 +158,7 @@ export function publishFederatedSubgraph(
             };
           }
         }
-        matchedEntity = match;
+        matchedProposalEntities.push(...matches);
       }
     }
 
@@ -577,6 +575,33 @@ export function publishFederatedSubgraph(
         newCompositionOptions(req.disableResolvabilityValidation),
       );
 
+    // if this subgraph is part of a proposal, mark the proposal subgraph as published
+    // and if all proposal subgraphs are published, collect proposal details for the webhook
+    const proposalDetailsList: {
+      id: string;
+      name: string;
+      namespace: string;
+      federatedGraphId: string;
+    }[] = [];
+
+    for (const matchedEntity of matchedProposalEntities) {
+      const { allSubgraphsPublished } = await proposalRepo.markProposalSubgraphAsPublished({
+        proposalSubgraphId: matchedEntity.proposalSubgraphId,
+        proposalId: matchedEntity.proposalId,
+      });
+      if (allSubgraphsPublished) {
+        const proposal = await proposalRepo.ById(matchedEntity.proposalId);
+        if (proposal) {
+          proposalDetailsList.push({
+            id: proposal.proposal.id,
+            name: proposal.proposal.name,
+            namespace: req.namespace,
+            federatedGraphId: proposal.proposal.federatedGraphId,
+          });
+        }
+      }
+    }
+
     for (const graph of updatedFederatedGraphs) {
       const hasErrors =
         compositionErrors.some((error) => error.federatedGraphName === graph.name) ||
@@ -589,6 +614,7 @@ export function publishFederatedSubgraph(
               id: graph.id,
               name: graph.name,
               namespace: graph.namespace,
+              composedSchemaVersionId: graph.composedSchemaVersionId,
             },
             organization: {
               id: authContext.organizationId,
@@ -596,50 +622,48 @@ export function publishFederatedSubgraph(
             },
             errors: hasErrors,
             actor_id: authContext.userId,
+            published_proposals:
+              proposalDetailsList.length > 0
+                ? proposalDetailsList.map((p) => ({
+                    id: p.id,
+                    name: p.name,
+                    namespace: p.namespace,
+                  }))
+                : undefined,
           },
         },
         authContext.userId,
       );
     }
 
-    // if this subgraph is part of a proposal, mark the proposal subgraph as published
-    // and if all proposal subgraphs are published, update the proposal state to PUBLISHED
-    if (matchedEntity) {
-      const { allSubgraphsPublished } = await proposalRepo.markProposalSubgraphAsPublished({
-        proposalSubgraphId: matchedEntity.proposalSubgraphId,
-        proposalId: matchedEntity.proposalId,
-      });
-      if (allSubgraphsPublished) {
-        const proposal = await proposalRepo.ById(matchedEntity.proposalId);
-        if (proposal) {
-          const federatedGraph = await fedGraphRepo.byId(proposal.proposal.federatedGraphId);
-          if (federatedGraph) {
-            orgWebhooks.send(
-              {
-                eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
-                payload: {
-                  federated_graph: {
-                    id: federatedGraph.id,
-                    name: federatedGraph.name,
-                    namespace: federatedGraph.namespace,
-                  },
-                  organization: {
-                    id: authContext.organizationId,
-                    slug: authContext.organizationSlug,
-                  },
-                  proposal: {
-                    id: proposal.proposal.id,
-                    name: proposal.proposal.name,
-                    namespace: req.namespace,
-                    state: 'PUBLISHED',
-                  },
-                  actor_id: authContext.userId,
-                },
+    // Send PROPOSAL_STATE_UPDATED webhook for each published proposal
+    for (const proposalDetails of proposalDetailsList) {
+      const federatedGraph = await fedGraphRepo.byId(proposalDetails.federatedGraphId);
+      if (federatedGraph) {
+        orgWebhooks.send(
+          {
+            eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+            payload: {
+              federated_graph: {
+                id: federatedGraph.id,
+                name: federatedGraph.name,
+                namespace: federatedGraph.namespace,
               },
-              authContext.userId,
-            );
-          }
-        }
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
+              proposal: {
+                id: proposalDetails.id,
+                name: proposalDetails.name,
+                namespace: proposalDetails.namespace,
+                state: 'PUBLISHED',
+              },
+              actor_id: authContext.userId,
+            },
+          },
+          authContext.userId,
+        );
       }
     }
 
