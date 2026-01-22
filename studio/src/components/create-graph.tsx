@@ -261,7 +261,7 @@ export const CreateGraphForm = ({
                         <TagInput
                           {...field}
                           size="sm"
-                          placeholder="key=value, ..."
+                          placeholder="key1=value1,key2=value2 ..."
                           tags={tags}
                           setTags={(newTags) => {
                             setTags(newTags);
@@ -273,7 +273,9 @@ export const CreateGraphForm = ({
                               },
                             );
                           }}
-                          delimiterList={[" ", ",", "Enter"]}
+                          // Commas are valid inside a matcher value list (e.g. team=A,team=B).
+                          // Separate matchers with space or Enter (each matcher is AND-ed).
+                          delimiterList={[" ", "Enter"]}
                           activeTagIndex={activeTagIndex}
                           setActiveTagIndex={setActiveTagIndex}
                           allowDuplicates={false}
