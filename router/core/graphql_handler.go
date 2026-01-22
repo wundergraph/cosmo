@@ -430,12 +430,8 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		}
 	}
 
-	if wsRw, ok := w.(*websocketResponseWriter); ok {
-		_ = wsRw.Flush()
-	}
-
-	if httpRw, ok := w.(*HttpFlushWriter); ok {
-		_ = httpRw.Flush()
+	if flusher, ok := w.(resolve.SubscriptionResponseWriter); ok {
+		_ = flusher.Flush()
 	}
 }
 

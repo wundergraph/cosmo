@@ -143,6 +143,8 @@ func (f *HttpFlushWriter) Flush() (err error) {
 		separation = ""
 	}
 
+	// resp sometimes ends with newlines. We need to remove them
+	// to cleanly add the seperation in the next step.
 	if bytes.HasSuffix(resp, []byte{'\n'}) {
 		resp = bytes.TrimRight(resp, "\n")
 	}
