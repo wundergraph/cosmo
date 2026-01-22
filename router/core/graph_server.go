@@ -120,12 +120,12 @@ func (b BuildGraphMuxOptions) IsBaseGraph() bool {
 	return b.FeatureFlagName == ""
 }
 
-// BuildMultiGraphHandlerOptions contains the configuration options for building a multi-graph handler.
-type BuildMultiGraphHandlerOptions struct {
-	BaseMux                 *chi.Mux
-	FeatureFlagConfigs      map[string]*nodev1.FeatureFlagRouterExecutionConfig
-	SwitchoverConfig        *SwitchoverConfig
-	CosmoCacheWarmerEnabled bool
+// buildMultiGraphHandlerOptions contains the configuration options for building a multi-graph handler.
+type buildMultiGraphHandlerOptions struct {
+	baseMux                 *chi.Mux
+	featureFlagConfigs      map[string]*nodev1.FeatureFlagRouterExecutionConfig
+	switchoverConfig        *SwitchoverConfig
+	cosmoCacheWarmerEnabled bool
 }
 
 // newGraphServer creates a new server instance.
@@ -300,11 +300,11 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, BuildMultiGraphHandlerOptions{
-		BaseMux:                 gm.mux,
-		FeatureFlagConfigs:      featureFlagConfigMap,
-		SwitchoverConfig:        r.switchoverConfig,
-		CosmoCacheWarmerEnabled: cosmoCacheWarmerEnabled,
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, buildMultiGraphHandlerOptions{
+		baseMux:                 gm.mux,
+		featureFlagConfigs:      featureFlagConfigMap,
+		switchoverConfig:        r.switchoverConfig,
+		cosmoCacheWarmerEnabled: cosmoCacheWarmerEnabled,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
@@ -453,23 +453,23 @@ func getRoutingUrlGroupingForCircuitBreakers(
 
 func (s *graphServer) buildMultiGraphHandler(
 	ctx context.Context,
-	opts BuildMultiGraphHandlerOptions,
+	opts buildMultiGraphHandlerOptions,
 ) (http.HandlerFunc, error) {
-	if len(opts.FeatureFlagConfigs) == 0 {
-		return opts.BaseMux.ServeHTTP, nil
+	if len(opts.featureFlagConfigs) == 0 {
+		return opts.baseMux.ServeHTTP, nil
 	}
 
-	featureFlagToMux := make(map[string]*chi.Mux, len(opts.FeatureFlagConfigs))
+	featureFlagToMux := make(map[string]*chi.Mux, len(opts.featureFlagConfigs))
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
-	for featureFlagName, executionConfig := range opts.FeatureFlagConfigs {
+	for featureFlagName, executionConfig := range opts.featureFlagConfigs {
 		gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
 			FeatureFlagName:         featureFlagName,
 			RouterConfigVersion:     executionConfig.GetVersion(),
 			EngineConfig:            executionConfig.GetEngineConfig(),
 			ConfigSubgraphs:         executionConfig.Subgraphs,
-			SwitchoverConfig:        opts.SwitchoverConfig,
-			CosmoCacheWarmerEnabled: opts.CosmoCacheWarmerEnabled,
+			SwitchoverConfig:        opts.switchoverConfig,
+			CosmoCacheWarmerEnabled: opts.cosmoCacheWarmerEnabled,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
@@ -496,7 +496,7 @@ func (s *graphServer) buildMultiGraphHandler(
 			return
 		}
 
-		opts.BaseMux.ServeHTTP(w, r)
+		opts.baseMux.ServeHTTP(w, r)
 	}, nil
 }
 
@@ -1379,7 +1379,7 @@ func (s *graphServer) buildGraphMux(
 		// - Router has cache warmer with inMemorySwitchoverFallback enabled, AND
 		// - Either:
 		//   - Using static execution config (not Cosmo): s.selfRegister == nil
-		//   - OR Cosmo cache warmer is disabled: !opts.CosmoCacheWarmerEnabled
+		//   - OR Cosmo cache warmer is disabled: !opts.cosmoCacheWarmerEnabled
 		case s.cacheWarmup.InMemorySwitchoverFallback && (s.selfRegister == nil || !opts.CosmoCacheWarmerEnabled):
 			// We first utilize the plan cache (if it was already set, so not on first starts) to create a list of queries
 			// and reset the plan cache to the new plan cache for this start afterwords

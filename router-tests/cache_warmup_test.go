@@ -1094,6 +1094,8 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 	})
 
 	t.Run("Successfully persists cache across config change restarts", func(t *testing.T) {
+		t.Parallel()
+		
 		updateConfig := func(t *testing.T, xEnv *testenv.Environment, ctx context.Context, listenString string, config string) {
 			f, err := os.Create(filepath.Join(xEnv.GetRouterProcessCwd(), "config.yaml"))
 			require.NoError(t, err)

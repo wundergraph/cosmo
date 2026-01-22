@@ -34,7 +34,7 @@ func (s *SwitchoverConfig) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
 	s.inMemorySwitchOverCache.cleanupUnusedFeatureFlags(routerCfg)
 }
 
-func (s *SwitchoverConfig) ProcessOnConfigChangeRouterInstanceRestart() {
+func (s *SwitchoverConfig) OnRouterConfigReload() {
 	// For cases of router config changes (not execution config), we shut down before creating the
 	// graph mux, because we need to initialize everything from the start
 	// This causes problems in using the previous planCache reference as it gets closed, so we need to
@@ -69,10 +69,10 @@ func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config, isCosmoC
 			c.queriesForFeatureFlag = make(map[string]any)
 		}
 		return
-	} else {
-		// Reset the map to free up memory
-		c.queriesForFeatureFlag = nil
 	}
+
+	// Reset the map to free up memory
+	c.queriesForFeatureFlag = nil
 }
 
 // IsEnabled returns whether the in-memory switchover cache is enabled

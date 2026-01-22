@@ -159,7 +159,7 @@ func (rs *RouterSupervisor) Start() error {
 		rs.logger.Debug("Got shutdown signal", zap.Bool("shutdown", shutdown))
 
 		if !shutdown {
-			rs.router.switchoverConfig.ProcessOnConfigChangeRouterInstanceRestart()
+			rs.router.switchoverConfig.OnRouterConfigReload()
 		}
 
 		if err := rs.stopRouter(); err != nil {
