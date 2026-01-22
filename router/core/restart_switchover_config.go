@@ -31,7 +31,7 @@ func (s *SwitchoverConfig) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
 	s.inMemorySwitchOverCache.cleanupUnusedFeatureFlags(routerCfg)
 }
 
-func (s *SwitchoverConfig) ProcessOnConfigChangeRestart() {
+func (s *SwitchoverConfig) ProcessOnConfigChangeRouterInstanceRestart() {
 	// For cases of router config changes (not execution config), we shut down before creating the
 	// graph mux, because we need to initialize everything from the start
 	// This causes problems in using the previous planCache reference as it gets closed, so we need to
@@ -39,7 +39,7 @@ func (s *SwitchoverConfig) ProcessOnConfigChangeRestart() {
 
 	// There can be inflight requests when this is called even though it's called in the restart path,
 	// This is because this is called before the router instance is shutdown before being reloaded
-	s.inMemorySwitchOverCache.processOnConfigChangeRestart()
+	s.inMemorySwitchOverCache.extractQueriesAndOverridePlanCache()
 }
 
 type InMemorySwitchOverCache struct {
@@ -110,7 +110,7 @@ func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache
 	c.queriesForFeatureFlag[featureFlagKey] = cache
 }
 
-func (c *InMemorySwitchOverCache) processOnConfigChangeRestart() {
+func (c *InMemorySwitchOverCache) extractQueriesAndOverridePlanCache() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -135,17 +135,12 @@ func (c *InMemorySwitchOverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.Ro
 		return
 	}
 
-	ffNames := make(map[string]struct{})
-	for ffName := range routerCfg.FeatureFlagConfigs.ConfigByFeatureFlagName {
-		ffNames[ffName] = struct{}{}
-	}
-
 	for ffName := range c.queriesForFeatureFlag {
 		// Skip the base which is ""
 		if ffName == "" {
 			continue
 		}
-		if _, exists := ffNames[ffName]; !exists {
+		if _, exists := routerCfg.FeatureFlagConfigs.ConfigByFeatureFlagName[ffName]; !exists {
 			delete(c.queriesForFeatureFlag, ffName)
 		}
 	}

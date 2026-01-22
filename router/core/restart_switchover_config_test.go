@@ -371,7 +371,7 @@ func TestInMemorySwitchOverCache_ProcessOnConfigChangeRestart(t *testing.T) {
 		cache.queriesForFeatureFlag["ff1"] = mockCache1
 		cache.queriesForFeatureFlag["ff2"] = mockCache2
 
-		cache.processOnConfigChangeRestart()
+		cache.extractQueriesAndOverridePlanCache()
 
 		// Verify both caches have been converted to operation slices
 		require.IsType(t, []*nodev1.Operation{}, cache.queriesForFeatureFlag["ff1"])
@@ -392,7 +392,7 @@ func TestInMemorySwitchOverCache_ProcessOnConfigChangeRestart(t *testing.T) {
 			queriesForFeatureFlag: nil,
 		}
 
-		cache.processOnConfigChangeRestart()
+		cache.extractQueriesAndOverridePlanCache()
 
 		// Should remain nil since processing is skipped
 		require.Nil(t, cache.queriesForFeatureFlag)
@@ -405,7 +405,7 @@ func TestInMemorySwitchOverCache_ProcessOnConfigChangeRestart(t *testing.T) {
 		}
 
 		require.NotPanics(t, func() {
-			cache.processOnConfigChangeRestart()
+			cache.extractQueriesAndOverridePlanCache()
 		})
 
 		require.Empty(t, cache.queriesForFeatureFlag)

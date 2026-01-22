@@ -987,7 +987,7 @@ type CacheWarmupConfiguration struct {
 	Workers                    int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
 	ItemsPerSecond             int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
 	Timeout                    time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
-	InMemorySwitchoverFallback bool              `yaml:"in_memory_switchover_fallback" envDefault:"true" env:"CACHE_WARMUP_IN_MEMORY_SWITCHOVER_FALLBACK_ENABLED"`
+	InMemorySwitchoverFallback bool              `yaml:"in_memory_switchover_fallback" envDefault:"true" env:"CACHE_WARMUP_IN_MEMORY_SWITCHOVER_FALLBACK"`
 }
 
 type MCPConfiguration struct {
