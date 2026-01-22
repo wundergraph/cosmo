@@ -2683,6 +2683,30 @@
             }
           }
         },
+        "cost_analysis": {
+          "type": "object",
+          "description": "Cost analysis based on @cost and @listSize directives.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, static cost is calculated and exposed to modules. Set to true to enable StaticLimit option."
+            },
+            "static_limit": {
+              "type": "integer",
+              "description": "The maximum allowed static (estimated) cost for a query. Queries exceeding this limit will be rejected before execution. If the limit is 0, this limit isn't applied.",
+              "default": 0,
+              "minimum": 0
+            },
+            "list_size": {
+              "type": "integer",
+              "description": "The default assumed size for list fields when no @listSize directive nor slicing argument is provided. Used as a multiplier for list field static costs.",
+              "default": 10,
+              "minimum": 1
+            }
+          }
+        },
         "operation_name_length_limit": {
           "type": "integer",
           "description": "The maximum allowed length of the operation name, 0 allows any length.",

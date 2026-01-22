@@ -243,5 +243,10 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	planConfig.BuildFetchReasons = routerEngineCfg.Execution.EnableRequireFetchReasons || routerEngineCfg.Execution.ValidateRequiredExternalFields
 	planConfig.ValidateRequiredExternalFields = routerEngineCfg.Execution.ValidateRequiredExternalFields
 
+	// Enable static cost computation when cost analysis is enabled
+	if routerEngineCfg.CostAnalysis != nil && routerEngineCfg.CostAnalysis.Enabled {
+		planConfig.ComputeStaticCost = true
+	}
+
 	return planConfig, providers, nil
 }

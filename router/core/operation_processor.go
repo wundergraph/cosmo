@@ -21,7 +21,11 @@ import (
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/pkg/errors"
 	"github.com/tidwall/sjson"
+
 	fastjson "github.com/wundergraph/astjson"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -30,13 +34,10 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
-
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 var (
@@ -123,6 +124,7 @@ type OperationProcessorOptions struct {
 	ApolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
 	DisableExposingVariablesContentOnValidationError bool
 	ComplexityLimits                                 *config.ComplexityLimits
+	CostAnalysis                                     *config.CostAnalysis
 	ParserTokenizerLimits                            astparser.TokenizerLimits
 	OperationNameLengthLimit                         int
 }
@@ -139,6 +141,7 @@ type OperationProcessor struct {
 	introspectionEnabled     bool
 	parseKitOptions          *parseKitOptions
 	complexityLimits         *config.ComplexityLimits
+	costAnalysis             *config.CostAnalysis
 	parserTokenizerLimits    astparser.TokenizerLimits
 	operationNameLengthLimit int
 }
@@ -1361,6 +1364,40 @@ func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.Co
 	return nil
 }
 
+// ValidateStaticCost validates that the estimated query cost is within the configured limit.
+// This should be called after planning, as the cost calculator is populated during the planning phase.
+func (o *OperationKit) ValidateStaticCost(preparedPlan plan.Plan, variables *fastjson.Value) error {
+	costAnalysis := o.operationProcessor.costAnalysis
+	if preparedPlan == nil || costAnalysis == nil || !costAnalysis.Enabled {
+		return nil
+	}
+
+	if costAnalysis.StaticLimit <= 0 {
+		return nil
+	}
+
+	costCalc := preparedPlan.GetStaticCostCalculator()
+	if costCalc == nil {
+		return nil
+	}
+
+	if costAnalysis.ListSize > 0 {
+		plan.StaticCostDefaults.List = costAnalysis.ListSize
+	}
+	costCalc.SetVariables(variables)
+
+	estimatedCost := costCalc.GetStaticCost()
+
+	if estimatedCost > costAnalysis.StaticLimit {
+		return &httpGraphqlError{
+			message:    fmt.Sprintf("The estimated query cost %d exceeds the maximum allowed cost (%d)", estimatedCost, costAnalysis.StaticLimit),
+			statusCode: http.StatusBadRequest,
+		}
+	}
+
+	return nil
+}
+
 var (
 	literalIF = []byte("if")
 )
@@ -1449,6 +1486,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parserTokenizerLimits:    opts.ParserTokenizerLimits,
 		operationNameLengthLimit: opts.OperationNameLengthLimit,
 		complexityLimits:         opts.ComplexityLimits,
+		costAnalysis:             opts.CostAnalysis,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                   opts.ApolloRouterCompatibilityFlags,
