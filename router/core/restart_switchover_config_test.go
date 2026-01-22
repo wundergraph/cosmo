@@ -182,9 +182,7 @@ func TestInMemorySwitchOverCache_GetPlanCacheForFF(t *testing.T) {
 		}
 
 		result := cache.getPlanCacheForFF("non-existent")
-
-		require.NotNil(t, result)
-		require.Empty(t, result)
+		require.Nil(t, result)
 	})
 
 	t.Run("returns nil when cache is disabled", func(t *testing.T) {
