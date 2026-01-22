@@ -316,7 +316,7 @@ export const ConfigureOverride = () => {
           <>
             <div className="flex w-full flex-row items-center justify-between rounded-lg border px-4 py-3 shadow-sm">
               <div className="flex flex-col gap-y-2">
-                <Label htmlFor="ignore-all">Exclude operation</Label>
+                <Label htmlFor="ignore-all">Ignore operation</Label>
                 <p className="text-[0.8rem] text-muted-foreground">
                   This operation will not be used in future checks.
                 </p>

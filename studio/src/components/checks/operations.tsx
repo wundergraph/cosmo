@@ -323,7 +323,7 @@ export const CheckOperations = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary">
-              Bulk Overrides
+              Overrides
               <ChevronDownIcon className="ml-2" />
             </Button>
           </DropdownMenuTrigger>
