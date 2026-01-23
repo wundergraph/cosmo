@@ -449,6 +449,26 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 
+		t.Run("blocks queries exceeding static cost limit when list size is zero", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+						Enabled:     true,
+						StaticLimit: 1,
+						ListSize:    0, // will be floored to 1
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } } }`,
+				})
+				// cost = 1 * (1 + 1)
+				require.Equal(t, 400, res.Response.StatusCode)
+				require.Contains(t, res.Body, "exceeds the maximum allowed static cost")
+			})
+		})
+
 		t.Run("disabled cost analysis does not block queries", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
