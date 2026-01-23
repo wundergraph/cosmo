@@ -504,6 +504,11 @@ type OperationContext interface {
 	// if called too early in request chain, it may be inaccurate for modules, using
 	// in Middleware is recommended
 	QueryPlanStats() (QueryPlanStats, error)
+
+	// StaticCost returns the static (estimated) cost of the operation based on @cost and @listSize directives.
+	// Returns 0 if cost analysis is not enabled or the plan is not yet available.
+	// This should be called after planning is complete, using in Middleware is recommended.
+	StaticCost() (int, error)
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -719,6 +724,20 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 	}
 
 	return qps, nil
+}
+
+func (o *operationContext) StaticCost() (int, error) {
+	if o == nil || o.preparedPlan == nil || o.preparedPlan.preparedPlan == nil {
+		return 0, errors.New("operation context or prepared plan is nil")
+	}
+
+	costCalc := o.preparedPlan.preparedPlan.GetStaticCostCalculator()
+	if costCalc == nil {
+		return 0, errors.New("cost analysis is not enabled")
+	}
+
+	costCalc.SetVariables(o.variables)
+	return costCalc.GetStaticCost(), nil
 }
 
 type SubgraphResolver struct {

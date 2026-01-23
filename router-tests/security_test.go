@@ -364,4 +364,145 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("cost analysis", func(t *testing.T) {
+		t.Parallel()
+
+		// These tests verify that static cost is calculated using default values
+		// when no @cost or @listSize directives are specified in the schema.
+
+		t.Run("blocks queries exceeding static cost limit with default values", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+						Enabled:     true,
+						StaticLimit: 9,
+						ListSize:    5,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } } }`,
+				})
+				// cost = 5 * (1 + 1)
+				require.Equal(t, 400, res.Response.StatusCode)
+				require.Contains(t, res.Body, "exceeds the maximum allowed static cost")
+			})
+		})
+
+		t.Run("allows queries under static cost limit with default values", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+						Enabled:     true,
+						StaticLimit: 11,
+						ListSize:    5,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } } }`,
+				})
+				// cost = 5 * (1 + 1)
+				require.Equal(t, 200, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("non-list query with defaults", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+						Enabled:     true,
+						StaticLimit: 2, // employee (1) + details (1) = 2
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename } } }`,
+				})
+				// Cost: 1 + 1
+				require.Equal(t, 200, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("list size configuration affects cost calculation", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+						Enabled:     true,
+						StaticLimit: 2,
+						ListSize:    2, // Small list size
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				// cost: 2 * 1
+				require.Contains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("disabled cost analysis does not block queries", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+						Enabled:     false,
+						StaticLimit: 1,
+						ListSize:    10,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } } }`,
+				})
+				// cost = 10 * (1 + 1)
+				require.Contains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("zero limit does not block queries", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+						Enabled:     true,
+						StaticLimit: 0, // Zero means no limit applied, but cost is calculated.
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("nested list fields multiply cost", func(t *testing.T) {
+			// Just one additional test; more thorough testing is done in the engine.
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+						Enabled:     true,
+						StaticLimit: 24,
+						ListSize:    5,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename } } }`,
+				})
+				// cost = 5 * (5 * 1)
+				require.Contains(t, res.Body, `"data":`)
+			})
+		})
+	})
 }

@@ -553,6 +553,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			EntityInterfaces: make([]plan.EntityInterfaceConfiguration, 0, len(in.EntityInterfaces)),
 			InterfaceObjects: make([]plan.EntityInterfaceConfiguration, 0, len(in.InterfaceObjects)),
 		},
+		CostConfig: plan.NewDataSourceCostConfig(),
 	}
 
 	for _, node := range in.RootNodes {
@@ -633,6 +634,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			ConcreteTypeNames: interfaceObjectConfiguration.ConcreteTypeNames,
 		})
 	}
+	// TODO: import CostConfigs from in (produced by composition) to be consumed by the router.
 
 	return out
 }
