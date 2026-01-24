@@ -508,8 +508,8 @@ export const CheckOperations = () => {
                                     : "Ignore changes"}
                                   <p className="max-w-xs text-xs text-muted-foreground">
                                     {doAllChangesHaveOverrides
-                                      ? "Toggle overrides off for these changes so that future checks will fail if any of these changes are breaking."
-                                      : "Toggle overrides on for these changes so that future checks will not treat these changes as breaking."}
+                                      ? "Disable overrides so future checks will fail on breaking listed changes."
+                                      : "Enable overrides so future checks will not fail on breaking listed changes."}
                                   </p>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -541,9 +541,8 @@ export const CheckOperations = () => {
                             Operation ignored in future checks
                           </AlertTitle>
                           <AlertDescription>
-                            This operation will be ignored in future checks.
-                            You can remove the override to include it again and manage
-                            per-change overrides.
+                            This operation will be excluded from future checks.
+                            Remove the override to include it again and manage individual change overrides.
                           </AlertDescription>
                           <Button
                             size="sm"

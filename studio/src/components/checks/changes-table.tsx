@@ -282,11 +282,11 @@ const Row = ({
               {hasOverride ? (
                 <>
                   Override active: future checks will <strong>not</strong>{" "}
-                  treat change to {path} as breaking for this operation.
+                  treat this change to {path} as breaking for this operation.
                 </>
               ) : (
                 <>
-                  Toggle to avoid future checks from treating this change to {path} as breaking for this operation.
+                  Toggle to prevent future checks from treating this change to {path} as breaking for this operation.
                 </>
               )}
             </TooltipContent>
