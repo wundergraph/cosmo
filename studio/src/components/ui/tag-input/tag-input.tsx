@@ -111,7 +111,7 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
       onInputChange?.(newValue);
     };
 
-    const tryAddTag = React.useCallback(
+    const tryAddTag = 
       (rawText: string, nextTags: Tag[]) => {
         const newTagText = rawText.trim();
         if (!newTagText) {
@@ -126,9 +126,7 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
         const newTagId = crypto.randomUUID();
         onTagAdd?.(newTagText);
         return [...nextTags, { id: newTagId, text: newTagText }];
-      },
-      [allowDuplicates, maxTags, onTagAdd],
-    );
+      };
 
     const escapeForCharClass = (value: string) =>
       value.replace(/[-\\^$*+?.()|[\]{}]/g, "\\$&");
