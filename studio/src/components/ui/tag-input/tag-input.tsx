@@ -96,10 +96,6 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
     const [tagCount, setTagCount] = React.useState(Math.max(0, tags.length));
     const inputRef = React.useRef<HTMLInputElement>(null);
 
-    React.useEffect(() => {
-      setTagCount(Math.max(0, tags.length));
-    }, [tags.length]);
-
     if (
       (maxTags !== undefined && maxTags < 0) ||
       (props.minTags !== undefined && props.minTags < 0)
@@ -137,7 +133,7 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
     const escapeForCharClass = (value: string) =>
       value.replace(/[-\\^$*+?.()|[\]{}]/g, "\\$&");
 
-    const commitInputValue = React.useCallback(
+    const commitInputValue = 
       (rawText: string, splitByDelimiters: boolean) => {
         const trimmed = rawText.trim();
         if (!trimmed) {
@@ -165,11 +161,10 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
 
         if (nextTags !== tags) {
           setTags(nextTags);
+          setTagCount(nextTags.length);
         }
         setInputValue("");
-      },
-      [delimiterList, tags, setTags, tryAddTag],
-    );
+      };
 
     const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
       setActiveTagIndex(null); // Reset active tag index when the input field gains focus
@@ -184,8 +179,22 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (delimiterList.includes(e.key)) {
+        e.preventDefault();
+        commitInputValue(inputValue, false);
+      } else if (e.key === "Backspace" && inputValue.length === 0) {
+        e.preventDefault();
+        const newTags = [...tags];
+        newTags.splice(tagCount - 1, 1);
+        setTags(newTags);
+        setTagCount(newTags.length);
+      }
+    };
+
+    const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
       e.preventDefault();
-      commitInputValue(inputValue, false);
+      const pastedText = e.clipboardData.getData("text/plain");
+      commitInputValue(pastedText, false);
     };
 
     const removeTag = (idToRemove: string) => {
@@ -255,6 +264,7 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
               onKeyDown={handleKeyDown}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
+              onPaste={handlePaste}
               {...inputProps}
               className={cn(
                 "h-5 w-fit flex-1 border-0 bg-transparent px-1.5 focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-0",
