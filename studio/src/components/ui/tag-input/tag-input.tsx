@@ -182,19 +182,20 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
       if (delimiterList.includes(e.key)) {
         e.preventDefault();
         commitInputValue(inputValue, false);
-      } else if (e.key === "Backspace" && inputValue.length === 0) {
+      } else if (e.key === "Backspace" && inputValue.length === 0 && tags.length > 0) {
         e.preventDefault();
-        const newTags = [...tags];
-        newTags.splice(tagCount - 1, 1);
+        const removedTag = tags[tags.length - 1];
+        const newTags = tags.slice(0, -1);
         setTags(newTags);
         setTagCount(newTags.length);
+        onTagRemove?.(removedTag.text);
       }
     };
 
     const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
       e.preventDefault();
       const pastedText = e.clipboardData.getData("text/plain");
-      commitInputValue(pastedText, false);
+      commitInputValue(pastedText, true);
     };
 
     const removeTag = (idToRemove: string) => {
