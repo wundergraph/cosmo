@@ -11,23 +11,21 @@ import (
 	"sync"
 	"time"
 
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 var _ RequestContext = (*requestContext)(nil)
@@ -541,6 +539,7 @@ type operationContext struct {
 	variables  *astjson.Value
 	files      []*httpclient.FileUpload
 	clientInfo *ClientInfo
+	planConfig plan.Configuration
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
@@ -736,8 +735,7 @@ func (o *operationContext) StaticCost() (int, error) {
 		return 0, errors.New("cost analysis is not enabled")
 	}
 
-	costCalc.SetVariables(o.variables)
-	return costCalc.GetStaticCost(), nil
+	return costCalc.GetStaticCost(o.planConfig, o.variables), nil
 }
 
 type SubgraphResolver struct {

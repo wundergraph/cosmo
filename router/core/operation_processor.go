@@ -1381,9 +1381,7 @@ func (o *OperationKit) ValidateStaticCost(preparedPlan plan.Plan, variables *fas
 		return nil
 	}
 
-	costCalc.SetVariables(variables)
-
-	estimatedCost := costCalc.GetStaticCost()
+	estimatedCost := costCalc.GetStaticCost(o.operationProcessor.executor.PlanConfig, variables)
 
 	if estimatedCost > costAnalysis.StaticLimit {
 		return &httpGraphqlError{
