@@ -45,6 +45,7 @@ service ProjectsService {
   rpc ResolveProjectCriticalDeadline(ResolveProjectCriticalDeadlineRequest) returns (ResolveProjectCriticalDeadlineResponse) {}
   rpc ResolveProjectEstimatedDaysRemaining(ResolveProjectEstimatedDaysRemainingRequest) returns (ResolveProjectEstimatedDaysRemainingResponse) {}
   rpc ResolveProjectFilteredTasks(ResolveProjectFilteredTasksRequest) returns (ResolveProjectFilteredTasksResponse) {}
+  rpc ResolveProjectSubProjects(ResolveProjectSubProjectsRequest) returns (ResolveProjectSubProjectsResponse) {}
   rpc ResolveProjectTopPriorityItem(ResolveProjectTopPriorityItemRequest) returns (ResolveProjectTopPriorityItemResponse) {}
   rpc ResolveTaskIsBlocked(ResolveTaskIsBlockedRequest) returns (ResolveTaskIsBlockedResponse) {}
   rpc ResolveTaskTotalEffort(ResolveTaskTotalEffortRequest) returns (ResolveTaskTotalEffortResponse) {}
@@ -466,6 +467,31 @@ message MutationUpdateProjectStatusRequest {
 message MutationUpdateProjectStatusResponse {
   ProjectUpdate update_project_status = 1;
 }
+message ResolveProjectSubProjectsArgs {
+  google.protobuf.BoolValue include_archived = 1;
+}
+
+message ResolveProjectSubProjectsContext {
+  string id = 1;
+  string name = 2;
+  ProjectStatus status = 3;
+}
+
+message ResolveProjectSubProjectsRequest {
+  // context provides the resolver context for the field subProjects of type Project.
+  repeated ResolveProjectSubProjectsContext context = 1;
+  // field_args provides the arguments for the resolver field subProjects of type Project.
+  ResolveProjectSubProjectsArgs field_args = 2;
+}
+
+message ResolveProjectSubProjectsResult {
+  repeated Project sub_projects = 1;
+}
+
+message ResolveProjectSubProjectsResponse {
+  repeated ResolveProjectSubProjectsResult result = 1;
+}
+
 message ResolveProjectFilteredTasksArgs {
   TaskStatus status = 1;
   TaskPriority priority = 2;
@@ -738,7 +764,7 @@ message ResolveEmployeeAverageTaskCompletionDaysResponse {
 }
 
 message Project {
-  reserved 20 to 24;
+  reserved 20 to 25;
   string id = 1;
   string name = 2;
   google.protobuf.StringValue description = 3;
