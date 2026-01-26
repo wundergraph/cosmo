@@ -452,8 +452,8 @@ func TestRouterPluginRequests(t *testing.T) {
 		},
 		{
 			name:     "query project with normal and recursive field resolver and aliases and multiple levels of recursion and aliases",
-			query:    `query { project(id:2) { id name urgent: topPriorityItem(category: "task") { __typename } nextDeadline: criticalDeadline(withinDays: 10000) { __typename } subsub: subProjects { id name status } } }`,
-			expected: `{"data":{"project":{"id":"2","name":"Microservices Revolution","urgent":{"__typename":"Task"},"nextDeadline":{"__typename":"Milestone"},"subsub":[{"id":"4","name":"DevOps Transformation","status":"PLANNING"},{"id":"5","name":"Security Overhaul","status":"ON_HOLD"}]}}}`,
+			query:    `{ project(id: 2) { id name urgent: topPriorityItem(category: "task") { __typename } nextDeadline: criticalDeadline(withinDays: 10000) { __typename } subsub: subProjects { id name status otherSubs: subProjects { id name } } } }`,
+			expected: `{"data":{"project":{"id":"2","name":"Microservices Revolution","urgent":{"__typename":"Task"},"nextDeadline":{"__typename":"Milestone"},"subsub":[{"id":"4","name":"DevOps Transformation","status":"PLANNING","otherSubs":[{"id":"1","name":"Cloud Migration Overhaul"}]},{"id":"5","name":"Security Overhaul","status":"ON_HOLD","otherSubs":[{"id":"2","name":"Microservices Revolution"}]}]}}}`,
 		},
 	}
 	testenv.Run(t, &testenv.Config{
