@@ -927,8 +927,8 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-					Enabled:                    true,
-					InMemorySwitchoverFallback: true,
+					Enabled:          true,
+					InMemoryFallback: true,
 				}),
 				core.WithConfigVersionHeader(true),
 			},
@@ -1017,8 +1017,8 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-					Enabled:                    true,
-					InMemorySwitchoverFallback: false,
+					Enabled:          true,
+					InMemoryFallback: false,
 				}),
 				core.WithConfigVersionHeader(true),
 			},
@@ -1069,8 +1069,8 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 					WatchInterval: 100 * time.Millisecond,
 				}),
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
-					Enabled:                    true,
-					InMemorySwitchoverFallback: true,
+					Enabled:          true,
+					InMemoryFallback: true,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1095,7 +1095,7 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 
 	t.Run("Successfully persists cache across config change restarts", func(t *testing.T) {
 		t.Parallel()
-		
+
 		updateConfig := func(t *testing.T, xEnv *testenv.Environment, ctx context.Context, listenString string, config string) {
 			f, err := os.Create(filepath.Join(xEnv.GetRouterProcessCwd(), "config.yaml"))
 			require.NoError(t, err)

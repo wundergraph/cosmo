@@ -55,7 +55,6 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
             traceSamplingRate: (features['trace-sampling-rate'] as number) ?? 0.1,
           },
           graphPublicKey: publicKey,
-          isCacheWarmerEnabled: !!features['cache-warmer'],
         };
 
         registrationInfoCache.set(authContext.federatedGraphId, registrationInfo);

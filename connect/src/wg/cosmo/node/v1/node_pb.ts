@@ -543,11 +543,6 @@ export class RegistrationInfo extends Message<RegistrationInfo> {
    */
   graphPublicKey = "";
 
-  /**
-   * @generated from field: bool is_cache_warmer_enabled = 3;
-   */
-  isCacheWarmerEnabled = false;
-
   constructor(data?: PartialMessage<RegistrationInfo>) {
     super();
     proto3.util.initPartial(data, this);
@@ -558,7 +553,6 @@ export class RegistrationInfo extends Message<RegistrationInfo> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "account_limits", kind: "message", T: AccountLimits },
     { no: 2, name: "graph_public_key", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "is_cache_warmer_enabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RegistrationInfo {

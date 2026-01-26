@@ -973,21 +973,24 @@ type ClientHeader struct {
 
 type CacheWarmupSource struct {
 	Filesystem *CacheWarmupFileSystemSource `yaml:"filesystem,omitempty"`
+	CdnSource  CacheWarmupCDNSource         `yaml:"cdn,omitempty"`
 }
 
 type CacheWarmupFileSystemSource struct {
 	Path string `yaml:"path" env:"CACHE_WARMUP_SOURCE_FILESYSTEM_PATH"`
 }
 
-type CacheWarmupCDNSource struct{}
+type CacheWarmupCDNSource struct {
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"CACHE_WARMUP_SOURCE_CDN_ENABLED"`
+}
 
 type CacheWarmupConfiguration struct {
-	Enabled                    bool              `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
-	Source                     CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`
-	Workers                    int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
-	ItemsPerSecond             int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
-	Timeout                    time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
-	InMemorySwitchoverFallback bool              `yaml:"in_memory_switchover_fallback" envDefault:"true" env:"CACHE_WARMUP_IN_MEMORY_SWITCHOVER_FALLBACK"`
+	Enabled          bool              `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
+	Source           CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`
+	Workers          int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
+	ItemsPerSecond   int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
+	Timeout          time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
+	InMemoryFallback bool              `yaml:"in_memory_fallback" envDefault:"true" env:"CACHE_WARMUP_IN_MEMORY_FALLBACK"`
 }
 
 type MCPConfiguration struct {

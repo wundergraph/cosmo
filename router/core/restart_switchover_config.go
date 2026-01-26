@@ -12,20 +12,20 @@ type planCache = *ristretto.Cache[uint64, *planWithMetaData]
 
 // SwitchoverConfig This file describes any configuration which should persist or be shared across router restarts
 type SwitchoverConfig struct {
-	inMemorySwitchOverCache *InMemorySwitchOverCache
+	inMemorySwitchOverCache *InMemorySwitchoverCache
 }
 
 func NewSwitchoverConfig(logger *zap.Logger) *SwitchoverConfig {
 	return &SwitchoverConfig{
-		inMemorySwitchOverCache: &InMemorySwitchOverCache{
+		inMemorySwitchOverCache: &InMemorySwitchoverCache{
 			logger: logger,
 		},
 	}
 }
 
 // UpdateSwitchoverConfig updates the switchover config based on the provided config.
-func (s *SwitchoverConfig) UpdateSwitchoverConfig(config *Config, isCosmoCacheWarmerEnabled bool) {
-	s.inMemorySwitchOverCache.updateStateFromConfig(config, isCosmoCacheWarmerEnabled)
+func (s *SwitchoverConfig) UpdateSwitchoverConfig(config *Config) {
+	s.inMemorySwitchOverCache.updateStateFromConfig(config)
 }
 
 // CleanupFeatureFlags cleans up anything related to unused feature flags due to being now excluded
@@ -45,19 +45,18 @@ func (s *SwitchoverConfig) OnRouterConfigReload() {
 	s.inMemorySwitchOverCache.extractQueriesAndOverridePlanCache()
 }
 
-// InMemorySwitchOverCache is a store that stores either queries or references to the planner cache for use with the cache warmer
-type InMemorySwitchOverCache struct {
+// InMemorySwitchoverCache is a store that stores either queries or references to the planner cache for use with the cache warmer
+type InMemorySwitchoverCache struct {
 	mu                    sync.RWMutex
 	queriesForFeatureFlag map[string]any
 	logger                *zap.Logger
 }
 
 // updateStateFromConfig updates the internal state of the in-memory switchover cache based on the provided config
-func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config, isCosmoCacheWarmerEnabled bool) {
+func (c *InMemorySwitchoverCache) updateStateFromConfig(config *Config) {
 	enabled := config.cacheWarmup != nil &&
-		!isCosmoCacheWarmerEnabled && // We only enable in-memory switchover cache if the cosmo cache warmer is not enabled
 		config.cacheWarmup.Enabled &&
-		config.cacheWarmup.InMemorySwitchoverFallback
+		config.cacheWarmup.InMemoryFallback
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -76,7 +75,7 @@ func (c *InMemorySwitchOverCache) updateStateFromConfig(config *Config, isCosmoC
 }
 
 // IsEnabled returns whether the in-memory switchover cache is enabled
-func (c *InMemorySwitchOverCache) IsEnabled() bool {
+func (c *InMemorySwitchoverCache) IsEnabled() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -84,7 +83,7 @@ func (c *InMemorySwitchOverCache) IsEnabled() bool {
 }
 
 // getPlanCacheForFF gets the plan cache in the []*nodev1.Operation format for a specific feature flag key
-func (c *InMemorySwitchOverCache) getPlanCacheForFF(featureFlagKey string) []*nodev1.Operation {
+func (c *InMemorySwitchoverCache) getPlanCacheForFF(featureFlagKey string) []*nodev1.Operation {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -108,7 +107,7 @@ func (c *InMemorySwitchOverCache) getPlanCacheForFF(featureFlagKey string) []*no
 }
 
 // setPlanCacheForFF sets the plan cache for a specific feature flag key
-func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache planCache) {
+func (c *InMemorySwitchoverCache) setPlanCacheForFF(featureFlagKey string, cache planCache) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -119,7 +118,7 @@ func (c *InMemorySwitchOverCache) setPlanCacheForFF(featureFlagKey string, cache
 }
 
 // extractQueriesAndOverridePlanCache extracts the queries from the plan cache and overrides the internal map
-func (c *InMemorySwitchOverCache) extractQueriesAndOverridePlanCache() {
+func (c *InMemorySwitchoverCache) extractQueriesAndOverridePlanCache() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -138,7 +137,7 @@ func (c *InMemorySwitchOverCache) extractQueriesAndOverridePlanCache() {
 
 // cleanupUnusedFeatureFlags removes any feature flags from the in-memory switchover cache
 // this is useful in case where the updated execution config excludes a feature flag
-func (c *InMemorySwitchOverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.RouterConfig) {
+func (c *InMemorySwitchoverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.RouterConfig) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

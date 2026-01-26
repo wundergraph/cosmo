@@ -43,7 +43,6 @@ message ResponseStatus {
 message RegistrationInfo {
   AccountLimits account_limits = 1;
   string graph_public_key = 2;
-  bool is_cache_warmer_enabled = 3;
 }
 
 message AccountLimits {
