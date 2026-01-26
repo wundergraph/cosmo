@@ -93,7 +93,6 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
     } = props;
 
     const [inputValue, setInputValue] = React.useState("");
-    const [tagCount, setTagCount] = React.useState(Math.max(0, tags.length));
     const inputRef = React.useRef<HTMLInputElement>(null);
 
     if (
@@ -152,15 +151,17 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
               .filter(Boolean)
             : [trimmed];
 
-        let nextTags = tags;
-        for (const text of nextTagTexts) {
-          nextTags = tryAddTag(text, nextTags);
-        }
-
-        if (nextTags !== tags) {
-          setTags(nextTags);
-          setTagCount(nextTags.length);
-        }
+        // Use functional updater pattern to get latest state and avoid race conditions
+        setTags((prevTags) => {
+          let nextTags = prevTags;
+          for (const text of nextTagTexts) {
+            nextTags = tryAddTag(text, nextTags);
+          }
+          if (nextTags !== prevTags) {
+            return nextTags;
+          }
+          return prevTags;
+        });
         setInputValue("");
       };
 
@@ -180,13 +181,17 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
       if (delimiterList.includes(e.key)) {
         e.preventDefault();
         commitInputValue(inputValue, false);
-      } else if (e.key === "Backspace" && inputValue.length === 0 && tags.length > 0) {
+      } else if (e.key === "Backspace" && inputValue.length === 0) {
+        setTags((prevTags) => {
+          if (prevTags.length > 0) {
+            const removedTag = prevTags[prevTags.length - 1];
+            const newTags = prevTags.slice(0, -1);
+            onTagRemove?.(removedTag.text);
+            return newTags;
+          }
+          return prevTags;
+        });
         e.preventDefault();
-        const removedTag = tags[tags.length - 1];
-        const newTags = tags.slice(0, -1);
-        setTags(newTags);
-        setTagCount(newTags.length);
-        onTagRemove?.(removedTag.text);
       }
     };
 
@@ -197,9 +202,15 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
     };
 
     const removeTag = (idToRemove: string) => {
-      setTags(tags.filter((tag) => tag.id !== idToRemove));
-      onTagRemove?.(tags.find((tag) => tag.id === idToRemove)?.text || "");
-      setTagCount((prevTagCount) => prevTagCount - 1);
+      setTags((prevTags) => {
+        const tagToRemove = prevTags.find((tag) => tag.id === idToRemove);
+        const newTags = prevTags.filter((tag) => tag.id !== idToRemove);
+        if (newTags.length !== prevTags.length) {
+          onTagRemove?.(tagToRemove?.text || "");
+          return newTags;
+        }
+        return prevTags;
+      });
     };
 
     const truncatedTags = truncate
@@ -279,7 +290,7 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
         {showCount && maxTags && (
           <div className="flex">
             <span className="ml-auto mt-1 text-sm text-muted-foreground">
-              {`${tagCount}`}/{`${maxTags}`}
+              {`${tags.length}`}/{`${maxTags}`}
             </span>
           </div>
         )}
