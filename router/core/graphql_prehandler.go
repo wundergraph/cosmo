@@ -786,7 +786,7 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	* Normalize the variables
 	 */
 
-	cached, uploadsMapping, err := operationKit.NormalizeVariables()
+	cached, uploadsMapping, fieldArgMapping, err := operationKit.NormalizeVariables()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
@@ -801,6 +801,8 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 		engineNormalizeSpan.End()
 		return err
 	}
+	// Store the field argument mapping for later use when creating Arguments
+	requestContext.operation.fieldArgumentMapping = fieldArgMapping
 	engineNormalizeSpan.SetAttributes(otel.WgVariablesNormalizationCacheHit.Bool(cached))
 	requestContext.operation.variablesNormalizationCacheHit = cached
 
@@ -921,13 +923,11 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	}
 
 	if h.mapFieldArguments {
-		requestContext.operation.fieldArguments = mapFieldArguments(mapFieldArgumentsOpts{
-			operation:      operationKit.kit.doc,
-			definition:     h.executor.ClientSchema,
-			vars:           requestContext.operation.variables,
-			remapVariables: requestContext.operation.remapVariables,
-			logger:         h.log,
-		})
+		requestContext.operation.fieldArguments = NewArgumentsFromMapping(
+			requestContext.operation.fieldArgumentMapping,
+			requestContext.operation.variables,
+			requestContext.operation.remapVariables,
+		)
 	}
 
 	requestContext.operation.normalizationTime = time.Since(startNormalization)

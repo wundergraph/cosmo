@@ -6,14 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/astjson"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"go.uber.org/zap/zaptest/observer"
 )
 
 func TestMapFieldArguments(t *testing.T) {
@@ -315,27 +311,42 @@ func TestMapFieldArguments(t *testing.T) {
 			norm.NormalizeOperation(&operation, &schema, rep)
 			require.False(t, rep.HasErrors(), "failed to normalize operation")
 
+			// Then normalize variables using VariablesNormalizer which returns the field argument mapping
+			varNorm := astnormalization.NewVariablesNormalizer()
+			result := varNorm.NormalizeOperation(&operation, &schema, rep)
+			require.False(t, rep.HasErrors(), "failed to normalize variables")
+
 			// Use normalized variables (includes both provided and extracted variables)
 			vars, err := astjson.ParseBytes(operation.Input.Variables)
 			require.NoError(t, err)
 
-			// Call mapFieldArguments
-			result := mapFieldArguments(mapFieldArgumentsOpts{
-				operation:  &operation,
-				definition: &schema,
-				vars:       vars,
-			})
+			// Create Arguments from the mapping (O(m) complexity)
+			arguments := NewArgumentsFromMapping(
+				result.FieldArgumentMapping,
+				vars,
+				nil, // no remapping in tests
+			)
 
 			// Run assertions
-			tc.assertions(t, result)
+			tc.assertions(t, arguments)
 		})
 	}
 }
 
-func TestMapFieldArguments_InvalidValueLogsWarning(t *testing.T) {
-	// This test verifies that when resolveArgValue fails (e.g., due to an invalid AST value),
-	// a warning is logged and the argument is skipped (not added to the result).
+func TestNewArgumentsFromMapping_NilMapping(t *testing.T) {
+	// Test that nil mapping returns empty Arguments
+	result := NewArgumentsFromMapping(nil, nil, nil)
+	assert.Nil(t, result.Get("user", "id"))
+}
 
+func TestNewArgumentsFromMapping_EmptyMapping(t *testing.T) {
+	// Test that empty mapping returns empty Arguments
+	result := NewArgumentsFromMapping(astnormalization.FieldArgumentMapping{}, nil, nil)
+	assert.Nil(t, result.Get("user", "id"))
+}
+
+func TestNewArgumentsFromMapping_WithRemapping(t *testing.T) {
+	// Test that variable remapping works correctly
 	schema := `
 		type Query {
 			user(id: ID!): User
@@ -345,109 +356,60 @@ func TestMapFieldArguments_InvalidValueLogsWarning(t *testing.T) {
 		}
 	`
 
-	operation := `
-		query {
-			user(id: "123") {
-				id
-			}
-		}
-	`
-
 	// Parse schema
 	schemaDef, report := astparser.ParseGraphqlDocumentString(schema)
 	require.False(t, report.HasErrors(), "failed to parse schema")
 	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDef)
 	require.NoError(t, err)
 
-	// Parse operation WITHOUT normalization to keep the inline literal
-	op, report := astparser.ParseGraphqlDocumentString(operation)
+	// Parse operation
+	operation, report := astparser.ParseGraphqlDocumentString(`
+		query GetUser($userId: ID!) {
+			user(id: $userId) {
+				id
+			}
+		}
+	`)
 	require.False(t, report.HasErrors(), "failed to parse operation")
 
-	// Corrupt the AST: set an invalid value kind that will cause ValueToJSON to fail
-	// Find the argument and set its value to an invalid kind
-	for i := range op.Arguments {
-		// Set to an invalid/unhandled value kind
-		op.Arguments[i].Value.Kind = ast.ValueKind(255) // Invalid kind
+	// Set variables
+	operation.Input.Variables = []byte(`{"userId": "123"}`)
+
+	// First normalize the operation
+	rep := &operationreport.Report{}
+	norm := astnormalization.NewNormalizer(true, true)
+	norm.NormalizeOperation(&operation, &schemaDef, rep)
+	require.False(t, rep.HasErrors(), "failed to normalize operation")
+
+	// Then normalize variables to get the mapping
+	varNorm := astnormalization.NewVariablesNormalizer()
+	normResult := varNorm.NormalizeOperation(&operation, &schemaDef, rep)
+	require.False(t, rep.HasErrors(), "failed to normalize variables")
+
+	// Parse variables
+	vars, err := astjson.ParseBytes(operation.Input.Variables)
+	require.NoError(t, err)
+
+	// Test with remapping: simulate that "userId" was remapped to "a"
+	// We need to provide the original name so the lookup works
+	remapVariables := map[string]string{
+		"a": "userId", // new name -> original name
 	}
 
-	// Set up observed logger to capture warnings
-	observedCore, observedLogs := observer.New(zapcore.WarnLevel)
-	logger := zap.New(observedCore)
+	// Modify the mapping to use the remapped name
+	modifiedMapping := astnormalization.FieldArgumentMapping{}
+	for k, v := range normResult.FieldArgumentMapping {
+		if v == "userId" {
+			modifiedMapping[k] = "a" // simulate remapping
+		} else {
+			modifiedMapping[k] = v
+		}
+	}
 
-	// Parse empty variables
-	vars, err := astjson.ParseBytes([]byte(`{}`))
-	require.NoError(t, err)
+	result := NewArgumentsFromMapping(modifiedMapping, vars, remapVariables)
 
-	// Call mapFieldArguments - should log a warning due to invalid value
-	result := mapFieldArguments(mapFieldArgumentsOpts{
-		operation:  &op,
-		definition: &schemaDef,
-		vars:       vars,
-		logger:     logger,
-	})
-
-	// Verify warning was logged
-	logs := observedLogs.All()
-	require.Len(t, logs, 1, "expected exactly one warning log")
-	assert.Equal(t, "failed to resolve argument value", logs[0].Message)
-	assert.Equal(t, zapcore.WarnLevel, logs[0].Level)
-
-	// Verify the argument was skipped (not added to result)
+	// The lookup should use the original variable name
 	idArg := result.Get("user", "id")
-	assert.Nil(t, idArg, "expected argument to be skipped due to error")
-}
-
-func TestMapFieldArguments_InlineLiteralWithoutNormalization(t *testing.T) {
-	// This test verifies that inline literal arguments are correctly extracted
-	// via getArgValueFromDoc when normalization is skipped.
-	// Normally, normalization converts inline literals to variables, but this test
-	// exercises the code path for non-variable argument values.
-
-	schema := `
-		type Query {
-			user(id: ID!, active: Boolean!): User
-		}
-		type User {
-			id: ID!
-		}
-	`
-
-	operation := `
-		query {
-			user(id: "inline-123", active: true) {
-				id
-			}
-		}
-	`
-
-	// Parse schema
-	schemaDef, report := astparser.ParseGraphqlDocumentString(schema)
-	require.False(t, report.HasErrors(), "failed to parse schema")
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDef)
-	require.NoError(t, err)
-
-	// Parse operation WITHOUT normalization to keep inline literals as non-variable values
-	op, report := astparser.ParseGraphqlDocumentString(operation)
-	require.False(t, report.HasErrors(), "failed to parse operation")
-
-	// Parse empty variables (inline values are in the AST, not in variables)
-	vars, err := astjson.ParseBytes([]byte(`{}`))
-	require.NoError(t, err)
-
-	// Call mapFieldArguments - should extract values via getArgValueFromDoc
-	result := mapFieldArguments(mapFieldArgumentsOpts{
-		operation:  &op,
-		definition: &schemaDef,
-		vars:       vars,
-	})
-
-	// Verify the string argument was correctly extracted
-	idArg := result.Get("user", "id")
-	require.NotNil(t, idArg, "expected 'id' argument to be accessible")
-	assert.Equal(t, "inline-123", string(idArg.GetStringBytes()))
-
-	// Verify the boolean argument was correctly extracted
-	activeArg := result.Get("user", "active")
-	require.NotNil(t, activeArg, "expected 'active' argument to be accessible")
-	assert.True(t, activeArg.GetBool())
+	require.NotNil(t, idArg, "expected 'id' argument on 'user' field")
+	assert.Equal(t, "123", string(idArg.GetStringBytes()))
 }

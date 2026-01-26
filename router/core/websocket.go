@@ -912,12 +912,13 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	}
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
-	cached, _, err := operationKit.NormalizeVariables()
+	cached, _, fieldArgMapping, err := operationKit.NormalizeVariables()
 	if err != nil {
 		opContext.normalizationTime = time.Since(startNormalization)
 		return nil, nil, err
 	}
 	opContext.variablesNormalizationCacheHit = cached
+	opContext.fieldArgumentMapping = fieldArgMapping
 
 	cached, err = operationKit.RemapVariables(h.disableVariablesRemapping)
 	if err != nil {
@@ -938,13 +939,11 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	}
 
 	if h.mapFieldArguments {
-		opContext.fieldArguments = mapFieldArguments(mapFieldArgumentsOpts{
-			operation:      operationKit.kit.doc,
-			definition:     h.operationProcessor.executor.ClientSchema,
-			vars:           opContext.variables,
-			remapVariables: opContext.remapVariables,
-			logger:         h.logger,
-		})
+		opContext.fieldArguments = NewArgumentsFromMapping(
+			opContext.fieldArgumentMapping,
+			opContext.variables,
+			opContext.remapVariables,
+		)
 	}
 
 	startValidation := time.Now()

@@ -261,7 +261,7 @@ func TestNormalizeVariablesOperationProcessor(t *testing.T) {
 			_, err = kit.NormalizeOperation("test", false)
 			require.NoError(t, err)
 
-			_, _, err = kit.NormalizeVariables()
+			_, _, _, err = kit.NormalizeVariables()
 			require.NoError(t, err)
 
 			assert.Equal(t, tc.ExpectedNormalizedRepresentation, kit.parsedOperation.NormalizedRepresentation)
