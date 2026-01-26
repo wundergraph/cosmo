@@ -22,7 +22,7 @@ func TestInMemorySwitchoverCache_UpdateInMemorySwitchoverCacheForConfigChanges(t
 			},
 		}
 
-		cache.updateStateFromConfig(cfg, false)
+		cache.updateStateFromConfig(cfg)
 
 		require.NotNil(t, cache.queriesForFeatureFlag)
 		require.Empty(t, cache.queriesForFeatureFlag)
@@ -41,7 +41,7 @@ func TestInMemorySwitchoverCache_UpdateInMemorySwitchoverCacheForConfigChanges(t
 			},
 		}
 
-		cache.updateStateFromConfig(cfg, false)
+		cache.updateStateFromConfig(cfg)
 
 		require.Nil(t, cache.queriesForFeatureFlag)
 	})
