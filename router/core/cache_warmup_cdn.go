@@ -76,7 +76,7 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) (operations 
 		}()
 	}
 
-	operationsPath := fmt.Sprintf("/%s/%s/cache_warmup/aa.json", c.organizationID, c.federatedGraphID)
+	operationsPath := fmt.Sprintf("/%s/%s/cache_warmup/operations.json", c.organizationID, c.federatedGraphID)
 
 	operationURL := c.cdnURL.ResolveReference(&url.URL{Path: operationsPath})
 	log.Debug("Loading cache warmup config", zap.String("url", operationURL.String()))

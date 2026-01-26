@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -23,6 +24,12 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.uber.org/zap"
 )
+
+type fakeSelfRegister struct{}
+
+func (*fakeSelfRegister) Register(ctx context.Context) (*nodev1.RegistrationInfo, error) {
+	return nil, nil
+}
 
 func TestCacheWarmup(t *testing.T) {
 	t.Parallel()
@@ -1123,6 +1130,112 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 		})
 	})
 
+	t.Run("Verify fallback is used when cdn source is enabled but cdn returns 404 internally", func(t *testing.T) {
+		t.Parallel()
+
+		// Create a temporary file for the router config
+		configFile := t.TempDir() + "/config.json"
+
+		// Initial config with just the employees subgraph
+		writeTestConfig(t, "initial", configFile)
+
+		var impl *fakeSelfRegister = nil
+
+		testenv.Run(t, &testenv.Config{
+			CdnSever: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+			})),
+			RouterOptions: []core.Option{
+				core.WithSelfRegistration(impl),
+				core.WithConfigVersionHeader(true),
+				core.WithExecutionConfig(&core.ExecutionConfig{
+					Path:          configFile,
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:          true,
+					InMemoryFallback: true,
+					Source: config.CacheWarmupSource{
+						CdnSource: config.CacheWarmupCDNSource{
+							Enabled: true,
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+
+			writeTestConfig(t, "updated", configFile)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				assert.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+				assert.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+			}, 2*time.Second, 100*time.Millisecond)
+		})
+	})
+
+	t.Run("Verify fallback is used when cdn source is enabled but cdn returns unauthorized internally", func(t *testing.T) {
+		t.Parallel()
+
+		// Create a temporary file for the router config
+		configFile := t.TempDir() + "/config.json"
+
+		// Initial config with just the employees subgraph
+		writeTestConfig(t, "initial", configFile)
+
+		var impl *fakeSelfRegister = nil
+
+		testenv.Run(t, &testenv.Config{
+			CdnSever: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusUnauthorized)
+			})),
+			RouterOptions: []core.Option{
+				core.WithSelfRegistration(impl),
+				core.WithConfigVersionHeader(true),
+				core.WithExecutionConfig(&core.ExecutionConfig{
+					Path:          configFile,
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:          true,
+					InMemoryFallback: true,
+					Source: config.CacheWarmupSource{
+						CdnSource: config.CacheWarmupCDNSource{
+							Enabled: true,
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { hello }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+
+			writeTestConfig(t, "updated", configFile)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { hello }`,
+				})
+				assert.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+				assert.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+			}, 2*time.Second, 100*time.Millisecond)
+		})
+	})
+
 	t.Run("Successfully persists cache across config change restarts", func(t *testing.T) {
 		t.Parallel()
 
@@ -1150,7 +1263,7 @@ cache_warmup:
   in_memory_fallback: true
   source:
     cdn:
-      enabled: true
+      enabled: false
 
 engine: 
   debug:
