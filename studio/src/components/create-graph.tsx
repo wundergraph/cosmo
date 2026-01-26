@@ -282,17 +282,19 @@ export const CreateGraphForm = ({
                         />
                       </FormControl>
                       <FormDescription className="text-left">
-                        Comma-separated values in the form of key=value. These
-                        will be used to match subgraphs for composition. Learn
-                        more{" "}
+                        Label matchers are used to select which subgraphs participate in this federated graph composition.
+                        Enter space-separated key-value pairs in the format <code>key=value</code>.
+                        To specify multiple values for the same key (OR condition), use commas within a single matcher (e.g., <code>team=A,team=B</code> matches subgraphs where team is either A or B).
+                        {" "}
                         <Link
                           href={docsBaseURL + "/cli/essentials#label-matcher"}
                           className="text-primary"
                           target="_blank"
                           rel="noreferrer"
                         >
-                          here.
+                          Learn more
                         </Link>
+                        .
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
