@@ -1117,7 +1117,7 @@ readiness_check_path: "/` + listenString + `"
 
 cache_warmup:
   enabled: true
-  in_memory_switchover_fallback: true
+  in_memory_fallback: true
 
 engine: 
   debug:
