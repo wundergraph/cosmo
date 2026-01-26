@@ -2405,11 +2405,26 @@
                   "format": "file-path"
                 }
               }
+            },
+            "cdn": {
+              "type": "object",
+              "description": "The CDN source of the cache warmup items.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable or disable the CDN source for cache warmup.",
+                  "default": true
+                }
+              }
             }
           },
           "oneOf": [
             {
               "required": ["filesystem"]
+            },
+            {
+              "required": ["cdn"]
             }
           ]
         },

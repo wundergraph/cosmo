@@ -619,6 +619,11 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
+						Source: config.CacheWarmupSource{
+							CdnSource: config.CacheWarmupCDNSource{
+								Enabled: true,
+							},
+						},
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -678,6 +683,11 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
+						Source: config.CacheWarmupSource{
+							CdnSource: config.CacheWarmupCDNSource{
+								Enabled: true,
+							},
+						},
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -721,6 +731,11 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
+						Source: config.CacheWarmupSource{
+							CdnSource: config.CacheWarmupCDNSource{
+								Enabled: true,
+							},
+						},
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -754,6 +769,11 @@ func TestCacheWarmup(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 						Enabled: true,
+						Source: config.CacheWarmupSource{
+							CdnSource: config.CacheWarmupCDNSource{
+								Enabled: true,
+							},
+						},
 					}),
 				},
 				AssertCacheMetrics: &testenv.CacheMetricsAssertions{
@@ -929,6 +949,11 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled:          true,
 					InMemoryFallback: true,
+					Source: config.CacheWarmupSource{
+						CdnSource: config.CacheWarmupCDNSource{
+							Enabled: true,
+						},
+					},
 				}),
 				core.WithConfigVersionHeader(true),
 			},
@@ -1019,6 +1044,11 @@ func TestInMemorySwitchoverCaching(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled:          true,
 					InMemoryFallback: false,
+					Source: config.CacheWarmupSource{
+						CdnSource: config.CacheWarmupCDNSource{
+							Enabled: true,
+						},
+					},
 				}),
 				core.WithConfigVersionHeader(true),
 			},
@@ -1118,6 +1148,9 @@ readiness_check_path: "/` + listenString + `"
 cache_warmup:
   enabled: true
   in_memory_fallback: true
+  source:
+    cdn:
+      enabled: true
 
 engine: 
   debug:
