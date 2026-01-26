@@ -1366,16 +1366,18 @@ func (s *graphServer) buildGraphMux(
 				RootPath: s.Config.cacheWarmup.Source.Filesystem.Path,
 			})
 		// Enable in-memory switchover fallback when:
-		// - Router has cache warmer with inMemorySwitchoverFallback enabled, AND
+		// - Router has cache warmer with inMemoryFallback enabled, AND
 		// - Either:
 		//   - Using static execution config (not Cosmo): s.selfRegister == nil
-		//   - OR Cosmo cache warmer is disabled: !opts.cosmoCacheWarmerEnabled
+		//   - OR CDN cache warmer is explictly disabled
 		case s.cacheWarmup.InMemoryFallback && (s.selfRegister == nil || !s.Config.cacheWarmup.Source.CdnSource.Enabled):
 			// We first utilize the plan cache (if it was already set, so not on first starts) to create a list of queries
 			// and reset the plan cache to the new plan cache for this start afterwords
 			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
 			opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 		case s.Config.cacheWarmup.Source.CdnSource.Enabled:
+			// We use the in-memory cache as a fallback if enabled
+			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
 			var fallbackSource *PlanSource
 			if s.cacheWarmup.InMemoryFallback {
 				fallbackSource = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
