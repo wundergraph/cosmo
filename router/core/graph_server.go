@@ -1375,15 +1375,19 @@ func (s *graphServer) buildGraphMux(
 			// and reset the plan cache to the new plan cache for this start afterwords
 			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
 			opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
-		default:
-			fallbackSource := NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
-			opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
-
+		case s.Config.cacheWarmup.Source.CdnSource.Enabled:
+			var fallbackSource *PlanSource
+			if s.cacheWarmup.InMemoryFallback {
+				fallbackSource = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
+				opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+			}
 			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger, fallbackSource)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create cdn source: %w", err)
 			}
 			warmupConfig.Source = cdnSource
+		default:
+			return nil, fmt.Errorf("unexpected cache warmer source provided")
 		}
 
 		err = WarmupCaches(ctx, warmupConfig)
