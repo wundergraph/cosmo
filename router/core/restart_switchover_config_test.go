@@ -62,7 +62,7 @@ func TestInMemorySwitchoverCache_UpdateInMemorySwitchoverCacheForConfigChanges(t
 			},
 		}
 
-		cache.updateStateFromConfig(cfg, false)
+		cache.updateStateFromConfig(cfg)
 
 		require.NotNil(t, cache.queriesForFeatureFlag)
 		require.Len(t, cache.queriesForFeatureFlag, 1)
@@ -81,7 +81,7 @@ func TestInMemorySwitchoverCache_UpdateInMemorySwitchoverCacheForConfigChanges(t
 			},
 		}
 
-		cache.updateStateFromConfig(cfg, false)
+		cache.updateStateFromConfig(cfg)
 
 		require.Nil(t, cache.queriesForFeatureFlag)
 	})
@@ -96,7 +96,7 @@ func TestInMemorySwitchoverCache_UpdateInMemorySwitchoverCacheForConfigChanges(t
 			cacheWarmup: nil,
 		}
 
-		cache.updateStateFromConfig(cfg, false)
+		cache.updateStateFromConfig(cfg)
 
 		require.Nil(t, cache.queriesForFeatureFlag)
 	})
@@ -112,7 +112,7 @@ func TestInMemorySwitchoverCache_UpdateInMemorySwitchoverCacheForConfigChanges(t
 			},
 		}
 
-		cache.updateStateFromConfig(cfg, false)
+		cache.updateStateFromConfig(cfg)
 
 		require.Nil(t, cache.queriesForFeatureFlag)
 	})
