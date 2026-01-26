@@ -67,7 +67,8 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) (operations 
 	// Defer fallback to PlanSource if items are nil
 	if c.fallbackSource != nil {
 		defer func() {
-			if operations == nil {
+			// If there were no operations loaded from CDN, use the fallbackSource
+			if len(operations) == 0 {
 				if err != nil {
 					log.Error("Falling back to PlanSource due to error loading cache warmup config from CDN", zap.Error(err))
 				}
