@@ -208,6 +208,7 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
   test('Should validate limit parameter', async () => {
     const { client, server } = await SetupTest({ dbname, chClient });
 
+    const subgraphName = genID('subgraph');
     const federatedGraphName = genID('fedGraph');
 
     // Create a federated graph
@@ -220,11 +221,31 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
 
     expect(createFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
 
+    // Create a subgraph
+    const createSubgraphResp = await client.createFederatedSubgraph({
+      name: subgraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labels: [{ key: 'team', value: 'A' }],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    expect(createSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create 51 checks
+    for (let i = 0; i < 51; i++) {
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+        schema: Uint8Array.from(Buffer.from(`type Query { a: String }`)),
+      });
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    }
+
     const now = new Date();
     const oneDayAgo = subDays(now, 1);
 
-    // Test with invalid limit (> 50)
-    const checksWithInvalidLimitResp = await client.getChecksByFederatedGraphName({
+    // Test with limit > 50 - should succeed but return max 50 results
+    const checksWithLimitOver50Resp = await client.getChecksByFederatedGraphName({
       name: federatedGraphName,
       namespace: DEFAULT_NAMESPACE,
       limit: 51,
@@ -236,8 +257,9 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
       },
     });
 
-    expect(checksWithInvalidLimitResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(checksWithInvalidLimitResp.response?.details).toBe('Invalid limit');
+    expect(checksWithLimitOver50Resp.response?.code).toBe(EnumStatusCode.OK);
+    // Limit is clamped to 50, so we should get maximum 50 checks back
+    expect(checksWithLimitOver50Resp.checks.length).toBe(50);
 
     // Test with valid limit
     const checksWithValidLimitResp = await client.getChecksByFederatedGraphName({
@@ -253,6 +275,7 @@ describe('GetChecksByFederatedGraphName', (ctx) => {
     });
 
     expect(checksWithValidLimitResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checksWithValidLimitResp.checks.length).toBe(50);
 
     await server.close();
   });
