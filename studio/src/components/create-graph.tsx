@@ -31,7 +31,7 @@ import {
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { EmptyState } from "./empty-state";
 import { cn } from "@/lib/utils";
@@ -118,6 +118,13 @@ export const CreateGraphForm = ({
     schema,
     mode: "onChange",
   });
+
+  // Sync form value when tags change (handles both direct updates and functional updaters)
+  useEffect(() => {
+    form.setValue("labelMatchers", tags as [Tag, ...Tag[]], {
+      shouldValidate: true,
+    });
+  }, [tags, form]);
 
   const { toast } = useToast();
 
@@ -261,36 +268,35 @@ export const CreateGraphForm = ({
                         <TagInput
                           {...field}
                           size="sm"
-                          placeholder="key=value, ..."
+                          placeholder="key1=value1,key2=value2 ..."
                           tags={tags}
                           setTags={(newTags) => {
+                            // Pass through functional updaters unchanged so React can call them with latest state
+                            // The useEffect above will sync form.setValue when tags actually changes
                             setTags(newTags);
-                            form.setValue(
-                              "labelMatchers",
-                              newTags as [Tag, ...Tag[]],
-                              {
-                                shouldValidate: true,
-                              },
-                            );
                           }}
-                          delimiterList={[" ", ",", "Enter"]}
+                          // Commas are valid inside a matcher value list (e.g. team=A,team=B).
+                          // Separate matchers with space or Enter (each matcher is AND-ed).
+                          delimiterList={[" ", "Enter"]}
                           activeTagIndex={activeTagIndex}
                           setActiveTagIndex={setActiveTagIndex}
                           allowDuplicates={false}
                         />
                       </FormControl>
                       <FormDescription className="text-left">
-                        Comma-separated values in the form of key=value. These
-                        will be used to match subgraphs for composition. Learn
-                        more{" "}
+                        Label matchers are used to select which subgraphs participate in this federated graph composition.
+                        Enter space-separated key-value pairs in the format <code>key=value</code>.
+                        To specify multiple values for the same key (OR condition), use commas within a single matcher (e.g., <code>team=A,team=B</code> matches subgraphs where team is either A or B).
+                        {" "}
                         <Link
                           href={docsBaseURL + "/cli/essentials#label-matcher"}
                           className="text-primary"
                           target="_blank"
                           rel="noreferrer"
                         >
-                          here.
+                          Learn more
                         </Link>
+                        .
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
