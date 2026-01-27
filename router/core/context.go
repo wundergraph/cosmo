@@ -18,7 +18,6 @@ import (
 
 	"github.com/wundergraph/astjson"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -529,10 +528,6 @@ type operationContext struct {
 	// fieldArguments are the arguments of the operation.
 	// These are not mapped by default, only when certain custom modules require them.
 	fieldArguments Arguments
-	// fieldArgumentMapping maps field arguments to their variable names.
-	// This is populated during variable normalization and used to create fieldArguments
-	// with O(m) complexity instead of O(n) AST walk.
-	fieldArgumentMapping astnormalization.FieldArgumentMapping
 	// variables are the variables of the operation
 	variables  *astjson.Value
 	files      []*httpclient.FileUpload

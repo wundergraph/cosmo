@@ -1,77 +1,29 @@
 package core
 
 import (
-	"strings"
-
 	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 )
 
-// fieldArgs is a collection of field arguments with their names
-// as keys and their corresponding values.
-type fieldArgs map[string]*astjson.Value
-
 // Arguments allow access to GraphQL field arguments used by clients.
 type Arguments struct {
-	// data holds a map which contains all field arguments
-	// for any given field of an operation.
-	data map[string]fieldArgs
+	// mapping maps "fieldPath.argumentName" to "variableName".
+	// For example: {"user.posts.limit": "a", "user.id": "userId"}
+	mapping astnormalization.FieldArgumentMapping
+
+	// variables contains the JSON-parsed variables from the request.
+	variables *astjson.Value
 }
 
-// NewArgumentsFromMapping creates Arguments using the cached field argument mapping
-// and the request's variable values. This is O(m) where m is the number of arguments,
-// compared to the previous O(n) AST walk where n is the number of AST nodes.
-//
-// The mapping parameter maps "fieldPath.argumentName" to "variableName".
-// For example: {"user.posts.limit": "a", "user.id": "userId"}
-//
-// The variables parameter contains the JSON-parsed variables from the request.
-// The remapVariables parameter maps new variable names to original variable names.
-func NewArgumentsFromMapping(
+// NewArguments creates an Arguments instance.
+func NewArguments(
 	mapping astnormalization.FieldArgumentMapping,
 	variables *astjson.Value,
-	remapVariables map[string]string,
 ) Arguments {
-	if len(mapping) == 0 {
-		return Arguments{}
+	return Arguments{
+		mapping:   mapping,
+		variables: variables,
 	}
-
-	data := make(map[string]fieldArgs, len(mapping))
-
-	for key, varName := range mapping {
-		// key format: "fieldPath.argumentName" (e.g., "user.posts.limit")
-		// We need to split by the last "." to separate field path from argument name
-		lastDot := strings.LastIndex(key, ".")
-		if lastDot == -1 {
-			// No dot found, skip this entry (shouldn't happen with valid data)
-			continue
-		}
-
-		fieldPath := key[:lastDot]
-		argName := key[lastDot+1:]
-
-		// Look up the original variable name if remapping is in effect
-		originalVarName := varName
-		if remapVariables != nil {
-			if original, ok := remapVariables[varName]; ok {
-				originalVarName = original
-			}
-		}
-
-		// Get the variable value from the parsed variables
-		var argValue *astjson.Value
-		if variables != nil {
-			argValue = variables.Get(originalVarName)
-		}
-
-		// Initialize the field's argument map if needed
-		if data[fieldPath] == nil {
-			data[fieldPath] = make(fieldArgs)
-		}
-		data[fieldPath][argName] = argValue
-	}
-
-	return Arguments{data: data}
 }
 
 // Get will return the value of argument a from field f.
@@ -106,14 +58,18 @@ func NewArgumentsFromMapping(
 //
 // If fa is nil, or f or a cannot be found, nil is returned.
 func (fa *Arguments) Get(f string, a string) *astjson.Value {
-	if fa == nil || fa.data == nil {
+	if fa == nil || len(fa.mapping) == 0 || fa.variables == nil {
 		return nil
 	}
 
-	args, found := fa.data[f]
-	if !found {
+	// Build the mapping key: "fieldPath.argumentName"
+	key := f + "." + a
+
+	// Look up variable name from mapping
+	varName, ok := fa.mapping[key]
+	if !ok {
 		return nil
 	}
 
-	return args[a]
+	return fa.variables.Get(varName)
 }

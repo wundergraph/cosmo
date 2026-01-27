@@ -802,7 +802,6 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 		return err
 	}
 	// Store the field argument mapping for later use when creating Arguments
-	requestContext.operation.fieldArgumentMapping = fieldArgMapping
 	engineNormalizeSpan.SetAttributes(otel.WgVariablesNormalizationCacheHit.Bool(cached))
 	requestContext.operation.variablesNormalizationCacheHit = cached
 
@@ -923,10 +922,9 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	}
 
 	if h.mapFieldArguments {
-		requestContext.operation.fieldArguments = NewArgumentsFromMapping(
-			requestContext.operation.fieldArgumentMapping,
+		requestContext.operation.fieldArguments = NewArguments(
+			fieldArgMapping,
 			requestContext.operation.variables,
-			requestContext.operation.remapVariables,
 		)
 	}
 

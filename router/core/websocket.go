@@ -918,7 +918,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		return nil, nil, err
 	}
 	opContext.variablesNormalizationCacheHit = cached
-	opContext.fieldArgumentMapping = fieldArgMapping
 
 	cached, err = operationKit.RemapVariables(h.disableVariablesRemapping)
 	if err != nil {
@@ -939,10 +938,9 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	}
 
 	if h.mapFieldArguments {
-		opContext.fieldArguments = NewArgumentsFromMapping(
-			opContext.fieldArgumentMapping,
+		opContext.fieldArguments = NewArguments(
+			fieldArgMapping,
 			opContext.variables,
-			opContext.remapVariables,
 		)
 	}
 

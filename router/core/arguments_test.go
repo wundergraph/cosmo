@@ -12,7 +12,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
-func TestMapFieldArguments(t *testing.T) {
+func TestArgumentMapping(t *testing.T) {
 	testCases := []struct {
 		name       string
 		schema     string
@@ -320,96 +320,21 @@ func TestMapFieldArguments(t *testing.T) {
 			vars, err := astjson.ParseBytes(operation.Input.Variables)
 			require.NoError(t, err)
 
-			// Create Arguments from the mapping (O(m) complexity)
-			arguments := NewArgumentsFromMapping(
-				result.FieldArgumentMapping,
-				vars,
-				nil, // no remapping in tests
-			)
+			arguments := NewArguments(result.FieldArgumentMapping, vars)
 
-			// Run assertions
 			tc.assertions(t, arguments)
 		})
 	}
 }
 
-func TestNewArgumentsFromMapping_NilMapping(t *testing.T) {
+func TestNewArguments_NilMapping(t *testing.T) {
 	// Test that nil mapping returns empty Arguments
-	result := NewArgumentsFromMapping(nil, nil, nil)
+	result := NewArguments(nil, nil)
 	assert.Nil(t, result.Get("user", "id"))
 }
 
-func TestNewArgumentsFromMapping_EmptyMapping(t *testing.T) {
+func TestNewArguments_EmptyMapping(t *testing.T) {
 	// Test that empty mapping returns empty Arguments
-	result := NewArgumentsFromMapping(astnormalization.FieldArgumentMapping{}, nil, nil)
+	result := NewArguments(astnormalization.FieldArgumentMapping{}, nil)
 	assert.Nil(t, result.Get("user", "id"))
-}
-
-func TestNewArgumentsFromMapping_WithRemapping(t *testing.T) {
-	// Test that variable remapping works correctly
-	schema := `
-		type Query {
-			user(id: ID!): User
-		}
-		type User {
-			id: ID!
-		}
-	`
-
-	// Parse schema
-	schemaDef, report := astparser.ParseGraphqlDocumentString(schema)
-	require.False(t, report.HasErrors(), "failed to parse schema")
-	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDef)
-	require.NoError(t, err)
-
-	// Parse operation
-	operation, report := astparser.ParseGraphqlDocumentString(`
-		query GetUser($userId: ID!) {
-			user(id: $userId) {
-				id
-			}
-		}
-	`)
-	require.False(t, report.HasErrors(), "failed to parse operation")
-
-	// Set variables
-	operation.Input.Variables = []byte(`{"userId": "123"}`)
-
-	// First normalize the operation
-	rep := &operationreport.Report{}
-	norm := astnormalization.NewNormalizer(true, true)
-	norm.NormalizeOperation(&operation, &schemaDef, rep)
-	require.False(t, rep.HasErrors(), "failed to normalize operation")
-
-	// Then normalize variables to get the mapping
-	varNorm := astnormalization.NewVariablesNormalizer()
-	normResult := varNorm.NormalizeOperation(&operation, &schemaDef, rep)
-	require.False(t, rep.HasErrors(), "failed to normalize variables")
-
-	// Parse variables
-	vars, err := astjson.ParseBytes(operation.Input.Variables)
-	require.NoError(t, err)
-
-	// Test with remapping: simulate that "userId" was remapped to "a"
-	// We need to provide the original name so the lookup works
-	remapVariables := map[string]string{
-		"a": "userId", // new name -> original name
-	}
-
-	// Modify the mapping to use the remapped name
-	modifiedMapping := astnormalization.FieldArgumentMapping{}
-	for k, v := range normResult.FieldArgumentMapping {
-		if v == "userId" {
-			modifiedMapping[k] = "a" // simulate remapping
-		} else {
-			modifiedMapping[k] = v
-		}
-	}
-
-	result := NewArgumentsFromMapping(modifiedMapping, vars, remapVariables)
-
-	// The lookup should use the original variable name
-	idArg := result.Get("user", "id")
-	require.NotNil(t, idArg, "expected 'id' argument on 'user' field")
-	assert.Equal(t, "123", string(idArg.GetStringBytes()))
 }
