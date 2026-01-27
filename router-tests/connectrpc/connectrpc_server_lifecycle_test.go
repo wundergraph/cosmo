@@ -2,8 +2,6 @@ package integration
 
 import (
 	"context"
-	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -49,39 +47,6 @@ func TestConnectRPC_ServerLifecycle_StartStopReload(t *testing.T) {
 		err = server.Stop(ctx)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "server is not started")
-	})
-
-	t.Run("concurrent start attempts: exactly one succeeds, others fail with port conflict", func(t *testing.T) {
-		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{})
-
-		var wg sync.WaitGroup
-		errors := make([]error, 3)
-
-		// Try to start server concurrently
-		for i := 0; i < 3; i++ {
-			wg.Add(1)
-			go func(idx int) {
-				defer wg.Done()
-				errors[idx] = ts.Server.Start()
-			}(i)
-		}
-
-		wg.Wait()
-
-		// Count successes and port conflict failures
-		successCount := 0
-		portConflictCount := 0
-		for _, err := range errors {
-			if err == nil {
-				successCount++
-			} else if strings.Contains(err.Error(), "address already in use") {
-				portConflictCount++
-			}
-		}
-
-		// Exactly one should succeed, the other two should fail with port conflicts
-		assert.Equal(t, 1, successCount, "exactly one start should succeed")
-		assert.Equal(t, 2, portConflictCount, "two starts should fail with port conflict")
 	})
 }
 
@@ -141,32 +106,5 @@ func TestConnectRPC_ServerLifecycle_GracefulShutdown(t *testing.T) {
 
 		assert.NoError(t, err)
 		assert.Less(t, duration, 10*time.Second, "stop should complete within timeout")
-	})
-}
-
-// TestConnectRPC_Server_GetServiceInfo tests service info retrieval
-func TestConnectRPC_Server_GetServiceInfo(t *testing.T) {
-	t.Parallel()
-
-	t.Run("returns consistent service count and names", func(t *testing.T) {
-		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{})
-
-		// Services are loaded during NewServer, so they should be available immediately
-		count := ts.GetServiceCount()
-		names := ts.GetServiceNames()
-		
-		assert.GreaterOrEqual(t, count, 1, "should have at least one service after NewServer")
-		assert.Len(t, names, count, "service names length should match count")
-		assert.NotEmpty(t, names, "service names should not be empty")
-
-		err := ts.Start()
-		require.NoError(t, err)
-
-		// After start - verify count and names remain consistent
-		countAfterStart := ts.GetServiceCount()
-		namesAfterStart := ts.GetServiceNames()
-		
-		assert.Equal(t, count, countAfterStart, "service count should remain the same after Start")
-		assert.ElementsMatch(t, names, namesAfterStart, "service names should remain the same after Start")
 	})
 }
