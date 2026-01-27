@@ -4,6 +4,38 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.104.1](https://github.com/wundergraph/cosmo/compare/wgc@0.104.0...wgc@0.104.1) (2026-01-20)
+
+### Bug Fixes
+
+* **cli:** handle cross device link error on plugin init ([#2465](https://github.com/wundergraph/cosmo/issues/2465)) ([d0cbf9c](https://github.com/wundergraph/cosmo/commit/d0cbf9c5e9952bd6a72d1959efd14727e076b226)) (@Noroth)
+
+# [0.104.0](https://github.com/wundergraph/cosmo/compare/wgc@0.103.4...wgc@0.104.0) (2026-01-16)
+
+### Features
+
+* hide posthog errors from cli output if debug not enabled ([#2458](https://github.com/wundergraph/cosmo/issues/2458)) ([afb499c](https://github.com/wundergraph/cosmo/commit/afb499cb75b628b5f514a8d468dc81d08e5e3a9d)) (@alepane21)
+
+## [0.103.4](https://github.com/wundergraph/cosmo/compare/wgc@0.103.3...wgc@0.103.4) (2026-01-09)
+
+**Note:** Version bump only for package wgc
+
+## [0.103.3](https://github.com/wundergraph/cosmo/compare/wgc@0.103.2...wgc@0.103.3) (2026-01-09)
+
+### Bug Fixes
+
+* perform auth for all the commands of grpc which requires controlplane ([#2447](https://github.com/wundergraph/cosmo/issues/2447)) ([eb6a5cc](https://github.com/wundergraph/cosmo/commit/eb6a5ccbc02a2b402b75984a1cb36349d15768da)) (@JivusAyrus)
+
+## [0.103.2](https://github.com/wundergraph/cosmo/compare/wgc@0.103.1...wgc@0.103.2) (2026-01-08)
+
+### Bug Fixes
+
+* limit the number of entries shown in the table for schema checks on the cli ([#2417](https://github.com/wundergraph/cosmo/issues/2417)) ([2a2cd52](https://github.com/wundergraph/cosmo/commit/2a2cd5207d1575518cf459bd05c702406d7f6ef6)) (@SkArchon)
+
+## [0.103.1](https://github.com/wundergraph/cosmo/compare/wgc@0.103.0...wgc@0.103.1) (2026-01-07)
+
+**Note:** Version bump only for package wgc
+
 # [0.103.0](https://github.com/wundergraph/cosmo/compare/wgc@0.102.6...wgc@0.103.0) (2026-01-07)
 
 ### Features
