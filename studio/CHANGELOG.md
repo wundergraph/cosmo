@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.150.0](https://github.com/wundergraph/cosmo/compare/studio@0.149.6...studio@0.150.0) (2026-01-26)
+
+### Features
+
+* make studio image rootless ([#2459](https://github.com/wundergraph/cosmo/issues/2459)) ([c5071f8](https://github.com/wundergraph/cosmo/commit/c5071f8df47fbfeeb794fe772a74a1bc63366cc0)) (@pepol)
+
+## [0.149.6](https://github.com/wundergraph/cosmo/compare/studio@0.149.5...studio@0.149.6) (2026-01-20)
+
+**Note:** Version bump only for package studio
+
 ## [0.149.5](https://github.com/wundergraph/cosmo/compare/studio@0.149.4...studio@0.149.5) (2026-01-16)
 
 **Note:** Version bump only for package studio
