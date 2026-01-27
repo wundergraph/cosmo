@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.128.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.127.3...@wundergraph/cosmo-connect@0.128.0) (2026-01-27)
+
+### Features
+
+* add pagination and limit handling for API keys ([#2430](https://github.com/wundergraph/cosmo/issues/2430)) ([eca6aac](https://github.com/wundergraph/cosmo/commit/eca6aac00ffb13527b241a45ab552ef0b87788e4)) (@JivusAyrus)
+
 ## [0.127.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.127.2...@wundergraph/cosmo-connect@0.127.3) (2026-01-08)
 
 ### Bug Fixes
