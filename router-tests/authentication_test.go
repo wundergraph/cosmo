@@ -4016,6 +4016,123 @@ func TestIntrospectionAuthentication(t *testing.T) {
 	})
 }
 
+func TestUseCustomization(t *testing.T) {
+	t.Parallel()
+
+	authHeader := func(token string) http.Header {
+		return http.Header{
+			"Authorization": []string{"Bearer " + token},
+		}
+	}
+
+	testRequest := func(t *testing.T, xEnv *testenv.Environment, header http.Header, expectSuccess bool) string {
+		t.Helper()
+
+		res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", header, strings.NewReader(employeesQuery))
+		require.NoError(t, err)
+		defer res.Body.Close()
+
+		if expectSuccess {
+			require.Equal(t, http.StatusOK, res.StatusCode)
+			require.Equal(t, JwksName, res.Header.Get(xAuthenticatedByHeader))
+		} else {
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+		}
+
+		data, err := io.ReadAll(res.Body)
+		require.NoError(t, err)
+		return string(data)
+	}
+
+	testSetup := func(t *testing.T, crypto jwks.Crypto, allowedUse ...string) (string, []authentication.Authenticator) {
+		t.Helper()
+
+		authServer, err := jwks.NewServerWithOptions(t, jwks.WithProviders(crypto), jwks.WithUse(""))
+		require.NoError(t, err)
+		t.Cleanup(authServer.Close)
+
+		cfg := toJWKSConfig(authServer.JWKSURL(), time.Second*5)
+		cfg.AllowedUse = allowedUse
+
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(
+			NewContextWithCancel(t),
+			zap.NewNop(),
+			[]authentication.JWKSConfig{cfg},
+		)
+		require.NoError(t, err)
+
+		authOptions := authentication.HttpHeaderAuthenticatorOptions{
+			Name:         JwksName,
+			TokenDecoder: tokenDecoder,
+		}
+		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
+		require.NoError(t, err)
+
+		authenticators := []authentication.Authenticator{authenticator}
+
+		token, err := authServer.TokenForKID(crypto.KID(), nil, false)
+		require.NoError(t, err)
+
+		return token, authenticators
+	}
+
+	t.Run("Use option", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Test authentication with empty use should fail by default", func(t *testing.T) {
+			t.Parallel()
+
+			rsaCrypto, err := jwks.NewRSACrypto("test", jwkset.AlgRS256, 2048)
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, rsaCrypto)
+
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(accessController),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				body := testRequest(t, xEnv, authHeader(token), false)
+				require.Equal(t, unauthorizedExpectedData, string(body))
+			})
+		})
+
+		t.Run("Test authentication with empty use should succeed if allowed", func(t *testing.T) {
+			t.Parallel()
+
+			rsaCrypto, err := jwks.NewRSACrypto("test", jwkset.AlgRS256, 2048)
+			require.NoError(t, err)
+
+			token, authenticators := testSetup(t, rsaCrypto, "")
+
+			accessController, err := core.NewAccessController(core.AccessControllerOptions{
+				Authenticators:           authenticators,
+				AuthenticationRequired:   true,
+				SkipIntrospectionQueries: false,
+				IntrospectionSkipSecret:  "",
+			})
+			require.NoError(t, err)
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithAccessController(accessController),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				body := testRequest(t, xEnv, authHeader(token), true)
+				require.Equal(t, employeesExpectedData, string(body))
+			})
+		})
+	})
+}
+
 func toJWKSConfig(url string, refresh time.Duration, allowedAlgorithms ...string) authentication.JWKSConfig {
 	return authentication.JWKSConfig{
 		URL:               url,

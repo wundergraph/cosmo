@@ -103,6 +103,7 @@ message CheckSubgraphSchemaRequest {
   optional VCSContext vcsContext = 7;
   repeated Label labels = 8;
   optional bool disable_resolvability_validation = 9;
+  optional int32 limit = 10;
 }
 
 message FixSubgraphSchemaRequest {
@@ -284,6 +285,18 @@ message CheckSubgraphSchemaResponse {
   optional bool isLinkedPruningCheckFailed = 16;
   optional bool isCheckExtensionSkipped = 17;
   optional string checkExtensionErrorMessage = 18;
+  optional SchemaCheckCounts counts = 19;
+}
+
+message SchemaCheckCounts{
+  int32 lintWarnings = 1;
+  int32 lintErrors = 2;
+  int32 breakingChanges = 3;
+  int32 nonBreakingChanges = 4;
+  int32 compositionErrors = 5;
+  int32 compositionWarnings = 6;
+  int32 graphPruneErrors = 7;
+  int32 graphPruneWarnings = 8;
 }
 
 message FixSubgraphSchemaResponse {
@@ -746,6 +759,7 @@ message CheckFederatedGraphRequest {
   repeated string label_matchers = 2;
   string namespace = 3;
   optional bool disable_resolvability_validation = 4;
+  optional int32 limit = 5;
 }
 
 message CheckFederatedGraphResponse {
@@ -753,6 +767,7 @@ message CheckFederatedGraphResponse {
   repeated CompositionError compositionErrors = 2;
   repeated Subgraph subgraphs = 3;
   repeated CompositionWarning compositionWarnings = 4;
+  optional SchemaCheckCounts counts = 5;
 }
 
 
@@ -2069,6 +2084,8 @@ message GetFieldUsageRequest {
   DateRange dateRange = 6;
   string namespace = 7;
   optional string feature_flag_name = 8;
+  bool is_argument = 9;
+  bool is_input = 10;
 }
 
 message ClientWithOperations {
