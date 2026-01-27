@@ -188,16 +188,16 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		if errs := resolveCtx.SubgraphErrors(); errs != nil {
+			trackFinalResponseError(resolveCtx.Context(), errs)
+			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+		}
+
 		// Apply any final client response header rules
 		if h.headerPropagation != nil {
 			if err := h.headerPropagation.ApplyClientResponseHeaderRules(w, reqCtx); err != nil {
 				reqCtx.logger.Error("Failed to apply client response header rules", zap.Error(err))
 			}
-		}
-
-		if errs := resolveCtx.SubgraphErrors(); errs != nil {
-			trackFinalResponseError(resolveCtx.Context(), errs)
-			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 
 		// Write contents of buf to the header propagation writer
