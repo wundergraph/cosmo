@@ -11,6 +11,44 @@ import Link from "next/link";
 import { ThemeToggle } from "./theme-toggle";
 import { Avatar, AvatarFallback } from "./ui/avatar";
 import { Button } from "./ui/button";
+import { PropsWithChildren } from "react";
+
+const localStorageKeysToRemove = [
+  'graphiql:headers',
+  'graphiql:queries',
+  'graphiql:tabState',
+  'graphiql:variables',
+  'graphiql:query',
+  'graphiql:operationName',
+  'playground:pre-flight:selected',
+  'playground:pre-operation:selected',
+  'playground:post-operation:selected',
+  'playground:script:tabState'
+];
+
+function removeLocalStorageItems() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  for (const key of localStorageKeysToRemove) {
+    window.localStorage.removeItem(key);
+  }
+}
+
+const LogoutLink = ({ children }: PropsWithChildren) => {
+  return (
+    <Link
+      onClick={() => {
+        removeLocalStorageItems();
+        resetTracking();
+      }}
+      href={process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/logout"}
+    >
+      {children || "Logout"}
+    </Link>
+  );
+}
 
 export const UserMenuMobile = () => {
   const user = useUser();
@@ -21,14 +59,7 @@ export const UserMenuMobile = () => {
     <div className="flex flex-col items-center justify-center gap-y-4">
       <p className="text-sm font-bold">{user.email}</p>
       <Button>
-        <Link
-          onClick={() => {
-            resetTracking();
-          }}
-          href={process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/logout"}
-        >
-          Logout
-        </Link>
+        <LogoutLink />
       </Button>
     </div>
   );
@@ -77,9 +108,9 @@ export const UserMenu = () => {
         <DropdownMenuSeparator />
         <ThemeToggle />
         <DropdownMenuSeparator />
-        <Link href={process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/logout"}>
+        <LogoutLink>
           <DropdownMenuItem>Logout</DropdownMenuItem>
-        </Link>
+        </LogoutLink>
       </DropdownMenuContent>
     </DropdownMenu>
   );
