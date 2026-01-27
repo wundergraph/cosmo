@@ -138,7 +138,13 @@
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
     "RouterURL": "",
-    "OmitToolNamePrefix": false
+    "OmitToolNamePrefix": false,
+    "OAuth": {
+      "Enabled": false,
+      "JWKS": null,
+      "AuthorizationServerURL": "",
+      "ScopesRequired": null
+    }
   },
   "DemoMode": false,
   "Modules": null,
