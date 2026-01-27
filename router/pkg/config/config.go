@@ -263,6 +263,7 @@ type HeaderRules struct {
 	All             *GlobalHeaderRule            `yaml:"all,omitempty"`
 	Subgraphs       map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
 	CookieWhitelist []string                     `yaml:"cookie_whitelist,omitempty"`
+	Client          []*ClientHeaderRule          `yaml:"client,omitempty"`
 }
 
 type GlobalHeaderRule struct {
@@ -329,6 +330,12 @@ const (
 	ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl ResponseHeaderRuleAlgorithm = "most_restrictive_cache_control"
 )
 
+type ClientHeaderRule struct {
+	// Set header options
+	Name       string `yaml:"name"`
+	Expression string `yaml:"expression"`
+}
+
 type ResponseHeaderRule struct {
 	// Operation describes the header operation to perform e.g. "propagate"
 	Operation HeaderRuleOperation `yaml:"op"`
@@ -349,6 +356,8 @@ type ResponseHeaderRule struct {
 	Name string `yaml:"name"`
 	// Value is the value of the header to set
 	Value string `yaml:"value"`
+
+	Expression string `yaml:"expression"`
 }
 
 func (r *ResponseHeaderRule) GetOperation() HeaderRuleOperation {

@@ -145,7 +145,8 @@
   "Headers": {
     "All": null,
     "Subgraphs": null,
-    "CookieWhitelist": null
+    "CookieWhitelist": null,
+    "Client": null
   },
   "TrafficShaping": {
     "All": {

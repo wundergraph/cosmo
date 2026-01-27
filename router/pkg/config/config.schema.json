@@ -1665,6 +1665,13 @@
           "items": {
             "type": "string"
           }
+        },
+        "client": {
+          "type": "array",
+          "description": "A list of header rules to apply to client responses.",
+          "items": {
+            "$ref": "#/$defs/client_header_rule"
+          }
         }
       }
     },
@@ -3535,6 +3542,23 @@
         "negate_match": ["matching"]
       },
       "required": ["op", "algorithm"]
+    },
+    "client_header_rule": {
+      "type": "object",
+      "description": "The configuration for client response headers. This is used to set headers in responses to clients.",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the header to set.",
+          "examples": ["X-Custom-Header"]
+        },
+        "expression": {
+          "type": "string",
+          "description": "The template expression to evaluate for the header value. The expression must return a string value."
+        }
+      },
+      "required": ["name", "expression"]
     },
     "set_header_rule": {
       "type": "object",
