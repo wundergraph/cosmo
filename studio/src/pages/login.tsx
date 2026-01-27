@@ -137,7 +137,9 @@ const LoginPage: NextPageWithLayout = () => {
                   Don&apos;t have an account?
                   <Link
                     href={
-                      redirectURL ? `/signup?redirectURL=${redirectURL}` : "/signup"
+                      redirectURL
+                        ? `/signup?redirectURL=${encodeURIComponent(redirectURL)}`
+                        : "/signup"
                     }
                     className="ml-[5px] font-medium text-primary hover:underline"
                   >
