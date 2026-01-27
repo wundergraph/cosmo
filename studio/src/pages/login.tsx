@@ -44,9 +44,6 @@ const constructLoginURL = ({
   return loginUrl + (queryString.length ? "?" + queryString : "");
 };
 
-// Button height: 56px / 900px = 6.2%
-const buttonHeightStyle = { height: "clamp(48px, 6.2vh, 56px)" };
-
 const LoginPage: NextPageWithLayout = () => {
   const router = useRouter();
 
