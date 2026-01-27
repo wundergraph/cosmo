@@ -2,6 +2,7 @@ package integration
 
 import (
 	"encoding/json"
+	"go.uber.org/zap/zapcore"
 	"net/http"
 	"strings"
 	"testing"
@@ -1316,6 +1317,54 @@ func TestHeaderPropagation(t *testing.T) {
 				// Client header should still be set even with errors
 				require.Equal(t, "client-value", res.Response.Header.Get("X-Client-Header"))
 				require.Equal(t, "error", res.Response.Header.Get("X-Error-Header"))
+			})
+		})
+
+		t.Run("should log errors (but not error out) when client header rule evaluation fails at runtime", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				LogObservation: testenv.LogObservationConfig{
+					Enabled:  true,
+					LogLevel: zapcore.ErrorLevel,
+				},
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						Client: []*config.ClientHeaderRule{
+							{
+								Name:       "X-Valid-Header",
+								Expression: `"valid-value"`,
+							},
+							{
+								Name:       "X-Invalid-Header",
+								Expression: `string(int("a"))`,
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithNoHobby,
+				})
+
+				require.Equal(t, "valid-value", res.Response.Header.Get("X-Valid-Header"))
+
+				_, headerExists := res.Response.Header["X-Invalid-Header"]
+				require.False(t, headerExists)
+
+				require.Equal(t, http.StatusOK, res.Response.StatusCode)
+				require.Contains(t, res.Body, `"data"`)
+
+				logs := xEnv.Observer()
+				require.NotNil(t, logs)
+
+				errorLogs := logs.FilterMessage("Failed to apply client response header rules").All()
+				require.Len(t, errorLogs, 1)
+
+				errorLog := errorLogs[0]
+				require.Equal(t, zapcore.ErrorLevel, errorLog.Level)
+				require.Equal(t, "Failed to apply client response header rules", errorLog.Message)
+				require.NotEmpty(t, errorLog.Context)
 			})
 		})
 	})
