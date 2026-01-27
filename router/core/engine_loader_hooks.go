@@ -12,6 +12,7 @@ import (
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
 	"github.com/wundergraph/cosmo/router/internal/unique"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector/grpcremote"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -101,6 +102,12 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 	reqContext := getRequestContext(ctx)
 	if reqContext == nil {
 		return ctx
+	}
+
+	// Inject HTTP headers into context for gRPC interceptor
+	// The gRPC interceptor will extract these headers and forward them as metadata
+	if reqContext.request != nil && reqContext.request.Header != nil {
+		ctx = grpcremote.WithHTTPHeaders(ctx, reqContext.request.Header)
 	}
 
 	ctx, _ = f.tracer.Start(ctx, "Engine - Fetch",
