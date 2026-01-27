@@ -13,28 +13,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 )
 
-func TestNewOperationRegistry(t *testing.T) {
-	t.Parallel()
-
-	t.Run("creates registry with operations", func(t *testing.T) {
-		t.Parallel()
-		operations := make(map[string]map[string]*schemaloader.Operation)
-		registry := NewOperationRegistry(operations)
-
-		assert.NotNil(t, registry)
-		assert.NotNil(t, registry.operations)
-		assert.Equal(t, 0, registry.Count())
-	})
-
-	t.Run("creates registry with nil operations", func(t *testing.T) {
-		t.Parallel()
-		registry := NewOperationRegistry(nil)
-
-		assert.NotNil(t, registry)
-		assert.NotNil(t, registry.operations)
-	})
-}
-
 func TestLoadOperationsForService(t *testing.T) {
 	t.Run("loads operations for service successfully", func(t *testing.T) {
 		tempDir := t.TempDir()

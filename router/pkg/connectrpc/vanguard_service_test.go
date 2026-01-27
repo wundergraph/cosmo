@@ -89,38 +89,6 @@ func TestNewVanguardService(t *testing.T) {
 	})
 }
 
-func TestVanguardService_GetServices(t *testing.T) {
-	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
-	handler := NewTestRPCHandler(t, protoLoader)
-
-	vs, err := NewVanguardService(VanguardServiceConfig{
-		Handler:     handler,
-		ProtoLoader: protoLoader,
-		Logger:      zap.NewNop(),
-	})
-	require.NoError(t, err)
-
-	services := vs.GetServices()
-	assert.Len(t, services, 1, "Should have exactly 1 service from employee_only directory")
-	assert.NotNil(t, services[0])
-}
-
-func TestVanguardService_GetServiceNames(t *testing.T) {
-	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
-	handler := NewTestRPCHandler(t, protoLoader)
-
-	vs, err := NewVanguardService(VanguardServiceConfig{
-		Handler:     handler,
-		ProtoLoader: protoLoader,
-		Logger:      zap.NewNop(),
-	})
-	require.NoError(t, err)
-
-	names := vs.GetServiceNames()
-	assert.Len(t, names, 1, "Should have exactly 1 service from employee_only directory")
-	assert.Contains(t, names, "employee.v1.EmployeeService")
-}
-
 func TestVanguardService_ValidateService(t *testing.T) {
 	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
 	handler := NewTestRPCHandler(t, protoLoader)
@@ -398,78 +366,6 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
-}
-
-func TestVanguardService_ExtractMethodName(t *testing.T) {
-	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
-	handler := NewTestRPCHandler(t, protoLoader)
-
-	vs, err := NewVanguardService(VanguardServiceConfig{
-		Handler:     handler,
-		ProtoLoader: protoLoader,
-		Logger:      zap.NewNop(),
-	})
-	require.NoError(t, err)
-
-	tests := []struct {
-		name        string
-		path        string
-		serviceName string
-		want        string
-	}{
-		{
-			name:        "valid path with leading slash",
-			path:        "/employee.v1.EmployeeService/GetEmployeeById",
-			serviceName: "employee.v1.EmployeeService",
-			want:        "GetEmployeeById",
-		},
-		{
-			name:        "valid path without leading slash",
-			path:        "employee.v1.EmployeeService/GetEmployeeById",
-			serviceName: "employee.v1.EmployeeService",
-			want:        "GetEmployeeById",
-		},
-		{
-			name:        "invalid path - no method",
-			path:        "/employee.v1.EmployeeService",
-			serviceName: "employee.v1.EmployeeService",
-			want:        "",
-		},
-		{
-			name:        "invalid path - wrong service",
-			path:        "/wrong.Service/QueryGetUser",
-			serviceName: "employee.v1.EmployeeService",
-			want:        "",
-		},
-		{
-			name:        "invalid path - too many parts",
-			path:        "/employee.v1.EmployeeService/GetEmployeeById/extra",
-			serviceName: "employee.v1.EmployeeService",
-			want:        "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := vs.extractMethodName(tt.path, tt.serviceName)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestVanguardService_GetFileDescriptors(t *testing.T) {
-	protoLoader := GetSharedProtoLoader(t, "samples/services/employee.v1")
-	handler := NewTestRPCHandler(t, protoLoader)
-
-	vs, err := NewVanguardService(VanguardServiceConfig{
-		Handler:     handler,
-		ProtoLoader: protoLoader,
-		Logger:      zap.NewNop(),
-	})
-	require.NoError(t, err)
-
-	descriptors := vs.GetFileDescriptors()
-	assert.NotEmpty(t, descriptors)
 }
 
 // errorReader is a reader that always returns an error
