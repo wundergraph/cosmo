@@ -13,8 +13,12 @@ import {
   NamedTypeNode,
   GraphQLID,
   ConstArgumentNode,
+  GraphQLObjectType,
+  GraphQLSchema,
+  buildSchema,
 } from 'graphql';
-import { CONNECT_FIELD_RESOLVER, CONTEXT } from './string-constants.js';
+import { CONNECT_FIELD_RESOLVER, CONTEXT, FIELDS, REQUIRES_DIRECTIVE_NAME } from './string-constants.js';
+import { SelectionSetValidationVisitor } from './selection-set-validation-visitor.js';
 
 /**
  * Type mapping from Kind enum values to their corresponding AST node types
@@ -86,6 +90,7 @@ interface MessageContext {
  */
 export class SDLValidationVisitor {
   private readonly schema: string;
+  private readonly schemaObject: GraphQLSchema;
   private readonly validationResult: ValidationResult;
   private lintingRules: LintingRule<any>[] = [];
   private visitor: ASTVisitor;
@@ -96,6 +101,7 @@ export class SDLValidationVisitor {
    */
   constructor(schema: string) {
     this.schema = schema;
+    this.schemaObject = buildSchema(schema, { assumeValid: true, assumeValidSDL: true });
     this.validationResult = {
       errors: [],
       warnings: [],
@@ -127,10 +133,11 @@ export class SDLValidationVisitor {
       validationFunction: (ctx) => this.validateListTypeNullability(ctx),
     };
 
+    // Requires directive support will currently be added. This rule will be removed in the future.
     const requiresRule: LintingRule<Kind.FIELD_DEFINITION> = {
       name: 'use-of-requires',
       description: 'Validates usage of @requires directive which is not yet supported',
-      enabled: true,
+      enabled: false,
       nodeKind: Kind.FIELD_DEFINITION,
       validationFunction: (ctx) => this.validateRequiresDirective(ctx),
     };
@@ -151,7 +158,22 @@ export class SDLValidationVisitor {
       validationFunction: (ctx) => this.validateInvalidResolverContext(ctx),
     };
 
-    this.lintingRules = [objectTypeRule, listTypeRule, requiresRule, providesRule, resolverContextRule];
+    const disallowAbstractTypesForRequiresRule: LintingRule<Kind.FIELD_DEFINITION> = {
+      name: 'disallow-abstract-types-for-requires',
+      description: 'Validates that abstract types are not used in requires directives',
+      enabled: true,
+      nodeKind: Kind.FIELD_DEFINITION,
+      validationFunction: (ctx) => this.validateDisallowAbstractTypesForRequires(ctx),
+    };
+
+    this.lintingRules = [
+      objectTypeRule,
+      listTypeRule,
+      requiresRule,
+      providesRule,
+      resolverContextRule,
+      disallowAbstractTypesForRequiresRule,
+    ];
   }
 
   /**
@@ -304,7 +326,9 @@ export class SDLValidationVisitor {
    * @private
    */
   private validateRequiresDirective(ctx: VisitContext<FieldDefinitionNode>): void {
-    const hasRequiresDirective = ctx.node.directives?.some((directive) => directive.name.value === 'requires');
+    const hasRequiresDirective = ctx.node.directives?.some(
+      (directive) => directive.name.value === REQUIRES_DIRECTIVE_NAME,
+    );
 
     if (hasRequiresDirective) {
       this.addWarning('Use of requires is not supported yet', ctx.node.loc);
@@ -367,6 +391,35 @@ export class SDLValidationVisitor {
           `Invalid context provided for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @${CONNECT_FIELD_RESOLVER} directive`,
           ctx.node.loc,
         );
+    }
+  }
+
+  private validateDisallowAbstractTypesForRequires(ctx: VisitContext<FieldDefinitionNode>): void {
+    const requiredDirective = ctx.node.directives?.find(
+      (directive) => directive.name.value === REQUIRES_DIRECTIVE_NAME,
+    );
+    if (!requiredDirective) return;
+
+    const fieldSelections = requiredDirective.arguments?.find((arg) => arg.name.value === FIELDS)?.value;
+    if (!fieldSelections || fieldSelections.kind !== Kind.STRING) return;
+
+    const parentType = ctx.ancestors[ctx.ancestors.length - 1];
+
+    if (!this.isASTObjectTypeNode(parentType)) return;
+
+    const operationDoc = parse(`{ ${fieldSelections.value} }`);
+
+    const selectionSetValidationVisitor = new SelectionSetValidationVisitor(
+      operationDoc,
+      this.schemaObject.getType(parentType.name.value) as GraphQLObjectType,
+    );
+    selectionSetValidationVisitor.visit();
+    for (const error of selectionSetValidationVisitor.getValidationResult().errors) {
+      this.addError(error, ctx.node.loc);
+    }
+
+    for (const warning of selectionSetValidationVisitor.getValidationResult().warnings) {
+      this.addWarning(warning, ctx.node.loc);
     }
   }
 

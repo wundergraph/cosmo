@@ -2095,6 +2095,13 @@ export class EntityMapping extends Message<EntityMapping> {
    */
   response = "";
 
+  /**
+   * Mappings for required fields
+   *
+   * @generated from field: repeated wg.cosmo.node.v1.RequiredFieldMapping required_field_mappings = 7;
+   */
+  requiredFieldMappings: RequiredFieldMapping[] = [];
+
   constructor(data?: PartialMessage<EntityMapping>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2109,6 +2116,7 @@ export class EntityMapping extends Message<EntityMapping> {
     { no: 4, name: "rpc", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 7, name: "required_field_mappings", kind: "message", T: RequiredFieldMapping, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): EntityMapping {
@@ -2125,6 +2133,69 @@ export class EntityMapping extends Message<EntityMapping> {
 
   static equals(a: EntityMapping | PlainMessage<EntityMapping> | undefined, b: EntityMapping | PlainMessage<EntityMapping> | undefined): boolean {
     return proto3.util.equals(EntityMapping, a, b);
+  }
+}
+
+/**
+ * Defines mapping for required fields
+ *
+ * @generated from message wg.cosmo.node.v1.RequiredFieldMapping
+ */
+export class RequiredFieldMapping extends Message<RequiredFieldMapping> {
+  /**
+   * @generated from field: wg.cosmo.node.v1.FieldMapping field_mapping = 1;
+   */
+  fieldMapping?: FieldMapping;
+
+  /**
+   * Mapped gRPC method name
+   *
+   * @generated from field: string rpc = 2;
+   */
+  rpc = "";
+
+  /**
+   * gRPC request message type name
+   *
+   * @generated from field: string request = 3;
+   */
+  request = "";
+
+  /**
+   * gRPC response message type name
+   *
+   * @generated from field: string response = 4;
+   */
+  response = "";
+
+  constructor(data?: PartialMessage<RequiredFieldMapping>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.node.v1.RequiredFieldMapping";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "field_mapping", kind: "message", T: FieldMapping },
+    { no: 2, name: "rpc", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "request", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "response", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RequiredFieldMapping {
+    return new RequiredFieldMapping().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RequiredFieldMapping {
+    return new RequiredFieldMapping().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RequiredFieldMapping {
+    return new RequiredFieldMapping().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RequiredFieldMapping | PlainMessage<RequiredFieldMapping> | undefined, b: RequiredFieldMapping | PlainMessage<RequiredFieldMapping> | undefined): boolean {
+    return proto3.util.equals(RequiredFieldMapping, a, b);
   }
 }
 
