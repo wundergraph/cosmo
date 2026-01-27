@@ -62,7 +62,7 @@ const lightweightCspHeader = `
   frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com${
     isPreview || isProduction ? ' https://vercel.live https://vercel.com' : ''
   };
-  img-src 'self'${
+  img-src 'self' https://wundergraph.com ${
     isPreview || isProduction
       ? ' https://vercel.live/ https://vercel.com *.pusher.com data: blob:'
       : ''
@@ -108,6 +108,15 @@ const lightweightCspHeader = `
 /** @type {import("next").NextConfig} */
 const config = {
   output: "standalone",
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "wundergraph.com",
+        pathname: "/images/**",
+      },
+    ],
+  },
   // This is done to reduce the production build size
   // see: https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/tree-shaking/
   webpack: (config, { webpack }) => {
