@@ -1034,4 +1034,289 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 	})
+
+	t.Run("Client Header Rules", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("should set client headers from static expressions", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						Client: []*config.ClientHeaderRule{
+							{
+								Name:       "X-Static-Header",
+								Expression: `"static-value"`,
+							},
+							{
+								Name:       "X-Another-Header",
+								Expression: `"another-value"`,
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithNoHobby,
+				})
+				require.Equal(t, "static-value", res.Response.Header.Get("X-Static-Header"))
+				require.Equal(t, "another-value", res.Response.Header.Get("X-Another-Header"))
+			})
+		})
+
+		t.Run("should set client headers from request headers", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						Client: []*config.ClientHeaderRule{
+							{
+								Name:       "X-Echo-Header",
+								Expression: `request.header.Get("X-Custom-Input")`,
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: queryEmployeeWithNoHobby,
+					Header: map[string][]string{
+						"X-Custom-Input": {"input-value"},
+					},
+				})
+				require.NoError(t, err)
+				require.Equal(t, "input-value", res.Response.Header.Get("X-Echo-Header"))
+			})
+		})
+
+		t.Run("should work alongside response header propagation", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("when there is a separate header", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							All: &config.GlobalHeaderRule{
+								Response: []*config.ResponseHeaderRule{
+									{
+										Operation: config.HeaderRuleOperationPropagate,
+										Named:     "X-Custom-Header",
+										Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite,
+									},
+								},
+							},
+							Client: []*config.ClientHeaderRule{
+								{
+									Name:       "X-Client-Header",
+									Expression: `"client-value"`,
+								},
+							},
+						}),
+					},
+					Subgraphs: subgraphsPropagateCustomHeader,
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithHobby,
+					})
+					// Check that both client header and propagated response header are present
+					require.Equal(t, "client-value", res.Response.Header.Get("X-Client-Header"))
+					require.Equal(t, employeeVal, res.Response.Header.Get("X-Custom-Header"))
+				})
+			})
+
+			t.Run("when the same header is in use ensure client header overrides", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							All: &config.GlobalHeaderRule{
+								Response: []*config.ResponseHeaderRule{
+									{
+										Operation: config.HeaderRuleOperationPropagate,
+										Named:     "X-Client-Header",
+										Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite,
+									},
+								},
+							},
+							Client: []*config.ClientHeaderRule{
+								{
+									Name:       "X-Client-Header",
+									Expression: `"client-value"`,
+								},
+							},
+						}),
+					},
+					Subgraphs: subgraphsPropagateCustomHeader,
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithHobby,
+					})
+					require.Equal(t, "client-value", res.Response.Header.Get("X-Client-Header"))
+				})
+			})
+		})
+
+		t.Run("should work alongside request header propagation", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Request-Header",
+								},
+							},
+						},
+						Client: []*config.ClientHeaderRule{
+							{
+								Name:       "X-Client-Header",
+								Expression: `request.header.Get("X-Request-Header")`,
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								// Verify the request header was propagated to the subgraph
+								require.Equal(t, "request-value", r.Header.Get("X-Request-Header"))
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: queryEmployeeWithNoHobby,
+					Header: map[string][]string{
+						"X-Request-Header": {"request-value"},
+					},
+				})
+				require.NoError(t, err)
+				require.Equal(t, "request-value", res.Response.Header.Get("X-Client-Header"))
+			})
+		})
+
+		t.Run("should work alongside both request and response header propagation", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Request-Header",
+								},
+							},
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Verification",
+									Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite,
+								},
+							},
+						},
+						Client: []*config.ClientHeaderRule{
+							{
+								Name:       "X-Client-Header",
+								Expression: `request.header.Get("X-Request-Header")`,
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								// Verify the request header was propagated to the subgraph
+								if r.Header.Get("X-Request-Header") == "request-value" {
+									w.Header().Set("X-Verification", "passed")
+								}
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+					Query: queryEmployeeWithNoHobby,
+					Header: map[string][]string{
+						"X-Request-Header": {"request-value"},
+					},
+				})
+				require.NoError(t, err)
+				require.Equal(t, "passed", res.Response.Header.Get("X-Verification"))
+				require.Equal(t, "request-value", res.Response.Header.Get("X-Client-Header"))
+			})
+		})
+
+		t.Run("should ignore rules that resolve to empty string", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						Client: []*config.ClientHeaderRule{
+							{
+								Name:       "X-Empty-Header",
+								Expression: `""`,
+							},
+							{
+								Name:       "X-Missing-Header",
+								Expression: `request.header.Get("X-Does-Not-Exist")`,
+							},
+							{
+								Name:       "X-Valid-Header",
+								Expression: `"valid-value"`,
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithNoHobby,
+				})
+				// Empty headers should not be set
+				require.Equal(t, "", res.Response.Header.Get("X-Empty-Header"))
+				require.Equal(t, "", res.Response.Header.Get("X-Missing-Header"))
+				// Valid header should be set
+				require.Equal(t, "valid-value", res.Response.Header.Get("X-Valid-Header"))
+			})
+		})
+
+		t.Run("should work with errors in response", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						Client: []*config.ClientHeaderRule{
+							{
+								Name:       "X-Client-Header",
+								Expression: `"client-value"`,
+							},
+							{
+								Name:       "X-Error-Header",
+								Expression: `request.error != nil ? "error" : "success"`,
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id: 1) { id rootFieldThrowsError } }`,
+				})
+				// Client header should still be set even with errors
+				require.Equal(t, "client-value", res.Response.Header.Get("X-Client-Header"))
+				require.Equal(t, "error", res.Response.Header.Get("X-Error-Header"))
+			})
+		})
+	})
 }

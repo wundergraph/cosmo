@@ -272,7 +272,8 @@
           "Default": "",
           "Algorithm": "append",
           "Name": "",
-          "Value": ""
+          "Value": "",
+          "Expression": ""
         }
       ]
     },
@@ -302,7 +303,8 @@
             "Default": "",
             "Algorithm": "",
             "Name": "X-Subgraph-Key",
-            "Value": "some-subgraph-secret"
+            "Value": "some-subgraph-secret",
+            "Expression": ""
           }
         ]
       }
@@ -310,6 +312,16 @@
     "CookieWhitelist": [
       "cookie1",
       "cookie2"
+    ],
+    "Client": [
+      {
+        "Name": "X-Client-Version",
+        "Expression": "request.header.Get('User-Agent')"
+      },
+      {
+        "Name": "X-Request-ID",
+        "Expression": "request.header.Get('X-Request-ID') ?? 'default-request-id'"
+      }
     ]
   },
   "TrafficShaping": {
