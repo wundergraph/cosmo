@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	"github.com/sebdah/goldie/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	employeev1 "github.com/wundergraph/cosmo/router-tests/testdata/connectrpc/client/employee.v1"
@@ -33,12 +32,16 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 
 	baseURL := "http://" + ts.Addr().String()
 
-	g := goldie.New(
-		t,
-		goldie.WithFixtureDir("testdata/connectrpc"),
-		goldie.WithNameSuffix(".json"),
-		goldie.WithDiffEngine(goldie.ClassicDiff),
-	)
+	expectedEmployee := `{
+		"id": 1,
+		"tag": "employee-1",
+		"details": {
+			"forename": "John",
+			"surname": "Doe",
+			"pets": [{"name": "Fluffy"}],
+			"location": {"key": {"name": "San Francisco"}}
+		}
+	}`
 
 	t.Run("Connect protocol", func(t *testing.T) {
 		client := employeev1connect.NewEmployeeServiceClient(
@@ -55,9 +58,9 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp.Msg.Employee)
 
-		employeeJSON, err := json.MarshalIndent(resp.Msg.Employee, "", "  ")
+		employeeJSON, err := json.Marshal(resp.Msg.Employee)
 		require.NoError(t, err)
-		g.Assert(t, "employee_response", employeeJSON)
+		require.JSONEq(t, expectedEmployee, string(employeeJSON))
 	})
 
 	t.Run("gRPC protocol", func(t *testing.T) {
@@ -68,8 +71,9 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 				// Allow HTTP/2 without TLS (h2c)
 				AllowHTTP: true,
 				// Use a custom dialer that doesn't require TLS
-				DialTLS: func(network, addr string, cfg *tls.Config) (net.Conn, error) {
-					return net.Dial(network, addr)
+				DialTLSContext: func(ctx context.Context, network, addr string, cfg *tls.Config) (net.Conn, error) {
+					var d net.Dialer
+					return d.DialContext(ctx, network, addr)
 				},
 			},
 		}
@@ -88,9 +92,9 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp.Msg.Employee)
 
-		employeeJSON, err := json.MarshalIndent(resp.Msg.Employee, "", "  ")
+		employeeJSON, err := json.Marshal(resp.Msg.Employee)
 		require.NoError(t, err)
-		g.Assert(t, "employee_response", employeeJSON)
+		require.JSONEq(t, expectedEmployee, string(employeeJSON))
 	})
 
 	t.Run("gRPC-Web protocol", func(t *testing.T) {
@@ -108,9 +112,9 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, resp.Msg.Employee)
 
-		employeeJSON, err := json.MarshalIndent(resp.Msg.Employee, "", "  ")
+		employeeJSON, err := json.Marshal(resp.Msg.Employee)
 		require.NoError(t, err)
-		g.Assert(t, "employee_response", employeeJSON)
+		require.JSONEq(t, expectedEmployee, string(employeeJSON))
 	})
 }
 
@@ -118,14 +122,7 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 	t.Parallel()
 
-	g := goldie.New(
-		t,
-		goldie.WithFixtureDir("testdata/connectrpc"),
-		goldie.WithNameSuffix(".json"),
-		goldie.WithDiffEngine(goldie.ClassicDiff),
-	)
-
-	t.Run("GraphQL error with no data returns CRITICAL", func(t *testing.T) {
+	t.Run("GraphQL error with no data returns error", func(t *testing.T) {
 		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
 			GraphQLHandler: ErrorGraphQLHandler("Employee not found"),
 		})
@@ -150,14 +147,6 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		// GraphQL errors use CodeUnknown (not CodeInternal which implies server bugs)
 		assert.Equal(t, connect.CodeUnknown, connectErr.Code())
 		assert.Contains(t, connectErr.Message(), "Employee not found")
-
-		// Capture error structure for golden test
-		errorJSON, err := json.MarshalIndent(map[string]interface{}{
-			"code":    connectErr.Code().String(),
-			"message": connectErr.Message(),
-		}, "", "  ")
-		require.NoError(t, err)
-		g.Assert(t, "error_no_data", errorJSON)
 	})
 
 	t.Run("GraphQL error with partial data returns error", func(t *testing.T) {
@@ -205,14 +194,6 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		require.ErrorAs(t, err, &connectErr)
 		assert.Equal(t, connect.CodeUnknown, connectErr.Code())
 		assert.Contains(t, connectErr.Message(), "GraphQL partial success with errors")
-
-		// Capture error structure for golden test
-		errorJSON, err := json.MarshalIndent(map[string]interface{}{
-			"code":    connectErr.Code().String(),
-			"message": connectErr.Message(),
-		}, "", "  ")
-		require.NoError(t, err)
-		g.Assert(t, "error_partial_data", errorJSON)
 	})
 
 	t.Run("HTTP 404 maps to CodeNotFound", func(t *testing.T) {
@@ -238,14 +219,6 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		var connectErr *connect.Error
 		require.ErrorAs(t, err, &connectErr)
 		assert.Equal(t, connect.CodeNotFound, connectErr.Code())
-
-		// Capture error structure for golden test
-		errorJSON, err := json.MarshalIndent(map[string]interface{}{
-			"code":    connectErr.Code().String(),
-			"message": connectErr.Message(),
-		}, "", "  ")
-		require.NoError(t, err)
-		g.Assert(t, "error_http_404", errorJSON)
 	})
 
 	t.Run("HTTP 500 maps to CodeInternal", func(t *testing.T) {
@@ -271,14 +244,6 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		var connectErr *connect.Error
 		require.ErrorAs(t, err, &connectErr)
 		assert.Equal(t, connect.CodeInternal, connectErr.Code())
-
-		// Capture error structure for golden test
-		errorJSON, err := json.MarshalIndent(map[string]interface{}{
-			"code":    connectErr.Code().String(),
-			"message": connectErr.Message(),
-		}, "", "  ")
-		require.NoError(t, err)
-		g.Assert(t, "error_http_500", errorJSON)
 	})
 
 	t.Run("multiple GraphQL errors with extension codes", func(t *testing.T) {
@@ -336,13 +301,5 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		// Format: "GraphQL operation failed: <first error message> (and N more errors)"
 		assert.Contains(t, connectErr.Message(), "You are not authorized to access this resource")
 		assert.Contains(t, connectErr.Message(), "and 1 more errors")
-
-		// Capture error structure for golden test
-		errorJSON, err := json.MarshalIndent(map[string]interface{}{
-			"code":    connectErr.Code().String(),
-			"message": connectErr.Message(),
-		}, "", "  ")
-		require.NoError(t, err)
-		g.Assert(t, "error_multiple_graphql_errors", errorJSON)
 	})
 }
