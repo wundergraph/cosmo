@@ -39,7 +39,7 @@ func TestConnectRPC_ServerLifecycle_StartStopReload(t *testing.T) {
 
 	t.Run("stop without start returns error", func(t *testing.T) {
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ServicesDir:     "../testdata/connectrpc/services",
+			ServicesDir:     "../../router/pkg/connectrpc/samples/services",
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          zap.NewNop(),
 		})
