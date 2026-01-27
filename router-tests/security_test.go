@@ -512,7 +512,7 @@ func TestQueryNamingLimits(t *testing.T) {
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
 						Enabled:     true,
-						StaticLimit: 24,
+						StaticLimit: 10,
 						ListSize:    5,
 					}
 				},
@@ -520,7 +520,7 @@ func TestQueryNamingLimits(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id details { forename } } }`,
 				})
-				// cost = 5 * (5 * 1)
+				// cost = 5 * (1 + 1)
 				require.Contains(t, res.Body, `"data":`)
 			})
 		})
