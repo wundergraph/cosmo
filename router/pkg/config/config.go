@@ -426,6 +426,7 @@ type SecurityConfiguration struct {
 	BlockPersistedOperations    BlockOperationConfiguration `yaml:"block_persisted_operations" envPrefix:"SECURITY_BLOCK_PERSISTED_OPERATIONS_"`
 	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
+	CostAnalysis                *CostAnalysis               `yaml:"cost_analysis"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
 	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
@@ -456,6 +457,22 @@ type ComplexityLimits struct {
 
 	// When set to true, complexity validation is ignored for all introspection queries.
 	IgnoreIntrospection bool `yaml:"ignore_introspection" envDefault:"false" env:"SECURITY_COMPLEXITY_IGNORE_INTROSPECTION"`
+}
+
+// CostAnalysis configures cost analysis based on @cost and @listSize directives.
+type CostAnalysis struct {
+	// When enabled, static cost is calculated and exposed to modules.
+	// Set to true to enable StaticLimit option.
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"SECURITY_COST_ANALYSIS_ENABLED"`
+
+	// StaticLimit is the maximum allowed static (estimated) cost for a query.
+	// Queries exceeding this limit will be rejected before execution.
+	// If the limit is 0, this limit isn't applied.
+	StaticLimit int `yaml:"static_limit,omitempty" envDefault:"0" env:"SECURITY_COST_ANALYSIS_STATIC_LIMIT"`
+
+	// ListSize is the default assumed size for list fields when no @listSize directive
+	// nor slicing argument is provided. Used as a multiplier for list field static costs.
+	ListSize int `yaml:"list_size,omitempty" envDefault:"10" env:"SECURITY_COST_ANALYSIS_LIST_SIZE"`
 }
 
 type ComplexityLimit struct {

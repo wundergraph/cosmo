@@ -8,26 +8,23 @@ import (
 	"net/url"
 	"slices"
 
-	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
-
 	"github.com/buger/jsonparser"
-	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub"
-	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
-
-	"github.com/wundergraph/cosmo/router/pkg/config"
-
 	"github.com/jensneuse/abstractlogger"
 	"go.uber.org/zap"
 
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub"
+	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/argument_templates"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	grpcdatasource "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/grpc_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-
-	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
 type Loader struct {
@@ -216,6 +213,7 @@ type RouterEngineConfiguration struct {
 	Events                   config.EventsConfiguration
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	StreamMetricStore        rmetric.StreamMetricStore
+	CostAnalysis             *config.CostAnalysis
 }
 
 func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {
@@ -555,6 +553,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			EntityInterfaces: make([]plan.EntityInterfaceConfiguration, 0, len(in.EntityInterfaces)),
 			InterfaceObjects: make([]plan.EntityInterfaceConfiguration, 0, len(in.InterfaceObjects)),
 		},
+		CostConfig: plan.NewDataSourceCostConfig(),
 	}
 
 	for _, node := range in.RootNodes {
@@ -635,6 +634,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			ConcreteTypeNames: interfaceObjectConfiguration.ConcreteTypeNames,
 		})
 	}
+	// TODO: import CostConfigs from in (produced by composition) to be consumed by the router.
 
 	return out
 }

@@ -728,6 +728,11 @@
       },
       "IgnoreIntrospection": false
     },
+    "CostAnalysis": {
+      "Enabled": true,
+      "StaticLimit": 1000,
+      "ListSize": 10
+    },
     "DepthLimit": null,
     "ParserLimits": {
       "ApproximateDepthLimit": 200,
