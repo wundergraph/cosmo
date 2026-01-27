@@ -622,16 +622,6 @@ export function publishFederatedSubgraph(
             },
             errors: hasErrors,
             actor_id: authContext.userId,
-            published_proposals:
-              proposalDetailsList.length > 0
-                ? proposalDetailsList
-                    .filter((p) => p.federatedGraphId === graph.id)
-                    .map((p) => ({
-                      id: p.id,
-                      name: p.name,
-                      namespace: p.namespace,
-                    }))
-                : undefined,
           },
         },
         authContext.userId,

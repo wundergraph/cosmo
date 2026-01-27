@@ -3,6 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { ProposalNamingConvention, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
+import { addMinutes, formatISO, subDays } from 'date-fns';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
@@ -38,7 +39,7 @@ async function enableProposalsForNamespace(client: any, namespace = DEFAULT_NAME
   return enableResponse;
 }
 
-describe('Proposal webhook tests - published_proposals filtering', () => {
+describe('Schema updated webhook tests', () => {
   let chClient: ClickHouseClient;
 
   // Store captured webhook payloads
@@ -78,7 +79,7 @@ describe('Proposal webhook tests - published_proposals filtering', () => {
     await afterAllSetup(dbname);
   });
 
-  test('published_proposals should only include proposals for the specific federated graph when publishing subgraph', async () => {
+  test('should include correct composedSchemaVersionId and send PROPOSAL_STATE_UPDATED webhook when publishing subgraph', async () => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
@@ -174,11 +175,23 @@ describe('Proposal webhook tests - published_proposals filtering', () => {
           },
         },
       },
+      {
+        eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+        meta: {
+          case: 'proposalStateUpdated',
+          value: {
+            graphIds: [fedGraph1Id],
+          },
+        },
+      },
     ];
 
     const webhook1Res = await client.createOrganizationWebhookConfig({
       endpoint: 'http://webhook-fedgraph1.test',
-      events: [OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]],
+      events: [
+        OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED],
+        OrganizationEventName[OrganizationEventName.PROPOSAL_STATE_UPDATED],
+      ],
       eventsMeta: eventsMeta1,
     });
     expect(webhook1Res.response?.code).toBe(EnumStatusCode.OK);
@@ -193,11 +206,23 @@ describe('Proposal webhook tests - published_proposals filtering', () => {
           },
         },
       },
+      {
+        eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+        meta: {
+          case: 'proposalStateUpdated',
+          value: {
+            graphIds: [fedGraph2Id],
+          },
+        },
+      },
     ];
 
     const webhook2Res = await client.createOrganizationWebhookConfig({
       endpoint: 'http://webhook-fedgraph2.test',
-      events: [OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]],
+      events: [
+        OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED],
+        OrganizationEventName[OrganizationEventName.PROPOSAL_STATE_UPDATED],
+      ],
       eventsMeta: eventsMeta2,
     });
     expect(webhook2Res.response?.code).toBe(EnumStatusCode.OK);
@@ -308,26 +333,47 @@ describe('Proposal webhook tests - published_proposals filtering', () => {
     // Wait a bit for webhook to be sent
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Verify webhook for fedGraph1 was called
-    const fedGraph1Webhooks = capturedWebhooks.filter((w) => w.url === 'http://webhook-fedgraph1.test');
-    expect(fedGraph1Webhooks.length).toBeGreaterThan(0);
+    // Verify FEDERATED_GRAPH_SCHEMA_UPDATED webhook for fedGraph1 was called
+    const fedGraph1SchemaWebhooks = capturedWebhooks.filter(
+      (w) => w.url === 'http://webhook-fedgraph1.test' && w.payload.event === 'FEDERATED_GRAPH_SCHEMA_UPDATED',
+    );
+    expect(fedGraph1SchemaWebhooks.length).toBeGreaterThan(0);
 
-    // Get the latest webhook for fedGraph1
-    const latestFedGraph1Webhook = fedGraph1Webhooks.at(-1)!;
+    // Get the latest schema updated webhook for fedGraph1
+    const latestFedGraph1SchemaWebhook = fedGraph1SchemaWebhooks.at(-1)!;
 
-    // Verify published_proposals contains only proposal1 (for fedGraph1)
-    if (latestFedGraph1Webhook.payload.published_proposals) {
-      expect(latestFedGraph1Webhook.payload.published_proposals.length).toBe(1);
-      expect(latestFedGraph1Webhook.payload.published_proposals[0].id).toBe(createProposal1Response.proposalId);
-    }
+    // Get the latest composition for fedGraph1 and verify schemaVersionId matches the webhook payload
+    const fedGraph1Compositions = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: DEFAULT_NAMESPACE,
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addMinutes(new Date(), 1)),
+    });
+    expect(fedGraph1Compositions.response?.code).toBe(EnumStatusCode.OK);
+    const latestFedGraph1Composition = fedGraph1Compositions.compositions.find((c) => c.isLatestValid);
+    expect(latestFedGraph1Composition).toBeDefined();
+    expect(latestFedGraph1SchemaWebhook.payload.payload.federated_graph.composedSchemaVersionId).toBe(
+      latestFedGraph1Composition!.schemaVersionId,
+    );
 
-    // Verify fedGraph1 webhook does NOT contain proposal2
-    if (latestFedGraph1Webhook.payload.published_proposals) {
-      const proposal2InFedGraph1 = latestFedGraph1Webhook.payload.published_proposals.find(
-        (p: any) => p.id === createProposal2Response.proposalId,
-      );
-      expect(proposal2InFedGraph1).toBeUndefined();
-    }
+    // Verify PROPOSAL_STATE_UPDATED webhook was sent for proposal1
+    const proposal1StateWebhooks = capturedWebhooks.filter(
+      (w) =>
+        w.url === 'http://webhook-fedgraph1.test' &&
+        w.payload.event === 'PROPOSAL_STATE_UPDATED' &&
+        w.payload.payload?.proposal?.id === createProposal1Response.proposalId,
+    );
+    expect(proposal1StateWebhooks.length).toBe(1);
+    expect(proposal1StateWebhooks[0].payload.payload.proposal.state).toBe('PUBLISHED');
+
+    // Verify PROPOSAL_STATE_UPDATED webhook with state 'PUBLISHED' was NOT sent for proposal2 (it's not published yet)
+    const proposal2PublishedWebhooksBeforePublish = capturedWebhooks.filter(
+      (w) =>
+        w.payload.event === 'PROPOSAL_STATE_UPDATED' &&
+        w.payload.payload?.proposal?.id === createProposal2Response.proposalId &&
+        w.payload.payload?.proposal?.state === 'PUBLISHED',
+    );
+    expect(proposal2PublishedWebhooksBeforePublish.length).toBe(0);
 
     // Clear captured webhooks
     capturedWebhooks = [];
@@ -344,31 +390,43 @@ describe('Proposal webhook tests - published_proposals filtering', () => {
     // Wait a bit for webhook to be sent
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Verify webhook for fedGraph2 was called
-    const fedGraph2Webhooks = capturedWebhooks.filter((w) => w.url === 'http://webhook-fedgraph2.test');
-    expect(fedGraph2Webhooks.length).toBeGreaterThan(0);
+    // Verify FEDERATED_GRAPH_SCHEMA_UPDATED webhook for fedGraph2 was called
+    const fedGraph2SchemaWebhooks = capturedWebhooks.filter(
+      (w) => w.url === 'http://webhook-fedgraph2.test' && w.payload.event === 'FEDERATED_GRAPH_SCHEMA_UPDATED',
+    );
+    expect(fedGraph2SchemaWebhooks.length).toBeGreaterThan(0);
 
-    // Get the latest webhook for fedGraph2
-    const latestFedGraph2Webhook = fedGraph2Webhooks.at(-1)!;
+    // Get the latest schema updated webhook for fedGraph2
+    const latestFedGraph2SchemaWebhook = fedGraph2SchemaWebhooks.at(-1)!;
 
-    // Verify published_proposals contains only proposal2 (for fedGraph2)
-    if (latestFedGraph2Webhook.payload.published_proposals) {
-      expect(latestFedGraph2Webhook.payload.published_proposals.length).toBe(1);
-      expect(latestFedGraph2Webhook.payload.published_proposals[0].id).toBe(createProposal2Response.proposalId);
-    }
+    // Get the latest composition for fedGraph2 and verify schemaVersionId matches the webhook payload
+    const fedGraph2Compositions = await client.getCompositions({
+      fedGraphName: fedGraph2Name,
+      namespace: DEFAULT_NAMESPACE,
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addMinutes(new Date(), 1)),
+    });
+    expect(fedGraph2Compositions.response?.code).toBe(EnumStatusCode.OK);
+    const latestFedGraph2Composition = fedGraph2Compositions.compositions.find((c) => c.isLatestValid);
+    expect(latestFedGraph2Composition).toBeDefined();
+    expect(latestFedGraph2SchemaWebhook.payload.payload.federated_graph.composedSchemaVersionId).toBe(
+      latestFedGraph2Composition!.schemaVersionId,
+    );
 
-    // Verify fedGraph2 webhook does NOT contain proposal1
-    if (latestFedGraph2Webhook.payload.published_proposals) {
-      const proposal1InFedGraph2 = latestFedGraph2Webhook.payload.published_proposals.find(
-        (p: any) => p.id === createProposal1Response.proposalId,
-      );
-      expect(proposal1InFedGraph2).toBeUndefined();
-    }
+    // Verify PROPOSAL_STATE_UPDATED webhook was sent for proposal2
+    const proposal2StateWebhooks = capturedWebhooks.filter(
+      (w) =>
+        w.url === 'http://webhook-fedgraph2.test' &&
+        w.payload.event === 'PROPOSAL_STATE_UPDATED' &&
+        w.payload.payload?.proposal?.id === createProposal2Response.proposalId,
+    );
+    expect(proposal2StateWebhooks.length).toBe(1);
+    expect(proposal2StateWebhooks[0].payload.payload.proposal.state).toBe('PUBLISHED');
 
     await server.close();
   });
 
-  test('published_proposals should only include proposals for the specific federated graph when deleting subgraph', async () => {
+  test('should include correct composedSchemaVersionId and send PROPOSAL_STATE_UPDATED webhook when deleting subgraph', async () => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
@@ -496,7 +554,10 @@ describe('Proposal webhook tests - published_proposals filtering', () => {
     // Create webhook configs
     await client.createOrganizationWebhookConfig({
       endpoint: 'http://webhook-fedgraph1.test',
-      events: [OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]],
+      events: [
+        OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED],
+        OrganizationEventName[OrganizationEventName.PROPOSAL_STATE_UPDATED],
+      ],
       eventsMeta: [
         {
           eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
@@ -505,17 +566,34 @@ describe('Proposal webhook tests - published_proposals filtering', () => {
             value: { graphIds: [fedGraph1Id] },
           },
         },
+        {
+          eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+          meta: {
+            case: 'proposalStateUpdated',
+            value: { graphIds: [fedGraph1Id] },
+          },
+        },
       ],
     });
 
     await client.createOrganizationWebhookConfig({
       endpoint: 'http://webhook-fedgraph2.test',
-      events: [OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED]],
+      events: [
+        OrganizationEventName[OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED],
+        OrganizationEventName[OrganizationEventName.PROPOSAL_STATE_UPDATED],
+      ],
       eventsMeta: [
         {
           eventName: OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED,
           meta: {
             case: 'federatedGraphSchemaUpdated',
+            value: { graphIds: [fedGraph2Id] },
+          },
+        },
+        {
+          eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+          meta: {
+            case: 'proposalStateUpdated',
             value: { graphIds: [fedGraph2Id] },
           },
         },
@@ -600,23 +678,46 @@ describe('Proposal webhook tests - published_proposals filtering', () => {
     // Wait a bit for webhook to be sent
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Verify webhook for fedGraph1 was called with correct published_proposals
-    const fedGraph1Webhooks = capturedWebhooks.filter((w) => w.url === 'http://webhook-fedgraph1.test');
-    expect(fedGraph1Webhooks.length).toBeGreaterThan(0);
+    // Verify FEDERATED_GRAPH_SCHEMA_UPDATED webhook for fedGraph1 was called
+    const fedGraph1SchemaWebhooks = capturedWebhooks.filter(
+      (w) => w.url === 'http://webhook-fedgraph1.test' && w.payload.event === 'FEDERATED_GRAPH_SCHEMA_UPDATED',
+    );
+    expect(fedGraph1SchemaWebhooks.length).toBeGreaterThan(0);
 
-    const latestFedGraph1Webhook = fedGraph1Webhooks.at(-1)!;
+    const latestFedGraph1SchemaWebhook = fedGraph1SchemaWebhooks.at(-1)!;
 
-    // Verify published_proposals contains only proposal1 (for fedGraph1)
-    if (latestFedGraph1Webhook.payload.published_proposals) {
-      expect(latestFedGraph1Webhook.payload.published_proposals.length).toBe(1);
-      expect(latestFedGraph1Webhook.payload.published_proposals[0].id).toBe(createProposal1Response.proposalId);
+    // Get the latest composition for fedGraph1 and verify schemaVersionId matches the webhook payload
+    const fedGraph1Compositions = await client.getCompositions({
+      fedGraphName: fedGraph1Name,
+      namespace: DEFAULT_NAMESPACE,
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addMinutes(new Date(), 1)),
+    });
+    expect(fedGraph1Compositions.response?.code).toBe(EnumStatusCode.OK);
+    const latestFedGraph1Composition = fedGraph1Compositions.compositions.find((c) => c.isLatestValid);
+    expect(latestFedGraph1Composition).toBeDefined();
+    expect(latestFedGraph1SchemaWebhook.payload.payload.federated_graph.composedSchemaVersionId).toBe(
+      latestFedGraph1Composition!.schemaVersionId,
+    );
 
-      // Verify proposal2 is NOT in the webhook
-      const proposal2InFedGraph1 = latestFedGraph1Webhook.payload.published_proposals.find(
-        (p: any) => p.id === createProposal2Response.proposalId,
-      );
-      expect(proposal2InFedGraph1).toBeUndefined();
-    }
+    // Verify PROPOSAL_STATE_UPDATED webhook was sent for proposal1
+    const proposal1StateWebhooks = capturedWebhooks.filter(
+      (w) =>
+        w.url === 'http://webhook-fedgraph1.test' &&
+        w.payload.event === 'PROPOSAL_STATE_UPDATED' &&
+        w.payload.payload?.proposal?.id === createProposal1Response.proposalId,
+    );
+    expect(proposal1StateWebhooks.length).toBe(1);
+    expect(proposal1StateWebhooks[0].payload.payload.proposal.state).toBe('PUBLISHED');
+
+    // Verify PROPOSAL_STATE_UPDATED webhook with state 'PUBLISHED' was NOT sent for proposal2 (it's not published yet)
+    const proposal2PublishedWebhooksBeforeDelete = capturedWebhooks.filter(
+      (w) =>
+        w.payload.event === 'PROPOSAL_STATE_UPDATED' &&
+        w.payload.payload?.proposal?.id === createProposal2Response.proposalId &&
+        w.payload.payload?.proposal?.state === 'PUBLISHED',
+    );
+    expect(proposal2PublishedWebhooksBeforeDelete.length).toBe(0);
 
     // Clear captured webhooks
     capturedWebhooks = [];
@@ -632,23 +733,37 @@ describe('Proposal webhook tests - published_proposals filtering', () => {
     // Wait a bit for webhook to be sent
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    // Verify webhook for fedGraph2 was called with correct published_proposals
-    const fedGraph2Webhooks = capturedWebhooks.filter((w) => w.url === 'http://webhook-fedgraph2.test');
-    expect(fedGraph2Webhooks.length).toBeGreaterThan(0);
+    // Verify FEDERATED_GRAPH_SCHEMA_UPDATED webhook for fedGraph2 was called
+    const fedGraph2SchemaWebhooks = capturedWebhooks.filter(
+      (w) => w.url === 'http://webhook-fedgraph2.test' && w.payload.event === 'FEDERATED_GRAPH_SCHEMA_UPDATED',
+    );
+    expect(fedGraph2SchemaWebhooks.length).toBeGreaterThan(0);
 
-    const latestFedGraph2Webhook = fedGraph2Webhooks.at(-1)!;
+    const latestFedGraph2SchemaWebhook = fedGraph2SchemaWebhooks.at(-1)!;
 
-    // Verify published_proposals contains only proposal2 (for fedGraph2)
-    if (latestFedGraph2Webhook.payload.published_proposals) {
-      expect(latestFedGraph2Webhook.payload.published_proposals.length).toBe(1);
-      expect(latestFedGraph2Webhook.payload.published_proposals[0].id).toBe(createProposal2Response.proposalId);
+    // Get the latest composition for fedGraph2 and verify schemaVersionId matches the webhook payload
+    const fedGraph2Compositions = await client.getCompositions({
+      fedGraphName: fedGraph2Name,
+      namespace: DEFAULT_NAMESPACE,
+      startDate: formatISO(subDays(new Date(), 1)),
+      endDate: formatISO(addMinutes(new Date(), 1)),
+    });
+    expect(fedGraph2Compositions.response?.code).toBe(EnumStatusCode.OK);
+    const latestFedGraph2Composition = fedGraph2Compositions.compositions.find((c) => c.isLatestValid);
+    expect(latestFedGraph2Composition).toBeDefined();
+    expect(latestFedGraph2SchemaWebhook.payload.payload.federated_graph.composedSchemaVersionId).toBe(
+      latestFedGraph2Composition!.schemaVersionId,
+    );
 
-      // Verify proposal1 is NOT in the webhook
-      const proposal1InFedGraph2 = latestFedGraph2Webhook.payload.published_proposals.find(
-        (p: any) => p.id === createProposal1Response.proposalId,
-      );
-      expect(proposal1InFedGraph2).toBeUndefined();
-    }
+    // Verify PROPOSAL_STATE_UPDATED webhook was sent for proposal2
+    const proposal2StateWebhooks = capturedWebhooks.filter(
+      (w) =>
+        w.url === 'http://webhook-fedgraph2.test' &&
+        w.payload.event === 'PROPOSAL_STATE_UPDATED' &&
+        w.payload.payload?.proposal?.id === createProposal2Response.proposalId,
+    );
+    expect(proposal2StateWebhooks.length).toBe(1);
+    expect(proposal2StateWebhooks[0].payload.payload.proposal.state).toBe('PUBLISHED');
 
     await server.close();
   });

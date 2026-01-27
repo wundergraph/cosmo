@@ -64,11 +64,6 @@ export interface FederatedGraphSchemaUpdate {
     };
     errors: boolean;
     actor_id?: string;
-    published_proposals?: {
-      id: string;
-      name: string;
-      namespace: string;
-    }[];
   };
 }
 
