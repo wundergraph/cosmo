@@ -57,6 +57,7 @@ import { Pagination } from "../ui/pagination";
 import { useDebounce } from "use-debounce";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
+import { CopyButton } from "../ui/copy-button";
 
 export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
@@ -418,9 +419,16 @@ export const CheckOperations = () => {
                 <AccordionItem id={hash} key={hash} value={hash}>
                   <AccordionTrigger className="px-2 hover:bg-secondary/30 hover:no-underline">
                     <div className="flex flex-1 items-center gap-2">
-                      <p className="w-16 text-start text-muted-foreground">
-                        {hash.slice(0, 6)}
-                      </p>
+                      <div className="flex w-24 items-center gap-1 text-start text-muted-foreground">
+                        <code className="text-xs">{hash.slice(0, 6)}</code>
+                        <CopyButton
+                          tooltip="Copy operation hash"
+                          value={hash}
+                          size="icon-sm"
+                          className="text-muted-foreground"
+                          onClick={(event) => event.stopPropagation()}
+                        />
+                      </div>
                       <p
                         className={cn({
                           "italic text-muted-foreground": name.length === 0,
@@ -447,11 +455,22 @@ export const CheckOperations = () => {
                   <AccordionContent>
                     <div className="mt-2 flex flex-col gap-y-6 px-2">
                       <div className="items-center justify-between space-y-6 md:flex-row xl:flex xl:space-y-0">
-                        <p className="text-muted-foreground">
-                          {firstSeenFormatted === lastSeenAtFormatted
-                            ? `Last seen at ${lastSeenAtFormatted}`
-                            : `First seen at ${firstSeenFormatted} and last seen at ${lastSeenAtFormatted}`}
-                        </p>
+                        <div className="space-y-1">
+                          <p className="text-muted-foreground">
+                            {firstSeenFormatted === lastSeenAtFormatted
+                              ? `Last seen at ${lastSeenAtFormatted}`
+                              : `First seen at ${firstSeenFormatted} and last seen at ${lastSeenAtFormatted}`}
+                          </p>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span className="font-mono">{hash}</span>
+                            <CopyButton
+                              tooltip="Copy operation hash"
+                              value={hash}
+                              size="icon-sm"
+                              className="text-muted-foreground"
+                            />
+                          </div>
+                        </div>
                         <div className="flex items-center gap-x-2">
                           <OperationContentDialog
                             hash={hash}
