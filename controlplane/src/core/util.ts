@@ -730,7 +730,9 @@ function isValidPort(port: string | undefined): boolean {
   if (!/^\d+$/.test(port)) {
     return false;
   }
-  return true;
+  const portNum = Number.parseInt(port, 10);
+  // Valid port range is 1-65535 (port 0 is reserved)
+  return portNum >= 1 && portNum <= 65_535;
 }
 
 function isValidHostname(hostname: string): boolean {
@@ -830,8 +832,8 @@ export function isValidGrpcNamingScheme(url: string): boolean {
       if (!/^\d+$/.test(cid) || !/^\d+$/.test(port)) {
         return false;
       }
-
-      return true;
+      // Validate port range (1-65535)
+      return isValidPort(port);
     }
     case 'ipv4': {
       if (!rest) {

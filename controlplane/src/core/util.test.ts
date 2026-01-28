@@ -307,6 +307,15 @@ describe('isValidGrpcNamingScheme', () => {
     test('should accept DNS with authority', () => {
       expect(isValidGrpcNamingScheme('dns://8.8.8.8/example.com:8080')).toBe(true);
     });
+
+    test('should reject DNS with invalid ports', () => {
+      expect(isValidGrpcNamingScheme('localhost:0')).toBe(false);
+      expect(isValidGrpcNamingScheme('example.com:65536')).toBe(false);
+      expect(isValidGrpcNamingScheme('subdomain.example.com:99999')).toBe(false);
+      expect(isValidGrpcNamingScheme('dns:localhost:0')).toBe(false);
+      expect(isValidGrpcNamingScheme('dns:example.com:65536')).toBe(false);
+      expect(isValidGrpcNamingScheme('dns://example.com:99999')).toBe(false);
+    });
   });
 
   describe('Unix domain sockets', () => {
@@ -353,6 +362,12 @@ describe('isValidGrpcNamingScheme', () => {
       expect(isValidGrpcNamingScheme('vsock:-1:8080')).toBe(false);
       expect(isValidGrpcNamingScheme('vsock:1:-1')).toBe(false);
     });
+
+    test('should reject vsock with invalid port ranges', () => {
+      expect(isValidGrpcNamingScheme('vsock:1:0')).toBe(false);
+      expect(isValidGrpcNamingScheme('vsock:1:65536')).toBe(false);
+      expect(isValidGrpcNamingScheme('vsock:0:99999')).toBe(false);
+    });
   });
 
   describe('IPv4 addresses', () => {
@@ -379,6 +394,14 @@ describe('isValidGrpcNamingScheme', () => {
       expect(isValidGrpcNamingScheme('ipv4:localhost:8080')).toBe(false);
       expect(isValidGrpcNamingScheme('ipv4:127.0.0.1:-1')).toBe(false);
     });
+
+    test('should reject IPv4 with invalid port ranges', () => {
+      expect(isValidGrpcNamingScheme('ipv4:127.0.0.1:0')).toBe(false);
+      expect(isValidGrpcNamingScheme('ipv4:192.168.1.1:65536')).toBe(false);
+      expect(isValidGrpcNamingScheme('ipv4:127.0.0.1:99999')).toBe(false);
+      expect(isValidGrpcNamingScheme('ipv4:127.0.0.1:8080,192.168.1.1:0')).toBe(false);
+      expect(isValidGrpcNamingScheme('ipv4:127.0.0.1:8080,192.168.1.1:65536')).toBe(false);
+    });
   });
 
   describe('IPv6 addresses', () => {
@@ -402,6 +425,14 @@ describe('isValidGrpcNamingScheme', () => {
     test('should reject invalid IPv6 addresses', () => {
       expect(isValidGrpcNamingScheme('ipv6:[::1]:-1')).toBe(false);
       expect(isValidGrpcNamingScheme('ipv6:invalid')).toBe(false);
+    });
+
+    test('should reject IPv6 with invalid port ranges', () => {
+      expect(isValidGrpcNamingScheme('ipv6:[::1]:0')).toBe(false);
+      expect(isValidGrpcNamingScheme('ipv6:[::1]:65536')).toBe(false);
+      expect(isValidGrpcNamingScheme('ipv6:[2001:db8::1]:99999')).toBe(false);
+      expect(isValidGrpcNamingScheme('ipv6:[::1]:8080,[2001:db8::1]:0')).toBe(false);
+      expect(isValidGrpcNamingScheme('ipv6:[::1]:8080,[2001:db8::1]:65536')).toBe(false);
     });
   });
 
