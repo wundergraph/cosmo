@@ -22,6 +22,9 @@ import {
   createFederatedGraph,
   DEFAULT_ROUTER_URL,
   DEFAULT_NAMESPACE,
+  DEFAULT_GRPC_SUBGRAPH_URL_ONE,
+  DEFAULT_GRPC_SUBGRAPH_URL_TWO,
+  DEFAULT_GRPC_SUBGRAPH_URL_THREE,
 } from '../test-util.js';
 
 let dbname = '';
@@ -509,7 +512,7 @@ describe('Publish feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -529,7 +532,7 @@ describe('Publish feature subgraph tests', () => {
       isFeatureSubgraph: true,
       labels: [],
       name: featureSubgraphName, // Feature subgraph doesn't exist yet
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       schema: 'type Query { hello: String }',
       type: SubgraphType.STANDARD, // This is what the CLI passes regardless of base type
     });
@@ -560,7 +563,7 @@ describe('Publish feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -568,7 +571,7 @@ describe('Publish feature subgraph tests', () => {
     // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
     const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphName,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       labels: [],
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
@@ -604,7 +607,7 @@ describe('Publish feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -619,7 +622,7 @@ describe('Publish feature subgraph tests', () => {
     // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
     const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphName,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       labels: [],
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
@@ -650,7 +653,7 @@ describe('Publish feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
     expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
-    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_TWO);
 
     await server.close();
   });
@@ -667,7 +670,7 @@ describe('Publish feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -681,7 +684,7 @@ describe('Publish feature subgraph tests', () => {
     // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
     const createFeatureSubgraph1Response = await client.createFederatedSubgraph({
       name: featureSubgraphName1,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       labels: [],
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
@@ -700,7 +703,7 @@ describe('Publish feature subgraph tests', () => {
     // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
     const createFeatureSubgraph2Response = await client.createFederatedSubgraph({
       name: featureSubgraphName2,
-      routingUrl: 'http://localhost:4003',
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_THREE,
       labels: [],
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
@@ -723,7 +726,7 @@ describe('Publish feature subgraph tests', () => {
     expect(getFeatureSubgraph1Response.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureSubgraph1Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
     expect(getFeatureSubgraph1Response.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraph1Response.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+    expect(getFeatureSubgraph1Response.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_TWO);
 
     const getFeatureSubgraph2Response = await client.getSubgraphByName({
       name: featureSubgraphName2,
@@ -731,7 +734,7 @@ describe('Publish feature subgraph tests', () => {
     expect(getFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureSubgraph2Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
     expect(getFeatureSubgraph2Response.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraph2Response.graph?.routingURL).toBe('http://localhost:4003');
+    expect(getFeatureSubgraph2Response.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_THREE);
 
     await server.close();
   });
@@ -747,7 +750,7 @@ describe('Publish feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -755,7 +758,7 @@ describe('Publish feature subgraph tests', () => {
     // Create feature subgraph based on GRPC service (replicating wgc feature-subgraph create)
     const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphName,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       labels: [],
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,

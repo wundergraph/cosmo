@@ -29,6 +29,7 @@ import {
   getLogger,
   handleError,
   isValidGraphName,
+  isValidGrpcNamingScheme,
   isValidLabels,
   isValidPluginVersion,
   newCompositionOptions,
@@ -383,6 +384,21 @@ export function publishFederatedSubgraph(
                 : req.isFeatureSubgraph
                   ? `A valid, non-empty routing URL is required to create and publish a feature subgraph.`
                   : `A valid, non-empty routing URL is required to create and publish a non-Event-Driven subgraph.`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+            compositionWarnings: [],
+            proposalMatchMessage,
+          };
+        }
+        // For GRPC_SERVICE subgraphs, validate that routing URL follows gRPC naming scheme
+        if (req.type === SubgraphType.GRPC_SERVICE && !isValidGrpcNamingScheme(routingUrl)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details:
+                `Routing URL must follow gRPC naming scheme. ` +
+                `See https://grpc.io/docs/guides/custom-name-resolution/ for examples.`,
             },
             compositionErrors: [],
             deploymentErrors: [],

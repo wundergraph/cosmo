@@ -49,6 +49,9 @@ export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
 export const DEFAULT_SUBGRAPH_URL_TWO = 'http://localhost:4002';
 export const DEFAULT_SUBGRAPH_URL_THREE = 'http://localhost:4003';
+export const DEFAULT_GRPC_SUBGRAPH_URL_ONE = 'localhost:4001';
+export const DEFAULT_GRPC_SUBGRAPH_URL_TWO = 'localhost:4002';
+export const DEFAULT_GRPC_SUBGRAPH_URL_THREE = 'localhost:4003';
 export const DEFAULT_NAMESPACE = 'default';
 
 const getKeycloakGroups = async (realm: string, keycloak: Keycloak, groupId: string | undefined) => {

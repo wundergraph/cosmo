@@ -2,7 +2,11 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
-import { UpdateSubgraphRequest, UpdateSubgraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  SubgraphType,
+  UpdateSubgraphRequest,
+  UpdateSubgraphResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
@@ -10,10 +14,12 @@ import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
   enrichLogger,
+  formatSubgraphType,
   formatSubscriptionProtocol,
   formatWebsocketSubprotocol,
   getLogger,
   handleError,
+  isValidGrpcNamingScheme,
   isValidLabels,
   newCompositionOptions,
 } from '../../util.js';
@@ -137,6 +143,24 @@ export function updateSubgraph(
           response: {
             code: EnumStatusCode.ERR,
             details: `Routing URL "${req.routingUrl}" is not a valid URL.`,
+          },
+          compositionErrors: [],
+          deploymentErrors: [],
+          compositionWarnings: [],
+        };
+      }
+      // For GRPC_SERVICE subgraphs, validate that routing URL follows gRPC naming scheme
+      if (
+        req.routingUrl !== undefined &&
+        subgraph.type === formatSubgraphType(SubgraphType.GRPC_SERVICE) &&
+        !isValidGrpcNamingScheme(req.routingUrl)
+      ) {
+        return {
+          response: {
+            code: EnumStatusCode.ERR,
+            details:
+              `Routing URL must follow gRPC naming scheme. ` +
+              `See https://grpc.io/docs/guides/custom-name-resolution/ for examples.`,
           },
           compositionErrors: [],
           deploymentErrors: [],

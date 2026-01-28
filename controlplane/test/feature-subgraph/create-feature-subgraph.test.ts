@@ -20,6 +20,9 @@ import {
   createFederatedGraph,
   DEFAULT_ROUTER_URL,
   DEFAULT_NAMESPACE,
+  DEFAULT_GRPC_SUBGRAPH_URL_ONE,
+  DEFAULT_GRPC_SUBGRAPH_URL_TWO,
+  DEFAULT_GRPC_SUBGRAPH_URL_THREE,
 } from '../test-util.js';
 
 let dbname = '';
@@ -576,7 +579,7 @@ describe('Create feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -591,7 +594,7 @@ describe('Create feature subgraph tests', () => {
     // Create a feature subgraph based on the gRPC service
     const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphName,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
     });
@@ -605,7 +608,7 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
     expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
-    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_TWO);
 
     await server.close();
   });
@@ -621,7 +624,7 @@ describe('Create feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -632,7 +635,7 @@ describe('Create feature subgraph tests', () => {
     });
     expect(getBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getBaseGrpcServiceResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
-    expect(getBaseGrpcServiceResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_ONE);
+    expect(getBaseGrpcServiceResponse.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_ONE);
 
     // Try to create a feature subgraph based on the gRPC service without routing URL - should fail
     const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
@@ -659,7 +662,7 @@ describe('Create feature subgraph tests', () => {
     const createBaseGrpcServiceResponse = await client.createFederatedSubgraph({
       name: baseGrpcServiceName,
       type: SubgraphType.GRPC_SERVICE,
-      routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
       labels: [grpcServiceLabel],
     });
     expect(createBaseGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -667,7 +670,7 @@ describe('Create feature subgraph tests', () => {
     // Create first feature subgraph
     const createFeatureSubgraph1Response = await client.createFederatedSubgraph({
       name: featureSubgraphName1,
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO,
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
     });
@@ -676,7 +679,7 @@ describe('Create feature subgraph tests', () => {
     // Create second feature subgraph
     const createFeatureSubgraph2Response = await client.createFederatedSubgraph({
       name: featureSubgraphName2,
-      routingUrl: 'http://localhost:4003',
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_THREE,
       isFeatureSubgraph: true,
       baseSubgraphName: baseGrpcServiceName,
     });
@@ -689,7 +692,7 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraph1Response.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureSubgraph1Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
     expect(getFeatureSubgraph1Response.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraph1Response.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+    expect(getFeatureSubgraph1Response.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_TWO);
 
     const getFeatureSubgraph2Response = await client.getSubgraphByName({
       name: featureSubgraphName2,
@@ -697,7 +700,7 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureSubgraph2Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
     expect(getFeatureSubgraph2Response.graph?.isFeatureSubgraph).toBe(true);
-    expect(getFeatureSubgraph2Response.graph?.routingURL).toBe('http://localhost:4003');
+    expect(getFeatureSubgraph2Response.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_THREE);
 
     await server.close();
   });
