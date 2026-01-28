@@ -801,7 +801,7 @@ export function isValidGrpcNamingScheme(url: string): boolean {
   const scheme = schemeMatch[1].toLowerCase();
   const rest = value.slice(schemeMatch[0].length);
   if (!supportedSchemes.has(scheme)) {
-    return rest.startsWith('//') ? false : isValidDnsTarget(value);
+    return isValidDnsTarget(value);
   }
 
   switch (scheme) {

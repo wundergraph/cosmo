@@ -301,7 +301,7 @@ describe('isValidGrpcNamingScheme', () => {
       expect(isValidGrpcNamingScheme('dns:localhost')).toBe(true);
       expect(isValidGrpcNamingScheme('dns:localhost:8080')).toBe(true);
       expect(isValidGrpcNamingScheme('dns:example.com:443')).toBe(true);
-      expect(isValidGrpcNamingScheme('dns://example.com:8080')).toBe(true);
+      expect(isValidGrpcNamingScheme('dns:///example.com:8080')).toBe(true);
     });
 
     test('should accept DNS with authority', () => {
