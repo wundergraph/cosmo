@@ -806,6 +806,18 @@ export function isValidGrpcNamingScheme(url: string): boolean {
 
   switch (scheme) {
     case 'dns': {
+      if (rest.startsWith('//')) {
+        const remainder = rest.slice(2);
+        const slashIndex = remainder.indexOf('/');
+        if (slashIndex === -1) {
+          return false; // No host:port path found
+        }
+        const endpoint = remainder.slice(slashIndex + 1);
+        if (!endpoint) {
+          return false; // Empty endpoint after slash
+        }
+        return isValidHostPort(endpoint);
+      }
       return isValidDnsTarget(rest);
     }
     case 'unix': {

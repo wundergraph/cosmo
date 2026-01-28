@@ -308,6 +308,25 @@ describe('isValidGrpcNamingScheme', () => {
       expect(isValidGrpcNamingScheme('dns://8.8.8.8/example.com:8080')).toBe(true);
     });
 
+    test('should reject DNS with authority but no host:port path', () => {
+      expect(isValidGrpcNamingScheme('dns://8.8.8.8')).toBe(false);
+      expect(isValidGrpcNamingScheme('dns://example.com')).toBe(false);
+    });
+
+    test('should reject DNS with authority but empty endpoint', () => {
+      expect(isValidGrpcNamingScheme('dns://8.8.8.8/')).toBe(false);
+      expect(isValidGrpcNamingScheme('dns://example.com/')).toBe(false);
+    });
+
+    test('should accept DNS with three slashes and valid host:port', () => {
+      expect(isValidGrpcNamingScheme('dns:///example.com:8080')).toBe(true);
+      expect(isValidGrpcNamingScheme('dns:///localhost:443')).toBe(true);
+    });
+
+    test('should reject DNS with three slashes but empty endpoint', () => {
+      expect(isValidGrpcNamingScheme('dns:///')).toBe(false);
+    });
+
     test('should reject DNS with invalid ports', () => {
       expect(isValidGrpcNamingScheme('localhost:0')).toBe(false);
       expect(isValidGrpcNamingScheme('example.com:65536')).toBe(false);
