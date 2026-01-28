@@ -859,7 +859,7 @@ export class SchemaCheckRepository {
         const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
         // currently matching only with the subgraph that is already present in the namespace
         if (proposalConfig) {
-          const match = await proposalRepo.matchSchemaWithProposal({
+          const matches = await proposalRepo.matchSchemaWithProposals({
             subgraphName,
             namespaceId: namespace.id,
             schemaSDL: newSchemaSDL,
@@ -870,10 +870,11 @@ export class SchemaCheckRepository {
 
           await this.update({
             schemaCheckID,
-            proposalMatch: match ? 'success' : proposalConfig.checkSeverityLevel === 'warn' ? 'warn' : 'error',
+            proposalMatch:
+              matches.length > 0 ? 'success' : proposalConfig.checkSeverityLevel === 'warn' ? 'warn' : 'error',
           });
 
-          if (!match) {
+          if (matches.length === 0) {
             if (proposalConfig.checkSeverityLevel === 'warn') {
               proposalMatchMessage += `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.\n`;
             } else {

@@ -480,7 +480,7 @@ export class ProposalRepository {
     return proposalSubgraphs;
   }
 
-  public async matchSchemaWithProposal({
+  public async matchSchemaWithProposals({
     subgraphName,
     namespaceId,
     schemaCheckId,
@@ -494,11 +494,13 @@ export class ProposalRepository {
     schemaSDL: string;
     routerCompatibilityVersion: string;
     isDeleted: boolean;
-  }): Promise<{ proposalId: string; proposalSubgraphId: string } | undefined> {
+  }): Promise<{ proposalId: string; proposalSubgraphId: string }[]> {
     const proposalSubgraphs = await this.getApprovedProposalSubgraphsBySubgraph({
       subgraphName,
       namespaceId,
     });
+
+    const matches: { proposalId: string; proposalSubgraphId: string }[] = [];
 
     for (const proposalSubgraph of proposalSubgraphs) {
       if (proposalSubgraph.isDeleted && isDeleted) {
@@ -517,10 +519,11 @@ export class ProposalRepository {
               },
             });
         }
-        return {
+        matches.push({
           proposalId: proposalSubgraph.proposalId,
           proposalSubgraphId: proposalSubgraph.id,
-        };
+        });
+        continue;
       }
 
       if (!proposalSubgraph.proposedSchemaSDL) {
@@ -549,13 +552,13 @@ export class ProposalRepository {
       }
 
       if (schemaChanges.changes.length === 0) {
-        return {
+        matches.push({
           proposalId: proposalSubgraph.proposalId,
           proposalSubgraphId: proposalSubgraph.id,
-        };
+        });
       }
     }
-    return undefined;
+    return matches;
   }
 
   public async getLatestCheckForProposal(
