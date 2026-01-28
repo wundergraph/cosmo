@@ -48,7 +48,7 @@ import {
 import copy from "copy-to-clipboard";
 import Fuse from "fuse.js";
 import { useRouter } from "next/router";
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useApplyParams } from "../analytics/use-apply-params";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
@@ -57,7 +57,74 @@ import { Pagination } from "../ui/pagination";
 import { useDebounce } from "use-debounce";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
-import { CopyButton } from "../ui/copy-button";
+
+const CopyableOperationHash = ({ hash }: { hash: string }) => {
+  const [copied, setCopied] = useState(false);
+  const [tooltipOpen, setTooltipOpen] = useState<boolean | undefined>(
+    undefined,
+  );
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const secondTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      if (secondTimeoutRef.current) {
+        clearTimeout(secondTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleHashClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    if (secondTimeoutRef.current) {
+      clearTimeout(secondTimeoutRef.current);
+    }
+
+    copy(hash);
+    setCopied(true);
+    setTooltipOpen(true);
+
+    timeoutRef.current = setTimeout(() => {
+      setTooltipOpen(false);
+      secondTimeoutRef.current = setTimeout(() => {
+        setCopied(false);
+        setTooltipOpen(undefined);
+      }, 200);
+    }, 1000);
+  };
+
+  return (
+    <Tooltip
+      delayDuration={100}
+      open={tooltipOpen}
+      onOpenChange={(open) => {
+        if (copied && !open) {
+          return;
+        }
+        setTooltipOpen(open ? true : undefined);
+      }}
+    >
+      <TooltipTrigger asChild>
+        <code
+          onClick={handleHashClick}
+          className="flex-shrink-0 cursor-pointer rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted-foreground/20"
+        >
+          {hash.slice(0, 4)}
+        </code>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{copied ? "Copied!" : "Copy Operation Hash"}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+};
 
 export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
@@ -419,23 +486,16 @@ export const CheckOperations = () => {
                 <AccordionItem id={hash} key={hash} value={hash}>
                   <AccordionTrigger className="px-2 hover:bg-secondary/30 hover:no-underline">
                     <div className="flex flex-1 items-center gap-2">
-                      <div className="flex w-24 items-center gap-1 text-start text-muted-foreground">
-                        <code className="text-xs">{hash.slice(0, 6)}</code>
-                        <CopyButton
-                          tooltip="Copy operation hash"
-                          value={hash}
-                          size="icon-sm"
-                          className="text-muted-foreground"
-                          onClick={(event) => event.stopPropagation()}
-                        />
+                      <div className="flex min-w-0 items-center gap-2">
+                        <CopyableOperationHash hash={hash} />
+                        <p
+                          className={cn("truncate", {
+                            "italic text-muted-foreground": name.length === 0,
+                          })}
+                        >
+                          {name || "unnamed operation"}
+                        </p>
                       </div>
-                      <p
-                        className={cn({
-                          "italic text-muted-foreground": name.length === 0,
-                        })}
-                      >
-                        {name || "unnamed operation"}
-                      </p>
                       <Badge
                         className="!inline-block !decoration-[none]"
                         variant="outline"
