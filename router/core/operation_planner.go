@@ -25,15 +25,15 @@ type planWithMetaData struct {
 }
 
 type OperationPlanner struct {
-	sf             singleflight.Group
-	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
-	executor       *Executor
-	trackUsageInfo bool
-	storeContent   bool
+	sf               singleflight.Group
+	planCache        ExecutionPlanCache[uint64, *planWithMetaData]
+	executor         *Executor
+	trackUsageInfo   bool
+	operationContent bool
 }
 
 type operationPlannerOpts struct {
-	storeContent bool
+	operationContent bool
 }
 
 type ExecutionPlanCache[K any, V any] interface {
@@ -49,10 +49,10 @@ type ExecutionPlanCache[K any, V any] interface {
 
 func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], storeContent bool) *OperationPlanner {
 	return &OperationPlanner{
-		planCache:      planCache,
-		executor:       executor,
-		trackUsageInfo: executor.TrackUsageInfo,
-		storeContent:   storeContent,
+		planCache:        planCache,
+		executor:         executor,
+		trackUsageInfo:   executor.TrackUsageInfo,
+		operationContent: storeContent,
 	}
 }
 
@@ -90,7 +90,7 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlan
 		schemaDocument:    p.executor.RouterSchema,
 	}
 
-	if opts.storeContent {
+	if opts.operationContent {
 		out.content = ctx.Content()
 	}
 
@@ -119,7 +119,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 	skipCache := options.TraceOptions.Enable || options.ExecutionOptions.IncludeQueryPlanInResponse
 
 	if skipCache {
-		prepared, err := p.preparePlan(opContext, operationPlannerOpts{storeContent: false})
+		prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: false})
 		if err != nil {
 			return err
 		}
@@ -147,7 +147,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		// this ensures that we only prepare the plan once for this operation ID
 		operationIDStr := strconv.FormatUint(operationID, 10)
 		sharedPreparedPlan, err, _ := p.sf.Do(operationIDStr, func() (interface{}, error) {
-			prepared, err := p.preparePlan(opContext, operationPlannerOpts{storeContent: p.storeContent})
+			prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: p.operationContent})
 			if err != nil {
 				return nil, err
 			}
