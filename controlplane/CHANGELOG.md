@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.186.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.185.0...controlplane@0.186.0) (2026-01-29)
+
+### Features
+
+* enhance redirect logic in auth controller to include onboarding parameter ([#2476](https://github.com/wundergraph/cosmo/issues/2476)) ([fd9302f](https://github.com/wundergraph/cosmo/commit/fd9302f5756d38ea6a764a3e60853b1f8c92c709)) (@JivusAyrus)
+* include schema version in graph update webhook ([#2467](https://github.com/wundergraph/cosmo/issues/2467)) ([6a51aaa](https://github.com/wundergraph/cosmo/commit/6a51aaa6d1ecec4cefc884bb05a5152e0b297b78)) (@thisisnithin)
+
 # [0.185.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.184.2...controlplane@0.185.0) (2026-01-27)
 
 ### Features

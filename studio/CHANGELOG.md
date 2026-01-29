@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.152.0](https://github.com/wundergraph/cosmo/compare/studio@0.151.0...studio@0.152.0) (2026-01-29)
+
+### Bug Fixes
+
+* update layout and styling of login and signup pages for mobile screens ([#2479](https://github.com/wundergraph/cosmo/issues/2479)) ([177c11d](https://github.com/wundergraph/cosmo/commit/177c11df3be3d7fc041f7e5a5ad42e51f1e76d3a)) (@JivusAyrus)
+
+### Features
+
+* allow to copy operations id from checks section ([#2474](https://github.com/wundergraph/cosmo/issues/2474)) ([223d43a](https://github.com/wundergraph/cosmo/commit/223d43a307423dfbd59267cf2c817217bc07d09c)) (@alepane21)
+
 # [0.151.0](https://github.com/wundergraph/cosmo/compare/studio@0.150.0...studio@0.151.0) (2026-01-27)
 
 ### Features
