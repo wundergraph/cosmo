@@ -232,15 +232,14 @@ export default (opts: BaseCommandOptions) => {
       }
       case 'json': {
         const returnedOperations: Record<string, OperationOutput> = {};
-        for (let ii = 0; ii < publishedOperations.length; ii++) {
-          const op = publishedOperations[ii];
-
+        for (const [ii, op] of publishedOperations.entries()) {
           returnedOperations[op.id] = {
             hash: op.hash,
             contents: operations[ii].contents,
             status: jsonOperationStatus(op.status),
             operationNames: op.operationNames ?? [],
           };
+        }
         }
         console.log(JSON.stringify(returnedOperations, null, 2));
         break;
