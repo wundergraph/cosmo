@@ -60,21 +60,21 @@ const LoginPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* Main content area - two columns */}
+      {/* Main content area */}
       <div className="flex flex-1 items-center justify-center px-4 py-8 lg:px-0 lg:py-0">
         <div className="flex w-full max-w-screen-2xl flex-col lg:flex-row">
-          {/* Left section */}
-          <div className="flex w-full flex-col items-center justify-center lg:w-1/2 lg:p-12">
+          {/* Left section - Form */}
+          <div className="flex min-h-screen w-full flex-col items-center justify-center lg:min-h-0 lg:w-1/2 lg:p-12">
             <div className="w-full max-w-md lg:max-w-lg">
-              <AuthCard className="w-full rounded-xl px-6 py-8 lg:px-10 lg:py-12">
-                <AuthLogoHeader />
+            <AuthCard className="w-full rounded-xl px-6 py-8 lg:px-10 lg:py-12">
+              <AuthLogoHeader />
 
-                <div className="mt-8 lg:mt-12">
-                  <h2 className="text-2xl font-normal leading-[120%] text-white lg:text-[32px]">
-                    Log in
-                  </h2>
+              <div className="mt-8 lg:mt-12">
+                <h2 className="text-2xl font-normal leading-[120%] text-white lg:text-[32px]">
+                  Log in
+                </h2>
 
-                  <div className="mt-6 space-y-3 lg:mt-8 lg:space-y-4">
+                <div className="mt-6 space-y-3 lg:mt-8 lg:space-y-4">
                   <Button
                     variant="outline"
                     size="lg"
@@ -131,7 +131,7 @@ const LoginPage: NextPageWithLayout = () => {
                 </div>
 
                 {/* Divider line */}
-                <div className="mt-7 mb-6 h-px w-full bg-white/10" />
+                <div className="mb-6 mt-7 h-px w-full bg-white/10" />
 
                 <p className="text-center text-sm text-gray-400">
                   Don&apos;t have an account?
@@ -149,16 +149,15 @@ const LoginPage: NextPageWithLayout = () => {
               </div>
             </AuthCard>
 
-              {/* Trusted companies */}
-              <div className="mt-8 lg:mt-16">
-                <TrustedCompanies />
-              </div>
+            {/* Trusted companies */}
+            <div className="mt-8 lg:mt-16">
+              <TrustedCompanies />
+            </div>
             </div>
           </div>
 
-        {/* Right section */}
-          <div className="hidden w-1/2 flex-col items-start 
-          justify-center pb-28 px-14 pt-12 lg:flex">
+          {/* Right section - Marketing */}
+          <div className="flex min-h-screen w-full flex-col items-center justify-center px-4 py-16 lg:min-h-0 lg:w-1/2 lg:items-start lg:px-14 lg:pb-28 lg:pt-12">
             <ProductCosmoStack variant="login" />
           </div>
         </div>
