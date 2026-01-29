@@ -1,5 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
+import { Code, ConnectError } from '@connectrpc/connect';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
@@ -144,6 +145,34 @@ describe('Persisted operations', (ctx) => {
     });
 
     expect(publishOperationsResp.response?.code).not.toBe(EnumStatusCode.OK);
+  });
+
+  test('Should reject persisted operations when payload is too large', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
+    const fedGraphName = genID('fedGraph');
+    await setupFederatedGraph(fedGraphName, client);
+
+    const operations = Array.from({ length: 51 }, (_, index) => ({
+      id: genID(`hello-${index}`),
+      contents: `query { hello }`,
+    }));
+
+    let error: unknown;
+    try {
+      await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations,
+      });
+    } catch (err) {
+      error = err;
+    }
+
+    expect(error).toBeInstanceOf(ConnectError);
+    expect(error).toMatchObject({ code: Code.ResourceExhausted });
   });
 
   test('Should not publish persisted operations with an invalid federated graph name', async (testContext) => {

@@ -3,9 +3,14 @@ import { readFile } from 'node:fs/promises';
 
 import { Command } from 'commander';
 import pc from 'picocolors';
+import cliProgress from 'cli-progress';
 
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { PublishedOperationStatus, PersistedOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  PublishedOperation,
+  PublishedOperationStatus,
+  PersistedOperation,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
@@ -18,6 +23,8 @@ interface OperationOutput {
   status: OperationOutputStatus;
   operationNames: string[];
 }
+
+const OPERATION_BATCH_SIZE = 50;
 
 const collect = (value: string, previous: string[]): string[] => {
   return [...previous, value];
@@ -157,69 +164,87 @@ export default (opts: BaseCommandOptions) => {
       }
     }
 
-    const result = await opts.client.platform.publishPersistedOperations(
-      {
-        fedGraphName: name,
-        namespace: options.namespace,
-        clientName: options.client,
-        operations,
-      },
-      { headers: getBaseHeaders() },
-    );
-    if (result.response?.code === EnumStatusCode.OK) {
-      if (options.quiet) {
-        return;
-      }
-      switch (options.format) {
-        case 'text': {
-          for (const op of result.operations) {
-            const message: string[] = [`pushed operation ${op.id}`];
-            if (op.hash !== op.id) {
-              message.push(`(${op.hash})`);
-            }
-            message.push(`(${humanReadableOperationStatus(op.status)})`);
-            if (op.operationNames.length > 0) {
-              message.push(`: ${op.operationNames.join(', ')}`);
-            }
-            console.log(message.join(' '));
-          }
-          const upToDate = (result.operations?.filter((op) => op.status === PublishedOperationStatus.UP_TO_DATE) ?? [])
-            .length;
-          const created = (result.operations?.filter((op) => op.status === PublishedOperationStatus.CREATED) ?? [])
-            .length;
-          const conflict = (result.operations?.filter((op) => op.status === PublishedOperationStatus.CONFLICT) ?? [])
-            .length;
-          const color = conflict === 0 ? pc.green : pc.yellow;
-          console.log(
-            color(
-              `pushed ${
-                result.operations?.length ?? 0
-              } operations: ${created} created, ${upToDate} up to date, ${conflict} conflicts`,
-            ),
-          );
-          if (conflict > 0 && !options.allowConflicts) {
-            command.error(pc.red('conflicts detected'));
-          }
-          break;
+    const publishedOperations: PublishedOperation[] = [];
+    const showProgress = !options.quiet && options.format === 'text' && operations.length > 0;
+    const bar = showProgress ? new cliProgress.SingleBar({}) : null;
+    let processed = 0;
+    if (bar) {
+      bar.start(operations.length, 0);
+    }
+    for (let start = 0; start < operations.length; start += OPERATION_BATCH_SIZE) {
+      const chunk = operations.slice(start, start + OPERATION_BATCH_SIZE);
+      const result = await opts.client.platform.publishPersistedOperations(
+        {
+          fedGraphName: name,
+          namespace: options.namespace,
+          clientName: options.client,
+          operations: chunk,
+        },
+        { headers: getBaseHeaders() },
+      );
+      if (result.response?.code !== EnumStatusCode.OK) {
+        if (bar) {
+          bar.stop();
         }
-        case 'json': {
-          const returnedOperations: Record<string, OperationOutput> = {};
-          for (let ii = 0; ii < result.operations.length; ii++) {
-            const op = result.operations[ii];
+        command.error(pc.red(`could not push operations: ${result.response?.details ?? 'unknown error'}`));
+      }
+      publishedOperations.push(...result.operations);
+      processed += result.operations.length;
+      if (bar) {
+        bar.update(processed);
+      }
+    }
+    if (bar) {
+      bar.stop();
+    }
+    if (options.quiet) {
+      return;
+    }
+    switch (options.format) {
+      case 'text': {
+        for (const op of publishedOperations) {
+          const message: string[] = [`pushed operation ${op.id}`];
+          if (op.hash !== op.id) {
+            message.push(`(${op.hash})`);
+          }
+          message.push(`(${humanReadableOperationStatus(op.status)})`);
+          if (op.operationNames.length > 0) {
+            message.push(`: ${op.operationNames.join(', ')}`);
+          }
+          console.log(message.join(' '));
+        }
+        const upToDate = (publishedOperations?.filter((op) => op.status === PublishedOperationStatus.UP_TO_DATE) ?? [])
+          .length;
+        const created = (publishedOperations?.filter((op) => op.status === PublishedOperationStatus.CREATED) ?? [])
+          .length;
+        const conflict = (publishedOperations?.filter((op) => op.status === PublishedOperationStatus.CONFLICT) ?? [])
+          .length;
+        const color = conflict === 0 ? pc.green : pc.yellow;
+        console.log(
+          color(
+            `pushed ${publishedOperations?.length ?? 0} operations: ${created} created, ${upToDate} up to date, ${conflict} conflicts`,
+          ),
+        );
+        if (conflict > 0 && !options.allowConflicts) {
+          command.error(pc.red('conflicts detected'));
+        }
+        break;
+      }
+      case 'json': {
+        const returnedOperations: Record<string, OperationOutput> = {};
+        for (let ii = 0; ii < publishedOperations.length; ii++) {
+          const op = publishedOperations[ii];
 
-            returnedOperations[op.id] = {
-              hash: op.hash,
-              contents: operations[ii].contents,
-              status: jsonOperationStatus(op.status),
-              operationNames: op.operationNames ?? [],
-            };
-          }
-          console.log(JSON.stringify(returnedOperations, null, 2));
-          break;
+          returnedOperations[op.id] = {
+            hash: op.hash,
+            contents: operations[ii].contents,
+            status: jsonOperationStatus(op.status),
+            operationNames: op.operationNames ?? [],
+          };
         }
+        console.log(JSON.stringify(returnedOperations, null, 2));
+        break;
       }
-    } else {
-      command.error(pc.red(`could not push operations: ${result.response?.details ?? 'unknown error'}`));
     }
   });
   return command;

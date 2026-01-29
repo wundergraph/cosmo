@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
-import { HandlerContext } from '@connectrpc/connect';
+import { Code, ConnectError, HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   PublishedOperation,
@@ -16,6 +16,8 @@ import { OperationsRepository } from '../../repositories/OperationsRepository.js
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+
+const MAX_PERSISTED_OPERATIONS = 50;
 
 export function publishPersistedOperations(
   opts: RouterOptions,
@@ -39,6 +41,13 @@ export function publishPersistedOperations(
 
     if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
       throw new UnauthorizedError();
+    }
+
+    if (req.operations.length > MAX_PERSISTED_OPERATIONS) {
+      throw new ConnectError(
+        `Payload Too Large: max ${MAX_PERSISTED_OPERATIONS} operations per request`,
+        Code.ResourceExhausted,
+      );
     }
 
     const userId = authContext.userId;
