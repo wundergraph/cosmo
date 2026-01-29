@@ -32,10 +32,9 @@ type CDNSource struct {
 	// from the token, already url-escaped
 	organizationID string
 	httpClient     *http.Client
-	fallbackSource *PlanSource
 }
 
-func NewCDNSource(endpoint, token string, logger *zap.Logger, fallbackSource *PlanSource) (*CDNSource, error) {
+func NewCDNSource(endpoint, token string, logger *zap.Logger) (*CDNSource, error) {
 	u, err := url.Parse(endpoint)
 	if err != nil {
 		return nil, err
@@ -56,26 +55,12 @@ func NewCDNSource(endpoint, token string, logger *zap.Logger, fallbackSource *Pl
 		federatedGraphID:    claims.FederatedGraphID,
 		organizationID:      claims.OrganizationID,
 		httpClient:          httpclient.NewRetryableHTTPClient(logger),
-		fallbackSource:      fallbackSource,
 	}, nil
 }
 
 func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) (operations []*nodev1.Operation, err error) {
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
-
-	// Defer fallback to PlanSource if items are nil
-	if c.fallbackSource != nil {
-		defer func() {
-			// If there were no operations loaded from CDN, use the fallbackSource
-			if len(operations) == 0 {
-				if err != nil {
-					log.Error("Falling back to PlanSource due to error loading cache warmup config from CDN", zap.Error(err))
-				}
-				operations, err = c.fallbackSource.LoadItems(ctx, log)
-			}
-		}()
-	}
 
 	operationsPath := fmt.Sprintf("/%s/%s/cache_warmup/operations.json", c.organizationID, c.federatedGraphID)
 

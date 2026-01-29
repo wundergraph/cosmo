@@ -135,8 +135,8 @@ func (c *InMemorySwitchoverCache) extractQueriesAndOverridePlanCache() {
 	c.queriesForFeatureFlag = switchoverMap
 }
 
-// cleanupUnusedFeatureFlags removes any feature flags from the in-memory switchover cache
-// this is useful in case where the updated execution config excludes a feature flag
+// cleanupUnusedFeatureFlags removes any feature flags that were removed from the execution config
+// after a schema / execution config change
 func (c *InMemorySwitchoverCache) cleanupUnusedFeatureFlags(routerCfg *nodev1.RouterConfig) {
 	c.mu.Lock()
 	defer c.mu.Unlock()

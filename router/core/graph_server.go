@@ -1371,19 +1371,18 @@ func (s *graphServer) buildGraphMux(
 		//   - Using static execution config (not Cosmo): s.selfRegister == nil
 		//   - OR CDN cache warmer is explictly disabled
 		case s.cacheWarmup.InMemoryFallback && (s.selfRegister == nil || !s.Config.cacheWarmup.Source.CdnSource.Enabled):
-			// We first utilize the plan cache (if it was already set, so not on first starts) to create a list of queries
-			// and reset the plan cache to the new plan cache for this start afterwords
+			// We first utilize the existing plan cache (if it was already set, i.e., not on the first start) to create a list of queries
+			// and then reset the plan cache to the new plan cache for this start afterwards.
 			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
 			opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 		case s.Config.cacheWarmup.Source.CdnSource.Enabled:
 			// We use the in-memory cache as a fallback if enabled
 			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
-			var fallbackSource *PlanSource
 			if s.cacheWarmup.InMemoryFallback {
-				fallbackSource = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
+				warmupConfig.FallbackSource = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
 				opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 			}
-			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger, fallbackSource)
+			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create cdn source: %w", err)
 			}

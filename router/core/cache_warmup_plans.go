@@ -25,5 +25,8 @@ func NewPlanSource(switchoverCacheWarmerQueries []*nodev1.Operation) *PlanSource
 
 // LoadItems loads the items from the plan source when called by the cache warmer
 func (c *PlanSource) LoadItems(_ context.Context, _ *zap.Logger) ([]*nodev1.Operation, error) {
+	if c == nil {
+		return nil, nil
+	}
 	return c.queries, nil
 }

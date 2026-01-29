@@ -34,6 +34,7 @@ type CacheWarmupProcessor interface {
 type CacheWarmupConfig struct {
 	Log            *zap.Logger
 	Source         CacheWarmupSource
+	FallbackSource CacheWarmupSource
 	Workers        int
 	ItemsPerSecond int
 	Timeout        time.Duration
@@ -45,6 +46,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 	w := &cacheWarmup{
 		log:            cfg.Log.With(zap.String("component", "cache_warmup")),
 		source:         cfg.Source,
+		fallbackSource: cfg.FallbackSource,
 		workers:        cfg.Workers,
 		itemsPerSecond: cfg.ItemsPerSecond,
 		timeout:        cfg.Timeout,
@@ -92,6 +94,7 @@ func WarmupCaches(ctx context.Context, cfg *CacheWarmupConfig) (err error) {
 type cacheWarmup struct {
 	log            *zap.Logger
 	source         CacheWarmupSource
+	fallbackSource CacheWarmupSource
 	workers        int
 	itemsPerSecond int
 	timeout        time.Duration
@@ -104,19 +107,11 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	ctx, cancel := context.WithTimeout(ctx, w.timeout)
 	defer cancel()
 
-	items, err := w.source.LoadItems(ctx, w.log)
-	if err != nil {
+	items, err := w.getItems(ctx)
+	// In case a provider returns err with > 0 items, we check for err != nil also
+	if len(items) == 0 || err != nil {
 		return 0, err
 	}
-
-	if len(items) == 0 {
-		w.log.Debug("No items to process")
-		return 0, nil
-	}
-
-	w.log.Info("Starting processing",
-		zap.Int("items", len(items)),
-	)
 
 	defaultClientInfo := &nodev1.ClientInfo{}
 
@@ -195,6 +190,43 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	}
 
 	return len(items), nil
+}
+
+func (w *cacheWarmup) getItems(ctx context.Context) (items []*nodev1.Operation, err error) {
+	// Defer fallback to PlanSource if items are nil
+	if w.fallbackSource != nil {
+		defer func() {
+			// If there were no operations loaded from CDN, use the fallbackSource
+			if len(items) == 0 {
+				fallbackItems, fallbackErr := w.fallbackSource.LoadItems(ctx, w.log)
+
+				// Only override existing items from main source if the fallback source returned items WITHOUT error
+				if len(fallbackItems) > 0 && fallbackErr == nil {
+					if err != nil {
+						w.log.Error("Falling back to PlanSource due to error loading cache warmup config from CDN", zap.Error(err))
+					}
+					items = fallbackItems
+					err = fallbackErr
+				}
+			}
+		}()
+	}
+
+	items, err = w.source.LoadItems(ctx, w.log)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(items) == 0 {
+		w.log.Debug("No items to process")
+		return nil, nil
+	}
+
+	w.log.Info("Starting processing",
+		zap.Int("items", len(items)),
+	)
+
+	return items, nil
 }
 
 type CacheWarmupPlanningProcessorOptions struct {
