@@ -400,16 +400,26 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         // Set the sso cookie.
         opts.authUtils.createSsoCookie(res, ssoSlug);
       }
+      // Determine the target URL
+      let targetUrl = opts.webBaseUrl;
       if (redirectURL) {
-        if (redirectURL.startsWith(opts.webBaseUrl)) {
-          res.redirect(redirectURL);
-        } else {
-          res.redirect(opts.webBaseUrl);
+        try {
+          const redirectOrigin = new URL(redirectURL).origin;
+          const webBaseOrigin = new URL(opts.webBaseUrl).origin;
+          if (redirectOrigin === webBaseOrigin) {
+            targetUrl = redirectURL;
+          }
+        } catch {
+          // On parse error, keep targetUrl as opts.webBaseUrl
         }
-      } else if (orgs === 0) {
-        res.redirect(opts.webBaseUrl + '?migrate=true');
+      }
+
+      // Append onboarding parameter if the user has no orgs
+      if (orgs === 0) {
+        const separator = targetUrl.includes('?') ? '&' : '?';
+        res.redirect(targetUrl + separator + 'onboarding=true');
       } else {
-        res.redirect(opts.webBaseUrl);
+        res.redirect(targetUrl);
       }
     } catch (err: any) {
       if (err instanceof AuthenticationError) {
