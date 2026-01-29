@@ -4,6 +4,21 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.151.0](https://github.com/wundergraph/cosmo/compare/studio@0.150.0...studio@0.151.0) (2026-01-27)
+
+### Features
+
+* add new login and signup pages ([#2471](https://github.com/wundergraph/cosmo/issues/2471)) ([b427211](https://github.com/wundergraph/cosmo/commit/b427211ca2fb917ed519d822d4efac0050884fb5)) (@JivusAyrus)
+* add pagination and limit handling for API keys ([#2430](https://github.com/wundergraph/cosmo/issues/2430)) ([eca6aac](https://github.com/wundergraph/cosmo/commit/eca6aac00ffb13527b241a45ab552ef0b87788e4)) (@JivusAyrus)
+* clear `localStorage` when logout ([#2446](https://github.com/wundergraph/cosmo/issues/2446)) ([cf76d6f](https://github.com/wundergraph/cosmo/commit/cf76d6f7806cce8d2b29d2171e5ca6887856f845)) (@wilsonrivera)
+* improve overrides labels ([#2461](https://github.com/wundergraph/cosmo/issues/2461)) ([05dafc9](https://github.com/wundergraph/cosmo/commit/05dafc9ee42c10deb1620f0f3184808b0562dfa2)) (@alepane21)
+
+# [0.150.0](https://github.com/wundergraph/cosmo/compare/studio@0.149.6...studio@0.150.0) (2026-01-26)
+
+### Features
+
+* make studio image rootless ([#2459](https://github.com/wundergraph/cosmo/issues/2459)) ([c5071f8](https://github.com/wundergraph/cosmo/commit/c5071f8df47fbfeeb794fe772a74a1bc63366cc0)) (@pepol)
+
 ## [0.149.6](https://github.com/wundergraph/cosmo/compare/studio@0.149.5...studio@0.149.6) (2026-01-20)
 
 **Note:** Version bump only for package studio

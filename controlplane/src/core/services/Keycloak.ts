@@ -3,6 +3,7 @@ import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/re
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { uid } from 'uid';
 import { FastifyBaseLogger } from 'fastify';
+import { decodeJwt } from 'jose';
 import { MemberRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 import { AuthenticationError } from '../errors/errors.js';
@@ -37,6 +38,29 @@ export default class Keycloak {
   }
 
   public async authenticateClient() {
+    if (this.client.accessToken) {
+      // We already have an access token, determine whether the token still valid before trying to authenticate again
+      try {
+        const { exp } = decodeJwt(this.client.accessToken);
+        if (exp && exp * 1000 > Date.now()) {
+          // The access token hasn't expired
+          return;
+        }
+
+        if (this.client.refreshToken) {
+          await this.client.auth({
+            grantType: 'refresh_token',
+            refreshToken: this.client.refreshToken,
+            clientId: 'admin-cli',
+          });
+
+          return;
+        }
+      } catch (error: unknown) {
+        this.logger.warn(error, 'Failed to refresh the existing access token, a new token will be requested');
+      }
+    }
+
     try {
       await this.client.auth({
         grantType: 'password',

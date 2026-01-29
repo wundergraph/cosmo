@@ -569,6 +569,16 @@
           "argumentMappings": []
         },
         {
+          "original": "subProjects",
+          "mapped": "sub_projects",
+          "argumentMappings": [
+            {
+              "original": "includeArchived",
+              "mapped": "include_archived"
+            }
+          ]
+        },
+        {
           "original": "filteredTasks",
           "mapped": "filtered_tasks",
           "argumentMappings": [
@@ -1063,6 +1073,25 @@
     }
   ],
   "resolveMappings": [
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "subProjects",
+          "mapped": "sub_projects",
+          "argumentMappings": [
+            {
+              "original": "includeArchived",
+              "mapped": "include_archived"
+            }
+          ]
+        }
+      },
+      "rpc": "ResolveProjectSubProjects",
+      "request": "ResolveProjectSubProjectsRequest",
+      "response": "ResolveProjectSubProjectsResponse"
+    },
     {
       "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {

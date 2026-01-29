@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.185.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.184.2...controlplane@0.185.0) (2026-01-27)
+
+### Features
+
+* add pagination and limit handling for API keys ([#2430](https://github.com/wundergraph/cosmo/issues/2430)) ([eca6aac](https://github.com/wundergraph/cosmo/commit/eca6aac00ffb13527b241a45ab552ef0b87788e4)) (@JivusAyrus)
+* improve `authenticateClient` by avoiding unnecessary token creation ([#2443](https://github.com/wundergraph/cosmo/issues/2443)) ([e6f5aa8](https://github.com/wundergraph/cosmo/commit/e6f5aa83eb318e9d8fefa553a811dddebfb24540)) (@wilsonrivera)
+
 ## [0.184.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.184.1...controlplane@0.184.2) (2026-01-20)
 
 **Note:** Version bump only for package controlplane
