@@ -56,6 +56,7 @@ export interface FederatedGraphSchemaUpdate {
       id: string;
       name: string;
       namespace: string;
+      composedSchemaVersionId?: string;
     };
     organization: {
       id: string;
