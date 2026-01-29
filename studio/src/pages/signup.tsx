@@ -44,11 +44,11 @@ const SignupPage: NextPageWithLayout = () => {
 
   return (
     <div className="flex min-h-full flex-col">
-      {/* Main content area - two columns */}
+      {/* Main content area */}
       <div className="flex flex-1 items-center justify-center px-4 py-8 lg:px-0 lg:py-0">
         <div className="flex w-full max-w-screen-2xl flex-col lg:flex-row">
-          {/* Left section */}
-          <div className="flex w-full flex-col items-center justify-center lg:w-1/2 lg:p-12">
+          {/* Left section - Form */}
+          <div className="flex min-h-screen w-full flex-col items-center justify-center lg:min-h-0 lg:w-1/2 lg:p-12">
             <div className="w-full max-w-md lg:max-w-lg">
               <AuthCard className="w-full rounded-xl px-6 py-8 lg:px-10 lg:py-12">
                 <AuthLogoHeader />
@@ -101,7 +101,7 @@ const SignupPage: NextPageWithLayout = () => {
                   </div>
 
                   {/* Divider line */}
-                  <div className="mt-7 mb-6 h-px w-full bg-white/10" />
+                  <div className="mb-6 mt-7 h-px w-full bg-white/10" />
 
                   <p className="text-center text-sm text-gray-400">
                     Already have an account?
@@ -111,7 +111,7 @@ const SignupPage: NextPageWithLayout = () => {
                           ? `/login?redirectURL=${encodeURIComponent(redirectURL)}`
                           : "/login"
                       }
-                      className="ml-[5px] font-medium hover:underline text-primary"
+                      className="ml-[5px] font-medium text-primary hover:underline"
                     >
                       Log in
                     </Link>
@@ -126,9 +126,8 @@ const SignupPage: NextPageWithLayout = () => {
             </div>
           </div>
 
-          {/* Right section */}
-          <div className="hidden w-1/2 flex-col items-start 
-          justify-center pb-28 px-14 pt-12 lg:flex">
+          {/* Right section - Marketing */}
+          <div className="flex min-h-screen w-full flex-col items-center justify-center px-4 py-16 lg:min-h-0 lg:w-1/2 lg:items-start lg:px-14 lg:pb-28 lg:pt-12">
             <ProductCosmoStack variant="signup" />
           </div>
         </div>
