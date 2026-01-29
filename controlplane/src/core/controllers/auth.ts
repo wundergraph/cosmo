@@ -402,8 +402,16 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       }
       // Determine the target URL
       let targetUrl = opts.webBaseUrl;
-      if (redirectURL && redirectURL.startsWith(opts.webBaseUrl)) {
-        targetUrl = redirectURL;
+      if (redirectURL) {
+        try {
+          const redirectOrigin = new URL(redirectURL).origin;
+          const webBaseOrigin = new URL(opts.webBaseUrl).origin;
+          if (redirectOrigin === webBaseOrigin) {
+            targetUrl = redirectURL;
+          }
+        } catch {
+          // On parse error, keep targetUrl as opts.webBaseUrl
+        }
       }
 
       // Append onboarding parameter if the user has no orgs
