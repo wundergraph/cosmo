@@ -190,7 +190,7 @@ export default (opts: BaseCommandOptions) => {
           command.error(pc.red(`could not push operations: ${result.response?.details ?? 'unknown error'}`));
         }
         publishedOperations.push(...result.operations);
-        processed += result.operations.length;
+        processed += chunk.length;
         if (bar) {
           bar.update(processed);
         }
