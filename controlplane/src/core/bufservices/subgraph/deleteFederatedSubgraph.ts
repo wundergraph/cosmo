@@ -253,7 +253,7 @@ export function deleteFederatedSubgraph(
 
     // Send PROPOSAL_STATE_UPDATED webhook for each published proposal
     for (const proposalDetails of proposalDetailsList) {
-      const federatedGraph = await fedGraphRepo.byId(proposalDetails.federatedGraphId);
+      const federatedGraph = affectedFederatedGraphs.find((g) => g.id === proposalDetails.federatedGraphId);
       if (federatedGraph) {
         orgWebhooks.send(
           {

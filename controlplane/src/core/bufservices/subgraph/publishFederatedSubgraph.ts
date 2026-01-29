@@ -630,7 +630,7 @@ export function publishFederatedSubgraph(
 
     // Send PROPOSAL_STATE_UPDATED webhook for each published proposal
     for (const proposalDetails of proposalDetailsList) {
-      const federatedGraph = await fedGraphRepo.byId(proposalDetails.federatedGraphId);
+      const federatedGraph = updatedFederatedGraphs.find((g) => g.id === proposalDetails.federatedGraphId);
       if (federatedGraph) {
         orgWebhooks.send(
           {
