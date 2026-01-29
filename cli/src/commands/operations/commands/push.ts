@@ -167,35 +167,38 @@ export default (opts: BaseCommandOptions) => {
     const publishedOperations: PublishedOperation[] = [];
     const showProgress = !options.quiet && options.format === 'text' && operations.length > 0;
     const bar = showProgress ? new cliProgress.SingleBar({}) : null;
-    let processed = 0;
-    if (bar) {
-      bar.start(operations.length, 0);
-    }
-    for (let start = 0; start < operations.length; start += OPERATION_BATCH_SIZE) {
-      const chunk = operations.slice(start, start + OPERATION_BATCH_SIZE);
-      const result = await opts.client.platform.publishPersistedOperations(
-        {
-          fedGraphName: name,
-          namespace: options.namespace,
-          clientName: options.client,
-          operations: chunk,
-        },
-        { headers: getBaseHeaders() },
-      );
-      if (result.response?.code !== EnumStatusCode.OK) {
-        if (bar) {
-          bar.stop();
-        }
-        command.error(pc.red(`could not push operations: ${result.response?.details ?? 'unknown error'}`));
-      }
-      publishedOperations.push(...result.operations);
-      processed += result.operations.length;
+    try {
+      let processed = 0;
       if (bar) {
-        bar.update(processed);
+        bar.start(operations.length, 0);
       }
-    }
-    if (bar) {
-      bar.stop();
+      for (let start = 0; start < operations.length; start += OPERATION_BATCH_SIZE) {
+        const chunk = operations.slice(start, start + OPERATION_BATCH_SIZE);
+        const result = await opts.client.platform.publishPersistedOperations(
+          {
+            fedGraphName: name,
+            namespace: options.namespace,
+            clientName: options.client,
+            operations: chunk,
+          },
+          { headers: getBaseHeaders() },
+        );
+        if (result.response?.code !== EnumStatusCode.OK) {
+          if (bar) {
+            bar.stop();
+          }
+          command.error(pc.red(`could not push operations: ${result.response?.details ?? 'unknown error'}`));
+        }
+        publishedOperations.push(...result.operations);
+        processed += result.operations.length;
+        if (bar) {
+          bar.update(processed);
+        }
+      }
+    } finally {
+      if (bar) {
+        bar.stop();
+      }
     }
     if (options.quiet) {
       return;
@@ -239,7 +242,6 @@ export default (opts: BaseCommandOptions) => {
             status: jsonOperationStatus(op.status),
             operationNames: op.operationNames ?? [],
           };
-        }
         }
         console.log(JSON.stringify(returnedOperations, null, 2));
         break;
