@@ -211,8 +211,9 @@ export default (opts: BaseCommandOptions) => {
             message.push(`(${op.hash})`);
           }
           message.push(`(${humanReadableOperationStatus(op.status)})`);
-          if (op.operationNames.length > 0) {
-            message.push(`: ${op.operationNames.join(', ')}`);
+          const opNames = op.operationNames ?? [];
+          if (opNames.length > 0) {
+            message.push(`: ${opNames.join(', ')}`);
           }
           console.log(message.join(' '));
         }
