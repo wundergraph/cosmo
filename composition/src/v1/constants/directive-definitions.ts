@@ -6,6 +6,7 @@ import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } f
 import {
   ARGUMENT_DEFINITION_UPPER,
   AS,
+  ASSUMED_SIZE,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
   CHANNEL,
@@ -16,6 +17,7 @@ import {
   CONFIGURE_DESCRIPTION,
   CONNECT_FIELD_RESOLVER,
   CONTEXT,
+  COST,
   DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
   DESCRIPTION_OVERRIDE,
@@ -47,6 +49,7 @@ import {
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
+  LIST_SIZE,
   NAME,
   OBJECT_UPPER,
   ONE_OF,
@@ -56,6 +59,7 @@ import {
   PROVIDES,
   REASON,
   REQUIRE_FETCH_REASONS,
+  REQUIRE_ONE_SLICING_ARGUMENT,
   REQUIRES,
   REQUIRES_SCOPES,
   RESOLVABLE,
@@ -65,6 +69,8 @@ import {
   SCOPES,
   SEMANTIC_NON_NULL,
   SHAREABLE,
+  SIZED_FIELDS,
+  SLICING_ARGUMENTS,
   SPECIFIED_BY,
   STREAM_CONFIGURATION,
   STRING_SCALAR,
@@ -77,6 +83,7 @@ import {
   TOPICS,
   UNION_UPPER,
   URL_LOWER,
+  WEIGHT,
 } from '../../utils/string-constants';
 import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from './type-nodes';
 
@@ -197,6 +204,28 @@ export const CONNECT_FIELD_RESOLVER_DEFINITION: DirectiveDefinitionNode = {
   kind: Kind.DIRECTIVE_DEFINITION,
   locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
   name: stringToNameNode(CONNECT_FIELD_RESOLVER),
+  repeatable: false,
+};
+
+// directive @cost(weight: String!) on ARGUMENT_DEFINITION | ENUM | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | OBJECT | SCALAR
+export const COST_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(WEIGHT),
+      type: REQUIRED_STRING_TYPE_NODE,
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([
+    ARGUMENT_DEFINITION_UPPER,
+    ENUM_UPPER,
+    FIELD_DEFINITION_UPPER,
+    INPUT_FIELD_DEFINITION_UPPER,
+    OBJECT_UPPER,
+    SCALAR_UPPER,
+  ]),
+  name: stringToNameNode(COST),
   repeatable: false,
 };
 
@@ -527,6 +556,59 @@ export const LINK_DEFINITION: DirectiveDefinitionNode = {
   locations: stringArrayToNameNodeArray([SCHEMA_UPPER]),
   name: stringToNameNode(LINK),
   repeatable: true,
+};
+
+/*
+ * directive @listSize(
+ *   assumedSize: Int,
+ *   slicingArguments: [String!],
+ *   sizedFields: [String!],
+ *   requireOneSlicingArgument: Boolean = true
+ * ) on FIELD_DEFINITION
+ */
+export const LIST_SIZE_DEFINITION: DirectiveDefinitionNode = {
+  arguments: [
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(ASSUMED_SIZE),
+      type: stringToNamedTypeNode(INT_SCALAR),
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(SLICING_ARGUMENTS),
+      type: {
+        kind: Kind.LIST_TYPE,
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(STRING_SCALAR),
+        },
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(SIZED_FIELDS),
+      type: {
+        kind: Kind.LIST_TYPE,
+        type: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(STRING_SCALAR),
+        },
+      },
+    },
+    {
+      kind: Kind.INPUT_VALUE_DEFINITION,
+      name: stringToNameNode(REQUIRE_ONE_SLICING_ARGUMENT),
+      type: stringToNamedTypeNode(BOOLEAN_SCALAR),
+      defaultValue: {
+        kind: Kind.BOOLEAN,
+        value: true,
+      },
+    },
+  ],
+  kind: Kind.DIRECTIVE_DEFINITION,
+  locations: stringArrayToNameNodeArray([FIELD_DEFINITION_UPPER]),
+  name: stringToNameNode(LIST_SIZE),
+  repeatable: false,
 };
 
 // directive @oneOf on INPUT_OBJECT
