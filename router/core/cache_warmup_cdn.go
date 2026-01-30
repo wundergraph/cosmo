@@ -5,11 +5,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"net/http"
 	"net/url"
 
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"go.opentelemetry.io/otel/codes"
@@ -17,7 +18,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var _ CacheWarmupSource = (*CDNSource)(nil)
@@ -58,7 +58,7 @@ func NewCDNSource(endpoint, token string, logger *zap.Logger) (*CDNSource, error
 	}, nil
 }
 
-func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) (operations []*nodev1.Operation, err error) {
+func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.Operation, error) {
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
 
