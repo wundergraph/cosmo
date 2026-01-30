@@ -469,21 +469,21 @@ const (
 // CostAnalysis configures cost analysis based on @cost and @listSize directives.
 type CostAnalysis struct {
 	// Enabled controls whether cost analysis is active.
-	// When true, the router calculates cost for every operation.
+	// When true, the router calculates costs for every operation.
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"SECURITY_COST_ANALYSIS_ENABLED"`
 
 	// Mode controls cost analysis behavior:
 	// - "measure": calculates costs without rejecting operations (for monitoring)
-	// - "enforce": calculates costs and rejects operations exceeding the static limit
+	// - "enforce": calculates costs and rejects operations exceeding the estimated limit
 	Mode CostAnalysisMode `yaml:"mode,omitempty" envDefault:"measure" env:"SECURITY_COST_ANALYSIS_MODE"`
 
-	// Limit is the maximum allowed estimated cost for a query.
-	// Only enforced when Mode is "enforce". Operations exceeding this limit are rejected.
-	Limit int `yaml:"limit,omitempty" envDefault:"0" env:"SECURITY_COST_ANALYSIS_LIMIT"`
+	// EstimatedLimit is the maximum allowed estimated cost for a query.
+	// Requires Mode set to "enforce". Operations exceeding this limit are rejected.
+	EstimatedLimit int `yaml:"estimated_limit,omitempty" envDefault:"0" env:"SECURITY_COST_ANALYSIS_ESTIMATED_LIMIT"`
 
-	// ListSize is the default assumed size for list fields when no @listSize directive
-	// nor slicing argument is provided. Used as a multiplier for list field costs.
-	ListSize int `yaml:"list_size,omitempty" envDefault:"10" env:"SECURITY_COST_ANALYSIS_LIST_SIZE"`
+	// EstimatedListSize is the default assumed size for list fields when no @listSize directive
+	// nor slicing argument is provided. Used as a multiplier for estimated cost calculation.
+	EstimatedListSize int `yaml:"estimated_list_size,omitempty" envDefault:"10" env:"SECURITY_COST_ANALYSIS_ESTIMATED_LIST_SIZE"`
 }
 
 type ComplexityLimit struct {

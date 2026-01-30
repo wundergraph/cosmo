@@ -37,9 +37,9 @@ func TestCostModuleExposition(t *testing.T) {
 			},
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 				securityConfiguration.CostAnalysis = &config.CostAnalysis{
-					Enabled:  true,
-					Mode:     config.CostAnalysisModeMeasure,
-					ListSize: 10,
+					Enabled:           true,
+					Mode:              config.CostAnalysisModeMeasure,
+					EstimatedListSize: 10,
 				}
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {

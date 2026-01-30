@@ -2691,23 +2691,23 @@
             "enabled": {
               "type": "boolean",
               "default": false,
-              "description": "When enabled, the router calculates cost for every operation."
+              "description": "When enabled, the router calculates costs for every operation."
             },
             "mode": {
               "type": "string",
               "enum": ["measure", "enforce"],
               "default": "measure",
-              "description": "Controls cost analysis behavior: 'measure' calculates costs without rejecting operations; 'enforce' rejects operations exceeding the limit."
+              "description": "Controls cost analysis behavior: 'measure' calculates costs without rejecting operations; 'enforce' rejects operations exceeding the estimated cost limit."
             },
-            "limit": {
+            "estimated_limit": {
               "type": "integer",
               "description": "Maximum allowed estimated cost for a query. Only enforced when mode is 'enforce'.",
               "default": 0,
               "minimum": 0
             },
-            "list_size": {
+            "estimated_list_size": {
               "type": "integer",
-              "description": "Default assumed size for list fields when no @listSize directive is specified.",
+              "description": "Default assumed size for list fields when no @listSize directive is specified. Used for estimated cost calculation.",
               "default": 10,
               "minimum": 1
             }

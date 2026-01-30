@@ -246,7 +246,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	// Enable static cost computation when cost analysis is enabled
 	if routerEngineCfg.CostAnalysis != nil && routerEngineCfg.CostAnalysis.Enabled {
 		planConfig.ComputeStaticCost = true
-		planConfig.StaticCostDefaultListSize = routerEngineCfg.CostAnalysis.ListSize
+		planConfig.StaticCostDefaultListSize = routerEngineCfg.CostAnalysis.EstimatedListSize
 	}
 
 	return planConfig, providers, nil

@@ -371,15 +371,15 @@ func TestQueryNamingLimits(t *testing.T) {
 		// These tests verify that cost is calculated using default values
 		// when no @cost or @listSize directives are specified in the schema.
 
-		t.Run("enforce mode blocks queries exceeding cost limit", func(t *testing.T) {
+		t.Run("enforce mode blocks queries exceeding estimated cost limit", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:  true,
-						Mode:     config.CostAnalysisModeEnforce,
-						Limit:    9,
-						ListSize: 5,
+						Enabled:           true,
+						Mode:              config.CostAnalysisModeEnforce,
+						EstimatedLimit:    9,
+						EstimatedListSize: 5,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -388,19 +388,19 @@ func TestQueryNamingLimits(t *testing.T) {
 				})
 				// cost = 5 * (1 + 1)
 				require.Equal(t, 400, res.Response.StatusCode)
-				require.Contains(t, res.Body, "exceeds the maximum allowed cost")
+				require.Contains(t, res.Body, "exceeds the maximum allowed estimated cost")
 			})
 		})
 
-		t.Run("enforce mode allows queries under cost limit", func(t *testing.T) {
+		t.Run("enforce mode allows queries under estimated cost limit", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:  true,
-						Mode:     config.CostAnalysisModeEnforce,
-						Limit:    11,
-						ListSize: 5,
+						Enabled:           true,
+						Mode:              config.CostAnalysisModeEnforce,
+						EstimatedLimit:    11,
+						EstimatedListSize: 5,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -418,9 +418,9 @@ func TestQueryNamingLimits(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled: true,
-						Mode:    config.CostAnalysisModeEnforce,
-						Limit:   2, // employee (1) + details (1) = 2
+						Enabled:        true,
+						Mode:           config.CostAnalysisModeEnforce,
+						EstimatedLimit: 2, // employee (1) + details (1) = 2
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -433,15 +433,15 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 
-		t.Run("list size configuration affects cost calculation", func(t *testing.T) {
+		t.Run("estimated list size configuration affects cost calculation", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:  true,
-						Mode:     config.CostAnalysisModeEnforce,
-						Limit:    2,
-						ListSize: 2, // Small list size
+						Enabled:           true,
+						Mode:              config.CostAnalysisModeEnforce,
+						EstimatedLimit:    2,
+						EstimatedListSize: 2, // Small list size
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -453,15 +453,15 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 
-		t.Run("enforce mode blocks when list size is zero (floored to 1)", func(t *testing.T) {
+		t.Run("enforce mode blocks when estimated list size is zero (floored to 1)", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:  true,
-						Mode:     config.CostAnalysisModeEnforce,
-						Limit:    1,
-						ListSize: 0, // will be floored to 1
+						Enabled:           true,
+						Mode:              config.CostAnalysisModeEnforce,
+						EstimatedLimit:    1,
+						EstimatedListSize: 0, // will be floored to 1
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -470,7 +470,7 @@ func TestQueryNamingLimits(t *testing.T) {
 				})
 				// cost = 1 * (1 + 1)
 				require.Equal(t, 400, res.Response.StatusCode)
-				require.Contains(t, res.Body, "exceeds the maximum allowed cost")
+				require.Contains(t, res.Body, "exceeds the maximum allowed estimated cost")
 			})
 		})
 
@@ -479,10 +479,10 @@ func TestQueryNamingLimits(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:  false,
-						Mode:     config.CostAnalysisModeEnforce,
-						Limit:    1,
-						ListSize: 10,
+						Enabled:           false,
+						Mode:              config.CostAnalysisModeEnforce,
+						EstimatedLimit:    1,
+						EstimatedListSize: 10,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -499,10 +499,10 @@ func TestQueryNamingLimits(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:  true,
-						Mode:     config.CostAnalysisModeMeasure,
-						Limit:    1, // Would block in enforce mode
-						ListSize: 10,
+						Enabled:           true,
+						Mode:              config.CostAnalysisModeMeasure,
+						EstimatedLimit:    1, // Would block in enforce mode
+						EstimatedListSize: 10,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -513,14 +513,14 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 
-		t.Run("enforce mode with zero limit does not block", func(t *testing.T) {
+		t.Run("enforce mode with zero estimated limit does not block", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled: true,
-						Mode:    config.CostAnalysisModeEnforce,
-						Limit:   0, // Zero limit means no enforcement
+						Enabled:        true,
+						Mode:           config.CostAnalysisModeEnforce,
+						EstimatedLimit: 0, // Zero limit means no enforcement
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -531,16 +531,16 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 
-		t.Run("nested list fields multiply cost", func(t *testing.T) {
+		t.Run("nested list fields multiply estimated cost", func(t *testing.T) {
 			// Just one additional test; more thorough testing is done in the engine.
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:  true,
-						Mode:     config.CostAnalysisModeEnforce,
-						Limit:    10,
-						ListSize: 5,
+						Enabled:           true,
+						Mode:              config.CostAnalysisModeEnforce,
+						EstimatedLimit:    10,
+						EstimatedListSize: 5,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
