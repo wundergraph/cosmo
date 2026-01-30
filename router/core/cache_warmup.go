@@ -107,11 +107,25 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	ctx, cancel := context.WithTimeout(ctx, w.timeout)
 	defer cancel()
 
-	items, err := w.getItems(ctx)
-	// In case a provider returns err with > 0 items, we check for err != nil also
+	items, err := w.source.LoadItems(ctx, w.log)
+
+	// Try fallback if no items were loaded OR there was an error loading from main source
 	if len(items) == 0 || err != nil {
+		items, err = w.loadFromFallbackSource(ctx, err)
+	}
+
+	if err != nil {
 		return 0, err
 	}
+
+	if len(items) == 0 {
+		w.log.Debug("No items to process")
+		return 0, nil
+	}
+
+	w.log.Info("Starting processing",
+		zap.Int("items", len(items)),
+	)
 
 	defaultClientInfo := &nodev1.ClientInfo{}
 
@@ -192,41 +206,23 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	return len(items), nil
 }
 
-func (w *cacheWarmup) getItems(ctx context.Context) (items []*nodev1.Operation, err error) {
-	// Defer fallback to PlanSource if items are nil
-	if w.fallbackSource != nil {
-		defer func() {
-			// If there were no operations loaded from CDN, use the fallbackSource
-			if len(items) == 0 {
-				fallbackItems, fallbackErr := w.fallbackSource.LoadItems(ctx, w.log)
-
-				// Only override existing items from main source if the fallback source returned items WITHOUT error
-				if len(fallbackItems) > 0 && fallbackErr == nil {
-					if err != nil {
-						w.log.Error("Falling back to PlanSource due to error loading cache warmup config from CDN", zap.Error(err))
-					}
-					items = fallbackItems
-					err = fallbackErr
-				}
-			}
-		}()
+func (w *cacheWarmup) loadFromFallbackSource(ctx context.Context, mainErr error) ([]*nodev1.Operation, error) {
+	if w.fallbackSource == nil {
+		return nil, mainErr
 	}
 
-	items, err = w.source.LoadItems(ctx, w.log)
+	fallbackItems, err := w.fallbackSource.LoadItems(ctx, w.log)
 	if err != nil {
-		return nil, err
+		// If fallback source also failed, log the fallback error and return the original error
+		w.log.Error("Failed to load cache warmup config from fallback source", zap.Error(err))
+		return nil, mainErr
 	}
 
-	if len(items) == 0 {
-		w.log.Debug("No items to process")
-		return nil, nil
+	// In case we went to the fallback because the main source had an error, log the original error
+	if mainErr != nil {
+		w.log.Error("Falling back to PlanSource due to error loading cache warmup config from CDN", zap.Error(mainErr))
 	}
-
-	w.log.Info("Starting processing",
-		zap.Int("items", len(items)),
-	)
-
-	return items, nil
+	return fallbackItems, nil
 }
 
 type CacheWarmupPlanningProcessorOptions struct {
