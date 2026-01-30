@@ -503,10 +503,9 @@ type OperationContext interface {
 	// in Middleware is recommended
 	QueryPlanStats() (QueryPlanStats, error)
 
-	// StaticCost returns the static (estimated) cost of the operation based on @cost and @listSize directives.
-	// Returns 0 if cost analysis is not enabled or the plan is not yet available.
-	// This should be called after planning is complete, using in Middleware is recommended.
-	StaticCost() (int, error)
+	// Cost returns cost analysis results for the operation.
+	// This should be called after planning is complete; using in Middleware is recommended.
+	Cost() (OperationCost, error)
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -627,6 +626,12 @@ type QueryPlanStats struct {
 	SubgraphRootFields   []SubgraphRootField
 }
 
+// OperationCost holds cost analysis results for an operation.
+type OperationCost struct {
+	// Estimated is the static cost calculated before execution based on @cost and @listSize directives.
+	Estimated int
+}
+
 type SubgraphRootField struct {
 	SubgraphName string
 	TypeName     string
@@ -725,17 +730,19 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 	return qps, nil
 }
 
-func (o *operationContext) StaticCost() (int, error) {
+func (o *operationContext) Cost() (OperationCost, error) {
 	if o == nil || o.preparedPlan == nil || o.preparedPlan.preparedPlan == nil {
-		return 0, errors.New("operation context or prepared plan is nil")
+		return OperationCost{}, errors.New("operation context or prepared plan is nil")
 	}
 
 	costCalc := o.preparedPlan.preparedPlan.GetStaticCostCalculator()
 	if costCalc == nil {
-		return 0, errors.New("cost analysis is not enabled")
+		return OperationCost{}, errors.New("cost analysis is not enabled")
 	}
 
-	return costCalc.GetStaticCost(o.planConfig, o.variables), nil
+	return OperationCost{
+		Estimated: costCalc.GetStaticCost(o.planConfig, o.variables),
+	}, nil
 }
 
 type SubgraphResolver struct {
