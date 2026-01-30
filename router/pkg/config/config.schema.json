@@ -2691,17 +2691,23 @@
             "enabled": {
               "type": "boolean",
               "default": false,
-              "description": "When enabled, static cost is calculated and exposed to modules. Set to true to enable StaticLimit option."
+              "description": "When enabled, the router calculates cost for every operation."
             },
-            "static_limit": {
+            "mode": {
+              "type": "string",
+              "enum": ["measure", "enforce"],
+              "default": "measure",
+              "description": "Controls cost analysis behavior: 'measure' calculates costs without rejecting operations; 'enforce' rejects operations exceeding the limit."
+            },
+            "limit": {
               "type": "integer",
-              "description": "The maximum allowed static (estimated) cost for a query. Queries exceeding this limit will be rejected before execution. If the limit is 0, this limit isn't applied.",
+              "description": "Maximum allowed estimated cost for a query. Only enforced when mode is 'enforce'.",
               "default": 0,
               "minimum": 0
             },
             "list_size": {
               "type": "integer",
-              "description": "The default assumed size for list fields when no @listSize directive nor slicing argument is provided. Used as a multiplier for list field static costs.",
+              "description": "Default assumed size for list fields when no @listSize directive is specified.",
               "default": 10,
               "minimum": 1
             }

@@ -1372,7 +1372,12 @@ func (o *OperationKit) ValidateStaticCost(preparedPlan plan.Plan, variables *fas
 		return nil
 	}
 
-	if costAnalysis.StaticLimit <= 0 {
+	// Only enforce limits in enforce mode
+	if costAnalysis.Mode != config.CostAnalysisModeEnforce {
+		return nil
+	}
+
+	if costAnalysis.Limit <= 0 {
 		return nil
 	}
 
@@ -1383,9 +1388,9 @@ func (o *OperationKit) ValidateStaticCost(preparedPlan plan.Plan, variables *fas
 
 	estimatedCost := costCalc.GetStaticCost(o.operationProcessor.executor.PlanConfig, variables)
 
-	if estimatedCost > costAnalysis.StaticLimit {
+	if estimatedCost > costAnalysis.Limit {
 		return &httpGraphqlError{
-			message:    fmt.Sprintf("The estimated query cost %d exceeds the maximum allowed static cost %d", estimatedCost, costAnalysis.StaticLimit),
+			message:    fmt.Sprintf("The estimated query cost %d exceeds the maximum allowed cost %d", estimatedCost, costAnalysis.Limit),
 			statusCode: http.StatusBadRequest,
 		}
 	}

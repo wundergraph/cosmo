@@ -7,13 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
-
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/wundergraph/cosmo/router/internal/unique"
+	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 
@@ -459,19 +458,31 @@ type ComplexityLimits struct {
 	IgnoreIntrospection bool `yaml:"ignore_introspection" envDefault:"false" env:"SECURITY_COMPLEXITY_IGNORE_INTROSPECTION"`
 }
 
+// CostAnalysisMode defines how cost analysis behaves.
+type CostAnalysisMode string
+
+const (
+	CostAnalysisModeMeasure CostAnalysisMode = "measure"
+	CostAnalysisModeEnforce CostAnalysisMode = "enforce"
+)
+
 // CostAnalysis configures cost analysis based on @cost and @listSize directives.
 type CostAnalysis struct {
-	// When enabled, static cost is calculated and exposed to modules.
-	// Set to true to enable StaticLimit option.
+	// Enabled controls whether cost analysis is active.
+	// When true, the router calculates cost for every operation.
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"SECURITY_COST_ANALYSIS_ENABLED"`
 
-	// StaticLimit is the maximum allowed static (estimated) cost for a query.
-	// Queries exceeding this limit will be rejected before execution.
-	// If the limit is 0, this limit isn't applied.
-	StaticLimit int `yaml:"static_limit,omitempty" envDefault:"0" env:"SECURITY_COST_ANALYSIS_STATIC_LIMIT"`
+	// Mode controls cost analysis behavior:
+	// - "measure": calculates costs without rejecting operations (for monitoring)
+	// - "enforce": calculates costs and rejects operations exceeding the static limit
+	Mode CostAnalysisMode `yaml:"mode,omitempty" envDefault:"measure" env:"SECURITY_COST_ANALYSIS_MODE"`
+
+	// Limit is the maximum allowed estimated cost for a query.
+	// Only enforced when Mode is "enforce". Operations exceeding this limit are rejected.
+	Limit int `yaml:"limit,omitempty" envDefault:"0" env:"SECURITY_COST_ANALYSIS_LIMIT"`
 
 	// ListSize is the default assumed size for list fields when no @listSize directive
-	// nor slicing argument is provided. Used as a multiplier for list field static costs.
+	// nor slicing argument is provided. Used as a multiplier for list field costs.
 	ListSize int `yaml:"list_size,omitempty" envDefault:"10" env:"SECURITY_COST_ANALYSIS_LIST_SIZE"`
 }
 

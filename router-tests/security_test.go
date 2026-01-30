@@ -368,17 +368,18 @@ func TestQueryNamingLimits(t *testing.T) {
 	t.Run("cost analysis", func(t *testing.T) {
 		t.Parallel()
 
-		// These tests verify that static cost is calculated using default values
+		// These tests verify that cost is calculated using default values
 		// when no @cost or @listSize directives are specified in the schema.
 
-		t.Run("blocks queries exceeding static cost limit with default values", func(t *testing.T) {
+		t.Run("enforce mode blocks queries exceeding cost limit", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:     true,
-						StaticLimit: 9,
-						ListSize:    5,
+						Enabled:  true,
+						Mode:     config.CostAnalysisModeEnforce,
+						Limit:    9,
+						ListSize: 5,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -387,18 +388,19 @@ func TestQueryNamingLimits(t *testing.T) {
 				})
 				// cost = 5 * (1 + 1)
 				require.Equal(t, 400, res.Response.StatusCode)
-				require.Contains(t, res.Body, "exceeds the maximum allowed static cost")
+				require.Contains(t, res.Body, "exceeds the maximum allowed cost")
 			})
 		})
 
-		t.Run("allows queries under static cost limit with default values", func(t *testing.T) {
+		t.Run("enforce mode allows queries under cost limit", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:     true,
-						StaticLimit: 11,
-						ListSize:    5,
+						Enabled:  true,
+						Mode:     config.CostAnalysisModeEnforce,
+						Limit:    11,
+						ListSize: 5,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -411,13 +413,14 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 
-		t.Run("non-list query with defaults", func(t *testing.T) {
+		t.Run("enforce mode with non-list query", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:     true,
-						StaticLimit: 2, // employee (1) + details (1) = 2
+						Enabled: true,
+						Mode:    config.CostAnalysisModeEnforce,
+						Limit:   2, // employee (1) + details (1) = 2
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -435,9 +438,10 @@ func TestQueryNamingLimits(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:     true,
-						StaticLimit: 2,
-						ListSize:    2, // Small list size
+						Enabled:  true,
+						Mode:     config.CostAnalysisModeEnforce,
+						Limit:    2,
+						ListSize: 2, // Small list size
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -449,14 +453,15 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 
-		t.Run("blocks queries exceeding static cost limit when list size is zero", func(t *testing.T) {
+		t.Run("enforce mode blocks when list size is zero (floored to 1)", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:     true,
-						StaticLimit: 1,
-						ListSize:    0, // will be floored to 1
+						Enabled:  true,
+						Mode:     config.CostAnalysisModeEnforce,
+						Limit:    1,
+						ListSize: 0, // will be floored to 1
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -465,7 +470,7 @@ func TestQueryNamingLimits(t *testing.T) {
 				})
 				// cost = 1 * (1 + 1)
 				require.Equal(t, 400, res.Response.StatusCode)
-				require.Contains(t, res.Body, "exceeds the maximum allowed static cost")
+				require.Contains(t, res.Body, "exceeds the maximum allowed cost")
 			})
 		})
 
@@ -474,9 +479,10 @@ func TestQueryNamingLimits(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:     false,
-						StaticLimit: 1,
-						ListSize:    10,
+						Enabled:  false,
+						Mode:     config.CostAnalysisModeEnforce,
+						Limit:    1,
+						ListSize: 10,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -488,13 +494,33 @@ func TestQueryNamingLimits(t *testing.T) {
 			})
 		})
 
-		t.Run("zero limit does not block queries", func(t *testing.T) {
+		t.Run("measure mode does not block queries", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:     true,
-						StaticLimit: 0, // Zero means no limit applied, but cost is calculated.
+						Enabled:  true,
+						Mode:     config.CostAnalysisModeMeasure,
+						Limit:    1, // Would block in enforce mode
+						ListSize: 10,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+			})
+		})
+
+		t.Run("enforce mode with zero limit does not block", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+						Enabled: true,
+						Mode:    config.CostAnalysisModeEnforce,
+						Limit:   0, // Zero limit means no enforcement
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -511,9 +537,10 @@ func TestQueryNamingLimits(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
-						Enabled:     true,
-						StaticLimit: 10,
-						ListSize:    5,
+						Enabled:  true,
+						Mode:     config.CostAnalysisModeEnforce,
+						Limit:    10,
+						ListSize: 5,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
