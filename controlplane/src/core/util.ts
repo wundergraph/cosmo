@@ -1,4 +1,5 @@
 import { randomFill } from 'node:crypto';
+import { isIPv4, isIPv6 } from 'node:net';
 import { S3ClientConfig } from '@aws-sdk/client-s3';
 import { HandlerContext } from '@connectrpc/connect';
 import {
@@ -720,4 +721,185 @@ export function isValidLocalhostOrSecureEndpoint(value: string) {
   }
 
   return isValid;
+}
+
+function isValidPort(port: string | undefined): boolean {
+  if (port === undefined) {
+    return true;
+  }
+  if (!/^\d+$/.test(port)) {
+    return false;
+  }
+  const portNum = Number.parseInt(port, 10);
+  // Valid port range is 1-65535 (port 0 is reserved)
+  return portNum >= 1 && portNum <= 65_535;
+}
+
+function isValidHostname(hostname: string): boolean {
+  if (!hostname || hostname.length > 253) {
+    return false;
+  }
+  const labels = hostname.split('.');
+  return labels.every((label) => /^[\da-z](?:[\da-z-]{0,61}[\da-z])?$/i.test(label));
+}
+
+function isValidHostOrIpv4(host: string): boolean {
+  return isIPv4(host) || isValidHostname(host);
+}
+
+function isValidHostPort(target: string): boolean {
+  if (!target || target.includes('/')) {
+    return false;
+  }
+  const lastColonIndex = target.lastIndexOf(':');
+  if (lastColonIndex === -1) {
+    return isValidHostOrIpv4(target);
+  }
+  if (target.indexOf(':') !== lastColonIndex) {
+    return false;
+  }
+  const host = target.slice(0, lastColonIndex);
+  const port = target.slice(lastColonIndex + 1);
+  if (!host || !port) {
+    return false;
+  }
+  return isValidHostOrIpv4(host) && isValidPort(port);
+}
+
+function isValidDnsTarget(rest: string): boolean {
+  if (!rest) {
+    return false;
+  }
+  if (rest.startsWith('//')) {
+    const remainder = rest.slice(2);
+    if (!remainder) {
+      return false;
+    }
+    const slashIndex = remainder.indexOf('/');
+    const endpoint = slashIndex === -1 ? remainder : remainder.slice(slashIndex + 1);
+    return isValidHostPort(endpoint);
+  }
+  return isValidHostPort(rest);
+}
+
+/**
+ * Validates if a routing URL is using one of the supported gRPC naming schemes.
+ * Supported schemes: dns:, unix:, unix-abstract:, vsock:, ipv4:, ipv6:
+ */
+export function isValidGrpcNamingScheme(url: string): boolean {
+  const value = url.trim();
+  if (!value) {
+    return false;
+  }
+
+  const supportedSchemes = new Set(['dns', 'unix', 'unix-abstract', 'vsock', 'ipv4', 'ipv6']);
+  const schemeMatch = /^([a-z][\d+.a-z-]*):/i.exec(value);
+  if (!schemeMatch) {
+    return isValidDnsTarget(value);
+  }
+
+  const scheme = schemeMatch[1].toLowerCase();
+  const rest = value.slice(schemeMatch[0].length);
+  if (!supportedSchemes.has(scheme)) {
+    return isValidDnsTarget(value);
+  }
+
+  switch (scheme) {
+    case 'dns': {
+      if (rest.startsWith('//')) {
+        const remainder = rest.slice(2);
+        const slashIndex = remainder.indexOf('/');
+        if (slashIndex === -1) {
+          return false; // No host:port path found
+        }
+        const endpoint = remainder.slice(slashIndex + 1);
+        if (!endpoint) {
+          return false; // Empty endpoint after slash
+        }
+        return isValidHostPort(endpoint);
+      }
+      return isValidDnsTarget(rest);
+    }
+    case 'unix': {
+      if (!rest) {
+        return false;
+      }
+      let path = rest;
+      if (rest.startsWith('//')) {
+        const remainder = rest.slice(2);
+        const slashIndex = remainder.indexOf('/');
+        path = slashIndex === -1 ? '' : remainder.slice(slashIndex);
+      }
+      return path.length > 0 && path !== '/';
+    }
+    case 'unix-abstract': {
+      return rest.length > 0;
+    }
+    case 'vsock': {
+      const parts = rest.split(':');
+      if (parts.length !== 2) {
+        return false;
+      }
+      const [cid, port] = parts;
+      if (!/^\d+$/.test(cid) || !/^\d+$/.test(port)) {
+        return false;
+      }
+      // Validate port range (1-65535)
+      return isValidPort(port);
+    }
+    case 'ipv4': {
+      if (!rest) {
+        return false;
+      }
+      const endpoints = rest.split(',').map((endpoint) => endpoint.trim());
+      return endpoints.every((endpoint) => {
+        if (!endpoint) {
+          return false;
+        }
+        const lastColonIndex = endpoint.lastIndexOf(':');
+        if (lastColonIndex === -1) {
+          return isIPv4(endpoint);
+        }
+        if (endpoint.indexOf(':') !== lastColonIndex) {
+          return false;
+        }
+        const host = endpoint.slice(0, lastColonIndex);
+        const port = endpoint.slice(lastColonIndex + 1);
+        return isIPv4(host) && isValidPort(port);
+      });
+    }
+    case 'ipv6': {
+      if (!rest) {
+        return false;
+      }
+      const endpoints = rest.split(',').map((endpoint) => endpoint.trim());
+      return endpoints.every((endpoint) => {
+        if (!endpoint) {
+          return false;
+        }
+        if (endpoint.startsWith('[')) {
+          const closingIndex = endpoint.indexOf(']');
+          if (closingIndex === -1) {
+            return false;
+          }
+          const address = endpoint.slice(1, closingIndex);
+          if (!isIPv6(address)) {
+            return false;
+          }
+          const portPart = endpoint.slice(closingIndex + 1);
+          if (!portPart) {
+            return true;
+          }
+          if (!portPart.startsWith(':')) {
+            return false;
+          }
+          return isValidPort(portPart.slice(1));
+        }
+        return isIPv6(endpoint);
+      });
+    }
+    default: {
+      return false;
+    }
+  }
 }

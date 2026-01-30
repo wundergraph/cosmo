@@ -15,6 +15,7 @@ import {
 import {
   createBaseAndFeatureSubgraph,
   createNamespace,
+  DEFAULT_GRPC_SUBGRAPH_URL_ONE,
   DEFAULT_NAMESPACE,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
@@ -892,7 +893,7 @@ describe('Create subgraph tests', () => {
         name: grpcServiceName,
         namespace: DEFAULT_NAMESPACE,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+        routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
         labels: [grpcServiceLabel],
       });
 
@@ -908,7 +909,7 @@ describe('Create subgraph tests', () => {
       expect(getSubgraphResp.graph).toBeDefined();
       expect(getSubgraphResp.graph?.name).toBe(grpcServiceName);
       expect(getSubgraphResp.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
-      expect(getSubgraphResp.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_ONE);
+      expect(getSubgraphResp.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_ONE);
 
       await server.close();
     });
@@ -948,12 +949,94 @@ describe('Create subgraph tests', () => {
         name: grpcServiceName,
         namespace: DEFAULT_NAMESPACE,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: 'invalid-url',
+        routingUrl: "invalid-url",
         labels: [grpcServiceLabel],
       });
 
       expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
       expect(createGrpcServiceSubgraphResp.response?.details).toBe('Routing URL "invalid-url" is not a valid URL');
+
+      await server.close();
+    });
+
+    test('Should not allow creating a GRPC service subgraph with HTTP/HTTPS routing URL', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const grpcServiceLabel = genUniqueLabel('service');
+
+      // Test HTTP URL
+      const createGrpcServiceSubgraphRespHttp = await client.createFederatedSubgraph({
+        name: genID('grpc-service-http'),
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'http://localhost:8080',
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphRespHttp.response?.code).toBe(EnumStatusCode.ERR);
+      expect(createGrpcServiceSubgraphRespHttp.response?.details).toContain(
+        'Routing URL must follow gRPC naming scheme',
+      );
+
+      // Test HTTPS URL
+      const createGrpcServiceSubgraphRespHttps = await client.createFederatedSubgraph({
+        name: genID('grpc-service-https'),
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'https://example.com:8080',
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphRespHttps.response?.code).toBe(EnumStatusCode.ERR);
+      expect(createGrpcServiceSubgraphRespHttps.response?.details).toContain(
+        'Routing URL must follow gRPC naming scheme',
+      );
+
+      await server.close();
+    });
+
+    test('Should allow creating a GRPC service subgraph with valid gRPC naming scheme URLs', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceLabel = genUniqueLabel('service');
+
+      // Test DNS scheme (default)
+      const createGrpcServiceSubgraphRespDns = await client.createFederatedSubgraph({
+        name: genID('grpc-service-dns'),
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'dns:localhost:8080',
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphRespDns.response?.code).toBe(EnumStatusCode.OK);
+
+      // Test plain hostname (defaults to DNS)
+      const createGrpcServiceSubgraphRespPlain = await client.createFederatedSubgraph({
+        name: genID('grpc-service-plain'),
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'localhost:8080',
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphRespPlain.response?.code).toBe(EnumStatusCode.OK);
+
+      // Test IPv4 scheme
+      const createGrpcServiceSubgraphRespIpv4 = await client.createFederatedSubgraph({
+        name: genID('grpc-service-ipv4'),
+        namespace: DEFAULT_NAMESPACE,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'ipv4:127.0.0.1:8080',
+        labels: [grpcServiceLabel],
+      });
+
+      expect(createGrpcServiceSubgraphRespIpv4.response?.code).toBe(EnumStatusCode.OK);
 
       await server.close();
     });
@@ -982,7 +1065,7 @@ describe('Create subgraph tests', () => {
         name: sharedName,
         namespace: DEFAULT_NAMESPACE,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: DEFAULT_SUBGRAPH_URL_TWO,
+        routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
         labels: [grpcServiceLabel],
       });
 
@@ -1008,7 +1091,7 @@ describe('Create subgraph tests', () => {
         name: sharedName,
         namespace: DEFAULT_NAMESPACE,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+        routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
         labels: [grpcServiceLabel],
       });
 
@@ -1055,7 +1138,7 @@ describe('Create subgraph tests', () => {
         name: sharedName,
         namespace: DEFAULT_NAMESPACE,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+        routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
         labels: [grpcServiceLabel],
       });
 
@@ -1088,7 +1171,7 @@ describe('Create subgraph tests', () => {
           name: grpcServiceName,
           namespace: DEFAULT_NAMESPACE,
           type: SubgraphType.GRPC_SERVICE,
-          routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+          routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
           labels: [grpcServiceLabel],
         });
 
@@ -1126,7 +1209,7 @@ describe('Create subgraph tests', () => {
         name: grpcServiceName,
         namespace: DEFAULT_NAMESPACE,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+        routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
         labels: [grpcServiceLabel],
       });
 
@@ -1149,7 +1232,7 @@ describe('Create subgraph tests', () => {
         name: grpcServiceName,
         namespace: DEFAULT_NAMESPACE,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: DEFAULT_SUBGRAPH_URL_ONE,
+        routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_ONE,
         labels: [envLabel, teamLabel, typeLabel],
       });
 
