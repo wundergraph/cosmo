@@ -24,7 +24,7 @@ interface OperationOutput {
   operationNames: string[];
 }
 
-const OPERATION_BATCH_SIZE = 50;
+const OPERATION_BATCH_SIZE = 100;
 
 const collect = (value: string, previous: string[]): string[] => {
   return [...previous, value];
