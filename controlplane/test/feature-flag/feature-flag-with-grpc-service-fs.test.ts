@@ -8,6 +8,7 @@ import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/
 import {
   createFederatedGraph,
   createThenPublishSubgraph,
+  DEFAULT_GRPC_SUBGRAPH_URL_TWO,
   DEFAULT_ROUTER_URL,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
@@ -82,7 +83,7 @@ describe('Feature flag with gRPC service feature subgraph tests', () => {
       namespace: 'default',
       type: SubgraphType.GRPC_SERVICE,
       labels: [sharedLabel],
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO, // gRPC services need routing URLs
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO, // gRPC services need routing URLs
     });
     expect(createGrpcServiceResponse.response?.code).toBe(EnumStatusCode.OK);
 
@@ -144,7 +145,7 @@ describe('Feature flag with gRPC service feature subgraph tests', () => {
     });
     expect(getGrpcServiceSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getGrpcServiceSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
-    expect(getGrpcServiceSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+    expect(getGrpcServiceSubgraphResponse.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_TWO);
 
     // Step 4: Create federated graph with the same labels
     await createFederatedGraph(client, fedGraphName, 'default', [joinLabel(sharedLabel)], DEFAULT_ROUTER_URL);
@@ -168,7 +169,7 @@ describe('Feature flag with gRPC service feature subgraph tests', () => {
       isFeatureSubgraph: true,
       baseSubgraphName: grpcServiceSubgraphName,
       labels: [sharedLabel],
-      routingUrl: DEFAULT_SUBGRAPH_URL_TWO, // Feature subgraphs based on gRPC services need routing URLs
+      routingUrl: DEFAULT_GRPC_SUBGRAPH_URL_TWO, // Feature subgraphs based on gRPC services need routing URLs
     });
     expect(createFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
@@ -228,7 +229,7 @@ describe('Feature flag with gRPC service feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
     expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
-    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
+    expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_TWO);
 
     // Step 7: Create a feature flag using the feature subgraph
     const createFeatureFlagResponse = await client.createFeatureFlag({
