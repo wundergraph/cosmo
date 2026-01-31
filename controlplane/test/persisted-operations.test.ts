@@ -154,7 +154,7 @@ describe('Persisted operations', (ctx) => {
     const fedGraphName = genID('fedGraph');
     await setupFederatedGraph(fedGraphName, client);
 
-    const operations = Array.from({ length: 51 }, (_, index) => ({
+    const operations = Array.from({ length: 101 }, (_, index) => ({
       id: genID(`hello-${index}`),
       contents: `query { hello }`,
     }));
