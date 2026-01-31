@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"fmt"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"io"
 	"net/http"
 	"reflect"
@@ -12,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 
 	"github.com/expr-lang/expr/vm"
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
@@ -45,6 +46,8 @@ var (
 		// Content Negotiation. We must never propagate the client headers to the upstream
 		// The router has to decide on its own what to send to the upstream
 		"Content-Type",
+		"Content-Encoding",
+		"Content-Length",
 		"Accept-Encoding",
 		"Accept-Charset",
 		"Accept",
