@@ -1310,7 +1310,7 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
 
-	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.SwitchoverConfig.inMemorySwitchOverCache.IsEnabled())
+	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.SwitchoverConfig.inMemoryPlanCacheFallback.IsEnabled())
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
@@ -1373,14 +1373,14 @@ func (s *graphServer) buildGraphMux(
 		case s.cacheWarmup.InMemoryFallback && (s.selfRegister == nil || !s.Config.cacheWarmup.Source.CdnSource.Enabled):
 			// We first utilize the existing plan cache (if it was already set, i.e., not on the first start) to create a list of queries
 			// and then reset the plan cache to the new plan cache for this start afterwards.
-			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
-			opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+			warmupConfig.Source = NewPlanSource(opts.SwitchoverConfig.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
+			opts.SwitchoverConfig.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 		case s.Config.cacheWarmup.Source.CdnSource.Enabled:
 			// We use the in-memory cache as a fallback if enabled
 			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
 			if s.cacheWarmup.InMemoryFallback {
-				warmupConfig.FallbackSource = NewPlanSource(opts.SwitchoverConfig.inMemorySwitchOverCache.getPlanCacheForFF(opts.FeatureFlagName))
-				opts.SwitchoverConfig.inMemorySwitchOverCache.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+				warmupConfig.FallbackSource = NewPlanSource(opts.SwitchoverConfig.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
+				opts.SwitchoverConfig.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 			}
 			cdnSource, err := NewCDNSource(s.Config.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
