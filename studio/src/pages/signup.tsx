@@ -47,16 +47,28 @@ const SignupPage: NextPageWithLayout = () => {
       {/* Main content area */}
       <div className="flex flex-1 items-center justify-center px-4 py-8 lg:px-0 lg:py-0">
         <div className="flex w-full max-w-screen-2xl flex-col lg:flex-row">
-          {/* Left section - Form */}
-          <div className="flex min-h-screen w-full flex-col items-center justify-center lg:min-h-0 lg:w-1/2 lg:p-12">
+          {/* Left section - Marketing */}
+          <div className="flex w-full flex-col items-center justify-center px-4 py-10 lg:min-h-screen lg:w-1/2 lg:items-start lg:px-14 lg:pb-28 lg:pt-12">
+            <div className="lg:mt-8">
+              <ProductCosmoStack variant="signup" />
+            </div>
+          </div>
+
+          {/* Right section - Form */}
+          <div className="flex w-full flex-col items-center justify-center pb-10 lg:min-h-screen lg:w-1/2 lg:p-12">
             <div className="w-full max-w-md lg:max-w-lg">
               <AuthCard className="w-full rounded-xl px-6 py-8 lg:px-10 lg:py-12">
-                <AuthLogoHeader />
+                <div className="hidden lg:block">
+                  <AuthLogoHeader />
+                </div>
 
                 <div className="mt-8 lg:mt-12">
-                  <h2 className="text-2xl font-normal leading-[120%] text-white lg:text-[32px]">
+                  <h2 className="text-center text-2xl font-normal leading-[120%] text-white lg:text-[32px]">
                     Sign up for free
                   </h2>
+                  <p className="mt-2 text-center text-sm text-white/85 lg:text-base">
+                    Try Cosmo as Managed Service. No card required.
+                  </p>
 
                   <div className="mt-6 space-y-3 lg:mt-8 lg:space-y-4">
                     <Button
@@ -124,11 +136,6 @@ const SignupPage: NextPageWithLayout = () => {
                 <TrustedCompanies />
               </div>
             </div>
-          </div>
-
-          {/* Right section - Marketing */}
-          <div className="flex min-h-screen w-full flex-col items-center justify-center px-4 py-16 lg:min-h-0 lg:w-1/2 lg:items-start lg:px-14 lg:pb-28 lg:pt-12">
-            <ProductCosmoStack variant="signup" />
           </div>
         </div>
       </div>
