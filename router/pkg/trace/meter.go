@@ -2,15 +2,12 @@ package trace
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"net/url"
 
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
-	"github.com/wundergraph/cosmo/router/pkg/trace/redact"
+	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -26,26 +23,16 @@ var (
 )
 
 type (
-	IPAnonymizationMethod string
-
-	IPAnonymizationConfig struct {
-		Enabled bool
-		Method  IPAnonymizationMethod
-	}
-
 	ProviderConfig struct {
 		Logger            *zap.Logger
 		Config            *Config
 		ServiceInstanceID string
-		IPAnonymization   *IPAnonymizationConfig
+		IPAnonymization   *attributeprocessor.IPAnonymizationConfig
+		// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values
+		SanitizeUTF8 *attributeprocessor.SanitizeUTF8Config
 		// MemoryExporter is used for testing purposes
 		MemoryExporter sdktrace.SpanExporter
 	}
-)
-
-const (
-	Hash   IPAnonymizationMethod = "hash"
-	Redact IPAnonymizationMethod = "redact"
 )
 
 func createExporter(log *zap.Logger, exp *ExporterConfig) (sdktrace.SpanExporter, error) {
@@ -159,25 +146,19 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		)
 	}
 
+	// Build list of attribute transformers based on config
+	var transformers []attributeprocessor.AttributeTransformer
+
+	// The orders of the transformers indicate the priority.
 	if config.IPAnonymization != nil && config.IPAnonymization.Enabled {
+		transformers = append(transformers, attributeprocessor.RedactKeys(SensitiveAttributes, config.IPAnonymization.Method))
+	}
+	if config.SanitizeUTF8 != nil && config.SanitizeUTF8.Enabled {
+		transformers = append(transformers, attributeprocessor.SanitizeUTF8(config.SanitizeUTF8, config.Logger))
+	}
 
-		var rFunc redact.RedactFunc
-
-		switch config.IPAnonymization.Method {
-		case Hash:
-			rFunc = func(key attribute.KeyValue) string {
-				h := sha256.New()
-				h.Write([]byte(key.Value.AsString()))
-				return hex.EncodeToString(h.Sum(nil))
-			}
-		case Redact:
-			rFunc = func(key attribute.KeyValue) string {
-				return "[REDACTED]"
-			}
-
-		}
-
-		opts = append(opts, redact.Attributes(SensitiveAttributes, rFunc))
+	if len(transformers) > 0 {
+		opts = append(opts, attributeprocessor.NewAttributeProcessorOption(transformers...))
 	}
 
 	if config.Config.Enabled {

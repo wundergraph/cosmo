@@ -6,6 +6,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -70,7 +71,9 @@ type Config struct {
 	// TestMemoryExporter is used for testing purposes. If set, the exporter will be used instead of the configured exporters.
 	TestMemoryExporter  sdktrace.SpanExporter
 	ResponseTraceHeader config.ResponseTraceHeader
-	Attributes          []config.CustomAttribute
+	Attributes []config.CustomAttribute
+	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values
+	SanitizeUTF8 *attributeprocessor.SanitizeUTF8Config
 }
 
 func DefaultExporter(cfg *Config) *ExporterConfig {
@@ -121,6 +124,10 @@ func DefaultConfig(serviceVersion string) *Config {
 		ResponseTraceHeader: config.ResponseTraceHeader{
 			Enabled:    false,
 			HeaderName: "x-wg-trace-id",
+		},
+		SanitizeUTF8: &attributeprocessor.SanitizeUTF8Config{
+			Enabled:          false,
+			LogSanitizations: false,
 		},
 	}
 }
