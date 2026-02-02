@@ -14,7 +14,8 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource/subscriptionclient/transport"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
@@ -64,7 +65,7 @@ func getErrorType(err error) errorType {
 	if errors.Is(err, context.Canceled) {
 		return errorTypeContextCanceled
 	}
-	var upgradeErr *graphql_datasource.UpgradeRequestError
+	var upgradeErr *transport.ErrFailedUpgrade
 	if errors.As(err, &upgradeErr) {
 		return errorTypeUpgradeFailed
 	}
@@ -82,7 +83,7 @@ func getErrorType(err error) errorType {
 	if errors.As(err, &streamsHandlerErr) {
 		return errorTypeStreamsHandlerError
 	}
-	var invalidWsSubprotocolErr graphql_datasource.InvalidWsSubprotocolError
+	var invalidWsSubprotocolErr transport.ErrInvalidSubprotocol
 	if errors.As(err, &invalidWsSubprotocolErr) {
 		return errorTypeInvalidWsSubprotocol
 	}

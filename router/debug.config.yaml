@@ -16,7 +16,7 @@ execution_config:
 
 router_registration: false
 
-log_level: info
+log_level: debug
 
 headers:
   all:
@@ -68,7 +68,7 @@ engine:
   max_concurrent_resolvers: 1024
   enable_single_flight: true
   debug:
-    report_websocket_connections: true
+    report_websocket_connections: false
     report_memory_usage: false
 
 events:

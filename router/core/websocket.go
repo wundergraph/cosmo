@@ -647,7 +647,7 @@ func (rw *websocketResponseWriter) Write(data []byte) (int, error) {
 
 func (rw *websocketResponseWriter) Flush() error {
 	if rw.buf.Len() > 0 {
-		rw.logger.Debug("flushing", zap.Int("bytes", rw.buf.Len()))
+		// rw.logger.Debug("flushing", zap.Int("bytes", rw.buf.Len()))
 		payload := rw.buf.Bytes()
 		var extensions []byte
 		var err error
