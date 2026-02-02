@@ -157,7 +157,7 @@ const LoginPage: NextPageWithLayout = () => {
           </div>
 
           {/* Right section - Marketing */}
-          <div className="flex min-h-screen w-full flex-col items-center justify-center px-4 py-16 lg:min-h-0 lg:w-1/2 lg:items-start lg:px-14 lg:pb-28 lg:pt-12">
+          <div className="flex min-h-screen w-full flex-col items-center justify-center px-4 py-16 lg:min-h-0 lg:w-1/2 lg:items-start lg:px-14 lg:pb-40 lg:pt-8">
             <ProductCosmoStack variant="login" />
           </div>
         </div>
