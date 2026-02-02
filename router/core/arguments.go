@@ -26,50 +26,81 @@ func NewArguments(
 	}
 }
 
-// Get will return the value of argument a from field f.
+// Get will return the value of the field argument at path.
 //
-// To access an argument of a root level field, you need to pass the
-// response key of the field as the first argument to Get and the name of the argument
-// as the second argument, e.g. Get("rootfield_name", "argument_name") .
+// To access a specific field argument you need to provide
+// the path in it's GraphQL operation via dot notation,
+// prefixed by the root levels type.
 //
-// The response key is the alias if present, otherwise the field name.
-// For aliased fields like "myAlias: user(id: 1)", use the alias "myAlias" in the path.
+//	Get("rootfield_operation_type.rootfield_name.other.fields.argument_name")
 //
-// The field path uses dot notation for nested fields.
-// For example you can access arg1 on field2 on the operation
+// To access the storeId field argument of the operation
 //
 //	subscription {
-//		mySub(arg1: "val1", arg2: "val2") {
-//			field1
-//			field2(arg1: "val3", arg2: "val4")
-//		}
+//	    orderUpdated(storeId: 1) {
+//	        id
+//	        status
+//	    }
 //	}
 //
-// You need to call Get("mySub.field2", "arg1") .
+// you need to call Get("subscription.orderUpdated.storeId") .
+// You can also access deeper nested fields.
+// For example you can access the categoryId field of the operation
 //
-// For aliased fields:
+//	subscription {
+//	    orderUpdated(storeId: 1) {
+//	        lineItems(categoryId: 2) {
+//	            id
+//	            name
+//	        }
+//	    }
+//	}
+//
+// by calling Get("subscription.orderUpdated.lineItems.categoryId") .
+//
+// If you use aliases in operation you need to provide the alias name
+// instead of the field name.
 //
 //	query {
-//		a: user(id: "1") { name }
-//		b: user(id: "2") { name }
+//	    a: user(id: "1") { name }
+//	    b: user(id: "2") { name }
 //	}
 //
-// You need to call Get("a", "id") or Get("b", "id") respectively.
+// You need to call Get("query.a.id") or Get("query.b.id") respectively.
+//
+// If you want to access field arguments of fragments, you need to
+// access it on one of the fields where the fragment is resolved.
+//
+//	fragment GoldTrophies on RaceDrivers {
+//	    trophies(color:"gold") {
+//	        title
+//	    }
+//	}
+//
+//	subscription {
+//	    driversFinish {
+//	        name
+//	        ... GoldTrophies
+//	    }
+//	}
+//
+// If you want to access the "color" field argument, you need to
+// call Get("subscription.driversFinish.trophies.color") .
+// The same concept applies to inline fragments.
 //
 // If fa is nil, or f or a cannot be found, nil is returned.
-func (fa *Arguments) Get(f string, a string) *astjson.Value {
+func (fa *Arguments) Get(path string) *astjson.Value {
 	if fa == nil || len(fa.mapping) == 0 || fa.variables == nil {
 		return nil
 	}
 
-	// Build the mapping key: "fieldPath.argumentName"
-	key := f + "." + a
-
-	// Look up variable name from mapping
-	varName, ok := fa.mapping[key]
+	// Look up variable name from field argument map
+	varName, ok := fa.mapping[path]
 	if !ok {
 		return nil
 	}
 
+	// Use the name to get the actual value from
+	// the operation contexts variables.
 	return fa.variables.Get(varName)
 }

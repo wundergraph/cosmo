@@ -125,6 +125,7 @@ type OperationProcessorOptions struct {
 	ComplexityLimits                                 *config.ComplexityLimits
 	ParserTokenizerLimits                            astparser.TokenizerLimits
 	OperationNameLengthLimit                         int
+	EnableFieldArgumentMapping                       bool
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -1408,6 +1409,7 @@ type parseKitOptions struct {
 	apolloCompatibilityFlags                         config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
 	disableExposingVariablesContentOnValidationError bool
+	enableFieldArgumentMapping                       bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
@@ -1423,7 +1425,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			astnormalization.WithRemoveFragmentDefinitions(),
 			astnormalization.WithRemoveUnusedVariables(),
 		),
-		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
+		variablesNormalizer: astnormalization.NewVariablesNormalizer(options.enableFieldArgumentMapping),
 		variablesRemapper:   astnormalization.NewVariablesMapper(),
 		printer:             &astprinter.Printer{},
 		normalizedOperation: &bytes.Buffer{},
@@ -1462,6 +1464,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                   opts.ApolloRouterCompatibilityFlags,
 			disableExposingVariablesContentOnValidationError: opts.DisableExposingVariablesContentOnValidationError,
+			enableFieldArgumentMapping:                       opts.EnableFieldArgumentMapping,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {

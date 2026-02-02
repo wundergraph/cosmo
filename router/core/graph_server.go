@@ -1295,6 +1295,7 @@ func (s *graphServer) buildGraphMux(
 		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
+		EnableFieldArgumentMapping:                       s.subscriptionHooks.needFieldArgumentMapping(),
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
