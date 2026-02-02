@@ -1137,13 +1137,20 @@ func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCac
 	o.parsedOperation.NormalizationCacheHit = true
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
-	//  We will always only have a single operation definition in the document
+	// We will always only have a single operation definition in the document
 	// Because we removed the unused operations during normalization
 	o.operationDefinitionRef = 0
 	err := o.setAndParseOperationDoc()
 	if err != nil {
 		return err
 	}
+	// Set the operation name
+	name := o.kit.doc.OperationDefinitionNameString(o.operationDefinitionRef)
+	if name == "" {
+		return nil
+	}
+	o.parsedOperation.Request.OperationName = name
+	o.originalOperationNameRef = o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name
 	return nil
 }
 
