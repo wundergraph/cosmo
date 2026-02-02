@@ -3,6 +3,7 @@ package attributeprocessor
 import (
 	"crypto/sha256"
 	"encoding/hex"
+
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -33,7 +34,7 @@ func RedactKeys(keys []attribute.Key, ipAnonymizationMethod IPAnonymizationMetho
 			return hex.EncodeToString(h.Sum(nil))
 		}
 	case Redact:
-		rFunc = func(key attribute.KeyValue) string {
+		rFunc = func(_ attribute.KeyValue) string {
 			return "[REDACTED]"
 		}
 	}

@@ -5,7 +5,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 	api "go.opentelemetry.io/otel/trace"
@@ -51,29 +51,31 @@ func testAttributesAfterCreation(opt trace.TracerProviderOption, attrs ...attrib
 }
 
 func TestAttributeProcessor(t *testing.T) {
-	contains := func(t *testing.T, got []attribute.KeyValue, want ...attribute.KeyValue) {
-		t.Helper()
-		for _, w := range want {
-			assert.Contains(t, got, w)
-		}
-	}
+	t.Parallel()
 
 	t.Run("NoTransformers", func(t *testing.T) {
+		t.Parallel()
+
 		// With no transformers, attributes should remain unchanged
 		name := attribute.String("name", "bob")
 		count := attribute.Int("count", 42)
 
-		got := testAttributes(NewAttributeProcessorOption(), name, count)
-		contains(t, got, name, count)
+		attributes := testAttributes(NewAttributeProcessorOption(), name, count)
+		require.Contains(t, attributes, name)
+		require.Contains(t, attributes, count)
 	})
 
 	t.Run("EmptyAttributes", func(t *testing.T) {
+		t.Parallel()
+
 		// With no attributes, nothing should happen
-		got := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{"secret"}, Redact)))
-		assert.Empty(t, got)
+		attributes := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{"secret"}, Redact)))
+		require.Empty(t, attributes)
 	})
 
 	t.Run("FirstTransformerHandlesAttribute", func(t *testing.T) {
+		t.Parallel()
+
 		// When first transformer handles an attribute, second transformer should be skipped for that attribute
 		secretKey := attribute.Key("secret")
 		otherKey := attribute.Key("other")
@@ -89,31 +91,28 @@ func TestAttributeProcessor(t *testing.T) {
 
 		// RedactKeys should handle "secret", so trackingTransformer should NOT see "secret"
 		// but SHOULD see "other"
-		got := testAttributes(
+		attributes := testAttributes(
 			NewAttributeProcessorOption(RedactKeys([]attribute.Key{secretKey}, Redact), trackingTransformer),
 			secret, other,
 		)
 
 		// secret should be redacted by first transformer
-		contains(t, got, attribute.String(string(secretKey), "[REDACTED]"))
+		require.Contains(t, attributes, attribute.String(string(secretKey), "[REDACTED]"))
 		// other should be unchanged
-		contains(t, got, other)
+		require.Contains(t, attributes, other)
 		// tracking transformer should NOT have seen "secret" (it was handled by redact)
-		assert.False(t, seenKeys[secretKey], "second transformer should NOT see 'secret' key (handled by first)")
+		require.False(t, seenKeys[secretKey], "second transformer should NOT see 'secret' key (handled by first)")
 		// tracking transformer SHOULD have seen "other"
-		assert.True(t, seenKeys[otherKey], "second transformer should see 'other' key")
+		require.True(t, seenKeys[otherKey], "second transformer should see 'other' key")
 	})
 }
 
 func TestMultipleTransformers(t *testing.T) {
-	contains := func(t *testing.T, got []attribute.KeyValue, want ...attribute.KeyValue) {
-		t.Helper()
-		for _, w := range want {
-			assert.Contains(t, got, w)
-		}
-	}
+	t.Parallel()
 
 	t.Run("TransformersAppliedInOrder", func(t *testing.T) {
+		t.Parallel()
+
 		// First transformer handles "secret" key
 		// Second transformer handles all strings (SanitizeUTF8)
 		secretKey := attribute.Key("secret")
@@ -122,33 +121,37 @@ func TestMultipleTransformers(t *testing.T) {
 		secret := attribute.String(string(secretKey), "value")
 		invalidUTF8 := attribute.String(string(otherKey), string([]byte{0x80}))
 
-		got := testAttributes(
+		attributes := testAttributes(
 			NewAttributeProcessorOption(RedactKeys([]attribute.Key{secretKey}, Redact), SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
 			secret, invalidUTF8,
 		)
 
 		// secret should be redacted
-		contains(t, got, attribute.String(string(secretKey), "[REDACTED]"))
+		require.Contains(t, attributes, attribute.String(string(secretKey), "[REDACTED]"))
 		// other should have UTF-8 sanitized
-		contains(t, got, attribute.String(string(otherKey), "\ufffd"))
+		require.Contains(t, attributes, attribute.String(string(otherKey), "\ufffd"))
 	})
 
 	t.Run("RedactedAttributeNotSanitized", func(t *testing.T) {
+		t.Parallel()
+
 		// When an attribute is redacted, it should not be passed to sanitize
 		// (the redacted value is already valid UTF-8)
 		key := attribute.Key("password")
 		invalidUTF8Password := attribute.String(string(key), string([]byte{'s', 'e', 'c', 'r', 'e', 't', 0x80}))
 
-		got := testAttributes(
+		attributes := testAttributes(
 			NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Redact), SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
 			invalidUTF8Password,
 		)
 
 		// password should be redacted (not sanitized)
-		contains(t, got, attribute.String(string(key), "[REDACTED]"))
+		require.Contains(t, attributes, attribute.String(string(key), "[REDACTED]"))
 	})
 
 	t.Run("MixedAttributeTypes", func(t *testing.T) {
+		t.Parallel()
+
 		// Test with mixed attribute types - only strings should be affected
 		secretKey := attribute.Key("secret")
 		secret := attribute.String(string(secretKey), "value")
@@ -156,15 +159,15 @@ func TestMultipleTransformers(t *testing.T) {
 		flag := attribute.Bool("flag", true)
 		invalidUTF8 := attribute.String("message", string([]byte{0x80}))
 
-		got := testAttributes(
+		attributes := testAttributes(
 			NewAttributeProcessorOption(RedactKeys([]attribute.Key{secretKey}, Redact), SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
 			secret, count, flag, invalidUTF8,
 		)
 
-		contains(t, got, attribute.String(string(secretKey), "[REDACTED]"))
-		contains(t, got, count)
-		contains(t, got, flag)
-		contains(t, got, attribute.String("message", "\ufffd"))
+		require.Contains(t, attributes, attribute.String(string(secretKey), "[REDACTED]"))
+		require.Contains(t, attributes, count)
+		require.Contains(t, attributes, flag)
+		require.Contains(t, attributes, attribute.String("message", "\ufffd"))
 	})
 }
 
@@ -200,19 +203,20 @@ func benchCombinedTransformers(redacted, total, invalidUTF8 int) func(*testing.B
 
 	for i := range attrs {
 		key := attribute.Key(strconv.Itoa(i))
-		if i < redacted {
+		switch {
+		case i < redacted:
 			keys = append(keys, key)
 			attrs[i] = attribute.KeyValue{
 				Key:   key,
 				Value: attribute.StringValue("secret-value"),
 			}
-		} else if i < redacted+invalidUTF8 {
+		case i < redacted+invalidUTF8:
 			// Create invalid UTF-8 string
 			attrs[i] = attribute.KeyValue{
 				Key:   key,
 				Value: attribute.StringValue(string([]byte{0x80, 0x81})),
 			}
-		} else {
+		default:
 			attrs[i] = attribute.KeyValue{
 				Key:   key,
 				Value: attribute.StringValue("valid-string"),

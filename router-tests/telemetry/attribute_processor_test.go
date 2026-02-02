@@ -44,7 +44,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.Contains(t, res.Body, `"employees"`)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Greater(t, len(sn), 0)
+			require.NotEmpty(t, sn)
 		})
 	})
 
@@ -66,7 +66,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.Contains(t, res.Body, `"employees"`)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Greater(t, len(sn), 0)
+			require.NotEmpty(t, sn)
 		})
 	})
 
@@ -87,7 +87,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.Contains(t, res.Body, `"employees"`)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Greater(t, len(sn), 0)
+			require.NotEmpty(t, sn)
 		})
 	})
 
@@ -109,7 +109,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.Contains(t, res.Body, `"employees"`)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Greater(t, len(sn), 0)
+			require.NotEmpty(t, sn)
 		})
 	})
 
@@ -148,7 +148,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 
 			// Verify that spans were created
 			sn := exporter.GetSpans().Snapshots()
-			require.Greater(t, len(sn), 0)
+			require.NotEmpty(t, sn)
 
 			// Verify that the invalid UTF-8 attribute was sanitized (replaced with U+FFFD)
 			sanitizedAttr := attribute.String(attrKey, sanitizedValue)
@@ -199,7 +199,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 
 			// Verify that spans were created
 			sn := exporter.GetSpans().Snapshots()
-			require.Greater(t, len(sn), 0)
+			require.NotEmpty(t, sn)
 
 			// Verify that the invalid UTF-8 attribute was still sanitized
 			sanitizedAttr := attribute.String(attrKey, sanitizedValue)
@@ -207,7 +207,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 
 			// Verify that NO warning log was emitted for the sanitization
 			logEntries := xEnv.Observer().FilterMessageSnippet("Invalid UTF-8 in span attribute").All()
-			require.Len(t, logEntries, 0)
+			require.Empty(t, logEntries)
 		})
 	})
 
@@ -228,7 +228,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.Contains(t, res.Body, `"employees"`)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Greater(t, len(sn), 0)
+			require.NotEmpty(t, sn)
 		})
 	})
 
@@ -260,7 +260,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 
 			// Verify that spans were created
 			sn := exporter.GetSpans().Snapshots()
-			require.Greater(t, len(sn), 0)
+			require.NotEmpty(t, sn)
 
 			// Verify that the invalid UTF-8 attribute was NOT sanitized
 			require.Contains(t, sn[0].Attributes(), attribute.String(attrKey, invalidUTF8Value))
@@ -289,7 +289,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.Contains(t, res.Body, `"employees"`)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Greater(t, len(sn), 0)
+			require.NotEmpty(t, sn)
 		})
 	})
 
@@ -311,7 +311,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.Contains(t, res.Body, `"employees"`)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Greater(t, len(sn), 0)
+			require.NotEmpty(t, sn)
 
 			// Check that http.client_ip is redacted in spans that have it
 			for _, span := range sn {
@@ -342,7 +342,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.Contains(t, res.Body, `"employees"`)
 
 			sn := exporter.GetSpans().Snapshots()
-			require.Greater(t, len(sn), 0)
+			require.NotEmpty(t, sn)
 
 			// Check that http.client_ip is hashed (64 char hex) in spans that have it
 			for _, span := range sn {

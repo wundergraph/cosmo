@@ -5,12 +5,14 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestRedactKeys(t *testing.T) {
+	t.Parallel()
+
 	const key = "password"
 	var (
 		name     = attribute.String("name", "bob")
@@ -20,75 +22,106 @@ func TestRedactKeys(t *testing.T) {
 		replaced = attribute.String(key, "[REDACTED]")
 	)
 
-	contains := func(t *testing.T, got []attribute.KeyValue, want ...attribute.KeyValue) {
-		t.Helper()
-		for _, w := range want {
-			assert.Contains(t, got, w)
-		}
-	}
-
 	t.Run("Empty", func(t *testing.T) {
+		t.Parallel()
+
 		// No transformers means no changes
-		got := testAttributes(NewAttributeProcessorOption(), name, passStr, eID)
-		contains(t, got, name, eID, passStr)
+		attributes := testAttributes(NewAttributeProcessorOption(), name, passStr, eID)
+		require.Contains(t, attributes, name)
+		require.Contains(t, attributes, eID)
+		require.Contains(t, attributes, passStr)
 	})
 	t.Run("EmptyAfterCreation", func(t *testing.T) {
-		got := testAttributesAfterCreation(NewAttributeProcessorOption(), name, passStr, eID)
-		contains(t, got, name, eID, passStr)
+		t.Parallel()
+
+		attributes := testAttributesAfterCreation(NewAttributeProcessorOption(), name, passStr, eID)
+		require.Contains(t, attributes, name)
+		require.Contains(t, attributes, eID)
+		require.Contains(t, attributes, passStr)
 	})
 
 	t.Run("SingleStringAttribute", func(t *testing.T) {
-		got := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Redact)), name, passStr, eID)
-		contains(t, got, name, eID, replaced)
+		t.Parallel()
+
+		attributes := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Redact)), name, passStr, eID)
+		require.Contains(t, attributes, name)
+		require.Contains(t, attributes, eID)
+		require.Contains(t, attributes, replaced)
 	})
 	t.Run("SingleStringAttributeAfterCreation", func(t *testing.T) {
-		got := testAttributesAfterCreation(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Redact)), name, passStr, eID)
-		contains(t, got, name, eID, replaced)
+		t.Parallel()
+
+		attributes := testAttributesAfterCreation(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Redact)), name, passStr, eID)
+		require.Contains(t, attributes, name)
+		require.Contains(t, attributes, eID)
+		require.Contains(t, attributes, replaced)
 	})
 
 	t.Run("NoMatchingKey", func(t *testing.T) {
-		got := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{"secret"}, Redact)), name, passStr, eID)
-		contains(t, got, name, eID, passStr)
+		t.Parallel()
+
+		attributes := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{"secret"}, Redact)), name, passStr, eID)
+		require.Contains(t, attributes, name)
+		require.Contains(t, attributes, eID)
+		require.Contains(t, attributes, passStr)
 	})
 	t.Run("NoMatchingKeyAfterCreation", func(t *testing.T) {
-		got := testAttributesAfterCreation(NewAttributeProcessorOption(RedactKeys([]attribute.Key{"secret"}, Redact)), name, passStr, eID)
-		contains(t, got, name, eID, passStr)
+		t.Parallel()
+
+		attributes := testAttributesAfterCreation(NewAttributeProcessorOption(RedactKeys([]attribute.Key{"secret"}, Redact)), name, passStr, eID)
+		require.Contains(t, attributes, name)
+		require.Contains(t, attributes, eID)
+		require.Contains(t, attributes, passStr)
 	})
 
 	t.Run("DifferentValueTypes", func(t *testing.T) {
-		got := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Redact)), name, passBool, eID)
-		contains(t, got, name, eID, replaced)
+		t.Parallel()
+
+		attributes := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Redact)), name, passBool, eID)
+		require.Contains(t, attributes, name)
+		require.Contains(t, attributes, eID)
+		require.Contains(t, attributes, replaced)
 	})
 	t.Run("DifferentValueTypesAfterCreation", func(t *testing.T) {
-		got := testAttributesAfterCreation(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Redact)), name, passBool, eID)
-		contains(t, got, name, eID, replaced)
+		t.Parallel()
+
+		attributes := testAttributesAfterCreation(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Redact)), name, passBool, eID)
+		require.Contains(t, attributes, name)
+		require.Contains(t, attributes, eID)
+		require.Contains(t, attributes, replaced)
 	})
 
 	t.Run("MultipleKeys", func(t *testing.T) {
+		t.Parallel()
+
 		secret := attribute.String("secret", "my-secret")
 		apiKey := attribute.String("api_key", "my-api-key")
 		normal := attribute.String("normal", "normal-value")
 
-		got := testAttributes(
+		attributes := testAttributes(
 			NewAttributeProcessorOption(RedactKeys([]attribute.Key{"secret", "api_key"}, Redact)),
 			secret, apiKey, normal,
 		)
-		contains(t, got, attribute.String("secret", "[REDACTED]"))
-		contains(t, got, attribute.String("api_key", "[REDACTED]"))
-		contains(t, got, normal)
+		require.Contains(t, attributes, attribute.String("secret", "[REDACTED]"))
+		require.Contains(t, attributes, attribute.String("api_key", "[REDACTED]"))
+		require.Contains(t, attributes, normal)
 	})
 }
 
 func TestRedactKeysWithHash(t *testing.T) {
+	t.Parallel()
+
 	const key = "password"
 	passStr := attribute.String(key, "super-secret-pswd")
 
 	t.Run("HashMethod", func(t *testing.T) {
-		got := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Hash)), passStr)
+		t.Parallel()
+
+		attributes := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Hash)), passStr)
 
 		// Find the password attribute
 		var hashedValue string
-		for _, attr := range got {
+		for _, attr := range attributes {
 			if attr.Key == key {
 				hashedValue = attr.Value.AsString()
 				break
@@ -96,55 +129,60 @@ func TestRedactKeysWithHash(t *testing.T) {
 		}
 
 		// Hash should be a 64-character hex string (SHA256)
-		assert.Len(t, hashedValue, 64, "Hash should be 64 characters (SHA256 hex)")
-		assert.NotEqual(t, "super-secret-pswd", hashedValue, "Value should be hashed")
-		assert.NotEqual(t, "[REDACTED]", hashedValue, "Value should be hashed, not redacted")
+		require.Len(t, hashedValue, 64, "Hash should be 64 characters (SHA256 hex)")
+		require.NotEqual(t, "super-secret-pswd", hashedValue, "Value should be hashed")
+		require.NotEqual(t, "[REDACTED]", hashedValue, "Value should be hashed, not redacted")
 	})
 
 	t.Run("HashIsDeterministic", func(t *testing.T) {
+		t.Parallel()
+
 		// Same value should produce same hash
-		got1 := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Hash)), passStr)
-		got2 := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Hash)), passStr)
+		attributes1 := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Hash)), passStr)
+		attributes2 := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Hash)), passStr)
 
 		var hash1, hash2 string
-		for _, attr := range got1 {
+		for _, attr := range attributes1 {
 			if attr.Key == key {
 				hash1 = attr.Value.AsString()
 				break
 			}
 		}
-		for _, attr := range got2 {
+		for _, attr := range attributes2 {
 			if attr.Key == key {
 				hash2 = attr.Value.AsString()
 				break
 			}
 		}
 
-		assert.Equal(t, hash1, hash2, "Same input should produce same hash")
+		require.Equal(t, "84ac464cfb16339f20b38c5dbd2623514badf48f525c165ebd39091a7969a86c", hash1)
+		require.Equal(t, hash1, hash2)
 	})
 
 	t.Run("DifferentValuesProduceDifferentHashes", func(t *testing.T) {
+		t.Parallel()
+
 		pass1 := attribute.String(key, "password1")
 		pass2 := attribute.String(key, "password2")
 
-		got1 := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Hash)), pass1)
-		got2 := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Hash)), pass2)
+		attributes1 := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Hash)), pass1)
+		attributes2 := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Hash)), pass2)
 
 		var hash1, hash2 string
-		for _, attr := range got1 {
+		for _, attr := range attributes1 {
 			if attr.Key == key {
 				hash1 = attr.Value.AsString()
 				break
 			}
 		}
-		for _, attr := range got2 {
+		for _, attr := range attributes2 {
 			if attr.Key == key {
 				hash2 = attr.Value.AsString()
 				break
 			}
 		}
 
-		assert.NotEqual(t, hash1, hash2, "Different inputs should produce different hashes")
+		require.NotEqual(t, hash1, hash2, "Different inputs should produce different hashes")
 	})
 }
 

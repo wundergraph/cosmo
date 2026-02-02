@@ -71,7 +71,7 @@ type Config struct {
 	// TestMemoryExporter is used for testing purposes. If set, the exporter will be used instead of the configured exporters.
 	TestMemoryExporter  sdktrace.SpanExporter
 	ResponseTraceHeader config.ResponseTraceHeader
-	Attributes []config.CustomAttribute
+	Attributes          []config.CustomAttribute
 	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values
 	SanitizeUTF8 *attributeprocessor.SanitizeUTF8Config
 }
