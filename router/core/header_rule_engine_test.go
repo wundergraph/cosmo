@@ -1072,16 +1072,17 @@ func TestClientHeaderRules(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		reqCtx := &requestContext{}
+		reqCtx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		}
 		clientCtx := withRequestContext(context.Background(), reqCtx)
 		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
 		require.NoError(t, err)
 		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
-		reqCtx.logger = zap.NewNop()
-		reqCtx.responseWriter = rr
 		reqCtx.request = clientReq
-		reqCtx.operation = &operationContext{}
-		reqCtx.subgraphResolver = NewSubgraphResolver([]Subgraph{})
 
 		err = ht.ApplyClientResponseHeaderRules(rr, reqCtx)
 		assert.NoError(t, err)
@@ -1103,17 +1104,18 @@ func TestClientHeaderRules(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		reqCtx := &requestContext{}
+		reqCtx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		}
 		clientCtx := withRequestContext(context.Background(), reqCtx)
 		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
 		require.NoError(t, err)
 		clientReq.Header.Set("X-User-ID", "user-123")
 		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
-		reqCtx.logger = zap.NewNop()
-		reqCtx.responseWriter = rr
 		reqCtx.request = clientReq
-		reqCtx.operation = &operationContext{}
-		reqCtx.subgraphResolver = NewSubgraphResolver([]Subgraph{})
 
 		err = ht.ApplyClientResponseHeaderRules(rr, reqCtx)
 		assert.NoError(t, err)
@@ -1139,16 +1141,17 @@ func TestClientHeaderRules(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		reqCtx := &requestContext{}
+		reqCtx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		}
 		clientCtx := withRequestContext(context.Background(), reqCtx)
 		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
 		require.NoError(t, err)
 		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
-		reqCtx.logger = zap.NewNop()
-		reqCtx.responseWriter = rr
 		reqCtx.request = clientReq
-		reqCtx.operation = &operationContext{}
-		reqCtx.subgraphResolver = NewSubgraphResolver([]Subgraph{})
 
 		err = ht.ApplyClientResponseHeaderRules(rr, reqCtx)
 		assert.NoError(t, err)
@@ -1171,18 +1174,19 @@ func TestClientHeaderRules(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		reqCtx := &requestContext{}
+		reqCtx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		}
 		clientCtx := withRequestContext(context.Background(), reqCtx)
 		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
 		require.NoError(t, err)
 		clientReq.Header.Set("X-User-ID", "user-123")
 		clientReq.Header.Set("X-Session-ID", "session-456")
 		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
-		reqCtx.logger = zap.NewNop()
-		reqCtx.responseWriter = rr
 		reqCtx.request = clientReq
-		reqCtx.operation = &operationContext{}
-		reqCtx.subgraphResolver = NewSubgraphResolver([]Subgraph{})
 
 		err = ht.ApplyClientResponseHeaderRules(rr, reqCtx)
 		assert.NoError(t, err)
@@ -1217,16 +1221,17 @@ func TestClientHeaderRules(t *testing.T) {
 
 		rr := httptest.NewRecorder()
 
-		reqCtx := &requestContext{}
+		reqCtx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		}
 		clientCtx := withRequestContext(context.Background(), reqCtx)
 		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
 		require.NoError(t, err)
 		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
-		reqCtx.logger = zap.NewNop()
-		reqCtx.responseWriter = rr
 		reqCtx.request = clientReq
-		reqCtx.operation = &operationContext{}
-		reqCtx.subgraphResolver = NewSubgraphResolver([]Subgraph{})
 
 		err = ht.ApplyClientResponseHeaderRules(rr, reqCtx)
 		assert.NoError(t, err)

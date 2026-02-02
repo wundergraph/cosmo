@@ -356,8 +356,6 @@ type ResponseHeaderRule struct {
 	Name string `yaml:"name"`
 	// Value is the value of the header to set
 	Value string `yaml:"value"`
-
-	Expression string `yaml:"expression"`
 }
 
 func (r *ResponseHeaderRule) GetOperation() HeaderRuleOperation {
