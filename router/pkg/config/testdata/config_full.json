@@ -272,8 +272,7 @@
           "Default": "",
           "Algorithm": "append",
           "Name": "",
-          "Value": "",
-          "Expression": ""
+          "Value": ""
         }
       ]
     },
@@ -303,8 +302,7 @@
             "Default": "",
             "Algorithm": "",
             "Name": "X-Subgraph-Key",
-            "Value": "some-subgraph-secret",
-            "Expression": ""
+            "Value": "some-subgraph-secret"
           }
         ]
       }
