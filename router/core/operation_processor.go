@@ -897,40 +897,6 @@ func (o *OperationKit) setAndParseOperationDoc() error {
 	return nil
 }
 
-func (o *OperationKit) populateOperationNameFromDoc() {
-	if o.parsedOperation.Request.OperationName != "" {
-		return
-	}
-	if o.kit == nil || o.kit.doc == nil {
-		return
-	}
-
-	ref := o.operationDefinitionRef
-	if ref < 0 || ref >= len(o.kit.doc.OperationDefinitions) {
-		ref = ast.InvalidRef
-	}
-	if ref == ast.InvalidRef {
-		for i := range o.kit.doc.RootNodes {
-			if o.kit.doc.RootNodes[i].Kind == ast.NodeKindOperationDefinition {
-				ref = o.kit.doc.RootNodes[i].Ref
-				break
-			}
-		}
-	}
-	if ref == ast.InvalidRef {
-		return
-	}
-
-	name := o.kit.doc.OperationDefinitionNameString(ref)
-	if name == "" {
-		return
-	}
-
-	o.parsedOperation.Request.OperationName = name
-	o.operationDefinitionRef = ref
-	o.originalOperationNameRef = o.kit.doc.OperationDefinitions[ref].Name
-}
-
 func (o *OperationKit) normalizeVariablesCacheKey() uint64 {
 	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
 	_, _ = o.kit.keyGen.WriteString(o.parsedOperation.NormalizedRepresentation)
@@ -1171,14 +1137,20 @@ func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCac
 	o.parsedOperation.NormalizationCacheHit = true
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
-	//  We will always only have a single operation definition in the document
+	// We will always only have a single operation definition in the document
 	// Because we removed the unused operations during normalization
 	o.operationDefinitionRef = 0
 	err := o.setAndParseOperationDoc()
 	if err != nil {
 		return err
 	}
-	o.populateOperationNameFromDoc()
+	// Set the operation name
+	name := o.kit.doc.OperationDefinitionNameString(o.operationDefinitionRef)
+	if name == "" {
+		return nil
+	}
+	o.parsedOperation.Request.OperationName = name
+	o.originalOperationNameRef = o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name
 	return nil
 }
 
