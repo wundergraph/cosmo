@@ -725,7 +725,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 			Callback: func(ctx core.SubscriptionOnStartHandlerContext) error {
 				args := ctx.Operation().Arguments()
 				if args != nil {
-					employeeIDArg := args.Get("employeeUpdatedMyKafka", "employeeID")
+					employeeIDArg := args.Get("subscription.employeeUpdatedMyKafka.employeeID")
 					if employeeIDArg != nil {
 						capturedEmployeeID = employeeIDArg.GetInt()
 					}

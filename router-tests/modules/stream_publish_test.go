@@ -372,7 +372,7 @@ func TestPublishHook(t *testing.T) {
 			Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 				args := ctx.Operation().Arguments()
 				if args != nil {
-					employeeIDArg := args.Get("updateEmployeeMyKafka", "employeeID")
+					employeeIDArg := args.Get("subscription.updateEmployeeMyKafka.employeeID")
 					if employeeIDArg != nil {
 						capturedEmployeeID = employeeIDArg.GetInt()
 					}

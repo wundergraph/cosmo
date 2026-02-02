@@ -977,7 +977,7 @@ func TestReceiveHook(t *testing.T) {
 			Callback: func(ctx core.StreamReceiveEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
 				args := ctx.Operation().Arguments()
 				if args != nil {
-					employeeIDArg := args.Get("employeeUpdatedMyKafka", "employeeID")
+					employeeIDArg := args.Get("subscription.employeeUpdatedMyKafka.employeeID")
 					if employeeIDArg != nil {
 						capturedEmployeeID = employeeIDArg.GetInt()
 					}

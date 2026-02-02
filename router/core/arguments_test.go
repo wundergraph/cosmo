@@ -41,7 +41,7 @@ func TestArgumentMapping(t *testing.T) {
 			`,
 			variables: `{"userId": "123"}`,
 			assertions: func(t *testing.T, result Arguments) {
-				idArg := result.Get("user", "id")
+				idArg := result.Get("query.user.id")
 				require.NotNil(t, idArg, "expected 'id' argument on 'user' field")
 				assert.Equal(t, "123", string(idArg.GetStringBytes()))
 			},
@@ -67,7 +67,7 @@ func TestArgumentMapping(t *testing.T) {
 			`,
 			variables: `{}`,
 			assertions: func(t *testing.T, result Arguments) {
-				idArg := result.Get("user", "id")
+				idArg := result.Get("query.user.id")
 				require.NotNil(t, idArg, "expected 'id' argument on 'user' field")
 				assert.Equal(t, "123", string(idArg.GetStringBytes()))
 			},
@@ -101,16 +101,16 @@ func TestArgumentMapping(t *testing.T) {
 			variables: `{"userId": "user-1", "limit": 10, "offset": 5}`,
 			assertions: func(t *testing.T, result Arguments) {
 				// Assert root field argument
-				userIdArg := result.Get("user", "id")
+				userIdArg := result.Get("query.user.id")
 				require.NotNil(t, userIdArg)
 				assert.Equal(t, "user-1", string(userIdArg.GetStringBytes()))
 
 				// Assert nested field arguments (dot notation path)
-				limitArg := result.Get("user.posts", "limit")
+				limitArg := result.Get("query.user.posts.limit")
 				require.NotNil(t, limitArg, "expected 'limit' argument on 'user.posts' field")
 				assert.Equal(t, 10, limitArg.GetInt())
 
-				offsetArg := result.Get("user.posts", "offset")
+				offsetArg := result.Get("query.user.posts.offset")
 				require.NotNil(t, offsetArg, "expected 'offset' argument on 'user.posts' field")
 				assert.Equal(t, 5, offsetArg.GetInt())
 			},
@@ -129,10 +129,10 @@ func TestArgumentMapping(t *testing.T) {
 			`,
 			variables: `{}`,
 			assertions: func(t *testing.T, result Arguments) {
-				arg := result.Get("hello", "someArg")
+				arg := result.Get("query.hello.someArg")
 				require.Nil(t, arg, "expected nil for non-existent argument")
 
-				arg = result.Get("nonExistent", "arg")
+				arg = result.Get("query.nonExistent.arg")
 				require.Nil(t, arg, "expected nil for non-existent field")
 			},
 		},
@@ -162,11 +162,11 @@ func TestArgumentMapping(t *testing.T) {
 			`,
 			variables: `{"userId": "user-123", "postSlug": "my-post"}`,
 			assertions: func(t *testing.T, result Arguments) {
-				userIdArg := result.Get("user", "id")
+				userIdArg := result.Get("query.user.id")
 				require.NotNil(t, userIdArg)
 				assert.Equal(t, "user-123", string(userIdArg.GetStringBytes()))
 
-				postSlugArg := result.Get("post", "slug")
+				postSlugArg := result.Get("query.post.slug")
 				require.NotNil(t, postSlugArg)
 				assert.Equal(t, "my-post", string(postSlugArg.GetStringBytes()))
 			},
@@ -192,7 +192,7 @@ func TestArgumentMapping(t *testing.T) {
 			`,
 			variables: `{"userIds": ["user-1", "user-2", "user-3"]}`,
 			assertions: func(t *testing.T, result Arguments) {
-				idsArg := result.Get("users", "ids")
+				idsArg := result.Get("query.users.ids")
 				require.NotNil(t, idsArg, "expected 'ids' argument on 'users' field")
 
 				// Verify it's an array
@@ -229,7 +229,7 @@ func TestArgumentMapping(t *testing.T) {
 			`,
 			variables: `{"filter": {"name": "John", "age": 30, "active": true}}`,
 			assertions: func(t *testing.T, result Arguments) {
-				filterArg := result.Get("users", "filter")
+				filterArg := result.Get("query.users.filter")
 				require.NotNil(t, filterArg, "expected 'filter' argument on 'users' field")
 
 				// Verify it's an object and access its fields
@@ -275,16 +275,16 @@ func TestArgumentMapping(t *testing.T) {
 			variables: `{"id1": "user-1", "id2": "user-2"}`,
 			assertions: func(t *testing.T, result Arguments) {
 				// Access arguments using the alias, not the field name
-				aIdArg := result.Get("a", "id")
+				aIdArg := result.Get("query.a.id")
 				require.NotNil(t, aIdArg, "expected 'id' argument on aliased field 'a'")
 				assert.Equal(t, "user-1", string(aIdArg.GetStringBytes()))
 
-				bIdArg := result.Get("b", "id")
+				bIdArg := result.Get("query.b.id")
 				require.NotNil(t, bIdArg, "expected 'id' argument on aliased field 'b'")
 				assert.Equal(t, "user-2", string(bIdArg.GetStringBytes()))
 
 				// Using the field name should not find the arguments
-				userIdArg := result.Get("user", "id")
+				userIdArg := result.Get("query.user.id")
 				assert.Nil(t, userIdArg, "expected nil when using field name instead of alias")
 			},
 		},
@@ -312,7 +312,7 @@ func TestArgumentMapping(t *testing.T) {
 			require.False(t, rep.HasErrors(), "failed to normalize operation")
 
 			// Then normalize variables using VariablesNormalizer which returns the field argument mapping
-			varNorm := astnormalization.NewVariablesNormalizer()
+			varNorm := astnormalization.NewVariablesNormalizer(true)
 			result := varNorm.NormalizeOperation(&operation, &schema, rep)
 			require.False(t, rep.HasErrors(), "failed to normalize variables")
 
@@ -330,11 +330,11 @@ func TestArgumentMapping(t *testing.T) {
 func TestNewArguments_NilMapping(t *testing.T) {
 	// Test that nil mapping returns empty Arguments
 	result := NewArguments(nil, nil)
-	assert.Nil(t, result.Get("user", "id"))
+	assert.Nil(t, result.Get("query.user.id"))
 }
 
 func TestNewArguments_EmptyMapping(t *testing.T) {
 	// Test that empty mapping returns empty Arguments
 	result := NewArguments(astnormalization.FieldArgumentMapping{}, nil)
-	assert.Nil(t, result.Get("user", "id"))
+	assert.Nil(t, result.Get("query.user.id"))
 }
