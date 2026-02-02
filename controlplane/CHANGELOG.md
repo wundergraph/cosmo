@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.187.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.186.0...controlplane@0.187.0) (2026-02-02)
+
+### Features
+
+* add gRPC naming scheme validation for subgraph routing URLs ([#2473](https://github.com/wundergraph/cosmo/issues/2473)) ([4d29351](https://github.com/wundergraph/cosmo/commit/4d29351ce0288f69417accb906863882cc97de4d)) (@alepane21)
+
 # [0.186.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.185.0...controlplane@0.186.0) (2026-01-29)
 
 ### Features
