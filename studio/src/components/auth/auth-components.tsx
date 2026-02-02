@@ -132,7 +132,7 @@ export const TrustedCompanies = () => {
 export const MarketingHeader = () => {
   return (
     <div className="text-center">
-      <h1 className="bg-[linear-gradient(180deg,#FFFFFF_50%,#999999_100%)] bg-clip-text text-2xl font-normal leading-[130%] text-transparent sm:text-[32px]">
+      <h1 className="bg-[linear-gradient(180deg,#FFFFFF_50%,#999999_100%)] bg-clip-text text-2xl font-bold leading-[130%] text-transparent sm:text-[32px]">
         Cosmo: Open-Source
         <br />
         GraphQL Federation Solution
@@ -222,7 +222,7 @@ export const ProductCosmoStack = ({ variant = "login" }: { variant?: "login" | "
   const features = variant === "login" ? loginFeatures : signupFeatures;
 
   return (
-    <div className="flex w-full flex-col px-2 sm:max-w-xl sm:px-8">
+    <div className="flex w-full flex-col px-2 sm:max-w-[43.2rem] sm:px-8">
       <MarketingHeader />
       <div className="mt-10 flex flex-col gap-6">
         {features.map((feature, index) => (
