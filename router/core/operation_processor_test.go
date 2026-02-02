@@ -75,6 +75,33 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 	}
 }
 
+func TestPersistedOperationCachePopulatesOperationName(t *testing.T) {
+	executor := &Executor{
+		PlanConfig:      plan.Configuration{},
+		RouterSchema:    nil,
+		Resolver:        nil,
+		RenameTypeNames: nil,
+	}
+	processor := NewOperationProcessor(OperationProcessorOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        1,
+	})
+
+	kit, err := processor.NewKit()
+	require.NoError(t, err)
+	defer kit.Free()
+
+	entry := NormalizationCacheEntry{
+		normalizedRepresentation: "query TestOperation { a }",
+		operationType:            "query",
+	}
+
+	err = kit.handleFoundPersistedOperationEntry(entry)
+	require.NoError(t, err)
+	require.Equal(t, "TestOperation", kit.parsedOperation.Request.OperationName)
+}
+
 func TestParseOperationProcessor(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
