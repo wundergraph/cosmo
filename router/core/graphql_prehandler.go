@@ -1159,8 +1159,14 @@ func (h *PreHandler) handleAuthenticationFailure(requestContext *requestContext,
 	rtrace.AttachErrToSpan(routerSpan, err)
 	rtrace.AttachErrToSpan(authenticateSpan, err)
 
+	graphqlErr := err
+	// If the error is an unauthorized error, we want to hide details from the graphql error
+	if errors.Is(err, ErrUnauthorized) {
+		graphqlErr = ErrUnauthorized
+	}
+
 	writeOperationError(r, w, requestLogger, &httpGraphqlError{
-		message:    err.Error(),
+		message:    graphqlErr.Error(),
 		statusCode: http.StatusUnauthorized,
 	})
 }

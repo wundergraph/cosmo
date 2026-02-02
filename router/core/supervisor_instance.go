@@ -41,7 +41,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		// More details: https://tip.golang.org/doc/gc-guide#Memory_limit
 		mLimit, err := memlimit.SetGoMemLimitWithOpts(
 			memlimit.WithRatio(0.9),
-			memlimit.WithProvider(memlimit.FromCgroupHybrid),
+			memlimit.WithProvider(memlimit.FromCgroup),
 		)
 		if err == nil {
 			params.Logger.Info("GOMEMLIMIT set automatically", zap.String("limit", humanize.Bytes(uint64(mLimit))))
@@ -292,6 +292,7 @@ func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Co
 			URL:               jwks.URL,
 			RefreshInterval:   jwks.RefreshInterval,
 			AllowedAlgorithms: jwks.Algorithms,
+			AllowedUse:        jwks.AllowedUse,
 
 			Secret:    jwks.Secret,
 			Algorithm: jwks.Algorithm,

@@ -522,4 +522,312 @@ describe('CheckFederatedGraph', (ctx) => {
 
     await server.close();
   });
+
+  describe('Federated graph check with limit parameter', () => {
+    test('Should return all composition errors when no limit is provided', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const federatedGraphName = genID('fedGraph');
+      const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
+      const productsSchema = new TextDecoder().decode(productsSchemaBuffer);
+
+      await client.createFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: ['team=B'],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      await client.createFederatedSubgraph({
+        name: 'products',
+        namespace: DEFAULT_NAMESPACE,
+        labels: [{ key: 'team', value: 'B' }],
+        routingUrl: 'http://localhost:8082',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: 'products',
+        namespace: DEFAULT_NAMESPACE,
+        schema: productsSchema,
+      });
+
+      // Check without limit - should have 2 composition errors
+      const checkResp = await client.checkFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: ['team=B'],
+        // No limit provided
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+      expect(checkResp.compositionErrors.length).toBe(2);
+      // Counts should reflect the actual total
+      expect(checkResp.counts?.compositionErrors).toBe(2);
+      expect(checkResp.counts?.compositionWarnings).toBeGreaterThanOrEqual(0);
+
+      await server.close();
+    });
+
+    test('Should limit composition errors when limit is provided', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const federatedGraphName = genID('fedGraph');
+      const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
+      const productsSchema = new TextDecoder().decode(productsSchemaBuffer);
+
+      await client.createFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: ['team=B'],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      await client.createFederatedSubgraph({
+        name: 'products',
+        namespace: DEFAULT_NAMESPACE,
+        labels: [{ key: 'team', value: 'B' }],
+        routingUrl: 'http://localhost:8082',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: 'products',
+        namespace: DEFAULT_NAMESPACE,
+        schema: productsSchema,
+      });
+
+      // Check with limit of 1
+      const checkResp = await client.checkFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: ['team=B'],
+        limit: 1,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+      // Should only return 1 error
+      expect(checkResp.compositionErrors.length).toBe(1);
+      // But counts should reflect the actual total
+      expect(checkResp.counts?.compositionErrors).toBe(2);
+
+      await server.close();
+    });
+
+    test('Should limit composition warnings when limit is provided', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const federatedGraphName = genID('fedGraph');
+      const label = genUniqueLabel();
+
+      await client.createFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: [joinLabel(label)],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      const subgraph1Name = genID('subgraph1');
+      const subgraph2Name = genID('subgraph2');
+
+      await client.createFederatedSubgraph({
+        name: subgraph1Name,
+        namespace: DEFAULT_NAMESPACE,
+        labels: [label],
+        routingUrl: 'http://localhost:8081',
+      });
+
+      await client.createFederatedSubgraph({
+        name: subgraph2Name,
+        namespace: DEFAULT_NAMESPACE,
+        labels: [label],
+        routingUrl: 'http://localhost:8082',
+      });
+
+      // Publish schemas that will cause composition warnings
+      await client.publishFederatedSubgraph({
+        name: subgraph1Name,
+        namespace: DEFAULT_NAMESPACE,
+        schema: `
+          type Query {
+            field1: String @deprecated(reason: "Use field2 instead")
+            field2: String @deprecated(reason: "Use field3 instead")
+            field3: String
+          }
+        `,
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraph2Name,
+        namespace: DEFAULT_NAMESPACE,
+        schema: 'type Query { otherField: String }',
+      });
+
+      // Check with limit of 1
+      const checkResp = await client.checkFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: [joinLabel(label)],
+        limit: 1,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      // Should limit warnings to 1
+      expect(checkResp.compositionWarnings.length).toBeLessThanOrEqual(1);
+      // Counts should still reflect actual totals
+      expect(checkResp.counts?.compositionWarnings).toBeGreaterThanOrEqual(0);
+
+      await server.close();
+    });
+
+    test('Should return counts object even when composition succeeds', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const federatedGraphName = genID('fedGraph');
+      const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
+      const usersSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/users.graphql'));
+
+      const pandasSchema = new TextDecoder().decode(pandasSchemaBuffer);
+      const usersSchema = new TextDecoder().decode(usersSchemaBuffer);
+
+      await client.createFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: ['team=A'],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      await client.createFederatedSubgraph({
+        name: 'pandas',
+        namespace: DEFAULT_NAMESPACE,
+        labels: [{ key: 'team', value: 'A' }],
+        routingUrl: 'http://localhost:8081',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: 'pandas',
+        namespace: DEFAULT_NAMESPACE,
+        schema: pandasSchema,
+      });
+
+      await client.createFederatedSubgraph({
+        name: 'users',
+        namespace: DEFAULT_NAMESPACE,
+        labels: [{ key: 'team', value: 'A' }],
+        routingUrl: 'http://localhost:8082',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: 'users',
+        namespace: DEFAULT_NAMESPACE,
+        schema: usersSchema,
+      });
+
+      const checkResp = await client.checkFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: ['team=A'],
+        limit: 10,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.compositionErrors.length).toBe(0);
+      // Counts should be present
+      expect(checkResp.counts).toBeDefined();
+      expect(checkResp.counts?.compositionErrors).toBe(0);
+      expect(checkResp.counts?.compositionWarnings).toBeGreaterThanOrEqual(0);
+      expect(checkResp.counts?.lintWarnings).toBe(0);
+      expect(checkResp.counts?.lintErrors).toBe(0);
+      expect(checkResp.counts?.breakingChanges).toBe(0);
+      expect(checkResp.counts?.nonBreakingChanges).toBe(0);
+      expect(checkResp.counts?.graphPruneErrors).toBe(0);
+      expect(checkResp.counts?.graphPruneWarnings).toBe(0);
+
+      await server.close();
+    });
+
+    test('Should clamp limit to maximum allowed value', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const federatedGraphName = genID('fedGraph');
+      const subgraphName = genID('subgraph');
+      const label = genUniqueLabel();
+
+      await client.createFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: [joinLabel(label)],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      await client.createFederatedSubgraph({
+        name: subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labels: [label],
+        routingUrl: 'http://localhost:8081',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+        schema: 'type Query { hello: String }',
+      });
+
+      // Pass a limit greater than the max (100,000)
+      const checkResp = await client.checkFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: [joinLabel(label)],
+        limit: 200_000,
+      });
+
+      // Should still work, limit will be clamped to 100,000
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.counts).toBeDefined();
+
+      await server.close();
+    });
+
+    test('Should clamp limit of 0 to minimum of 1', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const federatedGraphName = genID('fedGraph');
+      const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
+      const productsSchema = new TextDecoder().decode(productsSchemaBuffer);
+
+      await client.createFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: ['team=B'],
+        routingUrl: 'http://localhost:8080',
+      });
+
+      await client.createFederatedSubgraph({
+        name: 'products',
+        namespace: DEFAULT_NAMESPACE,
+        labels: [{ key: 'team', value: 'B' }],
+        routingUrl: 'http://localhost:8082',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: 'products',
+        namespace: DEFAULT_NAMESPACE,
+        schema: productsSchema,
+      });
+
+      // Pass a limit of 0 - should be clamped to minimum of 1
+      const checkResp = await client.checkFederatedGraph({
+        name: federatedGraphName,
+        namespace: DEFAULT_NAMESPACE,
+        labelMatchers: ['team=B'],
+        limit: 0,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+      // When limit is 0, it gets clamped to minimum of 1
+      expect(checkResp.compositionErrors.length).toBe(1);
+      // Counts should reflect the actual total
+      expect(checkResp.counts?.compositionErrors).toBe(2);
+
+      await server.close();
+    });
+  });
 });

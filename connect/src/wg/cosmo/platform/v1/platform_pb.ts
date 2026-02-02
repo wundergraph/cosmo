@@ -1099,6 +1099,11 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
    */
   disableResolvabilityValidation?: boolean;
 
+  /**
+   * @generated from field: optional int32 limit = 10;
+   */
+  limit?: number;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -1116,6 +1121,7 @@ export class CheckSubgraphSchemaRequest extends Message<CheckSubgraphSchemaReque
     { no: 7, name: "vcsContext", kind: "message", T: VCSContext, opt: true },
     { no: 8, name: "labels", kind: "message", T: Label, repeated: true },
     { no: 9, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 10, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaRequest {
@@ -2325,6 +2331,11 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
    */
   checkExtensionErrorMessage?: string;
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.SchemaCheckCounts counts = 19;
+   */
+  counts?: SchemaCheckCounts;
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2351,6 +2362,7 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
     { no: 16, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 17, name: "isCheckExtensionSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 18, name: "checkExtensionErrorMessage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 19, name: "counts", kind: "message", T: SchemaCheckCounts, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaResponse {
@@ -2367,6 +2379,85 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
 
   static equals(a: CheckSubgraphSchemaResponse | PlainMessage<CheckSubgraphSchemaResponse> | undefined, b: CheckSubgraphSchemaResponse | PlainMessage<CheckSubgraphSchemaResponse> | undefined): boolean {
     return proto3.util.equals(CheckSubgraphSchemaResponse, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.SchemaCheckCounts
+ */
+export class SchemaCheckCounts extends Message<SchemaCheckCounts> {
+  /**
+   * @generated from field: int32 lintWarnings = 1;
+   */
+  lintWarnings = 0;
+
+  /**
+   * @generated from field: int32 lintErrors = 2;
+   */
+  lintErrors = 0;
+
+  /**
+   * @generated from field: int32 breakingChanges = 3;
+   */
+  breakingChanges = 0;
+
+  /**
+   * @generated from field: int32 nonBreakingChanges = 4;
+   */
+  nonBreakingChanges = 0;
+
+  /**
+   * @generated from field: int32 compositionErrors = 5;
+   */
+  compositionErrors = 0;
+
+  /**
+   * @generated from field: int32 compositionWarnings = 6;
+   */
+  compositionWarnings = 0;
+
+  /**
+   * @generated from field: int32 graphPruneErrors = 7;
+   */
+  graphPruneErrors = 0;
+
+  /**
+   * @generated from field: int32 graphPruneWarnings = 8;
+   */
+  graphPruneWarnings = 0;
+
+  constructor(data?: PartialMessage<SchemaCheckCounts>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.SchemaCheckCounts";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "lintWarnings", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "lintErrors", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 3, name: "breakingChanges", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 4, name: "nonBreakingChanges", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 5, name: "compositionErrors", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 6, name: "compositionWarnings", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 7, name: "graphPruneErrors", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 8, name: "graphPruneWarnings", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheckCounts {
+    return new SchemaCheckCounts().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): SchemaCheckCounts {
+    return new SchemaCheckCounts().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): SchemaCheckCounts {
+    return new SchemaCheckCounts().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: SchemaCheckCounts | PlainMessage<SchemaCheckCounts> | undefined, b: SchemaCheckCounts | PlainMessage<SchemaCheckCounts> | undefined): boolean {
+    return proto3.util.equals(SchemaCheckCounts, a, b);
   }
 }
 
@@ -5765,6 +5856,11 @@ export class CheckFederatedGraphRequest extends Message<CheckFederatedGraphReque
    */
   disableResolvabilityValidation?: boolean;
 
+  /**
+   * @generated from field: optional int32 limit = 5;
+   */
+  limit?: number;
+
   constructor(data?: PartialMessage<CheckFederatedGraphRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5777,6 +5873,7 @@ export class CheckFederatedGraphRequest extends Message<CheckFederatedGraphReque
     { no: 2, name: "label_matchers", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 3, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 4, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 5, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckFederatedGraphRequest {
@@ -5820,6 +5917,11 @@ export class CheckFederatedGraphResponse extends Message<CheckFederatedGraphResp
    */
   compositionWarnings: CompositionWarning[] = [];
 
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.SchemaCheckCounts counts = 5;
+   */
+  counts?: SchemaCheckCounts;
+
   constructor(data?: PartialMessage<CheckFederatedGraphResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -5832,6 +5934,7 @@ export class CheckFederatedGraphResponse extends Message<CheckFederatedGraphResp
     { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
     { no: 3, name: "subgraphs", kind: "message", T: Subgraph, repeated: true },
     { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 5, name: "counts", kind: "message", T: SchemaCheckCounts, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckFederatedGraphResponse {
@@ -8172,6 +8275,16 @@ export class APIKey_Group extends Message<APIKey_Group> {
  * @generated from message wg.cosmo.platform.v1.GetAPIKeysRequest
  */
 export class GetAPIKeysRequest extends Message<GetAPIKeysRequest> {
+  /**
+   * @generated from field: int32 limit = 1;
+   */
+  limit = 0;
+
+  /**
+   * @generated from field: int32 offset = 2;
+   */
+  offset = 0;
+
   constructor(data?: PartialMessage<GetAPIKeysRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -8180,6 +8293,8 @@ export class GetAPIKeysRequest extends Message<GetAPIKeysRequest> {
   static readonly runtime: typeof proto3 = proto3;
   static readonly typeName = "wg.cosmo.platform.v1.GetAPIKeysRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 2, name: "offset", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAPIKeysRequest {
@@ -8213,6 +8328,11 @@ export class GetAPIKeysResponse extends Message<GetAPIKeysResponse> {
    */
   apiKeys: APIKey[] = [];
 
+  /**
+   * @generated from field: int32 count = 3;
+   */
+  count = 0;
+
   constructor(data?: PartialMessage<GetAPIKeysResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -8223,6 +8343,7 @@ export class GetAPIKeysResponse extends Message<GetAPIKeysResponse> {
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
     { no: 2, name: "apiKeys", kind: "message", T: APIKey, repeated: true },
+    { no: 3, name: "count", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetAPIKeysResponse {
@@ -16032,6 +16153,16 @@ export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {
    */
   featureFlagName?: string;
 
+  /**
+   * @generated from field: bool is_argument = 9;
+   */
+  isArgument = false;
+
+  /**
+   * @generated from field: bool is_input = 10;
+   */
+  isInput = false;
+
   constructor(data?: PartialMessage<GetFieldUsageRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -16048,6 +16179,8 @@ export class GetFieldUsageRequest extends Message<GetFieldUsageRequest> {
     { no: 6, name: "dateRange", kind: "message", T: DateRange },
     { no: 7, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 8, name: "feature_flag_name", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 9, name: "is_argument", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 10, name: "is_input", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetFieldUsageRequest {

@@ -105,6 +105,9 @@ type Project implements Node & Timestamped @key(fields: "id") {
   milestoneGroups: [[Milestone]]  # nested lists: nullable list of nullable lists
   priorityMatrix: [[[Task!]!]!]  # triple nested: non-nullable list of non-nullable lists of non-nullable lists
 
+  # Recursive field resolver for project hierarchy
+  subProjects(includeArchived: Boolean): [Project!]! @connect__fieldResolver(context: "id name status")
+
   # Computed fields with @connect__fieldResolver
   filteredTasks(status: TaskStatus, priority: TaskPriority, limit: Int): [Task!]! @connect__fieldResolver(context: "id")
   completionRate(includeSubtasks: Boolean): Float! @connect__fieldResolver(context: "id startDate endDate status")
