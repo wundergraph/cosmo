@@ -4,6 +4,7 @@ import {
   BOOLEAN_SCALAR,
   CONNECT_FIELD_RESOLVER,
   CONSUMER_INACTIVE_THRESHOLD,
+  COST,
   CONSUMER_NAME,
   DEPRECATED,
   EDFS_KAFKA_PUBLISH,
@@ -29,6 +30,7 @@ import {
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
+  LIST_SIZE,
   NOT_UPPER,
   OBJECT_UPPER,
   ONE_OF,
@@ -142,7 +144,9 @@ export const IGNORED_FEDERATED_TYPE_NAMES: ReadonlySet<TypeName> = new Set<TypeN
 ]);
 
 export const CLIENT_PERSISTED_DIRECTIVE_NAMES: ReadonlySet<DirectiveName> = new Set<DirectiveName>([
+  COST,
   DEPRECATED,
+  LIST_SIZE,
   ONE_OF,
   SEMANTIC_NON_NULL,
 ]);
