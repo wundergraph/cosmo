@@ -621,7 +621,7 @@ func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHe
 	}
 	value, err = expr.ResolveStringExpression(program, reqCtx.expressionContext)
 	if err != nil {
-		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %s", rule.Expression, rule.Name, err)
+		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %w", rule.Expression, rule.Name, err)
 	}
 	return
 }
