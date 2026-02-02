@@ -48,14 +48,14 @@ const SignupPage: NextPageWithLayout = () => {
       <div className="flex flex-1 items-center justify-center px-4 py-8 lg:px-0 lg:py-0">
         <div className="flex w-full max-w-screen-2xl flex-col lg:flex-row">
           {/* Left section - Marketing */}
-          <div className="flex w-full flex-col items-center justify-center px-4 py-10 lg:min-h-screen lg:w-1/2 lg:items-start lg:px-14 lg:pb-28 lg:pt-12">
+          <div className="flex w-full flex-col items-center justify-center px-4 py-10 lg:min-h-screen lg:w-1/2 lg:items-start lg:px-14 lg:pb-40 lg:pt-2">
             <div className="lg:mt-8">
               <ProductCosmoStack variant="signup" />
             </div>
           </div>
 
           {/* Right section - Form */}
-          <div className="flex w-full flex-col items-center justify-center pb-10 lg:min-h-screen lg:w-1/2 lg:p-12">
+          <div className="mt-8 flex w-full flex-col items-center justify-center pb-10 lg:mt-0 lg:min-h-screen lg:w-1/2 lg:p-12">
             <div className="w-full max-w-md lg:max-w-lg">
               <AuthCard className="w-full rounded-xl px-6 py-8 lg:px-10 lg:py-12">
                 <div className="hidden lg:block">
