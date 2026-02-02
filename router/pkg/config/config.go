@@ -89,7 +89,7 @@ type Tracing struct {
 	TracingGlobalFeatures `yaml:",inline"`
 
 	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values
-	SanitizeUTF8 SanitizeUTF8Config `yaml:"sanitize_utf8" envPrefix:"TRACING_SANITIZE_UTF8_"`
+	SanitizeUTF8 SanitizeUTF8Config `yaml:"sanitize_utf8"`
 }
 
 type PropagationConfig struct {
