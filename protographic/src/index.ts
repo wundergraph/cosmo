@@ -150,5 +150,16 @@ export {
   OperationType,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
+export {
+  CONNECT_FIELD_RESOLVER,
+  CONTEXT,
+  EXTERNAL_DIRECTIVE_NAME,
+  FIELDS,
+  FIELD_ARGS,
+  KEY_DIRECTIVE_NAME,
+  REQUIRES_DIRECTIVE_NAME,
+  RESULT,
+} from './string-constants.js';
+
 // Export protobufjs for AST manipulation
 export { default as protobuf } from 'protobufjs';
