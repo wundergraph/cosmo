@@ -1314,12 +1314,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableNetPoll:            true,
-		EnableSingleFlight:       true,
-		EnableInboundRequestDeduplication:      false,
-		EnableRequestTracing:     true,
-		EnableNormalizationCache: true,
-		NormalizationCacheSize:   1024,
+		EnableNetPoll:                     true,
+		EnableSingleFlight:                true,
+		EnableInboundRequestDeduplication: false,
+		EnableRequestTracing:              true,
+		EnableNormalizationCache:          true,
+		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
 			PrintQueryPlans:            false,
@@ -1737,10 +1737,10 @@ func grpcURL(endpoint string) string {
 	return "dns:///" + endpoint
 }
 
-func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v any) (err error) {
 	_, payload, err := conn.ReadMessage()
 	if err != nil {
-		return err
+		return fmt.Errorf("read message: %w", err)
 	}
 	if err := json.Unmarshal(payload, &v); err != nil {
 		t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
@@ -2724,6 +2724,8 @@ func WSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, p []byt
 }
 
 func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+	t.Helper()
+
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
 	attempts := 0
