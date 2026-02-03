@@ -74,6 +74,128 @@ func TestCacheControl(t *testing.T) {
 			assert.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"error resolving RootFieldThrowsError for Employee 1","path":["employee","rootFieldThrowsError"],"extensions":{"code":"ERROR_CODE"}}],"statusCode":200}}],"data":{"employee":{"id":1,"rootFieldThrowsError":null}}}`, res.Body)
 		})
 	})
+
+	t.Run("Ignored response headers from subgraphs are never propagated", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that subgraph response headers in the ignoredHeaders list are never propagated to client,
+		// even when propagation rules are configured. The router manages these headers itself.
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Content-Type",
+								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+							},
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Content-Encoding",
+								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+							},
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Connection",
+								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+							},
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "X-Custom-Header",
+								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+							},
+						},
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							// Attempt to set ignored headers - these should NOT be propagated
+							w.Header().Set("Content-Type", "application/custom-from-subgraph")
+							w.Header().Set("Content-Encoding", "gzip-from-subgraph")
+							w.Header().Set("Connection", "keep-alive-from-subgraph")
+							// This should be propagated
+							w.Header().Set("X-Custom-Header", "custom-value")
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id } }`,
+			})
+
+			// Verify subgraph's ignored headers are NOT propagated to client
+			contentType := res.Response.Header.Get("Content-Type")
+			require.NotEqual(t, "application/custom-from-subgraph", contentType, "Subgraph Content-Type should not be propagated")
+
+			contentEncoding := res.Response.Header.Get("Content-Encoding")
+			require.NotEqual(t, "gzip-from-subgraph", contentEncoding, "Subgraph Content-Encoding should not be propagated")
+
+			connection := res.Response.Header.Get("Connection")
+			require.NotEqual(t, "keep-alive-from-subgraph", connection, "Subgraph Connection should not be propagated")
+
+			// Verify custom header IS propagated (not in ignored list)
+			require.Equal(t, "custom-value", res.Response.Header.Get("X-Custom-Header"))
+		})
+	})
+
+	t.Run("Ignored response headers with regex matching are never propagated from subgraphs", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that subgraph response headers in the ignoredHeaders list are not propagated
+		// even with regex matching rules
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Matching:  "^Content-.*", // Should match Content-Type, Content-Encoding, Content-Length
+								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+							},
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Matching:  ".*", // Match all headers
+								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+							},
+						},
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/custom-from-subgraph")
+							w.Header().Set("Content-Encoding", "gzip-from-subgraph")
+							w.Header().Set("X-Custom-Header", "should-be-propagated")
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id } }`,
+			})
+
+			// Content-* headers from subgraph should NOT be propagated to client (router manages these)
+			contentType := res.Response.Header.Get("Content-Type")
+			require.NotEqual(t, "application/custom-from-subgraph", contentType, "Subgraph Content-Type should not be propagated")
+
+			contentEncoding := res.Response.Header.Get("Content-Encoding")
+			require.NotEqual(t, "gzip-from-subgraph", contentEncoding, "Subgraph Content-Encoding should not be propagated")
+
+			// X-Custom-Header SHOULD be propagated (not in ignored list)
+			require.Equal(t, "should-be-propagated", res.Response.Header.Get("X-Custom-Header"))
+		})
+	})
 }
 
 func TestHeaderPropagation(t *testing.T) {
