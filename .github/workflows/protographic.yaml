@@ -33,7 +33,7 @@ jobs:
         run: git diff --no-ext-diff --exit-code
 
       - name: Build
-        run: pnpm run --filter ./connect --filter ./protographic build
+        run: pnpm run --filter ./connect --filter ./composition --filter ./protographic build
 
       - name: Test
         run: pnpm run --filter ./protographic test:coverage
