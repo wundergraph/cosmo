@@ -1666,11 +1666,16 @@
             "type": "string"
           }
         },
-        "client": {
-          "type": "array",
-          "description": "A list of header rules to apply to client responses.",
-          "items": {
-            "$ref": "#/$defs/client_header_rule"
+        "router": {
+          "type": "object",
+          "properties": {
+            "response": {
+              "type": "array",
+              "description": "A list of header rules to apply to router responses.",
+              "items": {
+                "$ref": "#/$defs/router_response_header_rule"
+              }
+            }
           }
         }
       }
@@ -3543,9 +3548,9 @@
       },
       "required": ["op", "algorithm"]
     },
-    "client_header_rule": {
+    "router_response_header_rule": {
       "type": "object",
-      "description": "The configuration for client response headers. This is used to set headers in responses to clients.",
+      "description": "The configuration for router response headers. This is used to set headers in response from the router to clients.",
       "additionalProperties": false,
       "properties": {
         "name": {

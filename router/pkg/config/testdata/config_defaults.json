@@ -146,7 +146,9 @@
     "All": null,
     "Subgraphs": null,
     "CookieWhitelist": null,
-    "Client": null
+    "Router": {
+      "Response": null
+    }
   },
   "TrafficShaping": {
     "All": {

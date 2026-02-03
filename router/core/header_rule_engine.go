@@ -700,7 +700,7 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 	return &result, cacheControlHeader
 }
 
-// ApplyRouterResponseHeaderRules applies client response header rules to the response writer
+// ApplyRouterResponseHeaderRules applies router response header rules to the response writer
 func (h *HeaderPropagation) ApplyRouterResponseHeaderRules(w http.ResponseWriter, reqCtx *requestContext) error {
 	for _, rule := range h.rules.Router.Response {
 		if rule.Expression == "" {
@@ -708,12 +708,10 @@ func (h *HeaderPropagation) ApplyRouterResponseHeaderRules(w http.ResponseWriter
 		}
 		value, err := h.getRouterResponseRuleExpressionValue(rule, reqCtx)
 		if err != nil {
-			return fmt.Errorf("failed to evaluate client response header expression for %s: %w", rule.Name, err)
+			return fmt.Errorf("failed to evaluate router response header expression for %s: %w", rule.Name, err)
 		}
 		if value != "" {
 			w.Header().Set(rule.Name, value)
-		} else {
-			w.Header().Del(rule.Name)
 		}
 	}
 

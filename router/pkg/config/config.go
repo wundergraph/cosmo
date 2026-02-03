@@ -268,7 +268,7 @@ type HeaderRules struct {
 
 type RouterHeaderRules struct {
 	// All is a set of rules that apply to all response
-	Response []*RouterResponseHeaderRule `yaml:"client,omitempty"`
+	Response []*RouterResponseHeaderRule `yaml:"response,omitempty"`
 }
 
 type GlobalHeaderRule struct {

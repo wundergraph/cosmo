@@ -193,10 +193,10 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 		}
 
-		// Apply any final client response header rules
+		// Apply any final router response header rules
 		if h.headerPropagation != nil {
 			if err := h.headerPropagation.ApplyRouterResponseHeaderRules(w, reqCtx); err != nil {
-				reqCtx.logger.Error("Failed to apply client response header rules", zap.Error(err))
+				reqCtx.logger.Error("Failed to apply router response header rules", zap.Error(err))
 			}
 		}
 
