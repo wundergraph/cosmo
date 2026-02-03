@@ -312,6 +312,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if err != nil {
 		return nil, err
 	}
+	r.headerPropagation = hr
 
 	if hr.HasRequestRules() {
 		r.preOriginHandlers = append(r.preOriginHandlers, hr.OnOriginRequest)
