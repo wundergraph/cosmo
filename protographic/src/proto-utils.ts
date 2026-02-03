@@ -48,9 +48,9 @@ function buildProtoMessageWithIndent(includeComments: boolean, message: ProtoMes
 
   // if we have nested messages, we need to build them first
   if (message.nestedMessages && message.nestedMessages.length > 0) {
-    message.nestedMessages.forEach((nestedMessage) => {
+    for (const nestedMessage of message.nestedMessages) {
       messageLines.push(...buildProtoMessageWithIndent(includeComments, nestedMessage, indent + 1));
-    });
+    }
   }
 
   if (message.compositeType) {
@@ -61,17 +61,17 @@ function buildProtoMessageWithIndent(includeComments: boolean, message: ProtoMes
     messageLines.push(indentContent(indent + 1, `reserved ${message.reservedNumbers};`));
   }
 
-  message.fields.forEach((field) => {
+  for (const field of message.fields) {
     if (field.description) {
       messageLines.push(...formatComment(includeComments, field.description, indent + 1));
     }
 
-    let repeated = field.isRepeated ? 'repeated ' : '';
+    const repeated = field.isRepeated ? 'repeated ' : '';
 
     messageLines.push(
       indentContent(indent + 1, `${repeated}${field.typeName} ${field.fieldName} = ${field.fieldNumber};`),
     );
-  });
+  }
   messageLines.push(indentContent(indent, '}'), '');
   return messageLines;
 }
@@ -128,11 +128,11 @@ function buildCompositeTypeMessage(
     indentContent(indent + 1, `oneof ${oneOfName} {`),
   );
 
-  compositeTypes.forEach((compositeType, index) => {
+  for (const [index, compositeType] of compositeTypes.entries()) {
     lines.push(
       indentContent(indent + 2, `${compositeType} ${graphqlFieldToProtoField(compositeType)} = ${index + 1};`),
     );
-  });
+  }
 
   lines.push(indentContent(indent + 1, '}'));
   lines.push(indentContent(indent, '}'));
@@ -149,7 +149,7 @@ function buildCompositeTypeMessage(
 export function formatComment(
   includeComments: boolean,
   description: string | undefined | null,
-  indentLevel: number = 0,
+  indentLevel = 0,
 ): string[] {
   if (!includeComments || !description) {
     return [];
@@ -159,15 +159,13 @@ export function formatComment(
   const indent = SPACE_INDENT.repeat(indentLevel);
   const lines = description.trim().split('\n');
 
-  if (lines.length === 1) {
-    return [`${indent}${LINE_COMMENT_PREFIX}${lines[0]}`];
-  } else {
-    return [
+  return lines.length === 1
+? [`${indent}${LINE_COMMENT_PREFIX}${lines[0]}`]
+: [
       `${indent}${BLOCK_COMMENT_START}`,
       ...lines.map((line) => `${indent} * ${line}`),
       `${indent} ${BLOCK_COMMENT_END}`,
     ];
-  }
 }
 
 export function renderRPCMethod(includeComments: boolean, rpcMethod: RPCMethod): string[] {
@@ -195,7 +193,7 @@ export function renderRPCMethod(includeComments: boolean, rpcMethod: RPCMethod):
 export function getProtoTypeFromGraphQL(
   includeComments: boolean,
   graphqlType: GraphQLType,
-  ignoreWrapperTypes: boolean = false,
+  ignoreWrapperTypes = false,
 ): ProtoFieldType {
   // Nullable lists need to be handled first, otherwise they will be treated as scalar types
   if (isListType(graphqlType) || (isNonNullType(graphqlType) && isListType(graphqlType.ofType))) {
@@ -272,7 +270,7 @@ export function handleListType(
   const wrapperNestingLevel = isNested ? nestingLevel : 1;
 
   // Generate all required wrapper messages
-  let wrapperName = listNameByNestingLevel(wrapperNestingLevel, baseType);
+  const wrapperName = listNameByNestingLevel(wrapperNestingLevel, baseType);
 
   // For nested lists, never use repeated at field level to preserve nullability
   return {
@@ -336,11 +334,7 @@ function buildWrapperMessage(
 
   lines.push(`message ${wrapperName} {`);
   let innerWrapperName = '';
-  if (level > 1) {
-    innerWrapperName = `${'ListOf'.repeat(level - 1)}${baseType.name}`;
-  } else {
-    innerWrapperName = getProtoTypeFromGraphQL(includeComments, baseType, true).typeName;
-  }
+  innerWrapperName = level > 1 ? `${'ListOf'.repeat(level - 1)}${baseType.name}` : getProtoTypeFromGraphQL(includeComments, baseType, true).typeName;
 
   lines.push(
     formatIndent(1, `message List {`),

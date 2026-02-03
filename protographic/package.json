@@ -26,8 +26,8 @@
     "build": "tsc",
     "bench": "vitest bench --run",
     "format": "prettier --write src tests",
-    "lint": "prettier --check src tests",
-    "lint:fix": "prettier --write src tests"
+    "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src"
   },
   "devDependencies": {
     "@types/lodash-es": "4.17.12",

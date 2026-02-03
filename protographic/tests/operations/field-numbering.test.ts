@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { createFieldNumberManager } from '../../src';
+import { createFieldNumberManager } from '../../src/index.js';
 
 describe('Field Numbering', () => {
   describe('createFieldNumberManager', () => {

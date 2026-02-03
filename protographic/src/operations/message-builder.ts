@@ -20,11 +20,11 @@ import {
   GraphQLInterfaceType,
   GraphQLUnionType,
 } from 'graphql';
+import { upperFirst, camelCase } from 'lodash-es';
+import { graphqlFieldToProtoField } from '../naming-conventions.js';
 import { mapGraphQLTypeToProto, ProtoTypeInfo } from './type-mapper.js';
 import { assignFieldNumbersFromLockData, FieldNumberManager } from './field-numbering.js';
-import { graphqlFieldToProtoField } from '../naming-conventions.js';
 import { buildEnumType } from './request-builder.js';
-import { upperFirst, camelCase } from 'lodash-es';
 
 /**
  * Default maximum recursion depth to prevent stack overflow
@@ -126,7 +126,7 @@ export function buildMessageFromSelectionSet(
 
     for (const selection of selections) {
       switch (selection.kind) {
-        case 'Field':
+        case 'Field': {
           // Only object and interface types have fields that can be selected
           // Union types require inline fragments to access their constituent types
           if (isObjectType(currentType) || isInterfaceType(currentType)) {
@@ -138,8 +138,9 @@ export function buildMessageFromSelectionSet(
             }
           }
           break;
+        }
 
-        case 'InlineFragment':
+        case 'InlineFragment': {
           if (selection.typeCondition && options?.schema) {
             const typeName = selection.typeCondition.name.value;
             const type = options.schema.getType(typeName);
@@ -151,8 +152,9 @@ export function buildMessageFromSelectionSet(
             collectFields(selection.selectionSet.selections, currentType, depth + 1);
           }
           break;
+        }
 
-        case 'FragmentSpread':
+        case 'FragmentSpread': {
           if (options?.fragments) {
             const fragmentDef = options.fragments.get(selection.name.value);
             if (fragmentDef && options?.schema) {
@@ -164,6 +166,7 @@ export function buildMessageFromSelectionSet(
             }
           }
           break;
+        }
       }
     }
   };
@@ -445,13 +448,24 @@ function processInlineFragment(
   // Process all selections in the inline fragment with the resolved type
   if (fragment.selectionSet) {
     for (const selection of fragment.selectionSet.selections) {
-      if (selection.kind === 'Field') {
+      switch (selection.kind) {
+      case 'Field': {
         processFieldSelection(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
-      } else if (selection.kind === 'InlineFragment') {
+      
+      break;
+      }
+      case 'InlineFragment': {
         // Nested inline fragment
         processInlineFragment(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
-      } else if (selection.kind === 'FragmentSpread') {
+      
+      break;
+      }
+      case 'FragmentSpread': {
         processFragmentSpread(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
+      
+      break;
+      }
+      // No default
       }
     }
   }
@@ -501,13 +515,24 @@ function processFragmentSpread(
 
   // Process the fragment's selection set with the resolved type
   for (const selection of fragmentDef.selectionSet.selections) {
-    if (selection.kind === 'Field') {
+    switch (selection.kind) {
+    case 'Field': {
       processFieldSelection(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
-    } else if (selection.kind === 'InlineFragment') {
+    
+    break;
+    }
+    case 'InlineFragment': {
       processInlineFragment(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
-    } else if (selection.kind === 'FragmentSpread') {
+    
+    break;
+    }
+    case 'FragmentSpread': {
       // Nested fragment spread (fragment inside fragment)
       processFragmentSpread(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
+    
+    break;
+    }
+    // No default
     }
   }
 }

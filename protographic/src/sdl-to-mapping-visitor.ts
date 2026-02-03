@@ -13,18 +13,6 @@ import {
   Kind,
 } from 'graphql';
 import {
-  createEntityLookupMethodName,
-  createOperationMethodName,
-  createRequestMessageName,
-  createResolverMethodName,
-  createResponseMessageName,
-  graphqlArgumentToProtoField,
-  graphqlEnumValueToProtoEnumValue,
-  graphqlFieldToProtoField,
-  formatKeyElements,
-  OperationTypeName,
-} from './naming-conventions.js';
-import {
   ArgumentMapping,
   EntityMapping,
   EnumMapping,
@@ -40,6 +28,18 @@ import {
   TypeFieldMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { Maybe } from 'graphql/jsutils/Maybe.js';
+import {
+  createEntityLookupMethodName,
+  createOperationMethodName,
+  createRequestMessageName,
+  createResolverMethodName,
+  createResponseMessageName,
+  graphqlArgumentToProtoField,
+  graphqlEnumValueToProtoEnumValue,
+  graphqlFieldToProtoField,
+  formatKeyElements,
+  OperationTypeName,
+} from './naming-conventions.js';
 import { REQUIRES_DIRECTIVE_NAME } from './string-constants.js';
 import { RequiredFieldsVisitor } from './required-fields-visitor.js';
 /**
@@ -64,7 +64,7 @@ export class GraphQLToProtoVisitor {
    * @param schema - The GraphQL schema to process
    * @param serviceName - Name for the generated service (defaults to "DefaultService")
    */
-  constructor(schema: GraphQLSchema, serviceName: string = 'DefaultService') {
+  constructor(schema: GraphQLSchema, serviceName = 'DefaultService') {
     this.schema = schema;
     this.mapping = new GRPCMapping({
       version: 1,
@@ -119,12 +119,16 @@ export class GraphQLToProtoVisitor {
 
     for (const [typeName, type] of Object.entries(typeMap)) {
       // Skip built-in types and query/mutation/subscription types
-      if (this.shouldSkipRootType(type)) continue;
+      if (this.shouldSkipRootType(type)) {
+        continue;
+      }
 
       // Check if this is an entity type (has @key directive)
       if (isObjectType(type)) {
         const keyDirectives = this.getKeyDirectives(type);
-        if (keyDirectives.length === 0) continue;
+        if (keyDirectives.length === 0) {
+          continue;
+        }
 
         // Process each @key directive separately
         for (const keyDirective of keyDirectives) {
@@ -145,7 +149,9 @@ export class GraphQLToProtoVisitor {
     const fields = Object.values(type.getFields()).filter((field) =>
       field.astNode?.directives?.some((d) => d.name.value === REQUIRES_DIRECTIVE_NAME),
     );
-    if (fields.length === 0) return;
+    if (fields.length === 0) {
+      return;
+    }
 
     for (const field of fields) {
       const visitor = new RequiredFieldsVisitor(this.schema, type, field, this.getRequiredFieldSet(field));
@@ -226,7 +232,7 @@ export class GraphQLToProtoVisitor {
       typeName,
       kind: 'entity',
       key: keyField,
-      rpc: rpc,
+      rpc,
       request: createRequestMessageName(rpc),
       response: createResponseMessageName(rpc),
       requiredFieldMappings: [],
@@ -293,14 +299,20 @@ export class GraphQLToProtoVisitor {
 
     for (const typeName in typeMap) {
       const type = typeMap[typeName];
-      if (this.shouldSkipRootType(type)) continue;
+      if (this.shouldSkipRootType(type)) {
+        continue;
+      }
 
-      if (!isObjectType(type)) continue;
+      if (!isObjectType(type)) {
+        continue;
+      }
 
       const fields = type.getFields();
 
       for (const field of Object.values(fields)) {
-        if (field.args.length === 0) continue;
+        if (field.args.length === 0) {
+          continue;
+        }
 
         this.createLookupMapping(LookupType.RESOLVE, type.name, field);
       }
@@ -322,7 +334,9 @@ export class GraphQLToProtoVisitor {
     operationType: OperationType,
     graphqlType: Maybe<GraphQLObjectType>,
   ): void {
-    if (!graphqlType) return;
+    if (!graphqlType) {
+      return;
+    }
 
     const typeFieldMapping = new TypeFieldMapping({
       type: operationTypeName,
@@ -333,7 +347,9 @@ export class GraphQLToProtoVisitor {
 
     for (const fieldName in fields) {
       // Skip special federation fields
-      if (fieldName === '_entities') continue;
+      if (fieldName === '_entities') {
+        continue;
+      }
 
       const field = fields[fieldName];
       const mappedName = createOperationMethodName(operationTypeName, fieldName);
@@ -391,7 +407,9 @@ export class GraphQLToProtoVisitor {
     for (const typeName in typeMap) {
       const type = typeMap[typeName];
 
-      if (this.shouldSkipRootType(type)) continue;
+      if (this.shouldSkipRootType(type)) {
+        continue;
+      }
 
       // Process each type according to its kind
       if (isObjectType(type)) {

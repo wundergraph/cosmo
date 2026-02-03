@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { compileGraphQLToProto } from '../../src';
-import { expectValidProto } from '../util';
+import { compileGraphQLToProto } from '../../src/index.js';
+import { expectValidProto } from '../util.js';
 
 describe('SDL to Proto - Federation and Special Types', () => {
   test('should handle entity types with @key directive', () => {

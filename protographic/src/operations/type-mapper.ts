@@ -232,7 +232,7 @@ function handleListType(graphqlType: GraphQLType, options?: TypeMapperOptions): 
       isWrapper: false,
       isScalar: false,
       requiresNestedWrapper: true,
-      nestingLevel: nestingLevel,
+      nestingLevel,
     };
   }
 
@@ -305,5 +305,5 @@ export function getRequiredImports(types: GraphQLType[], options?: TypeMapperOpt
     }
   }
 
-  return Array.from(imports);
+  return [...imports];
 }

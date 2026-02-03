@@ -109,10 +109,10 @@ function generateHeader(root: protobuf.Root, options?: ProtoTextOptions): string
 
   // Add custom imports
   if (options?.imports) {
-    options.imports.forEach((imp) => imports.add(imp));
+    for (const imp of options.imports) { imports.add(imp); }
   }
 
-  for (const imp of Array.from(imports).sort()) {
+  for (const imp of [...imports].sort()) {
     lines.push(`import "${imp}";`);
   }
 
@@ -175,9 +175,7 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
   // Sort methods for consistent output
   const methods = Object.values(service.methods).sort((a, b) => a.name.localeCompare(b.name));
 
-  for (let i = 0; i < methods.length; i++) {
-    const method = methods[i];
-
+  for (const [i, method] of methods.entries()) {
     // Add blank line between methods for readability
     if (i > 0) {
       lines.push('');
@@ -213,7 +211,7 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
 /**
  * Converts a protobuf Type (message) to proto text
  */
-export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOptions, indent: number = 0): string[] {
+export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOptions, indent = 0): string[] {
   const lines: string[] = [];
 
   // Message comment
@@ -258,7 +256,7 @@ export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOp
 /**
  * Converts a protobuf Enum to proto text
  */
-export function enumToProtoText(enumType: protobuf.Enum, options?: ProtoTextOptions, indent: number = 0): string[] {
+export function enumToProtoText(enumType: protobuf.Enum, options?: ProtoTextOptions, indent = 0): string[] {
   const lines: string[] = [];
 
   // Enum comment
@@ -292,7 +290,7 @@ export function enumToProtoText(enumType: protobuf.Enum, options?: ProtoTextOpti
 /**
  * Formats a protobuf field as proto text
  */
-export function formatField(field: protobuf.Field, options?: ProtoTextOptions, indent: number = 1): string[] {
+export function formatField(field: protobuf.Field, options?: ProtoTextOptions, indent = 1): string[] {
   const lines: string[] = [];
 
   // Field comment
@@ -335,7 +333,7 @@ export function formatField(field: protobuf.Field, options?: ProtoTextOptions, i
  * - reserved 2, 5 to 10;
  * - reserved "old_field", "deprecated_field";
  */
-export function formatReserved(reserved: Array<number[] | string>, indent: number = 1): string[] {
+export function formatReserved(reserved: Array<number[] | string>, indent = 1): string[] {
   const lines: string[] = [];
 
   // Separate numbers and names
@@ -374,7 +372,7 @@ export function formatReserved(reserved: Array<number[] | string>, indent: numbe
  * Handles both individual numbers and ranges (e.g., "2, 5 to 10, 15")
  */
 function formatReservedNumbers(numbers: number[]): string {
-  if (numbers.length === 0) return '';
+  if (numbers.length === 0) { return ''; }
 
   // Sort and deduplicate numbers
   const sortedNumbers = [...new Set(numbers)].sort((a, b) => a - b);
@@ -407,11 +405,7 @@ function formatReservedNumbers(numbers: number[]): string {
   // Format the ranges
   return ranges
     .map(([start, end]) => {
-      if (start === end) {
-        return start.toString();
-      } else {
-        return `${start} to ${end}`;
-      }
+      return start === end ? start.toString() : `${start} to ${end}`;
     })
     .join(', ');
 }
@@ -421,11 +415,9 @@ function formatReservedNumbers(numbers: number[]): string {
  */
 function detectWrapperTypeUsage(root: protobuf.Root): boolean {
   for (const nested of root.nestedArray) {
-    if (nested instanceof protobuf.Type) {
-      if (messageUsesWrapperTypes(nested)) {
+    if (nested instanceof protobuf.Type && messageUsesWrapperTypes(nested)) {
         return true;
       }
-    }
   }
   return false;
 }
@@ -443,11 +435,9 @@ function messageUsesWrapperTypes(message: protobuf.Type): boolean {
 
   // Check nested messages recursively
   for (const nested of message.nestedArray) {
-    if (nested instanceof protobuf.Type) {
-      if (messageUsesWrapperTypes(nested)) {
+    if (nested instanceof protobuf.Type && messageUsesWrapperTypes(nested)) {
         return true;
       }
-    }
   }
 
   return false;
@@ -458,11 +448,9 @@ function messageUsesWrapperTypes(message: protobuf.Type): boolean {
  */
 function detectGraphQLVariableNameUsage(root: protobuf.Root): boolean {
   for (const nested of root.nestedArray) {
-    if (nested instanceof protobuf.Type) {
-      if (messageUsesGraphQLVariableName(nested)) {
+    if (nested instanceof protobuf.Type && messageUsesGraphQLVariableName(nested)) {
         return true;
       }
-    }
   }
   return false;
 }
@@ -480,11 +468,9 @@ function messageUsesGraphQLVariableName(message: protobuf.Type): boolean {
 
   // Check nested messages recursively
   for (const nested of message.nestedArray) {
-    if (nested instanceof protobuf.Type) {
-      if (messageUsesGraphQLVariableName(nested)) {
+    if (nested instanceof protobuf.Type && messageUsesGraphQLVariableName(nested)) {
         return true;
       }
-    }
   }
 
   return false;
@@ -493,7 +479,7 @@ function messageUsesGraphQLVariableName(message: protobuf.Type): boolean {
 /**
  * Helper to format method definitions for services
  */
-export function formatMethod(method: protobuf.Method, options?: ProtoTextOptions, indent: number = 1): string[] {
+export function formatMethod(method: protobuf.Method, options?: ProtoTextOptions, indent = 1): string[] {
   const lines: string[] = [];
 
   // Method comment

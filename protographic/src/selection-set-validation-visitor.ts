@@ -163,7 +163,7 @@ export class SelectionSetValidationVisitor {
    * @returns BREAK if validation fails to stop traversal, undefined otherwise
    */
   private onEnterSelectionSet(ctx: VisitContext<SelectionSetNode>): any {
-    if (!ctx.parent) return;
+    if (!ctx.parent) { return; }
 
     if (this.isInlineFragment(ctx.parent)) {
       this.validationResult.errors.push('Inline fragments are not allowed in requires directives');
@@ -183,7 +183,6 @@ export class SelectionSetValidationVisitor {
     if (isObjectType(namedType)) {
       this.ancestors.push(this.currentType);
       this.currentType = namedType;
-      return;
     }
   }
 
@@ -194,7 +193,7 @@ export class SelectionSetValidationVisitor {
    * @param ctx - The visit context containing the selection set node and its parent
    */
   private onLeaveSelectionSet(ctx: VisitContext<SelectionSetNode>): void {
-    if (!ctx.parent) return;
+    if (!ctx.parent) { return; }
 
     if (!this.isFieldNode(ctx.parent)) {
       return;
@@ -224,7 +223,7 @@ export class SelectionSetValidationVisitor {
    * @returns True if the node is a FieldNode
    */
   private isFieldNode(node: ASTNode | ReadonlyArray<ASTNode>): node is FieldNode {
-    if (Array.isArray(node)) return false;
+    if (Array.isArray(node)) { return false; }
     return (node as ASTNode).kind === Kind.FIELD;
   }
 

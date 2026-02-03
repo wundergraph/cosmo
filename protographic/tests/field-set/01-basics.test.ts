@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { RequiredFieldsVisitor } from '../../src';
 import { buildSchema, GraphQLField, GraphQLObjectType, GraphQLSchema, StringValueNode } from 'graphql';
-import { buildProtoMessage } from '../../src/proto-utils';
+import { RequiredFieldsVisitor } from '../../src/index.js';
+import { buildProtoMessage } from '../../src/proto-utils.js';
 import {
   CompositeMessageKind,
   InterfaceMessageDefinition,
@@ -11,8 +11,8 @@ import {
   ProtoMessageField,
   RPCMethod,
   UnionMessageDefinition,
-} from '../../src/types';
-import { RequiredFieldMapping } from '../../src/required-fields-visitor';
+} from '../../src/types.js';
+import { RequiredFieldMapping } from '../../src/required-fields-visitor.js';
 
 /**
  * Options for creating a RequiredFieldsVisitor test setup.

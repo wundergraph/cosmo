@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { compileGraphQLToProto } from '../../src';
-import { expectValidProto } from '../util';
+import { compileGraphQLToProto } from '../../src/index.js';
+import { expectValidProto } from '../util.js';
 
 describe('SDL to Proto - Edge Cases and Error Handling', () => {
   test('should handle schema with only scalar fields correctly', () => {

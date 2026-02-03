@@ -1,5 +1,5 @@
 import { describe, expect, it, test } from 'vitest';
-import { compileGraphQLToMapping } from '../../src';
+import { compileGraphQLToMapping } from '../../src/index.js';
 
 describe('GraphQL Federation to Proto Mapping', () => {
   it('maps basic federation entity with @key directive', () => {

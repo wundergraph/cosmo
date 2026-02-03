@@ -18,6 +18,7 @@ import {
   SelectionSetNode,
   visit,
 } from 'graphql';
+import { FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { CompositeMessageKind, ProtoMessage, RPCMethod, VisitContext } from './types.js';
 import { KEY_DIRECTIVE_NAME } from './string-constants.js';
 import {
@@ -30,7 +31,6 @@ import {
 } from './naming-conventions.js';
 import { getProtoTypeFromGraphQL } from './proto-utils.js';
 import { AbstractSelectionRewriter } from './abstract-selection-rewriter.js';
-import { FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 /**
  * A record mapping key directive strings to their corresponding RequiredFieldMapping.
@@ -83,7 +83,7 @@ export class RequiredFieldsVisitor {
   private ancestors: GraphQLObjectType[] = [];
   private currentType: GraphQLObjectType | undefined = this.objectType;
   private keyDirectives: DirectiveNode[] = [];
-  private currentKeyFieldsString: string = '';
+  private currentKeyFieldsString = '';
 
   /** Collected RPC methods for the required fields */
   private rpcMethods: RPCMethod[] = [];
@@ -365,10 +365,10 @@ export class RequiredFieldsVisitor {
    * @throws Error if the field definition is not found on the current type
    */
   private onEnterField(ctx: VisitContext<FieldNode>): void {
-    if (!this.current) return;
+    if (!this.current) { return; }
 
     const fieldDefinition = this.fieldDefinition(ctx.node.name.value);
-    if (!fieldDefinition) throw new Error(`Field definition not found for field ${ctx.node.name.value}`);
+    if (!fieldDefinition) { throw new Error(`Field definition not found for field ${ctx.node.name.value}`); }
 
     if (this.isCompositeType(fieldDefinition.type)) {
       this.handleCompositeType(fieldDefinition);
@@ -415,7 +415,7 @@ export class RequiredFieldsVisitor {
     const currentInlineFragment = this.currentInlineFragment;
     this.currentInlineFragment = this.inlineFragmentStack.pop() ?? undefined;
 
-    if (!this.current || !this.current.compositeType) return;
+    if (!this.current || !this.current.compositeType) { return; }
 
     if (this.current.compositeType.kind === CompositeMessageKind.UNION) {
       this.current.compositeType.memberTypes.push(currentInlineFragment?.typeCondition?.name.value ?? '');
@@ -430,7 +430,7 @@ export class RequiredFieldsVisitor {
    * @param ctx - The visit context containing the selection set node and its parent
    */
   private onEnterSelectionSet(ctx: VisitContext<SelectionSetNode>): void {
-    if (!ctx.parent || !this.current) return;
+    if (!ctx.parent || !this.current) { return; }
 
     let currentType: GraphQLType | undefined;
     if (this.isFieldNode(ctx.parent)) {
@@ -441,14 +441,14 @@ export class RequiredFieldsVisitor {
       }
     } else if (this.isInlineFragmentNode(ctx.parent)) {
       const typeName = ctx.parent.typeCondition?.name.value;
-      if (!typeName) return;
+      if (!typeName) { return; }
 
       currentType = this.findObjectType(typeName) ?? undefined;
     } else {
       return;
     }
 
-    if (!this.currentType) return;
+    if (!this.currentType) { return; }
 
     this.ancestors.push(this.currentType);
     this.currentType = currentType;
@@ -495,7 +495,7 @@ export class RequiredFieldsVisitor {
    * @param fieldDefinition - The field definition with a composite type
    */
   private handleCompositeType(fieldDefinition: GraphQLField<any, any, any>): void {
-    if (!this.current) return;
+    if (!this.current) { return; }
     const compositeType = getNamedType(fieldDefinition.type);
 
     if (isInterfaceType(compositeType)) {
@@ -514,8 +514,6 @@ export class RequiredFieldsVisitor {
         memberTypes: [],
         typeName: compositeType.name,
       };
-
-      return;
     }
   }
 
@@ -526,7 +524,7 @@ export class RequiredFieldsVisitor {
    * @returns True if the node is a FieldNode
    */
   private isFieldNode(node: ASTNode | ReadonlyArray<ASTNode>): node is FieldNode {
-    if (Array.isArray(node)) return false;
+    if (Array.isArray(node)) { return false; }
     return (node as ASTNode).kind === Kind.FIELD;
   }
 
@@ -537,7 +535,7 @@ export class RequiredFieldsVisitor {
    * @returns True if the node is an InlineFragmentNode
    */
   private isInlineFragmentNode(node: ASTNode | ReadonlyArray<ASTNode>): node is InlineFragmentNode {
-    if (Array.isArray(node)) return false;
+    if (Array.isArray(node)) { return false; }
     return (node as ASTNode).kind === Kind.INLINE_FRAGMENT;
   }
 
@@ -550,7 +548,7 @@ export class RequiredFieldsVisitor {
   private findObjectTypeForField(fieldName: string): GraphQLObjectType | undefined {
     const fields = this.currentType?.getFields() ?? {};
     const field = fields[fieldName];
-    if (!field) return undefined;
+    if (!field) { return undefined; }
 
     const namedType = getNamedType(field.type);
     if (isObjectType(namedType)) {
@@ -578,9 +576,9 @@ export class RequiredFieldsVisitor {
    */
   private findObjectType(typeName: string): GraphQLObjectType | undefined {
     const type = this.schema.getTypeMap()[typeName];
-    if (!type) return undefined;
+    if (!type) { return undefined; }
 
-    if (!isObjectType(type)) return undefined;
+    if (!isObjectType(type)) { return undefined; }
     return type;
   }
 
@@ -592,7 +590,7 @@ export class RequiredFieldsVisitor {
    */
   private getKeyFieldsString(directive: DirectiveNode): string {
     const fieldsArg = directive.arguments?.find((arg) => arg.name.value === 'fields');
-    if (!fieldsArg) return '';
+    if (!fieldsArg) { return ''; }
 
     return fieldsArg.value.kind === Kind.STRING ? fieldsArg.value.value : '';
   }

@@ -23,13 +23,13 @@ import {
   specifiedRules,
   KnownDirectivesRule,
 } from 'graphql';
+import { upperFirst, camelCase } from 'lodash-es';
 import { createFieldNumberManager } from './operations/field-numbering.js';
 import { buildMessageFromSelectionSet } from './operations/message-builder.js';
 import { buildRequestMessage, buildInputObjectMessage, buildEnumType } from './operations/request-builder.js';
 import { rootToProtoText } from './operations/proto-text-generator.js';
 import { mapGraphQLTypeToProto } from './operations/type-mapper.js';
 import { createRequestMessageName, createResponseMessageName } from './naming-conventions.js';
-import { upperFirst, camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
 import { IdempotencyLevel, MethodWithIdempotency } from './types.js';
 
@@ -261,7 +261,7 @@ class OperationsToProtoVisitor {
     // 2. Validate operation name starts with uppercase letter
     // This follows protobuf RPC naming conventions while allowing flexibility
     // Must start with uppercase letter, followed by letters/numbers
-    if (!/^[A-Z][a-zA-Z0-9]*$/.test(operationName)) {
+    if (!/^[A-Z][\dA-Za-z]*$/.test(operationName)) {
       const suggestedName = upperFirst(camelCase(operationName));
       throw new Error(
         `Operation name "${operationName}" must start with an uppercase letter ` +
@@ -448,12 +448,15 @@ class OperationsToProtoVisitor {
    */
   private getRootType(operationType: OperationTypeNode): GraphQLObjectType {
     switch (operationType) {
-      case OperationTypeNode.QUERY:
+      case OperationTypeNode.QUERY: {
         return this.schema.getQueryType()!;
-      case OperationTypeNode.MUTATION:
+      }
+      case OperationTypeNode.MUTATION: {
         return this.schema.getMutationType()!;
-      case OperationTypeNode.SUBSCRIPTION:
+      }
+      case OperationTypeNode.SUBSCRIPTION: {
         return this.schema.getSubscriptionType()!;
+      }
     }
   }
 

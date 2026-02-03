@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatKeyElements, createMethodSuffixFromEntityKey } from '../src/naming-conventions';
+import { formatKeyElements, createMethodSuffixFromEntityKey } from '../src/naming-conventions.js';
 
 describe('formatKeyElements', () => {
   it('handles comma-separated keys', () => {

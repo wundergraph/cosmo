@@ -1,6 +1,6 @@
 import { describe, expect, it, test } from 'vitest';
-import { compileGraphQLToProto } from '../../src';
-import { expectValidProto } from '../util';
+import { compileGraphQLToProto } from '../../src/index.js';
+import { expectValidProto } from '../util.js';
 
 describe('SDL to Proto - Basic Types', () => {
   test('should convert scalar types correctly', () => {

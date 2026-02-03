@@ -15,7 +15,7 @@ import { SDLValidationVisitor, type ValidationResult } from './sdl-validation-vi
  */
 export function compileGraphQLToMapping(
   schemaOrSDL: GraphQLSchema | string,
-  serviceName: string = 'DefaultService',
+  serviceName = 'DefaultService',
 ): GRPCMapping {
   // If a string was provided, build the schema
   const schema =

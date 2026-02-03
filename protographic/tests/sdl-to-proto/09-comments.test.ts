@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { compileGraphQLToProto } from '../../src';
-import { expectValidProto } from '../util';
+import { compileGraphQLToProto } from '../../src/index.js';
+import { expectValidProto } from '../util.js';
 
 describe('SDL to Proto Comments', () => {
   it('should convert GraphQL type descriptions to Proto comments', () => {

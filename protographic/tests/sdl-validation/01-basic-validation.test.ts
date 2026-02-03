@@ -1,6 +1,6 @@
 import { buildSchema } from 'graphql';
 import { describe, expect, test } from 'vitest';
-import { SDLValidationVisitor } from '../../src/sdl-validation-visitor';
+import { SDLValidationVisitor } from '../../src/sdl-validation-visitor.js';
 
 describe('SDL Validation', () => {
   test('should validate a basic schema', () => {

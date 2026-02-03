@@ -63,7 +63,7 @@ export function createResponseMessageName(methodName: string): string {
 /**
  * Creates an entity lookup method name for an entity type
  */
-export function createEntityLookupMethodName(typeName: string, keyString: string = 'id'): string {
+export function createEntityLookupMethodName(typeName: string, keyString = 'id'): string {
   const normalizedKey = createMethodSuffixFromEntityKey(keyString);
   return `Lookup${typeName}${normalizedKey}`;
 }
@@ -74,7 +74,7 @@ export function createEntityLookupMethodName(typeName: string, keyString: string
  * @param keyString - The key string
  * @returns The name of the key message
  */
-export function createEntityLookupRequestKeyMessageName(typeName: string, keyString: string = 'id'): string {
+export function createEntityLookupRequestKeyMessageName(typeName: string, keyString = 'id'): string {
   const requestName = createRequestMessageName(createEntityLookupMethodName(typeName, keyString));
   return `${requestName}Key`;
 }
@@ -91,7 +91,7 @@ export function createEntityLookupRequestKeyMessageName(typeName: string, keyStr
  * createRequiredFieldsMethodName('User', 'post', 'id name') // => 'RequireUserPostByIdAndName'
  * createRequiredFieldsMethodName('User', 'post', 'name,id') // => 'RequireUserPostByIdAndName'
  */
-export function createRequiredFieldsMethodName(typeName: string, fieldName: string, keyString: string = 'id'): string {
+export function createRequiredFieldsMethodName(typeName: string, fieldName: string, keyString = 'id'): string {
   const normalizedKey = createMethodSuffixFromEntityKey(keyString);
   return `Require${typeName}${upperFirst(camelCase(fieldName))}${normalizedKey}`;
 }
@@ -101,7 +101,7 @@ export function createRequiredFieldsMethodName(typeName: string, fieldName: stri
  * @param keyString - The key string
  * @returns The method suffix
  */
-export function createMethodSuffixFromEntityKey(keyString: string = 'id'): string {
+export function createMethodSuffixFromEntityKey(keyString = 'id'): string {
   const normalizedKey = formatKeyElements(keyString).join('And');
 
   return `By${normalizedKey}`;
@@ -130,7 +130,7 @@ export function normalizeKeyString(keyString: string): string {
   }
 
   const normalizedFieldSet = getNormalizedFieldSet(documentNode);
-  return [...new Set(normalizedFieldSet.split(/[,\s]+/))].join(' ');
+  return [...new Set(normalizedFieldSet.split(/[\s,]+/))].join(' ');
 }
 
 /**
@@ -150,7 +150,7 @@ export function normalizeKeyString(keyString: string): string {
  */
 export function formatKeyElements(keyString: string): string[] {
   return normalizeKeyString(keyString)
-    .split(/[,\s]+/)
+    .split(/[\s,]+/)
     .map((field) => upperFirst(camelCase(field)));
 }
 

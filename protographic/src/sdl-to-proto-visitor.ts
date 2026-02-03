@@ -25,6 +25,7 @@ import {
   Kind,
   StringValueNode,
 } from 'graphql';
+import { camelCase } from 'lodash-es';
 import {
   createEntityLookupMethodName,
   createEnumUnspecifiedValue,
@@ -38,7 +39,6 @@ import {
   typeFieldArgsName,
   typeFieldContextName,
 } from './naming-conventions.js';
-import { camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
 import {
   CONNECT_FIELD_RESOLVER,
@@ -170,7 +170,23 @@ export class GraphQLToProtoTextVisitor {
    * @param options - Configuration options for the visitor
    */
   constructor(schema: GraphQLSchema, options: GraphQLToProtoTextVisitorOptions = {}) {
-    const { serviceName = 'DefaultService', packageName = 'service.v1', lockData, includeComments = true } = options;
+    const {
+      serviceName = 'DefaultService',
+      packageName = 'service.v1',
+      lockData,
+      includeComments = true,
+      goPackage,
+      javaPackage,
+      javaOuterClassname,
+      javaMultipleFiles,
+      csharpNamespace,
+      rubyPackage,
+      phpNamespace,
+      phpMetadataNamespace,
+      objcClassPrefix,
+      swiftPrefix,
+      protoOptions,
+    } = options;
 
     this.schema = schema;
     this.serviceName = serviceName;
@@ -186,16 +202,16 @@ export class GraphQLToProtoTextVisitor {
     // Process language-specific proto options using buildProtoOptions
     const protoOptionsFromLanguageProps = buildProtoOptions(
       {
-        goPackage: options.goPackage,
-        javaPackage: options.javaPackage,
-        javaOuterClassname: options.javaOuterClassname,
-        javaMultipleFiles: options.javaMultipleFiles,
-        csharpNamespace: options.csharpNamespace,
-        rubyPackage: options.rubyPackage,
-        phpNamespace: options.phpNamespace,
-        phpMetadataNamespace: options.phpMetadataNamespace,
-        objcClassPrefix: options.objcClassPrefix,
-        swiftPrefix: options.swiftPrefix,
+        goPackage,
+        javaPackage,
+        javaOuterClassname,
+        javaMultipleFiles,
+        csharpNamespace,
+        rubyPackage,
+        phpNamespace,
+        phpMetadataNamespace,
+        objcClassPrefix,
+        swiftPrefix,
       },
       packageName,
     );
@@ -206,8 +222,8 @@ export class GraphQLToProtoTextVisitor {
     }
 
     // Process custom protoOptions array (for backward compatibility)
-    if (options.protoOptions && options.protoOptions.length > 0) {
-      const processedOptions = options.protoOptions.map((opt) => `option ${opt.name} = ${opt.constant};`);
+    if (protoOptions && protoOptions.length > 0) {
+      const processedOptions = protoOptions.map((opt) => `option ${opt.name} = ${opt.constant};`);
       this.options.push(...processedOptions);
     }
   }
@@ -303,7 +319,7 @@ export class GraphQLToProtoTextVisitor {
     // Add all wrapper messages first since they might be referenced by other messages
     if (this.nestedListWrappers.size > 0) {
       // Sort the wrappers by name for deterministic output
-      const sortedWrapperNames = Array.from(this.nestedListWrappers.keys()).sort();
+      const sortedWrapperNames = [...this.nestedListWrappers.keys()].sort();
       for (const wrapperName of sortedWrapperNames) {
         protoContent.push(this.nestedListWrappers.get(wrapperName)!);
       }
@@ -604,10 +620,10 @@ export class GraphQLToProtoTextVisitor {
       }
 
       // Skip non-object types
-      if (!isObjectType(type)) continue;
+      if (!isObjectType(type)) { continue; }
       const keyDirectives = this.getKeyDirectives(type);
       // Skip types that don't have @key directives
-      if (keyDirectives.length === 0) continue;
+      if (keyDirectives.length === 0) { continue; }
 
       // Queue this type for message generation (only once)
       this.queueTypeForProcessing(type);
@@ -617,13 +633,13 @@ export class GraphQLToProtoTextVisitor {
       const normalizedKeysSet = new Set<string>();
       for (const keyDirective of keyDirectives) {
         const keyInfo = this.getKeyInfoFromDirective(keyDirective);
-        if (!keyInfo) continue;
+        if (!keyInfo) { continue; }
 
         const { keyString, resolvable } = keyInfo;
-        if (!resolvable) continue;
+        if (!resolvable) { continue; }
 
         const normalizedKey = keyString
-          .split(/[,\s]+/)
+          .split(/[\s,]+/)
           .filter((field) => field.length > 0)
           .sort()
           .join(' ');
@@ -685,7 +701,7 @@ export class GraphQLToProtoTextVisitor {
     // Get the root operation type (Query or Mutation)
     const rootType = operationType === 'Query' ? this.schema.getQueryType() : this.schema.getMutationType();
 
-    if (!rootType) return result;
+    if (!rootType) { return result; }
 
     const fields = rootType.getFields();
 
@@ -695,9 +711,9 @@ export class GraphQLToProtoTextVisitor {
 
     for (const fieldName of orderedFieldNames) {
       // Skip special fields like _entities
-      if (fieldName === '_entities') continue;
+      if (fieldName === '_entities') { continue; }
 
-      if (!fields[fieldName]) continue;
+      if (!fields[fieldName]) { continue; }
 
       const field = fields[fieldName];
       const mappedName = createOperationMethodName(operationType, fieldName);
@@ -757,7 +773,7 @@ export class GraphQLToProtoTextVisitor {
       name: methodName,
       request: requestName,
       response: responseName,
-      description: description,
+      description,
     });
 
     return rpcLines.join('\n');
@@ -800,7 +816,7 @@ export class GraphQLToProtoTextVisitor {
 
     // Add all key fields to the key message
     const protoKeyFields: string[] = [];
-    keyFields.forEach((keyField, index) => {
+    for (const [index, keyField] of keyFields.entries()) {
       const protoKeyField = graphqlFieldToProtoField(keyField);
       protoKeyFields.push(protoKeyField);
 
@@ -812,7 +828,7 @@ export class GraphQLToProtoTextVisitor {
         messageLines.push(...this.formatComment(keyFieldComment, 1)); // Field comment, indent 1 level
       }
       messageLines.push(`  string ${protoKeyField} = ${keyFieldNumber};`);
-    });
+    }
 
     messageLines.push('}');
     messageLines.push('');
@@ -954,7 +970,7 @@ Example:
       // Process arguments in the order specified by the lock manager
       for (const argName of orderedArgNames) {
         const arg = field.args.find((a) => a.name === argName);
-        if (!arg) continue;
+        if (!arg) { continue; }
 
         const argType = this.getProtoTypeFromGraphQL(arg.type);
         const argProtoName = graphqlFieldToProtoField(arg.name);
@@ -1109,16 +1125,16 @@ Example:
     const typeMap = this.schema.getTypeMap();
     const result: CollectionResult = { rpcMethods: [], methodNames: [], messageDefinitions: [] };
 
-    Object.values(typeMap).forEach((type) => {
+    for (const type of Object.values(typeMap)) {
       if (!isObjectType(type) || this.isOperationType(type)) {
-        return;
+        continue;
       }
 
       const fields = type.getFields();
 
-      Object.values(fields).forEach((field) => {
+      for (const field of Object.values(fields)) {
         if (field.args.length === 0) {
-          return;
+          continue;
         }
 
         const methodName = createResolverMethodName(type.name, field.name);
@@ -1131,8 +1147,8 @@ Example:
 
         result.messageDefinitions.push(...this.createResolverRequestMessage(methodName, requestName, type, field));
         result.messageDefinitions.push(...this.createResolverResponseMessage(methodName, responseName, field));
-      });
-    });
+      }
+    }
 
     return result;
   }
@@ -1162,7 +1178,7 @@ Example:
 
         result.rpcMethods.push(...rpcMethods.map((m) => renderRPCMethod(this.includeComments, m).join('\n')));
         result.methodNames.push(...rpcMethods.map((m) => m.name));
-        let messageLines = messageDefinitions.map((m) => buildProtoMessage(this.includeComments, m)).flat();
+        const messageLines = messageDefinitions.flatMap((m) => buildProtoMessage(this.includeComments, m));
         result.messageDefinitions.push(...messageLines);
       }
     }
@@ -1197,15 +1213,18 @@ Example:
 
     const idFields = this.getIDFields(parent, field.name);
     switch (idFields.length) {
-      case 0:
+      case 0: {
         return { context: '', error: 'No fields with type ID found' };
-      case 1:
+      }
+      case 1: {
         return { context: idFields[0].name, error: undefined };
-      default:
+      }
+      default: {
         return {
           context: '',
           error: `Multiple fields with type ID found - provide a context with the fields you want to use in the @${CONNECT_FIELD_RESOLVER} directive`,
         };
+      }
     }
   }
 
@@ -1297,7 +1316,7 @@ Example:
     );
 
     // filter the fields in the parent type that are in the context
-    const searchFields = context.split(/[,\s]+/).filter((field) => field.length > 0);
+    const searchFields = context.split(/[\s,]+/).filter((field) => field.length > 0);
     const fieldFilter = Object.values(parent.getFields()).filter((field) => searchFields.includes(field.name));
     if (searchFields.length !== fieldFilter.length) {
       throw new Error(`Invalid field context for resolver. Could not find all fields in the parent type: ${context}`);
@@ -1317,7 +1336,7 @@ Example:
     );
 
     fieldNumber = 0;
-    let keyMessageFields: ProtoMessageField[] = [];
+    const keyMessageFields: ProtoMessageField[] = [];
 
     // add the context message to the key message
     keyMessageFields.push({
@@ -1560,7 +1579,7 @@ Example:
     const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(type.name, fieldNames);
 
     for (const fieldName of orderedFieldNames) {
-      if (!fields[fieldName]) continue;
+      if (!fields[fieldName]) { continue; }
 
       // ignore fields with arguments as those are handled in separate resolver rpcs
       const field = fields[fieldName];
@@ -1705,7 +1724,7 @@ Example:
     const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(type.name, fieldNames);
 
     for (const fieldName of orderedFieldNames) {
-      if (!fields[fieldName]) continue;
+      if (!fields[fieldName]) { continue; }
 
       const field = fields[fieldName];
       const fieldType = this.getProtoTypeFromGraphQL(field.type);
@@ -1762,7 +1781,7 @@ Example:
     this.processedTypes.add(type.name);
 
     const implementingTypes = Object.values(this.schema.getTypeMap())
-      .filter(isObjectType)
+      .filter((t) => isObjectType(t))
       .filter((t) => t.getInterfaces().some((i) => i.name === type.name));
 
     if (implementingTypes.length === 0) {
@@ -1789,10 +1808,9 @@ Example:
     const typeNames = implementingTypes.map((t) => t.name);
     const orderedTypeNames = this.lockManager.reconcileMessageFieldOrder(`${type.name}Implementations`, typeNames);
 
-    for (let i = 0; i < orderedTypeNames.length; i++) {
-      const typeName = orderedTypeNames[i];
+    for (const [i, typeName] of orderedTypeNames.entries()) {
       const implType = implementingTypes.find((t) => t.name === typeName);
-      if (!implType) continue;
+      if (!implType) { continue; }
 
       // Add implementing type description as comment if available
       if (implType.description) {
@@ -1848,10 +1866,9 @@ Example:
     const typeNames = types.map((t) => t.name);
     const orderedTypeNames = this.lockManager.reconcileMessageFieldOrder(`${type.name}Members`, typeNames);
 
-    for (let i = 0; i < orderedTypeNames.length; i++) {
-      const typeName = orderedTypeNames[i];
+    for (const [i, typeName] of orderedTypeNames.entries()) {
       const memberType = types.find((t) => t.name === typeName);
-      if (!memberType) continue;
+      if (!memberType) { continue; }
 
       // Add member type description as comment if available
       if (memberType.description) {
@@ -1917,7 +1934,7 @@ Example:
 
     for (const valueName of orderedValueNames) {
       const value = values.find((v) => v.name === valueName);
-      if (!value) continue;
+      if (!value) { continue; }
 
       const protoEnumValue = graphqlEnumValueToProtoEnumValue(type.name, value.name);
 
@@ -1967,7 +1984,7 @@ Example:
    * @param ignoreWrapperTypes - If true, do not use wrapper types for nullable scalar fields
    * @returns The corresponding Protocol Buffer type name
    */
-  private getProtoTypeFromGraphQL(graphqlType: GraphQLType, ignoreWrapperTypes: boolean = false): ProtoFieldType {
+  private getProtoTypeFromGraphQL(graphqlType: GraphQLType, ignoreWrapperTypes = false): ProtoFieldType {
     const protoFieldType = getProtoTypeFromGraphQL(this.includeComments, graphqlType, ignoreWrapperTypes);
     if (!ignoreWrapperTypes && protoFieldType.isWrapper) {
       this.usesWrapperTypes = true;
@@ -2009,7 +2026,7 @@ Example:
    * @returns A formatted string for the reserved statement
    */
   private formatReservedNumbers(numbers: number[]): string {
-    if (numbers.length === 0) return '';
+    if (numbers.length === 0) { return ''; }
 
     // Sort numbers for better readability
     const sortedNumbers = [...numbers].sort((a, b) => a - b);
@@ -2042,11 +2059,7 @@ Example:
     // Format the ranges
     return ranges
       .map(([start, end]) => {
-        if (start === end) {
-          return start.toString();
-        } else {
-          return `${start} to ${end}`;
-        }
+        return start === end ? start.toString() : `${start} to ${end}`;
       })
       .join(', ');
   }
@@ -2057,7 +2070,7 @@ Example:
    * @param indentLevel - The level of indentation for the comment (in number of 2-space blocks)
    * @returns Array of comment lines with proper indentation
    */
-  private formatComment(description: string | undefined | null, indentLevel: number = 0): string[] {
+  private formatComment(description: string | undefined | null, indentLevel = 0): string[] {
     return formatComment(this.includeComments, description, indentLevel);
   }
 
