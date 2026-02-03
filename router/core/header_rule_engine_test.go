@@ -1057,13 +1057,15 @@ func TestExpression(t *testing.T) {
 	})
 }
 
-func TestClientHeaderRules(t *testing.T) {
-	t.Run("Should set client response header with static expression", func(t *testing.T) {
+func TestRouterResponseHeaderRules(t *testing.T) {
+	t.Run("Should set router response header with static expression", func(t *testing.T) {
 		ht, err := NewHeaderPropagation(&config.HeaderRules{
-			Client: []*config.ClientHeaderRule{
-				{
-					Name:       "X-Client-Header",
-					Expression: "\"static-value\"",
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Client-Header",
+						Expression: "\"static-value\"",
+					},
 				},
 			},
 		})
@@ -1084,18 +1086,20 @@ func TestClientHeaderRules(t *testing.T) {
 		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
 		reqCtx.request = clientReq
 
-		err = ht.ApplyClientResponseHeaderRules(rr, reqCtx)
+		err = ht.ApplyRouterResponseHeaderRules(rr, reqCtx)
 		assert.NoError(t, err)
 
 		assert.Equal(t, "static-value", rr.Header().Get("X-Client-Header"))
 	})
 
-	t.Run("Should set client response header with expression from request header", func(t *testing.T) {
+	t.Run("Should set router response header with expression from request header", func(t *testing.T) {
 		ht, err := NewHeaderPropagation(&config.HeaderRules{
-			Client: []*config.ClientHeaderRule{
-				{
-					Name:       "X-Client-ID",
-					Expression: "request.header.Get(\"X-User-ID\")",
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Client-ID",
+						Expression: "request.header.Get(\"X-User-ID\")",
+					},
 				},
 			},
 		})
@@ -1117,22 +1121,24 @@ func TestClientHeaderRules(t *testing.T) {
 		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
 		reqCtx.request = clientReq
 
-		err = ht.ApplyClientResponseHeaderRules(rr, reqCtx)
+		err = ht.ApplyRouterResponseHeaderRules(rr, reqCtx)
 		assert.NoError(t, err)
 
 		assert.Equal(t, "user-123", rr.Header().Get("X-Client-ID"))
 	})
 
-	t.Run("Should set multiple client response headers", func(t *testing.T) {
+	t.Run("Should set multiple router response headers", func(t *testing.T) {
 		ht, err := NewHeaderPropagation(&config.HeaderRules{
-			Client: []*config.ClientHeaderRule{
-				{
-					Name:       "X-Client-Header-1",
-					Expression: "\"value-1\"",
-				},
-				{
-					Name:       "X-Client-Header-2",
-					Expression: "\"value-2\"",
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Client-Header-1",
+						Expression: "\"value-1\"",
+					},
+					{
+						Name:       "X-Client-Header-2",
+						Expression: "\"value-2\"",
+					},
 				},
 			},
 		})
@@ -1153,19 +1159,21 @@ func TestClientHeaderRules(t *testing.T) {
 		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
 		reqCtx.request = clientReq
 
-		err = ht.ApplyClientResponseHeaderRules(rr, reqCtx)
+		err = ht.ApplyRouterResponseHeaderRules(rr, reqCtx)
 		assert.NoError(t, err)
 
 		assert.Equal(t, "value-1", rr.Header().Get("X-Client-Header-1"))
 		assert.Equal(t, "value-2", rr.Header().Get("X-Client-Header-2"))
 	})
 
-	t.Run("Should set client response header with complex expression", func(t *testing.T) {
+	t.Run("Should set router response header with complex expression", func(t *testing.T) {
 		ht, err := NewHeaderPropagation(&config.HeaderRules{
-			Client: []*config.ClientHeaderRule{
-				{
-					Name:       "X-Combined-Header",
-					Expression: "request.header.Get(\"X-User-ID\") + \"-\" + request.header.Get(\"X-Session-ID\")",
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Combined-Header",
+						Expression: "request.header.Get(\"X-User-ID\") + \"-\" + request.header.Get(\"X-Session-ID\")",
+					},
 				},
 			},
 		})
@@ -1188,18 +1196,20 @@ func TestClientHeaderRules(t *testing.T) {
 		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
 		reqCtx.request = clientReq
 
-		err = ht.ApplyClientResponseHeaderRules(rr, reqCtx)
+		err = ht.ApplyRouterResponseHeaderRules(rr, reqCtx)
 		assert.NoError(t, err)
 
 		assert.Equal(t, "user-123-session-456", rr.Header().Get("X-Combined-Header"))
 	})
 
-	t.Run("Should return error when client header expression is invalid", func(t *testing.T) {
+	t.Run("Should return error when router response header expression is invalid", func(t *testing.T) {
 		ht, err := NewHeaderPropagation(&config.HeaderRules{
-			Client: []*config.ClientHeaderRule{
-				{
-					Name:       "X-Invalid",
-					Expression: "invalid expression syntax",
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Invalid",
+						Expression: "invalid expression syntax",
+					},
 				},
 			},
 		})
@@ -1207,12 +1217,14 @@ func TestClientHeaderRules(t *testing.T) {
 		assert.Error(t, err)
 	})
 
-	t.Run("Should ignore client header rules which resolve to \"\"", func(t *testing.T) {
+	t.Run("Should ignore router response header rules which resolve to \"\"", func(t *testing.T) {
 		ht, err := NewHeaderPropagation(&config.HeaderRules{
-			Client: []*config.ClientHeaderRule{
-				{
-					Name:       "X-Client-ID",
-					Expression: "\"\"",
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Client-ID",
+						Expression: "\"\"",
+					},
 				},
 			},
 		})
@@ -1233,7 +1245,7 @@ func TestClientHeaderRules(t *testing.T) {
 		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
 		reqCtx.request = clientReq
 
-		err = ht.ApplyClientResponseHeaderRules(rr, reqCtx)
+		err = ht.ApplyRouterResponseHeaderRules(rr, reqCtx)
 		assert.NoError(t, err)
 
 		// Should not set the header since the expression resolves to empty string

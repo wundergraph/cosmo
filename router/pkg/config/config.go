@@ -263,7 +263,12 @@ type HeaderRules struct {
 	All             *GlobalHeaderRule            `yaml:"all,omitempty"`
 	Subgraphs       map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
 	CookieWhitelist []string                     `yaml:"cookie_whitelist,omitempty"`
-	Client          []*ClientHeaderRule          `yaml:"client,omitempty"`
+	Router          RouterHeaderRules            `yaml:"router,omitempty"`
+}
+
+type RouterHeaderRules struct {
+	// All is a set of rules that apply to all response
+	Response []*RouterResponseHeaderRule `yaml:"client,omitempty"`
 }
 
 type GlobalHeaderRule struct {
@@ -330,7 +335,7 @@ const (
 	ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl ResponseHeaderRuleAlgorithm = "most_restrictive_cache_control"
 )
 
-type ClientHeaderRule struct {
+type RouterResponseHeaderRule struct {
 	// Set header options
 	Name       string `yaml:"name"`
 	Expression string `yaml:"expression"`

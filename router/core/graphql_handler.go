@@ -195,7 +195,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Apply any final client response header rules
 		if h.headerPropagation != nil {
-			if err := h.headerPropagation.ApplyClientResponseHeaderRules(w, reqCtx); err != nil {
+			if err := h.headerPropagation.ApplyRouterResponseHeaderRules(w, reqCtx); err != nil {
 				reqCtx.logger.Error("Failed to apply client response header rules", zap.Error(err))
 			}
 		}

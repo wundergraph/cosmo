@@ -2,11 +2,12 @@ package integration
 
 import (
 	"encoding/json"
-	"go.uber.org/zap/zapcore"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"go.uber.org/zap/zapcore"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1036,22 +1037,24 @@ func TestHeaderPropagation(t *testing.T) {
 		})
 	})
 
-	t.Run("Client Header Rules", func(t *testing.T) {
+	t.Run("Router Response Header Rules", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("should set client headers from static expressions", func(t *testing.T) {
+		t.Run("should set router response headers from static expressions", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithHeaderRules(config.HeaderRules{
-						Client: []*config.ClientHeaderRule{
-							{
-								Name:       "X-Static-Header",
-								Expression: `"static-value"`,
-							},
-							{
-								Name:       "X-Another-Header",
-								Expression: `"another-value"`,
+						Router: config.RouterHeaderRules{
+							Response: []*config.RouterResponseHeaderRule{
+								{
+									Name:       "X-Static-Header",
+									Expression: `"static-value"`,
+								},
+								{
+									Name:       "X-Another-Header",
+									Expression: `"another-value"`,
+								},
 							},
 						},
 					}),
@@ -1065,15 +1068,17 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
-		t.Run("should set client headers from request headers", func(t *testing.T) {
+		t.Run("should set router response headers from request headers", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithHeaderRules(config.HeaderRules{
-						Client: []*config.ClientHeaderRule{
-							{
-								Name:       "X-Echo-Header",
-								Expression: `request.header.Get("X-Custom-Input")`,
+						Router: config.RouterHeaderRules{
+							Response: []*config.RouterResponseHeaderRule{
+								{
+									Name:       "X-Echo-Header",
+									Expression: `request.header.Get("X-Custom-Input")`,
+								},
 							},
 						},
 					}),
@@ -1108,10 +1113,12 @@ func TestHeaderPropagation(t *testing.T) {
 									},
 								},
 							},
-							Client: []*config.ClientHeaderRule{
-								{
-									Name:       "X-Client-Header",
-									Expression: `"client-value"`,
+							Router: config.RouterHeaderRules{
+								Response: []*config.RouterResponseHeaderRule{
+									{
+										Name:       "X-Client-Header",
+										Expression: `"client-value"`,
+									},
 								},
 							},
 						}),
@@ -1121,41 +1128,47 @@ func TestHeaderPropagation(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: queryEmployeeWithHobby,
 					})
-					// Check that both client header and propagated response header are present
+					// Check that both router response header and propagated response header are present
 					require.Equal(t, "client-value", res.Response.Header.Get("X-Client-Header"))
 					require.Equal(t, employeeVal, res.Response.Header.Get("X-Custom-Header"))
 				})
 			})
 
-			t.Run("when the same header is in use ensure client header overrides", func(t *testing.T) {
+			t.Run("when the same header is in use", func(t *testing.T) {
 				t.Parallel()
 
-				testenv.Run(t, &testenv.Config{
-					RouterOptions: []core.Option{
-						core.WithHeaderRules(config.HeaderRules{
-							All: &config.GlobalHeaderRule{
-								Response: []*config.ResponseHeaderRule{
-									{
-										Operation: config.HeaderRuleOperationPropagate,
-										Named:     "X-Client-Header",
-										Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite,
+				t.Run("ensure router response header overrides", func(t *testing.T) {
+					t.Parallel()
+
+					testenv.Run(t, &testenv.Config{
+						RouterOptions: []core.Option{
+							core.WithHeaderRules(config.HeaderRules{
+								All: &config.GlobalHeaderRule{
+									Response: []*config.ResponseHeaderRule{
+										{
+											Operation: config.HeaderRuleOperationPropagate,
+											Named:     "X-Custom-Header",
+											Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite,
+										},
 									},
 								},
-							},
-							Client: []*config.ClientHeaderRule{
-								{
-									Name:       "X-Client-Header",
-									Expression: `"client-value"`,
+								Router: config.RouterHeaderRules{
+									Response: []*config.RouterResponseHeaderRule{
+										{
+											Name:       "X-Custom-Header",
+											Expression: `"client-value"`,
+										},
+									},
 								},
-							},
-						}),
-					},
-					Subgraphs: subgraphsPropagateCustomHeader,
-				}, func(t *testing.T, xEnv *testenv.Environment) {
-					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-						Query: queryEmployeeWithHobby,
+							}),
+						},
+						Subgraphs: subgraphsPropagateCustomHeader,
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Query: queryEmployeeWithHobby,
+						})
+						require.Equal(t, "client-value", res.Response.Header.Get("X-Custom-Header"))
 					})
-					require.Equal(t, "client-value", res.Response.Header.Get("X-Client-Header"))
 				})
 			})
 		})
@@ -1174,10 +1187,12 @@ func TestHeaderPropagation(t *testing.T) {
 								},
 							},
 						},
-						Client: []*config.ClientHeaderRule{
-							{
-								Name:       "X-Client-Header",
-								Expression: `request.header.Get("X-Request-Header")`,
+						Router: config.RouterHeaderRules{
+							Response: []*config.RouterResponseHeaderRule{
+								{
+									Name:       "X-Router-Header",
+									Expression: `request.header.Get("X-Request-Header")`,
+								},
 							},
 						},
 					}),
@@ -1201,7 +1216,7 @@ func TestHeaderPropagation(t *testing.T) {
 					},
 				})
 				require.NoError(t, err)
-				require.Equal(t, "request-value", res.Response.Header.Get("X-Client-Header"))
+				require.Equal(t, "request-value", res.Response.Header.Get("X-Router-Header"))
 			})
 		})
 
@@ -1226,10 +1241,12 @@ func TestHeaderPropagation(t *testing.T) {
 								},
 							},
 						},
-						Client: []*config.ClientHeaderRule{
-							{
-								Name:       "X-Client-Header",
-								Expression: `request.header.Get("X-Request-Header")`,
+						Router: config.RouterHeaderRules{
+							Response: []*config.RouterResponseHeaderRule{
+								{
+									Name:       "X-Router-Header",
+									Expression: `request.header.Get("X-Request-Header")`,
+								},
 							},
 						},
 					}),
@@ -1256,7 +1273,7 @@ func TestHeaderPropagation(t *testing.T) {
 				})
 				require.NoError(t, err)
 				require.Equal(t, "passed", res.Response.Header.Get("X-Verification"))
-				require.Equal(t, "request-value", res.Response.Header.Get("X-Client-Header"))
+				require.Equal(t, "request-value", res.Response.Header.Get("X-Router-Header"))
 			})
 		})
 
@@ -1265,18 +1282,20 @@ func TestHeaderPropagation(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithHeaderRules(config.HeaderRules{
-						Client: []*config.ClientHeaderRule{
-							{
-								Name:       "X-Empty-Header",
-								Expression: `""`,
-							},
-							{
-								Name:       "X-Missing-Header",
-								Expression: `request.header.Get("X-Does-Not-Exist")`,
-							},
-							{
-								Name:       "X-Valid-Header",
-								Expression: `"valid-value"`,
+						Router: config.RouterHeaderRules{
+							Response: []*config.RouterResponseHeaderRule{
+								{
+									Name:       "X-Empty-Header",
+									Expression: `""`,
+								},
+								{
+									Name:       "X-Missing-Header",
+									Expression: `request.header.Get("X-Does-Not-Exist")`,
+								},
+								{
+									Name:       "X-Valid-Header",
+									Expression: `"valid-value"`,
+								},
 							},
 						},
 					}),
@@ -1298,14 +1317,16 @@ func TestHeaderPropagation(t *testing.T) {
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: []core.Option{
 					core.WithHeaderRules(config.HeaderRules{
-						Client: []*config.ClientHeaderRule{
-							{
-								Name:       "X-Client-Header",
-								Expression: `"client-value"`,
-							},
-							{
-								Name:       "X-Error-Header",
-								Expression: `request.error != nil ? "error" : "success"`,
+						Router: config.RouterHeaderRules{
+							Response: []*config.RouterResponseHeaderRule{
+								{
+									Name:       "X-Router-Header",
+									Expression: `"router-value"`,
+								},
+								{
+									Name:       "X-Error-Header",
+									Expression: `request.error != nil ? "error" : "success"`,
+								},
 							},
 						},
 					}),
@@ -1314,13 +1335,13 @@ func TestHeaderPropagation(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employee(id: 1) { id rootFieldThrowsError } }`,
 				})
-				// Client header should still be set even with errors
-				require.Equal(t, "client-value", res.Response.Header.Get("X-Client-Header"))
+				// Router response header should still be set even with errors
+				require.Equal(t, "router-value", res.Response.Header.Get("X-Router-Header"))
 				require.Equal(t, "error", res.Response.Header.Get("X-Error-Header"))
 			})
 		})
 
-		t.Run("should log errors (but not error out) when client header rule evaluation fails at runtime", func(t *testing.T) {
+		t.Run("should log errors (but not error out) when router response header rule evaluation fails at runtime", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t, &testenv.Config{
@@ -1330,14 +1351,16 @@ func TestHeaderPropagation(t *testing.T) {
 				},
 				RouterOptions: []core.Option{
 					core.WithHeaderRules(config.HeaderRules{
-						Client: []*config.ClientHeaderRule{
-							{
-								Name:       "X-Valid-Header",
-								Expression: `"valid-value"`,
-							},
-							{
-								Name:       "X-Invalid-Header",
-								Expression: `string(int("a"))`,
+						Router: config.RouterHeaderRules{
+							Response: []*config.RouterResponseHeaderRule{
+								{
+									Name:       "X-Valid-Header",
+									Expression: `"valid-value"`,
+								},
+								{
+									Name:       "X-Invalid-Header",
+									Expression: `string(int("a"))`,
+								},
 							},
 						},
 					}),
@@ -1358,12 +1381,12 @@ func TestHeaderPropagation(t *testing.T) {
 				logs := xEnv.Observer()
 				require.NotNil(t, logs)
 
-				errorLogs := logs.FilterMessage("Failed to apply client response header rules").All()
+				errorLogs := logs.FilterMessage("Failed to apply router response header rules").All()
 				require.Len(t, errorLogs, 1)
 
 				errorLog := errorLogs[0]
 				require.Equal(t, zapcore.ErrorLevel, errorLog.Level)
-				require.Equal(t, "Failed to apply client response header rules", errorLog.Message)
+				require.Equal(t, "Failed to apply router response header rules", errorLog.Message)
 				require.NotEmpty(t, errorLog.Context)
 			})
 		})
