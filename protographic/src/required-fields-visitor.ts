@@ -27,7 +27,7 @@ import {
   createResponseMessageName,
   graphqlFieldToProtoField,
   formatKeyElements,
-} from './naming-conventions';
+} from './naming-conventions.js';
 import { getProtoTypeFromGraphQL } from './proto-utils.js';
 import { AbstractSelectionRewriter } from './abstract-selection-rewriter.js';
 import { FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
