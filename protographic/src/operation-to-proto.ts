@@ -17,8 +17,6 @@ import {
   GraphQLEnumType,
   FragmentDefinitionNode,
   TypeNode,
-  NonNullTypeNode,
-  ListTypeNode,
   NamedTypeNode,
   Kind,
   validate,
@@ -30,11 +28,7 @@ import { buildMessageFromSelectionSet } from './operations/message-builder.js';
 import { buildRequestMessage, buildInputObjectMessage, buildEnumType } from './operations/request-builder.js';
 import { rootToProtoText } from './operations/proto-text-generator.js';
 import { mapGraphQLTypeToProto } from './operations/type-mapper.js';
-import {
-  createRequestMessageName,
-  createResponseMessageName,
-  createOperationMethodName,
-} from './naming-conventions.js';
+import { createRequestMessageName, createResponseMessageName } from './naming-conventions.js';
 import { upperFirst, camelCase } from 'lodash-es';
 import { ProtoLock, ProtoLockManager } from './proto-lock.js';
 import { IdempotencyLevel, MethodWithIdempotency } from './types.js';

@@ -17,9 +17,9 @@ import {
   RPCMethod,
   SCALAR_TYPE_MAP,
   SCALAR_WRAPPER_TYPE_MAP,
-} from './types';
-import { unwrapNonNullType, isNestedListType, calculateNestingLevel } from './operations/list-type-utils';
-import { graphqlFieldToProtoField } from './naming-conventions';
+} from './types.js';
+import { unwrapNonNullType, isNestedListType, calculateNestingLevel } from './operations/list-type-utils.js';
+import { graphqlFieldToProtoField } from './naming-conventions.js';
 
 const SPACE_INDENT = '  '; // 2 spaces
 const LINE_COMMENT_PREFIX = '// ';

@@ -11,7 +11,6 @@ import {
   isInputObjectType,
   isObjectType,
   Kind,
-  StringValueNode,
 } from 'graphql';
 import {
   createEntityLookupMethodName,
