@@ -407,7 +407,14 @@ export class SDLValidationVisitor {
 
     if (!this.isASTObjectTypeNode(parentType)) return;
 
-    const operationDoc = parse(`{ ${fieldSelections.value} }`);
+    let operationDoc;
+    try {
+      operationDoc = parse(`{ ${fieldSelections.value} }`);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      this.addError(`Invalid @${REQUIRES_DIRECTIVE_NAME} field selection syntax: ${errorMessage}`, ctx.node.loc);
+      return;
+    }
 
     const selectionSetValidationVisitor = new SelectionSetValidationVisitor(
       operationDoc,

@@ -23,6 +23,7 @@ import {
   graphqlArgumentToProtoField,
   graphqlEnumValueToProtoEnumValue,
   graphqlFieldToProtoField,
+  formatKeyElements,
   OperationTypeName,
 } from './naming-conventions.js';
 import {
@@ -153,8 +154,21 @@ export class GraphQLToProtoVisitor {
       visitor.visit();
       const mapping = visitor.getMapping();
 
+      const seenKeys = new Set<string>();
+
       for (const [key, value] of Object.entries(mapping)) {
-        const em = this.mapping.entityMappings.find((em) => em.typeName === type.name && em.key === key);
+        const normalizedKey = formatKeyElements(key).join(' ');
+
+        if (seenKeys.has(normalizedKey)) {
+          continue;
+        }
+
+        seenKeys.add(normalizedKey);
+
+        // Compare normalized versions of both keys to handle different formatting
+        const em = this.mapping.entityMappings.find(
+          (em) => em.typeName === type.name && formatKeyElements(em.key).join(' ') === normalizedKey,
+        );
         if (!em) {
           throw new Error(`Entity mapping not found for type ${type.name} and key ${key}`);
         }

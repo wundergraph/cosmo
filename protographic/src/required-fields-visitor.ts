@@ -26,11 +26,12 @@ import {
   createRequiredFieldsMethodName,
   createResponseMessageName,
   graphqlFieldToProtoField,
-  normalizeKeyElements,
+  formatKeyElements,
 } from './naming-conventions';
 import { getProtoTypeFromGraphQL } from './proto-utils';
 import { AbstractSelectionRewriter } from './abstract-selection-rewriter';
 import { FieldMapping, TypeFieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { getNormalizedFieldSet, safeParse } from '@wundergraph/composition';
 
 /**
  * Configuration options for the RequiredFieldsVisitor.
@@ -141,7 +142,8 @@ export class RequiredFieldsVisitor {
    */
   public visit(): void {
     for (const keyDirective of this.keyDirectives) {
-      this.currentKeyFieldsString = normalizeKeyElements(this.getKeyFieldsString(keyDirective)).join(' ');
+      const rawFieldSet = this.getKeyFieldsString(keyDirective);
+      this.currentKeyFieldsString = formatKeyElements(rawFieldSet).join(' ');
 
       if (this.mapping[this.currentKeyFieldsString]) {
         continue;

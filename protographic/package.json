@@ -39,6 +39,7 @@
   "dependencies": {
     "@bufbuild/protobuf": "^1.8.0",
     "@wundergraph/cosmo-connect": "workspace:*",
+    "@wundergraph/composition": "workspace:*",
     "graphql": "^16.9.0",
     "lodash-es": "4.17.21",
     "protobufjs": "^7.5.0"

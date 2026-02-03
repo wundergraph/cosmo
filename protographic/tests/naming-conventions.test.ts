@@ -1,45 +1,45 @@
 import { describe, expect, it } from 'vitest';
-import { normalizeKeyElements, createMethodSuffixFromEntityKey } from '../src/naming-conventions';
+import { formatKeyElements, createMethodSuffixFromEntityKey } from '../src/naming-conventions';
 
-describe('normalizeKeyElements', () => {
+describe('formatKeyElements', () => {
   it('handles comma-separated keys', () => {
-    expect(normalizeKeyElements('id,name')).toEqual(['Id', 'Name']);
+    expect(formatKeyElements('id,name')).toEqual(['Id', 'Name']);
   });
 
   it('handles space-separated keys', () => {
-    expect(normalizeKeyElements('name id')).toEqual(['Id', 'Name']);
+    expect(formatKeyElements('name id')).toEqual(['Id', 'Name']);
   });
 
   it('handles mixed separators (comma and space)', () => {
-    expect(normalizeKeyElements('id, name')).toEqual(['Id', 'Name']);
+    expect(formatKeyElements('id, name')).toEqual(['Id', 'Name']);
   });
 
   it('removes duplicates', () => {
-    expect(normalizeKeyElements('name id name')).toEqual(['Id', 'Name']);
+    expect(formatKeyElements('name id name')).toEqual(['Id', 'Name']);
   });
 
   it('sorts keys alphabetically', () => {
-    expect(normalizeKeyElements('name,id')).toEqual(['Id', 'Name']);
+    expect(formatKeyElements('name,id')).toEqual(['Id', 'Name']);
   });
 
   it('converts snake_case to PascalCase', () => {
-    expect(normalizeKeyElements('user_id')).toEqual(['UserId']);
+    expect(formatKeyElements('user_id')).toEqual(['UserId']);
   });
 
   it('handles single element', () => {
-    expect(normalizeKeyElements('id')).toEqual(['Id']);
+    expect(formatKeyElements('id')).toEqual(['Id']);
   });
 
   it('handles multiple snake_case words', () => {
-    expect(normalizeKeyElements('first_name last_name')).toEqual(['FirstName', 'LastName']);
+    expect(formatKeyElements('first_name last_name')).toEqual(['FirstName', 'LastName']);
   });
 
   it('handles camelCase input', () => {
-    expect(normalizeKeyElements('userId')).toEqual(['UserId']);
+    expect(formatKeyElements('userId')).toEqual(['UserId']);
   });
 
   it('handles multiple keys with various separators', () => {
-    expect(normalizeKeyElements('a, b c,d')).toEqual(['A', 'B', 'C', 'D']);
+    expect(formatKeyElements('a, b c,d')).toEqual(['A', 'B', 'C', 'D']);
   });
 });
 

@@ -1,3 +1,4 @@
+import { getNormalizedFieldSet, safeParse } from '@wundergraph/composition';
 import { camelCase, snakeCase, upperFirst } from 'lodash-es';
 
 /**
@@ -101,22 +102,56 @@ export function createRequiredFieldsMethodName(typeName: string, fieldName: stri
  * @returns The method suffix
  */
 export function createMethodSuffixFromEntityKey(keyString: string = 'id'): string {
-  const normalizedKey = normalizeKeyElements(keyString).join('And');
+  const normalizedKey = formatKeyElements(keyString).join('And');
 
   return `By${normalizedKey}`;
 }
 
 /**
- * Normalizes the key elements by sorting them alphabetically and removing duplicates.
- * @param keyString - The key string
- * @returns The normalized key elements
+ * Normalizes a key string into a canonical field set representation.
+ *
+ * Parses the key string as a GraphQL selection set and applies normalization
+ * logic from the composition package to produce a consistent string representation.
+ * @remarks We currently don't support nested keys, so we apply a simple deduplication logic.
+ *
+ * @param keyString - The key string from a @key directive (e.g., "id name", "id,name")
+ * @returns The normalized field set string
+ * @throws Error if the key string cannot be parsed as a valid GraphQL selection
+ *
  * @example
- * normalizeKeyElements('id,name') // => ['Id', 'Name']
- * normalizeKeyElements('name,id') // => ['Id', 'Name']
- * normalizeKeyElements('name id name') // => ['Id', 'Name']
+ * normalizeKeyString('id name')     // => 'id name'
+ * normalizeKeyString('name id')     // => 'id name' (sorted)
+ * normalizeKeyString('id,name')     // => 'id name'
  */
-export function normalizeKeyElements(keyString: string): string[] {
-  return [...new Set(keyString.split(/[,\s]+/))].map((field) => upperFirst(camelCase(field))).sort();
+export function normalizeKeyString(keyString: string): string {
+  const { error, documentNode } = safeParse('{' + keyString + '}');
+  if (error || !documentNode) {
+    throw new Error(`Invalid field set for key directive: ${keyString} - error: ${error?.message}`);
+  }
+
+  const normalizedFieldSet = getNormalizedFieldSet(documentNode);
+  return [...new Set(normalizedFieldSet.split(/[,\s]+/))].join(' ');
+}
+
+/**
+ * Formats key elements into PascalCase.
+ *
+ * This function normalizes a key string, splits it into individual field names,
+ * converts each to PascalCase. Used primarily for generating consistent method name suffixes from entity keys.
+ *
+ * @param keyString - The key string from a @key directive (e.g., "id name", "user_id,name")
+ * @returns Array of PascalCase field names
+ *
+ * @example
+ * formatKeyElements('id,name')       // => ['Id', 'Name']
+ * formatKeyElements('name,id')       // => ['Id', 'Name']
+ * formatKeyElements('name id name')  // => ['Id', 'Name']
+ * formatKeyElements('user_id')       // => ['UserId']
+ */
+export function formatKeyElements(keyString: string): string[] {
+  return normalizeKeyString(keyString)
+    .split(/[,\s]+/)
+    .map((field) => upperFirst(camelCase(field)));
 }
 
 /**

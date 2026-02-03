@@ -881,6 +881,9 @@ importers:
       '@bufbuild/protobuf':
         specifier: ^1.8.0
         version: 1.10.0
+      '@wundergraph/composition':
+        specifier: workspace:*
+        version: link:../composition
       '@wundergraph/cosmo-connect':
         specifier: workspace:*
         version: link:../connect
@@ -7846,9 +7849,6 @@ packages:
 
   '@types/node-fetch@2.6.11':
     resolution: {integrity: sha512-24xFj9R5+rfQJLRyM56qh+wnVSYhyXC2tkoBndtY0U+vubqNsYXGjufB2nn8Q6gt0LrARwL6UBtMCSVCwl4B1g==}
-
-  '@types/node@18.19.130':
-    resolution: {integrity: sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg==}
 
   '@types/node@18.19.21':
     resolution: {integrity: sha512-2Q2NeB6BmiTFQi4DHBzncSoq/cJMLDdhPaAoJFnFCyD9a8VPZRf7a1GAwp1Edb7ROaZc5Jz/tnZyL6EsWMRaqw==}
@@ -23108,11 +23108,6 @@ snapshots:
       '@types/node': 20.12.12
       form-data: 4.0.4
 
-  '@types/node@18.19.130':
-    dependencies:
-      undici-types: 5.26.5
-    optional: true
-
   '@types/node@18.19.21':
     dependencies:
       undici-types: 5.26.5
@@ -24140,7 +24135,7 @@ snapshots:
 
   bun-types@1.2.12:
     dependencies:
-      '@types/node': 18.19.130
+      '@types/node': 20.12.12
     optional: true
 
   bun-types@1.2.3:
@@ -27252,7 +27247,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 20.3.1
+      '@types/node': 20.12.12
       merge-stream: 2.0.0
       supports-color: 10.2.0
 

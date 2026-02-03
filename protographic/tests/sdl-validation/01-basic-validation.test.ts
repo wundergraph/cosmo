@@ -539,4 +539,50 @@ describe('SDL Validation', () => {
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(0);
   });
+
+  test('should return an error for invalid @requires field selection syntax', () => {
+    const sdl = `
+        type Query {
+            user: User!
+        }
+
+        type User @key(fields: "id") {
+            id: ID!
+            name: String! @external
+            age: Int! @requires(fields: "name {")
+        }
+    `;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(1);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.errors[0]).toContain('Invalid @requires field selection syntax');
+  });
+
+  test('should return an error for @requires with unclosed braces', () => {
+    const sdl = `
+        type Query {
+            user: User!
+        }
+
+        type User @key(fields: "id") {
+            id: ID!
+            details: Details! @external
+            computed: String! @requires(fields: "details { foo")
+        }
+
+        type Details {
+            foo: String!
+        }
+    `;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(1);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.errors[0]).toContain('Invalid @requires field selection syntax');
+  });
 });
