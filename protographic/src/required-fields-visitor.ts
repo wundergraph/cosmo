@@ -26,6 +26,7 @@ import {
   createRequiredFieldsMethodName,
   createResponseMessageName,
   graphqlFieldToProtoField,
+  normalizeKeyElements,
 } from './naming-conventions';
 import { getProtoTypeFromGraphQL } from './proto-utils';
 import { AbstractSelectionRewriter } from './abstract-selection-rewriter';
@@ -140,7 +141,11 @@ export class RequiredFieldsVisitor {
    */
   public visit(): void {
     for (const keyDirective of this.keyDirectives) {
-      this.currentKeyFieldsString = this.getKeyFieldsString(keyDirective);
+      this.currentKeyFieldsString = normalizeKeyElements(this.getKeyFieldsString(keyDirective)).join(' ');
+
+      if (this.mapping[this.currentKeyFieldsString]) {
+        continue;
+      }
 
       this.mapping[this.currentKeyFieldsString] = {
         requiredFieldMapping: new FieldMapping({

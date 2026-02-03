@@ -1,174 +1,228 @@
 import { describe, expect, it } from 'vitest';
 import { RequiredFieldsVisitor } from '../../src';
-import { buildSchema, GraphQLObjectType, StringValueNode, visit } from 'graphql';
+import { buildSchema, GraphQLField, GraphQLObjectType, GraphQLSchema, StringValueNode } from 'graphql';
 import { buildProtoMessage } from '../../src/proto-utils';
 import {
   CompositeMessageKind,
   InterfaceMessageDefinition,
   isInterfaceMessageDefinition,
   isUnionMessageDefinition,
+  ProtoMessage,
   ProtoMessageField,
+  RPCMethod,
   UnionMessageDefinition,
 } from '../../src/types';
+import { RequiredFieldMapping } from '../../src/required-fields-visitor';
+
+/**
+ * Options for creating a RequiredFieldsVisitor test setup.
+ */
+interface CreateVisitorOptions {
+  /** The GraphQL SDL to build the schema from */
+  sdl: string;
+  /** The name of the entity type (defaults to finding the type with @key directive) */
+  entityName: string;
+  /** The name of the field with the @requires directive */
+  requiredFieldName: string;
+  /** Optional explicit field set string (if not provided, extracted from @requires directive) */
+  fieldSet?: string;
+}
+
+/**
+ * Result of creating a RequiredFieldsVisitor test setup.
+ */
+interface VisitorTestSetup {
+  schema: GraphQLSchema;
+  entity: GraphQLObjectType;
+  requiredField: GraphQLField<any, any, any>;
+  visitor: RequiredFieldsVisitor;
+  /** Calls visitor.visit() and returns the results */
+  execute: () => VisitorResult;
+}
+
+/**
+ * Result of executing the visitor.
+ */
+interface VisitorResult {
+  rpcMethods: RPCMethod[];
+  messageDefinitions: ProtoMessage[];
+  mapping: Record<string, RequiredFieldMapping>;
+}
+
+/**
+ * Creates a RequiredFieldsVisitor test setup with common boilerplate handled.
+ *
+ * @param options - Configuration for the test setup
+ * @returns The test setup including the visitor and an execute function
+ * @throws Error if the entity or required field is not found
+ */
+function createVisitorSetup(options: CreateVisitorOptions): VisitorTestSetup {
+  const { sdl, entityName, requiredFieldName, fieldSet: explicitFieldSet } = options;
+
+  const schema = buildSchema(sdl, {
+    assumeValid: true,
+    assumeValidSDL: true,
+  });
+
+  const entity = schema.getTypeMap()[entityName] as GraphQLObjectType | undefined;
+  if (!entity) {
+    throw new Error(`Entity '${entityName}' not found in schema`);
+  }
+
+  const requiredField = entity.getFields()[requiredFieldName];
+  if (!requiredField) {
+    throw new Error(`Field '${requiredFieldName}' not found on entity '${entityName}'`);
+  }
+
+  // Extract fieldSet from @requires directive if not explicitly provided
+  const fieldSet =
+    explicitFieldSet ??
+    (
+      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
+        .value as StringValueNode
+    )?.value;
+
+  if (!fieldSet) {
+    throw new Error(`No field set found for field '${requiredFieldName}'`);
+  }
+
+  const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
+
+  return {
+    schema,
+    entity,
+    requiredField,
+    visitor,
+    execute: () => {
+      visitor.visit();
+      return {
+        rpcMethods: visitor.getRPCMethods(),
+        messageDefinitions: visitor.getMessageDefinitions(),
+        mapping: visitor.getMapping(),
+      };
+    },
+  };
+}
+
+/**
+ * Asserts that a ProtoMessageField matches expected values.
+ */
+function assertFieldMessage(
+  field: ProtoMessageField | undefined,
+  expected: { fieldName: string; typeName: string; fieldNumber: number; isRepeated: boolean },
+): void {
+  expect(field).toBeDefined();
+  expect(field?.fieldName).toBe(expected.fieldName);
+  expect(field?.typeName).toBe(expected.typeName);
+  expect(field?.fieldNumber).toBe(expected.fieldNumber);
+  expect(field?.isRepeated).toBe(expected.isRepeated);
+}
+
+/**
+ * Asserts that the expected standard messages are present in the message definitions.
+ */
+function assertStandardMessages(messageDefinitions: ProtoMessage[], methodPrefix: string): void {
+  expect(messageDefinitions).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ messageName: `${methodPrefix}Request` }),
+      expect.objectContaining({ messageName: `${methodPrefix}Context` }),
+      expect.objectContaining({ messageName: `${methodPrefix}Response` }),
+      expect.objectContaining({ messageName: `${methodPrefix}Result` }),
+      expect.objectContaining({ messageName: `${methodPrefix}Fields` }),
+    ]),
+  );
+}
 
 describe('Field Set Visitor', () => {
   it('should visit a field set for a scalar type', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      name: String! @external
-      age: Int @requires(fields: "name")
-    }
-  `;
-
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          name: String! @external
+          age: Int @requires(fields: "name")
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'age',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['age'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = (
-      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
-        .value as StringValueNode
-    ).value;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserAgeById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserAgeByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserAgeByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserAgeByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserAgeByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserAgeByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserAgeById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserAgeByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserAgeByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(1);
-    expect(fieldMessage?.fields?.[0].fieldName).toBe('name');
-    expect(fieldMessage?.fields?.[0].typeName).toBe('string');
-    expect(fieldMessage?.fields?.[0].fieldNumber).toBe(1);
-    expect(fieldMessage?.fields?.[0].isRepeated).toBe(false);
+    assertFieldMessage(fieldMessage?.fields?.[0], {
+      fieldName: 'name',
+      typeName: 'string',
+      fieldNumber: 1,
+      isRepeated: false,
+    });
   });
+
   it('should visit a field set for a scalar type and deduplicate fields', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      name: String! @external
-      age: Int @requires(fields: "name")
-    }
-  `;
-
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          name: String! @external
+          age: Int @requires(fields: "name")
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'age',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['age'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = (
-      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
-        .value as StringValueNode
-    ).value;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserAgeById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserAgeByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserAgeByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserAgeByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserAgeByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserAgeByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserAgeById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserAgeByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserAgeByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(1);
-    expect(fieldMessage?.fields?.[0].fieldName).toBe('name');
-    expect(fieldMessage?.fields?.[0].typeName).toBe('string');
-    expect(fieldMessage?.fields?.[0].fieldNumber).toBe(1);
-    expect(fieldMessage?.fields?.[0].isRepeated).toBe(false);
+    assertFieldMessage(fieldMessage?.fields?.[0], {
+      fieldName: 'name',
+      typeName: 'string',
+      fieldNumber: 1,
+      isRepeated: false,
+    });
   });
+
   it('should visit a field set for an object type', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      description: String! @external
-      details: Details! @requires(fields: "description")
-    }
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          description: String! @external
+          details: Details! @requires(fields: "description")
+        }
 
-    type Details {
-      firstName: String!
-      lastName: String!
-    }
-  `;
-
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'details',
+      fieldSet: 'description',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['details'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = `description`;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserDetailsById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(1);
     assertFieldMessage(fieldMessage?.fields[0], {
@@ -178,7 +232,7 @@ describe('Field Set Visitor', () => {
       isRepeated: false,
     });
 
-    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    const resultMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdResult');
     expect(resultMessage).toBeDefined();
     expect(resultMessage?.fields).toHaveLength(1);
     assertFieldMessage(resultMessage?.fields[0], {
@@ -190,57 +244,31 @@ describe('Field Set Visitor', () => {
   });
 
   it('should visit a field set for a list type', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      descriptions: [String!]! @external
-      details: [Details!]! @requires(fields: "descriptions")
-    }
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          descriptions: [String!]! @external
+          details: [Details!]! @requires(fields: "descriptions")
+        }
 
-    type Details {
-      firstName: String!
-      lastName: String!
-    }
-  `;
-
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'details',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['details'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = (
-      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
-        .value as StringValueNode
-    ).value;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserDetailsById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(1);
     assertFieldMessage(fieldMessage?.fields[0], {
@@ -250,7 +278,7 @@ describe('Field Set Visitor', () => {
       isRepeated: true,
     });
 
-    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    const resultMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdResult');
     expect(resultMessage).toBeDefined();
     expect(resultMessage?.fields).toHaveLength(1);
     assertFieldMessage(resultMessage?.fields[0], {
@@ -262,54 +290,32 @@ describe('Field Set Visitor', () => {
   });
 
   it('should visit a field set for nullable list types', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      descriptions: [String!] @external
-      details: [Details!] @requires(fields: "descriptions")
-    }
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          descriptions: [String!] @external
+          details: [Details!] @requires(fields: "descriptions")
+        }
 
-    type Details {
-      firstName: String!
-      lastName: String!
-    }
-  `;
-
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'details',
+      fieldSet: 'descriptions',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['details'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = `descriptions`;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserDetailsById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(1);
     assertFieldMessage(fieldMessage?.fields[0], {
@@ -319,7 +325,7 @@ describe('Field Set Visitor', () => {
       isRepeated: false,
     });
 
-    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    const resultMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdResult');
     expect(resultMessage).toBeDefined();
     expect(resultMessage?.fields).toHaveLength(1);
     assertFieldMessage(resultMessage?.fields[0], {
@@ -331,59 +337,33 @@ describe('Field Set Visitor', () => {
   });
 
   it('should visit a field set for multiple field selections', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      descriptions: [String!] @external
-      field: String! @external
-      otherField: String! @external
-      details: [Details!] @requires(fields: "descriptions field otherField")
-    }
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          descriptions: [String!] @external
+          field: String! @external
+          otherField: String! @external
+          details: [Details!] @requires(fields: "descriptions field otherField")
+        }
 
-    type Details {
-      firstName: String!
-      lastName: String!
-    }
-  `;
-
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'details',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['details'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = (
-      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
-        .value as StringValueNode
-    ).value;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserDetailsById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(3);
     assertFieldMessage(fieldMessage?.fields[0], {
@@ -405,7 +385,7 @@ describe('Field Set Visitor', () => {
       isRepeated: false,
     });
 
-    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    const resultMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdResult');
     expect(resultMessage).toBeDefined();
     expect(resultMessage?.fields).toHaveLength(1);
     assertFieldMessage(resultMessage?.fields[0], {
@@ -417,62 +397,36 @@ describe('Field Set Visitor', () => {
   });
 
   it('should visit a field set with nested field selections', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      description: Description! @external
-      details: Details! @requires(fields: "description { title score }")
-    }
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          description: Description! @external
+          details: Details! @requires(fields: "description { title score }")
+        }
 
-    type Description {
-      title: String!
-      score: Int!
-    }
+        type Description {
+          title: String!
+          score: Int!
+        }
 
-    type Details {
-      firstName: String!
-      lastName: String!
-    }
-  `;
-
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'details',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['details'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = (
-      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
-        .value as StringValueNode
-    ).value;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserDetailsById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(1);
     assertFieldMessage(fieldMessage?.fields[0], {
@@ -497,7 +451,7 @@ describe('Field Set Visitor', () => {
       isRepeated: false,
     });
 
-    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    const resultMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdResult');
     expect(resultMessage).toBeDefined();
     expect(resultMessage?.fields).toHaveLength(1);
     assertFieldMessage(resultMessage?.fields[0], {
@@ -509,70 +463,44 @@ describe('Field Set Visitor', () => {
   });
 
   it('should visit a field set with multiple nested field selections', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      description: Description! @external
-      details: Details! @requires(fields: "description { title score address { street city state zip } }")
-    }
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          description: Description! @external
+          details: Details! @requires(fields: "description { title score address { street city state zip } }")
+        }
 
-    type Description {
-      title: String!
-      score: Int!
-      address: Address!
-    }
+        type Description {
+          title: String!
+          score: Int!
+          address: Address!
+        }
 
-    type Address {
-      street: String!
-      city: String!
-      state: String!
-      zip: String!
-    }
+        type Address {
+          street: String!
+          city: String!
+          state: String!
+          zip: String!
+        }
 
-    type Details {
-      firstName: String!
-      lastName: String!
-    }
-  `;
-
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'details',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['details'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = (
-      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
-        .value as StringValueNode
-    ).value;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserDetailsById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(1);
     assertFieldMessage(fieldMessage?.fields[0], {
@@ -630,7 +558,7 @@ describe('Field Set Visitor', () => {
       isRepeated: false,
     });
 
-    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    const resultMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdResult');
     expect(resultMessage).toBeDefined();
     expect(resultMessage?.fields).toHaveLength(1);
     assertFieldMessage(resultMessage?.fields[0], {
@@ -642,70 +570,44 @@ describe('Field Set Visitor', () => {
   });
 
   it('should visit a field set for a union type', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      pet: Animal! @external
-      name: String! @external
-      details: Details! @requires(fields: "pet { ... on Cat { name catBreed } ... on Dog { name dogBreed } } name")
-    }
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          pet: Animal! @external
+          name: String! @external
+          details: Details! @requires(fields: "pet { ... on Cat { name catBreed } ... on Dog { name dogBreed } } name")
+        }
 
-    union Animal = Cat | Dog
+        union Animal = Cat | Dog
 
-    type Cat {
-      name: String!
-      catBreed: String!
-    }
+        type Cat {
+          name: String!
+          catBreed: String!
+        }
 
-    type Dog {
-      name: String!
-      dogBreed: String!
-    }
+        type Dog {
+          name: String!
+          dogBreed: String!
+        }
 
-    type Details {
-      firstName: String!
-      lastName: String!
-    }
-  `;
-
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'details',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['details'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = (
-      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
-        .value as StringValueNode
-    ).value;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserDetailsById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(2);
     assertFieldMessage(fieldMessage?.fields[0], {
@@ -731,7 +633,7 @@ describe('Field Set Visitor', () => {
     expect(unionMessageDefinition.memberTypes[0]).toBe('Cat');
     expect(unionMessageDefinition.memberTypes[1]).toBe('Dog');
 
-    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    const resultMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdResult');
     expect(resultMessage).toBeDefined();
     expect(resultMessage?.fields).toHaveLength(1);
     assertFieldMessage(resultMessage?.fields[0], {
@@ -766,73 +668,48 @@ describe('Field Set Visitor', () => {
       "
     `);
   });
+
   it('should visit a field set for an interface type', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      pet: Animal! @external
-      name: String! @external
-      details: Details! @requires(fields: "pet { ... on Cat { name catBreed } ... on Dog { name dogBreed } } name")
-    }
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          pet: Animal! @external
+          name: String! @external
+          details: Details! @requires(fields: "pet { ... on Cat { name catBreed } ... on Dog { name dogBreed } } name")
+        }
 
-    interface Animal {
-      name: String!
-    }
+        interface Animal {
+          name: String!
+        }
 
-    type Cat implements Animal {
-      name: String!
-      catBreed: String!
-    }
+        type Cat implements Animal {
+          name: String!
+          catBreed: String!
+        }
 
-    type Dog implements Animal {
-      name: String!
-      dogBreed: String!
-    }
+        type Dog implements Animal {
+          name: String!
+          dogBreed: String!
+        }
 
-    type Details {
-      firstName: String!
-      lastName: String!
-    }
-  `;
-
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'details',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['details'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = (
-      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
-        .value as StringValueNode
-    ).value;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserDetailsById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(2);
     assertFieldMessage(fieldMessage?.fields[0], {
@@ -858,7 +735,7 @@ describe('Field Set Visitor', () => {
     expect(interfaceMessageDefinition.implementingTypes[0]).toBe('Cat');
     expect(interfaceMessageDefinition.implementingTypes[1]).toBe('Dog');
 
-    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    const resultMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdResult');
     expect(resultMessage).toBeDefined();
     expect(resultMessage?.fields).toHaveLength(1);
     assertFieldMessage(resultMessage?.fields[0], {
@@ -893,73 +770,48 @@ describe('Field Set Visitor', () => {
       "
     `);
   });
-  it('should visit a field set for an interface type with extraced interface field', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      pet: Animal! @external
-      name: String! @external
-      details: Details! @requires(fields: "pet { name ... on Cat { catBreed } ... on Dog { dogBreed } } name")
-    }
 
-    interface Animal {
-      name: String!
-    }
+  it('should visit a field set for an interface type with extracted interface field', () => {
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          pet: Animal! @external
+          name: String! @external
+          details: Details! @requires(fields: "pet { name ... on Cat { catBreed } ... on Dog { dogBreed } } name")
+        }
 
-    type Cat implements Animal {
-      name: String!
-      catBreed: String!
-    }
+        interface Animal {
+          name: String!
+        }
 
-    type Dog implements Animal {
-      name: String!
-      dogBreed: String!
-    }
+        type Cat implements Animal {
+          name: String!
+          catBreed: String!
+        }
 
-    type Details {
-      firstName: String!
-      lastName: String!
-    }
-  `;
+        type Dog implements Animal {
+          name: String!
+          dogBreed: String!
+        }
 
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'details',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['details'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = (
-      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
-        .value as StringValueNode
-    ).value;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserDetailsById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(2);
     assertFieldMessage(fieldMessage?.fields[0], {
@@ -985,7 +837,7 @@ describe('Field Set Visitor', () => {
     expect(interfaceMessageDefinition.implementingTypes[0]).toBe('Cat');
     expect(interfaceMessageDefinition.implementingTypes[1]).toBe('Dog');
 
-    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    const resultMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdResult');
     expect(resultMessage).toBeDefined();
     expect(resultMessage?.fields).toHaveLength(1);
     assertFieldMessage(resultMessage?.fields[0], {
@@ -1020,76 +872,51 @@ describe('Field Set Visitor', () => {
       "
     `);
   });
+
   it('should visit a field set with nested field selections and a union type', () => {
-    const sdl = `
-    type User @key(fields: "id") {
-      id: ID!
-      description: Description! @external
-      details: Details! @requires(fields: "description { title score pet { ... on Cat { name catBreed } ... on Dog { name dogBreed } } }")
-    }
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          description: Description! @external
+          details: Details! @requires(fields: "description { title score pet { ... on Cat { name catBreed } ... on Dog { name dogBreed } } }")
+        }
 
-    type Description {
-      title: String!
-      score: Int!
-      pet: Animal!
-    }
+        type Description {
+          title: String!
+          score: Int!
+          pet: Animal!
+        }
 
-    union Animal = Cat | Dog
+        union Animal = Cat | Dog
 
-    type Cat {
-      name: String!
-      catBreed: String!
-    }
+        type Cat {
+          name: String!
+          catBreed: String!
+        }
 
-    type Dog {
-      name: String!
-      dogBreed: String!
-    }
+        type Dog {
+          name: String!
+          dogBreed: String!
+        }
 
-    type Details {
-      firstName: String!
-      lastName: String!
-    }
-  `;
-
-    const schema = buildSchema(sdl, {
-      assumeValid: true,
-      assumeValidSDL: true,
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'details',
     });
 
-    const typeMap = schema.getTypeMap();
-    const entity = typeMap['User'] as GraphQLObjectType | undefined;
-    if (!entity) {
-      throw new Error('Entity not found');
-    }
-
-    const requiredField = entity.getFields()['details'];
-    expect(requiredField).toBeDefined();
-
-    const fieldSet = (
-      requiredField.astNode?.directives?.find((d) => d.name.value === 'requires')?.arguments?.[0]
-        .value as StringValueNode
-    ).value;
-
-    const visitor = new RequiredFieldsVisitor(schema, entity, requiredField, fieldSet);
-    visitor.visit();
-    const rpcMethods = visitor.getRPCMethods();
-    const messageDefinitions = visitor.getMessageDefinitions();
+    const { rpcMethods, messageDefinitions } = execute();
 
     expect(rpcMethods).toHaveLength(1);
     expect(rpcMethods[0].name).toBe('RequireUserDetailsById');
     expect(messageDefinitions).toHaveLength(5);
-    expect(messageDefinitions).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdRequest' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdContext' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResponse' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdResult' }),
-        expect.objectContaining({ messageName: 'RequireUserDetailsByIdFields' }),
-      ]),
-    );
+    assertStandardMessages(messageDefinitions, 'RequireUserDetailsById');
 
-    let fieldMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdFields');
+    const fieldMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdFields');
     expect(fieldMessage).toBeDefined();
     expect(fieldMessage?.fields).toHaveLength(1);
     expect(fieldMessage?.fields[0].fieldName).toBe('description');
@@ -1104,20 +931,24 @@ describe('Field Set Visitor', () => {
     expect(descriptionMessage?.fields).toHaveLength(3);
 
     // Check Description fields
-    expect(descriptionMessage?.fields[0].fieldName).toBe('title');
-    expect(descriptionMessage?.fields[0].typeName).toBe('string');
-    expect(descriptionMessage?.fields[0].fieldNumber).toBe(1);
-    expect(descriptionMessage?.fields[0].isRepeated).toBe(false);
-
-    expect(descriptionMessage?.fields[1].fieldName).toBe('score');
-    expect(descriptionMessage?.fields[1].typeName).toBe('int32');
-    expect(descriptionMessage?.fields[1].fieldNumber).toBe(2);
-    expect(descriptionMessage?.fields[1].isRepeated).toBe(false);
-
-    expect(descriptionMessage?.fields[2].fieldName).toBe('pet');
-    expect(descriptionMessage?.fields[2].typeName).toBe('Animal');
-    expect(descriptionMessage?.fields[2].fieldNumber).toBe(3);
-    expect(descriptionMessage?.fields[2].isRepeated).toBe(false);
+    assertFieldMessage(descriptionMessage?.fields[0], {
+      fieldName: 'title',
+      typeName: 'string',
+      fieldNumber: 1,
+      isRepeated: false,
+    });
+    assertFieldMessage(descriptionMessage?.fields[1], {
+      fieldName: 'score',
+      typeName: 'int32',
+      fieldNumber: 2,
+      isRepeated: false,
+    });
+    assertFieldMessage(descriptionMessage?.fields[2], {
+      fieldName: 'pet',
+      typeName: 'Animal',
+      fieldNumber: 3,
+      isRepeated: false,
+    });
 
     // Check for union composite type on Description message
     const compositeType = descriptionMessage?.compositeType;
@@ -1129,23 +960,120 @@ describe('Field Set Visitor', () => {
     expect(unionMessageDefinition.memberTypes).toHaveLength(2);
     expect(unionMessageDefinition.memberTypes).toEqual(expect.arrayContaining(['Cat', 'Dog']));
 
-    let resultMessage = messageDefinitions.find((message) => message.messageName === 'RequireUserDetailsByIdResult');
+    const resultMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserDetailsByIdResult');
     expect(resultMessage).toBeDefined();
     expect(resultMessage?.fields).toHaveLength(1);
-    expect(resultMessage?.fields[0].fieldName).toBe('details');
-    expect(resultMessage?.fields[0].typeName).toBe('Details');
-    expect(resultMessage?.fields[0].fieldNumber).toBe(1);
-    expect(resultMessage?.fields[0].isRepeated).toBe(false);
+    assertFieldMessage(resultMessage?.fields[0], {
+      fieldName: 'details',
+      typeName: 'Details',
+      fieldNumber: 1,
+      isRepeated: false,
+    });
   });
 });
 
-const assertFieldMessage = (
-  field: ProtoMessageField | undefined,
-  expected: { fieldName: string; typeName: string; fieldNumber: number; isRepeated: boolean },
-) => {
-  expect(field).toBeDefined();
-  expect(field?.fieldName).toBe(expected.fieldName);
-  expect(field?.typeName).toBe(expected.typeName);
-  expect(field?.fieldNumber).toBe(expected.fieldNumber);
-  expect(field?.isRepeated).toBe(expected.isRepeated);
-};
+describe('Ambiguous @key directive deduplication', () => {
+  it('should deduplicate @key directives with fields in different order (space-separated)', () => {
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type Product @key(fields: "id name") @key(fields: "name id") {
+          id: ID!
+          name: String!
+          price: Float! @requires(fields: "name")
+        }
+      `,
+      entityName: 'Product',
+      requiredFieldName: 'price',
+      fieldSet: 'name',
+    });
+
+    const { rpcMethods, mapping } = execute();
+
+    // Should only produce 1 RPC method, not 2
+    expect(rpcMethods).toHaveLength(1);
+    expect(rpcMethods[0].name).toBe('RequireProductPriceByIdAndName');
+
+    // Mapping should have only one entry with normalized key
+    expect(Object.keys(mapping)).toHaveLength(1);
+    expect(mapping).toHaveProperty('Id Name');
+  });
+
+  it('should deduplicate @key directives with different separators (comma vs space)', () => {
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type Product @key(fields: "id,name") @key(fields: "name id") {
+          id: ID!
+          name: String!
+          price: Float! @requires(fields: "name")
+        }
+      `,
+      entityName: 'Product',
+      requiredFieldName: 'price',
+      fieldSet: 'name',
+    });
+
+    const { rpcMethods, mapping } = execute();
+
+    // Should only produce 1 RPC method, not 2
+    expect(rpcMethods).toHaveLength(1);
+    expect(rpcMethods[0].name).toBe('RequireProductPriceByIdAndName');
+
+    // Mapping should have only one entry
+    expect(Object.keys(mapping)).toHaveLength(1);
+    expect(mapping).toHaveProperty('Id Name');
+  });
+
+  it('should deduplicate identical @key directives', () => {
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type Product @key(fields: "id") @key(fields: "id") {
+          id: ID!
+          name: String!
+          price: Float! @requires(fields: "name")
+        }
+      `,
+      entityName: 'Product',
+      requiredFieldName: 'price',
+      fieldSet: 'name',
+    });
+
+    const { rpcMethods, mapping } = execute();
+
+    // Should only produce 1 RPC method, not 2
+    expect(rpcMethods).toHaveLength(1);
+    expect(rpcMethods[0].name).toBe('RequireProductPriceById');
+
+    // Mapping should have only one entry
+    expect(Object.keys(mapping)).toHaveLength(1);
+    expect(mapping).toHaveProperty('Id');
+  });
+
+  it('should produce separate RPCs for distinct @key directives', () => {
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type Product @key(fields: "id") @key(fields: "sku") {
+          id: ID!
+          sku: String!
+          name: String!
+          price: Float! @requires(fields: "name")
+        }
+      `,
+      entityName: 'Product',
+      requiredFieldName: 'price',
+      fieldSet: 'name',
+    });
+
+    const { rpcMethods, mapping } = execute();
+
+    // Should produce 2 RPC methods for distinct keys
+    expect(rpcMethods).toHaveLength(2);
+    expect(rpcMethods.map((r) => r.name)).toEqual(
+      expect.arrayContaining(['RequireProductPriceById', 'RequireProductPriceBySku']),
+    );
+
+    // Mapping should have two entries
+    expect(Object.keys(mapping)).toHaveLength(2);
+    expect(mapping).toHaveProperty('Id');
+    expect(mapping).toHaveProperty('Sku');
+  });
+});
