@@ -184,15 +184,21 @@ export class GraphQLToProtoVisitor {
     }
   }
 
+  /**
+   * Extracts the required field set from a field's requires directive
+   * @param field - The GraphQL field to get the required field set from
+   * @returns The required field set string
+   * @throws Error if the required field set is not found or is not a string
+   */
   private getRequiredFieldSet(field: GraphQLField<any, any>): string {
-    const node = field.astNode?.directives
+    const arg = field.astNode?.directives
       ?.find((d) => d.name.value === REQUIRES_DIRECTIVE_NAME)
-      ?.arguments?.find((arg) => arg.name.value === 'fields')?.value as StringValueNode;
-    if (!node) {
+      ?.arguments?.find((arg) => arg.name.value === 'fields');
+    if (!arg || arg.value.kind !== Kind.STRING) {
       throw new Error(`Required field set not found for field ${field.name}`);
     }
 
-    return node.value;
+    return arg.value.value;
   }
 
   /**
