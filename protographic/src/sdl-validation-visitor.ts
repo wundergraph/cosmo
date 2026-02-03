@@ -361,6 +361,9 @@ export class SDLValidationVisitor {
     }
 
     const parent = ctx.ancestors.at(-1);
+    if (!parent) {
+      return;
+    }
     // If the parent is not an object type definition node, we don't need to continue with the validation
     if (!this.isASTObjectTypeNode(parent)) {
       return;
@@ -403,14 +406,23 @@ export class SDLValidationVisitor {
     const requiredDirective = ctx.node.directives?.find(
       (directive) => directive.name.value === REQUIRES_DIRECTIVE_NAME,
     );
-    if (!requiredDirective) { return; }
+    if (!requiredDirective) {
+      return;
+    }
 
     const fieldSelections = requiredDirective.arguments?.find((arg) => arg.name.value === FIELDS)?.value;
-    if (!fieldSelections || fieldSelections.kind !== Kind.STRING) { return; }
+    if (!fieldSelections || fieldSelections.kind !== Kind.STRING) {
+      return;
+    }
 
     const parentType = ctx.ancestors.at(-1);
+    if (!parentType) {
+      return;
+    }
 
-    if (!this.isASTObjectTypeNode(parentType)) { return; }
+    if (!this.isASTObjectTypeNode(parentType)) {
+      return;
+    }
 
     let operationDoc;
     try {
@@ -460,7 +472,9 @@ export class SDLValidationVisitor {
     }
 
     const fieldNames = this.getContextFields(node);
-    if (fieldNames.length === 0) { return true; }
+    if (fieldNames.length === 0) {
+      return true;
+    }
     const parentFields = this.getParentFields(parent);
 
     if (parentFields.error) {
@@ -502,7 +516,9 @@ export class SDLValidationVisitor {
    * @private
    */
   private getContextFields(node: ConstArgumentNode | undefined): string[] {
-    if (!node) { return []; }
+    if (!node) {
+      return [];
+    }
 
     const value = node?.value.kind === Kind.STRING ? node.value.value.trim() : '';
     if (value.length === 0) {
@@ -547,13 +563,19 @@ export class SDLValidationVisitor {
     currentPath.push(fieldName);
     visited.add(fieldName);
     for (const contextField of contextFields) {
-      if (contextField === fieldName) { continue; }
+      if (contextField === fieldName) {
+        continue;
+      }
 
       const typeField = typeFields.find((p) => p.name.value === contextField);
-      if (!typeField) { continue; }
+      if (!typeField) {
+        continue;
+      }
 
       const typeFieldContext = this.getResolverContext(typeField);
-      if (!typeFieldContext) { continue; }
+      if (!typeFieldContext) {
+        continue;
+      }
 
       const typeFieldContextFields = this.getContextFields(typeFieldContext);
       if (typeFieldContextFields.includes(fieldName)) {

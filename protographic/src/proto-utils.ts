@@ -160,12 +160,12 @@ export function formatComment(
   const lines = description.trim().split('\n');
 
   return lines.length === 1
-? [`${indent}${LINE_COMMENT_PREFIX}${lines[0]}`]
-: [
-      `${indent}${BLOCK_COMMENT_START}`,
-      ...lines.map((line) => `${indent} * ${line}`),
-      `${indent} ${BLOCK_COMMENT_END}`,
-    ];
+    ? [`${indent}${LINE_COMMENT_PREFIX}${lines[0]}`]
+    : [
+        `${indent}${BLOCK_COMMENT_START}`,
+        ...lines.map((line) => `${indent} * ${line}`),
+        `${indent} ${BLOCK_COMMENT_END}`,
+      ];
 }
 
 export function renderRPCMethod(includeComments: boolean, rpcMethod: RPCMethod): string[] {
@@ -328,20 +328,19 @@ function buildWrapperMessage(
     lines.push(...formatComment(includeComments, `Wrapper message for a list of ${baseType.name}.`, 0));
   }
 
-  const formatIndent = (indent: number, content: string) => {
-    return '  '.repeat(indent) + content;
-  };
-
   lines.push(`message ${wrapperName} {`);
   let innerWrapperName = '';
-  innerWrapperName = level > 1 ? `${'ListOf'.repeat(level - 1)}${baseType.name}` : getProtoTypeFromGraphQL(includeComments, baseType, true).typeName;
+  innerWrapperName =
+    level > 1
+      ? `${'ListOf'.repeat(level - 1)}${baseType.name}`
+      : getProtoTypeFromGraphQL(includeComments, baseType, true).typeName;
 
   lines.push(
-    formatIndent(1, `message List {`),
-    formatIndent(2, `repeated ${innerWrapperName} items = 1;`),
-    formatIndent(1, `}`),
-    formatIndent(1, `List list = 1;`),
-    formatIndent(0, `}`),
+    indentContent(1, `message List {`),
+    indentContent(2, `repeated ${innerWrapperName} items = 1;`),
+    indentContent(1, `}`),
+    indentContent(1, `List list = 1;`),
+    `}`,
   );
 
   return lines;

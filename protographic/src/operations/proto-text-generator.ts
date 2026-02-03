@@ -109,7 +109,9 @@ function generateHeader(root: protobuf.Root, options?: ProtoTextOptions): string
 
   // Add custom imports
   if (options?.imports) {
-    for (const imp of options.imports) { imports.add(imp); }
+    for (const imp of options.imports) {
+      imports.add(imp);
+    }
   }
 
   for (const imp of [...imports].sort()) {
@@ -372,7 +374,9 @@ export function formatReserved(reserved: Array<number[] | string>, indent = 1): 
  * Handles both individual numbers and ranges (e.g., "2, 5 to 10, 15")
  */
 function formatReservedNumbers(numbers: number[]): string {
-  if (numbers.length === 0) { return ''; }
+  if (numbers.length === 0) {
+    return '';
+  }
 
   // Sort and deduplicate numbers
   const sortedNumbers = [...new Set(numbers)].sort((a, b) => a - b);
@@ -416,8 +420,8 @@ function formatReservedNumbers(numbers: number[]): string {
 function detectWrapperTypeUsage(root: protobuf.Root): boolean {
   for (const nested of root.nestedArray) {
     if (nested instanceof protobuf.Type && messageUsesWrapperTypes(nested)) {
-        return true;
-      }
+      return true;
+    }
   }
   return false;
 }
@@ -436,8 +440,8 @@ function messageUsesWrapperTypes(message: protobuf.Type): boolean {
   // Check nested messages recursively
   for (const nested of message.nestedArray) {
     if (nested instanceof protobuf.Type && messageUsesWrapperTypes(nested)) {
-        return true;
-      }
+      return true;
+    }
   }
 
   return false;
@@ -449,8 +453,8 @@ function messageUsesWrapperTypes(message: protobuf.Type): boolean {
 function detectGraphQLVariableNameUsage(root: protobuf.Root): boolean {
   for (const nested of root.nestedArray) {
     if (nested instanceof protobuf.Type && messageUsesGraphQLVariableName(nested)) {
-        return true;
-      }
+      return true;
+    }
   }
   return false;
 }
@@ -469,8 +473,8 @@ function messageUsesGraphQLVariableName(message: protobuf.Type): boolean {
   // Check nested messages recursively
   for (const nested of message.nestedArray) {
     if (nested instanceof protobuf.Type && messageUsesGraphQLVariableName(nested)) {
-        return true;
-      }
+      return true;
+    }
   }
 
   return false;

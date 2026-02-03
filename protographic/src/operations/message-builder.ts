@@ -449,23 +449,23 @@ function processInlineFragment(
   if (fragment.selectionSet) {
     for (const selection of fragment.selectionSet.selections) {
       switch (selection.kind) {
-      case 'Field': {
-        processFieldSelection(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
-      
-      break;
-      }
-      case 'InlineFragment': {
-        // Nested inline fragment
-        processInlineFragment(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
-      
-      break;
-      }
-      case 'FragmentSpread': {
-        processFragmentSpread(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
-      
-      break;
-      }
-      // No default
+        case 'Field': {
+          processFieldSelection(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
+
+          break;
+        }
+        case 'InlineFragment': {
+          // Nested inline fragment
+          processInlineFragment(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
+
+          break;
+        }
+        case 'FragmentSpread': {
+          processFragmentSpread(selection, message, fragmentType, typeInfo, options, fieldNumberManager, messagePath);
+
+          break;
+        }
+        // No default
       }
     }
   }
@@ -516,23 +516,23 @@ function processFragmentSpread(
   // Process the fragment's selection set with the resolved type
   for (const selection of fragmentDef.selectionSet.selections) {
     switch (selection.kind) {
-    case 'Field': {
-      processFieldSelection(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
-    
-    break;
-    }
-    case 'InlineFragment': {
-      processInlineFragment(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
-    
-    break;
-    }
-    case 'FragmentSpread': {
-      // Nested fragment spread (fragment inside fragment)
-      processFragmentSpread(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
-    
-    break;
-    }
-    // No default
+      case 'Field': {
+        processFieldSelection(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
+
+        break;
+      }
+      case 'InlineFragment': {
+        processInlineFragment(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
+
+        break;
+      }
+      case 'FragmentSpread': {
+        // Nested fragment spread (fragment inside fragment)
+        processFragmentSpread(selection, message, type, typeInfo, options, fieldNumberManager, messagePath);
+
+        break;
+      }
+      // No default
     }
   }
 }

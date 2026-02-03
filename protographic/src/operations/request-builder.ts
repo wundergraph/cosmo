@@ -79,7 +79,9 @@ export function buildRequestMessage(
   let fieldNumber = 1;
   for (const protoVariableName of orderedVariableNames) {
     const variable = variableMap.get(protoVariableName);
-    if (!variable) { continue; }
+    if (!variable) {
+      continue;
+    }
 
     const variableName = variable.variable.name.value;
     const field = buildVariableField(variableName, variable.type, schema, messageName, options, fieldNumber);
@@ -209,7 +211,9 @@ export function buildInputObjectMessage(
   // Process fields in reconciled order
   for (const protoFieldName of orderedFieldNames) {
     const inputField = fieldMap.get(protoFieldName);
-    if (!inputField) { continue; }
+    if (!inputField) {
+      continue;
+    }
 
     const typeInfo = mapGraphQLTypeToProto(inputField.type, {
       customScalarMappings: options?.customScalarMappings,

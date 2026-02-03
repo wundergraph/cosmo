@@ -620,10 +620,14 @@ export class GraphQLToProtoTextVisitor {
       }
 
       // Skip non-object types
-      if (!isObjectType(type)) { continue; }
+      if (!isObjectType(type)) {
+        continue;
+      }
       const keyDirectives = this.getKeyDirectives(type);
       // Skip types that don't have @key directives
-      if (keyDirectives.length === 0) { continue; }
+      if (keyDirectives.length === 0) {
+        continue;
+      }
 
       // Queue this type for message generation (only once)
       this.queueTypeForProcessing(type);
@@ -633,10 +637,14 @@ export class GraphQLToProtoTextVisitor {
       const normalizedKeysSet = new Set<string>();
       for (const keyDirective of keyDirectives) {
         const keyInfo = this.getKeyInfoFromDirective(keyDirective);
-        if (!keyInfo) { continue; }
+        if (!keyInfo) {
+          continue;
+        }
 
         const { keyString, resolvable } = keyInfo;
-        if (!resolvable) { continue; }
+        if (!resolvable) {
+          continue;
+        }
 
         const normalizedKey = keyString
           .split(/[\s,]+/)
@@ -701,7 +709,9 @@ export class GraphQLToProtoTextVisitor {
     // Get the root operation type (Query or Mutation)
     const rootType = operationType === 'Query' ? this.schema.getQueryType() : this.schema.getMutationType();
 
-    if (!rootType) { return result; }
+    if (!rootType) {
+      return result;
+    }
 
     const fields = rootType.getFields();
 
@@ -711,9 +721,13 @@ export class GraphQLToProtoTextVisitor {
 
     for (const fieldName of orderedFieldNames) {
       // Skip special fields like _entities
-      if (fieldName === '_entities') { continue; }
+      if (fieldName === '_entities') {
+        continue;
+      }
 
-      if (!fields[fieldName]) { continue; }
+      if (!fields[fieldName]) {
+        continue;
+      }
 
       const field = fields[fieldName];
       const mappedName = createOperationMethodName(operationType, fieldName);
@@ -970,7 +984,9 @@ Example:
       // Process arguments in the order specified by the lock manager
       for (const argName of orderedArgNames) {
         const arg = field.args.find((a) => a.name === argName);
-        if (!arg) { continue; }
+        if (!arg) {
+          continue;
+        }
 
         const argType = this.getProtoTypeFromGraphQL(arg.type);
         const argProtoName = graphqlFieldToProtoField(arg.name);
@@ -1579,7 +1595,9 @@ Example:
     const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(type.name, fieldNames);
 
     for (const fieldName of orderedFieldNames) {
-      if (!fields[fieldName]) { continue; }
+      if (!fields[fieldName]) {
+        continue;
+      }
 
       // ignore fields with arguments as those are handled in separate resolver rpcs
       const field = fields[fieldName];
@@ -1724,7 +1742,9 @@ Example:
     const orderedFieldNames = this.lockManager.reconcileMessageFieldOrder(type.name, fieldNames);
 
     for (const fieldName of orderedFieldNames) {
-      if (!fields[fieldName]) { continue; }
+      if (!fields[fieldName]) {
+        continue;
+      }
 
       const field = fields[fieldName];
       const fieldType = this.getProtoTypeFromGraphQL(field.type);
@@ -1810,7 +1830,9 @@ Example:
 
     for (const [i, typeName] of orderedTypeNames.entries()) {
       const implType = implementingTypes.find((t) => t.name === typeName);
-      if (!implType) { continue; }
+      if (!implType) {
+        continue;
+      }
 
       // Add implementing type description as comment if available
       if (implType.description) {
@@ -1868,7 +1890,9 @@ Example:
 
     for (const [i, typeName] of orderedTypeNames.entries()) {
       const memberType = types.find((t) => t.name === typeName);
-      if (!memberType) { continue; }
+      if (!memberType) {
+        continue;
+      }
 
       // Add member type description as comment if available
       if (memberType.description) {
@@ -1934,7 +1958,9 @@ Example:
 
     for (const valueName of orderedValueNames) {
       const value = values.find((v) => v.name === valueName);
-      if (!value) { continue; }
+      if (!value) {
+        continue;
+      }
 
       const protoEnumValue = graphqlEnumValueToProtoEnumValue(type.name, value.name);
 
@@ -2026,7 +2052,9 @@ Example:
    * @returns A formatted string for the reserved statement
    */
   private formatReservedNumbers(numbers: number[]): string {
-    if (numbers.length === 0) { return ''; }
+    if (numbers.length === 0) {
+      return '';
+    }
 
     // Sort numbers for better readability
     const sortedNumbers = [...numbers].sort((a, b) => a - b);

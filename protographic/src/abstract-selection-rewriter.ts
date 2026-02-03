@@ -108,11 +108,17 @@ export class AbstractSelectionRewriter {
    * @param ctx - The visitor context containing the current node and its position in the AST
    */
   private onEnterSelectionSet(ctx: VisitContext<SelectionSetNode>): void {
-    if (!ctx.parent) { return; }
-    if (!this.isFieldNode(ctx.parent)) { return; }
+    if (!ctx.parent) {
+      return;
+    }
+    if (!this.isFieldNode(ctx.parent)) {
+      return;
+    }
 
     const currentType = this.findNamedTypeForField(ctx.parent.name.value);
-    if (!currentType) { return; }
+    if (!currentType) {
+      return;
+    }
 
     // Only process selection sets for interface types
     if (!isInterfaceType(currentType)) {
@@ -122,7 +128,9 @@ export class AbstractSelectionRewriter {
     const fields = ctx.node.selections.filter((s) => s.kind === Kind.FIELD);
     const inlineFragments = ctx.node.selections.filter((s) => s.kind === Kind.INLINE_FRAGMENT);
 
-    if (fields.length === 0) { return; }
+    if (fields.length === 0) {
+      return;
+    }
 
     // Remove the interface-level fields from the selection set, keeping only inline fragments
     ctx.node.selections = [...inlineFragments];
@@ -162,7 +170,9 @@ export class AbstractSelectionRewriter {
    * @returns true if the node is a FieldNode, false otherwise
    */
   private isFieldNode(node: ASTNode | ReadonlyArray<ASTNode>): node is FieldNode {
-    if (Array.isArray(node)) { return false; }
+    if (Array.isArray(node)) {
+      return false;
+    }
     return (node as ASTNode).kind === Kind.FIELD;
   }
 
@@ -188,7 +198,9 @@ export class AbstractSelectionRewriter {
   private findNamedTypeForField(fieldName: string): GraphQLType | undefined {
     const fields = this.currentType.getFields();
     const field = fields[fieldName];
-    if (!field) { return undefined; }
+    if (!field) {
+      return undefined;
+    }
 
     return getNamedType(field.type);
   }
