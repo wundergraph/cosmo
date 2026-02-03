@@ -16,8 +16,10 @@ import (
 func ParseWWWAuthenticateParams(header string) map[string]string {
 	params := make(map[string]string)
 
-	// Remove "Bearer " prefix
-	header = strings.TrimPrefix(header, "Bearer ")
+	// Remove "Bearer " prefix (case-insensitive)
+	if len(header) >= 7 && strings.EqualFold(header[:7], "Bearer ") {
+		header = header[7:]
+	}
 	header = strings.TrimSpace(header)
 
 	// Simple state machine to parse key="value" pairs
