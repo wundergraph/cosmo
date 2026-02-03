@@ -41,7 +41,7 @@ import {
   TypeFieldMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { Maybe } from 'graphql/jsutils/Maybe.js';
-import { EXTERNAL_DIRECTIVE_NAME, REQUIRES_DIRECTIVE_NAME } from './string-constants';
+import { REQUIRES_DIRECTIVE_NAME } from './string-constants.js';
 import { RequiredFieldsVisitor } from './required-fields-visitor.js';
 /**
  * Visitor that converts a GraphQL schema to gRPC mapping definitions
