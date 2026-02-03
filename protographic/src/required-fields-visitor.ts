@@ -251,20 +251,6 @@ export class RequiredFieldsVisitor {
   }
 
   /**
-   * Creates a FieldMapping for a required field's proto message field.
-   *
-   * @param field - The proto message field to create a mapping for
-   * @returns A FieldMapping with original GraphQL name and mapped proto name
-   */
-  private createFieldMappingForRequiredField(field: ProtoMessageField): FieldMapping {
-    return new FieldMapping({
-      original: field.graphqlName ?? field.fieldName,
-      mapped: field.fieldName,
-      argumentMappings: [], // TODO: add argument mappings.
-    });
-  }
-
-  /**
    * Handles entering the document node.
    * Creates the RPC method definition and all request/response message structures
    * for fetching the required fields.
