@@ -155,9 +155,14 @@ export function formatComment(
     return [];
   }
 
+  // Sanitize description to prevent breaking block comments.
+  // Replace "/*" and "*/" with safe alternatives so they don't interfere
+  // with the BLOCK_COMMENT_START/BLOCK_COMMENT_END markers.
+  const sanitized = description.replace(/\/\*/g, '/ *').replace(/\*\//g, '* /');
+
   // Use 2-space indentation consistently
   const indent = SPACE_INDENT.repeat(indentLevel);
-  const lines = description.trim().split('\n');
+  const lines = sanitized.trim().split('\n');
 
   return lines.length === 1
     ? [`${indent}${LINE_COMMENT_PREFIX}${lines[0]}`]
@@ -303,9 +308,13 @@ export function listNameByNestingLevel(nestingLevel: number, baseType: GraphQLNa
  *     List list = 1;
  *   }
  *
+ * @param includeComments - Whether to include descriptive comments in the output
  * @param level - The nesting level (1 for simple wrapper, >1 for nested structures)
  * @param baseType - The GraphQL base type being wrapped (e.g., String, User, etc.)
- * @returns The generated wrapper message name (e.g., "ListOfString", "ListOfListOfUser")
+ * @returns The generated wrapper message definition as a proto message string.
+ *          Constructs a `wrapperName` (e.g., "ListOfString", "ListOfListOfUser") and
+ *          uses `buildWrapperMessage(includeComments, wrapperName, level, baseType)`
+ *          to render the full message text.
  */
 export function createNestedListWrapper(includeComments: boolean, level: number, baseType: GraphQLNamedType): string {
   const wrapperName = `${'ListOf'.repeat(level)}${baseType.name}`;
