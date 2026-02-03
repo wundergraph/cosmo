@@ -1013,6 +1013,17 @@ describe('GraphQL Federation to Proto Mapping', () => {
             "key": "id",
             "kind": "entity",
             "request": "LookupProductByIdRequest",
+            "requiredFieldMappings": [
+              {
+                "fieldMapping": {
+                  "mapped": "stock_health_score",
+                  "original": "stockHealthScore",
+                },
+                "request": "RequireProductStockHealthScoreByIdRequest",
+                "response": "RequireProductStockHealthScoreByIdResponse",
+                "rpc": "RequireProductStockHealthScoreById",
+              },
+            ],
             "response": "LookupProductByIdResponse",
             "rpc": "LookupProductById",
             "typeName": "Product",
@@ -1032,19 +1043,6 @@ describe('GraphQL Federation to Proto Mapping', () => {
           {
             "fieldMappings": [
               {
-                "mapped": "item_count",
-                "original": "itemCount",
-              },
-              {
-                "mapped": "price",
-                "original": "price",
-              },
-            ],
-            "type": "RequireProductStockHealthScoreByIdFields",
-          },
-          {
-            "fieldMappings": [
-              {
                 "mapped": "products",
                 "original": "products",
               },
@@ -1056,6 +1054,18 @@ describe('GraphQL Federation to Proto Mapping', () => {
               {
                 "mapped": "id",
                 "original": "id",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+              {
+                "mapped": "item_count",
+                "original": "itemCount",
+              },
+              {
+                "mapped": "stock_health_score",
+                "original": "stockHealthScore",
               },
             ],
             "type": "Product",
@@ -1128,32 +1138,6 @@ describe('GraphQL Federation to Proto Mapping', () => {
           {
             "fieldMappings": [
               {
-                "mapped": "last_restock_date",
-                "original": "lastRestockDate",
-              },
-            ],
-            "type": "RequireProductStockHealthScoreByIdFields.RestockData",
-          },
-          {
-            "fieldMappings": [
-              {
-                "mapped": "item_count",
-                "original": "itemCount",
-              },
-              {
-                "mapped": "restock_data",
-                "original": "restockData",
-              },
-              {
-                "mapped": "price",
-                "original": "price",
-              },
-            ],
-            "type": "RequireProductStockHealthScoreByIdFields",
-          },
-          {
-            "fieldMappings": [
-              {
                 "mapped": "products",
                 "original": "products",
               },
@@ -1169,6 +1153,22 @@ describe('GraphQL Federation to Proto Mapping', () => {
               {
                 "mapped": "name",
                 "original": "name",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+              {
+                "mapped": "item_count",
+                "original": "itemCount",
+              },
+              {
+                "mapped": "restock_data",
+                "original": "restockData",
+              },
+              {
+                "mapped": "stock_health_score",
+                "original": "stockHealthScore",
               },
             ],
             "type": "Product",

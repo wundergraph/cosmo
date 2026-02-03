@@ -154,17 +154,6 @@ export class GraphQLToProtoVisitor {
       const mapping = visitor.getMapping();
 
       for (const [key, value] of Object.entries(mapping)) {
-        value.typeFieldMappings?.forEach((t) => {
-          if (t.fieldMappings?.length === 0) return;
-
-          const typeFieldMapping = this.mapping.typeFieldMappings.find((tfm) => tfm.type === t.type);
-          if (!typeFieldMapping) {
-            this.mapping.typeFieldMappings.push(t);
-          }
-
-          typeFieldMapping?.fieldMappings.push(...t.fieldMappings);
-        });
-
         const em = this.mapping.entityMappings.find((em) => em.typeName === type.name && em.key === key);
         if (!em) {
           throw new Error(`Entity mapping not found for type ${type.name} and key ${key}`);
@@ -434,8 +423,6 @@ export class GraphQLToProtoVisitor {
     for (const fieldName in fields) {
       const field = fields[fieldName];
 
-      if (this.shouldSkipField(field)) continue;
-
       const fieldMapping = this.createFieldMapping(field);
       typeFieldMapping.fieldMappings.push(fieldMapping);
     }
@@ -444,20 +431,6 @@ export class GraphQLToProtoVisitor {
     if (typeFieldMapping.fieldMappings.length > 0) {
       this.mapping.typeFieldMappings.push(typeFieldMapping);
     }
-  }
-
-  /**
-   * Determines if a field should be skipped during processing
-   *
-   * @param field - The GraphQL field to check
-   * @returns True if the field should be skipped, false otherwise
-   */
-  private shouldSkipField(field: GraphQLField<any, any>): boolean {
-    return (
-      field.astNode?.directives?.some(
-        (d) => d.name.value === REQUIRES_DIRECTIVE_NAME || d.name.value === EXTERNAL_DIRECTIVE_NAME,
-      ) ?? false
-    );
   }
 
   /**

@@ -53,8 +53,6 @@ export type RequiredFieldMapping = {
   rpc?: RPCMethod;
   /** The field mapping between GraphQL and proto field names */
   requiredFieldMapping?: FieldMapping;
-  /** Type field mappings for nested types in the required fields selection */
-  typeFieldMappings?: TypeFieldMapping[];
 };
 
 /**
@@ -149,7 +147,6 @@ export class RequiredFieldsVisitor {
           original: this.requiredField.name,
           mapped: graphqlFieldToProtoField(this.requiredField.name),
         }),
-        typeFieldMappings: [],
       };
       visit(this.fieldSetDoc, this.visitor);
     }
@@ -250,39 +247,7 @@ export class RequiredFieldsVisitor {
   private onLeaveDocument(): void {
     if (this.requiredFieldMessage) {
       this.messageDefinitions.push(this.requiredFieldMessage);
-      this.createTypeFieldMappings(this.requiredFieldMessage, []);
     }
-  }
-
-  /**
-   * Recursively creates type field mappings for a message and its nested messages.
-   * Builds the path-qualified type names for nested message mappings.
-   *
-   * @param message - The protobuf message to create mappings for
-   * @param path - The current path of parent message names for qualification
-   */
-  private createTypeFieldMappings(message: ProtoMessage, path: string[]): void {
-    if (!message) return;
-
-    let pathPrefix = path.length > 0 ? `${path.join('.')}.` : '';
-
-    const typeFieldMapping = new TypeFieldMapping({
-      type: `${pathPrefix}${message.messageName}`,
-      fieldMappings: [],
-    });
-
-    for (const field of message.fields) {
-      typeFieldMapping.fieldMappings.push(this.createFieldMappingForRequiredField(field));
-    }
-
-    path.push(message.messageName);
-    for (const nested of message.nestedMessages ?? []) {
-      this.createTypeFieldMappings(nested, path);
-    }
-
-    path.pop();
-
-    this.mapping[this.currentKeyFieldsString!].typeFieldMappings?.push(typeFieldMapping);
   }
 
   /**
