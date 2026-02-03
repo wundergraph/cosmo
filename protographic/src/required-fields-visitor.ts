@@ -18,8 +18,8 @@ import {
   SelectionSetNode,
   visit,
 } from 'graphql';
-import { CompositeMessageKind, ProtoMessage, ProtoMessageField, RPCMethod, VisitContext } from './types.js';
-import { KEY_DIRECTIVE_NAME } from './string-constants';
+import { CompositeMessageKind, ProtoMessage, RPCMethod, VisitContext } from './types.js';
+import { KEY_DIRECTIVE_NAME } from './string-constants.js';
 import {
   createEntityLookupRequestKeyMessageName,
   createRequestMessageName,
