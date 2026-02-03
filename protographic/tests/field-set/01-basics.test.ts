@@ -20,7 +20,7 @@ import { RequiredFieldMapping } from '../../src/required-fields-visitor.js';
 interface CreateVisitorOptions {
   /** The GraphQL SDL to build the schema from */
   sdl: string;
-  /** The name of the entity type (defaults to finding the type with @key directive) */
+  /** The name of the entity type */
   entityName: string;
   /** The name of the field with the @requires directive */
   requiredFieldName: string;
