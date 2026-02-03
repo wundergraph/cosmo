@@ -1077,3 +1077,80 @@ describe('Ambiguous @key directive deduplication', () => {
     expect(mapping).toHaveProperty('Sku');
   });
 });
+
+describe('Nested message deduplication', () => {
+  it('should reuse nested message when multiple fields reference the same type', () => {
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          homeAddress: Address! @external
+          workAddress: Address! @external
+          computed: String! @requires(fields: "homeAddress { city street } workAddress { city zip }")
+        }
+
+        type Address {
+          city: String!
+          street: String!
+          zip: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'computed',
+    });
+
+    const { messageDefinitions } = execute();
+
+    const fieldsMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserComputedByIdFields');
+    expect(fieldsMessage).toBeDefined();
+
+    // Should have two fields: homeAddress and workAddress
+    expect(fieldsMessage?.fields).toHaveLength(2);
+    expect(fieldsMessage?.fields.map((f) => f.fieldName)).toEqual(
+      expect.arrayContaining(['home_address', 'work_address']),
+    );
+
+    // Should have only ONE nested Address message, not two
+    expect(fieldsMessage?.nestedMessages).toHaveLength(1);
+    expect(fieldsMessage?.nestedMessages?.[0].messageName).toBe('Address');
+
+    // The single Address message should contain all fields from both selections (city, street, zip)
+    const addressMessage = fieldsMessage?.nestedMessages?.[0];
+    expect(addressMessage?.fields).toHaveLength(3);
+    expect(addressMessage?.fields.map((f) => f.fieldName)).toEqual(expect.arrayContaining(['city', 'street', 'zip']));
+  });
+
+  it('should create separate nested messages for different types', () => {
+    const { execute } = createVisitorSetup({
+      sdl: `
+        type User @key(fields: "id") {
+          id: ID!
+          homeAddress: Address! @external
+          profile: Profile! @external
+          computed: String! @requires(fields: "homeAddress { city } profile { bio }")
+        }
+
+        type Address {
+          city: String!
+        }
+
+        type Profile {
+          bio: String!
+        }
+      `,
+      entityName: 'User',
+      requiredFieldName: 'computed',
+    });
+
+    const { messageDefinitions } = execute();
+
+    const fieldsMessage = messageDefinitions.find((m) => m.messageName === 'RequireUserComputedByIdFields');
+    expect(fieldsMessage).toBeDefined();
+
+    // Should have two different nested messages: Address and Profile
+    expect(fieldsMessage?.nestedMessages).toHaveLength(2);
+    expect(fieldsMessage?.nestedMessages?.map((m) => m.messageName)).toEqual(
+      expect.arrayContaining(['Address', 'Profile']),
+    );
+  });
+});

@@ -142,6 +142,10 @@ export class RequiredFieldsVisitor {
   public visit(): void {
     for (const keyDirective of this.keyDirectives) {
       const rawFieldSet = this.getKeyFieldsString(keyDirective);
+      if (rawFieldSet.length === 0) {
+        throw new Error(`Required field set is empty for key directive ${keyDirective.name.value}`);
+      }
+
       this.currentKeyFieldsString = formatKeyElements(rawFieldSet).join(' ');
 
       if (this.mapping[this.currentKeyFieldsString]) {
@@ -394,9 +398,17 @@ export class RequiredFieldsVisitor {
       this.handleCompositeType(fieldDefinition);
     }
 
+    const protoFieldName = graphqlFieldToProtoField(fieldDefinition.name);
+
+    // Check if field already exists to avoid duplicates when reusing nested messages
+    const existingField = this.current.fields.find((f) => f.fieldName === protoFieldName);
+    if (existingField) {
+      return;
+    }
+
     const typeInfo = getProtoTypeFromGraphQL(false, fieldDefinition.type);
     this.current.fields.push({
-      fieldName: graphqlFieldToProtoField(fieldDefinition.name),
+      fieldName: protoFieldName,
       typeName: typeInfo.typeName,
       fieldNumber: this.current?.fields.length + 1,
       isRepeated: typeInfo.isRepeated,
@@ -466,17 +478,25 @@ export class RequiredFieldsVisitor {
     this.ancestors.push(this.currentType);
     this.currentType = currentType;
 
-    // Create a new nested message for the current type.
-    let nested: ProtoMessage = {
-      messageName: this.currentType?.name ?? '',
-      fields: [],
-    };
-
     if (!this.current.nestedMessages) {
       this.current.nestedMessages = [];
     }
 
-    this.current.nestedMessages.push(nested);
+    // Check if a nested message with the same name already exists
+    const existingNested = this.current.nestedMessages.find((msg) => msg.messageName === this.currentType?.name);
+
+    let nested: ProtoMessage;
+    if (existingNested) {
+      // Reuse the existing nested message to avoid duplicates
+      nested = existingNested;
+    } else {
+      // Create a new nested message for the current type
+      nested = {
+        messageName: this.currentType?.name ?? '',
+        fields: [],
+      };
+      this.current.nestedMessages.push(nested);
+    }
 
     this.stack.push(this.current);
     this.current = nested;
