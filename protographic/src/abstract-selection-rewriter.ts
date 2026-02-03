@@ -122,6 +122,8 @@ export class AbstractSelectionRewriter {
     const fields = ctx.node.selections.filter((s) => s.kind === Kind.FIELD);
     const inlineFragments = ctx.node.selections.filter((s) => s.kind === Kind.INLINE_FRAGMENT);
 
+    if (fields.length === 0) return;
+
     // Remove the interface-level fields from the selection set, keeping only inline fragments
     ctx.node.selections = [...inlineFragments];
 
