@@ -33,13 +33,6 @@ import { AbstractSelectionRewriter } from './abstract-selection-rewriter.js';
 import { FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 /**
- * Configuration options for the RequiredFieldsVisitor.
- */
-type RequiredFieldsVisitorOptions = {
-  includeComments: boolean;
-};
-
-/**
  * A record mapping key directive strings to their corresponding RequiredFieldMapping.
  * Each entity can have multiple @key directives, and each key needs its own RPC mapping.
  */
@@ -124,9 +117,6 @@ export class RequiredFieldsVisitor {
     private readonly objectType: GraphQLObjectType,
     private readonly requiredField: GraphQLField<any, any, any>,
     fieldSet: string,
-    options: RequiredFieldsVisitorOptions = {
-      includeComments: false,
-    },
   ) {
     this.resolveKeyDirectives();
     this.fieldSetDoc = parse(`{ ${fieldSet} }`);
@@ -401,8 +391,7 @@ export class RequiredFieldsVisitor {
     const protoFieldName = graphqlFieldToProtoField(fieldDefinition.name);
 
     // Check if field already exists to avoid duplicates when reusing nested messages
-    const existingField = this.current.fields.find((f) => f.fieldName === protoFieldName);
-    if (existingField) {
+    if (this.current.fields.some((f) => f.fieldName === protoFieldName)) {
       return;
     }
 
