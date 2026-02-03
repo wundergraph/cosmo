@@ -1056,3 +1056,199 @@ func TestExpression(t *testing.T) {
 		assert.Equal(t, "Other-Value", updatedClientReq.Header.Get("X-Test-Header"))
 	})
 }
+
+func TestRouterResponseHeaderRules(t *testing.T) {
+	t.Run("Should set router response header with static expression", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Client-Header",
+						Expression: "\"static-value\"",
+					},
+				},
+			},
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, ht)
+
+		rr := httptest.NewRecorder()
+
+		reqCtx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		}
+		clientCtx := withRequestContext(context.Background(), reqCtx)
+		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
+		require.NoError(t, err)
+		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
+		reqCtx.request = clientReq
+
+		err = ht.ApplyRouterResponseHeaderRules(rr, reqCtx)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "static-value", rr.Header().Get("X-Client-Header"))
+	})
+
+	t.Run("Should set router response header with expression from request header", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Client-ID",
+						Expression: "request.header.Get(\"X-User-ID\")",
+					},
+				},
+			},
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, ht)
+
+		rr := httptest.NewRecorder()
+
+		reqCtx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		}
+		clientCtx := withRequestContext(context.Background(), reqCtx)
+		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
+		require.NoError(t, err)
+		clientReq.Header.Set("X-User-ID", "user-123")
+		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
+		reqCtx.request = clientReq
+
+		err = ht.ApplyRouterResponseHeaderRules(rr, reqCtx)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "user-123", rr.Header().Get("X-Client-ID"))
+	})
+
+	t.Run("Should set multiple router response headers", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Client-Header-1",
+						Expression: "\"value-1\"",
+					},
+					{
+						Name:       "X-Client-Header-2",
+						Expression: "\"value-2\"",
+					},
+				},
+			},
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, ht)
+
+		rr := httptest.NewRecorder()
+
+		reqCtx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		}
+		clientCtx := withRequestContext(context.Background(), reqCtx)
+		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
+		require.NoError(t, err)
+		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
+		reqCtx.request = clientReq
+
+		err = ht.ApplyRouterResponseHeaderRules(rr, reqCtx)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "value-1", rr.Header().Get("X-Client-Header-1"))
+		assert.Equal(t, "value-2", rr.Header().Get("X-Client-Header-2"))
+	})
+
+	t.Run("Should set router response header with complex expression", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Combined-Header",
+						Expression: "request.header.Get(\"X-User-ID\") + \"-\" + request.header.Get(\"X-Session-ID\")",
+					},
+				},
+			},
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, ht)
+
+		rr := httptest.NewRecorder()
+
+		reqCtx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		}
+		clientCtx := withRequestContext(context.Background(), reqCtx)
+		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
+		require.NoError(t, err)
+		clientReq.Header.Set("X-User-ID", "user-123")
+		clientReq.Header.Set("X-Session-ID", "session-456")
+		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
+		reqCtx.request = clientReq
+
+		err = ht.ApplyRouterResponseHeaderRules(rr, reqCtx)
+		assert.NoError(t, err)
+
+		assert.Equal(t, "user-123-session-456", rr.Header().Get("X-Combined-Header"))
+	})
+
+	t.Run("Should return error when router response header expression is invalid", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Invalid",
+						Expression: "invalid expression syntax",
+					},
+				},
+			},
+		})
+		assert.Nil(t, ht)
+		assert.Error(t, err)
+	})
+
+	t.Run("Should ignore router response header rules which resolve to \"\"", func(t *testing.T) {
+		ht, err := NewHeaderPropagation(&config.HeaderRules{
+			Router: config.RouterHeaderRules{
+				Response: []*config.RouterResponseHeaderRule{
+					{
+						Name:       "X-Client-ID",
+						Expression: "\"\"",
+					},
+				},
+			},
+		})
+		assert.NoError(t, err)
+		assert.NotNil(t, ht)
+
+		rr := httptest.NewRecorder()
+
+		reqCtx := &requestContext{
+			logger:           zap.NewNop(),
+			responseWriter:   rr,
+			operation:        &operationContext{},
+			subgraphResolver: NewSubgraphResolver([]Subgraph{}),
+		}
+		clientCtx := withRequestContext(context.Background(), reqCtx)
+		clientReq, err := http.NewRequestWithContext(clientCtx, "POST", "http://localhost", nil)
+		require.NoError(t, err)
+		reqCtx.expressionContext = expr.Context{Request: expr.LoadRequest(clientReq)}
+		reqCtx.request = clientReq
+
+		err = ht.ApplyRouterResponseHeaderRules(rr, reqCtx)
+		assert.NoError(t, err)
+
+		// Should not set the header since the expression resolves to empty string
+		assert.Empty(t, rr.Header().Get("X-Client-ID"))
+	})
+}
