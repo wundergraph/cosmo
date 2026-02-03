@@ -17,8 +17,8 @@ import {
   SelectionSetNode,
   visit,
 } from 'graphql';
-import { VisitContext } from './types';
-import { ValidationResult } from './sdl-validation-visitor';
+import { VisitContext } from './types.js';
+import { ValidationResult } from './sdl-validation-visitor.js';
 
 /**
  * Validates selection sets within @requires directive field sets.

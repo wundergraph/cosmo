@@ -18,7 +18,7 @@ import {
   SelectionSetNode,
   visit,
 } from 'graphql';
-import { CompositeMessageKind, ProtoMessage, ProtoMessageField, RPCMethod, VisitContext } from './types';
+import { CompositeMessageKind, ProtoMessage, ProtoMessageField, RPCMethod, VisitContext } from './types.js';
 import { KEY_DIRECTIVE_NAME } from './string-constants';
 import {
   createEntityLookupRequestKeyMessageName,
@@ -28,10 +28,9 @@ import {
   graphqlFieldToProtoField,
   formatKeyElements,
 } from './naming-conventions';
-import { getProtoTypeFromGraphQL } from './proto-utils';
-import { AbstractSelectionRewriter } from './abstract-selection-rewriter';
-import { FieldMapping, TypeFieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { getNormalizedFieldSet, safeParse } from '@wundergraph/composition';
+import { getProtoTypeFromGraphQL } from './proto-utils.js';
+import { AbstractSelectionRewriter } from './abstract-selection-rewriter.js';
+import { FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 /**
  * Configuration options for the RequiredFieldsVisitor.

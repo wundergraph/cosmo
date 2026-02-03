@@ -22,7 +22,7 @@ import {
   GraphQLType,
   getNamedType,
 } from 'graphql';
-import { VisitContext } from './types';
+import { VisitContext } from './types.js';
 
 /**
  * Rewrites GraphQL selection sets to normalize abstract type selections.

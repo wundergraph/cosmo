@@ -17,7 +17,6 @@ import {
   createEntityLookupMethodName,
   createOperationMethodName,
   createRequestMessageName,
-  createRequiredFieldsMethodName,
   createResolverMethodName,
   createResponseMessageName,
   graphqlArgumentToProtoField,
