@@ -473,7 +473,7 @@ func TestMCP(t *testing.T) {
 				// Make the request
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close() //nolint:errcheck //nolint:errcheck
+				defer resp.Body.Close() //nolint:errcheck
 
 				// Verify response status
 				assert.Equal(t, http.StatusNoContent, resp.StatusCode)

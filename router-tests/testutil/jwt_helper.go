@@ -102,7 +102,11 @@ func (s *JWKSTestServer) waitForReady(timeout time.Duration) error {
 		case <-ctx.Done():
 			return fmt.Errorf("timeout waiting for JWKS server")
 		case <-ticker.C:
-			resp, err := http.Get(s.jwksURL)
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.jwksURL, nil)
+			if err != nil {
+				continue
+			}
+			resp, err := http.DefaultClient.Do(req)
 			if err == nil {
 				resp.Body.Close()
 				if resp.StatusCode == http.StatusOK {

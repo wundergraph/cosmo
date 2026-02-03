@@ -17,6 +17,9 @@ type contextKey string
 
 const (
 	userClaimsContextKey contextKey = "mcp_user_claims"
+	// maxBodyBytes is the maximum size of the request body we'll read for scope checking.
+	// This prevents memory exhaustion from oversized payloads.
+	maxBodyBytes int64 = 1 << 20 // 1 MB
 )
 
 // mcpAuthProvider adapts MCP headers to the authentication.Provider interface
@@ -121,11 +124,17 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 
 		// Step 2: Parse JSON-RPC request to check for tool-specific scopes
 		// Read body to extract tool name (only if body exists)
+		// Use LimitReader to prevent memory exhaustion from oversized payloads
 		var body []byte
 		if r.Body != nil {
-			body, err = io.ReadAll(r.Body)
+			limitedReader := io.LimitReader(r.Body, maxBodyBytes+1)
+			body, err = io.ReadAll(limitedReader)
 			if err != nil {
 				m.sendUnauthorizedResponse(w, fmt.Errorf("failed to read request body"))
+				return
+			}
+			if int64(len(body)) > maxBodyBytes {
+				m.sendUnauthorizedResponse(w, fmt.Errorf("request body too large"))
 				return
 			}
 			// Restore body for downstream handlers
@@ -155,8 +164,9 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 			}
 		}
 
-		// Add claims to request context for downstream handlers
+		// Add claims and request headers to request context for downstream handlers
 		ctx := context.WithValue(r.Context(), userClaimsContextKey, claims)
+		ctx = requestHeadersFromRequest(ctx, r)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

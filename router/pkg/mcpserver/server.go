@@ -892,7 +892,7 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 		// If there are errors but no data, return only the errors
 		if len(graphqlResponse.Data) == 0 || string(graphqlResponse.Data) == "null" {
 			return &mcp.CallToolResult{
-				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Response error: %v", err)}},
+				Content: []mcp.Content{&mcp.TextContent{Text: fmt.Sprintf("Response error: %s", errorMessage)}},
 				IsError: true,
 			}, nil
 		}
@@ -1022,14 +1022,17 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 		ScopesSupported:        scopes, // Automatically derived from required scopes
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(metadata); err != nil {
+	// Encode to buffer first so we can handle errors before writing headers
+	data, err := json.Marshal(metadata)
+	if err != nil {
 		s.logger.Error("failed to encode protected resource metadata", zap.Error(err))
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }
 
 // GetResourceMetadataURL returns the URL for the OAuth 2.0 Protected Resource Metadata endpoint

@@ -15,6 +15,15 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
+// previewToken returns a truncated preview of a token for logging purposes.
+// Returns the full token if shorter than n characters, otherwise returns first n characters with "...".
+func previewToken(token string, n int) string {
+	if len(token) <= n {
+		return token
+	}
+	return token[:n] + "..."
+}
+
 // authRoundTripper wraps an http.RoundTripper and adds Authorization headers
 // It also captures the last HTTP response for error analysis
 type authRoundTripper struct {
@@ -199,7 +208,7 @@ func TestMCPAuthorizationWithOfficialSDK(t *testing.T) {
 			require.NoError(t, err)
 			defer mcpClient.Close() //nolint:errcheck
 
-			t.Logf("✓ Connected to MCP server with token: %s", token[:20]+"...")
+			t.Logf("✓ Connected to MCP server with token: %s", previewToken(token, 20))
 
 			// Call a tool
 			result, err := mcpClient.CallTool(ctx, "execute_operation_my_employees", map[string]any{
@@ -317,7 +326,7 @@ func TestMCPAuthorizationWithOfficialSDK(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, result)
-				t.Logf("✓ Request %d succeeded with token: %s", i+1, token[:25]+"...")
+				t.Logf("✓ Request %d succeeded with token: %s", i+1, previewToken(token, 25))
 			}
 
 			t.Logf("✓ All token changes worked on same session")
