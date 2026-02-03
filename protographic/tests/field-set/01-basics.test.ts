@@ -171,7 +171,7 @@ describe('Field Set Visitor', () => {
         type User @key(fields: "id") {
           id: ID!
           name: String! @external
-          age: Int @requires(fields: "name")
+          age: Int @requires(fields: "name name")
         }
       `,
       entityName: 'User',

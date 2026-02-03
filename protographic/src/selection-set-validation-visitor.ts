@@ -108,8 +108,12 @@ export class SelectionSetValidationVisitor {
    * @returns BREAK if validation fails to stop traversal, undefined otherwise
    */
   private onEnterField(ctx: VisitContext<FieldNode>): any {
-    const fieldDefitinion = this.getFieldDefinition(ctx.node);
-    const namedType = this.getUnderlyingType(fieldDefitinion.type);
+    const fieldDefinition = this.getFieldDefinition(ctx.node);
+    if (!fieldDefinition) {
+      return;
+    }
+
+    const namedType = this.getUnderlyingType(fieldDefinition.type);
 
     if (this.isAbstractType(namedType)) {
       this.validationResult.errors.push(
@@ -136,14 +140,17 @@ export class SelectionSetValidationVisitor {
 
   /**
    * Retrieves the field definition for a field node from the current type.
+   * If the field is not found, a validation error is recorded and null is returned.
    *
    * @param node - The field node to look up
-   * @returns The GraphQL field definition
-   * @throws Error if the field definition is not found on the current type
+   * @returns The GraphQL field definition, or null if not found
    */
-  private getFieldDefinition(node: FieldNode): GraphQLField<any, any> {
+  private getFieldDefinition(node: FieldNode): GraphQLField<any, any> | null {
     const fieldDef = this.currentType.getFields()[node.name.value];
-    if (!fieldDef) throw new Error(`Field definition not found for field ${node.name.value}`);
+    if (!fieldDef) {
+      this.validationResult.errors.push(`Field '${node.name.value}' not found on type '${this.currentType.name}'`);
+      return null;
+    }
     return fieldDef;
   }
 
