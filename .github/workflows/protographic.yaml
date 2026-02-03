@@ -24,7 +24,7 @@ jobs:
       - uses: ./.github/actions/node
 
       - name: Install dependencies
-        run: pnpm install --filter ./protographic
+        run: pnpm install --filter ./connect --filter ./composition --filter ./protographic
 
       - name: Generate code
         run: pnpm generate
