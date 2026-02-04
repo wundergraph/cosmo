@@ -549,7 +549,7 @@ message ResolveProjectCriticalDeadlineArgs {
 message ResolveProjectCriticalDeadlineContext {
   string id = 1;
   ProjectStatus status = 2;
-  repeated Milestone milestones = 3;
+  Milestone milestones = 3;
 }
 
 message ResolveProjectCriticalDeadlineRequest {
