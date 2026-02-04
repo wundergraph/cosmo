@@ -428,31 +428,25 @@ export class RequiredFieldsVisitor {
    *
    * @param ctx - The visit context containing the selection set node and its parent
    */
-  private onEnterSelectionSet(ctx: VisitContext<SelectionSetNode>): void {
+  private onEnterSelectionSet(ctx: VisitContext<SelectionSetNode>): any {
     if (!ctx.parent || !this.current) {
-      return;
+      return false;
     }
 
-    let currentType: GraphQLType | undefined;
+    let currentType: GraphQLObjectType | undefined;
     if (this.isFieldNode(ctx.parent)) {
       currentType = this.findObjectTypeForField(ctx.parent.name.value) ?? undefined;
-      if (!currentType) {
-        // TODO: handle this case. Could be a union or interface type.
-        return;
-      }
     } else if (this.isInlineFragmentNode(ctx.parent)) {
       const typeName = ctx.parent.typeCondition?.name.value;
-      if (!typeName) {
-        return;
+      if (typeName) {
+        currentType = this.findObjectType(typeName);
       }
-
-      currentType = this.findObjectType(typeName) ?? undefined;
     } else {
-      return;
+      return false;
     }
 
-    if (!this.currentType) {
-      return;
+    if (!this.currentType || !currentType) {
+      return false;
     }
 
     this.ancestors.push(this.currentType);
@@ -484,7 +478,8 @@ export class RequiredFieldsVisitor {
 
   /**
    * Handles leaving a selection set node.
-   * Restores the previous type and message context when ascending the tree.
+   * Restores the previous type and message context when ascending the tree,
+   * but only if onEnterSelectionSet actually pushed state.
    *
    * @param ctx - The visit context containing the selection set node
    */
