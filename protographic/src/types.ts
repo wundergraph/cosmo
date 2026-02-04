@@ -73,6 +73,12 @@ export interface ProtoMessageField {
   description?: string;
   // The original name of the field in the GraphQL schema
   graphqlName?: string;
+
+  /**
+   * The composite type of the field. When building a proto message
+   * this is used to create the composite type messages as nested messages.
+   */
+  compositeType?: CompositeMessageDefinition;
 }
 
 /**
@@ -96,7 +102,6 @@ export interface ProtoMessage {
    *  Address address = 1;
    */
   nestedMessages?: ProtoMessage[];
-  compositeType?: CompositeMessageDefinition;
 }
 
 export interface ListWrapper {

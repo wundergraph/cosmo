@@ -19,7 +19,7 @@ import {
   visit,
 } from 'graphql';
 import { FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { CompositeMessageKind, ProtoMessage, RPCMethod, VisitContext } from './types.js';
+import { CompositeMessageDefinition, CompositeMessageKind, ProtoMessage, RPCMethod, VisitContext } from './types.js';
 import { KEY_DIRECTIVE_NAME } from './string-constants.js';
 import {
   createEntityLookupRequestKeyMessageName,
@@ -374,8 +374,9 @@ export class RequiredFieldsVisitor {
       throw new Error(`Field definition not found for field ${ctx.node.name.value}`);
     }
 
+    let compositeType: CompositeMessageDefinition | undefined;
     if (this.isCompositeType(fieldDefinition.type)) {
-      this.handleCompositeType(fieldDefinition);
+      compositeType = this.handleCompositeType(fieldDefinition);
     }
 
     const protoFieldName = graphqlFieldToProtoField(fieldDefinition.name);
@@ -392,6 +393,7 @@ export class RequiredFieldsVisitor {
       fieldNumber: this.current?.fields.length + 1,
       isRepeated: typeInfo.isRepeated,
       graphqlName: fieldDefinition.name,
+      compositeType,
     });
   }
 
@@ -416,16 +418,7 @@ export class RequiredFieldsVisitor {
    * @param ctx - The visit context containing the inline fragment node
    */
   private onLeaveInlineFragment(ctx: VisitContext<InlineFragmentNode>): void {
-    const currentInlineFragment = this.currentInlineFragment;
     this.currentInlineFragment = this.inlineFragmentStack.pop() ?? undefined;
-
-    if (!this.current || !this.current.compositeType) {
-      return;
-    }
-
-    if (this.current.compositeType.kind === CompositeMessageKind.UNION) {
-      this.current.compositeType.memberTypes.push(currentInlineFragment?.typeCondition?.name.value ?? '');
-    }
   }
 
   /**
@@ -506,29 +499,29 @@ export class RequiredFieldsVisitor {
    *
    * @param fieldDefinition - The field definition with a composite type
    */
-  private handleCompositeType(fieldDefinition: GraphQLField<any, any, any>): void {
+  private handleCompositeType(fieldDefinition: GraphQLField<any, any, any>): CompositeMessageDefinition | undefined {
     if (!this.current) {
-      return;
+      return undefined;
     }
     const compositeType = getNamedType(fieldDefinition.type);
 
     if (isInterfaceType(compositeType)) {
-      this.current.compositeType = {
+      return {
         kind: CompositeMessageKind.INTERFACE,
         implementingTypes: this.schema.getImplementations(compositeType).objects.map((o) => o.name),
         typeName: compositeType.name,
       };
-
-      return;
     }
 
     if (isUnionType(compositeType)) {
-      this.current.compositeType = {
+      return {
         kind: CompositeMessageKind.UNION,
-        memberTypes: [],
+        memberTypes: this.schema.getPossibleTypes(compositeType).map((t) => t.name),
         typeName: compositeType.name,
       };
     }
+
+    return undefined;
   }
 
   /**

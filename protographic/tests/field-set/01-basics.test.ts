@@ -623,7 +623,7 @@ describe('Field Set Visitor', () => {
       isRepeated: false,
     });
 
-    const compositeType = fieldMessage?.compositeType;
+    const compositeType = fieldMessage?.fields[0].compositeType;
     expect(compositeType).toBeDefined();
     expect(compositeType?.kind).toBe(CompositeMessageKind.UNION);
     expect(compositeType?.typeName).toBe('Animal');
@@ -725,7 +725,7 @@ describe('Field Set Visitor', () => {
       isRepeated: false,
     });
 
-    const compositeType = fieldMessage?.compositeType;
+    const compositeType = fieldMessage?.fields[0].compositeType;
     expect(compositeType).toBeDefined();
     expect(compositeType?.kind).toBe(CompositeMessageKind.INTERFACE);
     expect(compositeType?.typeName).toBe('Animal');
@@ -827,7 +827,7 @@ describe('Field Set Visitor', () => {
       isRepeated: false,
     });
 
-    const compositeType = fieldMessage?.compositeType;
+    const compositeType = fieldMessage?.fields[0].compositeType;
     expect(compositeType).toBeDefined();
     expect(compositeType?.kind).toBe(CompositeMessageKind.INTERFACE);
     expect(compositeType?.typeName).toBe('Animal');
@@ -951,7 +951,7 @@ describe('Field Set Visitor', () => {
     });
 
     // Check for union composite type on Description message
-    const compositeType = descriptionMessage?.compositeType;
+    const compositeType = descriptionMessage?.fields[2].compositeType;
     expect(compositeType).toBeDefined();
     expect(compositeType?.kind).toBe(CompositeMessageKind.UNION);
     expect(compositeType?.typeName).toBe('Animal');

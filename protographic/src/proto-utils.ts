@@ -32,7 +32,7 @@ const BLOCK_COMMENT_END = '*/';
  * @returns The message definition
  */
 export function buildProtoMessage(includeComments: boolean, message: ProtoMessage): string[] {
-  return buildProtoMessageWithIndent(includeComments, message, 0);
+  return buildProtoMessageWithIndent(includeComments, message, 0, new Set());
 }
 
 /**
@@ -42,23 +42,39 @@ export function buildProtoMessage(includeComments: boolean, message: ProtoMessag
  * @param indent - The indent level
  * @returns The message lines
  */
-function buildProtoMessageWithIndent(includeComments: boolean, message: ProtoMessage, indent: number): string[] {
+function buildProtoMessageWithIndent(
+  includeComments: boolean,
+  message: ProtoMessage,
+  indent: number,
+  seenTypes: Set<string>,
+): string[] {
   const messageLines = formatComment(includeComments, message.description, indent);
-  messageLines.push(indentContent(indent, `message ${message.messageName} {`));
 
-  // if we have nested messages, we need to build them first
-  if (message.nestedMessages && message.nestedMessages.length > 0) {
-    for (const nestedMessage of message.nestedMessages) {
-      messageLines.push(...buildProtoMessageWithIndent(includeComments, nestedMessage, indent + 1));
-    }
+  if (seenTypes.has(message.messageName)) {
+    throw new Error(`Duplicate nested message name: ${message.messageName}`);
   }
 
-  if (message.compositeType) {
-    messageLines.push(...buildCompositeTypeMessage(includeComments, message.compositeType, indent + 1));
+  seenTypes.add(message.messageName);
+  messageLines.push(indentContent(indent, `message ${message.messageName} {`));
+
+  // Build nested messages first - use a new Set for this level since
+  // protobuf allows the same message name at different nesting levels
+  if (message.nestedMessages && message.nestedMessages.length > 0) {
+    const nestedSeenTypes = new Set<string>();
+    for (const nestedMessage of message.nestedMessages) {
+      messageLines.push(...buildProtoMessageWithIndent(includeComments, nestedMessage, indent + 1, nestedSeenTypes));
+    }
   }
 
   if (message.reservedNumbers && message.reservedNumbers.length > 0) {
     messageLines.push(indentContent(indent + 1, `reserved ${message.reservedNumbers};`));
+  }
+
+  const compositeTypeFields = message.fields.filter((f) => f.compositeType);
+  for (const compositeTypeField of compositeTypeFields) {
+    messageLines.push(
+      ...buildCompositeTypeMessage(includeComments, compositeTypeField.compositeType!, indent + 1, seenTypes),
+    );
   }
 
   for (const field of message.fields) {
@@ -105,7 +121,13 @@ function buildCompositeTypeMessage(
   includeComments: boolean,
   compositeType: CompositeMessageDefinition,
   indent: number,
+  seenTypes: Set<string>,
 ): string[] {
+  if (seenTypes.has(compositeType.typeName)) {
+    return [];
+  }
+
+  seenTypes.add(compositeType.typeName);
   const lines: string[] = [];
 
   if (includeComments && compositeType.description) {
