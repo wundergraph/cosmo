@@ -55,7 +55,7 @@ func NewUsageTracker(log *zap.Logger, config UsageTrackerConfig) (*UsageTracker,
 	}
 	cfg := posthog.Config{
 		Logger:   tracker.posthogLogger(),
-		Endpoint: "https://eu.i.posthoga.com",
+		Endpoint: "https://eu.i.posthog.com",
 	}
 	tracker.client, err = posthog.NewWithConfig("phc_h2Efq192t8Jz2eW14BDRt3I8Vrs2WMd3oQ4KOpMu3xT", cfg)
 	if err != nil {
