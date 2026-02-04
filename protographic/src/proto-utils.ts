@@ -145,6 +145,9 @@ function buildCompositeTypeMessage(
     compositeTypes = compositeType.implementingTypes;
   }
 
+  // Create a sorted copy to ensure deterministic field numbers without mutating the input.
+  compositeTypes = [...compositeTypes].sort((a, b) => a.localeCompare(b));
+
   lines.push(
     indentContent(indent, `message ${compositeType.typeName} {`),
     indentContent(indent + 1, `oneof ${oneOfName} {`),

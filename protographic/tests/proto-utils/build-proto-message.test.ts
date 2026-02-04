@@ -308,9 +308,9 @@ describe('buildProtoMessage', () => {
         "message SearchResponse {
           message SearchResult {
             oneof value {
-              User user = 1;
+              Order order = 1;
               Product product = 2;
-              Order order = 3;
+              User user = 3;
             }
           }
           SearchResult result = 1;
@@ -406,14 +406,14 @@ describe('buildProtoMessage', () => {
           message Widget {
             oneof instance {
               Chart chart = 1;
-              Table table = 2;
-              Counter counter = 3;
+              Counter counter = 2;
+              Table table = 3;
             }
           }
           message DataSource {
             oneof instance {
-              Database database = 1;
-              API api = 2;
+              API api = 1;
+              Database database = 2;
               File file = 3;
             }
           }
@@ -461,8 +461,8 @@ describe('buildProtoMessage', () => {
         "message Response {
           message SearchResult {
             oneof value {
-              User user = 1;
-              Product product = 2;
+              Product product = 1;
+              User user = 2;
             }
           }
           SearchResult primary_result = 1;
@@ -656,8 +656,8 @@ describe('buildProtoMessage', () => {
           }
           message SearchResult {
             oneof value {
-              User user = 1;
-              Product product = 2;
+              Product product = 1;
+              User user = 2;
             }
           }
           Animal animal1 = 1;
@@ -788,8 +788,8 @@ describe('buildProtoMessage', () => {
           // Union of possible search results
           message SearchResult {
             oneof value {
-              User user = 1;
-              Product product = 2;
+              Product product = 1;
+              User user = 2;
             }
           }
           // The search result
