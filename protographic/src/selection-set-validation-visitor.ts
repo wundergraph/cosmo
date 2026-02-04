@@ -110,7 +110,7 @@ export class SelectionSetValidationVisitor {
   private onEnterField(ctx: VisitContext<FieldNode>): any {
     const fieldDefinition = this.getFieldDefinition(ctx.node);
     if (!fieldDefinition) {
-      return;
+      return false;
     }
 
     const namedType = this.getUnderlyingType(fieldDefinition.type);
