@@ -1203,7 +1203,7 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	if err := r.configureUsageTracking(ctx); err != nil {
-		return err
+		r.logger.Info("failed to start usage tracking", zap.Error(err))
 	}
 
 	r.trackRouterConfigUsage()
@@ -1416,13 +1416,16 @@ func (r *Router) configureUsageTracking(ctx context.Context) (err error) {
 	}
 	r.usage, err = track.NewUsageTracker(r.logger, cfg)
 	if err != nil {
-		return fmt.Errorf("failed to create usage tracker: %w", err)
+		return err
 	}
 	go r.usage.TrackUptime(ctx)
 	return nil
 }
 
 func (r *Router) trackRouterConfigUsage() {
+	if r.usage == nil {
+		return
+	}
 	r.usage.TrackRouterConfigUsage(r.Config.Usage())
 }
 
