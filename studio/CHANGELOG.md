@@ -4,6 +4,51 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.154.0](https://github.com/wundergraph/cosmo/compare/studio@0.153.0...studio@0.154.0) (2026-02-02)
+
+### Features
+
+* improve create graph form UX ([#2468](https://github.com/wundergraph/cosmo/issues/2468)) ([b188b46](https://github.com/wundergraph/cosmo/commit/b188b4669d21882cc55c24bd7ee3fa8fd275363e)) (@alepane21)
+
+# [0.153.0](https://github.com/wundergraph/cosmo/compare/studio@0.152.0...studio@0.153.0) (2026-02-02)
+
+### Bug Fixes
+
+* optimize signup page layout and styling ([#2483](https://github.com/wundergraph/cosmo/issues/2483)) ([f2e5a5b](https://github.com/wundergraph/cosmo/commit/f2e5a5b9e9c95b54a1b7ab75960c39d37c2abeec)) (@wunderhawk)
+
+### Features
+
+* query execution event capture ([#2482](https://github.com/wundergraph/cosmo/issues/2482)) ([2c44697](https://github.com/wundergraph/cosmo/commit/2c44697df50356982130d6397dd9f8ac5545cbcf)) (@thisisnithin)
+
+# [0.152.0](https://github.com/wundergraph/cosmo/compare/studio@0.151.0...studio@0.152.0) (2026-01-29)
+
+### Bug Fixes
+
+* update layout and styling of login and signup pages for mobile screens ([#2479](https://github.com/wundergraph/cosmo/issues/2479)) ([177c11d](https://github.com/wundergraph/cosmo/commit/177c11df3be3d7fc041f7e5a5ad42e51f1e76d3a)) (@JivusAyrus)
+
+### Features
+
+* allow to copy operations id from checks section ([#2474](https://github.com/wundergraph/cosmo/issues/2474)) ([223d43a](https://github.com/wundergraph/cosmo/commit/223d43a307423dfbd59267cf2c817217bc07d09c)) (@alepane21)
+
+# [0.151.0](https://github.com/wundergraph/cosmo/compare/studio@0.150.0...studio@0.151.0) (2026-01-27)
+
+### Features
+
+* add new login and signup pages ([#2471](https://github.com/wundergraph/cosmo/issues/2471)) ([b427211](https://github.com/wundergraph/cosmo/commit/b427211ca2fb917ed519d822d4efac0050884fb5)) (@JivusAyrus)
+* add pagination and limit handling for API keys ([#2430](https://github.com/wundergraph/cosmo/issues/2430)) ([eca6aac](https://github.com/wundergraph/cosmo/commit/eca6aac00ffb13527b241a45ab552ef0b87788e4)) (@JivusAyrus)
+* clear `localStorage` when logout ([#2446](https://github.com/wundergraph/cosmo/issues/2446)) ([cf76d6f](https://github.com/wundergraph/cosmo/commit/cf76d6f7806cce8d2b29d2171e5ca6887856f845)) (@wilsonrivera)
+* improve overrides labels ([#2461](https://github.com/wundergraph/cosmo/issues/2461)) ([05dafc9](https://github.com/wundergraph/cosmo/commit/05dafc9ee42c10deb1620f0f3184808b0562dfa2)) (@alepane21)
+
+# [0.150.0](https://github.com/wundergraph/cosmo/compare/studio@0.149.6...studio@0.150.0) (2026-01-26)
+
+### Features
+
+* make studio image rootless ([#2459](https://github.com/wundergraph/cosmo/issues/2459)) ([c5071f8](https://github.com/wundergraph/cosmo/commit/c5071f8df47fbfeeb794fe772a74a1bc63366cc0)) (@pepol)
+
+## [0.149.6](https://github.com/wundergraph/cosmo/compare/studio@0.149.5...studio@0.149.6) (2026-01-20)
+
+**Note:** Version bump only for package studio
+
 ## [0.149.5](https://github.com/wundergraph/cosmo/compare/studio@0.149.4...studio@0.149.5) (2026-01-16)
 
 **Note:** Version bump only for package studio

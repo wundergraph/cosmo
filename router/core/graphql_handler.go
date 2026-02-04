@@ -79,6 +79,7 @@ type HandlerOptions struct {
 
 	EnableCacheResponseHeaders      bool
 	EnableResponseHeaderPropagation bool
+	HeaderPropagation               *HeaderPropagation
 
 	ApolloSubscriptionMultipartPrintBoundary bool
 }
@@ -92,6 +93,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		executor:                                 opts.Executor,
 		enableCacheResponseHeaders:               opts.EnableCacheResponseHeaders,
 		enableResponseHeaderPropagation:          opts.EnableResponseHeaderPropagation,
+		headerPropagation:                        opts.HeaderPropagation,
 		engineStats:                              opts.EngineStats,
 		tracer:                                   tracer,
 		authorizer:                               opts.Authorizer,
@@ -128,6 +130,7 @@ type GraphQLHandler struct {
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
+	headerPropagation               *HeaderPropagation
 
 	apolloSubscriptionMultipartPrintBoundary bool
 }
@@ -188,6 +191,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if errs := resolveCtx.SubgraphErrors(); errs != nil {
 			trackFinalResponseError(resolveCtx.Context(), errs)
 			w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+		}
+
+		// Apply any final router response header rules
+		if h.headerPropagation != nil {
+			if err := h.headerPropagation.ApplyRouterResponseHeaderRules(w, reqCtx); err != nil {
+				reqCtx.logger.Error("Failed to apply router response header rules", zap.Error(err))
+			}
 		}
 
 		// Write contents of buf to the header propagation writer
@@ -430,8 +440,8 @@ func (h *GraphQLHandler) WriteError(ctx *resolve.Context, err error, res *resolv
 		}
 	}
 
-	if wsRw, ok := w.(*websocketResponseWriter); ok {
-		_ = wsRw.Flush()
+	if flusher, ok := w.(resolve.SubscriptionResponseWriter); ok {
+		_ = flusher.Flush()
 	}
 }
 
