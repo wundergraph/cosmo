@@ -16,7 +16,13 @@ type OperationTimingsModule struct {
 func (m *OperationTimingsModule) Middleware(ctx core.RequestContext, next http.Handler) {
 	timings := ctx.Operation().Timings()
 
-	m.ResultsChan <- timings
+	if m.ResultsChan != nil {
+		select {
+		case m.ResultsChan <- timings:
+		default:
+			// drop if nobody is listening to avoid blocking the request path
+		}
+	}
 
 	// Call the next handler in the chain or return early by calling w.Write()
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
