@@ -1834,7 +1834,8 @@ func TestMultipartErrorResponseWriteFailures(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
-			_, _ = io.ReadAll(resp.Body)
+			_, err = io.ReadAll(resp.Body)
+			require.NoError(t, err)
 
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 
