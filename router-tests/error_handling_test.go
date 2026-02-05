@@ -1743,11 +1743,11 @@ func TestErrorResponseBodyWriteFailures(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(map[string]interface{}{
 					"failingWriterModule": failing_writer.FailingWriterModule{
-						ErrorType: failing_writer.ErrorTypeBrokenPipeOnBody,
+						ErrorType: failing_writer.ErrorTypeBrokenPipe,
 					},
 				}),
 				core.WithCustomModules(&failing_writer.FailingWriterModule{
-					ErrorType: failing_writer.ErrorTypeBrokenPipeOnBody,
+					ErrorType: failing_writer.ErrorTypeBrokenPipe,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1777,11 +1777,11 @@ func TestErrorResponseBodyWriteFailures(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(map[string]interface{}{
 					"failingWriterModule": failing_writer.FailingWriterModule{
-						ErrorType: failing_writer.ErrorTypeGenericOnBody,
+						ErrorType: failing_writer.ErrorTypeGeneric,
 					},
 				}),
 				core.WithCustomModules(&failing_writer.FailingWriterModule{
-					ErrorType: failing_writer.ErrorTypeGenericOnBody,
+					ErrorType: failing_writer.ErrorTypeGeneric,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1815,11 +1815,11 @@ func TestMultipartErrorResponseWriteFailures(t *testing.T) {
 			RouterOptions: []core.Option{
 				core.WithModulesConfig(map[string]interface{}{
 					"failingWriterModule": failing_writer.FailingWriterModule{
-						ErrorType: failing_writer.ErrorTypeBrokenPipeMultipart,
+						ErrorType: failing_writer.ErrorTypeBrokenPipe,
 					},
 				}),
 				core.WithCustomModules(&failing_writer.FailingWriterModule{
-					ErrorType: failing_writer.ErrorTypeBrokenPipeMultipart,
+					ErrorType: failing_writer.ErrorTypeBrokenPipe,
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {

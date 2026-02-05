@@ -3,7 +3,6 @@ package failing_writer
 import (
 	"errors"
 	"net/http"
-	"strings"
 	"syscall"
 
 	"github.com/wundergraph/cosmo/router/core"
@@ -15,12 +14,8 @@ const moduleID = "failingWriterModule"
 type ErrorType string
 
 const (
-	ErrorTypeBrokenPipe          ErrorType = "broken_pipe"
-	ErrorTypeGeneric             ErrorType = "generic"
-	ErrorTypeBrokenPipeOnBody    ErrorType = "broken_pipe_on_body"
-	ErrorTypeGenericOnBody       ErrorType = "generic_on_body"
-	ErrorTypeBrokenPipeMultipart ErrorType = "broken_pipe_multipart"
-	ErrorTypeGenericMultipart    ErrorType = "generic_multipart"
+	ErrorTypeBrokenPipe ErrorType = "broken_pipe"
+	ErrorTypeGeneric    ErrorType = "generic"
 )
 
 type failingWriter struct {
@@ -29,29 +24,11 @@ type failingWriter struct {
 }
 
 func (w *failingWriter) Write(b []byte) (int, error) {
-	shouldFail := false
+	// Simply fail on every write - the test controls what scenario triggers the write
 	switch w.errorType {
-	case ErrorTypeBrokenPipe, ErrorTypeGeneric:
-		shouldFail = true
-	case ErrorTypeBrokenPipeOnBody, ErrorTypeGenericOnBody:
-		if len(b) > 0 && b[0] == '{' {
-			shouldFail = true
-		}
-	case ErrorTypeBrokenPipeMultipart, ErrorTypeGenericMultipart:
-		content := string(b)
-		if strings.Contains(content, "--graphql") || strings.Contains(content, "Content-Type: application/json") {
-			shouldFail = true
-		}
-	}
-
-	if !shouldFail {
-		return w.ResponseWriter.Write(b)
-	}
-
-	switch w.errorType {
-	case ErrorTypeBrokenPipe, ErrorTypeBrokenPipeOnBody, ErrorTypeBrokenPipeMultipart:
+	case ErrorTypeBrokenPipe:
 		return 0, syscall.EPIPE
-	case ErrorTypeGeneric, ErrorTypeGenericOnBody, ErrorTypeGenericMultipart:
+	case ErrorTypeGeneric:
 		return 0, errors.New("simulated write error")
 	default:
 		return 0, errors.New("unknown error type")

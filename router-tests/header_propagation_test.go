@@ -1554,11 +1554,11 @@ func TestHeaderPropagation(t *testing.T) {
 						}),
 						core.WithModulesConfig(map[string]interface{}{
 							"failingWriterModule": failing_writer.FailingWriterModule{
-								ErrorType: failing_writer.ErrorTypeGenericOnBody,
+								ErrorType: failing_writer.ErrorTypeGeneric,
 							},
 						}),
 						core.WithCustomModules(&failing_writer.FailingWriterModule{
-							ErrorType: failing_writer.ErrorTypeGenericOnBody,
+							ErrorType: failing_writer.ErrorTypeGeneric,
 						}),
 					},
 					Subgraphs: testenv.SubgraphsConfig{
