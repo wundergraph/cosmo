@@ -216,7 +216,7 @@ func writeRequestErrors(params writeRequestErrorsParams) {
 	// In certain cases the requestContext can be nil, e.g.:- when called from the batch handler
 	if params.headerPropagation != nil && requestContext != nil && !isSubscription {
 		if err := params.headerPropagation.ApplyRouterResponseHeaderRules(params.writer, requestContext); err != nil {
-			params.logger.Error("Failed to apply router response header rules", zap.Error(err))
+			params.logger.Error("Failed to apply router response header rules on error cases", zap.Error(err))
 		}
 	}
 

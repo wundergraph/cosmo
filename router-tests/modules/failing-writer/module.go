@@ -3,6 +3,7 @@ package failing_writer
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"syscall"
 
 	"github.com/wundergraph/cosmo/router/core"
@@ -14,11 +15,54 @@ const moduleID = "failingWriterModule"
 type ErrorType string
 
 const (
-	ErrorTypeBrokenPipe       ErrorType = "broken_pipe"
-	ErrorTypeGeneric          ErrorType = "generic"
-	ErrorTypeBrokenPipeOnBody ErrorType = "broken_pipe_on_body"
-	ErrorTypeGenericOnBody    ErrorType = "generic_on_body"
+	ErrorTypeBrokenPipe          ErrorType = "broken_pipe"
+	ErrorTypeGeneric             ErrorType = "generic"
+	ErrorTypeBrokenPipeOnBody    ErrorType = "broken_pipe_on_body"
+	ErrorTypeGenericOnBody       ErrorType = "generic_on_body"
+	ErrorTypeBrokenPipeMultipart ErrorType = "broken_pipe_multipart"
+	ErrorTypeGenericMultipart    ErrorType = "generic_multipart"
 )
+
+type failingWriter struct {
+	http.ResponseWriter
+	errorType ErrorType
+}
+
+func (w *failingWriter) Write(b []byte) (int, error) {
+	shouldFail := false
+	switch w.errorType {
+	case ErrorTypeBrokenPipe, ErrorTypeGeneric:
+		shouldFail = true
+	case ErrorTypeBrokenPipeOnBody, ErrorTypeGenericOnBody:
+		if len(b) > 0 && b[0] == '{' {
+			shouldFail = true
+		}
+	case ErrorTypeBrokenPipeMultipart, ErrorTypeGenericMultipart:
+		content := string(b)
+		if strings.Contains(content, "--graphql") || strings.Contains(content, "Content-Type: application/json") {
+			shouldFail = true
+		}
+	}
+
+	if !shouldFail {
+		return w.ResponseWriter.Write(b)
+	}
+
+	switch w.errorType {
+	case ErrorTypeBrokenPipe, ErrorTypeBrokenPipeOnBody, ErrorTypeBrokenPipeMultipart:
+		return 0, syscall.EPIPE
+	case ErrorTypeGeneric, ErrorTypeGenericOnBody, ErrorTypeGenericMultipart:
+		return 0, errors.New("simulated write error")
+	default:
+		return 0, errors.New("unknown error type")
+	}
+}
+
+func (w *failingWriter) Flush() {
+	if flusher, ok := w.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
 
 type FailingWriterModule struct {
 	Logger    *zap.Logger
@@ -32,53 +76,6 @@ func (m *FailingWriterModule) Provision(ctx *core.ModuleContext) error {
 
 func (m *FailingWriterModule) Cleanup() error {
 	return nil
-}
-
-// failingWriter wraps http.ResponseWriter and makes Write operations fail
-type failingWriter struct {
-	http.ResponseWriter
-	errorType  ErrorType
-	writeCount int
-}
-
-func (w *failingWriter) Write(b []byte) (int, error) {
-	w.writeCount++
-
-	// Determine if we should fail based on error type and write content
-	shouldFail := false
-	switch w.errorType {
-	case ErrorTypeBrokenPipe, ErrorTypeGeneric:
-		// Fail on first write (for SSE header tests - the "event: next\ndata: " write)
-		shouldFail = w.writeCount == 1
-	case ErrorTypeBrokenPipeOnBody, ErrorTypeGenericOnBody:
-		// Fail on JSON body writes (skip SSE header "event: next\ndata: " if present)
-		// SSE header is "event: next\ndata: " which doesn't contain '{'
-		// Response bodies always start with '{'
-		if len(b) > 0 && b[0] == '{' {
-			shouldFail = true
-		}
-	}
-
-	if !shouldFail {
-		return w.ResponseWriter.Write(b)
-	}
-
-	// Return the appropriate error
-	switch w.errorType {
-	case ErrorTypeBrokenPipe, ErrorTypeBrokenPipeOnBody:
-		return 0, syscall.EPIPE
-	case ErrorTypeGeneric, ErrorTypeGenericOnBody:
-		return 0, errors.New("simulated write error")
-	default:
-		return 0, errors.New("unknown error type")
-	}
-}
-
-// Implement http.Flusher interface (needed for subscriptions)
-func (w *failingWriter) Flush() {
-	if flusher, ok := w.ResponseWriter.(http.Flusher); ok {
-		flusher.Flush()
-	}
 }
 
 func (m *FailingWriterModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {

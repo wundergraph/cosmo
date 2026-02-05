@@ -1800,3 +1800,48 @@ func TestErrorResponseBodyWriteFailures(t *testing.T) {
 		})
 	})
 }
+
+func TestMultipartErrorResponseWriteFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should log error when broken pipe error occurs writing multipart error response", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeBrokenPipeMultipart,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeBrokenPipeMultipart,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "multipart/mixed")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			_, _ = io.ReadAll(resp.Body)
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			logs := xEnv.Observer().FilterMessage("error writing multipart response")
+			require.Equal(t, 1, logs.Len(), "Expected error log for multipart write failure")
+			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
+		})
+	})
+
+}

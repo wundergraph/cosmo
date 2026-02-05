@@ -16,6 +16,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	failing_writer "github.com/wundergraph/cosmo/router-tests/modules/failing-writer"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
@@ -1545,15 +1546,19 @@ func TestHeaderPropagation(t *testing.T) {
 							Router: config.RouterHeaderRules{
 								Response: []*config.RouterResponseHeaderRule{
 									{
-										Name:       "X-Valid-Header",
-										Expression: `"valid-value"`,
-									},
-									{
 										Name:       "X-Invalid-Header",
 										Expression: `string(int("a"))`,
 									},
 								},
 							},
+						}),
+						core.WithModulesConfig(map[string]interface{}{
+							"failingWriterModule": failing_writer.FailingWriterModule{
+								ErrorType: failing_writer.ErrorTypeGenericOnBody,
+							},
+						}),
+						core.WithCustomModules(&failing_writer.FailingWriterModule{
+							ErrorType: failing_writer.ErrorTypeGenericOnBody,
 						}),
 					},
 					Subgraphs: testenv.SubgraphsConfig{
@@ -1562,21 +1567,20 @@ func TestHeaderPropagation(t *testing.T) {
 						},
 					},
 				}, func(t *testing.T, xEnv *testenv.Environment) {
-					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-						Query: `{ employees { id details { forename surname } notes } }`,
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query: "",
 					})
-
-					require.Contains(t, res.Body, "Failed to fetch from Subgraph")
+					require.NoError(t, err)
+					require.NotNil(t, res)
 
 					logs := xEnv.Observer()
 					require.NotNil(t, logs)
 
-					errorLogs := logs.FilterMessage("Failed to apply router response header rules").All()
+					errorLogs := logs.FilterMessage("Failed to apply router response header rules on error cases").All()
 					require.Len(t, errorLogs, 1)
 
 					errorLog := errorLogs[0]
 					require.Equal(t, zapcore.ErrorLevel, errorLog.Level)
-					require.Equal(t, "Failed to apply router response header rules", errorLog.Message)
 					require.NotEmpty(t, errorLog.Context)
 				})
 			})
