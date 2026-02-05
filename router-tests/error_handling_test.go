@@ -1805,7 +1805,7 @@ func TestErrorResponseBodyWriteFailures(t *testing.T) {
 func TestMultipartErrorResponseWriteFailures(t *testing.T) {
 	t.Parallel()
 
-	t.Run("should log error when broken pipe error occurs writing multipart error response", func(t *testing.T) {
+	t.Run("should log error when error occurs while writing multipart error response", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
