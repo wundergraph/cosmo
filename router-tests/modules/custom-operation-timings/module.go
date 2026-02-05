@@ -36,7 +36,7 @@ func (m *OperationTimingsModule) Module() core.ModuleInfo {
 		Priority: 1,
 		New: func() core.Module {
 			return &OperationTimingsModule{
-				ResultsChan: make(chan core.OperationTimings),
+				ResultsChan: make(chan core.OperationTimings, 1),
 			}
 		},
 	}
