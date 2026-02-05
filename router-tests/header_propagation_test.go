@@ -1479,53 +1479,106 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
-		t.Run("should log errors (but not error out) when router response header rule evaluation fails at runtime", func(t *testing.T) {
+		t.Run("should log errors (but not error out)", func(t *testing.T) {
 			t.Parallel()
 
-			testenv.Run(t, &testenv.Config{
-				LogObservation: testenv.LogObservationConfig{
-					Enabled:  true,
-					LogLevel: zapcore.ErrorLevel,
-				},
-				RouterOptions: []core.Option{
-					core.WithHeaderRules(config.HeaderRules{
-						Router: config.RouterHeaderRules{
-							Response: []*config.RouterResponseHeaderRule{
-								{
-									Name:       "X-Valid-Header",
-									Expression: `"valid-value"`,
-								},
-								{
-									Name:       "X-Invalid-Header",
-									Expression: `string(int("a"))`,
+			t.Run("when request is successful", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.ErrorLevel,
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							Router: config.RouterHeaderRules{
+								Response: []*config.RouterResponseHeaderRule{
+									{
+										Name:       "X-Valid-Header",
+										Expression: `"valid-value"`,
+									},
+									{
+										Name:       "X-Invalid-Header",
+										Expression: `string(int("a"))`,
+									},
 								},
 							},
-						},
-					}),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: queryEmployeeWithNoHobby,
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithNoHobby,
+					})
+
+					require.Equal(t, "valid-value", res.Response.Header.Get("X-Valid-Header"))
+
+					_, headerExists := res.Response.Header["X-Invalid-Header"]
+					require.False(t, headerExists)
+
+					require.Equal(t, http.StatusOK, res.Response.StatusCode)
+					require.Contains(t, res.Body, `"data"`)
+
+					logs := xEnv.Observer()
+					require.NotNil(t, logs)
+
+					errorLogs := logs.FilterMessage("Failed to apply router response header rules").All()
+					require.Len(t, errorLogs, 1)
+
+					errorLog := errorLogs[0]
+					require.Equal(t, zapcore.ErrorLevel, errorLog.Level)
+					require.Equal(t, "Failed to apply router response header rules", errorLog.Message)
+					require.NotEmpty(t, errorLog.Context)
 				})
+			})
 
-				require.Equal(t, "valid-value", res.Response.Header.Get("X-Valid-Header"))
+			t.Run("when request is not successful", func(t *testing.T) {
+				t.Parallel()
 
-				_, headerExists := res.Response.Header["X-Invalid-Header"]
-				require.False(t, headerExists)
+				testenv.Run(t, &testenv.Config{
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.ErrorLevel,
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							Router: config.RouterHeaderRules{
+								Response: []*config.RouterResponseHeaderRule{
+									{
+										Name:       "X-Valid-Header",
+										Expression: `"valid-value"`,
+									},
+									{
+										Name:       "X-Invalid-Header",
+										Expression: `string(int("a"))`,
+									},
+								},
+							},
+						}),
+					},
+					Subgraphs: testenv.SubgraphsConfig{
+						Products: testenv.SubgraphConfig{
+							CloseOnStart: true,
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `{ employees { id details { forename surname } notes } }`,
+					})
 
-				require.Equal(t, http.StatusOK, res.Response.StatusCode)
-				require.Contains(t, res.Body, `"data"`)
+					require.Contains(t, res.Body, "Failed to fetch from Subgraph")
 
-				logs := xEnv.Observer()
-				require.NotNil(t, logs)
+					logs := xEnv.Observer()
+					require.NotNil(t, logs)
 
-				errorLogs := logs.FilterMessage("Failed to apply router response header rules").All()
-				require.Len(t, errorLogs, 1)
+					errorLogs := logs.FilterMessage("Failed to apply router response header rules").All()
+					require.Len(t, errorLogs, 1)
 
-				errorLog := errorLogs[0]
-				require.Equal(t, zapcore.ErrorLevel, errorLog.Level)
-				require.Equal(t, "Failed to apply router response header rules", errorLog.Message)
-				require.NotEmpty(t, errorLog.Context)
+					errorLog := errorLogs[0]
+					require.Equal(t, zapcore.ErrorLevel, errorLog.Level)
+					require.Equal(t, "Failed to apply router response header rules", errorLog.Message)
+					require.NotEmpty(t, errorLog.Context)
+				})
 			})
 		})
 	})
