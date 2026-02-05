@@ -4,9 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
+
+	non_flusher_writer "github.com/wundergraph/cosmo/router-tests/modules/non-flusher-writer"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -260,6 +265,47 @@ func TestHeartbeats(t *testing.T) {
 			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
 				assert.Equal(t, "", line)
 			})
+		})
+	})
+}
+
+func TestNonFlusherWriterSubscriptionError(t *testing.T) {
+	t.Parallel()
+
+	t.Run("subscription error when writer cannot flush", func(t *testing.T) {
+		t.Parallel()
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"nonFlusherWriterModule": non_flusher_writer.NonFlusherWriterModule{},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&non_flusher_writer.NonFlusherWriterModule{}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { currentTime { unixTime timeStamp } }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Contains(t, string(body), "errors")
+			require.Contains(t, string(body), "could not flush response")
 		})
 	})
 }
