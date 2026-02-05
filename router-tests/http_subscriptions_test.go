@@ -10,13 +10,12 @@ import (
 	"testing"
 	"time"
 
-	non_flusher_writer "github.com/wundergraph/cosmo/router-tests/modules/non-flusher-writer"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	non_flusher_writer "github.com/wundergraph/cosmo/router-tests/modules/non-flusher-writer"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func readMultipartPrefix(reader *bufio.Reader) error {
