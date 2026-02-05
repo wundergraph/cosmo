@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.188.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.187.0...controlplane@0.188.0) (2026-02-05)
+
+### Features
+
+* add UTM parameter tracking for new user signups ([#2488](https://github.com/wundergraph/cosmo/issues/2488)) ([4dfdd7b](https://github.com/wundergraph/cosmo/commit/4dfdd7b8d83b34d193311c77b4c71fe0bca51a97)) (@wunderhawk)
+
 # [0.187.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.186.0...controlplane@0.187.0) (2026-02-02)
 
 ### Features
