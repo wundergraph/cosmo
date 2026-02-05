@@ -1664,8 +1664,6 @@ func TestSSEErrorResponseWriteFailures(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Make a subscription request with an invalid query to trigger an error response
-			// The failing writer will cause the write to fail with a broken pipe error
 			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
 			require.NoError(t, err)
 
@@ -1708,8 +1706,6 @@ func TestSSEErrorResponseWriteFailures(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Make a subscription request with an invalid query to trigger an error response
-			// The failing writer will cause the write to fail with a generic error
 			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
 			require.NoError(t, err)
 
@@ -1721,15 +1717,11 @@ func TestSSEErrorResponseWriteFailures(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
-			// Read response body (will be empty or incomplete due to write failure)
 			body, _ := io.ReadAll(resp.Body)
 
-			// The response status should be 200 (SSE connection established)
-			// but body will be empty due to write failure
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 			require.Empty(t, body)
 
-			// Verify that an error was logged for the write failure (errors.go:241)
 			logs := xEnv.Observer().FilterMessage("Error writing response")
 			require.Equal(t, 1, logs.Len())
 			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
@@ -1759,19 +1751,15 @@ func TestErrorResponseBodyWriteFailures(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Make a bad request (empty query) to trigger an error response with 400 status
-			// The failing writer will fail when writing the JSON response body
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: "", // Empty query triggers bad request error
+				Query: "",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res)
 
-			// The response should have 400 status but empty body due to write failure
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 			require.Empty(t, res.Body)
 
-			// Verify that a warning was logged for the broken pipe error (errors.go:265)
 			logs := xEnv.Observer().FilterMessage("Broken pipe, error writing response")
 			require.Equal(t, 1, logs.Len())
 			require.Equal(t, zapcore.WarnLevel, logs.All()[0].Level)
@@ -1797,19 +1785,15 @@ func TestErrorResponseBodyWriteFailures(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Make a bad request (empty query) to trigger an error response with 400 status
-			// The failing writer will fail when writing the JSON response body
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: "", // Empty query triggers bad request error
+				Query: "",
 			})
 			require.NoError(t, err)
 			require.NotNil(t, res)
 
-			// The response should have 400 status but empty body due to write failure
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 			require.Empty(t, res.Body)
 
-			// Verify that an error was logged for the write failure (errors.go:268)
 			logs := xEnv.Observer().FilterMessage("Error writing response")
 			require.Equal(t, 1, logs.Len())
 			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
