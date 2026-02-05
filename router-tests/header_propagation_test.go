@@ -14,14 +14,13 @@ import (
 	"testing"
 	"time"
 
-	"go.uber.org/zap/zapcore"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.uber.org/zap/zapcore"
 )
 
 // mockSelfRegister implements selfregister.SelfRegister for testing parseRequestOptions error path
@@ -29,7 +28,7 @@ type mockSelfRegister struct {
 	registrationInfo *nodev1.RegistrationInfo
 }
 
-func (m *mockSelfRegister) Register(ctx context.Context) (*nodev1.RegistrationInfo, error) {
+func (m *mockSelfRegister) Register(_ context.Context) (*nodev1.RegistrationInfo, error) {
 	return m.registrationInfo, nil
 }
 
@@ -1558,7 +1557,7 @@ func TestHeaderPropagationOnErrorResponses(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Contains(t, res.Body, "errors")
-			require.Equal(t, res.Response.Header.Get("X-Error-Message"), "Cannot query field \"nonExistentField\" on type \"Query\".")
+			require.Equal(t, "Cannot query field \"nonExistentField\" on type \"Query\".", res.Response.Header.Get("X-Error-Message"))
 		})
 	})
 
@@ -1587,7 +1586,7 @@ func TestHeaderPropagationOnErrorResponses(t *testing.T) {
 			require.NoError(t, err)
 
 			require.Contains(t, res.Body, "errors")
-			require.Equal(t, res.Response.Header.Get("X-Error-Message"), "empty request body")
+			require.Equal(t, "empty request body", res.Response.Header.Get("X-Error-Message"))
 		})
 	})
 
@@ -1676,9 +1675,9 @@ func TestHeaderPropagationOnErrorResponses(t *testing.T) {
 				Variables: []byte(`{"files":[null]}`),
 				Files:     files,
 			})
-			require.Equal(t, `{"errors":[{"message":"file upload disabled"}]}`, res.Body)
+			require.JSONEq(t, `{"errors":[{"message":"file upload disabled"}]}`, res.Body)
 
-			require.Equal(t, res.Response.Header.Get("X-Error-Message"), "file upload disabled")
+			require.Equal(t, "file upload disabled", res.Response.Header.Get("X-Error-Message"))
 		})
 	})
 
@@ -1698,7 +1697,6 @@ func TestHeaderPropagationOnErrorResponses(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Make a subscription request with an invalid query via SSE
 			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentSubscription }"}`))
 			require.NoError(t, err)
 
@@ -1725,26 +1723,16 @@ func TestHeaderPropagationOnErrorResponses(t *testing.T) {
 	t.Run("router response headers should be propagated when failure due to invalid JWT token", func(t *testing.T) {
 		t.Parallel()
 
-		// Generate an EC key pair for signing (ES256 uses P-256 curve)
 		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		require.NoError(t, err)
-
-		// Encode the public key as PEM
 		publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 		require.NoError(t, err)
+		publicKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyBytes})
 
-		publicKeyPEM := pem.EncodeToMemory(&pem.Block{
-			Type:  "PUBLIC KEY",
-			Bytes: publicKeyBytes,
-		})
-
-		// Create a mock self-register that returns registration info with the public key
 		mockSR := &mockSelfRegister{
 			registrationInfo: &nodev1.RegistrationInfo{
 				GraphPublicKey: string(publicKeyPEM),
-				AccountLimits: &nodev1.AccountLimits{
-					TraceSamplingRate: 1.0,
-				},
+				AccountLimits:  &nodev1.AccountLimits{},
 			},
 		}
 
@@ -1764,8 +1752,6 @@ func TestHeaderPropagationOnErrorResponses(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Send a request with an invalid JWT token in X-WG-Token header
-			// This should trigger parseRequestOptions to fail because the token is invalid
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id } }`,
 				Header: map[string][]string{
@@ -1773,17 +1759,10 @@ func TestHeaderPropagationOnErrorResponses(t *testing.T) {
 				},
 			})
 			require.NoError(t, err)
-
-			// The response should be a bad request due to invalid token
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 
-			// Response should contain an error
 			require.Contains(t, res.Body, "errors")
-
-			// Router response headers should be propagated even on this error
-			errorHeader := res.Response.Header.Get("X-Error-Message")
-			require.NotEmpty(t, errorHeader, "Router response header should be propagated on parseRequestOptions failure")
-			require.Contains(t, errorHeader, "token")
+			require.Equal(t, "token is malformed: token contains an invalid number of segments", res.Response.Header.Get("X-Error-Message"))
 		})
 	})
 }
