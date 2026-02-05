@@ -37,11 +37,17 @@ type Authentication interface {
 	// Scopes returns the scopes of the authenticated request, as returned by
 	// the Authenticator.
 	Scopes() []string
+	// SetBypassScopeValidation sets a flag to bypass all scope validation for this request.
+	// When set to true, the authorizer will skip scope checks entirely.
+	SetBypassScopeValidation(bypass bool)
+	// BypassScopeValidation returns whether scope validation should be bypassed for this request.
+	BypassScopeValidation() bool
 }
 
 type authentication struct {
-	authenticator string
-	claims        Claims
+	authenticator           string
+	claims                  Claims
+	bypassScopeValidation   bool
 }
 
 func (a *authentication) Authenticator() string {
@@ -75,6 +81,20 @@ func (a *authentication) Scopes() []string {
 		return nil
 	}
 	return strings.Split(scopes, " ")
+}
+
+func (a *authentication) SetBypassScopeValidation(bypass bool) {
+	if a == nil {
+		return
+	}
+	a.bypassScopeValidation = bypass
+}
+
+func (a *authentication) BypassScopeValidation() bool {
+	if a == nil {
+		return false
+	}
+	return a.bypassScopeValidation
 }
 
 var errUnacceptableAud = errors.New("audience match not found")

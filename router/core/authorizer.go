@@ -47,12 +47,12 @@ func (a *CosmoAuthorizer) RenderResponseExtension(ctx *resolve.Context, out io.W
 	return err
 }
 
-func (a *CosmoAuthorizer) getAuth(ctx context.Context) (isAuthenticated bool, scopes []string) {
+func (a *CosmoAuthorizer) getAuth(ctx context.Context) (isAuthenticated bool, scopes []string, bypassScopeValidation bool) {
 	auth := authentication.FromContext(ctx)
 	if auth == nil {
-		return false, nil
+		return false, nil, false
 	}
-	return true, auth.Scopes()
+	return true, auth.Scopes(), auth.BypassScopeValidation()
 }
 
 func (a *CosmoAuthorizer) handleRejectUnauthorized(result *resolve.AuthorizationDeny) (*resolve.AuthorizationDeny, error) {
@@ -66,13 +66,19 @@ func (a *CosmoAuthorizer) handleRejectUnauthorized(result *resolve.Authorization
 }
 
 func (a *CosmoAuthorizer) AuthorizePreFetch(ctx *resolve.Context, dataSourceID string, input json.RawMessage, coordinate resolve.GraphCoordinate) (result *resolve.AuthorizationDeny, err error) {
-	isAuthenticated, actual := a.getAuth(ctx.Context())
+	isAuthenticated, actual, bypassScopeValidation := a.getAuth(ctx.Context())
+	if bypassScopeValidation {
+		return nil, nil
+	}
 	required := a.requiredScopesForField(coordinate)
 	return a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
 }
 
 func (a *CosmoAuthorizer) AuthorizeObjectField(ctx *resolve.Context, dataSourceID string, object json.RawMessage, coordinate resolve.GraphCoordinate) (result *resolve.AuthorizationDeny, err error) {
-	isAuthenticated, actual := a.getAuth(ctx.Context())
+	isAuthenticated, actual, bypassScopeValidation := a.getAuth(ctx.Context())
+	if bypassScopeValidation {
+		return nil, nil
+	}
 	required := a.requiredScopesForField(coordinate)
 	return a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
 }

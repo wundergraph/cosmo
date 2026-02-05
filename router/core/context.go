@@ -132,6 +132,11 @@ type RequestContext interface {
 	// If Authentication is not set, it will be initialized with the scopes
 	SetAuthenticationScopes(scopes []string)
 
+	// SetBypassScopeValidation sets a flag to bypass all scope validation for this request.
+	// When set to true, the authorizer will skip scope checks entirely.
+	// This is useful when you have a wildcard scope that should grant access to all scopes.
+	SetBypassScopeValidation(bypass bool)
+
 	// SetCustomFieldValueRenderer overrides the default field value rendering behavior
 	// This can be used, e.g. to obfuscate sensitive data in the response
 	SetCustomFieldValueRenderer(renderer resolve.FieldValueRenderer)
@@ -470,6 +475,15 @@ func (c *requestContext) SetAuthenticationScopes(scopes []string) {
 		c.request = c.request.WithContext(authentication.NewContext(c.request.Context(), auth))
 	}
 	auth.SetScopes(scopes)
+}
+
+func (c *requestContext) SetBypassScopeValidation(bypass bool) {
+	auth := authentication.FromContext(c.request.Context())
+	if auth == nil {
+		auth = authentication.NewEmptyAuthentication()
+		c.request = c.request.WithContext(authentication.NewContext(c.request.Context(), auth))
+	}
+	auth.SetBypassScopeValidation(bypass)
 }
 
 func (c *requestContext) SetForceSha256Compute() {
