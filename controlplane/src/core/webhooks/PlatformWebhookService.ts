@@ -11,6 +11,11 @@ interface User {
   user_email: string;
   user_first_name?: string;
   user_last_name?: string;
+  utm_source?: string;
+  utm_medium?: string;
+  utm_campaign?: string;
+  utm_content?: string;
+  utm_term?: string;
 }
 
 interface ApolloMigrate {
