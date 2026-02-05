@@ -1717,7 +1717,8 @@ func TestSSEErrorResponseWriteFailures(t *testing.T) {
 			require.NoError(t, err)
 			defer resp.Body.Close()
 
-			body, _ := io.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
 
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 			require.Empty(t, body)
