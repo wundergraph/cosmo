@@ -1582,8 +1582,8 @@ func TestHeaderPropagationOnErrorResponses(t *testing.T) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query: "", // Empty query should trigger a bad request error
 			})
-			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
 
 			require.Contains(t, res.Body, "errors")
 			require.Equal(t, "empty request body", res.Response.Header.Get("X-Error-Message"))
