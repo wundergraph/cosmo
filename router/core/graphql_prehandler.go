@@ -253,7 +253,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		executionOptions, traceOptions, err := h.parseRequestOptions(r, clientInfo, requestLogger)
 		if err != nil {
 			requestContext.SetError(err)
-			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger, h.headerPropagation)
+			writeRequestErrors(writeRequestErrorsParams{
+				request:           r,
+				writer:            w,
+				statusCode:        http.StatusBadRequest,
+				requestErrors:     graphqlerrors.RequestErrorsFromError(err),
+				logger:            requestLogger,
+				headerPropagation: h.headerPropagation,
+			})
 			return
 		}
 

@@ -188,74 +188,84 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 	}
 }
 
+// writeRequestErrorsParams contains parameters for writing request errors to the response.
+type writeRequestErrorsParams struct {
+	request           *http.Request
+	writer            http.ResponseWriter
+	statusCode        int
+	requestErrors     graphqlerrors.RequestErrors
+	logger            *zap.Logger
+	headerPropagation *HeaderPropagation
+}
+
 // writeRequestErrors writes the given request errors to the http.ResponseWriter.
 // It accepts a graphqlerrors.RequestErrors object and writes it to the response based on the GraphQL spec.
-func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger, headerPropagation *HeaderPropagation) {
-	if requestErrors == nil {
+func writeRequestErrors(params writeRequestErrorsParams) {
+	if params.requestErrors == nil {
 		return
 	}
 
-	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+	params.writer.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
 
 	// According to the tests requestContext can be nil (when called from module WriteResponseError)
 	// As such we have coded this condition defensively to be safe
-	requestContext := getRequestContext(r.Context())
+	requestContext := getRequestContext(params.request.Context())
 	isSubscription := requestContext != nil && requestContext.operation != nil && requestContext.operation.opType == "subscription"
 
 	// We only want to apply header propagation for non-subscription operations
 	// In certain cases the requestContext can be nil, e.g.:- when called from the batch handler
-	if headerPropagation != nil && requestContext != nil && !isSubscription {
-		if err := headerPropagation.ApplyRouterResponseHeaderRules(w, requestContext); err != nil {
-			requestLogger.Error("Failed to apply router response header rules", zap.Error(err))
+	if params.headerPropagation != nil && requestContext != nil && !isSubscription {
+		if err := params.headerPropagation.ApplyRouterResponseHeaderRules(params.writer, requestContext); err != nil {
+			params.logger.Error("Failed to apply router response header rules", zap.Error(err))
 		}
 	}
 
-	wgRequestParams := NegotiateSubscriptionParams(r, !isSubscription)
+	wgRequestParams := NegotiateSubscriptionParams(params.request, !isSubscription)
 
 	// Is subscription
 	if wgRequestParams.UseSse || wgRequestParams.UseMultipart {
-		setSubscriptionHeaders(wgRequestParams, r, w)
+		setSubscriptionHeaders(wgRequestParams, params.request, params.writer)
 
-		if statusCode != 0 {
-			w.WriteHeader(statusCode)
+		if params.statusCode != 0 {
+			params.writer.WriteHeader(params.statusCode)
 		}
 
 		if wgRequestParams.UseSse {
-			_, err := w.Write([]byte("event: next\ndata: "))
+			_, err := params.writer.Write([]byte("event: next\ndata: "))
 			if err != nil {
-				if requestLogger != nil {
+				if params.logger != nil {
 					if rErrors.IsBrokenPipe(err) {
-						requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
+						params.logger.Warn("Broken pipe, error writing response", zap.Error(err))
 						return
 					}
-					requestLogger.Error("Error writing response", zap.Error(err))
+					params.logger.Error("Error writing response", zap.Error(err))
 				}
 				return
 			}
 		} else if wgRequestParams.UseMultipart {
 			// Handle multipart error response
-			if err := writeMultipartError(w, requestErrors, isSubscription); err != nil {
-				if requestLogger != nil {
-					requestLogger.Error("error writing multipart response", zap.Error(err))
+			if err := writeMultipartError(params.writer, params.requestErrors, isSubscription); err != nil {
+				if params.logger != nil {
+					params.logger.Error("error writing multipart response", zap.Error(err))
 				}
 			}
 			return
 		}
 	} else {
 		// Regular request
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		if statusCode != 0 {
-			w.WriteHeader(statusCode)
+		params.writer.Header().Set("Content-Type", "application/json; charset=utf-8")
+		if params.statusCode != 0 {
+			params.writer.WriteHeader(params.statusCode)
 		}
 	}
 
-	if _, err := requestErrors.WriteResponse(w); err != nil {
-		if requestLogger != nil {
+	if _, err := params.requestErrors.WriteResponse(params.writer); err != nil {
+		if params.logger != nil {
 			if rErrors.IsBrokenPipe(err) {
-				requestLogger.Warn("Broken pipe, error writing response", zap.Error(err))
+				params.logger.Warn("Broken pipe, error writing response", zap.Error(err))
 				return
 			}
-			requestLogger.Error("Error writing response", zap.Error(err))
+			params.logger.Error("Error writing response", zap.Error(err))
 		}
 	}
 }
@@ -325,24 +335,59 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 	switch {
 	case errors.As(err, &httpErr):
-		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger, propagation)
+		writeRequestErrors(writeRequestErrorsParams{
+			request:           r,
+			writer:            w,
+			statusCode:        httpErr.StatusCode(),
+			requestErrors:     requestErrorsFromHttpError(httpErr),
+			logger:            requestLogger,
+			headerPropagation: propagation,
+		})
 	case errors.As(err, &poNotFoundErr):
 		newErr := NewHttpGraphqlError("PersistedQueryNotFound", "PERSISTED_QUERY_NOT_FOUND", http.StatusOK)
-		writeRequestErrors(r, w, http.StatusOK, requestErrorsFromHttpError(newErr), requestLogger, propagation)
+		writeRequestErrors(writeRequestErrorsParams{
+			request:           r,
+			writer:            w,
+			statusCode:        http.StatusOK,
+			requestErrors:     requestErrorsFromHttpError(newErr),
+			logger:            requestLogger,
+			headerPropagation: propagation,
+		})
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()
 		logInternalErrorsFromReport(reportErr.Report(), requestLogger)
 
 		statusCode, requestErrors := graphqlerrors.RequestErrorsFromOperationReportWithStatusCode(*report)
 		if len(requestErrors) > 0 {
-			writeRequestErrors(r, w, statusCode, requestErrors, requestLogger, propagation)
+			writeRequestErrors(writeRequestErrorsParams{
+				request:           r,
+				writer:            w,
+				statusCode:        statusCode,
+				requestErrors:     requestErrors,
+				logger:            requestLogger,
+				headerPropagation: propagation,
+			})
 			return
 		} else {
 			// there were no external errors to return to user, so we return an internal server error
-			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger, propagation)
+			writeRequestErrors(writeRequestErrorsParams{
+				request:           r,
+				writer:            w,
+				statusCode:        http.StatusInternalServerError,
+				requestErrors:     graphqlerrors.RequestErrorsFromError(errInternalServer),
+				logger:            requestLogger,
+				headerPropagation: propagation,
+			})
 		}
 	default:
-		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger, propagation)
+		writeRequestErrors(writeRequestErrorsParams{
+			request:           r,
+			writer:            w,
+			statusCode:        http.StatusInternalServerError,
+			requestErrors:     graphqlerrors.RequestErrorsFromError(errInternalServer),
+			logger:            requestLogger,
+			headerPropagation: propagation,
+		})
 	}
 }
 

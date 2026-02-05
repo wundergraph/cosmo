@@ -184,5 +184,11 @@ func WriteResponseError(ctx RequestContext, err error) {
 		errs = graphqlerrors.RequestErrorsFromError(errors.New("Internal Error"))
 	}
 
-	writeRequestErrors(ctx.Request(), ctx.ResponseWriter(), statusCode, errs, ctx.Logger(), nil)
+	writeRequestErrors(writeRequestErrorsParams{
+		request:       ctx.Request(),
+		writer:        ctx.ResponseWriter(),
+		statusCode:    statusCode,
+		requestErrors: errs,
+		logger:        ctx.Logger(),
+	})
 }
