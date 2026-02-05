@@ -71,6 +71,7 @@ type PreHandlerOptions struct {
 	OmitBatchExtensions         bool
 
 	OperationContentAttributes bool
+	HeaderPropagation          *HeaderPropagation
 }
 
 type PreHandler struct {
@@ -81,6 +82,7 @@ type PreHandler struct {
 	planner                     *OperationPlanner
 	accessController            *AccessController
 	operationBlocker            *OperationBlocker
+	headerPropagation           *HeaderPropagation
 	developmentMode             bool
 	alwaysIncludeQueryPlan      bool
 	alwaysSkipLoader            bool
@@ -162,6 +164,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
 		exprManager:               opts.ExprManager,
 		omitBatchExtensions:       opts.OmitBatchExtensions,
+		headerPropagation:         opts.HeaderPropagation,
 
 		operationContentAttributes: opts.OperationContentAttributes,
 	}
@@ -250,7 +253,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		executionOptions, traceOptions, err := h.parseRequestOptions(r, clientInfo, requestLogger)
 		if err != nil {
 			requestContext.SetError(err)
-			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
+			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger, h.headerPropagation)
 			return
 		}
 
@@ -272,7 +275,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					message:    "file upload disabled",
 					statusCode: http.StatusOK,
 				})
-				writeOperationError(r, w, requestLogger, requestContext.error)
+				writeOperationError(r, w, requestLogger, requestContext.error, h.headerPropagation)
 				return
 			}
 
@@ -291,7 +294,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			}
 			if err != nil {
 				requestContext.SetError(err)
-				writeOperationError(r, w, requestLogger, requestContext.error)
+				writeOperationError(r, w, requestLogger, requestContext.error, h.headerPropagation)
 				readMultiPartSpan.End()
 				return
 			}
@@ -328,7 +331,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				// e.g. too large body, slow client, aborted connection etc.
 				// The error is logged as debug log in the writeOperationError function
 
-				writeOperationError(r, w, requestLogger, err)
+				writeOperationError(r, w, requestLogger, err, h.headerPropagation)
 				readOperationBodySpan.End()
 				return
 			}
@@ -399,7 +402,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, err)
 
-			writeOperationError(r, w, requestLogger, err)
+			writeOperationError(r, w, requestLogger, err, h.headerPropagation)
 			return
 		}
 
@@ -1155,7 +1158,7 @@ func (h *PreHandler) handleAuthenticationFailure(requestContext *requestContext,
 	writeOperationError(r, w, requestLogger, &httpGraphqlError{
 		message:    graphqlErr.Error(),
 		statusCode: http.StatusUnauthorized,
-	})
+	}, h.headerPropagation)
 }
 
 func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger) {

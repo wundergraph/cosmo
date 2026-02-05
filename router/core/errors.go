@@ -190,7 +190,7 @@ func propagateSubgraphErrors(ctx *resolve.Context) {
 
 // writeRequestErrors writes the given request errors to the http.ResponseWriter.
 // It accepts a graphqlerrors.RequestErrors object and writes it to the response based on the GraphQL spec.
-func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger) {
+func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, requestErrors graphqlerrors.RequestErrors, requestLogger *zap.Logger, headerPropagation *HeaderPropagation) {
 	if requestErrors == nil {
 		return
 	}
@@ -201,6 +201,14 @@ func writeRequestErrors(r *http.Request, w http.ResponseWriter, statusCode int, 
 	// As such we have coded this condition defensively to be safe
 	requestContext := getRequestContext(r.Context())
 	isSubscription := requestContext != nil && requestContext.operation != nil && requestContext.operation.opType == "subscription"
+
+	// We only want to apply header propagation for non-subscription operations
+	// In certain cases the requestContext can be nil, e.g.:- when called from the batch handler
+	if headerPropagation != nil && requestContext != nil && !isSubscription {
+		if err := headerPropagation.ApplyRouterResponseHeaderRules(w, requestContext); err != nil {
+			requestLogger.Error("Failed to apply router response header rules", zap.Error(err))
+		}
+	}
 
 	wgRequestParams := NegotiateSubscriptionParams(r, !isSubscription)
 
@@ -309,7 +317,7 @@ func requestErrorsFromHttpError(httpErr HttpError) graphqlerrors.RequestErrors {
 
 // writeOperationError writes the given error to the http.ResponseWriter but evaluates the error type first.
 // It also logs additional information about the error.
-func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error) {
+func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *zap.Logger, err error, propagation *HeaderPropagation) {
 	requestLogger.Debug("operation error", zap.Error(err))
 
 	var reportErr ReportError
@@ -317,24 +325,24 @@ func writeOperationError(r *http.Request, w http.ResponseWriter, requestLogger *
 	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 	switch {
 	case errors.As(err, &httpErr):
-		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger)
+		writeRequestErrors(r, w, httpErr.StatusCode(), requestErrorsFromHttpError(httpErr), requestLogger, propagation)
 	case errors.As(err, &poNotFoundErr):
 		newErr := NewHttpGraphqlError("PersistedQueryNotFound", "PERSISTED_QUERY_NOT_FOUND", http.StatusOK)
-		writeRequestErrors(r, w, http.StatusOK, requestErrorsFromHttpError(newErr), requestLogger)
+		writeRequestErrors(r, w, http.StatusOK, requestErrorsFromHttpError(newErr), requestLogger, propagation)
 	case errors.As(err, &reportErr):
 		report := reportErr.Report()
 		logInternalErrorsFromReport(reportErr.Report(), requestLogger)
 
 		statusCode, requestErrors := graphqlerrors.RequestErrorsFromOperationReportWithStatusCode(*report)
 		if len(requestErrors) > 0 {
-			writeRequestErrors(r, w, statusCode, requestErrors, requestLogger)
+			writeRequestErrors(r, w, statusCode, requestErrors, requestLogger, propagation)
 			return
 		} else {
 			// there were no external errors to return to user, so we return an internal server error
-			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
+			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger, propagation)
 		}
 	default:
-		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger)
+		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errInternalServer), requestLogger, propagation)
 	}
 }
 
