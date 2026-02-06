@@ -16,10 +16,14 @@ export const registerSchemaChangeProposalWorkflowTool = ({
   server: McpServer;
   opts: BaseCommandOptions;
 }) => {
-  server.tool(
+  server.registerTool(
     'schema_change_proposal_workflow',
-    'Use this tool to generate a list of instructions to make a successful schema change for a Supergraph.',
-    { change: z.string(), supergraph: z.string(), namespace: z.string().optional() },
+    {
+      title: 'Schema Change Proposal Workflow',
+      description:
+        'Use this tool to generate a list of instructions to make a successful schema change for a Supergraph.',
+      inputSchema: { change: z.string(), supergraph: z.string(), namespace: z.string().optional() },
+    },
     ({ change, supergraph, namespace }) => ({
       content: [
         {

@@ -1,19 +1,22 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { z } from 'zod';
-import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { getBaseHeaders } from '../../../core/config.js';
 import { ToolContext } from './types.js';
 
 export const registerSubgraphVerifySchemaChangesTool = ({ server, opts }: ToolContext) => {
-  server.tool(
+  server.registerTool(
     'verify_subgraph_schema_changes',
-    'When making changes to a Subgraph Schema, this command can validate if the schema is valid GraphQL SDL, if it composes with all other subgraphs into a valid supergraph, and if there are any breaking changes.',
     {
-      name: z.string().describe('The name of the subgraph'),
-      namespace: z.string().optional().describe('The namespace of the subgraph'),
-      schema: z.string().describe('The new schema SDL to check'),
-      delete: z.boolean().optional().describe('Run checks in case the subgraph should be deleted'),
-      skipTrafficCheck: z.boolean().optional().describe('Skip checking for client traffic'),
+      title: 'Verify Subgraph Schema Changes',
+      description:
+        'When making changes to a Subgraph Schema, this command can validate if the schema is valid GraphQL SDL, if it composes with all other subgraphs into a valid supergraph, and if there are any breaking changes.',
+      inputSchema: {
+        name: z.string().describe('The name of the subgraph'),
+        namespace: z.string().optional().describe('The namespace of the subgraph'),
+        schema: z.string().describe('The new schema SDL to check'),
+        delete: z.boolean().optional().describe('Run checks in case the subgraph should be deleted'),
+        skipTrafficCheck: z.boolean().optional().describe('Skip checking for client traffic'),
+      },
     },
     async (params) => {
       const resp = await opts.client.platform.checkSubgraphSchema(

@@ -44,7 +44,7 @@
     "@connectrpc/connect": "1.4.0",
     "@connectrpc/connect-node": "1.4.0",
     "@graphql-tools/utils": "10.2.2",
-    "@modelcontextprotocol/sdk": "1.9.0",
+    "@modelcontextprotocol/sdk": "1.26.0",
     "@octokit/rest": "22.0.0",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
@@ -82,7 +82,7 @@
     "tar": "7.4.3",
     "trieve-ts-sdk": "0.0.80",
     "undici": "6.21.2",
-    "zod": "^3.24.2"
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@types/bun": "1.2.3",
