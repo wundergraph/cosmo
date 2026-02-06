@@ -97,7 +97,6 @@ type Config struct {
 	preOriginHandlers               []TransportPreHandler
 	postOriginHandlers              []TransportPostHandler
 	headerRules                     *config.HeaderRules
-	headerPropagation               *HeaderPropagation
 	subgraphTransportOptions        *SubgraphTransportOptions
 	subgraphCircuitBreakerOptions   *SubgraphCircuitBreakerOptions
 	graphqlMetricsConfig            *GraphQLMetricsConfig
