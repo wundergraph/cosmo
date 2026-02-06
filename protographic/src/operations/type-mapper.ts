@@ -12,6 +12,7 @@ import {
   getNamedType,
   GraphQLScalarType,
 } from 'graphql';
+import { SCALAR_WRAPPER_TYPE_MAP } from '../types.js';
 import { unwrapNonNullType, isNestedListType, calculateNestingLevel } from './list-type-utils.js';
 
 /**
@@ -23,17 +24,6 @@ const SCALAR_TYPE_MAP: Record<string, string> = {
   Int: 'int32',
   Float: 'double',
   Boolean: 'bool',
-};
-
-/**
- * Maps GraphQL scalar types to Protocol Buffer wrapper types for nullable fields
- */
-const SCALAR_WRAPPER_TYPE_MAP: Record<string, string> = {
-  ID: 'google.protobuf.StringValue',
-  String: 'google.protobuf.StringValue',
-  Int: 'google.protobuf.Int32Value',
-  Float: 'google.protobuf.DoubleValue',
-  Boolean: 'google.protobuf.BoolValue',
 };
 
 /**
