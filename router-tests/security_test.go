@@ -388,7 +388,7 @@ func TestQueryNamingLimits(t *testing.T) {
 				})
 				// cost = 5 * (1 + 1)
 				require.Equal(t, 400, res.Response.StatusCode)
-				require.Contains(t, res.Body, "exceeds the maximum allowed estimated cost")
+				require.Contains(t, res.Body, "exceeds the maximum allowed limit")
 			})
 		})
 
@@ -470,7 +470,7 @@ func TestQueryNamingLimits(t *testing.T) {
 				})
 				// cost = 1 * (1 + 1)
 				require.Equal(t, 400, res.Response.StatusCode)
-				require.Contains(t, res.Body, "exceeds the maximum allowed estimated cost")
+				require.Contains(t, res.Body, "exceeds the maximum allowed limit")
 			})
 		})
 

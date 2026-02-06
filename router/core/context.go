@@ -735,13 +735,13 @@ func (o *operationContext) Cost() (OperationCost, error) {
 		return OperationCost{}, errors.New("operation context or prepared plan is nil")
 	}
 
-	costCalc := o.preparedPlan.preparedPlan.GetStaticCostCalculator()
+	costCalc := o.preparedPlan.preparedPlan.GetCostCalculator()
 	if costCalc == nil {
 		return OperationCost{}, errors.New("cost analysis is not enabled")
 	}
 
 	return OperationCost{
-		Estimated: costCalc.GetStaticCost(o.planConfig, o.variables),
+		Estimated: costCalc.EstimateCost(o.planConfig, o.variables),
 	}, nil
 }
 

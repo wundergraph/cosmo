@@ -53,7 +53,7 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 		return nil, &reportError{report: &report}
 	}
 
-	// Store plan config to access it from the operationContext.ComputeStaticCost()
+	// Store plan config to access it from the operationContext.ComputeEstimatedCost()
 	ctx.planConfig = p.executor.PlanConfig
 
 	planner, err := plan.NewPlanner(p.executor.PlanConfig)
