@@ -180,7 +180,7 @@ func TestEngineDataSourceFactory_RequestDataSource(t *testing.T) {
 		return event.ProviderID() == "test-provider" && event.Subject == "test-subject"
 	}), mock.MatchedBy(func(event datasource.StreamEvent) bool {
 		return event != nil && strings.EqualFold(string(event.GetData()), `{"test":"data"}`)
-	}), mock.Anything).Return([]byte(`{"response": "test"}`), nil)
+	})).Return([]byte(`{"response": "test"}`), nil)
 
 	// Create the data source with mock adapter
 	pubsub := &EngineDataSourceFactory{
