@@ -52,6 +52,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
@@ -813,10 +814,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			Logger:            r.logger,
 			Config:            r.traceConfig,
 			ServiceInstanceID: r.instanceID,
-			IPAnonymization: &rtrace.IPAnonymizationConfig{
+			IPAnonymization: &attributeprocessor.IPAnonymizationConfig{
 				Enabled: r.ipAnonymization.Enabled,
-				Method:  rtrace.IPAnonymizationMethod(r.ipAnonymization.Method),
+				Method:  attributeprocessor.IPAnonymizationMethod(r.ipAnonymization.Method),
 			},
+			SanitizeUTF8:   r.traceConfig.SanitizeUTF8,
 			MemoryExporter: r.traceConfig.TestMemoryExporter,
 		})
 		if err != nil {
@@ -2266,6 +2268,10 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 		Propagators:                propagators,
 		ResponseTraceHeader:        cfg.Tracing.ResponseTraceHeader,
 		OperationContentAttributes: cfg.Tracing.OperationContentAttributes,
+		SanitizeUTF8: &attributeprocessor.SanitizeUTF8Config{
+			Enabled:          cfg.Tracing.SanitizeUTF8.Enabled,
+			LogSanitizations: cfg.Tracing.SanitizeUTF8.LogSanitizations,
+		},
 	}
 }
 
