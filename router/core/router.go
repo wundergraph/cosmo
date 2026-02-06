@@ -1935,11 +1935,11 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 	return &TransportRequestOptions{
 		RequestTimeout:         60 * time.Second,
 		TLSHandshakeTimeout:    10 * time.Second,
-		ResponseHeaderTimeout:  0 * time.Second,
+		ResponseHeaderTimeout:  30 * time.Second, // Set timeout to prevent indefinite hangs
 		ExpectContinueTimeout:  0 * time.Second,
 		KeepAliveProbeInterval: 30 * time.Second,
 		KeepAliveIdleTimeout:   90 * time.Second,
-		DialTimeout:            30 * time.Second,
+		DialTimeout:            10 * time.Second, // Reduced from 30s for faster failure detection
 
 		MaxConnsPerHost:     1024,
 		MaxIdleConnsPerHost: 64,
