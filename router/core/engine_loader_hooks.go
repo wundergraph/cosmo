@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/expr"
 	"slices"
 	"sync/atomic"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/expr"
 
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"

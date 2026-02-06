@@ -141,7 +141,9 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.T
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		if resp.StatusCode == http.StatusNotFound {
@@ -167,7 +169,9 @@ func (cdn *Client) getRouterConfig(ctx context.Context, version string, _ time.T
 		if err != nil {
 			return nil, fmt.Errorf("could not create gzip reader: %w", err)
 		}
-		defer r.Close()
+		defer func() {
+			_ = r.Close()
+		}()
 		reader = r
 	}
 

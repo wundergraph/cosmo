@@ -4509,7 +4509,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 
 				connectionTotal := metrics[0]
 
-				require.Equal(t, 100.0, *connectionTotal.Gauge.Value)
+				require.Equal(t, float64(1024), *connectionTotal.Gauge.Value)
 
 				expected := []*io_prometheus_client.LabelPair{
 					{
@@ -4689,7 +4689,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Len(t, metrics, 2)
 
 				metricDataPoint1 := metrics[0]
-				require.Equal(t, 100.0, *metricDataPoint1.Gauge.Value)
+				require.Equal(t, float64(1024), *metricDataPoint1.Gauge.Value)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
@@ -4703,7 +4703,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Equal(t, expected1, metricDataPoint1.Label)
 
 				metricDataPoint2 := metrics[1]
-				require.Equal(t, 100.0, *metricDataPoint2.Gauge.Value)
+				require.Equal(t, float64(1024), *metricDataPoint2.Gauge.Value)
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
@@ -4918,7 +4918,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 
 				connectionTotal := metrics[0]
 
-				require.Equal(t, 100.0, *connectionTotal.Gauge.Value)
+				require.Equal(t, float64(1024), *connectionTotal.Gauge.Value)
 
 				expected := []*io_prometheus_client.LabelPair{
 					{

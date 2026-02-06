@@ -3,8 +3,9 @@ package grpccommon
 import (
 	"context"
 	"errors"
-	"go.opentelemetry.io/otel/trace"
 	"io"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"sync"
 	"sync/atomic"
@@ -136,7 +137,7 @@ func (g *GRPCPluginClient) SetClients(pluginClient *plugin.Client, clientConn gr
 	// Close the previous client connection if it exists
 	if g.cc != nil {
 		if closer, ok := g.cc.(io.Closer); ok {
-			closer.Close()
+			_ = closer.Close()
 		}
 	}
 

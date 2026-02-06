@@ -148,9 +148,9 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 
 					outContent, opTimes, err := planner.PlanOperation(queryFilePath, cfg.OutputFormat)
 					res := QueryPlanResult{
-						FileName:      queryFile.Name(),
-						Plan:          outContent,
-						Timings:       opTimes,
+						FileName: queryFile.Name(),
+						Plan:     outContent,
+						Timings:  opTimes,
 					}
 					if err != nil {
 						if _, ok := err.(*core.PlannerOperationValidationError); ok {
@@ -189,7 +189,9 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 			cancel()
 			return fmt.Errorf("failed to create results file: %v", err)
 		}
-		defer reportFile.Close()
+		defer func() {
+			_ = reportFile.Close()
+		}()
 		slices.SortFunc(results, func(a, b QueryPlanResult) int {
 			return strings.Compare(a.FileName, b.FileName)
 		})
@@ -203,7 +205,7 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 		if jsonErr != nil {
 			return fmt.Errorf("failed to marshal result: %v", jsonErr)
 		}
-		_, writeErr := reportFile.WriteString(fmt.Sprintf("%s\n", data))
+		_, writeErr := fmt.Fprintf(reportFile, "%s\n", data)
 		if writeErr != nil {
 			return fmt.Errorf("failed to write result: %v", writeErr)
 		}

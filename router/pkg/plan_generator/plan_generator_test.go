@@ -212,9 +212,9 @@ func TestPlanGenerator(t *testing.T) {
 		resultsExpected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", ReportFileName))
 		assert.NoError(t, err)
 		resultsStruct := QueryPlanResults{}
-		json.Unmarshal(results, &resultsStruct)
+		_ = json.Unmarshal(results, &resultsStruct)
 		resultsExpectedStruct := QueryPlanResults{}
-		json.Unmarshal(resultsExpected, &resultsExpectedStruct)
+		_ = json.Unmarshal(resultsExpected, &resultsExpectedStruct)
 		require.Len(t, resultsStruct.Plans, len(resultsExpectedStruct.Plans))
 		for i := range resultsStruct.Plans {
 			assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
@@ -252,9 +252,9 @@ func TestPlanGenerator(t *testing.T) {
 		resultsExpected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", ReportFileName))
 		assert.NoError(t, err)
 		resultsStruct := QueryPlanResults{}
-		json.Unmarshal(results, &resultsStruct)
+		_ = json.Unmarshal(results, &resultsStruct)
 		resultsExpectedStruct := QueryPlanResults{}
-		json.Unmarshal(resultsExpected, &resultsExpectedStruct)
+		_ = json.Unmarshal(resultsExpected, &resultsExpectedStruct)
 		require.Len(t, resultsStruct.Plans, len(resultsExpectedStruct.Plans))
 		for i := range resultsStruct.Plans {
 			assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
@@ -290,9 +290,9 @@ func TestPlanGenerator(t *testing.T) {
 				expected, err := os.ReadFile(path.Join(getTestDataDir(), "plans", "base", filename))
 				assert.NoError(t, err)
 				resultsStruct := QueryPlanResults{}
-				json.Unmarshal(queryPlan, &resultsStruct)
+				_ = json.Unmarshal(queryPlan, &resultsStruct)
 				resultsExpectedStruct := QueryPlanResults{}
-				json.Unmarshal(expected, &resultsExpectedStruct)
+				_ = json.Unmarshal(expected, &resultsExpectedStruct)
 				for i := range resultsStruct.Plans {
 					assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
 					assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)

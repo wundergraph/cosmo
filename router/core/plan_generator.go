@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -341,22 +340,11 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	var netPollConfig graphql_datasource.NetPollConfiguration
 	netPollConfig.ApplyDefaults()
 
-	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		http.DefaultClient,
-		http.DefaultClient,
-		context.Background(),
-		graphql_datasource.WithLogger(log.NoopLogger),
-		graphql_datasource.WithNetPollConfiguration(netPollConfig),
-	)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	loader := NewLoader(ctx, false, &DefaultFactoryResolver{
-		engineCtx:          ctx,
-		httpClient:         http.DefaultClient,
-		streamingClient:    http.DefaultClient,
-		subscriptionClient: subscriptionClient,
+		engineCtx: ctx,
 	}, logger, subscriptionHooks{})
 
 	// this generates the plan configuration using the data source factories from the config package

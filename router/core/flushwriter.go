@@ -219,7 +219,7 @@ func wrapMultipartMessage(resp []byte, wrapPayload bool) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	respValue, _, err := astjson.MergeValuesWithPath(payloadWrapper, respValuePreMerge, "payload")
+	respValue, _, err := astjson.MergeValuesWithPath(nil, payloadWrapper, respValuePreMerge, "payload")
 	if err != nil {
 		return nil, err
 	}
@@ -258,7 +258,7 @@ func NegotiateSubscriptionParams(r *http.Request, preferJson bool) SubscriptionP
 	// Eventually a solution will be in the stdlib: see https://github.com/golang/go/issues/19307, at which point we should
 	// remove this
 	var (
-		useMultipart = false
+		useMultipart bool
 		useSse       = q.Has(WgSseParam)
 		bestType     = ""
 		bestQ        = -1.0 // Default to lowest possible q-value

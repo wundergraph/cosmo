@@ -97,7 +97,6 @@ type Config struct {
 	preOriginHandlers               []TransportPreHandler
 	postOriginHandlers              []TransportPostHandler
 	headerRules                     *config.HeaderRules
-	headerPropagation               *HeaderPropagation
 	subgraphTransportOptions        *SubgraphTransportOptions
 	subgraphCircuitBreakerOptions   *SubgraphCircuitBreakerOptions
 	graphqlMetricsConfig            *GraphQLMetricsConfig
@@ -309,7 +308,7 @@ func (c *Config) Usage() map[string]any {
 	}
 
 	if c.routerConfigPollerConfig != nil {
-		usage["fallback_execution_config_storage_enabled"] = c.routerConfigPollerConfig.ExecutionConfig.FallbackStorage.Enabled
+		usage["fallback_execution_config_storage_enabled"] = c.routerConfigPollerConfig.FallbackStorage.Enabled
 	}
 	usage["cache_warmup"] = c.cacheWarmup != nil && c.cacheWarmup.Enabled
 	if c.cacheWarmup != nil && c.cacheWarmup.Enabled {

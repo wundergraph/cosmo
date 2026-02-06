@@ -145,7 +145,9 @@ func Main() {
 			logger.Error("failed to start pyroscope", zap.Error(err))
 		}
 		if pyro != nil {
-			defer pyro.Stop()
+			defer func() {
+				_ = pyro.Stop()
+			}()
 		}
 	}
 
