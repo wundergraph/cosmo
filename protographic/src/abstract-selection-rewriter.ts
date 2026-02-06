@@ -59,6 +59,8 @@ export class AbstractSelectionRewriter {
   private readonly fieldSetDoc: DocumentNode;
   public readonly schema: GraphQLSchema;
   private currentType: GraphQLTypeWithFields;
+  private currentInterfaceRoot?: GraphQLInterfaceType;
+  private interfaceRootStack: GraphQLInterfaceType[] = [];
   /** Stack for tracking parent types during nested field traversal */
   private typeStack: GraphQLTypeWithFields[] = [];
   /** Boolean stack indicating whether to restore type/selection context when leaving a selection set */
@@ -96,6 +98,8 @@ export class AbstractSelectionRewriter {
       InlineFragment: {
         enter: (node, key, parent, path, ancestors) =>
           this.onEnterInlineFragment({ node, key, parent, path, ancestors }),
+        leave: (node, key, parent, path, ancestors) =>
+          this.onLeaveInlineFragment({ node, key, parent, path, ancestors }),
       },
     };
   }
@@ -158,6 +162,12 @@ export class AbstractSelectionRewriter {
       return;
     }
 
+    if (this.currentInterfaceRoot) {
+      this.interfaceRootStack.push(this.currentInterfaceRoot);
+    }
+
+    this.currentInterfaceRoot = fieldType;
+
     this.appendValidInlineFragments(ctx.node);
     this.distributeFieldsIntoInlineFragments(ctx.node);
   }
@@ -183,6 +193,19 @@ export class AbstractSelectionRewriter {
     if (this.rebalanceStack.pop() ?? false) {
       this.currentType = this.typeStack.pop() ?? this.currentType;
       this.currentSelectionSet = this.selectionSetStack.pop();
+    }
+
+    if (!this.isFieldNode(ctx.parent)) {
+      return;
+    }
+
+    const fieldType = this.findNamedTypeForField(ctx.parent.name.value);
+    if (!fieldType || !this.isTypeWithFields(fieldType)) {
+      return;
+    }
+
+    if (isInterfaceType(fieldType) && fieldType.name === this.currentInterfaceRoot?.name) {
+      this.currentInterfaceRoot = this.interfaceRootStack.pop();
     }
   }
 
@@ -218,8 +241,18 @@ export class AbstractSelectionRewriter {
         );
       }
 
+      const type = this.schema.getType(ctx.node.typeCondition?.name.value ?? '');
+      if (!type || !this.isTypeWithFields(type)) {
+        return undefined;
+      }
+
+      this.rebalanceStack.push(true);
+      this.typeStack.push(this.currentType);
+      this.currentType = type;
       return undefined;
     }
+
+    this.rebalanceStack.push(false);
 
     this.appendValidInlineFragments(ctx.node.selectionSet);
     this.distributeFieldsIntoInlineFragments(ctx.node.selectionSet);
@@ -237,6 +270,16 @@ export class AbstractSelectionRewriter {
       ...ctx.node.selectionSet.selections,
       ...this.currentSelectionSet.selections.slice(index + 1),
     ];
+  }
+
+  private onLeaveInlineFragment(ctx: VisitContext<InlineFragmentNode>): any {
+    if (!ctx.parent || !this.currentSelectionSet) {
+      return;
+    }
+
+    if (this.rebalanceStack.pop() ?? false) {
+      this.currentType = this.typeStack.pop() ?? this.currentType;
+    }
   }
 
   /**
@@ -349,8 +392,7 @@ export class AbstractSelectionRewriter {
       },
       selectionSet: {
         kind: Kind.SELECTION_SET,
-        selections: fields
-          .filter((f) => type.getFields()[f.name.value]),
+        selections: fields.filter((f) => type.getFields()[f.name.value]),
       },
     };
   }
@@ -428,7 +470,7 @@ export class AbstractSelectionRewriter {
    * @returns true if the fragment is valid for the current type context, false otherwise
    */
   private inlineFragmentIsValidForCurrentType(node: InlineFragmentNode): boolean {
-    if (!isInterfaceType(this.currentType)) {
+    if (!isInterfaceType(this.currentInterfaceRoot)) {
       return true;
     }
 

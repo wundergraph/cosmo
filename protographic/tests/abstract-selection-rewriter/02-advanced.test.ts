@@ -1,0 +1,644 @@
+import { describe, expect, it } from 'vitest';
+import { buildSchema, parse, print, GraphQLObjectType } from 'graphql';
+import { AbstractSelectionRewriter } from '../../src/abstract-selection-rewriter.js';
+
+const advancedSchema = buildSchema(
+  `
+  type Query {
+    organization: Organization
+    departments: [Department]
+  }
+
+  type Organization {
+    name: String
+    departments: [Department]
+  }
+
+  type Department {
+    title: String
+    members: [Employee]
+  }
+
+  interface Employee {
+    id: ID!
+    name: String
+  }
+
+  interface Managed {
+    supervisor: String
+  }
+
+  interface Permission {
+    scope: String
+  }
+
+  type Manager implements Employee {
+    id: ID!
+    name: String
+    reports: [Employee]
+    level: Int
+  }
+
+  type Engineer implements Employee & Managed {
+    id: ID!
+    name: String
+    supervisor: String
+    specialty: String
+  }
+
+  type Contractor implements Employee & Managed & Permission {
+    id: ID!
+    name: String
+    supervisor: String
+    scope: String
+    agency: String
+  }
+
+  type Intern implements Employee & Permission {
+    id: ID!
+    name: String
+    scope: String
+    school: String
+  }
+`,
+  {
+    assumeValid: true,
+    assumeValidSDL: true,
+  },
+);
+
+/**
+ * Helper function to normalize a field set selection
+ */
+function normalizeFieldSet(fieldSet: string, typeName: string): string {
+  const doc = parse(`{ ${fieldSet} }`);
+  const objectType = advancedSchema.getTypeMap()[typeName] as GraphQLObjectType;
+  const rewriter = new AbstractSelectionRewriter(doc, advancedSchema, objectType);
+  rewriter.normalize();
+  return print(doc);
+}
+
+describe('AbstractSelectionRewriter - Advanced Cases', () => {
+  describe('Via departments (shallower nesting)', () => {
+    it('should distribute interface fields through one object type level', () => {
+      const input = `
+        departments {
+          members {
+            id
+            ... on Manager { level }
+            ... on Engineer { specialty }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Contractor {
+                id
+              }
+              ... on Intern {
+                id
+              }
+              ... on Manager {
+                id
+                level
+              }
+              ... on Engineer {
+                id
+                specialty
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should handle nested interface selection (... on Managed inside Employee)', () => {
+      const input = `
+        departments {
+          members {
+            ... on Managed {
+              supervisor
+              ... on Engineer { specialty }
+              ... on Contractor { agency }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Engineer {
+                supervisor
+                specialty
+              }
+              ... on Contractor {
+                supervisor
+                agency
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should distribute fields at both interface levels', () => {
+      const input = `
+        departments {
+          members {
+            id
+            ... on Managed {
+              supervisor
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                id
+              }
+              ... on Engineer {
+                id
+                supervisor
+              }
+              ... on Contractor {
+                id
+                supervisor
+              }
+              ... on Intern {
+                id
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should handle nested interface selection on Permission', () => {
+      const input = `
+        departments {
+          members {
+            ... on Permission {
+              scope
+              ... on Contractor { agency }
+              ... on Intern { school }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Contractor {
+                scope
+                agency
+              }
+              ... on Intern {
+                scope
+                school
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should handle two nested interface selections (Managed + Permission)', () => {
+      const input = `
+        departments {
+          members {
+            id
+            ... on Managed {
+              supervisor
+            }
+            ... on Permission {
+              scope
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                id
+              }
+              ... on Engineer {
+                id
+                supervisor
+              }
+              ... on Contractor {
+                id
+                supervisor
+                scope
+              }
+              ... on Intern {
+                id
+                scope
+              }
+            }
+          }
+        }"
+      `);
+    });
+  });
+
+  describe('Via organization (deep nesting)', () => {
+    it('should distribute interface fields through deep nesting', () => {
+      const input = `
+        organization {
+          name
+          departments {
+            members {
+              id
+              ... on Manager { level }
+              ... on Engineer { specialty }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          organization {
+            name
+            departments {
+              members {
+                ... on Contractor {
+                  id
+                }
+                ... on Intern {
+                  id
+                }
+                ... on Manager {
+                  id
+                  level
+                }
+                ... on Engineer {
+                  id
+                  specialty
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should handle nested interface selection through deep nesting', () => {
+      const input = `
+        organization {
+          name
+          departments {
+            members {
+              ... on Managed {
+                supervisor
+                ... on Engineer { specialty }
+                ... on Contractor { agency }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          organization {
+            name
+            departments {
+              members {
+                ... on Engineer {
+                  supervisor
+                  specialty
+                }
+                ... on Contractor {
+                  supervisor
+                  agency
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
+  });
+
+  describe('Recursive interface field', () => {
+    it('should normalize interface field on concrete type inside fragment', () => {
+      const input = `
+        departments {
+          members {
+            ... on Manager {
+              reports {
+                id
+                ... on Engineer { specialty }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                reports {
+                  ... on Manager {
+                    id
+                  }
+                  ... on Contractor {
+                    id
+                  }
+                  ... on Intern {
+                    id
+                  }
+                  ... on Engineer {
+                    id
+                    specialty
+                  }
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should normalize nested Managed interface selection within Manager.reports', () => {
+      const input = `
+        departments {
+          members {
+            ... on Manager {
+              reports {
+                id
+                ... on Managed {
+                  supervisor
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                reports {
+                  ... on Manager {
+                    id
+                  }
+                  ... on Engineer {
+                    id
+                    supervisor
+                  }
+                  ... on Contractor {
+                    id
+                    supervisor
+                  }
+                  ... on Intern {
+                    id
+                  }
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should normalize nested Permission interface selection within Manager.reports', () => {
+      const input = `
+        departments {
+          members {
+            ... on Manager {
+              reports {
+                name
+                ... on Permission {
+                  scope
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                reports {
+                  ... on Manager {
+                    name
+                  }
+                  ... on Engineer {
+                    name
+                  }
+                  ... on Contractor {
+                    name
+                    scope
+                  }
+                  ... on Intern {
+                    name
+                    scope
+                  }
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should normalize multiple nested interface selections within Manager.reports', () => {
+      const input = `
+        departments {
+          members {
+            ... on Manager {
+              reports {
+                id
+                name
+                ... on Managed {
+                  supervisor
+                }
+                ... on Permission {
+                  scope
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                reports {
+                  ... on Manager {
+                    id
+                    name
+                  }
+                  ... on Engineer {
+                    id
+                    name
+                    supervisor
+                  }
+                  ... on Contractor {
+                    id
+                    name
+                    supervisor
+                    scope
+                  }
+                  ... on Intern {
+                    id
+                    name
+                    scope
+                  }
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should normalize nested interface with concrete type selections within Manager.reports', () => {
+      const input = `
+        departments {
+          members {
+            ... on Manager {
+              reports {
+                id
+                ... on Managed {
+                  supervisor
+                  ... on Engineer { specialty }
+                  ... on Contractor { agency }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                reports {
+                  ... on Manager {
+                    id
+                  }
+                  ... on Engineer {
+                    id
+                    supervisor
+                    specialty
+                  }
+                  ... on Contractor {
+                    id
+                    supervisor
+                    agency
+                  }
+                  ... on Intern {
+                    id
+                  }
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should normalize all interface combinations within Manager.reports', () => {
+      const input = `
+        departments {
+          members {
+            ... on Manager {
+              level
+              reports {
+                ... on Managed {
+                  supervisor
+                  ... on Engineer { specialty }
+                }
+                ... on Permission {
+                  scope
+                  ... on Intern { school }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                level
+                reports {
+                  ... on Contractor {
+                    supervisor
+                    scope
+                  }
+                  ... on Intern {
+                    scope
+                    school
+                  }
+                  ... on Engineer {
+                    supervisor
+                    specialty
+                  }
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
+  });
+});
