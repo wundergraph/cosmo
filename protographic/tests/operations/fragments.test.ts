@@ -1263,7 +1263,7 @@ describe('Fragment Support', () => {
             message Child {
               message Child {
                 string id = 1;
-                google.protobuf.StringValue value = 4;
+                google.protobuf.StringValue value = 2;
               }
               string id = 1;
               google.protobuf.StringValue name = 2;

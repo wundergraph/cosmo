@@ -341,6 +341,7 @@ type Config struct {
 	UseVersionedGraph                  bool
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
+	MCPOperationsPath                  string
 	EnableRedis                        bool
 	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
@@ -1455,12 +1456,15 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if testConfig.MCP.Enabled {
-		// Add Storage provider
+		mcpOperationsPath := "testdata/mcp_operations"
+		if testConfig.MCPOperationsPath != "" {
+			mcpOperationsPath = testConfig.MCPOperationsPath
+		}
 		routerOpts = append(routerOpts, core.WithStorageProviders(config.StorageProviders{
 			FileSystem: []config.FileSystemStorageProvider{
 				{
 					ID:   "test",
-					Path: "testdata/mcp_operations",
+					Path: mcpOperationsPath,
 				},
 			},
 		}))

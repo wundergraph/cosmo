@@ -356,6 +356,9 @@ export const FieldUsageSheet = () => {
   const graph = useContext(GraphContext);
   const featureFlagName = router.query.featureFlag as string;
 
+  const category = router.query.category as string;
+  const isInput = category === "inputs";
+
   const { data, error, isLoading, refetch } = useQuery(
     getFieldUsage,
     {
@@ -370,6 +373,7 @@ export const FieldUsageSheet = () => {
         end: formatISO(dateRange.end),
       },
       featureFlagName,
+      isInput,
     },
     {
       enabled: !!showUsage && !!graph?.graph?.name,

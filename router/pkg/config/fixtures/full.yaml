@@ -45,6 +45,7 @@ mcp:
   expose_schema: false
   enable_arbitrary_operations: false
   exclude_mutations: false
+  omit_tool_name_prefix: false
   graph_name: cosmo
   router_url: https://cosmo-router.wundergraph.com
   server:
@@ -267,6 +268,12 @@ headers:
   cookie_whitelist:
     - 'cookie1'
     - 'cookie2'
+  router:
+    response:
+      - name: 'X-Client-Version'
+        expression: "request.header.Get('User-Agent')"
+      - name: 'X-Request-ID'
+        expression: "request.header.Get('X-Request-ID') ?? 'default-request-id'"
 
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information

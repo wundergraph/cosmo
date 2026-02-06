@@ -56,6 +56,7 @@ export interface FederatedGraphSchemaUpdate {
       id: string;
       name: string;
       namespace: string;
+      composedSchemaVersionId?: string;
     };
     organization: {
       id: string;
@@ -320,7 +321,7 @@ export class OrganizationWebhookService {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `🚀 Schema of the federated graph *<${process.env.WEB_BASE_URL}/${eventData.payload.organization.slug}/${graph.namespace}/graph/${graph.name} | ${graph.name}>* has been updated 🎉`,
+                text: `🚀 Schema of the federated graph *<${process.env.WEB_BASE_URL}/${eventData.payload.organization.slug}/${graph.namespace}/graph/${graph.name} | ${graph.name}>* in *${graph.namespace}* namespace has been updated 🎉`,
               },
             },
           ],

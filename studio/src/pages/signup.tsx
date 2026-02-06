@@ -1,6 +1,11 @@
-import { ProductCosmoStack } from "@/components/auth/cosmo-stack";
+import {
+  AuthCard,
+  AuthLogoHeader,
+  AuthFooter,
+  TrustedCompanies,
+  ProductCosmoStack,
+} from "@/components/auth/auth-components";
 import { AuthLayout } from "@/components/layout/auth-layout";
-import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { NextPageWithLayout } from "@/lib/page";
 import { ArrowRightIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
@@ -38,77 +43,105 @@ const SignupPage: NextPageWithLayout = () => {
   const { redirectURL } = querySchema.parse(router.query);
 
   return (
-    <div className="flex min-h-screen items-center justify-center xl:items-start xl:justify-start">
-      <div className="relative z-10 m-4 flex w-full max-w-xl flex-col gap-y-4 rounded-lg border bg-gray-950/60 p-4 text-white shadow-xl backdrop-blur-xl md:p-10 lg:m-10 lg:mt-20 xl:mt-52 2xl:mt-60">
-        <a href="https://wundergraph.com" className="flex items-center gap-2">
-          <Logo width={40} height={40} />
-          <h1 className="text-lg font-bold">WunderGraph Cosmo</h1>
-        </a>
-        <div className="flex flex-col items-start pt-8 md:pt-16">
-          <h2 className="mb-1 text-2xl font-medium">Sign up</h2>
-          <p className="text-muted-foreground">
-            Already have an account?{" "}
-            <Link
-              href={
-                redirectURL ? `/login?redirectURL=${redirectURL}` : "/login"
-              }
-              className="underline hover:text-foreground"
-            >
-              Sign in
-            </Link>
-          </p>
-
-          <div className="mt-12 space-y-4">
-            <Button
-              variant="outline"
-              size="lg"
-              className="text-md w-full truncate px-12 py-6"
-              asChild
-            >
-              <Link
-                href={constructSignupURL({ redirectURL, provider: "github" })}
-              >
-                <GitHubLogoIcon className="me-2" />
-                Sign up with GitHub
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              size="lg"
-              className="text-md w-full truncate px-12 py-6"
-              asChild
-            >
-              <Link
-                href={constructSignupURL({ redirectURL, provider: "google" })}
-              >
-                <FaGoogle className="me-2" />
-                Sign up with Google
-              </Link>
-            </Button>
-
-            <div className="relative flex items-center py-5" role="separator">
-              <div className="flex-grow border-t border-muted"></div>
-              <span className="mx-4 flex-shrink text-muted-foreground">or</span>
-              <div className="flex-grow border-t border-muted"></div>
+    <div className="flex min-h-full flex-col">
+      {/* Main content area */}
+      <div className="flex flex-1 items-center justify-center px-4 py-8 lg:px-0 lg:py-0">
+        <div className="flex w-full max-w-screen-2xl flex-col lg:flex-row">
+          {/* Left section - Marketing */}
+          <div className="flex w-full flex-col items-center justify-center px-4 py-10 lg:min-h-screen lg:w-1/2 lg:items-start lg:px-14 lg:pb-40 lg:pt-2">
+            <div className="lg:mt-8">
+              <ProductCosmoStack variant="signup" />
             </div>
+          </div>
 
-            <Button
-              variant="outline"
-              size="lg"
-              className="text-md group w-full truncate px-12 py-6"
-              asChild
-            >
-              <Link href={constructSignupURL({ redirectURL })}>
-                Continue with Email{" "}
-                <ArrowRightIcon className="ms-2 transition-all group-hover:translate-x-1" />
-              </Link>
-            </Button>
+          {/* Right section - Form */}
+          <div className="mt-8 flex w-full flex-col items-center justify-center pb-10 lg:mt-0 lg:min-h-screen lg:w-1/2 lg:p-12">
+            <div className="w-full max-w-md lg:max-w-lg">
+              <AuthCard className="w-full rounded-xl px-6 py-8 lg:px-10 lg:py-12">
+                <div className="hidden lg:block">
+                  <AuthLogoHeader />
+                </div>
+
+                <div className="mt-8 lg:mt-12">
+                  <h2 className="text-center text-2xl font-normal leading-[120%] text-white lg:text-[32px]">
+                    Sign up for free
+                  </h2>
+                  <p className="mt-2 text-center text-sm text-white/85 lg:text-base">
+                    Try Cosmo as Managed Service. No card required.
+                  </p>
+
+                  <div className="mt-6 space-y-3 lg:mt-8 lg:space-y-4">
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
+                      asChild
+                    >
+                      <Link
+                        href={constructSignupURL({ redirectURL, provider: "github" })}
+                      >
+                        <GitHubLogoIcon className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
+                        Sign up with GitHub
+                      </Link>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
+                      asChild
+                    >
+                      <Link
+                        href={constructSignupURL({ redirectURL, provider: "google" })}
+                      >
+                        <FaGoogle className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
+                        Sign up with Google
+                      </Link>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="group h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
+                      asChild
+                    >
+                      <Link href={constructSignupURL({ redirectURL })}>
+                        Continue with Email
+                        <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1 lg:ml-3 lg:h-5 lg:w-5" />
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {/* Divider line */}
+                  <div className="mb-6 mt-7 h-px w-full bg-white/10" />
+
+                  <p className="text-center text-sm text-gray-400">
+                    Already have an account?
+                    <Link
+                      href={
+                        redirectURL
+                          ? `/login?redirectURL=${encodeURIComponent(redirectURL)}`
+                          : "/login"
+                      }
+                      className="ml-[5px] font-medium text-primary hover:underline"
+                    >
+                      Log in
+                    </Link>
+                  </p>
+                </div>
+              </AuthCard>
+
+              {/* Trusted companies */}
+              <div className="mt-8 lg:mt-16">
+                <TrustedCompanies />
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div className="relative hidden flex-1 flex-col items-center gap-y-4 text-center text-white xl:flex xl:pt-40 2xl:pt-52">
-        <ProductCosmoStack />
-      </div>
+
+      {/* Footer */}
+      <AuthFooter />
     </div>
   );
 };

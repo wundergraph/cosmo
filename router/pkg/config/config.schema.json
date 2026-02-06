@@ -1421,8 +1421,8 @@
             "Content-Type",
             "Graphql-Client-Name",
             "Graphql-Client-Version",
-            "Apollo-Graphql-Client-Name",
-            "Apollo-Graphql-Client-Version",
+            "ApolloGraphql-Client-Name",
+            "ApolloGraphql-Client-Version",
             "x-wg-trace",
             "x-wg-disable-tracing",
             "x-wg-token",
@@ -1766,6 +1766,18 @@
           "items": {
             "type": "string"
           }
+        },
+        "router": {
+          "type": "object",
+          "properties": {
+            "response": {
+              "type": "array",
+              "description": "A list of header rules to apply to router responses.",
+              "items": {
+                "$ref": "#/$defs/router_response_header_rule"
+              }
+            }
+          }
         }
       }
     },
@@ -1872,6 +1884,19 @@
                   "header_key_id": {
                     "type": "string",
                     "description": "The KID header of the JWK token created using the secret"
+                  },
+                  "allowed_use": {
+                    "type": "array",
+                    "description": "The allowed value of the use parameter for the JWKs. If not specified, only keys with use set to 'sig' will be used. If your server provides no use, you can add an empty value to allow those keys.",
+                    "default": ["sig"],
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "sig",
+                        "enc",
+                        ""
+                      ]
+                    }
                   },
                   "algorithms": {
                     "type": "array",
@@ -2285,6 +2310,11 @@
           "type": "boolean",
           "default": false,
           "description": "Expose the full GraphQL schema through MCP. When enabled, AI models can request the complete schema of your API."
+        },
+        "omit_tool_name_prefix": {
+          "type": "boolean",
+          "default": false,
+          "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
         }
       }
     },
@@ -3766,6 +3796,23 @@
         "op",
         "algorithm"
       ]
+    },
+    "router_response_header_rule": {
+      "type": "object",
+      "description": "The configuration for router response headers. This is used to set headers in response from the router to clients.",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the header to set.",
+          "examples": ["X-Custom-Header"]
+        },
+        "expression": {
+          "type": "string",
+          "description": "The template expression to evaluate for the header value. The expression must return a string value."
+        }
+      },
+      "required": ["name", "expression"]
     },
     "set_header_rule": {
       "type": "object",

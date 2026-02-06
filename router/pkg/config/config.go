@@ -263,6 +263,12 @@ type HeaderRules struct {
 	All             *GlobalHeaderRule            `yaml:"all,omitempty"`
 	Subgraphs       map[string]*GlobalHeaderRule `yaml:"subgraphs,omitempty"`
 	CookieWhitelist []string                     `yaml:"cookie_whitelist,omitempty"`
+	Router          RouterHeaderRules            `yaml:"router,omitempty"`
+}
+
+type RouterHeaderRules struct {
+	// All is a set of rules that apply to all response
+	Response []*RouterResponseHeaderRule `yaml:"response,omitempty"`
 }
 
 type GlobalHeaderRule struct {
@@ -328,6 +334,12 @@ const (
 	// ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl propagates the most restrictive cache control header from all subgraph responses to the client
 	ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl ResponseHeaderRuleAlgorithm = "most_restrictive_cache_control"
 )
+
+type RouterResponseHeaderRule struct {
+	// Set header options
+	Name       string `yaml:"name"`
+	Expression string `yaml:"expression"`
+}
 
 type ResponseHeaderRule struct {
 	// Operation describes the header operation to perform e.g. "propagate"
@@ -493,6 +505,7 @@ type OverridesConfiguration struct {
 
 type JWKSConfiguration struct {
 	URL               string            `yaml:"url"`
+	AllowedUse        []string          `yaml:"allowed_use"`
 	Algorithms        []string          `yaml:"algorithms"`
 	RefreshInterval   time.Duration     `yaml:"refresh_interval" envDefault:"1m"`
 	RefreshUnknownKID RefreshUnknownKID `yaml:"refresh_unknown_kid"`
@@ -1006,6 +1019,9 @@ type MCPConfiguration struct {
 	EnableArbitraryOperations bool             `yaml:"enable_arbitrary_operations" envDefault:"false" env:"MCP_ENABLE_ARBITRARY_OPERATIONS"`
 	ExposeSchema              bool             `yaml:"expose_schema" envDefault:"false" env:"MCP_EXPOSE_SCHEMA"`
 	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
+	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
+	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
+	OmitToolNamePrefix bool `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
 }
 
 type MCPSessionConfig struct {

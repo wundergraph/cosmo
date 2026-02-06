@@ -4,7 +4,7 @@
 // 	protoc        v5.29.3
 // source: generated/service.proto
 
-package plugin
+package projects
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -3600,6 +3600,267 @@ func (x *MutationUpdateProjectStatusResponse) GetUpdateProjectStatus() *ProjectU
 	return nil
 }
 
+type ResolveProjectSubProjectsArgs struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	IncludeArchived *wrapperspb.BoolValue `protobuf:"bytes,1,opt,name=include_archived,json=includeArchived,proto3" json:"include_archived,omitempty"`
+}
+
+func (x *ResolveProjectSubProjectsArgs) Reset() {
+	*x = ResolveProjectSubProjectsArgs{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_generated_service_proto_msgTypes[68]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ResolveProjectSubProjectsArgs) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveProjectSubProjectsArgs) ProtoMessage() {}
+
+func (x *ResolveProjectSubProjectsArgs) ProtoReflect() protoreflect.Message {
+	mi := &file_generated_service_proto_msgTypes[68]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveProjectSubProjectsArgs.ProtoReflect.Descriptor instead.
+func (*ResolveProjectSubProjectsArgs) Descriptor() ([]byte, []int) {
+	return file_generated_service_proto_rawDescGZIP(), []int{68}
+}
+
+func (x *ResolveProjectSubProjectsArgs) GetIncludeArchived() *wrapperspb.BoolValue {
+	if x != nil {
+		return x.IncludeArchived
+	}
+	return nil
+}
+
+type ResolveProjectSubProjectsContext struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Id     string        `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Name   string        `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	Status ProjectStatus `protobuf:"varint,3,opt,name=status,proto3,enum=service.ProjectStatus" json:"status,omitempty"`
+}
+
+func (x *ResolveProjectSubProjectsContext) Reset() {
+	*x = ResolveProjectSubProjectsContext{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_generated_service_proto_msgTypes[69]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ResolveProjectSubProjectsContext) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveProjectSubProjectsContext) ProtoMessage() {}
+
+func (x *ResolveProjectSubProjectsContext) ProtoReflect() protoreflect.Message {
+	mi := &file_generated_service_proto_msgTypes[69]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveProjectSubProjectsContext.ProtoReflect.Descriptor instead.
+func (*ResolveProjectSubProjectsContext) Descriptor() ([]byte, []int) {
+	return file_generated_service_proto_rawDescGZIP(), []int{69}
+}
+
+func (x *ResolveProjectSubProjectsContext) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ResolveProjectSubProjectsContext) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *ResolveProjectSubProjectsContext) GetStatus() ProjectStatus {
+	if x != nil {
+		return x.Status
+	}
+	return ProjectStatus_PROJECT_STATUS_UNSPECIFIED
+}
+
+type ResolveProjectSubProjectsRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// context provides the resolver context for the field subProjects of type Project.
+	Context []*ResolveProjectSubProjectsContext `protobuf:"bytes,1,rep,name=context,proto3" json:"context,omitempty"`
+	// field_args provides the arguments for the resolver field subProjects of type Project.
+	FieldArgs *ResolveProjectSubProjectsArgs `protobuf:"bytes,2,opt,name=field_args,json=fieldArgs,proto3" json:"field_args,omitempty"`
+}
+
+func (x *ResolveProjectSubProjectsRequest) Reset() {
+	*x = ResolveProjectSubProjectsRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_generated_service_proto_msgTypes[70]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ResolveProjectSubProjectsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveProjectSubProjectsRequest) ProtoMessage() {}
+
+func (x *ResolveProjectSubProjectsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_generated_service_proto_msgTypes[70]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveProjectSubProjectsRequest.ProtoReflect.Descriptor instead.
+func (*ResolveProjectSubProjectsRequest) Descriptor() ([]byte, []int) {
+	return file_generated_service_proto_rawDescGZIP(), []int{70}
+}
+
+func (x *ResolveProjectSubProjectsRequest) GetContext() []*ResolveProjectSubProjectsContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *ResolveProjectSubProjectsRequest) GetFieldArgs() *ResolveProjectSubProjectsArgs {
+	if x != nil {
+		return x.FieldArgs
+	}
+	return nil
+}
+
+type ResolveProjectSubProjectsResult struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	SubProjects []*Project `protobuf:"bytes,1,rep,name=sub_projects,json=subProjects,proto3" json:"sub_projects,omitempty"`
+}
+
+func (x *ResolveProjectSubProjectsResult) Reset() {
+	*x = ResolveProjectSubProjectsResult{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_generated_service_proto_msgTypes[71]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ResolveProjectSubProjectsResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveProjectSubProjectsResult) ProtoMessage() {}
+
+func (x *ResolveProjectSubProjectsResult) ProtoReflect() protoreflect.Message {
+	mi := &file_generated_service_proto_msgTypes[71]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveProjectSubProjectsResult.ProtoReflect.Descriptor instead.
+func (*ResolveProjectSubProjectsResult) Descriptor() ([]byte, []int) {
+	return file_generated_service_proto_rawDescGZIP(), []int{71}
+}
+
+func (x *ResolveProjectSubProjectsResult) GetSubProjects() []*Project {
+	if x != nil {
+		return x.SubProjects
+	}
+	return nil
+}
+
+type ResolveProjectSubProjectsResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Result []*ResolveProjectSubProjectsResult `protobuf:"bytes,1,rep,name=result,proto3" json:"result,omitempty"`
+}
+
+func (x *ResolveProjectSubProjectsResponse) Reset() {
+	*x = ResolveProjectSubProjectsResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_generated_service_proto_msgTypes[72]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ResolveProjectSubProjectsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResolveProjectSubProjectsResponse) ProtoMessage() {}
+
+func (x *ResolveProjectSubProjectsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_generated_service_proto_msgTypes[72]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResolveProjectSubProjectsResponse.ProtoReflect.Descriptor instead.
+func (*ResolveProjectSubProjectsResponse) Descriptor() ([]byte, []int) {
+	return file_generated_service_proto_rawDescGZIP(), []int{72}
+}
+
+func (x *ResolveProjectSubProjectsResponse) GetResult() []*ResolveProjectSubProjectsResult {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
 type ResolveProjectFilteredTasksArgs struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -3613,7 +3874,7 @@ type ResolveProjectFilteredTasksArgs struct {
 func (x *ResolveProjectFilteredTasksArgs) Reset() {
 	*x = ResolveProjectFilteredTasksArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[68]
+		mi := &file_generated_service_proto_msgTypes[73]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3626,7 +3887,7 @@ func (x *ResolveProjectFilteredTasksArgs) String() string {
 func (*ResolveProjectFilteredTasksArgs) ProtoMessage() {}
 
 func (x *ResolveProjectFilteredTasksArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[68]
+	mi := &file_generated_service_proto_msgTypes[73]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3639,7 +3900,7 @@ func (x *ResolveProjectFilteredTasksArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveProjectFilteredTasksArgs.ProtoReflect.Descriptor instead.
 func (*ResolveProjectFilteredTasksArgs) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{68}
+	return file_generated_service_proto_rawDescGZIP(), []int{73}
 }
 
 func (x *ResolveProjectFilteredTasksArgs) GetStatus() TaskStatus {
@@ -3674,7 +3935,7 @@ type ResolveProjectFilteredTasksContext struct {
 func (x *ResolveProjectFilteredTasksContext) Reset() {
 	*x = ResolveProjectFilteredTasksContext{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[69]
+		mi := &file_generated_service_proto_msgTypes[74]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3687,7 +3948,7 @@ func (x *ResolveProjectFilteredTasksContext) String() string {
 func (*ResolveProjectFilteredTasksContext) ProtoMessage() {}
 
 func (x *ResolveProjectFilteredTasksContext) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[69]
+	mi := &file_generated_service_proto_msgTypes[74]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3700,7 +3961,7 @@ func (x *ResolveProjectFilteredTasksContext) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ResolveProjectFilteredTasksContext.ProtoReflect.Descriptor instead.
 func (*ResolveProjectFilteredTasksContext) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{69}
+	return file_generated_service_proto_rawDescGZIP(), []int{74}
 }
 
 func (x *ResolveProjectFilteredTasksContext) GetId() string {
@@ -3724,7 +3985,7 @@ type ResolveProjectFilteredTasksRequest struct {
 func (x *ResolveProjectFilteredTasksRequest) Reset() {
 	*x = ResolveProjectFilteredTasksRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[70]
+		mi := &file_generated_service_proto_msgTypes[75]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3737,7 +3998,7 @@ func (x *ResolveProjectFilteredTasksRequest) String() string {
 func (*ResolveProjectFilteredTasksRequest) ProtoMessage() {}
 
 func (x *ResolveProjectFilteredTasksRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[70]
+	mi := &file_generated_service_proto_msgTypes[75]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3750,7 +4011,7 @@ func (x *ResolveProjectFilteredTasksRequest) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ResolveProjectFilteredTasksRequest.ProtoReflect.Descriptor instead.
 func (*ResolveProjectFilteredTasksRequest) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{70}
+	return file_generated_service_proto_rawDescGZIP(), []int{75}
 }
 
 func (x *ResolveProjectFilteredTasksRequest) GetContext() []*ResolveProjectFilteredTasksContext {
@@ -3778,7 +4039,7 @@ type ResolveProjectFilteredTasksResult struct {
 func (x *ResolveProjectFilteredTasksResult) Reset() {
 	*x = ResolveProjectFilteredTasksResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[71]
+		mi := &file_generated_service_proto_msgTypes[76]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3791,7 +4052,7 @@ func (x *ResolveProjectFilteredTasksResult) String() string {
 func (*ResolveProjectFilteredTasksResult) ProtoMessage() {}
 
 func (x *ResolveProjectFilteredTasksResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[71]
+	mi := &file_generated_service_proto_msgTypes[76]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3804,7 +4065,7 @@ func (x *ResolveProjectFilteredTasksResult) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ResolveProjectFilteredTasksResult.ProtoReflect.Descriptor instead.
 func (*ResolveProjectFilteredTasksResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{71}
+	return file_generated_service_proto_rawDescGZIP(), []int{76}
 }
 
 func (x *ResolveProjectFilteredTasksResult) GetFilteredTasks() []*Task {
@@ -3825,7 +4086,7 @@ type ResolveProjectFilteredTasksResponse struct {
 func (x *ResolveProjectFilteredTasksResponse) Reset() {
 	*x = ResolveProjectFilteredTasksResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[72]
+		mi := &file_generated_service_proto_msgTypes[77]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3838,7 +4099,7 @@ func (x *ResolveProjectFilteredTasksResponse) String() string {
 func (*ResolveProjectFilteredTasksResponse) ProtoMessage() {}
 
 func (x *ResolveProjectFilteredTasksResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[72]
+	mi := &file_generated_service_proto_msgTypes[77]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3851,7 +4112,7 @@ func (x *ResolveProjectFilteredTasksResponse) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ResolveProjectFilteredTasksResponse.ProtoReflect.Descriptor instead.
 func (*ResolveProjectFilteredTasksResponse) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{72}
+	return file_generated_service_proto_rawDescGZIP(), []int{77}
 }
 
 func (x *ResolveProjectFilteredTasksResponse) GetResult() []*ResolveProjectFilteredTasksResult {
@@ -3872,7 +4133,7 @@ type ResolveProjectCompletionRateArgs struct {
 func (x *ResolveProjectCompletionRateArgs) Reset() {
 	*x = ResolveProjectCompletionRateArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[73]
+		mi := &file_generated_service_proto_msgTypes[78]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3885,7 +4146,7 @@ func (x *ResolveProjectCompletionRateArgs) String() string {
 func (*ResolveProjectCompletionRateArgs) ProtoMessage() {}
 
 func (x *ResolveProjectCompletionRateArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[73]
+	mi := &file_generated_service_proto_msgTypes[78]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3898,7 +4159,7 @@ func (x *ResolveProjectCompletionRateArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveProjectCompletionRateArgs.ProtoReflect.Descriptor instead.
 func (*ResolveProjectCompletionRateArgs) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{73}
+	return file_generated_service_proto_rawDescGZIP(), []int{78}
 }
 
 func (x *ResolveProjectCompletionRateArgs) GetIncludeSubtasks() *wrapperspb.BoolValue {
@@ -3922,7 +4183,7 @@ type ResolveProjectCompletionRateContext struct {
 func (x *ResolveProjectCompletionRateContext) Reset() {
 	*x = ResolveProjectCompletionRateContext{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[74]
+		mi := &file_generated_service_proto_msgTypes[79]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -3935,7 +4196,7 @@ func (x *ResolveProjectCompletionRateContext) String() string {
 func (*ResolveProjectCompletionRateContext) ProtoMessage() {}
 
 func (x *ResolveProjectCompletionRateContext) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[74]
+	mi := &file_generated_service_proto_msgTypes[79]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3948,7 +4209,7 @@ func (x *ResolveProjectCompletionRateContext) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ResolveProjectCompletionRateContext.ProtoReflect.Descriptor instead.
 func (*ResolveProjectCompletionRateContext) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{74}
+	return file_generated_service_proto_rawDescGZIP(), []int{79}
 }
 
 func (x *ResolveProjectCompletionRateContext) GetId() string {
@@ -3993,7 +4254,7 @@ type ResolveProjectCompletionRateRequest struct {
 func (x *ResolveProjectCompletionRateRequest) Reset() {
 	*x = ResolveProjectCompletionRateRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[75]
+		mi := &file_generated_service_proto_msgTypes[80]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4006,7 +4267,7 @@ func (x *ResolveProjectCompletionRateRequest) String() string {
 func (*ResolveProjectCompletionRateRequest) ProtoMessage() {}
 
 func (x *ResolveProjectCompletionRateRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[75]
+	mi := &file_generated_service_proto_msgTypes[80]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4019,7 +4280,7 @@ func (x *ResolveProjectCompletionRateRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ResolveProjectCompletionRateRequest.ProtoReflect.Descriptor instead.
 func (*ResolveProjectCompletionRateRequest) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{75}
+	return file_generated_service_proto_rawDescGZIP(), []int{80}
 }
 
 func (x *ResolveProjectCompletionRateRequest) GetContext() []*ResolveProjectCompletionRateContext {
@@ -4047,7 +4308,7 @@ type ResolveProjectCompletionRateResult struct {
 func (x *ResolveProjectCompletionRateResult) Reset() {
 	*x = ResolveProjectCompletionRateResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[76]
+		mi := &file_generated_service_proto_msgTypes[81]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4060,7 +4321,7 @@ func (x *ResolveProjectCompletionRateResult) String() string {
 func (*ResolveProjectCompletionRateResult) ProtoMessage() {}
 
 func (x *ResolveProjectCompletionRateResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[76]
+	mi := &file_generated_service_proto_msgTypes[81]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4073,7 +4334,7 @@ func (x *ResolveProjectCompletionRateResult) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ResolveProjectCompletionRateResult.ProtoReflect.Descriptor instead.
 func (*ResolveProjectCompletionRateResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{76}
+	return file_generated_service_proto_rawDescGZIP(), []int{81}
 }
 
 func (x *ResolveProjectCompletionRateResult) GetCompletionRate() float64 {
@@ -4094,7 +4355,7 @@ type ResolveProjectCompletionRateResponse struct {
 func (x *ResolveProjectCompletionRateResponse) Reset() {
 	*x = ResolveProjectCompletionRateResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[77]
+		mi := &file_generated_service_proto_msgTypes[82]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4107,7 +4368,7 @@ func (x *ResolveProjectCompletionRateResponse) String() string {
 func (*ResolveProjectCompletionRateResponse) ProtoMessage() {}
 
 func (x *ResolveProjectCompletionRateResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[77]
+	mi := &file_generated_service_proto_msgTypes[82]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4120,7 +4381,7 @@ func (x *ResolveProjectCompletionRateResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ResolveProjectCompletionRateResponse.ProtoReflect.Descriptor instead.
 func (*ResolveProjectCompletionRateResponse) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{77}
+	return file_generated_service_proto_rawDescGZIP(), []int{82}
 }
 
 func (x *ResolveProjectCompletionRateResponse) GetResult() []*ResolveProjectCompletionRateResult {
@@ -4141,7 +4402,7 @@ type ResolveProjectEstimatedDaysRemainingArgs struct {
 func (x *ResolveProjectEstimatedDaysRemainingArgs) Reset() {
 	*x = ResolveProjectEstimatedDaysRemainingArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[78]
+		mi := &file_generated_service_proto_msgTypes[83]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4154,7 +4415,7 @@ func (x *ResolveProjectEstimatedDaysRemainingArgs) String() string {
 func (*ResolveProjectEstimatedDaysRemainingArgs) ProtoMessage() {}
 
 func (x *ResolveProjectEstimatedDaysRemainingArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[78]
+	mi := &file_generated_service_proto_msgTypes[83]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4167,7 +4428,7 @@ func (x *ResolveProjectEstimatedDaysRemainingArgs) ProtoReflect() protoreflect.M
 
 // Deprecated: Use ResolveProjectEstimatedDaysRemainingArgs.ProtoReflect.Descriptor instead.
 func (*ResolveProjectEstimatedDaysRemainingArgs) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{78}
+	return file_generated_service_proto_rawDescGZIP(), []int{83}
 }
 
 func (x *ResolveProjectEstimatedDaysRemainingArgs) GetFromDate() *wrapperspb.StringValue {
@@ -4190,7 +4451,7 @@ type ResolveProjectEstimatedDaysRemainingContext struct {
 func (x *ResolveProjectEstimatedDaysRemainingContext) Reset() {
 	*x = ResolveProjectEstimatedDaysRemainingContext{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[79]
+		mi := &file_generated_service_proto_msgTypes[84]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4203,7 +4464,7 @@ func (x *ResolveProjectEstimatedDaysRemainingContext) String() string {
 func (*ResolveProjectEstimatedDaysRemainingContext) ProtoMessage() {}
 
 func (x *ResolveProjectEstimatedDaysRemainingContext) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[79]
+	mi := &file_generated_service_proto_msgTypes[84]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4216,7 +4477,7 @@ func (x *ResolveProjectEstimatedDaysRemainingContext) ProtoReflect() protoreflec
 
 // Deprecated: Use ResolveProjectEstimatedDaysRemainingContext.ProtoReflect.Descriptor instead.
 func (*ResolveProjectEstimatedDaysRemainingContext) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{79}
+	return file_generated_service_proto_rawDescGZIP(), []int{84}
 }
 
 func (x *ResolveProjectEstimatedDaysRemainingContext) GetId() string {
@@ -4254,7 +4515,7 @@ type ResolveProjectEstimatedDaysRemainingRequest struct {
 func (x *ResolveProjectEstimatedDaysRemainingRequest) Reset() {
 	*x = ResolveProjectEstimatedDaysRemainingRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[80]
+		mi := &file_generated_service_proto_msgTypes[85]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4267,7 +4528,7 @@ func (x *ResolveProjectEstimatedDaysRemainingRequest) String() string {
 func (*ResolveProjectEstimatedDaysRemainingRequest) ProtoMessage() {}
 
 func (x *ResolveProjectEstimatedDaysRemainingRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[80]
+	mi := &file_generated_service_proto_msgTypes[85]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4280,7 +4541,7 @@ func (x *ResolveProjectEstimatedDaysRemainingRequest) ProtoReflect() protoreflec
 
 // Deprecated: Use ResolveProjectEstimatedDaysRemainingRequest.ProtoReflect.Descriptor instead.
 func (*ResolveProjectEstimatedDaysRemainingRequest) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{80}
+	return file_generated_service_proto_rawDescGZIP(), []int{85}
 }
 
 func (x *ResolveProjectEstimatedDaysRemainingRequest) GetContext() []*ResolveProjectEstimatedDaysRemainingContext {
@@ -4308,7 +4569,7 @@ type ResolveProjectEstimatedDaysRemainingResult struct {
 func (x *ResolveProjectEstimatedDaysRemainingResult) Reset() {
 	*x = ResolveProjectEstimatedDaysRemainingResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[81]
+		mi := &file_generated_service_proto_msgTypes[86]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4321,7 +4582,7 @@ func (x *ResolveProjectEstimatedDaysRemainingResult) String() string {
 func (*ResolveProjectEstimatedDaysRemainingResult) ProtoMessage() {}
 
 func (x *ResolveProjectEstimatedDaysRemainingResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[81]
+	mi := &file_generated_service_proto_msgTypes[86]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4334,7 +4595,7 @@ func (x *ResolveProjectEstimatedDaysRemainingResult) ProtoReflect() protoreflect
 
 // Deprecated: Use ResolveProjectEstimatedDaysRemainingResult.ProtoReflect.Descriptor instead.
 func (*ResolveProjectEstimatedDaysRemainingResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{81}
+	return file_generated_service_proto_rawDescGZIP(), []int{86}
 }
 
 func (x *ResolveProjectEstimatedDaysRemainingResult) GetEstimatedDaysRemaining() *wrapperspb.Int32Value {
@@ -4355,7 +4616,7 @@ type ResolveProjectEstimatedDaysRemainingResponse struct {
 func (x *ResolveProjectEstimatedDaysRemainingResponse) Reset() {
 	*x = ResolveProjectEstimatedDaysRemainingResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[82]
+		mi := &file_generated_service_proto_msgTypes[87]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4368,7 +4629,7 @@ func (x *ResolveProjectEstimatedDaysRemainingResponse) String() string {
 func (*ResolveProjectEstimatedDaysRemainingResponse) ProtoMessage() {}
 
 func (x *ResolveProjectEstimatedDaysRemainingResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[82]
+	mi := &file_generated_service_proto_msgTypes[87]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4381,7 +4642,7 @@ func (x *ResolveProjectEstimatedDaysRemainingResponse) ProtoReflect() protorefle
 
 // Deprecated: Use ResolveProjectEstimatedDaysRemainingResponse.ProtoReflect.Descriptor instead.
 func (*ResolveProjectEstimatedDaysRemainingResponse) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{82}
+	return file_generated_service_proto_rawDescGZIP(), []int{87}
 }
 
 func (x *ResolveProjectEstimatedDaysRemainingResponse) GetResult() []*ResolveProjectEstimatedDaysRemainingResult {
@@ -4402,7 +4663,7 @@ type ResolveProjectCriticalDeadlineArgs struct {
 func (x *ResolveProjectCriticalDeadlineArgs) Reset() {
 	*x = ResolveProjectCriticalDeadlineArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[83]
+		mi := &file_generated_service_proto_msgTypes[88]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4415,7 +4676,7 @@ func (x *ResolveProjectCriticalDeadlineArgs) String() string {
 func (*ResolveProjectCriticalDeadlineArgs) ProtoMessage() {}
 
 func (x *ResolveProjectCriticalDeadlineArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[83]
+	mi := &file_generated_service_proto_msgTypes[88]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4428,7 +4689,7 @@ func (x *ResolveProjectCriticalDeadlineArgs) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ResolveProjectCriticalDeadlineArgs.ProtoReflect.Descriptor instead.
 func (*ResolveProjectCriticalDeadlineArgs) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{83}
+	return file_generated_service_proto_rawDescGZIP(), []int{88}
 }
 
 func (x *ResolveProjectCriticalDeadlineArgs) GetWithinDays() *wrapperspb.Int32Value {
@@ -4451,7 +4712,7 @@ type ResolveProjectCriticalDeadlineContext struct {
 func (x *ResolveProjectCriticalDeadlineContext) Reset() {
 	*x = ResolveProjectCriticalDeadlineContext{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[84]
+		mi := &file_generated_service_proto_msgTypes[89]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4464,7 +4725,7 @@ func (x *ResolveProjectCriticalDeadlineContext) String() string {
 func (*ResolveProjectCriticalDeadlineContext) ProtoMessage() {}
 
 func (x *ResolveProjectCriticalDeadlineContext) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[84]
+	mi := &file_generated_service_proto_msgTypes[89]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4477,7 +4738,7 @@ func (x *ResolveProjectCriticalDeadlineContext) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ResolveProjectCriticalDeadlineContext.ProtoReflect.Descriptor instead.
 func (*ResolveProjectCriticalDeadlineContext) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{84}
+	return file_generated_service_proto_rawDescGZIP(), []int{89}
 }
 
 func (x *ResolveProjectCriticalDeadlineContext) GetId() string {
@@ -4515,7 +4776,7 @@ type ResolveProjectCriticalDeadlineRequest struct {
 func (x *ResolveProjectCriticalDeadlineRequest) Reset() {
 	*x = ResolveProjectCriticalDeadlineRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[85]
+		mi := &file_generated_service_proto_msgTypes[90]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4528,7 +4789,7 @@ func (x *ResolveProjectCriticalDeadlineRequest) String() string {
 func (*ResolveProjectCriticalDeadlineRequest) ProtoMessage() {}
 
 func (x *ResolveProjectCriticalDeadlineRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[85]
+	mi := &file_generated_service_proto_msgTypes[90]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4541,7 +4802,7 @@ func (x *ResolveProjectCriticalDeadlineRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ResolveProjectCriticalDeadlineRequest.ProtoReflect.Descriptor instead.
 func (*ResolveProjectCriticalDeadlineRequest) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{85}
+	return file_generated_service_proto_rawDescGZIP(), []int{90}
 }
 
 func (x *ResolveProjectCriticalDeadlineRequest) GetContext() []*ResolveProjectCriticalDeadlineContext {
@@ -4569,7 +4830,7 @@ type ResolveProjectCriticalDeadlineResult struct {
 func (x *ResolveProjectCriticalDeadlineResult) Reset() {
 	*x = ResolveProjectCriticalDeadlineResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[86]
+		mi := &file_generated_service_proto_msgTypes[91]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4582,7 +4843,7 @@ func (x *ResolveProjectCriticalDeadlineResult) String() string {
 func (*ResolveProjectCriticalDeadlineResult) ProtoMessage() {}
 
 func (x *ResolveProjectCriticalDeadlineResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[86]
+	mi := &file_generated_service_proto_msgTypes[91]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4595,7 +4856,7 @@ func (x *ResolveProjectCriticalDeadlineResult) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ResolveProjectCriticalDeadlineResult.ProtoReflect.Descriptor instead.
 func (*ResolveProjectCriticalDeadlineResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{86}
+	return file_generated_service_proto_rawDescGZIP(), []int{91}
 }
 
 func (x *ResolveProjectCriticalDeadlineResult) GetCriticalDeadline() *Timestamped {
@@ -4616,7 +4877,7 @@ type ResolveProjectCriticalDeadlineResponse struct {
 func (x *ResolveProjectCriticalDeadlineResponse) Reset() {
 	*x = ResolveProjectCriticalDeadlineResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[87]
+		mi := &file_generated_service_proto_msgTypes[92]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4629,7 +4890,7 @@ func (x *ResolveProjectCriticalDeadlineResponse) String() string {
 func (*ResolveProjectCriticalDeadlineResponse) ProtoMessage() {}
 
 func (x *ResolveProjectCriticalDeadlineResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[87]
+	mi := &file_generated_service_proto_msgTypes[92]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4642,7 +4903,7 @@ func (x *ResolveProjectCriticalDeadlineResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use ResolveProjectCriticalDeadlineResponse.ProtoReflect.Descriptor instead.
 func (*ResolveProjectCriticalDeadlineResponse) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{87}
+	return file_generated_service_proto_rawDescGZIP(), []int{92}
 }
 
 func (x *ResolveProjectCriticalDeadlineResponse) GetResult() []*ResolveProjectCriticalDeadlineResult {
@@ -4663,7 +4924,7 @@ type ResolveProjectTopPriorityItemArgs struct {
 func (x *ResolveProjectTopPriorityItemArgs) Reset() {
 	*x = ResolveProjectTopPriorityItemArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[88]
+		mi := &file_generated_service_proto_msgTypes[93]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4676,7 +4937,7 @@ func (x *ResolveProjectTopPriorityItemArgs) String() string {
 func (*ResolveProjectTopPriorityItemArgs) ProtoMessage() {}
 
 func (x *ResolveProjectTopPriorityItemArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[88]
+	mi := &file_generated_service_proto_msgTypes[93]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4689,7 +4950,7 @@ func (x *ResolveProjectTopPriorityItemArgs) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ResolveProjectTopPriorityItemArgs.ProtoReflect.Descriptor instead.
 func (*ResolveProjectTopPriorityItemArgs) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{88}
+	return file_generated_service_proto_rawDescGZIP(), []int{93}
 }
 
 func (x *ResolveProjectTopPriorityItemArgs) GetCategory() *wrapperspb.StringValue {
@@ -4711,7 +4972,7 @@ type ResolveProjectTopPriorityItemContext struct {
 func (x *ResolveProjectTopPriorityItemContext) Reset() {
 	*x = ResolveProjectTopPriorityItemContext{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[89]
+		mi := &file_generated_service_proto_msgTypes[94]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4724,7 +4985,7 @@ func (x *ResolveProjectTopPriorityItemContext) String() string {
 func (*ResolveProjectTopPriorityItemContext) ProtoMessage() {}
 
 func (x *ResolveProjectTopPriorityItemContext) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[89]
+	mi := &file_generated_service_proto_msgTypes[94]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4737,7 +4998,7 @@ func (x *ResolveProjectTopPriorityItemContext) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ResolveProjectTopPriorityItemContext.ProtoReflect.Descriptor instead.
 func (*ResolveProjectTopPriorityItemContext) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{89}
+	return file_generated_service_proto_rawDescGZIP(), []int{94}
 }
 
 func (x *ResolveProjectTopPriorityItemContext) GetId() string {
@@ -4768,7 +5029,7 @@ type ResolveProjectTopPriorityItemRequest struct {
 func (x *ResolveProjectTopPriorityItemRequest) Reset() {
 	*x = ResolveProjectTopPriorityItemRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[90]
+		mi := &file_generated_service_proto_msgTypes[95]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4781,7 +5042,7 @@ func (x *ResolveProjectTopPriorityItemRequest) String() string {
 func (*ResolveProjectTopPriorityItemRequest) ProtoMessage() {}
 
 func (x *ResolveProjectTopPriorityItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[90]
+	mi := &file_generated_service_proto_msgTypes[95]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4794,7 +5055,7 @@ func (x *ResolveProjectTopPriorityItemRequest) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ResolveProjectTopPriorityItemRequest.ProtoReflect.Descriptor instead.
 func (*ResolveProjectTopPriorityItemRequest) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{90}
+	return file_generated_service_proto_rawDescGZIP(), []int{95}
 }
 
 func (x *ResolveProjectTopPriorityItemRequest) GetContext() []*ResolveProjectTopPriorityItemContext {
@@ -4822,7 +5083,7 @@ type ResolveProjectTopPriorityItemResult struct {
 func (x *ResolveProjectTopPriorityItemResult) Reset() {
 	*x = ResolveProjectTopPriorityItemResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[91]
+		mi := &file_generated_service_proto_msgTypes[96]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4835,7 +5096,7 @@ func (x *ResolveProjectTopPriorityItemResult) String() string {
 func (*ResolveProjectTopPriorityItemResult) ProtoMessage() {}
 
 func (x *ResolveProjectTopPriorityItemResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[91]
+	mi := &file_generated_service_proto_msgTypes[96]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4848,7 +5109,7 @@ func (x *ResolveProjectTopPriorityItemResult) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ResolveProjectTopPriorityItemResult.ProtoReflect.Descriptor instead.
 func (*ResolveProjectTopPriorityItemResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{91}
+	return file_generated_service_proto_rawDescGZIP(), []int{96}
 }
 
 func (x *ResolveProjectTopPriorityItemResult) GetTopPriorityItem() *ProjectSearchResult {
@@ -4869,7 +5130,7 @@ type ResolveProjectTopPriorityItemResponse struct {
 func (x *ResolveProjectTopPriorityItemResponse) Reset() {
 	*x = ResolveProjectTopPriorityItemResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[92]
+		mi := &file_generated_service_proto_msgTypes[97]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4882,7 +5143,7 @@ func (x *ResolveProjectTopPriorityItemResponse) String() string {
 func (*ResolveProjectTopPriorityItemResponse) ProtoMessage() {}
 
 func (x *ResolveProjectTopPriorityItemResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[92]
+	mi := &file_generated_service_proto_msgTypes[97]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4895,7 +5156,7 @@ func (x *ResolveProjectTopPriorityItemResponse) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ResolveProjectTopPriorityItemResponse.ProtoReflect.Descriptor instead.
 func (*ResolveProjectTopPriorityItemResponse) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{92}
+	return file_generated_service_proto_rawDescGZIP(), []int{97}
 }
 
 func (x *ResolveProjectTopPriorityItemResponse) GetResult() []*ResolveProjectTopPriorityItemResult {
@@ -4916,7 +5177,7 @@ type ResolveMilestoneIsAtRiskArgs struct {
 func (x *ResolveMilestoneIsAtRiskArgs) Reset() {
 	*x = ResolveMilestoneIsAtRiskArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[93]
+		mi := &file_generated_service_proto_msgTypes[98]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4929,7 +5190,7 @@ func (x *ResolveMilestoneIsAtRiskArgs) String() string {
 func (*ResolveMilestoneIsAtRiskArgs) ProtoMessage() {}
 
 func (x *ResolveMilestoneIsAtRiskArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[93]
+	mi := &file_generated_service_proto_msgTypes[98]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4942,7 +5203,7 @@ func (x *ResolveMilestoneIsAtRiskArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveMilestoneIsAtRiskArgs.ProtoReflect.Descriptor instead.
 func (*ResolveMilestoneIsAtRiskArgs) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{93}
+	return file_generated_service_proto_rawDescGZIP(), []int{98}
 }
 
 func (x *ResolveMilestoneIsAtRiskArgs) GetThreshold() *wrapperspb.DoubleValue {
@@ -4966,7 +5227,7 @@ type ResolveMilestoneIsAtRiskContext struct {
 func (x *ResolveMilestoneIsAtRiskContext) Reset() {
 	*x = ResolveMilestoneIsAtRiskContext{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[94]
+		mi := &file_generated_service_proto_msgTypes[99]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -4979,7 +5240,7 @@ func (x *ResolveMilestoneIsAtRiskContext) String() string {
 func (*ResolveMilestoneIsAtRiskContext) ProtoMessage() {}
 
 func (x *ResolveMilestoneIsAtRiskContext) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[94]
+	mi := &file_generated_service_proto_msgTypes[99]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4992,7 +5253,7 @@ func (x *ResolveMilestoneIsAtRiskContext) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveMilestoneIsAtRiskContext.ProtoReflect.Descriptor instead.
 func (*ResolveMilestoneIsAtRiskContext) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{94}
+	return file_generated_service_proto_rawDescGZIP(), []int{99}
 }
 
 func (x *ResolveMilestoneIsAtRiskContext) GetId() string {
@@ -5037,7 +5298,7 @@ type ResolveMilestoneIsAtRiskRequest struct {
 func (x *ResolveMilestoneIsAtRiskRequest) Reset() {
 	*x = ResolveMilestoneIsAtRiskRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[95]
+		mi := &file_generated_service_proto_msgTypes[100]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5050,7 +5311,7 @@ func (x *ResolveMilestoneIsAtRiskRequest) String() string {
 func (*ResolveMilestoneIsAtRiskRequest) ProtoMessage() {}
 
 func (x *ResolveMilestoneIsAtRiskRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[95]
+	mi := &file_generated_service_proto_msgTypes[100]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5063,7 +5324,7 @@ func (x *ResolveMilestoneIsAtRiskRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveMilestoneIsAtRiskRequest.ProtoReflect.Descriptor instead.
 func (*ResolveMilestoneIsAtRiskRequest) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{95}
+	return file_generated_service_proto_rawDescGZIP(), []int{100}
 }
 
 func (x *ResolveMilestoneIsAtRiskRequest) GetContext() []*ResolveMilestoneIsAtRiskContext {
@@ -5091,7 +5352,7 @@ type ResolveMilestoneIsAtRiskResult struct {
 func (x *ResolveMilestoneIsAtRiskResult) Reset() {
 	*x = ResolveMilestoneIsAtRiskResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[96]
+		mi := &file_generated_service_proto_msgTypes[101]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5104,7 +5365,7 @@ func (x *ResolveMilestoneIsAtRiskResult) String() string {
 func (*ResolveMilestoneIsAtRiskResult) ProtoMessage() {}
 
 func (x *ResolveMilestoneIsAtRiskResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[96]
+	mi := &file_generated_service_proto_msgTypes[101]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5117,7 +5378,7 @@ func (x *ResolveMilestoneIsAtRiskResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveMilestoneIsAtRiskResult.ProtoReflect.Descriptor instead.
 func (*ResolveMilestoneIsAtRiskResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{96}
+	return file_generated_service_proto_rawDescGZIP(), []int{101}
 }
 
 func (x *ResolveMilestoneIsAtRiskResult) GetIsAtRisk() bool {
@@ -5138,7 +5399,7 @@ type ResolveMilestoneIsAtRiskResponse struct {
 func (x *ResolveMilestoneIsAtRiskResponse) Reset() {
 	*x = ResolveMilestoneIsAtRiskResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[97]
+		mi := &file_generated_service_proto_msgTypes[102]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5151,7 +5412,7 @@ func (x *ResolveMilestoneIsAtRiskResponse) String() string {
 func (*ResolveMilestoneIsAtRiskResponse) ProtoMessage() {}
 
 func (x *ResolveMilestoneIsAtRiskResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[97]
+	mi := &file_generated_service_proto_msgTypes[102]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5164,7 +5425,7 @@ func (x *ResolveMilestoneIsAtRiskResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveMilestoneIsAtRiskResponse.ProtoReflect.Descriptor instead.
 func (*ResolveMilestoneIsAtRiskResponse) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{97}
+	return file_generated_service_proto_rawDescGZIP(), []int{102}
 }
 
 func (x *ResolveMilestoneIsAtRiskResponse) GetResult() []*ResolveMilestoneIsAtRiskResult {
@@ -5185,7 +5446,7 @@ type ResolveMilestoneDaysUntilDueArgs struct {
 func (x *ResolveMilestoneDaysUntilDueArgs) Reset() {
 	*x = ResolveMilestoneDaysUntilDueArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[98]
+		mi := &file_generated_service_proto_msgTypes[103]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5198,7 +5459,7 @@ func (x *ResolveMilestoneDaysUntilDueArgs) String() string {
 func (*ResolveMilestoneDaysUntilDueArgs) ProtoMessage() {}
 
 func (x *ResolveMilestoneDaysUntilDueArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[98]
+	mi := &file_generated_service_proto_msgTypes[103]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5211,7 +5472,7 @@ func (x *ResolveMilestoneDaysUntilDueArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveMilestoneDaysUntilDueArgs.ProtoReflect.Descriptor instead.
 func (*ResolveMilestoneDaysUntilDueArgs) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{98}
+	return file_generated_service_proto_rawDescGZIP(), []int{103}
 }
 
 func (x *ResolveMilestoneDaysUntilDueArgs) GetFromDate() *wrapperspb.StringValue {
@@ -5232,7 +5493,7 @@ type ResolveMilestoneDaysUntilDueContext struct {
 func (x *ResolveMilestoneDaysUntilDueContext) Reset() {
 	*x = ResolveMilestoneDaysUntilDueContext{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[99]
+		mi := &file_generated_service_proto_msgTypes[104]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5245,7 +5506,7 @@ func (x *ResolveMilestoneDaysUntilDueContext) String() string {
 func (*ResolveMilestoneDaysUntilDueContext) ProtoMessage() {}
 
 func (x *ResolveMilestoneDaysUntilDueContext) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[99]
+	mi := &file_generated_service_proto_msgTypes[104]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5258,7 +5519,7 @@ func (x *ResolveMilestoneDaysUntilDueContext) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ResolveMilestoneDaysUntilDueContext.ProtoReflect.Descriptor instead.
 func (*ResolveMilestoneDaysUntilDueContext) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{99}
+	return file_generated_service_proto_rawDescGZIP(), []int{104}
 }
 
 func (x *ResolveMilestoneDaysUntilDueContext) GetEndDate() *wrapperspb.StringValue {
@@ -5282,7 +5543,7 @@ type ResolveMilestoneDaysUntilDueRequest struct {
 func (x *ResolveMilestoneDaysUntilDueRequest) Reset() {
 	*x = ResolveMilestoneDaysUntilDueRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[100]
+		mi := &file_generated_service_proto_msgTypes[105]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5295,7 +5556,7 @@ func (x *ResolveMilestoneDaysUntilDueRequest) String() string {
 func (*ResolveMilestoneDaysUntilDueRequest) ProtoMessage() {}
 
 func (x *ResolveMilestoneDaysUntilDueRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[100]
+	mi := &file_generated_service_proto_msgTypes[105]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5308,7 +5569,7 @@ func (x *ResolveMilestoneDaysUntilDueRequest) ProtoReflect() protoreflect.Messag
 
 // Deprecated: Use ResolveMilestoneDaysUntilDueRequest.ProtoReflect.Descriptor instead.
 func (*ResolveMilestoneDaysUntilDueRequest) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{100}
+	return file_generated_service_proto_rawDescGZIP(), []int{105}
 }
 
 func (x *ResolveMilestoneDaysUntilDueRequest) GetContext() []*ResolveMilestoneDaysUntilDueContext {
@@ -5336,7 +5597,7 @@ type ResolveMilestoneDaysUntilDueResult struct {
 func (x *ResolveMilestoneDaysUntilDueResult) Reset() {
 	*x = ResolveMilestoneDaysUntilDueResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[101]
+		mi := &file_generated_service_proto_msgTypes[106]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5349,7 +5610,7 @@ func (x *ResolveMilestoneDaysUntilDueResult) String() string {
 func (*ResolveMilestoneDaysUntilDueResult) ProtoMessage() {}
 
 func (x *ResolveMilestoneDaysUntilDueResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[101]
+	mi := &file_generated_service_proto_msgTypes[106]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5362,7 +5623,7 @@ func (x *ResolveMilestoneDaysUntilDueResult) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ResolveMilestoneDaysUntilDueResult.ProtoReflect.Descriptor instead.
 func (*ResolveMilestoneDaysUntilDueResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{101}
+	return file_generated_service_proto_rawDescGZIP(), []int{106}
 }
 
 func (x *ResolveMilestoneDaysUntilDueResult) GetDaysUntilDue() *wrapperspb.Int32Value {
@@ -5383,7 +5644,7 @@ type ResolveMilestoneDaysUntilDueResponse struct {
 func (x *ResolveMilestoneDaysUntilDueResponse) Reset() {
 	*x = ResolveMilestoneDaysUntilDueResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[102]
+		mi := &file_generated_service_proto_msgTypes[107]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5396,7 +5657,7 @@ func (x *ResolveMilestoneDaysUntilDueResponse) String() string {
 func (*ResolveMilestoneDaysUntilDueResponse) ProtoMessage() {}
 
 func (x *ResolveMilestoneDaysUntilDueResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[102]
+	mi := &file_generated_service_proto_msgTypes[107]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5409,7 +5670,7 @@ func (x *ResolveMilestoneDaysUntilDueResponse) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ResolveMilestoneDaysUntilDueResponse.ProtoReflect.Descriptor instead.
 func (*ResolveMilestoneDaysUntilDueResponse) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{102}
+	return file_generated_service_proto_rawDescGZIP(), []int{107}
 }
 
 func (x *ResolveMilestoneDaysUntilDueResponse) GetResult() []*ResolveMilestoneDaysUntilDueResult {
@@ -5430,7 +5691,7 @@ type ResolveTaskIsBlockedArgs struct {
 func (x *ResolveTaskIsBlockedArgs) Reset() {
 	*x = ResolveTaskIsBlockedArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[103]
+		mi := &file_generated_service_proto_msgTypes[108]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5443,7 +5704,7 @@ func (x *ResolveTaskIsBlockedArgs) String() string {
 func (*ResolveTaskIsBlockedArgs) ProtoMessage() {}
 
 func (x *ResolveTaskIsBlockedArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[103]
+	mi := &file_generated_service_proto_msgTypes[108]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5456,7 +5717,7 @@ func (x *ResolveTaskIsBlockedArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveTaskIsBlockedArgs.ProtoReflect.Descriptor instead.
 func (*ResolveTaskIsBlockedArgs) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{103}
+	return file_generated_service_proto_rawDescGZIP(), []int{108}
 }
 
 func (x *ResolveTaskIsBlockedArgs) GetCheckDependencies() *wrapperspb.BoolValue {
@@ -5478,7 +5739,7 @@ type ResolveTaskIsBlockedContext struct {
 func (x *ResolveTaskIsBlockedContext) Reset() {
 	*x = ResolveTaskIsBlockedContext{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[104]
+		mi := &file_generated_service_proto_msgTypes[109]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5491,7 +5752,7 @@ func (x *ResolveTaskIsBlockedContext) String() string {
 func (*ResolveTaskIsBlockedContext) ProtoMessage() {}
 
 func (x *ResolveTaskIsBlockedContext) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[104]
+	mi := &file_generated_service_proto_msgTypes[109]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5504,7 +5765,7 @@ func (x *ResolveTaskIsBlockedContext) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveTaskIsBlockedContext.ProtoReflect.Descriptor instead.
 func (*ResolveTaskIsBlockedContext) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{104}
+	return file_generated_service_proto_rawDescGZIP(), []int{109}
 }
 
 func (x *ResolveTaskIsBlockedContext) GetId() string {
@@ -5535,7 +5796,7 @@ type ResolveTaskIsBlockedRequest struct {
 func (x *ResolveTaskIsBlockedRequest) Reset() {
 	*x = ResolveTaskIsBlockedRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[105]
+		mi := &file_generated_service_proto_msgTypes[110]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5548,7 +5809,7 @@ func (x *ResolveTaskIsBlockedRequest) String() string {
 func (*ResolveTaskIsBlockedRequest) ProtoMessage() {}
 
 func (x *ResolveTaskIsBlockedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[105]
+	mi := &file_generated_service_proto_msgTypes[110]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5561,7 +5822,7 @@ func (x *ResolveTaskIsBlockedRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveTaskIsBlockedRequest.ProtoReflect.Descriptor instead.
 func (*ResolveTaskIsBlockedRequest) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{105}
+	return file_generated_service_proto_rawDescGZIP(), []int{110}
 }
 
 func (x *ResolveTaskIsBlockedRequest) GetContext() []*ResolveTaskIsBlockedContext {
@@ -5589,7 +5850,7 @@ type ResolveTaskIsBlockedResult struct {
 func (x *ResolveTaskIsBlockedResult) Reset() {
 	*x = ResolveTaskIsBlockedResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[106]
+		mi := &file_generated_service_proto_msgTypes[111]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5602,7 +5863,7 @@ func (x *ResolveTaskIsBlockedResult) String() string {
 func (*ResolveTaskIsBlockedResult) ProtoMessage() {}
 
 func (x *ResolveTaskIsBlockedResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[106]
+	mi := &file_generated_service_proto_msgTypes[111]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5615,7 +5876,7 @@ func (x *ResolveTaskIsBlockedResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveTaskIsBlockedResult.ProtoReflect.Descriptor instead.
 func (*ResolveTaskIsBlockedResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{106}
+	return file_generated_service_proto_rawDescGZIP(), []int{111}
 }
 
 func (x *ResolveTaskIsBlockedResult) GetIsBlocked() bool {
@@ -5636,7 +5897,7 @@ type ResolveTaskIsBlockedResponse struct {
 func (x *ResolveTaskIsBlockedResponse) Reset() {
 	*x = ResolveTaskIsBlockedResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[107]
+		mi := &file_generated_service_proto_msgTypes[112]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5649,7 +5910,7 @@ func (x *ResolveTaskIsBlockedResponse) String() string {
 func (*ResolveTaskIsBlockedResponse) ProtoMessage() {}
 
 func (x *ResolveTaskIsBlockedResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[107]
+	mi := &file_generated_service_proto_msgTypes[112]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5662,7 +5923,7 @@ func (x *ResolveTaskIsBlockedResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveTaskIsBlockedResponse.ProtoReflect.Descriptor instead.
 func (*ResolveTaskIsBlockedResponse) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{107}
+	return file_generated_service_proto_rawDescGZIP(), []int{112}
 }
 
 func (x *ResolveTaskIsBlockedResponse) GetResult() []*ResolveTaskIsBlockedResult {
@@ -5683,7 +5944,7 @@ type ResolveTaskTotalEffortArgs struct {
 func (x *ResolveTaskTotalEffortArgs) Reset() {
 	*x = ResolveTaskTotalEffortArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[108]
+		mi := &file_generated_service_proto_msgTypes[113]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5696,7 +5957,7 @@ func (x *ResolveTaskTotalEffortArgs) String() string {
 func (*ResolveTaskTotalEffortArgs) ProtoMessage() {}
 
 func (x *ResolveTaskTotalEffortArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[108]
+	mi := &file_generated_service_proto_msgTypes[113]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5709,7 +5970,7 @@ func (x *ResolveTaskTotalEffortArgs) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveTaskTotalEffortArgs.ProtoReflect.Descriptor instead.
 func (*ResolveTaskTotalEffortArgs) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{108}
+	return file_generated_service_proto_rawDescGZIP(), []int{113}
 }
 
 func (x *ResolveTaskTotalEffortArgs) GetIncludeSubtasks() *wrapperspb.BoolValue {
@@ -5732,7 +5993,7 @@ type ResolveTaskTotalEffortContext struct {
 func (x *ResolveTaskTotalEffortContext) Reset() {
 	*x = ResolveTaskTotalEffortContext{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[109]
+		mi := &file_generated_service_proto_msgTypes[114]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5745,7 +6006,7 @@ func (x *ResolveTaskTotalEffortContext) String() string {
 func (*ResolveTaskTotalEffortContext) ProtoMessage() {}
 
 func (x *ResolveTaskTotalEffortContext) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[109]
+	mi := &file_generated_service_proto_msgTypes[114]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5758,7 +6019,7 @@ func (x *ResolveTaskTotalEffortContext) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveTaskTotalEffortContext.ProtoReflect.Descriptor instead.
 func (*ResolveTaskTotalEffortContext) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{109}
+	return file_generated_service_proto_rawDescGZIP(), []int{114}
 }
 
 func (x *ResolveTaskTotalEffortContext) GetId() string {
@@ -5796,7 +6057,7 @@ type ResolveTaskTotalEffortRequest struct {
 func (x *ResolveTaskTotalEffortRequest) Reset() {
 	*x = ResolveTaskTotalEffortRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[110]
+		mi := &file_generated_service_proto_msgTypes[115]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5809,7 +6070,7 @@ func (x *ResolveTaskTotalEffortRequest) String() string {
 func (*ResolveTaskTotalEffortRequest) ProtoMessage() {}
 
 func (x *ResolveTaskTotalEffortRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[110]
+	mi := &file_generated_service_proto_msgTypes[115]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5822,7 +6083,7 @@ func (x *ResolveTaskTotalEffortRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveTaskTotalEffortRequest.ProtoReflect.Descriptor instead.
 func (*ResolveTaskTotalEffortRequest) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{110}
+	return file_generated_service_proto_rawDescGZIP(), []int{115}
 }
 
 func (x *ResolveTaskTotalEffortRequest) GetContext() []*ResolveTaskTotalEffortContext {
@@ -5850,7 +6111,7 @@ type ResolveTaskTotalEffortResult struct {
 func (x *ResolveTaskTotalEffortResult) Reset() {
 	*x = ResolveTaskTotalEffortResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[111]
+		mi := &file_generated_service_proto_msgTypes[116]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5863,7 +6124,7 @@ func (x *ResolveTaskTotalEffortResult) String() string {
 func (*ResolveTaskTotalEffortResult) ProtoMessage() {}
 
 func (x *ResolveTaskTotalEffortResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[111]
+	mi := &file_generated_service_proto_msgTypes[116]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5876,7 +6137,7 @@ func (x *ResolveTaskTotalEffortResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveTaskTotalEffortResult.ProtoReflect.Descriptor instead.
 func (*ResolveTaskTotalEffortResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{111}
+	return file_generated_service_proto_rawDescGZIP(), []int{116}
 }
 
 func (x *ResolveTaskTotalEffortResult) GetTotalEffort() *wrapperspb.DoubleValue {
@@ -5897,7 +6158,7 @@ type ResolveTaskTotalEffortResponse struct {
 func (x *ResolveTaskTotalEffortResponse) Reset() {
 	*x = ResolveTaskTotalEffortResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[112]
+		mi := &file_generated_service_proto_msgTypes[117]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5910,7 +6171,7 @@ func (x *ResolveTaskTotalEffortResponse) String() string {
 func (*ResolveTaskTotalEffortResponse) ProtoMessage() {}
 
 func (x *ResolveTaskTotalEffortResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[112]
+	mi := &file_generated_service_proto_msgTypes[117]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5923,7 +6184,7 @@ func (x *ResolveTaskTotalEffortResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResolveTaskTotalEffortResponse.ProtoReflect.Descriptor instead.
 func (*ResolveTaskTotalEffortResponse) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{112}
+	return file_generated_service_proto_rawDescGZIP(), []int{117}
 }
 
 func (x *ResolveTaskTotalEffortResponse) GetResult() []*ResolveTaskTotalEffortResult {
@@ -5945,7 +6206,7 @@ type ResolveEmployeeCurrentWorkloadArgs struct {
 func (x *ResolveEmployeeCurrentWorkloadArgs) Reset() {
 	*x = ResolveEmployeeCurrentWorkloadArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[113]
+		mi := &file_generated_service_proto_msgTypes[118]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -5958,7 +6219,7 @@ func (x *ResolveEmployeeCurrentWorkloadArgs) String() string {
 func (*ResolveEmployeeCurrentWorkloadArgs) ProtoMessage() {}
 
 func (x *ResolveEmployeeCurrentWorkloadArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[113]
+	mi := &file_generated_service_proto_msgTypes[118]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5971,7 +6232,7 @@ func (x *ResolveEmployeeCurrentWorkloadArgs) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ResolveEmployeeCurrentWorkloadArgs.ProtoReflect.Descriptor instead.
 func (*ResolveEmployeeCurrentWorkloadArgs) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{113}
+	return file_generated_service_proto_rawDescGZIP(), []int{118}
 }
 
 func (x *ResolveEmployeeCurrentWorkloadArgs) GetIncludeCompleted() *wrapperspb.BoolValue {
@@ -5999,7 +6260,7 @@ type ResolveEmployeeCurrentWorkloadContext struct {
 func (x *ResolveEmployeeCurrentWorkloadContext) Reset() {
 	*x = ResolveEmployeeCurrentWorkloadContext{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[114]
+		mi := &file_generated_service_proto_msgTypes[119]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6012,7 +6273,7 @@ func (x *ResolveEmployeeCurrentWorkloadContext) String() string {
 func (*ResolveEmployeeCurrentWorkloadContext) ProtoMessage() {}
 
 func (x *ResolveEmployeeCurrentWorkloadContext) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[114]
+	mi := &file_generated_service_proto_msgTypes[119]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6025,7 +6286,7 @@ func (x *ResolveEmployeeCurrentWorkloadContext) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ResolveEmployeeCurrentWorkloadContext.ProtoReflect.Descriptor instead.
 func (*ResolveEmployeeCurrentWorkloadContext) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{114}
+	return file_generated_service_proto_rawDescGZIP(), []int{119}
 }
 
 func (x *ResolveEmployeeCurrentWorkloadContext) GetId() int32 {
@@ -6049,7 +6310,7 @@ type ResolveEmployeeCurrentWorkloadRequest struct {
 func (x *ResolveEmployeeCurrentWorkloadRequest) Reset() {
 	*x = ResolveEmployeeCurrentWorkloadRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[115]
+		mi := &file_generated_service_proto_msgTypes[120]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6062,7 +6323,7 @@ func (x *ResolveEmployeeCurrentWorkloadRequest) String() string {
 func (*ResolveEmployeeCurrentWorkloadRequest) ProtoMessage() {}
 
 func (x *ResolveEmployeeCurrentWorkloadRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[115]
+	mi := &file_generated_service_proto_msgTypes[120]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6075,7 +6336,7 @@ func (x *ResolveEmployeeCurrentWorkloadRequest) ProtoReflect() protoreflect.Mess
 
 // Deprecated: Use ResolveEmployeeCurrentWorkloadRequest.ProtoReflect.Descriptor instead.
 func (*ResolveEmployeeCurrentWorkloadRequest) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{115}
+	return file_generated_service_proto_rawDescGZIP(), []int{120}
 }
 
 func (x *ResolveEmployeeCurrentWorkloadRequest) GetContext() []*ResolveEmployeeCurrentWorkloadContext {
@@ -6103,7 +6364,7 @@ type ResolveEmployeeCurrentWorkloadResult struct {
 func (x *ResolveEmployeeCurrentWorkloadResult) Reset() {
 	*x = ResolveEmployeeCurrentWorkloadResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[116]
+		mi := &file_generated_service_proto_msgTypes[121]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6116,7 +6377,7 @@ func (x *ResolveEmployeeCurrentWorkloadResult) String() string {
 func (*ResolveEmployeeCurrentWorkloadResult) ProtoMessage() {}
 
 func (x *ResolveEmployeeCurrentWorkloadResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[116]
+	mi := &file_generated_service_proto_msgTypes[121]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6129,7 +6390,7 @@ func (x *ResolveEmployeeCurrentWorkloadResult) ProtoReflect() protoreflect.Messa
 
 // Deprecated: Use ResolveEmployeeCurrentWorkloadResult.ProtoReflect.Descriptor instead.
 func (*ResolveEmployeeCurrentWorkloadResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{116}
+	return file_generated_service_proto_rawDescGZIP(), []int{121}
 }
 
 func (x *ResolveEmployeeCurrentWorkloadResult) GetCurrentWorkload() int32 {
@@ -6150,7 +6411,7 @@ type ResolveEmployeeCurrentWorkloadResponse struct {
 func (x *ResolveEmployeeCurrentWorkloadResponse) Reset() {
 	*x = ResolveEmployeeCurrentWorkloadResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[117]
+		mi := &file_generated_service_proto_msgTypes[122]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6163,7 +6424,7 @@ func (x *ResolveEmployeeCurrentWorkloadResponse) String() string {
 func (*ResolveEmployeeCurrentWorkloadResponse) ProtoMessage() {}
 
 func (x *ResolveEmployeeCurrentWorkloadResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[117]
+	mi := &file_generated_service_proto_msgTypes[122]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6176,7 +6437,7 @@ func (x *ResolveEmployeeCurrentWorkloadResponse) ProtoReflect() protoreflect.Mes
 
 // Deprecated: Use ResolveEmployeeCurrentWorkloadResponse.ProtoReflect.Descriptor instead.
 func (*ResolveEmployeeCurrentWorkloadResponse) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{117}
+	return file_generated_service_proto_rawDescGZIP(), []int{122}
 }
 
 func (x *ResolveEmployeeCurrentWorkloadResponse) GetResult() []*ResolveEmployeeCurrentWorkloadResult {
@@ -6198,7 +6459,7 @@ type ResolveEmployeeAverageTaskCompletionDaysArgs struct {
 func (x *ResolveEmployeeAverageTaskCompletionDaysArgs) Reset() {
 	*x = ResolveEmployeeAverageTaskCompletionDaysArgs{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[118]
+		mi := &file_generated_service_proto_msgTypes[123]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6211,7 +6472,7 @@ func (x *ResolveEmployeeAverageTaskCompletionDaysArgs) String() string {
 func (*ResolveEmployeeAverageTaskCompletionDaysArgs) ProtoMessage() {}
 
 func (x *ResolveEmployeeAverageTaskCompletionDaysArgs) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[118]
+	mi := &file_generated_service_proto_msgTypes[123]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6224,7 +6485,7 @@ func (x *ResolveEmployeeAverageTaskCompletionDaysArgs) ProtoReflect() protorefle
 
 // Deprecated: Use ResolveEmployeeAverageTaskCompletionDaysArgs.ProtoReflect.Descriptor instead.
 func (*ResolveEmployeeAverageTaskCompletionDaysArgs) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{118}
+	return file_generated_service_proto_rawDescGZIP(), []int{123}
 }
 
 func (x *ResolveEmployeeAverageTaskCompletionDaysArgs) GetProjectId() *wrapperspb.StringValue {
@@ -6252,7 +6513,7 @@ type ResolveEmployeeAverageTaskCompletionDaysContext struct {
 func (x *ResolveEmployeeAverageTaskCompletionDaysContext) Reset() {
 	*x = ResolveEmployeeAverageTaskCompletionDaysContext{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[119]
+		mi := &file_generated_service_proto_msgTypes[124]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6265,7 +6526,7 @@ func (x *ResolveEmployeeAverageTaskCompletionDaysContext) String() string {
 func (*ResolveEmployeeAverageTaskCompletionDaysContext) ProtoMessage() {}
 
 func (x *ResolveEmployeeAverageTaskCompletionDaysContext) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[119]
+	mi := &file_generated_service_proto_msgTypes[124]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6278,7 +6539,7 @@ func (x *ResolveEmployeeAverageTaskCompletionDaysContext) ProtoReflect() protore
 
 // Deprecated: Use ResolveEmployeeAverageTaskCompletionDaysContext.ProtoReflect.Descriptor instead.
 func (*ResolveEmployeeAverageTaskCompletionDaysContext) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{119}
+	return file_generated_service_proto_rawDescGZIP(), []int{124}
 }
 
 func (x *ResolveEmployeeAverageTaskCompletionDaysContext) GetId() int32 {
@@ -6302,7 +6563,7 @@ type ResolveEmployeeAverageTaskCompletionDaysRequest struct {
 func (x *ResolveEmployeeAverageTaskCompletionDaysRequest) Reset() {
 	*x = ResolveEmployeeAverageTaskCompletionDaysRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[120]
+		mi := &file_generated_service_proto_msgTypes[125]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6315,7 +6576,7 @@ func (x *ResolveEmployeeAverageTaskCompletionDaysRequest) String() string {
 func (*ResolveEmployeeAverageTaskCompletionDaysRequest) ProtoMessage() {}
 
 func (x *ResolveEmployeeAverageTaskCompletionDaysRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[120]
+	mi := &file_generated_service_proto_msgTypes[125]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6328,7 +6589,7 @@ func (x *ResolveEmployeeAverageTaskCompletionDaysRequest) ProtoReflect() protore
 
 // Deprecated: Use ResolveEmployeeAverageTaskCompletionDaysRequest.ProtoReflect.Descriptor instead.
 func (*ResolveEmployeeAverageTaskCompletionDaysRequest) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{120}
+	return file_generated_service_proto_rawDescGZIP(), []int{125}
 }
 
 func (x *ResolveEmployeeAverageTaskCompletionDaysRequest) GetContext() []*ResolveEmployeeAverageTaskCompletionDaysContext {
@@ -6356,7 +6617,7 @@ type ResolveEmployeeAverageTaskCompletionDaysResult struct {
 func (x *ResolveEmployeeAverageTaskCompletionDaysResult) Reset() {
 	*x = ResolveEmployeeAverageTaskCompletionDaysResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[121]
+		mi := &file_generated_service_proto_msgTypes[126]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6369,7 +6630,7 @@ func (x *ResolveEmployeeAverageTaskCompletionDaysResult) String() string {
 func (*ResolveEmployeeAverageTaskCompletionDaysResult) ProtoMessage() {}
 
 func (x *ResolveEmployeeAverageTaskCompletionDaysResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[121]
+	mi := &file_generated_service_proto_msgTypes[126]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6382,7 +6643,7 @@ func (x *ResolveEmployeeAverageTaskCompletionDaysResult) ProtoReflect() protoref
 
 // Deprecated: Use ResolveEmployeeAverageTaskCompletionDaysResult.ProtoReflect.Descriptor instead.
 func (*ResolveEmployeeAverageTaskCompletionDaysResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{121}
+	return file_generated_service_proto_rawDescGZIP(), []int{126}
 }
 
 func (x *ResolveEmployeeAverageTaskCompletionDaysResult) GetAverageTaskCompletionDays() *wrapperspb.DoubleValue {
@@ -6403,7 +6664,7 @@ type ResolveEmployeeAverageTaskCompletionDaysResponse struct {
 func (x *ResolveEmployeeAverageTaskCompletionDaysResponse) Reset() {
 	*x = ResolveEmployeeAverageTaskCompletionDaysResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[122]
+		mi := &file_generated_service_proto_msgTypes[127]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6416,7 +6677,7 @@ func (x *ResolveEmployeeAverageTaskCompletionDaysResponse) String() string {
 func (*ResolveEmployeeAverageTaskCompletionDaysResponse) ProtoMessage() {}
 
 func (x *ResolveEmployeeAverageTaskCompletionDaysResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[122]
+	mi := &file_generated_service_proto_msgTypes[127]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6429,7 +6690,7 @@ func (x *ResolveEmployeeAverageTaskCompletionDaysResponse) ProtoReflect() protor
 
 // Deprecated: Use ResolveEmployeeAverageTaskCompletionDaysResponse.ProtoReflect.Descriptor instead.
 func (*ResolveEmployeeAverageTaskCompletionDaysResponse) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{122}
+	return file_generated_service_proto_rawDescGZIP(), []int{127}
 }
 
 func (x *ResolveEmployeeAverageTaskCompletionDaysResponse) GetResult() []*ResolveEmployeeAverageTaskCompletionDaysResult {
@@ -6468,7 +6729,7 @@ type Project struct {
 func (x *Project) Reset() {
 	*x = Project{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[123]
+		mi := &file_generated_service_proto_msgTypes[128]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6481,7 +6742,7 @@ func (x *Project) String() string {
 func (*Project) ProtoMessage() {}
 
 func (x *Project) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[123]
+	mi := &file_generated_service_proto_msgTypes[128]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6494,7 +6755,7 @@ func (x *Project) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Project.ProtoReflect.Descriptor instead.
 func (*Project) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{123}
+	return file_generated_service_proto_rawDescGZIP(), []int{128}
 }
 
 func (x *Project) GetId() string {
@@ -6651,7 +6912,7 @@ type Milestone struct {
 func (x *Milestone) Reset() {
 	*x = Milestone{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[124]
+		mi := &file_generated_service_proto_msgTypes[129]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6664,7 +6925,7 @@ func (x *Milestone) String() string {
 func (*Milestone) ProtoMessage() {}
 
 func (x *Milestone) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[124]
+	mi := &file_generated_service_proto_msgTypes[129]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6677,7 +6938,7 @@ func (x *Milestone) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Milestone.ProtoReflect.Descriptor instead.
 func (*Milestone) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{124}
+	return file_generated_service_proto_rawDescGZIP(), []int{129}
 }
 
 func (x *Milestone) GetId() string {
@@ -6787,7 +7048,7 @@ type Task struct {
 func (x *Task) Reset() {
 	*x = Task{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[125]
+		mi := &file_generated_service_proto_msgTypes[130]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6800,7 +7061,7 @@ func (x *Task) String() string {
 func (*Task) ProtoMessage() {}
 
 func (x *Task) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[125]
+	mi := &file_generated_service_proto_msgTypes[130]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6813,7 +7074,7 @@ func (x *Task) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Task.ProtoReflect.Descriptor instead.
 func (*Task) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{125}
+	return file_generated_service_proto_rawDescGZIP(), []int{130}
 }
 
 func (x *Task) GetId() string {
@@ -6953,7 +7214,7 @@ type Employee struct {
 func (x *Employee) Reset() {
 	*x = Employee{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[126]
+		mi := &file_generated_service_proto_msgTypes[131]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -6966,7 +7227,7 @@ func (x *Employee) String() string {
 func (*Employee) ProtoMessage() {}
 
 func (x *Employee) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[126]
+	mi := &file_generated_service_proto_msgTypes[131]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6979,7 +7240,7 @@ func (x *Employee) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Employee.ProtoReflect.Descriptor instead.
 func (*Employee) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{126}
+	return file_generated_service_proto_rawDescGZIP(), []int{131}
 }
 
 func (x *Employee) GetId() int32 {
@@ -7044,7 +7305,7 @@ type Product struct {
 func (x *Product) Reset() {
 	*x = Product{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[127]
+		mi := &file_generated_service_proto_msgTypes[132]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7057,7 +7318,7 @@ func (x *Product) String() string {
 func (*Product) ProtoMessage() {}
 
 func (x *Product) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[127]
+	mi := &file_generated_service_proto_msgTypes[132]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7070,7 +7331,7 @@ func (x *Product) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Product.ProtoReflect.Descriptor instead.
 func (*Product) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{127}
+	return file_generated_service_proto_rawDescGZIP(), []int{132}
 }
 
 func (x *Product) GetUpc() string {
@@ -7111,7 +7372,7 @@ type ProjectResource struct {
 func (x *ProjectResource) Reset() {
 	*x = ProjectResource{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[128]
+		mi := &file_generated_service_proto_msgTypes[133]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7124,7 +7385,7 @@ func (x *ProjectResource) String() string {
 func (*ProjectResource) ProtoMessage() {}
 
 func (x *ProjectResource) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[128]
+	mi := &file_generated_service_proto_msgTypes[133]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7137,7 +7398,7 @@ func (x *ProjectResource) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectResource.ProtoReflect.Descriptor instead.
 func (*ProjectResource) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{128}
+	return file_generated_service_proto_rawDescGZIP(), []int{133}
 }
 
 func (m *ProjectResource) GetValue() isProjectResource_Value {
@@ -7219,7 +7480,7 @@ type ProjectSearchResult struct {
 func (x *ProjectSearchResult) Reset() {
 	*x = ProjectSearchResult{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[129]
+		mi := &file_generated_service_proto_msgTypes[134]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7232,7 +7493,7 @@ func (x *ProjectSearchResult) String() string {
 func (*ProjectSearchResult) ProtoMessage() {}
 
 func (x *ProjectSearchResult) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[129]
+	mi := &file_generated_service_proto_msgTypes[134]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7245,7 +7506,7 @@ func (x *ProjectSearchResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectSearchResult.ProtoReflect.Descriptor instead.
 func (*ProjectSearchResult) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{129}
+	return file_generated_service_proto_rawDescGZIP(), []int{134}
 }
 
 func (m *ProjectSearchResult) GetValue() isProjectSearchResult_Value {
@@ -7314,7 +7575,7 @@ type ProjectActivity struct {
 func (x *ProjectActivity) Reset() {
 	*x = ProjectActivity{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[130]
+		mi := &file_generated_service_proto_msgTypes[135]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7327,7 +7588,7 @@ func (x *ProjectActivity) String() string {
 func (*ProjectActivity) ProtoMessage() {}
 
 func (x *ProjectActivity) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[130]
+	mi := &file_generated_service_proto_msgTypes[135]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7340,7 +7601,7 @@ func (x *ProjectActivity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectActivity.ProtoReflect.Descriptor instead.
 func (*ProjectActivity) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{130}
+	return file_generated_service_proto_rawDescGZIP(), []int{135}
 }
 
 func (m *ProjectActivity) GetValue() isProjectActivity_Value {
@@ -7410,7 +7671,7 @@ type Node struct {
 func (x *Node) Reset() {
 	*x = Node{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[131]
+		mi := &file_generated_service_proto_msgTypes[136]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7423,7 +7684,7 @@ func (x *Node) String() string {
 func (*Node) ProtoMessage() {}
 
 func (x *Node) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[131]
+	mi := &file_generated_service_proto_msgTypes[136]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7436,7 +7697,7 @@ func (x *Node) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Node.ProtoReflect.Descriptor instead.
 func (*Node) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{131}
+	return file_generated_service_proto_rawDescGZIP(), []int{136}
 }
 
 func (m *Node) GetInstance() isNode_Instance {
@@ -7517,7 +7778,7 @@ type ProjectInput struct {
 func (x *ProjectInput) Reset() {
 	*x = ProjectInput{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[132]
+		mi := &file_generated_service_proto_msgTypes[137]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7530,7 +7791,7 @@ func (x *ProjectInput) String() string {
 func (*ProjectInput) ProtoMessage() {}
 
 func (x *ProjectInput) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[132]
+	mi := &file_generated_service_proto_msgTypes[137]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7543,7 +7804,7 @@ func (x *ProjectInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectInput.ProtoReflect.Descriptor instead.
 func (*ProjectInput) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{132}
+	return file_generated_service_proto_rawDescGZIP(), []int{137}
 }
 
 func (x *ProjectInput) GetName() string {
@@ -7596,7 +7857,7 @@ type MilestoneInput struct {
 func (x *MilestoneInput) Reset() {
 	*x = MilestoneInput{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[133]
+		mi := &file_generated_service_proto_msgTypes[138]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7609,7 +7870,7 @@ func (x *MilestoneInput) String() string {
 func (*MilestoneInput) ProtoMessage() {}
 
 func (x *MilestoneInput) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[133]
+	mi := &file_generated_service_proto_msgTypes[138]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7622,7 +7883,7 @@ func (x *MilestoneInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MilestoneInput.ProtoReflect.Descriptor instead.
 func (*MilestoneInput) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{133}
+	return file_generated_service_proto_rawDescGZIP(), []int{138}
 }
 
 func (x *MilestoneInput) GetProjectId() string {
@@ -7677,7 +7938,7 @@ type TaskInput struct {
 func (x *TaskInput) Reset() {
 	*x = TaskInput{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[134]
+		mi := &file_generated_service_proto_msgTypes[139]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7690,7 +7951,7 @@ func (x *TaskInput) String() string {
 func (*TaskInput) ProtoMessage() {}
 
 func (x *TaskInput) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[134]
+	mi := &file_generated_service_proto_msgTypes[139]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7703,7 +7964,7 @@ func (x *TaskInput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TaskInput.ProtoReflect.Descriptor instead.
 func (*TaskInput) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{134}
+	return file_generated_service_proto_rawDescGZIP(), []int{139}
 }
 
 func (x *TaskInput) GetProjectId() string {
@@ -7772,7 +8033,7 @@ type ProjectUpdate struct {
 func (x *ProjectUpdate) Reset() {
 	*x = ProjectUpdate{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[135]
+		mi := &file_generated_service_proto_msgTypes[140]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7785,7 +8046,7 @@ func (x *ProjectUpdate) String() string {
 func (*ProjectUpdate) ProtoMessage() {}
 
 func (x *ProjectUpdate) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[135]
+	mi := &file_generated_service_proto_msgTypes[140]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7798,7 +8059,7 @@ func (x *ProjectUpdate) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectUpdate.ProtoReflect.Descriptor instead.
 func (*ProjectUpdate) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{135}
+	return file_generated_service_proto_rawDescGZIP(), []int{140}
 }
 
 func (x *ProjectUpdate) GetId() string {
@@ -7865,7 +8126,7 @@ type Timestamped struct {
 func (x *Timestamped) Reset() {
 	*x = Timestamped{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[136]
+		mi := &file_generated_service_proto_msgTypes[141]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7878,7 +8139,7 @@ func (x *Timestamped) String() string {
 func (*Timestamped) ProtoMessage() {}
 
 func (x *Timestamped) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[136]
+	mi := &file_generated_service_proto_msgTypes[141]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7891,7 +8152,7 @@ func (x *Timestamped) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Timestamped.ProtoReflect.Descriptor instead.
 func (*Timestamped) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{136}
+	return file_generated_service_proto_rawDescGZIP(), []int{141}
 }
 
 func (m *Timestamped) GetInstance() isTimestamped_Instance {
@@ -7945,7 +8206,7 @@ type Assignable struct {
 func (x *Assignable) Reset() {
 	*x = Assignable{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[137]
+		mi := &file_generated_service_proto_msgTypes[142]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -7958,7 +8219,7 @@ func (x *Assignable) String() string {
 func (*Assignable) ProtoMessage() {}
 
 func (x *Assignable) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[137]
+	mi := &file_generated_service_proto_msgTypes[142]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -7971,7 +8232,7 @@ func (x *Assignable) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Assignable.ProtoReflect.Descriptor instead.
 func (*Assignable) Descriptor() ([]byte, []int) {
-	return file_generated_service_proto_rawDescGZIP(), []int{137}
+	return file_generated_service_proto_rawDescGZIP(), []int{142}
 }
 
 func (m *Assignable) GetInstance() isAssignable_Instance {
@@ -8009,7 +8270,7 @@ type ListOfEmployee_List struct {
 func (x *ListOfEmployee_List) Reset() {
 	*x = ListOfEmployee_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[138]
+		mi := &file_generated_service_proto_msgTypes[143]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8022,7 +8283,7 @@ func (x *ListOfEmployee_List) String() string {
 func (*ListOfEmployee_List) ProtoMessage() {}
 
 func (x *ListOfEmployee_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[138]
+	mi := &file_generated_service_proto_msgTypes[143]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8056,7 +8317,7 @@ type ListOfInt_List struct {
 func (x *ListOfInt_List) Reset() {
 	*x = ListOfInt_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[139]
+		mi := &file_generated_service_proto_msgTypes[144]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8069,7 +8330,7 @@ func (x *ListOfInt_List) String() string {
 func (*ListOfInt_List) ProtoMessage() {}
 
 func (x *ListOfInt_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[139]
+	mi := &file_generated_service_proto_msgTypes[144]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8103,7 +8364,7 @@ type ListOfListOfListOfTask_List struct {
 func (x *ListOfListOfListOfTask_List) Reset() {
 	*x = ListOfListOfListOfTask_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[140]
+		mi := &file_generated_service_proto_msgTypes[145]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8116,7 +8377,7 @@ func (x *ListOfListOfListOfTask_List) String() string {
 func (*ListOfListOfListOfTask_List) ProtoMessage() {}
 
 func (x *ListOfListOfListOfTask_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[140]
+	mi := &file_generated_service_proto_msgTypes[145]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8150,7 +8411,7 @@ type ListOfListOfMilestone_List struct {
 func (x *ListOfListOfMilestone_List) Reset() {
 	*x = ListOfListOfMilestone_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[141]
+		mi := &file_generated_service_proto_msgTypes[146]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8163,7 +8424,7 @@ func (x *ListOfListOfMilestone_List) String() string {
 func (*ListOfListOfMilestone_List) ProtoMessage() {}
 
 func (x *ListOfListOfMilestone_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[141]
+	mi := &file_generated_service_proto_msgTypes[146]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8197,7 +8458,7 @@ type ListOfListOfProject_List struct {
 func (x *ListOfListOfProject_List) Reset() {
 	*x = ListOfListOfProject_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[142]
+		mi := &file_generated_service_proto_msgTypes[147]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8210,7 +8471,7 @@ func (x *ListOfListOfProject_List) String() string {
 func (*ListOfListOfProject_List) ProtoMessage() {}
 
 func (x *ListOfListOfProject_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[142]
+	mi := &file_generated_service_proto_msgTypes[147]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8244,7 +8505,7 @@ type ListOfListOfProjectResource_List struct {
 func (x *ListOfListOfProjectResource_List) Reset() {
 	*x = ListOfListOfProjectResource_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[143]
+		mi := &file_generated_service_proto_msgTypes[148]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8257,7 +8518,7 @@ func (x *ListOfListOfProjectResource_List) String() string {
 func (*ListOfListOfProjectResource_List) ProtoMessage() {}
 
 func (x *ListOfListOfProjectResource_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[143]
+	mi := &file_generated_service_proto_msgTypes[148]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8291,7 +8552,7 @@ type ListOfListOfString_List struct {
 func (x *ListOfListOfString_List) Reset() {
 	*x = ListOfListOfString_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[144]
+		mi := &file_generated_service_proto_msgTypes[149]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8304,7 +8565,7 @@ func (x *ListOfListOfString_List) String() string {
 func (*ListOfListOfString_List) ProtoMessage() {}
 
 func (x *ListOfListOfString_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[144]
+	mi := &file_generated_service_proto_msgTypes[149]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8338,7 +8599,7 @@ type ListOfListOfTask_List struct {
 func (x *ListOfListOfTask_List) Reset() {
 	*x = ListOfListOfTask_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[145]
+		mi := &file_generated_service_proto_msgTypes[150]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8351,7 +8612,7 @@ func (x *ListOfListOfTask_List) String() string {
 func (*ListOfListOfTask_List) ProtoMessage() {}
 
 func (x *ListOfListOfTask_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[145]
+	mi := &file_generated_service_proto_msgTypes[150]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8385,7 +8646,7 @@ type ListOfMilestone_List struct {
 func (x *ListOfMilestone_List) Reset() {
 	*x = ListOfMilestone_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[146]
+		mi := &file_generated_service_proto_msgTypes[151]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8398,7 +8659,7 @@ func (x *ListOfMilestone_List) String() string {
 func (*ListOfMilestone_List) ProtoMessage() {}
 
 func (x *ListOfMilestone_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[146]
+	mi := &file_generated_service_proto_msgTypes[151]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8432,7 +8693,7 @@ type ListOfProject_List struct {
 func (x *ListOfProject_List) Reset() {
 	*x = ListOfProject_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[147]
+		mi := &file_generated_service_proto_msgTypes[152]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8445,7 +8706,7 @@ func (x *ListOfProject_List) String() string {
 func (*ListOfProject_List) ProtoMessage() {}
 
 func (x *ListOfProject_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[147]
+	mi := &file_generated_service_proto_msgTypes[152]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8479,7 +8740,7 @@ type ListOfProjectResource_List struct {
 func (x *ListOfProjectResource_List) Reset() {
 	*x = ListOfProjectResource_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[148]
+		mi := &file_generated_service_proto_msgTypes[153]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8492,7 +8753,7 @@ func (x *ListOfProjectResource_List) String() string {
 func (*ListOfProjectResource_List) ProtoMessage() {}
 
 func (x *ListOfProjectResource_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[148]
+	mi := &file_generated_service_proto_msgTypes[153]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8526,7 +8787,7 @@ type ListOfString_List struct {
 func (x *ListOfString_List) Reset() {
 	*x = ListOfString_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[149]
+		mi := &file_generated_service_proto_msgTypes[154]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8539,7 +8800,7 @@ func (x *ListOfString_List) String() string {
 func (*ListOfString_List) ProtoMessage() {}
 
 func (x *ListOfString_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[149]
+	mi := &file_generated_service_proto_msgTypes[154]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8573,7 +8834,7 @@ type ListOfTask_List struct {
 func (x *ListOfTask_List) Reset() {
 	*x = ListOfTask_List{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_generated_service_proto_msgTypes[150]
+		mi := &file_generated_service_proto_msgTypes[155]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -8586,7 +8847,7 @@ func (x *ListOfTask_List) String() string {
 func (*ListOfTask_List) ProtoMessage() {}
 
 func (x *ListOfTask_List) ProtoReflect() protoreflect.Message {
-	mi := &file_generated_service_proto_msgTypes[150]
+	mi := &file_generated_service_proto_msgTypes[155]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -8955,6 +9216,43 @@ var file_generated_service_proto_rawDesc = []byte{
 	0x28, 0x0b, 0x32, 0x16, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x50, 0x72, 0x6f,
 	0x6a, 0x65, 0x63, 0x74, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x13, 0x75, 0x70, 0x64, 0x61,
 	0x74, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x22,
+	0x66, 0x0a, 0x1d, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63,
+	0x74, 0x53, 0x75, 0x62, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x41, 0x72, 0x67, 0x73,
+	0x12, 0x45, 0x0a, 0x10, 0x69, 0x6e, 0x63, 0x6c, 0x75, 0x64, 0x65, 0x5f, 0x61, 0x72, 0x63, 0x68,
+	0x69, 0x76, 0x65, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x67, 0x6f, 0x6f,
+	0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e, 0x42, 0x6f, 0x6f,
+	0x6c, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x0f, 0x69, 0x6e, 0x63, 0x6c, 0x75, 0x64, 0x65, 0x41,
+	0x72, 0x63, 0x68, 0x69, 0x76, 0x65, 0x64, 0x22, 0x76, 0x0a, 0x20, 0x52, 0x65, 0x73, 0x6f, 0x6c,
+	0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x53, 0x75, 0x62, 0x50, 0x72, 0x6f, 0x6a,
+	0x65, 0x63, 0x74, 0x73, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69,
+	0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x12, 0x0a, 0x04, 0x6e,
+	0x61, 0x6d, 0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12,
+	0x2e, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x03, 0x20, 0x01, 0x28, 0x0e, 0x32,
+	0x16, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63,
+	0x74, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73, 0x52, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x22,
+	0xae, 0x01, 0x0a, 0x20, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65,
+	0x63, 0x74, 0x53, 0x75, 0x62, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x12, 0x43, 0x0a, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x18,
+	0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x29, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
+	0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x53, 0x75,
+	0x62, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x43, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74,
+	0x52, 0x07, 0x63, 0x6f, 0x6e, 0x74, 0x65, 0x78, 0x74, 0x12, 0x45, 0x0a, 0x0a, 0x66, 0x69, 0x65,
+	0x6c, 0x64, 0x5f, 0x61, 0x72, 0x67, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x26, 0x2e,
+	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x53, 0x75, 0x62, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
+	0x73, 0x41, 0x72, 0x67, 0x73, 0x52, 0x09, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x41, 0x72, 0x67, 0x73,
+	0x22, 0x56, 0x0a, 0x1f, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65,
+	0x63, 0x74, 0x53, 0x75, 0x62, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65, 0x73,
+	0x75, 0x6c, 0x74, 0x12, 0x33, 0x0a, 0x0c, 0x73, 0x75, 0x62, 0x5f, 0x70, 0x72, 0x6f, 0x6a, 0x65,
+	0x63, 0x74, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x10, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x52, 0x0b, 0x73, 0x75, 0x62,
+	0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x22, 0x65, 0x0a, 0x21, 0x52, 0x65, 0x73, 0x6f,
+	0x6c, 0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x53, 0x75, 0x62, 0x50, 0x72, 0x6f,
+	0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x40, 0x0a,
+	0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x28, 0x2e,
+	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x53, 0x75, 0x62, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
+	0x73, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x52, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x22,
 	0xb4, 0x01, 0x0a, 0x1f, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65,
 	0x63, 0x74, 0x46, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x65, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x41,
 	0x72, 0x67, 0x73, 0x12, 0x2b, 0x0a, 0x06, 0x73, 0x74, 0x61, 0x74, 0x75, 0x73, 0x18, 0x01, 0x20,
@@ -9466,7 +9764,7 @@ var file_generated_service_proto_rawDesc = []byte{
 	0x72, 0x69, 0x78, 0x18, 0x13, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1f, 0x2e, 0x73, 0x65, 0x72, 0x76,
 	0x69, 0x63, 0x65, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x4f, 0x66, 0x4c, 0x69, 0x73, 0x74, 0x4f, 0x66,
 	0x4c, 0x69, 0x73, 0x74, 0x4f, 0x66, 0x54, 0x61, 0x73, 0x6b, 0x52, 0x0e, 0x70, 0x72, 0x69, 0x6f,
-	0x72, 0x69, 0x74, 0x79, 0x4d, 0x61, 0x74, 0x72, 0x69, 0x78, 0x4a, 0x04, 0x08, 0x14, 0x10, 0x19,
+	0x72, 0x69, 0x74, 0x79, 0x4d, 0x61, 0x74, 0x72, 0x69, 0x78, 0x4a, 0x04, 0x08, 0x14, 0x10, 0x1a,
 	0x22, 0xaf, 0x04, 0x0a, 0x09, 0x4d, 0x69, 0x6c, 0x65, 0x73, 0x74, 0x6f, 0x6e, 0x65, 0x12, 0x0e,
 	0x0a, 0x02, 0x69, 0x64, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x12, 0x1d,
 	0x0a, 0x0a, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x5f, 0x69, 0x64, 0x18, 0x02, 0x20, 0x01,
@@ -9780,7 +10078,7 @@ var file_generated_service_proto_rawDesc = []byte{
 	0x45, 0x53, 0x53, 0x5f, 0x55, 0x50, 0x44, 0x41, 0x54, 0x45, 0x10, 0x04, 0x12, 0x23, 0x0a, 0x1f,
 	0x50, 0x52, 0x4f, 0x4a, 0x45, 0x43, 0x54, 0x5f, 0x55, 0x50, 0x44, 0x41, 0x54, 0x45, 0x5f, 0x54,
 	0x59, 0x50, 0x45, 0x5f, 0x54, 0x45, 0x41, 0x4d, 0x5f, 0x43, 0x48, 0x41, 0x4e, 0x47, 0x45, 0x10,
-	0x05, 0x32, 0xe9, 0x1d, 0x0a, 0x0f, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x53, 0x65,
+	0x05, 0x32, 0xdf, 0x1e, 0x0a, 0x0f, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x53, 0x65,
 	0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x5f, 0x0a, 0x12, 0x4c, 0x6f, 0x6f, 0x6b, 0x75, 0x70, 0x45,
 	0x6d, 0x70, 0x6c, 0x6f, 0x79, 0x65, 0x65, 0x42, 0x79, 0x49, 0x64, 0x12, 0x22, 0x2e, 0x73, 0x65,
 	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x4c, 0x6f, 0x6f, 0x6b, 0x75, 0x70, 0x45, 0x6d, 0x70, 0x6c,
@@ -9997,31 +10295,40 @@ var file_generated_service_proto_rawDesc = []byte{
 	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2c, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
 	0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x46,
 	0x69, 0x6c, 0x74, 0x65, 0x72, 0x65, 0x64, 0x54, 0x61, 0x73, 0x6b, 0x73, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x80, 0x01, 0x0a, 0x1d, 0x52, 0x65, 0x73, 0x6f, 0x6c,
-	0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x54, 0x6f, 0x70, 0x50, 0x72, 0x69, 0x6f,
-	0x72, 0x69, 0x74, 0x79, 0x49, 0x74, 0x65, 0x6d, 0x12, 0x2d, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
-	0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63,
-	0x74, 0x54, 0x6f, 0x70, 0x50, 0x72, 0x69, 0x6f, 0x72, 0x69, 0x74, 0x79, 0x49, 0x74, 0x65, 0x6d,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2e, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
-	0x54, 0x6f, 0x70, 0x50, 0x72, 0x69, 0x6f, 0x72, 0x69, 0x74, 0x79, 0x49, 0x74, 0x65, 0x6d, 0x52,
-	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x65, 0x0a, 0x14, 0x52, 0x65, 0x73,
-	0x6f, 0x6c, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x49, 0x73, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x65,
-	0x64, 0x12, 0x24, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f,
-	0x6c, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x49, 0x73, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x64,
-	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x25, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x74, 0x0a, 0x19, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76,
+	0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x53, 0x75, 0x62, 0x50, 0x72, 0x6f, 0x6a, 0x65,
+	0x63, 0x74, 0x73, 0x12, 0x29, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x52, 0x65,
+	0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x53, 0x75, 0x62, 0x50,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2a,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65,
+	0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x53, 0x75, 0x62, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63,
+	0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x80, 0x01, 0x0a,
+	0x1d, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x54,
+	0x6f, 0x70, 0x50, 0x72, 0x69, 0x6f, 0x72, 0x69, 0x74, 0x79, 0x49, 0x74, 0x65, 0x6d, 0x12, 0x2d,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65,
+	0x50, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x54, 0x6f, 0x70, 0x50, 0x72, 0x69, 0x6f, 0x72, 0x69,
+	0x74, 0x79, 0x49, 0x74, 0x65, 0x6d, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x2e, 0x2e,
+	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x50,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x54, 0x6f, 0x70, 0x50, 0x72, 0x69, 0x6f, 0x72, 0x69, 0x74,
+	0x79, 0x49, 0x74, 0x65, 0x6d, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12,
+	0x65, 0x0a, 0x14, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x49, 0x73,
+	0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x64, 0x12, 0x24, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
 	0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x49, 0x73, 0x42,
-	0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x64, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00,
-	0x12, 0x6b, 0x0a, 0x16, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x54,
-	0x6f, 0x74, 0x61, 0x6c, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74, 0x12, 0x26, 0x2e, 0x73, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b,
-	0x54, 0x6f, 0x74, 0x61, 0x6c, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65,
-	0x73, 0x74, 0x1a, 0x27, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x73,
-	0x6f, 0x6c, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x45, 0x66, 0x66,
-	0x6f, 0x72, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x42, 0x25, 0x5a,
-	0x23, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x77, 0x75, 0x6e, 0x64,
-	0x65, 0x72, 0x67, 0x72, 0x61, 0x70, 0x68, 0x2f, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2f, 0x70, 0x6c,
-	0x75, 0x67, 0x69, 0x6e, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x64, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x25, 0x2e,
+	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x54,
+	0x61, 0x73, 0x6b, 0x49, 0x73, 0x42, 0x6c, 0x6f, 0x63, 0x6b, 0x65, 0x64, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x6b, 0x0a, 0x16, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76,
+	0x65, 0x54, 0x61, 0x73, 0x6b, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74,
+	0x12, 0x26, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c,
+	0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x45, 0x66, 0x66, 0x6f, 0x72,
+	0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x27, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
+	0x63, 0x65, 0x2e, 0x52, 0x65, 0x73, 0x6f, 0x6c, 0x76, 0x65, 0x54, 0x61, 0x73, 0x6b, 0x54, 0x6f,
+	0x74, 0x61, 0x6c, 0x45, 0x66, 0x66, 0x6f, 0x72, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73,
+	0x65, 0x22, 0x00, 0x42, 0x3a, 0x5a, 0x38, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f,
+	0x6d, 0x2f, 0x77, 0x75, 0x6e, 0x64, 0x65, 0x72, 0x67, 0x72, 0x61, 0x70, 0x68, 0x2f, 0x63, 0x6f,
+	0x73, 0x6d, 0x6f, 0x2f, 0x64, 0x65, 0x6d, 0x6f, 0x2f, 0x70, 0x6b, 0x67, 0x2f, 0x73, 0x75, 0x62,
+	0x67, 0x72, 0x61, 0x70, 0x68, 0x73, 0x2f, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x73, 0x62,
+	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -10037,7 +10344,7 @@ func file_generated_service_proto_rawDescGZIP() []byte {
 }
 
 var file_generated_service_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_generated_service_proto_msgTypes = make([]protoimpl.MessageInfo, 151)
+var file_generated_service_proto_msgTypes = make([]protoimpl.MessageInfo, 156)
 var file_generated_service_proto_goTypes = []any{
 	(ProjectStatus)(0),                                       // 0: service.ProjectStatus
 	(MilestoneStatus)(0),                                     // 1: service.MilestoneStatus
@@ -10112,376 +10419,389 @@ var file_generated_service_proto_goTypes = []any{
 	(*MutationAddTaskResponse)(nil),                          // 70: service.MutationAddTaskResponse
 	(*MutationUpdateProjectStatusRequest)(nil),               // 71: service.MutationUpdateProjectStatusRequest
 	(*MutationUpdateProjectStatusResponse)(nil),              // 72: service.MutationUpdateProjectStatusResponse
-	(*ResolveProjectFilteredTasksArgs)(nil),                  // 73: service.ResolveProjectFilteredTasksArgs
-	(*ResolveProjectFilteredTasksContext)(nil),               // 74: service.ResolveProjectFilteredTasksContext
-	(*ResolveProjectFilteredTasksRequest)(nil),               // 75: service.ResolveProjectFilteredTasksRequest
-	(*ResolveProjectFilteredTasksResult)(nil),                // 76: service.ResolveProjectFilteredTasksResult
-	(*ResolveProjectFilteredTasksResponse)(nil),              // 77: service.ResolveProjectFilteredTasksResponse
-	(*ResolveProjectCompletionRateArgs)(nil),                 // 78: service.ResolveProjectCompletionRateArgs
-	(*ResolveProjectCompletionRateContext)(nil),              // 79: service.ResolveProjectCompletionRateContext
-	(*ResolveProjectCompletionRateRequest)(nil),              // 80: service.ResolveProjectCompletionRateRequest
-	(*ResolveProjectCompletionRateResult)(nil),               // 81: service.ResolveProjectCompletionRateResult
-	(*ResolveProjectCompletionRateResponse)(nil),             // 82: service.ResolveProjectCompletionRateResponse
-	(*ResolveProjectEstimatedDaysRemainingArgs)(nil),         // 83: service.ResolveProjectEstimatedDaysRemainingArgs
-	(*ResolveProjectEstimatedDaysRemainingContext)(nil),      // 84: service.ResolveProjectEstimatedDaysRemainingContext
-	(*ResolveProjectEstimatedDaysRemainingRequest)(nil),      // 85: service.ResolveProjectEstimatedDaysRemainingRequest
-	(*ResolveProjectEstimatedDaysRemainingResult)(nil),       // 86: service.ResolveProjectEstimatedDaysRemainingResult
-	(*ResolveProjectEstimatedDaysRemainingResponse)(nil),     // 87: service.ResolveProjectEstimatedDaysRemainingResponse
-	(*ResolveProjectCriticalDeadlineArgs)(nil),               // 88: service.ResolveProjectCriticalDeadlineArgs
-	(*ResolveProjectCriticalDeadlineContext)(nil),            // 89: service.ResolveProjectCriticalDeadlineContext
-	(*ResolveProjectCriticalDeadlineRequest)(nil),            // 90: service.ResolveProjectCriticalDeadlineRequest
-	(*ResolveProjectCriticalDeadlineResult)(nil),             // 91: service.ResolveProjectCriticalDeadlineResult
-	(*ResolveProjectCriticalDeadlineResponse)(nil),           // 92: service.ResolveProjectCriticalDeadlineResponse
-	(*ResolveProjectTopPriorityItemArgs)(nil),                // 93: service.ResolveProjectTopPriorityItemArgs
-	(*ResolveProjectTopPriorityItemContext)(nil),             // 94: service.ResolveProjectTopPriorityItemContext
-	(*ResolveProjectTopPriorityItemRequest)(nil),             // 95: service.ResolveProjectTopPriorityItemRequest
-	(*ResolveProjectTopPriorityItemResult)(nil),              // 96: service.ResolveProjectTopPriorityItemResult
-	(*ResolveProjectTopPriorityItemResponse)(nil),            // 97: service.ResolveProjectTopPriorityItemResponse
-	(*ResolveMilestoneIsAtRiskArgs)(nil),                     // 98: service.ResolveMilestoneIsAtRiskArgs
-	(*ResolveMilestoneIsAtRiskContext)(nil),                  // 99: service.ResolveMilestoneIsAtRiskContext
-	(*ResolveMilestoneIsAtRiskRequest)(nil),                  // 100: service.ResolveMilestoneIsAtRiskRequest
-	(*ResolveMilestoneIsAtRiskResult)(nil),                   // 101: service.ResolveMilestoneIsAtRiskResult
-	(*ResolveMilestoneIsAtRiskResponse)(nil),                 // 102: service.ResolveMilestoneIsAtRiskResponse
-	(*ResolveMilestoneDaysUntilDueArgs)(nil),                 // 103: service.ResolveMilestoneDaysUntilDueArgs
-	(*ResolveMilestoneDaysUntilDueContext)(nil),              // 104: service.ResolveMilestoneDaysUntilDueContext
-	(*ResolveMilestoneDaysUntilDueRequest)(nil),              // 105: service.ResolveMilestoneDaysUntilDueRequest
-	(*ResolveMilestoneDaysUntilDueResult)(nil),               // 106: service.ResolveMilestoneDaysUntilDueResult
-	(*ResolveMilestoneDaysUntilDueResponse)(nil),             // 107: service.ResolveMilestoneDaysUntilDueResponse
-	(*ResolveTaskIsBlockedArgs)(nil),                         // 108: service.ResolveTaskIsBlockedArgs
-	(*ResolveTaskIsBlockedContext)(nil),                      // 109: service.ResolveTaskIsBlockedContext
-	(*ResolveTaskIsBlockedRequest)(nil),                      // 110: service.ResolveTaskIsBlockedRequest
-	(*ResolveTaskIsBlockedResult)(nil),                       // 111: service.ResolveTaskIsBlockedResult
-	(*ResolveTaskIsBlockedResponse)(nil),                     // 112: service.ResolveTaskIsBlockedResponse
-	(*ResolveTaskTotalEffortArgs)(nil),                       // 113: service.ResolveTaskTotalEffortArgs
-	(*ResolveTaskTotalEffortContext)(nil),                    // 114: service.ResolveTaskTotalEffortContext
-	(*ResolveTaskTotalEffortRequest)(nil),                    // 115: service.ResolveTaskTotalEffortRequest
-	(*ResolveTaskTotalEffortResult)(nil),                     // 116: service.ResolveTaskTotalEffortResult
-	(*ResolveTaskTotalEffortResponse)(nil),                   // 117: service.ResolveTaskTotalEffortResponse
-	(*ResolveEmployeeCurrentWorkloadArgs)(nil),               // 118: service.ResolveEmployeeCurrentWorkloadArgs
-	(*ResolveEmployeeCurrentWorkloadContext)(nil),            // 119: service.ResolveEmployeeCurrentWorkloadContext
-	(*ResolveEmployeeCurrentWorkloadRequest)(nil),            // 120: service.ResolveEmployeeCurrentWorkloadRequest
-	(*ResolveEmployeeCurrentWorkloadResult)(nil),             // 121: service.ResolveEmployeeCurrentWorkloadResult
-	(*ResolveEmployeeCurrentWorkloadResponse)(nil),           // 122: service.ResolveEmployeeCurrentWorkloadResponse
-	(*ResolveEmployeeAverageTaskCompletionDaysArgs)(nil),     // 123: service.ResolveEmployeeAverageTaskCompletionDaysArgs
-	(*ResolveEmployeeAverageTaskCompletionDaysContext)(nil),  // 124: service.ResolveEmployeeAverageTaskCompletionDaysContext
-	(*ResolveEmployeeAverageTaskCompletionDaysRequest)(nil),  // 125: service.ResolveEmployeeAverageTaskCompletionDaysRequest
-	(*ResolveEmployeeAverageTaskCompletionDaysResult)(nil),   // 126: service.ResolveEmployeeAverageTaskCompletionDaysResult
-	(*ResolveEmployeeAverageTaskCompletionDaysResponse)(nil), // 127: service.ResolveEmployeeAverageTaskCompletionDaysResponse
-	(*Project)(nil),                                          // 128: service.Project
-	(*Milestone)(nil),                                        // 129: service.Milestone
-	(*Task)(nil),                                             // 130: service.Task
-	(*Employee)(nil),                                         // 131: service.Employee
-	(*Product)(nil),                                          // 132: service.Product
-	(*ProjectResource)(nil),                                  // 133: service.ProjectResource
-	(*ProjectSearchResult)(nil),                              // 134: service.ProjectSearchResult
-	(*ProjectActivity)(nil),                                  // 135: service.ProjectActivity
-	(*Node)(nil),                                             // 136: service.Node
-	(*ProjectInput)(nil),                                     // 137: service.ProjectInput
-	(*MilestoneInput)(nil),                                   // 138: service.MilestoneInput
-	(*TaskInput)(nil),                                        // 139: service.TaskInput
-	(*ProjectUpdate)(nil),                                    // 140: service.ProjectUpdate
-	(*Timestamped)(nil),                                      // 141: service.Timestamped
-	(*Assignable)(nil),                                       // 142: service.Assignable
-	(*ListOfEmployee_List)(nil),                              // 143: service.ListOfEmployee.List
-	(*ListOfInt_List)(nil),                                   // 144: service.ListOfInt.List
-	(*ListOfListOfListOfTask_List)(nil),                      // 145: service.ListOfListOfListOfTask.List
-	(*ListOfListOfMilestone_List)(nil),                       // 146: service.ListOfListOfMilestone.List
-	(*ListOfListOfProject_List)(nil),                         // 147: service.ListOfListOfProject.List
-	(*ListOfListOfProjectResource_List)(nil),                 // 148: service.ListOfListOfProjectResource.List
-	(*ListOfListOfString_List)(nil),                          // 149: service.ListOfListOfString.List
-	(*ListOfListOfTask_List)(nil),                            // 150: service.ListOfListOfTask.List
-	(*ListOfMilestone_List)(nil),                             // 151: service.ListOfMilestone.List
-	(*ListOfProject_List)(nil),                               // 152: service.ListOfProject.List
-	(*ListOfProjectResource_List)(nil),                       // 153: service.ListOfProjectResource.List
-	(*ListOfString_List)(nil),                                // 154: service.ListOfString.List
-	(*ListOfTask_List)(nil),                                  // 155: service.ListOfTask.List
-	(*wrapperspb.Int32Value)(nil),                            // 156: google.protobuf.Int32Value
-	(*wrapperspb.BoolValue)(nil),                             // 157: google.protobuf.BoolValue
-	(*wrapperspb.StringValue)(nil),                           // 158: google.protobuf.StringValue
-	(*wrapperspb.DoubleValue)(nil),                           // 159: google.protobuf.DoubleValue
+	(*ResolveProjectSubProjectsArgs)(nil),                    // 73: service.ResolveProjectSubProjectsArgs
+	(*ResolveProjectSubProjectsContext)(nil),                 // 74: service.ResolveProjectSubProjectsContext
+	(*ResolveProjectSubProjectsRequest)(nil),                 // 75: service.ResolveProjectSubProjectsRequest
+	(*ResolveProjectSubProjectsResult)(nil),                  // 76: service.ResolveProjectSubProjectsResult
+	(*ResolveProjectSubProjectsResponse)(nil),                // 77: service.ResolveProjectSubProjectsResponse
+	(*ResolveProjectFilteredTasksArgs)(nil),                  // 78: service.ResolveProjectFilteredTasksArgs
+	(*ResolveProjectFilteredTasksContext)(nil),               // 79: service.ResolveProjectFilteredTasksContext
+	(*ResolveProjectFilteredTasksRequest)(nil),               // 80: service.ResolveProjectFilteredTasksRequest
+	(*ResolveProjectFilteredTasksResult)(nil),                // 81: service.ResolveProjectFilteredTasksResult
+	(*ResolveProjectFilteredTasksResponse)(nil),              // 82: service.ResolveProjectFilteredTasksResponse
+	(*ResolveProjectCompletionRateArgs)(nil),                 // 83: service.ResolveProjectCompletionRateArgs
+	(*ResolveProjectCompletionRateContext)(nil),              // 84: service.ResolveProjectCompletionRateContext
+	(*ResolveProjectCompletionRateRequest)(nil),              // 85: service.ResolveProjectCompletionRateRequest
+	(*ResolveProjectCompletionRateResult)(nil),               // 86: service.ResolveProjectCompletionRateResult
+	(*ResolveProjectCompletionRateResponse)(nil),             // 87: service.ResolveProjectCompletionRateResponse
+	(*ResolveProjectEstimatedDaysRemainingArgs)(nil),         // 88: service.ResolveProjectEstimatedDaysRemainingArgs
+	(*ResolveProjectEstimatedDaysRemainingContext)(nil),      // 89: service.ResolveProjectEstimatedDaysRemainingContext
+	(*ResolveProjectEstimatedDaysRemainingRequest)(nil),      // 90: service.ResolveProjectEstimatedDaysRemainingRequest
+	(*ResolveProjectEstimatedDaysRemainingResult)(nil),       // 91: service.ResolveProjectEstimatedDaysRemainingResult
+	(*ResolveProjectEstimatedDaysRemainingResponse)(nil),     // 92: service.ResolveProjectEstimatedDaysRemainingResponse
+	(*ResolveProjectCriticalDeadlineArgs)(nil),               // 93: service.ResolveProjectCriticalDeadlineArgs
+	(*ResolveProjectCriticalDeadlineContext)(nil),            // 94: service.ResolveProjectCriticalDeadlineContext
+	(*ResolveProjectCriticalDeadlineRequest)(nil),            // 95: service.ResolveProjectCriticalDeadlineRequest
+	(*ResolveProjectCriticalDeadlineResult)(nil),             // 96: service.ResolveProjectCriticalDeadlineResult
+	(*ResolveProjectCriticalDeadlineResponse)(nil),           // 97: service.ResolveProjectCriticalDeadlineResponse
+	(*ResolveProjectTopPriorityItemArgs)(nil),                // 98: service.ResolveProjectTopPriorityItemArgs
+	(*ResolveProjectTopPriorityItemContext)(nil),             // 99: service.ResolveProjectTopPriorityItemContext
+	(*ResolveProjectTopPriorityItemRequest)(nil),             // 100: service.ResolveProjectTopPriorityItemRequest
+	(*ResolveProjectTopPriorityItemResult)(nil),              // 101: service.ResolveProjectTopPriorityItemResult
+	(*ResolveProjectTopPriorityItemResponse)(nil),            // 102: service.ResolveProjectTopPriorityItemResponse
+	(*ResolveMilestoneIsAtRiskArgs)(nil),                     // 103: service.ResolveMilestoneIsAtRiskArgs
+	(*ResolveMilestoneIsAtRiskContext)(nil),                  // 104: service.ResolveMilestoneIsAtRiskContext
+	(*ResolveMilestoneIsAtRiskRequest)(nil),                  // 105: service.ResolveMilestoneIsAtRiskRequest
+	(*ResolveMilestoneIsAtRiskResult)(nil),                   // 106: service.ResolveMilestoneIsAtRiskResult
+	(*ResolveMilestoneIsAtRiskResponse)(nil),                 // 107: service.ResolveMilestoneIsAtRiskResponse
+	(*ResolveMilestoneDaysUntilDueArgs)(nil),                 // 108: service.ResolveMilestoneDaysUntilDueArgs
+	(*ResolveMilestoneDaysUntilDueContext)(nil),              // 109: service.ResolveMilestoneDaysUntilDueContext
+	(*ResolveMilestoneDaysUntilDueRequest)(nil),              // 110: service.ResolveMilestoneDaysUntilDueRequest
+	(*ResolveMilestoneDaysUntilDueResult)(nil),               // 111: service.ResolveMilestoneDaysUntilDueResult
+	(*ResolveMilestoneDaysUntilDueResponse)(nil),             // 112: service.ResolveMilestoneDaysUntilDueResponse
+	(*ResolveTaskIsBlockedArgs)(nil),                         // 113: service.ResolveTaskIsBlockedArgs
+	(*ResolveTaskIsBlockedContext)(nil),                      // 114: service.ResolveTaskIsBlockedContext
+	(*ResolveTaskIsBlockedRequest)(nil),                      // 115: service.ResolveTaskIsBlockedRequest
+	(*ResolveTaskIsBlockedResult)(nil),                       // 116: service.ResolveTaskIsBlockedResult
+	(*ResolveTaskIsBlockedResponse)(nil),                     // 117: service.ResolveTaskIsBlockedResponse
+	(*ResolveTaskTotalEffortArgs)(nil),                       // 118: service.ResolveTaskTotalEffortArgs
+	(*ResolveTaskTotalEffortContext)(nil),                    // 119: service.ResolveTaskTotalEffortContext
+	(*ResolveTaskTotalEffortRequest)(nil),                    // 120: service.ResolveTaskTotalEffortRequest
+	(*ResolveTaskTotalEffortResult)(nil),                     // 121: service.ResolveTaskTotalEffortResult
+	(*ResolveTaskTotalEffortResponse)(nil),                   // 122: service.ResolveTaskTotalEffortResponse
+	(*ResolveEmployeeCurrentWorkloadArgs)(nil),               // 123: service.ResolveEmployeeCurrentWorkloadArgs
+	(*ResolveEmployeeCurrentWorkloadContext)(nil),            // 124: service.ResolveEmployeeCurrentWorkloadContext
+	(*ResolveEmployeeCurrentWorkloadRequest)(nil),            // 125: service.ResolveEmployeeCurrentWorkloadRequest
+	(*ResolveEmployeeCurrentWorkloadResult)(nil),             // 126: service.ResolveEmployeeCurrentWorkloadResult
+	(*ResolveEmployeeCurrentWorkloadResponse)(nil),           // 127: service.ResolveEmployeeCurrentWorkloadResponse
+	(*ResolveEmployeeAverageTaskCompletionDaysArgs)(nil),     // 128: service.ResolveEmployeeAverageTaskCompletionDaysArgs
+	(*ResolveEmployeeAverageTaskCompletionDaysContext)(nil),  // 129: service.ResolveEmployeeAverageTaskCompletionDaysContext
+	(*ResolveEmployeeAverageTaskCompletionDaysRequest)(nil),  // 130: service.ResolveEmployeeAverageTaskCompletionDaysRequest
+	(*ResolveEmployeeAverageTaskCompletionDaysResult)(nil),   // 131: service.ResolveEmployeeAverageTaskCompletionDaysResult
+	(*ResolveEmployeeAverageTaskCompletionDaysResponse)(nil), // 132: service.ResolveEmployeeAverageTaskCompletionDaysResponse
+	(*Project)(nil),                                          // 133: service.Project
+	(*Milestone)(nil),                                        // 134: service.Milestone
+	(*Task)(nil),                                             // 135: service.Task
+	(*Employee)(nil),                                         // 136: service.Employee
+	(*Product)(nil),                                          // 137: service.Product
+	(*ProjectResource)(nil),                                  // 138: service.ProjectResource
+	(*ProjectSearchResult)(nil),                              // 139: service.ProjectSearchResult
+	(*ProjectActivity)(nil),                                  // 140: service.ProjectActivity
+	(*Node)(nil),                                             // 141: service.Node
+	(*ProjectInput)(nil),                                     // 142: service.ProjectInput
+	(*MilestoneInput)(nil),                                   // 143: service.MilestoneInput
+	(*TaskInput)(nil),                                        // 144: service.TaskInput
+	(*ProjectUpdate)(nil),                                    // 145: service.ProjectUpdate
+	(*Timestamped)(nil),                                      // 146: service.Timestamped
+	(*Assignable)(nil),                                       // 147: service.Assignable
+	(*ListOfEmployee_List)(nil),                              // 148: service.ListOfEmployee.List
+	(*ListOfInt_List)(nil),                                   // 149: service.ListOfInt.List
+	(*ListOfListOfListOfTask_List)(nil),                      // 150: service.ListOfListOfListOfTask.List
+	(*ListOfListOfMilestone_List)(nil),                       // 151: service.ListOfListOfMilestone.List
+	(*ListOfListOfProject_List)(nil),                         // 152: service.ListOfListOfProject.List
+	(*ListOfListOfProjectResource_List)(nil),                 // 153: service.ListOfListOfProjectResource.List
+	(*ListOfListOfString_List)(nil),                          // 154: service.ListOfListOfString.List
+	(*ListOfListOfTask_List)(nil),                            // 155: service.ListOfListOfTask.List
+	(*ListOfMilestone_List)(nil),                             // 156: service.ListOfMilestone.List
+	(*ListOfProject_List)(nil),                               // 157: service.ListOfProject.List
+	(*ListOfProjectResource_List)(nil),                       // 158: service.ListOfProjectResource.List
+	(*ListOfString_List)(nil),                                // 159: service.ListOfString.List
+	(*ListOfTask_List)(nil),                                  // 160: service.ListOfTask.List
+	(*wrapperspb.BoolValue)(nil),                             // 161: google.protobuf.BoolValue
+	(*wrapperspb.Int32Value)(nil),                            // 162: google.protobuf.Int32Value
+	(*wrapperspb.StringValue)(nil),                           // 163: google.protobuf.StringValue
+	(*wrapperspb.DoubleValue)(nil),                           // 164: google.protobuf.DoubleValue
 }
 var file_generated_service_proto_depIdxs = []int32{
-	143, // 0: service.ListOfEmployee.list:type_name -> service.ListOfEmployee.List
-	144, // 1: service.ListOfInt.list:type_name -> service.ListOfInt.List
-	145, // 2: service.ListOfListOfListOfTask.list:type_name -> service.ListOfListOfListOfTask.List
-	146, // 3: service.ListOfListOfMilestone.list:type_name -> service.ListOfListOfMilestone.List
-	147, // 4: service.ListOfListOfProject.list:type_name -> service.ListOfListOfProject.List
-	148, // 5: service.ListOfListOfProjectResource.list:type_name -> service.ListOfListOfProjectResource.List
-	149, // 6: service.ListOfListOfString.list:type_name -> service.ListOfListOfString.List
-	150, // 7: service.ListOfListOfTask.list:type_name -> service.ListOfListOfTask.List
-	151, // 8: service.ListOfMilestone.list:type_name -> service.ListOfMilestone.List
-	152, // 9: service.ListOfProject.list:type_name -> service.ListOfProject.List
-	153, // 10: service.ListOfProjectResource.list:type_name -> service.ListOfProjectResource.List
-	154, // 11: service.ListOfString.list:type_name -> service.ListOfString.List
-	155, // 12: service.ListOfTask.list:type_name -> service.ListOfTask.List
+	148, // 0: service.ListOfEmployee.list:type_name -> service.ListOfEmployee.List
+	149, // 1: service.ListOfInt.list:type_name -> service.ListOfInt.List
+	150, // 2: service.ListOfListOfListOfTask.list:type_name -> service.ListOfListOfListOfTask.List
+	151, // 3: service.ListOfListOfMilestone.list:type_name -> service.ListOfListOfMilestone.List
+	152, // 4: service.ListOfListOfProject.list:type_name -> service.ListOfListOfProject.List
+	153, // 5: service.ListOfListOfProjectResource.list:type_name -> service.ListOfListOfProjectResource.List
+	154, // 6: service.ListOfListOfString.list:type_name -> service.ListOfListOfString.List
+	155, // 7: service.ListOfListOfTask.list:type_name -> service.ListOfListOfTask.List
+	156, // 8: service.ListOfMilestone.list:type_name -> service.ListOfMilestone.List
+	157, // 9: service.ListOfProject.list:type_name -> service.ListOfProject.List
+	158, // 10: service.ListOfProjectResource.list:type_name -> service.ListOfProjectResource.List
+	159, // 11: service.ListOfString.list:type_name -> service.ListOfString.List
+	160, // 12: service.ListOfTask.list:type_name -> service.ListOfTask.List
 	18,  // 13: service.LookupProjectByIdRequest.keys:type_name -> service.LookupProjectByIdRequestKey
-	128, // 14: service.LookupProjectByIdResponse.result:type_name -> service.Project
+	133, // 14: service.LookupProjectByIdResponse.result:type_name -> service.Project
 	21,  // 15: service.LookupMilestoneByIdRequest.keys:type_name -> service.LookupMilestoneByIdRequestKey
-	129, // 16: service.LookupMilestoneByIdResponse.result:type_name -> service.Milestone
+	134, // 16: service.LookupMilestoneByIdResponse.result:type_name -> service.Milestone
 	24,  // 17: service.LookupTaskByIdRequest.keys:type_name -> service.LookupTaskByIdRequestKey
-	130, // 18: service.LookupTaskByIdResponse.result:type_name -> service.Task
+	135, // 18: service.LookupTaskByIdResponse.result:type_name -> service.Task
 	27,  // 19: service.LookupEmployeeByIdRequest.keys:type_name -> service.LookupEmployeeByIdRequestKey
-	131, // 20: service.LookupEmployeeByIdResponse.result:type_name -> service.Employee
+	136, // 20: service.LookupEmployeeByIdResponse.result:type_name -> service.Employee
 	30,  // 21: service.LookupProductByUpcRequest.keys:type_name -> service.LookupProductByUpcRequestKey
-	132, // 22: service.LookupProductByUpcResponse.result:type_name -> service.Product
-	128, // 23: service.QueryProjectsResponse.projects:type_name -> service.Project
-	128, // 24: service.QueryProjectResponse.project:type_name -> service.Project
+	137, // 22: service.LookupProductByUpcResponse.result:type_name -> service.Product
+	133, // 23: service.QueryProjectsResponse.projects:type_name -> service.Project
+	133, // 24: service.QueryProjectResponse.project:type_name -> service.Project
 	0,   // 25: service.QueryProjectStatusesResponse.project_statuses:type_name -> service.ProjectStatus
 	0,   // 26: service.QueryProjectsByStatusRequest.status:type_name -> service.ProjectStatus
-	128, // 27: service.QueryProjectsByStatusResponse.projects_by_status:type_name -> service.Project
-	133, // 28: service.QueryProjectResourcesResponse.project_resources:type_name -> service.ProjectResource
-	134, // 29: service.QuerySearchProjectsResponse.search_projects:type_name -> service.ProjectSearchResult
-	129, // 30: service.QueryMilestonesResponse.milestones:type_name -> service.Milestone
-	130, // 31: service.QueryTasksResponse.tasks:type_name -> service.Task
-	135, // 32: service.QueryProjectActivitiesResponse.project_activities:type_name -> service.ProjectActivity
+	133, // 27: service.QueryProjectsByStatusResponse.projects_by_status:type_name -> service.Project
+	138, // 28: service.QueryProjectResourcesResponse.project_resources:type_name -> service.ProjectResource
+	139, // 29: service.QuerySearchProjectsResponse.search_projects:type_name -> service.ProjectSearchResult
+	134, // 30: service.QueryMilestonesResponse.milestones:type_name -> service.Milestone
+	135, // 31: service.QueryTasksResponse.tasks:type_name -> service.Task
+	140, // 32: service.QueryProjectActivitiesResponse.project_activities:type_name -> service.ProjectActivity
 	16,  // 33: service.QueryProjectTagsResponse.project_tags:type_name -> service.ListOfString
-	128, // 34: service.QueryArchivedProjectsResponse.archived_projects:type_name -> service.Project
+	133, // 34: service.QueryArchivedProjectsResponse.archived_projects:type_name -> service.Project
 	12,  // 35: service.QueryTasksByPriorityResponse.tasks_by_priority:type_name -> service.ListOfListOfTask
 	10,  // 36: service.QueryResourceMatrixResponse.resource_matrix:type_name -> service.ListOfListOfProjectResource
-	136, // 37: service.QueryNodesByIdResponse.nodes_by_id:type_name -> service.Node
-	137, // 38: service.MutationAddProjectRequest.project:type_name -> service.ProjectInput
-	128, // 39: service.MutationAddProjectResponse.add_project:type_name -> service.Project
-	138, // 40: service.MutationAddMilestoneRequest.milestone:type_name -> service.MilestoneInput
-	129, // 41: service.MutationAddMilestoneResponse.add_milestone:type_name -> service.Milestone
-	139, // 42: service.MutationAddTaskRequest.task:type_name -> service.TaskInput
-	130, // 43: service.MutationAddTaskResponse.add_task:type_name -> service.Task
+	141, // 37: service.QueryNodesByIdResponse.nodes_by_id:type_name -> service.Node
+	142, // 38: service.MutationAddProjectRequest.project:type_name -> service.ProjectInput
+	133, // 39: service.MutationAddProjectResponse.add_project:type_name -> service.Project
+	143, // 40: service.MutationAddMilestoneRequest.milestone:type_name -> service.MilestoneInput
+	134, // 41: service.MutationAddMilestoneResponse.add_milestone:type_name -> service.Milestone
+	144, // 42: service.MutationAddTaskRequest.task:type_name -> service.TaskInput
+	135, // 43: service.MutationAddTaskResponse.add_task:type_name -> service.Task
 	0,   // 44: service.MutationUpdateProjectStatusRequest.status:type_name -> service.ProjectStatus
-	140, // 45: service.MutationUpdateProjectStatusResponse.update_project_status:type_name -> service.ProjectUpdate
-	2,   // 46: service.ResolveProjectFilteredTasksArgs.status:type_name -> service.TaskStatus
-	3,   // 47: service.ResolveProjectFilteredTasksArgs.priority:type_name -> service.TaskPriority
-	156, // 48: service.ResolveProjectFilteredTasksArgs.limit:type_name -> google.protobuf.Int32Value
-	74,  // 49: service.ResolveProjectFilteredTasksRequest.context:type_name -> service.ResolveProjectFilteredTasksContext
-	73,  // 50: service.ResolveProjectFilteredTasksRequest.field_args:type_name -> service.ResolveProjectFilteredTasksArgs
-	130, // 51: service.ResolveProjectFilteredTasksResult.filtered_tasks:type_name -> service.Task
-	76,  // 52: service.ResolveProjectFilteredTasksResponse.result:type_name -> service.ResolveProjectFilteredTasksResult
-	157, // 53: service.ResolveProjectCompletionRateArgs.include_subtasks:type_name -> google.protobuf.BoolValue
-	158, // 54: service.ResolveProjectCompletionRateContext.start_date:type_name -> google.protobuf.StringValue
-	158, // 55: service.ResolveProjectCompletionRateContext.end_date:type_name -> google.protobuf.StringValue
-	0,   // 56: service.ResolveProjectCompletionRateContext.status:type_name -> service.ProjectStatus
-	79,  // 57: service.ResolveProjectCompletionRateRequest.context:type_name -> service.ResolveProjectCompletionRateContext
-	78,  // 58: service.ResolveProjectCompletionRateRequest.field_args:type_name -> service.ResolveProjectCompletionRateArgs
-	81,  // 59: service.ResolveProjectCompletionRateResponse.result:type_name -> service.ResolveProjectCompletionRateResult
-	158, // 60: service.ResolveProjectEstimatedDaysRemainingArgs.from_date:type_name -> google.protobuf.StringValue
-	158, // 61: service.ResolveProjectEstimatedDaysRemainingContext.end_date:type_name -> google.protobuf.StringValue
-	0,   // 62: service.ResolveProjectEstimatedDaysRemainingContext.status:type_name -> service.ProjectStatus
-	84,  // 63: service.ResolveProjectEstimatedDaysRemainingRequest.context:type_name -> service.ResolveProjectEstimatedDaysRemainingContext
-	83,  // 64: service.ResolveProjectEstimatedDaysRemainingRequest.field_args:type_name -> service.ResolveProjectEstimatedDaysRemainingArgs
-	156, // 65: service.ResolveProjectEstimatedDaysRemainingResult.estimated_days_remaining:type_name -> google.protobuf.Int32Value
-	86,  // 66: service.ResolveProjectEstimatedDaysRemainingResponse.result:type_name -> service.ResolveProjectEstimatedDaysRemainingResult
-	156, // 67: service.ResolveProjectCriticalDeadlineArgs.within_days:type_name -> google.protobuf.Int32Value
-	0,   // 68: service.ResolveProjectCriticalDeadlineContext.status:type_name -> service.ProjectStatus
-	129, // 69: service.ResolveProjectCriticalDeadlineContext.milestones:type_name -> service.Milestone
-	89,  // 70: service.ResolveProjectCriticalDeadlineRequest.context:type_name -> service.ResolveProjectCriticalDeadlineContext
-	88,  // 71: service.ResolveProjectCriticalDeadlineRequest.field_args:type_name -> service.ResolveProjectCriticalDeadlineArgs
-	141, // 72: service.ResolveProjectCriticalDeadlineResult.critical_deadline:type_name -> service.Timestamped
-	91,  // 73: service.ResolveProjectCriticalDeadlineResponse.result:type_name -> service.ResolveProjectCriticalDeadlineResult
-	158, // 74: service.ResolveProjectTopPriorityItemArgs.category:type_name -> google.protobuf.StringValue
-	0,   // 75: service.ResolveProjectTopPriorityItemContext.status:type_name -> service.ProjectStatus
-	94,  // 76: service.ResolveProjectTopPriorityItemRequest.context:type_name -> service.ResolveProjectTopPriorityItemContext
-	93,  // 77: service.ResolveProjectTopPriorityItemRequest.field_args:type_name -> service.ResolveProjectTopPriorityItemArgs
-	134, // 78: service.ResolveProjectTopPriorityItemResult.top_priority_item:type_name -> service.ProjectSearchResult
-	96,  // 79: service.ResolveProjectTopPriorityItemResponse.result:type_name -> service.ResolveProjectTopPriorityItemResult
-	159, // 80: service.ResolveMilestoneIsAtRiskArgs.threshold:type_name -> google.protobuf.DoubleValue
-	158, // 81: service.ResolveMilestoneIsAtRiskContext.end_date:type_name -> google.protobuf.StringValue
-	1,   // 82: service.ResolveMilestoneIsAtRiskContext.status:type_name -> service.MilestoneStatus
-	159, // 83: service.ResolveMilestoneIsAtRiskContext.completion_percentage:type_name -> google.protobuf.DoubleValue
-	99,  // 84: service.ResolveMilestoneIsAtRiskRequest.context:type_name -> service.ResolveMilestoneIsAtRiskContext
-	98,  // 85: service.ResolveMilestoneIsAtRiskRequest.field_args:type_name -> service.ResolveMilestoneIsAtRiskArgs
-	101, // 86: service.ResolveMilestoneIsAtRiskResponse.result:type_name -> service.ResolveMilestoneIsAtRiskResult
-	158, // 87: service.ResolveMilestoneDaysUntilDueArgs.from_date:type_name -> google.protobuf.StringValue
-	158, // 88: service.ResolveMilestoneDaysUntilDueContext.end_date:type_name -> google.protobuf.StringValue
-	104, // 89: service.ResolveMilestoneDaysUntilDueRequest.context:type_name -> service.ResolveMilestoneDaysUntilDueContext
-	103, // 90: service.ResolveMilestoneDaysUntilDueRequest.field_args:type_name -> service.ResolveMilestoneDaysUntilDueArgs
-	156, // 91: service.ResolveMilestoneDaysUntilDueResult.days_until_due:type_name -> google.protobuf.Int32Value
-	106, // 92: service.ResolveMilestoneDaysUntilDueResponse.result:type_name -> service.ResolveMilestoneDaysUntilDueResult
-	157, // 93: service.ResolveTaskIsBlockedArgs.check_dependencies:type_name -> google.protobuf.BoolValue
-	2,   // 94: service.ResolveTaskIsBlockedContext.status:type_name -> service.TaskStatus
-	109, // 95: service.ResolveTaskIsBlockedRequest.context:type_name -> service.ResolveTaskIsBlockedContext
-	108, // 96: service.ResolveTaskIsBlockedRequest.field_args:type_name -> service.ResolveTaskIsBlockedArgs
-	111, // 97: service.ResolveTaskIsBlockedResponse.result:type_name -> service.ResolveTaskIsBlockedResult
-	157, // 98: service.ResolveTaskTotalEffortArgs.include_subtasks:type_name -> google.protobuf.BoolValue
-	159, // 99: service.ResolveTaskTotalEffortContext.estimated_hours:type_name -> google.protobuf.DoubleValue
-	159, // 100: service.ResolveTaskTotalEffortContext.actual_hours:type_name -> google.protobuf.DoubleValue
-	114, // 101: service.ResolveTaskTotalEffortRequest.context:type_name -> service.ResolveTaskTotalEffortContext
-	113, // 102: service.ResolveTaskTotalEffortRequest.field_args:type_name -> service.ResolveTaskTotalEffortArgs
-	159, // 103: service.ResolveTaskTotalEffortResult.total_effort:type_name -> google.protobuf.DoubleValue
-	116, // 104: service.ResolveTaskTotalEffortResponse.result:type_name -> service.ResolveTaskTotalEffortResult
-	157, // 105: service.ResolveEmployeeCurrentWorkloadArgs.include_completed:type_name -> google.protobuf.BoolValue
-	158, // 106: service.ResolveEmployeeCurrentWorkloadArgs.project_id:type_name -> google.protobuf.StringValue
-	119, // 107: service.ResolveEmployeeCurrentWorkloadRequest.context:type_name -> service.ResolveEmployeeCurrentWorkloadContext
-	118, // 108: service.ResolveEmployeeCurrentWorkloadRequest.field_args:type_name -> service.ResolveEmployeeCurrentWorkloadArgs
-	121, // 109: service.ResolveEmployeeCurrentWorkloadResponse.result:type_name -> service.ResolveEmployeeCurrentWorkloadResult
-	158, // 110: service.ResolveEmployeeAverageTaskCompletionDaysArgs.project_id:type_name -> google.protobuf.StringValue
-	3,   // 111: service.ResolveEmployeeAverageTaskCompletionDaysArgs.priority:type_name -> service.TaskPriority
-	124, // 112: service.ResolveEmployeeAverageTaskCompletionDaysRequest.context:type_name -> service.ResolveEmployeeAverageTaskCompletionDaysContext
-	123, // 113: service.ResolveEmployeeAverageTaskCompletionDaysRequest.field_args:type_name -> service.ResolveEmployeeAverageTaskCompletionDaysArgs
-	159, // 114: service.ResolveEmployeeAverageTaskCompletionDaysResult.average_task_completion_days:type_name -> google.protobuf.DoubleValue
-	126, // 115: service.ResolveEmployeeAverageTaskCompletionDaysResponse.result:type_name -> service.ResolveEmployeeAverageTaskCompletionDaysResult
-	158, // 116: service.Project.description:type_name -> google.protobuf.StringValue
-	158, // 117: service.Project.start_date:type_name -> google.protobuf.StringValue
-	158, // 118: service.Project.end_date:type_name -> google.protobuf.StringValue
-	0,   // 119: service.Project.status:type_name -> service.ProjectStatus
-	131, // 120: service.Project.team_members:type_name -> service.Employee
-	132, // 121: service.Project.related_products:type_name -> service.Product
-	16,  // 122: service.Project.milestone_ids:type_name -> service.ListOfString
-	129, // 123: service.Project.milestones:type_name -> service.Milestone
-	130, // 124: service.Project.tasks:type_name -> service.Task
-	159, // 125: service.Project.progress:type_name -> google.protobuf.DoubleValue
-	16,  // 126: service.Project.tags:type_name -> service.ListOfString
-	14,  // 127: service.Project.alternative_projects:type_name -> service.ListOfProject
-	14,  // 128: service.Project.dependencies:type_name -> service.ListOfProject
-	10,  // 129: service.Project.resource_groups:type_name -> service.ListOfListOfProjectResource
-	12,  // 130: service.Project.tasks_by_phase:type_name -> service.ListOfListOfTask
-	8,   // 131: service.Project.milestone_groups:type_name -> service.ListOfListOfMilestone
-	7,   // 132: service.Project.priority_matrix:type_name -> service.ListOfListOfListOfTask
-	158, // 133: service.Milestone.description:type_name -> google.protobuf.StringValue
-	158, // 134: service.Milestone.start_date:type_name -> google.protobuf.StringValue
-	158, // 135: service.Milestone.end_date:type_name -> google.protobuf.StringValue
-	1,   // 136: service.Milestone.status:type_name -> service.MilestoneStatus
-	159, // 137: service.Milestone.completion_percentage:type_name -> google.protobuf.DoubleValue
-	129, // 138: service.Milestone.dependencies:type_name -> service.Milestone
-	17,  // 139: service.Milestone.subtasks:type_name -> service.ListOfTask
-	5,   // 140: service.Milestone.reviewers:type_name -> service.ListOfEmployee
-	158, // 141: service.Task.milestone_id:type_name -> google.protobuf.StringValue
-	156, // 142: service.Task.assignee_id:type_name -> google.protobuf.Int32Value
-	158, // 143: service.Task.description:type_name -> google.protobuf.StringValue
-	3,   // 144: service.Task.priority:type_name -> service.TaskPriority
-	2,   // 145: service.Task.status:type_name -> service.TaskStatus
-	159, // 146: service.Task.estimated_hours:type_name -> google.protobuf.DoubleValue
-	159, // 147: service.Task.actual_hours:type_name -> google.protobuf.DoubleValue
-	158, // 148: service.Task.created_at:type_name -> google.protobuf.StringValue
-	158, // 149: service.Task.completed_at:type_name -> google.protobuf.StringValue
-	16,  // 150: service.Task.labels:type_name -> service.ListOfString
-	17,  // 151: service.Task.subtasks:type_name -> service.ListOfTask
-	130, // 152: service.Task.dependencies:type_name -> service.Task
-	6,   // 153: service.Task.reviewer_ids:type_name -> service.ListOfInt
-	14,  // 154: service.Employee.projects:type_name -> service.ListOfProject
-	130, // 155: service.Employee.assigned_tasks:type_name -> service.Task
-	130, // 156: service.Employee.completed_tasks:type_name -> service.Task
-	16,  // 157: service.Employee.skills:type_name -> service.ListOfString
-	16,  // 158: service.Employee.certifications:type_name -> service.ListOfString
-	9,   // 159: service.Employee.project_history:type_name -> service.ListOfListOfProject
-	14,  // 160: service.Product.projects:type_name -> service.ListOfProject
-	11,  // 161: service.Product.feature_matrix:type_name -> service.ListOfListOfString
-	131, // 162: service.ProjectResource.employee:type_name -> service.Employee
-	132, // 163: service.ProjectResource.product:type_name -> service.Product
-	129, // 164: service.ProjectResource.milestone:type_name -> service.Milestone
-	130, // 165: service.ProjectResource.task:type_name -> service.Task
-	128, // 166: service.ProjectSearchResult.project:type_name -> service.Project
-	129, // 167: service.ProjectSearchResult.milestone:type_name -> service.Milestone
-	130, // 168: service.ProjectSearchResult.task:type_name -> service.Task
-	140, // 169: service.ProjectActivity.project_update:type_name -> service.ProjectUpdate
-	129, // 170: service.ProjectActivity.milestone:type_name -> service.Milestone
-	130, // 171: service.ProjectActivity.task:type_name -> service.Task
-	128, // 172: service.Node.project:type_name -> service.Project
-	129, // 173: service.Node.milestone:type_name -> service.Milestone
-	130, // 174: service.Node.task:type_name -> service.Task
-	140, // 175: service.Node.project_update:type_name -> service.ProjectUpdate
-	158, // 176: service.ProjectInput.description:type_name -> google.protobuf.StringValue
-	158, // 177: service.ProjectInput.start_date:type_name -> google.protobuf.StringValue
-	158, // 178: service.ProjectInput.end_date:type_name -> google.protobuf.StringValue
-	0,   // 179: service.ProjectInput.status:type_name -> service.ProjectStatus
-	158, // 180: service.MilestoneInput.description:type_name -> google.protobuf.StringValue
-	158, // 181: service.MilestoneInput.due_date:type_name -> google.protobuf.StringValue
-	1,   // 182: service.MilestoneInput.status:type_name -> service.MilestoneStatus
-	156, // 183: service.TaskInput.assignee_id:type_name -> google.protobuf.Int32Value
-	158, // 184: service.TaskInput.description:type_name -> google.protobuf.StringValue
-	3,   // 185: service.TaskInput.priority:type_name -> service.TaskPriority
-	2,   // 186: service.TaskInput.status:type_name -> service.TaskStatus
-	159, // 187: service.TaskInput.estimated_hours:type_name -> google.protobuf.DoubleValue
-	4,   // 188: service.ProjectUpdate.update_type:type_name -> service.ProjectUpdateType
-	158, // 189: service.ProjectUpdate.metadata:type_name -> google.protobuf.StringValue
-	128, // 190: service.Timestamped.project:type_name -> service.Project
-	129, // 191: service.Timestamped.milestone:type_name -> service.Milestone
-	130, // 192: service.Assignable.task:type_name -> service.Task
-	131, // 193: service.ListOfEmployee.List.items:type_name -> service.Employee
-	12,  // 194: service.ListOfListOfListOfTask.List.items:type_name -> service.ListOfListOfTask
-	13,  // 195: service.ListOfListOfMilestone.List.items:type_name -> service.ListOfMilestone
-	14,  // 196: service.ListOfListOfProject.List.items:type_name -> service.ListOfProject
-	15,  // 197: service.ListOfListOfProjectResource.List.items:type_name -> service.ListOfProjectResource
-	16,  // 198: service.ListOfListOfString.List.items:type_name -> service.ListOfString
-	17,  // 199: service.ListOfListOfTask.List.items:type_name -> service.ListOfTask
-	129, // 200: service.ListOfMilestone.List.items:type_name -> service.Milestone
-	128, // 201: service.ListOfProject.List.items:type_name -> service.Project
-	133, // 202: service.ListOfProjectResource.List.items:type_name -> service.ProjectResource
-	130, // 203: service.ListOfTask.List.items:type_name -> service.Task
-	28,  // 204: service.ProjectsService.LookupEmployeeById:input_type -> service.LookupEmployeeByIdRequest
-	22,  // 205: service.ProjectsService.LookupMilestoneById:input_type -> service.LookupMilestoneByIdRequest
-	31,  // 206: service.ProjectsService.LookupProductByUpc:input_type -> service.LookupProductByUpcRequest
-	19,  // 207: service.ProjectsService.LookupProjectById:input_type -> service.LookupProjectByIdRequest
-	25,  // 208: service.ProjectsService.LookupTaskById:input_type -> service.LookupTaskByIdRequest
-	67,  // 209: service.ProjectsService.MutationAddMilestone:input_type -> service.MutationAddMilestoneRequest
-	65,  // 210: service.ProjectsService.MutationAddProject:input_type -> service.MutationAddProjectRequest
-	69,  // 211: service.ProjectsService.MutationAddTask:input_type -> service.MutationAddTaskRequest
-	71,  // 212: service.ProjectsService.MutationUpdateProjectStatus:input_type -> service.MutationUpdateProjectStatusRequest
-	53,  // 213: service.ProjectsService.QueryArchivedProjects:input_type -> service.QueryArchivedProjectsRequest
-	59,  // 214: service.ProjectsService.QueryKillService:input_type -> service.QueryKillServiceRequest
-	45,  // 215: service.ProjectsService.QueryMilestones:input_type -> service.QueryMilestonesRequest
-	63,  // 216: service.ProjectsService.QueryNodesById:input_type -> service.QueryNodesByIdRequest
-	61,  // 217: service.ProjectsService.QueryPanic:input_type -> service.QueryPanicRequest
-	35,  // 218: service.ProjectsService.QueryProject:input_type -> service.QueryProjectRequest
-	49,  // 219: service.ProjectsService.QueryProjectActivities:input_type -> service.QueryProjectActivitiesRequest
-	41,  // 220: service.ProjectsService.QueryProjectResources:input_type -> service.QueryProjectResourcesRequest
-	37,  // 221: service.ProjectsService.QueryProjectStatuses:input_type -> service.QueryProjectStatusesRequest
-	51,  // 222: service.ProjectsService.QueryProjectTags:input_type -> service.QueryProjectTagsRequest
-	33,  // 223: service.ProjectsService.QueryProjects:input_type -> service.QueryProjectsRequest
-	39,  // 224: service.ProjectsService.QueryProjectsByStatus:input_type -> service.QueryProjectsByStatusRequest
-	57,  // 225: service.ProjectsService.QueryResourceMatrix:input_type -> service.QueryResourceMatrixRequest
-	43,  // 226: service.ProjectsService.QuerySearchProjects:input_type -> service.QuerySearchProjectsRequest
-	47,  // 227: service.ProjectsService.QueryTasks:input_type -> service.QueryTasksRequest
-	55,  // 228: service.ProjectsService.QueryTasksByPriority:input_type -> service.QueryTasksByPriorityRequest
-	125, // 229: service.ProjectsService.ResolveEmployeeAverageTaskCompletionDays:input_type -> service.ResolveEmployeeAverageTaskCompletionDaysRequest
-	120, // 230: service.ProjectsService.ResolveEmployeeCurrentWorkload:input_type -> service.ResolveEmployeeCurrentWorkloadRequest
-	105, // 231: service.ProjectsService.ResolveMilestoneDaysUntilDue:input_type -> service.ResolveMilestoneDaysUntilDueRequest
-	100, // 232: service.ProjectsService.ResolveMilestoneIsAtRisk:input_type -> service.ResolveMilestoneIsAtRiskRequest
-	80,  // 233: service.ProjectsService.ResolveProjectCompletionRate:input_type -> service.ResolveProjectCompletionRateRequest
-	90,  // 234: service.ProjectsService.ResolveProjectCriticalDeadline:input_type -> service.ResolveProjectCriticalDeadlineRequest
-	85,  // 235: service.ProjectsService.ResolveProjectEstimatedDaysRemaining:input_type -> service.ResolveProjectEstimatedDaysRemainingRequest
-	75,  // 236: service.ProjectsService.ResolveProjectFilteredTasks:input_type -> service.ResolveProjectFilteredTasksRequest
-	95,  // 237: service.ProjectsService.ResolveProjectTopPriorityItem:input_type -> service.ResolveProjectTopPriorityItemRequest
-	110, // 238: service.ProjectsService.ResolveTaskIsBlocked:input_type -> service.ResolveTaskIsBlockedRequest
-	115, // 239: service.ProjectsService.ResolveTaskTotalEffort:input_type -> service.ResolveTaskTotalEffortRequest
-	29,  // 240: service.ProjectsService.LookupEmployeeById:output_type -> service.LookupEmployeeByIdResponse
-	23,  // 241: service.ProjectsService.LookupMilestoneById:output_type -> service.LookupMilestoneByIdResponse
-	32,  // 242: service.ProjectsService.LookupProductByUpc:output_type -> service.LookupProductByUpcResponse
-	20,  // 243: service.ProjectsService.LookupProjectById:output_type -> service.LookupProjectByIdResponse
-	26,  // 244: service.ProjectsService.LookupTaskById:output_type -> service.LookupTaskByIdResponse
-	68,  // 245: service.ProjectsService.MutationAddMilestone:output_type -> service.MutationAddMilestoneResponse
-	66,  // 246: service.ProjectsService.MutationAddProject:output_type -> service.MutationAddProjectResponse
-	70,  // 247: service.ProjectsService.MutationAddTask:output_type -> service.MutationAddTaskResponse
-	72,  // 248: service.ProjectsService.MutationUpdateProjectStatus:output_type -> service.MutationUpdateProjectStatusResponse
-	54,  // 249: service.ProjectsService.QueryArchivedProjects:output_type -> service.QueryArchivedProjectsResponse
-	60,  // 250: service.ProjectsService.QueryKillService:output_type -> service.QueryKillServiceResponse
-	46,  // 251: service.ProjectsService.QueryMilestones:output_type -> service.QueryMilestonesResponse
-	64,  // 252: service.ProjectsService.QueryNodesById:output_type -> service.QueryNodesByIdResponse
-	62,  // 253: service.ProjectsService.QueryPanic:output_type -> service.QueryPanicResponse
-	36,  // 254: service.ProjectsService.QueryProject:output_type -> service.QueryProjectResponse
-	50,  // 255: service.ProjectsService.QueryProjectActivities:output_type -> service.QueryProjectActivitiesResponse
-	42,  // 256: service.ProjectsService.QueryProjectResources:output_type -> service.QueryProjectResourcesResponse
-	38,  // 257: service.ProjectsService.QueryProjectStatuses:output_type -> service.QueryProjectStatusesResponse
-	52,  // 258: service.ProjectsService.QueryProjectTags:output_type -> service.QueryProjectTagsResponse
-	34,  // 259: service.ProjectsService.QueryProjects:output_type -> service.QueryProjectsResponse
-	40,  // 260: service.ProjectsService.QueryProjectsByStatus:output_type -> service.QueryProjectsByStatusResponse
-	58,  // 261: service.ProjectsService.QueryResourceMatrix:output_type -> service.QueryResourceMatrixResponse
-	44,  // 262: service.ProjectsService.QuerySearchProjects:output_type -> service.QuerySearchProjectsResponse
-	48,  // 263: service.ProjectsService.QueryTasks:output_type -> service.QueryTasksResponse
-	56,  // 264: service.ProjectsService.QueryTasksByPriority:output_type -> service.QueryTasksByPriorityResponse
-	127, // 265: service.ProjectsService.ResolveEmployeeAverageTaskCompletionDays:output_type -> service.ResolveEmployeeAverageTaskCompletionDaysResponse
-	122, // 266: service.ProjectsService.ResolveEmployeeCurrentWorkload:output_type -> service.ResolveEmployeeCurrentWorkloadResponse
-	107, // 267: service.ProjectsService.ResolveMilestoneDaysUntilDue:output_type -> service.ResolveMilestoneDaysUntilDueResponse
-	102, // 268: service.ProjectsService.ResolveMilestoneIsAtRisk:output_type -> service.ResolveMilestoneIsAtRiskResponse
-	82,  // 269: service.ProjectsService.ResolveProjectCompletionRate:output_type -> service.ResolveProjectCompletionRateResponse
-	92,  // 270: service.ProjectsService.ResolveProjectCriticalDeadline:output_type -> service.ResolveProjectCriticalDeadlineResponse
-	87,  // 271: service.ProjectsService.ResolveProjectEstimatedDaysRemaining:output_type -> service.ResolveProjectEstimatedDaysRemainingResponse
-	77,  // 272: service.ProjectsService.ResolveProjectFilteredTasks:output_type -> service.ResolveProjectFilteredTasksResponse
-	97,  // 273: service.ProjectsService.ResolveProjectTopPriorityItem:output_type -> service.ResolveProjectTopPriorityItemResponse
-	112, // 274: service.ProjectsService.ResolveTaskIsBlocked:output_type -> service.ResolveTaskIsBlockedResponse
-	117, // 275: service.ProjectsService.ResolveTaskTotalEffort:output_type -> service.ResolveTaskTotalEffortResponse
-	240, // [240:276] is the sub-list for method output_type
-	204, // [204:240] is the sub-list for method input_type
-	204, // [204:204] is the sub-list for extension type_name
-	204, // [204:204] is the sub-list for extension extendee
-	0,   // [0:204] is the sub-list for field type_name
+	145, // 45: service.MutationUpdateProjectStatusResponse.update_project_status:type_name -> service.ProjectUpdate
+	161, // 46: service.ResolveProjectSubProjectsArgs.include_archived:type_name -> google.protobuf.BoolValue
+	0,   // 47: service.ResolveProjectSubProjectsContext.status:type_name -> service.ProjectStatus
+	74,  // 48: service.ResolveProjectSubProjectsRequest.context:type_name -> service.ResolveProjectSubProjectsContext
+	73,  // 49: service.ResolveProjectSubProjectsRequest.field_args:type_name -> service.ResolveProjectSubProjectsArgs
+	133, // 50: service.ResolveProjectSubProjectsResult.sub_projects:type_name -> service.Project
+	76,  // 51: service.ResolveProjectSubProjectsResponse.result:type_name -> service.ResolveProjectSubProjectsResult
+	2,   // 52: service.ResolveProjectFilteredTasksArgs.status:type_name -> service.TaskStatus
+	3,   // 53: service.ResolveProjectFilteredTasksArgs.priority:type_name -> service.TaskPriority
+	162, // 54: service.ResolveProjectFilteredTasksArgs.limit:type_name -> google.protobuf.Int32Value
+	79,  // 55: service.ResolveProjectFilteredTasksRequest.context:type_name -> service.ResolveProjectFilteredTasksContext
+	78,  // 56: service.ResolveProjectFilteredTasksRequest.field_args:type_name -> service.ResolveProjectFilteredTasksArgs
+	135, // 57: service.ResolveProjectFilteredTasksResult.filtered_tasks:type_name -> service.Task
+	81,  // 58: service.ResolveProjectFilteredTasksResponse.result:type_name -> service.ResolveProjectFilteredTasksResult
+	161, // 59: service.ResolveProjectCompletionRateArgs.include_subtasks:type_name -> google.protobuf.BoolValue
+	163, // 60: service.ResolveProjectCompletionRateContext.start_date:type_name -> google.protobuf.StringValue
+	163, // 61: service.ResolveProjectCompletionRateContext.end_date:type_name -> google.protobuf.StringValue
+	0,   // 62: service.ResolveProjectCompletionRateContext.status:type_name -> service.ProjectStatus
+	84,  // 63: service.ResolveProjectCompletionRateRequest.context:type_name -> service.ResolveProjectCompletionRateContext
+	83,  // 64: service.ResolveProjectCompletionRateRequest.field_args:type_name -> service.ResolveProjectCompletionRateArgs
+	86,  // 65: service.ResolveProjectCompletionRateResponse.result:type_name -> service.ResolveProjectCompletionRateResult
+	163, // 66: service.ResolveProjectEstimatedDaysRemainingArgs.from_date:type_name -> google.protobuf.StringValue
+	163, // 67: service.ResolveProjectEstimatedDaysRemainingContext.end_date:type_name -> google.protobuf.StringValue
+	0,   // 68: service.ResolveProjectEstimatedDaysRemainingContext.status:type_name -> service.ProjectStatus
+	89,  // 69: service.ResolveProjectEstimatedDaysRemainingRequest.context:type_name -> service.ResolveProjectEstimatedDaysRemainingContext
+	88,  // 70: service.ResolveProjectEstimatedDaysRemainingRequest.field_args:type_name -> service.ResolveProjectEstimatedDaysRemainingArgs
+	162, // 71: service.ResolveProjectEstimatedDaysRemainingResult.estimated_days_remaining:type_name -> google.protobuf.Int32Value
+	91,  // 72: service.ResolveProjectEstimatedDaysRemainingResponse.result:type_name -> service.ResolveProjectEstimatedDaysRemainingResult
+	162, // 73: service.ResolveProjectCriticalDeadlineArgs.within_days:type_name -> google.protobuf.Int32Value
+	0,   // 74: service.ResolveProjectCriticalDeadlineContext.status:type_name -> service.ProjectStatus
+	134, // 75: service.ResolveProjectCriticalDeadlineContext.milestones:type_name -> service.Milestone
+	94,  // 76: service.ResolveProjectCriticalDeadlineRequest.context:type_name -> service.ResolveProjectCriticalDeadlineContext
+	93,  // 77: service.ResolveProjectCriticalDeadlineRequest.field_args:type_name -> service.ResolveProjectCriticalDeadlineArgs
+	146, // 78: service.ResolveProjectCriticalDeadlineResult.critical_deadline:type_name -> service.Timestamped
+	96,  // 79: service.ResolveProjectCriticalDeadlineResponse.result:type_name -> service.ResolveProjectCriticalDeadlineResult
+	163, // 80: service.ResolveProjectTopPriorityItemArgs.category:type_name -> google.protobuf.StringValue
+	0,   // 81: service.ResolveProjectTopPriorityItemContext.status:type_name -> service.ProjectStatus
+	99,  // 82: service.ResolveProjectTopPriorityItemRequest.context:type_name -> service.ResolveProjectTopPriorityItemContext
+	98,  // 83: service.ResolveProjectTopPriorityItemRequest.field_args:type_name -> service.ResolveProjectTopPriorityItemArgs
+	139, // 84: service.ResolveProjectTopPriorityItemResult.top_priority_item:type_name -> service.ProjectSearchResult
+	101, // 85: service.ResolveProjectTopPriorityItemResponse.result:type_name -> service.ResolveProjectTopPriorityItemResult
+	164, // 86: service.ResolveMilestoneIsAtRiskArgs.threshold:type_name -> google.protobuf.DoubleValue
+	163, // 87: service.ResolveMilestoneIsAtRiskContext.end_date:type_name -> google.protobuf.StringValue
+	1,   // 88: service.ResolveMilestoneIsAtRiskContext.status:type_name -> service.MilestoneStatus
+	164, // 89: service.ResolveMilestoneIsAtRiskContext.completion_percentage:type_name -> google.protobuf.DoubleValue
+	104, // 90: service.ResolveMilestoneIsAtRiskRequest.context:type_name -> service.ResolveMilestoneIsAtRiskContext
+	103, // 91: service.ResolveMilestoneIsAtRiskRequest.field_args:type_name -> service.ResolveMilestoneIsAtRiskArgs
+	106, // 92: service.ResolveMilestoneIsAtRiskResponse.result:type_name -> service.ResolveMilestoneIsAtRiskResult
+	163, // 93: service.ResolveMilestoneDaysUntilDueArgs.from_date:type_name -> google.protobuf.StringValue
+	163, // 94: service.ResolveMilestoneDaysUntilDueContext.end_date:type_name -> google.protobuf.StringValue
+	109, // 95: service.ResolveMilestoneDaysUntilDueRequest.context:type_name -> service.ResolveMilestoneDaysUntilDueContext
+	108, // 96: service.ResolveMilestoneDaysUntilDueRequest.field_args:type_name -> service.ResolveMilestoneDaysUntilDueArgs
+	162, // 97: service.ResolveMilestoneDaysUntilDueResult.days_until_due:type_name -> google.protobuf.Int32Value
+	111, // 98: service.ResolveMilestoneDaysUntilDueResponse.result:type_name -> service.ResolveMilestoneDaysUntilDueResult
+	161, // 99: service.ResolveTaskIsBlockedArgs.check_dependencies:type_name -> google.protobuf.BoolValue
+	2,   // 100: service.ResolveTaskIsBlockedContext.status:type_name -> service.TaskStatus
+	114, // 101: service.ResolveTaskIsBlockedRequest.context:type_name -> service.ResolveTaskIsBlockedContext
+	113, // 102: service.ResolveTaskIsBlockedRequest.field_args:type_name -> service.ResolveTaskIsBlockedArgs
+	116, // 103: service.ResolveTaskIsBlockedResponse.result:type_name -> service.ResolveTaskIsBlockedResult
+	161, // 104: service.ResolveTaskTotalEffortArgs.include_subtasks:type_name -> google.protobuf.BoolValue
+	164, // 105: service.ResolveTaskTotalEffortContext.estimated_hours:type_name -> google.protobuf.DoubleValue
+	164, // 106: service.ResolveTaskTotalEffortContext.actual_hours:type_name -> google.protobuf.DoubleValue
+	119, // 107: service.ResolveTaskTotalEffortRequest.context:type_name -> service.ResolveTaskTotalEffortContext
+	118, // 108: service.ResolveTaskTotalEffortRequest.field_args:type_name -> service.ResolveTaskTotalEffortArgs
+	164, // 109: service.ResolveTaskTotalEffortResult.total_effort:type_name -> google.protobuf.DoubleValue
+	121, // 110: service.ResolveTaskTotalEffortResponse.result:type_name -> service.ResolveTaskTotalEffortResult
+	161, // 111: service.ResolveEmployeeCurrentWorkloadArgs.include_completed:type_name -> google.protobuf.BoolValue
+	163, // 112: service.ResolveEmployeeCurrentWorkloadArgs.project_id:type_name -> google.protobuf.StringValue
+	124, // 113: service.ResolveEmployeeCurrentWorkloadRequest.context:type_name -> service.ResolveEmployeeCurrentWorkloadContext
+	123, // 114: service.ResolveEmployeeCurrentWorkloadRequest.field_args:type_name -> service.ResolveEmployeeCurrentWorkloadArgs
+	126, // 115: service.ResolveEmployeeCurrentWorkloadResponse.result:type_name -> service.ResolveEmployeeCurrentWorkloadResult
+	163, // 116: service.ResolveEmployeeAverageTaskCompletionDaysArgs.project_id:type_name -> google.protobuf.StringValue
+	3,   // 117: service.ResolveEmployeeAverageTaskCompletionDaysArgs.priority:type_name -> service.TaskPriority
+	129, // 118: service.ResolveEmployeeAverageTaskCompletionDaysRequest.context:type_name -> service.ResolveEmployeeAverageTaskCompletionDaysContext
+	128, // 119: service.ResolveEmployeeAverageTaskCompletionDaysRequest.field_args:type_name -> service.ResolveEmployeeAverageTaskCompletionDaysArgs
+	164, // 120: service.ResolveEmployeeAverageTaskCompletionDaysResult.average_task_completion_days:type_name -> google.protobuf.DoubleValue
+	131, // 121: service.ResolveEmployeeAverageTaskCompletionDaysResponse.result:type_name -> service.ResolveEmployeeAverageTaskCompletionDaysResult
+	163, // 122: service.Project.description:type_name -> google.protobuf.StringValue
+	163, // 123: service.Project.start_date:type_name -> google.protobuf.StringValue
+	163, // 124: service.Project.end_date:type_name -> google.protobuf.StringValue
+	0,   // 125: service.Project.status:type_name -> service.ProjectStatus
+	136, // 126: service.Project.team_members:type_name -> service.Employee
+	137, // 127: service.Project.related_products:type_name -> service.Product
+	16,  // 128: service.Project.milestone_ids:type_name -> service.ListOfString
+	134, // 129: service.Project.milestones:type_name -> service.Milestone
+	135, // 130: service.Project.tasks:type_name -> service.Task
+	164, // 131: service.Project.progress:type_name -> google.protobuf.DoubleValue
+	16,  // 132: service.Project.tags:type_name -> service.ListOfString
+	14,  // 133: service.Project.alternative_projects:type_name -> service.ListOfProject
+	14,  // 134: service.Project.dependencies:type_name -> service.ListOfProject
+	10,  // 135: service.Project.resource_groups:type_name -> service.ListOfListOfProjectResource
+	12,  // 136: service.Project.tasks_by_phase:type_name -> service.ListOfListOfTask
+	8,   // 137: service.Project.milestone_groups:type_name -> service.ListOfListOfMilestone
+	7,   // 138: service.Project.priority_matrix:type_name -> service.ListOfListOfListOfTask
+	163, // 139: service.Milestone.description:type_name -> google.protobuf.StringValue
+	163, // 140: service.Milestone.start_date:type_name -> google.protobuf.StringValue
+	163, // 141: service.Milestone.end_date:type_name -> google.protobuf.StringValue
+	1,   // 142: service.Milestone.status:type_name -> service.MilestoneStatus
+	164, // 143: service.Milestone.completion_percentage:type_name -> google.protobuf.DoubleValue
+	134, // 144: service.Milestone.dependencies:type_name -> service.Milestone
+	17,  // 145: service.Milestone.subtasks:type_name -> service.ListOfTask
+	5,   // 146: service.Milestone.reviewers:type_name -> service.ListOfEmployee
+	163, // 147: service.Task.milestone_id:type_name -> google.protobuf.StringValue
+	162, // 148: service.Task.assignee_id:type_name -> google.protobuf.Int32Value
+	163, // 149: service.Task.description:type_name -> google.protobuf.StringValue
+	3,   // 150: service.Task.priority:type_name -> service.TaskPriority
+	2,   // 151: service.Task.status:type_name -> service.TaskStatus
+	164, // 152: service.Task.estimated_hours:type_name -> google.protobuf.DoubleValue
+	164, // 153: service.Task.actual_hours:type_name -> google.protobuf.DoubleValue
+	163, // 154: service.Task.created_at:type_name -> google.protobuf.StringValue
+	163, // 155: service.Task.completed_at:type_name -> google.protobuf.StringValue
+	16,  // 156: service.Task.labels:type_name -> service.ListOfString
+	17,  // 157: service.Task.subtasks:type_name -> service.ListOfTask
+	135, // 158: service.Task.dependencies:type_name -> service.Task
+	6,   // 159: service.Task.reviewer_ids:type_name -> service.ListOfInt
+	14,  // 160: service.Employee.projects:type_name -> service.ListOfProject
+	135, // 161: service.Employee.assigned_tasks:type_name -> service.Task
+	135, // 162: service.Employee.completed_tasks:type_name -> service.Task
+	16,  // 163: service.Employee.skills:type_name -> service.ListOfString
+	16,  // 164: service.Employee.certifications:type_name -> service.ListOfString
+	9,   // 165: service.Employee.project_history:type_name -> service.ListOfListOfProject
+	14,  // 166: service.Product.projects:type_name -> service.ListOfProject
+	11,  // 167: service.Product.feature_matrix:type_name -> service.ListOfListOfString
+	136, // 168: service.ProjectResource.employee:type_name -> service.Employee
+	137, // 169: service.ProjectResource.product:type_name -> service.Product
+	134, // 170: service.ProjectResource.milestone:type_name -> service.Milestone
+	135, // 171: service.ProjectResource.task:type_name -> service.Task
+	133, // 172: service.ProjectSearchResult.project:type_name -> service.Project
+	134, // 173: service.ProjectSearchResult.milestone:type_name -> service.Milestone
+	135, // 174: service.ProjectSearchResult.task:type_name -> service.Task
+	145, // 175: service.ProjectActivity.project_update:type_name -> service.ProjectUpdate
+	134, // 176: service.ProjectActivity.milestone:type_name -> service.Milestone
+	135, // 177: service.ProjectActivity.task:type_name -> service.Task
+	133, // 178: service.Node.project:type_name -> service.Project
+	134, // 179: service.Node.milestone:type_name -> service.Milestone
+	135, // 180: service.Node.task:type_name -> service.Task
+	145, // 181: service.Node.project_update:type_name -> service.ProjectUpdate
+	163, // 182: service.ProjectInput.description:type_name -> google.protobuf.StringValue
+	163, // 183: service.ProjectInput.start_date:type_name -> google.protobuf.StringValue
+	163, // 184: service.ProjectInput.end_date:type_name -> google.protobuf.StringValue
+	0,   // 185: service.ProjectInput.status:type_name -> service.ProjectStatus
+	163, // 186: service.MilestoneInput.description:type_name -> google.protobuf.StringValue
+	163, // 187: service.MilestoneInput.due_date:type_name -> google.protobuf.StringValue
+	1,   // 188: service.MilestoneInput.status:type_name -> service.MilestoneStatus
+	162, // 189: service.TaskInput.assignee_id:type_name -> google.protobuf.Int32Value
+	163, // 190: service.TaskInput.description:type_name -> google.protobuf.StringValue
+	3,   // 191: service.TaskInput.priority:type_name -> service.TaskPriority
+	2,   // 192: service.TaskInput.status:type_name -> service.TaskStatus
+	164, // 193: service.TaskInput.estimated_hours:type_name -> google.protobuf.DoubleValue
+	4,   // 194: service.ProjectUpdate.update_type:type_name -> service.ProjectUpdateType
+	163, // 195: service.ProjectUpdate.metadata:type_name -> google.protobuf.StringValue
+	133, // 196: service.Timestamped.project:type_name -> service.Project
+	134, // 197: service.Timestamped.milestone:type_name -> service.Milestone
+	135, // 198: service.Assignable.task:type_name -> service.Task
+	136, // 199: service.ListOfEmployee.List.items:type_name -> service.Employee
+	12,  // 200: service.ListOfListOfListOfTask.List.items:type_name -> service.ListOfListOfTask
+	13,  // 201: service.ListOfListOfMilestone.List.items:type_name -> service.ListOfMilestone
+	14,  // 202: service.ListOfListOfProject.List.items:type_name -> service.ListOfProject
+	15,  // 203: service.ListOfListOfProjectResource.List.items:type_name -> service.ListOfProjectResource
+	16,  // 204: service.ListOfListOfString.List.items:type_name -> service.ListOfString
+	17,  // 205: service.ListOfListOfTask.List.items:type_name -> service.ListOfTask
+	134, // 206: service.ListOfMilestone.List.items:type_name -> service.Milestone
+	133, // 207: service.ListOfProject.List.items:type_name -> service.Project
+	138, // 208: service.ListOfProjectResource.List.items:type_name -> service.ProjectResource
+	135, // 209: service.ListOfTask.List.items:type_name -> service.Task
+	28,  // 210: service.ProjectsService.LookupEmployeeById:input_type -> service.LookupEmployeeByIdRequest
+	22,  // 211: service.ProjectsService.LookupMilestoneById:input_type -> service.LookupMilestoneByIdRequest
+	31,  // 212: service.ProjectsService.LookupProductByUpc:input_type -> service.LookupProductByUpcRequest
+	19,  // 213: service.ProjectsService.LookupProjectById:input_type -> service.LookupProjectByIdRequest
+	25,  // 214: service.ProjectsService.LookupTaskById:input_type -> service.LookupTaskByIdRequest
+	67,  // 215: service.ProjectsService.MutationAddMilestone:input_type -> service.MutationAddMilestoneRequest
+	65,  // 216: service.ProjectsService.MutationAddProject:input_type -> service.MutationAddProjectRequest
+	69,  // 217: service.ProjectsService.MutationAddTask:input_type -> service.MutationAddTaskRequest
+	71,  // 218: service.ProjectsService.MutationUpdateProjectStatus:input_type -> service.MutationUpdateProjectStatusRequest
+	53,  // 219: service.ProjectsService.QueryArchivedProjects:input_type -> service.QueryArchivedProjectsRequest
+	59,  // 220: service.ProjectsService.QueryKillService:input_type -> service.QueryKillServiceRequest
+	45,  // 221: service.ProjectsService.QueryMilestones:input_type -> service.QueryMilestonesRequest
+	63,  // 222: service.ProjectsService.QueryNodesById:input_type -> service.QueryNodesByIdRequest
+	61,  // 223: service.ProjectsService.QueryPanic:input_type -> service.QueryPanicRequest
+	35,  // 224: service.ProjectsService.QueryProject:input_type -> service.QueryProjectRequest
+	49,  // 225: service.ProjectsService.QueryProjectActivities:input_type -> service.QueryProjectActivitiesRequest
+	41,  // 226: service.ProjectsService.QueryProjectResources:input_type -> service.QueryProjectResourcesRequest
+	37,  // 227: service.ProjectsService.QueryProjectStatuses:input_type -> service.QueryProjectStatusesRequest
+	51,  // 228: service.ProjectsService.QueryProjectTags:input_type -> service.QueryProjectTagsRequest
+	33,  // 229: service.ProjectsService.QueryProjects:input_type -> service.QueryProjectsRequest
+	39,  // 230: service.ProjectsService.QueryProjectsByStatus:input_type -> service.QueryProjectsByStatusRequest
+	57,  // 231: service.ProjectsService.QueryResourceMatrix:input_type -> service.QueryResourceMatrixRequest
+	43,  // 232: service.ProjectsService.QuerySearchProjects:input_type -> service.QuerySearchProjectsRequest
+	47,  // 233: service.ProjectsService.QueryTasks:input_type -> service.QueryTasksRequest
+	55,  // 234: service.ProjectsService.QueryTasksByPriority:input_type -> service.QueryTasksByPriorityRequest
+	130, // 235: service.ProjectsService.ResolveEmployeeAverageTaskCompletionDays:input_type -> service.ResolveEmployeeAverageTaskCompletionDaysRequest
+	125, // 236: service.ProjectsService.ResolveEmployeeCurrentWorkload:input_type -> service.ResolveEmployeeCurrentWorkloadRequest
+	110, // 237: service.ProjectsService.ResolveMilestoneDaysUntilDue:input_type -> service.ResolveMilestoneDaysUntilDueRequest
+	105, // 238: service.ProjectsService.ResolveMilestoneIsAtRisk:input_type -> service.ResolveMilestoneIsAtRiskRequest
+	85,  // 239: service.ProjectsService.ResolveProjectCompletionRate:input_type -> service.ResolveProjectCompletionRateRequest
+	95,  // 240: service.ProjectsService.ResolveProjectCriticalDeadline:input_type -> service.ResolveProjectCriticalDeadlineRequest
+	90,  // 241: service.ProjectsService.ResolveProjectEstimatedDaysRemaining:input_type -> service.ResolveProjectEstimatedDaysRemainingRequest
+	80,  // 242: service.ProjectsService.ResolveProjectFilteredTasks:input_type -> service.ResolveProjectFilteredTasksRequest
+	75,  // 243: service.ProjectsService.ResolveProjectSubProjects:input_type -> service.ResolveProjectSubProjectsRequest
+	100, // 244: service.ProjectsService.ResolveProjectTopPriorityItem:input_type -> service.ResolveProjectTopPriorityItemRequest
+	115, // 245: service.ProjectsService.ResolveTaskIsBlocked:input_type -> service.ResolveTaskIsBlockedRequest
+	120, // 246: service.ProjectsService.ResolveTaskTotalEffort:input_type -> service.ResolveTaskTotalEffortRequest
+	29,  // 247: service.ProjectsService.LookupEmployeeById:output_type -> service.LookupEmployeeByIdResponse
+	23,  // 248: service.ProjectsService.LookupMilestoneById:output_type -> service.LookupMilestoneByIdResponse
+	32,  // 249: service.ProjectsService.LookupProductByUpc:output_type -> service.LookupProductByUpcResponse
+	20,  // 250: service.ProjectsService.LookupProjectById:output_type -> service.LookupProjectByIdResponse
+	26,  // 251: service.ProjectsService.LookupTaskById:output_type -> service.LookupTaskByIdResponse
+	68,  // 252: service.ProjectsService.MutationAddMilestone:output_type -> service.MutationAddMilestoneResponse
+	66,  // 253: service.ProjectsService.MutationAddProject:output_type -> service.MutationAddProjectResponse
+	70,  // 254: service.ProjectsService.MutationAddTask:output_type -> service.MutationAddTaskResponse
+	72,  // 255: service.ProjectsService.MutationUpdateProjectStatus:output_type -> service.MutationUpdateProjectStatusResponse
+	54,  // 256: service.ProjectsService.QueryArchivedProjects:output_type -> service.QueryArchivedProjectsResponse
+	60,  // 257: service.ProjectsService.QueryKillService:output_type -> service.QueryKillServiceResponse
+	46,  // 258: service.ProjectsService.QueryMilestones:output_type -> service.QueryMilestonesResponse
+	64,  // 259: service.ProjectsService.QueryNodesById:output_type -> service.QueryNodesByIdResponse
+	62,  // 260: service.ProjectsService.QueryPanic:output_type -> service.QueryPanicResponse
+	36,  // 261: service.ProjectsService.QueryProject:output_type -> service.QueryProjectResponse
+	50,  // 262: service.ProjectsService.QueryProjectActivities:output_type -> service.QueryProjectActivitiesResponse
+	42,  // 263: service.ProjectsService.QueryProjectResources:output_type -> service.QueryProjectResourcesResponse
+	38,  // 264: service.ProjectsService.QueryProjectStatuses:output_type -> service.QueryProjectStatusesResponse
+	52,  // 265: service.ProjectsService.QueryProjectTags:output_type -> service.QueryProjectTagsResponse
+	34,  // 266: service.ProjectsService.QueryProjects:output_type -> service.QueryProjectsResponse
+	40,  // 267: service.ProjectsService.QueryProjectsByStatus:output_type -> service.QueryProjectsByStatusResponse
+	58,  // 268: service.ProjectsService.QueryResourceMatrix:output_type -> service.QueryResourceMatrixResponse
+	44,  // 269: service.ProjectsService.QuerySearchProjects:output_type -> service.QuerySearchProjectsResponse
+	48,  // 270: service.ProjectsService.QueryTasks:output_type -> service.QueryTasksResponse
+	56,  // 271: service.ProjectsService.QueryTasksByPriority:output_type -> service.QueryTasksByPriorityResponse
+	132, // 272: service.ProjectsService.ResolveEmployeeAverageTaskCompletionDays:output_type -> service.ResolveEmployeeAverageTaskCompletionDaysResponse
+	127, // 273: service.ProjectsService.ResolveEmployeeCurrentWorkload:output_type -> service.ResolveEmployeeCurrentWorkloadResponse
+	112, // 274: service.ProjectsService.ResolveMilestoneDaysUntilDue:output_type -> service.ResolveMilestoneDaysUntilDueResponse
+	107, // 275: service.ProjectsService.ResolveMilestoneIsAtRisk:output_type -> service.ResolveMilestoneIsAtRiskResponse
+	87,  // 276: service.ProjectsService.ResolveProjectCompletionRate:output_type -> service.ResolveProjectCompletionRateResponse
+	97,  // 277: service.ProjectsService.ResolveProjectCriticalDeadline:output_type -> service.ResolveProjectCriticalDeadlineResponse
+	92,  // 278: service.ProjectsService.ResolveProjectEstimatedDaysRemaining:output_type -> service.ResolveProjectEstimatedDaysRemainingResponse
+	82,  // 279: service.ProjectsService.ResolveProjectFilteredTasks:output_type -> service.ResolveProjectFilteredTasksResponse
+	77,  // 280: service.ProjectsService.ResolveProjectSubProjects:output_type -> service.ResolveProjectSubProjectsResponse
+	102, // 281: service.ProjectsService.ResolveProjectTopPriorityItem:output_type -> service.ResolveProjectTopPriorityItemResponse
+	117, // 282: service.ProjectsService.ResolveTaskIsBlocked:output_type -> service.ResolveTaskIsBlockedResponse
+	122, // 283: service.ProjectsService.ResolveTaskTotalEffort:output_type -> service.ResolveTaskTotalEffortResponse
+	247, // [247:284] is the sub-list for method output_type
+	210, // [210:247] is the sub-list for method input_type
+	210, // [210:210] is the sub-list for extension type_name
+	210, // [210:210] is the sub-list for extension extendee
+	0,   // [0:210] is the sub-list for field type_name
 }
 
 func init() { file_generated_service_proto_init() }
@@ -11307,7 +11627,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[68].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectFilteredTasksArgs); i {
+			switch v := v.(*ResolveProjectSubProjectsArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11319,7 +11639,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[69].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectFilteredTasksContext); i {
+			switch v := v.(*ResolveProjectSubProjectsContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11331,7 +11651,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[70].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectFilteredTasksRequest); i {
+			switch v := v.(*ResolveProjectSubProjectsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11343,7 +11663,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[71].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectFilteredTasksResult); i {
+			switch v := v.(*ResolveProjectSubProjectsResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11355,7 +11675,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[72].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectFilteredTasksResponse); i {
+			switch v := v.(*ResolveProjectSubProjectsResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11367,7 +11687,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[73].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectCompletionRateArgs); i {
+			switch v := v.(*ResolveProjectFilteredTasksArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11379,7 +11699,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[74].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectCompletionRateContext); i {
+			switch v := v.(*ResolveProjectFilteredTasksContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11391,7 +11711,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[75].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectCompletionRateRequest); i {
+			switch v := v.(*ResolveProjectFilteredTasksRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11403,7 +11723,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[76].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectCompletionRateResult); i {
+			switch v := v.(*ResolveProjectFilteredTasksResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11415,7 +11735,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[77].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectCompletionRateResponse); i {
+			switch v := v.(*ResolveProjectFilteredTasksResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11427,7 +11747,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[78].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectEstimatedDaysRemainingArgs); i {
+			switch v := v.(*ResolveProjectCompletionRateArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11439,7 +11759,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[79].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectEstimatedDaysRemainingContext); i {
+			switch v := v.(*ResolveProjectCompletionRateContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11451,7 +11771,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[80].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectEstimatedDaysRemainingRequest); i {
+			switch v := v.(*ResolveProjectCompletionRateRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11463,7 +11783,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[81].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectEstimatedDaysRemainingResult); i {
+			switch v := v.(*ResolveProjectCompletionRateResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11475,7 +11795,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[82].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectEstimatedDaysRemainingResponse); i {
+			switch v := v.(*ResolveProjectCompletionRateResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11487,7 +11807,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[83].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectCriticalDeadlineArgs); i {
+			switch v := v.(*ResolveProjectEstimatedDaysRemainingArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11499,7 +11819,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[84].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectCriticalDeadlineContext); i {
+			switch v := v.(*ResolveProjectEstimatedDaysRemainingContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11511,7 +11831,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[85].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectCriticalDeadlineRequest); i {
+			switch v := v.(*ResolveProjectEstimatedDaysRemainingRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11523,7 +11843,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[86].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectCriticalDeadlineResult); i {
+			switch v := v.(*ResolveProjectEstimatedDaysRemainingResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11535,7 +11855,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[87].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectCriticalDeadlineResponse); i {
+			switch v := v.(*ResolveProjectEstimatedDaysRemainingResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11547,7 +11867,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[88].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectTopPriorityItemArgs); i {
+			switch v := v.(*ResolveProjectCriticalDeadlineArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11559,7 +11879,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[89].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectTopPriorityItemContext); i {
+			switch v := v.(*ResolveProjectCriticalDeadlineContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11571,7 +11891,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[90].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectTopPriorityItemRequest); i {
+			switch v := v.(*ResolveProjectCriticalDeadlineRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11583,7 +11903,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[91].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectTopPriorityItemResult); i {
+			switch v := v.(*ResolveProjectCriticalDeadlineResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11595,7 +11915,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[92].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveProjectTopPriorityItemResponse); i {
+			switch v := v.(*ResolveProjectCriticalDeadlineResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11607,7 +11927,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[93].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveMilestoneIsAtRiskArgs); i {
+			switch v := v.(*ResolveProjectTopPriorityItemArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11619,7 +11939,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[94].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveMilestoneIsAtRiskContext); i {
+			switch v := v.(*ResolveProjectTopPriorityItemContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11631,7 +11951,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[95].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveMilestoneIsAtRiskRequest); i {
+			switch v := v.(*ResolveProjectTopPriorityItemRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11643,7 +11963,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[96].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveMilestoneIsAtRiskResult); i {
+			switch v := v.(*ResolveProjectTopPriorityItemResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11655,7 +11975,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[97].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveMilestoneIsAtRiskResponse); i {
+			switch v := v.(*ResolveProjectTopPriorityItemResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11667,7 +11987,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[98].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveMilestoneDaysUntilDueArgs); i {
+			switch v := v.(*ResolveMilestoneIsAtRiskArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11679,7 +11999,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[99].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveMilestoneDaysUntilDueContext); i {
+			switch v := v.(*ResolveMilestoneIsAtRiskContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11691,7 +12011,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[100].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveMilestoneDaysUntilDueRequest); i {
+			switch v := v.(*ResolveMilestoneIsAtRiskRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11703,7 +12023,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[101].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveMilestoneDaysUntilDueResult); i {
+			switch v := v.(*ResolveMilestoneIsAtRiskResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11715,7 +12035,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[102].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveMilestoneDaysUntilDueResponse); i {
+			switch v := v.(*ResolveMilestoneIsAtRiskResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11727,7 +12047,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[103].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveTaskIsBlockedArgs); i {
+			switch v := v.(*ResolveMilestoneDaysUntilDueArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11739,7 +12059,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[104].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveTaskIsBlockedContext); i {
+			switch v := v.(*ResolveMilestoneDaysUntilDueContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11751,7 +12071,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[105].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveTaskIsBlockedRequest); i {
+			switch v := v.(*ResolveMilestoneDaysUntilDueRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11763,7 +12083,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[106].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveTaskIsBlockedResult); i {
+			switch v := v.(*ResolveMilestoneDaysUntilDueResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11775,7 +12095,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[107].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveTaskIsBlockedResponse); i {
+			switch v := v.(*ResolveMilestoneDaysUntilDueResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11787,7 +12107,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[108].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveTaskTotalEffortArgs); i {
+			switch v := v.(*ResolveTaskIsBlockedArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11799,7 +12119,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[109].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveTaskTotalEffortContext); i {
+			switch v := v.(*ResolveTaskIsBlockedContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11811,7 +12131,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[110].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveTaskTotalEffortRequest); i {
+			switch v := v.(*ResolveTaskIsBlockedRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11823,7 +12143,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[111].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveTaskTotalEffortResult); i {
+			switch v := v.(*ResolveTaskIsBlockedResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11835,7 +12155,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[112].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveTaskTotalEffortResponse); i {
+			switch v := v.(*ResolveTaskIsBlockedResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11847,7 +12167,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[113].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveEmployeeCurrentWorkloadArgs); i {
+			switch v := v.(*ResolveTaskTotalEffortArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11859,7 +12179,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[114].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveEmployeeCurrentWorkloadContext); i {
+			switch v := v.(*ResolveTaskTotalEffortContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11871,7 +12191,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[115].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveEmployeeCurrentWorkloadRequest); i {
+			switch v := v.(*ResolveTaskTotalEffortRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11883,7 +12203,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[116].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveEmployeeCurrentWorkloadResult); i {
+			switch v := v.(*ResolveTaskTotalEffortResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11895,7 +12215,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[117].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveEmployeeCurrentWorkloadResponse); i {
+			switch v := v.(*ResolveTaskTotalEffortResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11907,7 +12227,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[118].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveEmployeeAverageTaskCompletionDaysArgs); i {
+			switch v := v.(*ResolveEmployeeCurrentWorkloadArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11919,7 +12239,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[119].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveEmployeeAverageTaskCompletionDaysContext); i {
+			switch v := v.(*ResolveEmployeeCurrentWorkloadContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11931,7 +12251,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[120].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveEmployeeAverageTaskCompletionDaysRequest); i {
+			switch v := v.(*ResolveEmployeeCurrentWorkloadRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11943,7 +12263,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[121].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveEmployeeAverageTaskCompletionDaysResult); i {
+			switch v := v.(*ResolveEmployeeCurrentWorkloadResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11955,7 +12275,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[122].Exporter = func(v any, i int) any {
-			switch v := v.(*ResolveEmployeeAverageTaskCompletionDaysResponse); i {
+			switch v := v.(*ResolveEmployeeCurrentWorkloadResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11967,7 +12287,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[123].Exporter = func(v any, i int) any {
-			switch v := v.(*Project); i {
+			switch v := v.(*ResolveEmployeeAverageTaskCompletionDaysArgs); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11979,7 +12299,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[124].Exporter = func(v any, i int) any {
-			switch v := v.(*Milestone); i {
+			switch v := v.(*ResolveEmployeeAverageTaskCompletionDaysContext); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -11991,7 +12311,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[125].Exporter = func(v any, i int) any {
-			switch v := v.(*Task); i {
+			switch v := v.(*ResolveEmployeeAverageTaskCompletionDaysRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12003,7 +12323,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[126].Exporter = func(v any, i int) any {
-			switch v := v.(*Employee); i {
+			switch v := v.(*ResolveEmployeeAverageTaskCompletionDaysResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12015,7 +12335,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[127].Exporter = func(v any, i int) any {
-			switch v := v.(*Product); i {
+			switch v := v.(*ResolveEmployeeAverageTaskCompletionDaysResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12027,7 +12347,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[128].Exporter = func(v any, i int) any {
-			switch v := v.(*ProjectResource); i {
+			switch v := v.(*Project); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12039,7 +12359,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[129].Exporter = func(v any, i int) any {
-			switch v := v.(*ProjectSearchResult); i {
+			switch v := v.(*Milestone); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12051,7 +12371,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[130].Exporter = func(v any, i int) any {
-			switch v := v.(*ProjectActivity); i {
+			switch v := v.(*Task); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12063,7 +12383,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[131].Exporter = func(v any, i int) any {
-			switch v := v.(*Node); i {
+			switch v := v.(*Employee); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12075,7 +12395,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[132].Exporter = func(v any, i int) any {
-			switch v := v.(*ProjectInput); i {
+			switch v := v.(*Product); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12087,7 +12407,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[133].Exporter = func(v any, i int) any {
-			switch v := v.(*MilestoneInput); i {
+			switch v := v.(*ProjectResource); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12099,7 +12419,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[134].Exporter = func(v any, i int) any {
-			switch v := v.(*TaskInput); i {
+			switch v := v.(*ProjectSearchResult); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12111,7 +12431,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[135].Exporter = func(v any, i int) any {
-			switch v := v.(*ProjectUpdate); i {
+			switch v := v.(*ProjectActivity); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12123,7 +12443,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[136].Exporter = func(v any, i int) any {
-			switch v := v.(*Timestamped); i {
+			switch v := v.(*Node); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12135,7 +12455,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[137].Exporter = func(v any, i int) any {
-			switch v := v.(*Assignable); i {
+			switch v := v.(*ProjectInput); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12147,7 +12467,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[138].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfEmployee_List); i {
+			switch v := v.(*MilestoneInput); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12159,7 +12479,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[139].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfInt_List); i {
+			switch v := v.(*TaskInput); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12171,7 +12491,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[140].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfListOfListOfTask_List); i {
+			switch v := v.(*ProjectUpdate); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12183,7 +12503,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[141].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfListOfMilestone_List); i {
+			switch v := v.(*Timestamped); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12195,7 +12515,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[142].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfListOfProject_List); i {
+			switch v := v.(*Assignable); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12207,7 +12527,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[143].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfListOfProjectResource_List); i {
+			switch v := v.(*ListOfEmployee_List); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12219,7 +12539,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[144].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfListOfString_List); i {
+			switch v := v.(*ListOfInt_List); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12231,7 +12551,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[145].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfListOfTask_List); i {
+			switch v := v.(*ListOfListOfListOfTask_List); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12243,7 +12563,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[146].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfMilestone_List); i {
+			switch v := v.(*ListOfListOfMilestone_List); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12255,7 +12575,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[147].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfProject_List); i {
+			switch v := v.(*ListOfListOfProject_List); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12267,7 +12587,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[148].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfProjectResource_List); i {
+			switch v := v.(*ListOfListOfProjectResource_List); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12279,7 +12599,7 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[149].Exporter = func(v any, i int) any {
-			switch v := v.(*ListOfString_List); i {
+			switch v := v.(*ListOfListOfString_List); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -12291,6 +12611,66 @@ func file_generated_service_proto_init() {
 			}
 		}
 		file_generated_service_proto_msgTypes[150].Exporter = func(v any, i int) any {
+			switch v := v.(*ListOfListOfTask_List); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_generated_service_proto_msgTypes[151].Exporter = func(v any, i int) any {
+			switch v := v.(*ListOfMilestone_List); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_generated_service_proto_msgTypes[152].Exporter = func(v any, i int) any {
+			switch v := v.(*ListOfProject_List); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_generated_service_proto_msgTypes[153].Exporter = func(v any, i int) any {
+			switch v := v.(*ListOfProjectResource_List); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_generated_service_proto_msgTypes[154].Exporter = func(v any, i int) any {
+			switch v := v.(*ListOfString_List); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_generated_service_proto_msgTypes[155].Exporter = func(v any, i int) any {
 			switch v := v.(*ListOfTask_List); i {
 			case 0:
 				return &v.state
@@ -12303,33 +12683,33 @@ func file_generated_service_proto_init() {
 			}
 		}
 	}
-	file_generated_service_proto_msgTypes[128].OneofWrappers = []any{
+	file_generated_service_proto_msgTypes[133].OneofWrappers = []any{
 		(*ProjectResource_Employee)(nil),
 		(*ProjectResource_Product)(nil),
 		(*ProjectResource_Milestone)(nil),
 		(*ProjectResource_Task)(nil),
 	}
-	file_generated_service_proto_msgTypes[129].OneofWrappers = []any{
+	file_generated_service_proto_msgTypes[134].OneofWrappers = []any{
 		(*ProjectSearchResult_Project)(nil),
 		(*ProjectSearchResult_Milestone)(nil),
 		(*ProjectSearchResult_Task)(nil),
 	}
-	file_generated_service_proto_msgTypes[130].OneofWrappers = []any{
+	file_generated_service_proto_msgTypes[135].OneofWrappers = []any{
 		(*ProjectActivity_ProjectUpdate)(nil),
 		(*ProjectActivity_Milestone)(nil),
 		(*ProjectActivity_Task)(nil),
 	}
-	file_generated_service_proto_msgTypes[131].OneofWrappers = []any{
+	file_generated_service_proto_msgTypes[136].OneofWrappers = []any{
 		(*Node_Project)(nil),
 		(*Node_Milestone)(nil),
 		(*Node_Task)(nil),
 		(*Node_ProjectUpdate)(nil),
 	}
-	file_generated_service_proto_msgTypes[136].OneofWrappers = []any{
+	file_generated_service_proto_msgTypes[141].OneofWrappers = []any{
 		(*Timestamped_Project)(nil),
 		(*Timestamped_Milestone)(nil),
 	}
-	file_generated_service_proto_msgTypes[137].OneofWrappers = []any{
+	file_generated_service_proto_msgTypes[142].OneofWrappers = []any{
 		(*Assignable_Task)(nil),
 	}
 	type x struct{}
@@ -12338,7 +12718,7 @@ func file_generated_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_generated_service_proto_rawDesc,
 			NumEnums:      5,
-			NumMessages:   151,
+			NumMessages:   156,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

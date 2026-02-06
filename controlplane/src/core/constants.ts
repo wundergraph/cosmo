@@ -1,5 +1,7 @@
 import * as z from 'zod';
 
+export const maxRowLimitForChecks = 100_000;
+
 export const apiKeyPermissions = [
   {
     displayName: 'System for Cross-domain Identity Management (SCIM)',
