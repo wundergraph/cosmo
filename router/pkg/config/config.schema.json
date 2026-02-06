@@ -1327,8 +1327,8 @@
             "Content-Type",
             "Graphql-Client-Name",
             "Graphql-Client-Version",
-            "Apollo-Graphql-Client-Name",
-            "Apollo-Graphql-Client-Version",
+            "ApolloGraphql-Client-Name",
+            "ApolloGraphql-Client-Version",
             "x-wg-trace",
             "x-wg-disable-tracing",
             "x-wg-token",
@@ -1664,6 +1664,18 @@
           "default": [],
           "items": {
             "type": "string"
+          }
+        },
+        "router": {
+          "type": "object",
+          "properties": {
+            "response": {
+              "type": "array",
+              "description": "A list of header rules to apply to router responses.",
+              "items": {
+                "$ref": "#/$defs/router_response_header_rule"
+              }
+            }
           }
         }
       }
@@ -3535,6 +3547,23 @@
         "negate_match": ["matching"]
       },
       "required": ["op", "algorithm"]
+    },
+    "router_response_header_rule": {
+      "type": "object",
+      "description": "The configuration for router response headers. This is used to set headers in response from the router to clients.",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the header to set.",
+          "examples": ["X-Custom-Header"]
+        },
+        "expression": {
+          "type": "string",
+          "description": "The template expression to evaluate for the header value. The expression must return a string value."
+        }
+      },
+      "required": ["name", "expression"]
     },
     "set_header_rule": {
       "type": "object",
