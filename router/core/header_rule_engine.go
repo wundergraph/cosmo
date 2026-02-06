@@ -28,6 +28,7 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 )
 
 var (
@@ -50,6 +51,8 @@ var (
 		// Content Negotiation. We must never propagate the client headers to the upstream
 		// The router has to decide on its own what to send to the upstream
 		"Content-Type",
+		"Content-Encoding",
+		"Content-Length",
 		"Accept-Encoding",
 		"Accept-Charset",
 		"Accept",
@@ -102,12 +105,15 @@ func HeaderPropagationWriter(w http.ResponseWriter, resolveCtx *resolve.Context,
 }
 
 type headerPropagationWriter struct {
-	setContentLength     bool
-	propagateHeaders     bool
-	writer               http.ResponseWriter
-	headerPropagation    *responseHeaderPropagation
-	resolveCtx           *resolve.Context
-	didSetSubgraphErrors bool
+	setContentLength          bool
+	propagateHeaders          bool
+	writer                    http.ResponseWriter
+	headerPropagation         *responseHeaderPropagation
+	resolveCtx                *resolve.Context
+	didSetSubgraphErrors      bool
+	routerHeaderPropagation   *HeaderPropagation
+	reqCtx                    *requestContext
+	didApplyRouterRespHeaders bool
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
@@ -130,17 +136,26 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 		h.didSetSubgraphErrors = true
 		trackFinalResponseError(h.resolveCtx.Context(), errs)
 	}
+	if h.routerHeaderPropagation != nil && !h.didApplyRouterRespHeaders {
+		h.didApplyRouterRespHeaders = true
+		if err := h.routerHeaderPropagation.ApplyRouterResponseHeaderRules(h.writer, h.reqCtx); err != nil {
+			if h.reqCtx != nil {
+				h.reqCtx.logger.Error("Failed to apply router response header rules", zap.Error(err))
+			}
+		}
+	}
 	return h.writer.Write(p)
 }
 
 // HeaderPropagation is a pre-origin handler that can be used to propagate and
 // manipulate headers from the client request to the upstream
 type HeaderPropagation struct {
-	regex            map[string]*regexp.Regexp
-	rules            *config.HeaderRules
-	compiledRules    map[string]*vm.Program
-	hasRequestRules  bool
-	hasResponseRules bool
+	regex                       map[string]*regexp.Regexp
+	rules                       *config.HeaderRules
+	compiledRules               map[string]*vm.Program
+	compiledRouterResponseRules map[string]*vm.Program
+	hasRequestRules             bool
+	hasResponseRules            bool
 	// Precomputed request rule presence for fast-path checks
 	hasAllRequestRules      bool
 	subgraphHasRequestRules map[string]bool
@@ -162,12 +177,13 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 
 	initHeaderRules(rules)
 	hf := HeaderPropagation{
-		rules:         rules,
-		regex:         map[string]*regexp.Regexp{},
-		compiledRules: map[string]*vm.Program{},
+		rules:                       rules,
+		regex:                       map[string]*regexp.Regexp{},
+		compiledRules:               map[string]*vm.Program{},
+		compiledRouterResponseRules: map[string]*vm.Program{},
 	}
 
-	rhrs, rhrrs := hf.getAllRules()
+	rhrs, rhrrs, rrs := hf.getAllRules()
 	hf.hasRequestRules = len(rhrs) > 0
 	hf.hasResponseRules = len(rhrrs) > 0
 
@@ -187,7 +203,7 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 		return nil, err
 	}
 
-	if err := hf.compileExpressionRules(rhrs); err != nil {
+	if err := hf.compileExpressionRules(rhrs, rrs); err != nil {
 		return nil, err
 	}
 
@@ -229,7 +245,7 @@ func AddCacheControlPolicyToRules(rules *config.HeaderRules, cacheControl config
 	return rules
 }
 
-func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*config.ResponseHeaderRule) {
+func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*config.ResponseHeaderRule, []*config.RouterResponseHeaderRule) {
 	rhrs := hf.rules.All.Request
 	for _, subgraph := range hf.rules.Subgraphs {
 		rhrs = append(rhrs, subgraph.Request...)
@@ -240,7 +256,7 @@ func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*conf
 		rhrrs = append(rhrrs, subgraph.Response...)
 	}
 
-	return rhrs, rhrrs
+	return rhrs, rhrrs, hf.rules.Router.Response
 }
 
 func (hf *HeaderPropagation) processRule(rule config.HeaderRule, index int) error {
@@ -276,9 +292,9 @@ func (hf *HeaderPropagation) collectRuleMatchers(rhrs []*config.RequestHeaderRul
 	return nil
 }
 
-func (hf *HeaderPropagation) compileExpressionRules(rules []*config.RequestHeaderRule) error {
+func (hf *HeaderPropagation) compileExpressionRules(requestRules []*config.RequestHeaderRule, routerResponseRules []*config.RouterResponseHeaderRule) error {
 	manager := expr.CreateNewExprManager()
-	for _, rule := range rules {
+	for _, rule := range requestRules {
 		if rule.Expression == "" {
 			continue
 		}
@@ -290,6 +306,19 @@ func (hf *HeaderPropagation) compileExpressionRules(rules []*config.RequestHeade
 			return fmt.Errorf("error compiling expression %s for header rule %s: %w", rule.Expression, rule.Name, err)
 		}
 		hf.compiledRules[rule.Expression] = program
+	}
+	for _, rule := range routerResponseRules {
+		if rule.Expression == "" {
+			continue
+		}
+		if _, ok := hf.compiledRouterResponseRules[rule.Expression]; ok {
+			continue
+		}
+		program, err := manager.CompileExpression(rule.Expression, reflect.String)
+		if err != nil {
+			return fmt.Errorf("error compiling expression %s for header rule %s: %w", rule.Expression, rule.Name, err)
+		}
+		hf.compiledRouterResponseRules[rule.Expression] = program
 	}
 	return nil
 }
@@ -706,6 +735,39 @@ func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHe
 		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %s", rule.Expression, rule.Name, err.Error())
 	}
 	return
+}
+
+func (h *HeaderPropagation) getRouterResponseRuleExpressionValue(rule *config.RouterResponseHeaderRule, reqCtx *requestContext) (value string, err error) {
+	if reqCtx == nil {
+		return "", fmt.Errorf("context cannot be nil")
+	}
+	program, ok := h.compiledRouterResponseRules[rule.Expression]
+	if !ok {
+		return "", fmt.Errorf("expression %s not found in compiled rules for header rule %s", rule.Expression, rule.Name)
+	}
+	value, err = expr.ResolveStringExpression(program, reqCtx.expressionContext)
+	if err != nil {
+		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %w", rule.Expression, rule.Name, err)
+	}
+	return
+}
+
+// ApplyRouterResponseHeaderRules applies router response header rules to the response writer
+func (h *HeaderPropagation) ApplyRouterResponseHeaderRules(w http.ResponseWriter, reqCtx *requestContext) error {
+	for _, rule := range h.rules.Router.Response {
+		if rule.Expression == "" {
+			continue
+		}
+		value, err := h.getRouterResponseRuleExpressionValue(rule, reqCtx)
+		if err != nil {
+			return fmt.Errorf("failed to evaluate router response header expression for %s: %w", rule.Name, err)
+		}
+		if value != "" {
+			w.Header().Set(rule.Name, value)
+		}
+	}
+
+	return nil
 }
 
 func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirective.Object, string) {

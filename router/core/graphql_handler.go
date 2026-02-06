@@ -191,6 +191,15 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Write contents of buf to the header propagation writer
 		hpw := HeaderPropagationWriter(w, resolveCtx, true)
 
+		// Attach router response header rules to the writer so they are applied
+		// at write time, after the resolve has completed (giving access to request.error etc.)
+		if h.headerPropagation != nil {
+			if pw, ok := hpw.(*headerPropagationWriter); ok {
+				pw.routerHeaderPropagation = h.headerPropagation
+				pw.reqCtx = reqCtx
+			}
+		}
+
 		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
 		if err != nil {

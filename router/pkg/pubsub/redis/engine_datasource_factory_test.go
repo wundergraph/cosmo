@@ -59,7 +59,7 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	// Call Load on the data source
 	data, err := ds.Load(context.Background(), nil, []byte(input))
 	require.NoError(t, err)
-	require.Equal(t, `{"success": true}`, string(data))
+	require.Equal(t, `{"__typename": "edfs__PublishResult", "success": true}`, string(data))
 }
 
 // TestEngineDataSourceFactory_GetResolveDataSource_WrongType tests the EngineDataSourceFactory with a mocked adapter

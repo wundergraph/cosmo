@@ -242,9 +242,9 @@ func (s *PublishDataSource) Load(ctx context.Context, headers http.Header, input
 
 	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{&publishData.Event}}); err != nil {
 		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
-		return []byte(`{"success": false}`), nil
+		return []byte(`{"__typename": "edfs__PublishResult", "success": false}`), nil
 	}
-	return []byte(`{"success": true}`), nil
+	return []byte(`{"__typename": "edfs__PublishResult", "success": true}`), nil
 }
 
 func (s *PublishDataSource) LoadWithFiles(ctx context.Context, headers http.Header, input []byte, files []*httpclient.FileUpload) (data []byte, err error) {

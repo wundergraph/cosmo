@@ -24,7 +24,7 @@ require (
 	github.com/wundergraph/astjson v1.0.0
 	github.com/wundergraph/cosmo/demo v0.0.0-20250912064154-106e871ee32e
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
-	github.com/wundergraph/cosmo/router v0.0.0-20251126113850-ce5751591be9
+	github.com/wundergraph/cosmo/router v0.0.0-20260206112736-7b219acefa94
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.247
 	go.opentelemetry.io/otel v1.36.0
