@@ -271,7 +271,9 @@ export class AbstractSelectionRewriter {
       ];
     }
 
-    node.selections = [...uniqueInlineFragments];
+    // Put the fields back in the selection set. If there are any fields that were not included in the inline fragments.
+    const fields = node.selections.filter((s) => s.kind === Kind.FIELD);
+    node.selections = [...fields, ...uniqueInlineFragments];
   }
 
   /**
@@ -348,11 +350,7 @@ export class AbstractSelectionRewriter {
       selectionSet: {
         kind: Kind.SELECTION_SET,
         selections: fields
-          .filter((f) => type.getFields()[f.name.value])
-          .map((f) => ({
-            kind: Kind.FIELD,
-            name: { kind: Kind.NAME, value: f.name.value },
-          })),
+          .filter((f) => type.getFields()[f.name.value]),
       },
     };
   }
