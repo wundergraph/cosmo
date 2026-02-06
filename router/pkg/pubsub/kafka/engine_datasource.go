@@ -1,16 +1,13 @@
 package kafka
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
+	"net/http"
 	"slices"
 	"strings"
 
-	"github.com/buger/jsonparser"
-	"github.com/cespare/xxhash/v2"
 	goccyjson "github.com/goccy/go-json"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
@@ -219,27 +216,7 @@ func (s *SubscriptionDataSource) SubscriptionEventConfiguration(input []byte) da
 	return &subscriptionConfiguration
 }
 
-func (s *SubscriptionDataSource) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
-	val, _, _, err := jsonparser.Get(input, "topics")
-	if err != nil {
-		return err
-	}
-
-	_, err = xxh.Write(val)
-	if err != nil {
-		return err
-	}
-
-	val, _, _, err = jsonparser.Get(input, "providerId")
-	if err != nil {
-		return err
-	}
-
-	_, err = xxh.Write(val)
-	return err
-}
-
-func (s *SubscriptionDataSource) Start(ctx *resolve.Context, input []byte, updater datasource.SubscriptionEventUpdater) error {
+func (s *SubscriptionDataSource) Start(ctx *resolve.Context, header http.Header, input []byte, updater datasource.SubscriptionEventUpdater) error {
 	subConf := s.SubscriptionEventConfiguration(input)
 	if subConf == nil {
 		return fmt.Errorf("no subscription configuration found")
@@ -257,25 +234,20 @@ type PublishDataSource struct {
 	pubSub datasource.Adapter
 }
 
-func (s *PublishDataSource) Load(ctx context.Context, input []byte, out *bytes.Buffer) error {
+func (s *PublishDataSource) Load(ctx context.Context, headers http.Header, input []byte) (data []byte, err error) {
 	var publishData publishData
 	if err := json.Unmarshal(input, &publishData); err != nil {
-		return err
+		return nil, err
 	}
 
 	if err := s.pubSub.Publish(ctx, publishData.PublishEventConfiguration(), []datasource.StreamEvent{&Event{&publishData.Event}}); err != nil {
 		// err will not be returned but only logged inside PubSubProvider.Publish to avoid a "unable to fetch from subgraph" error
-		_, errWrite := io.WriteString(out, `{"__typename": "edfs__PublishResult", "success": false}`)
-		return errWrite
+		return []byte(`{"__typename": "edfs__PublishResult", "success": false}`), nil
 	}
-	_, errWrite := io.WriteString(out, `{"__typename": "edfs__PublishResult", "success": true}`)
-	if errWrite != nil {
-		return errWrite
-	}
-	return nil
+	return []byte(`{"__typename": "edfs__PublishResult", "success": true}`), nil
 }
 
-func (s *PublishDataSource) LoadWithFiles(ctx context.Context, input []byte, files []*httpclient.FileUpload, out *bytes.Buffer) (err error) {
+func (s *PublishDataSource) LoadWithFiles(ctx context.Context, headers http.Header, input []byte, files []*httpclient.FileUpload) (data []byte, err error) {
 	panic("not implemented")
 }
 
