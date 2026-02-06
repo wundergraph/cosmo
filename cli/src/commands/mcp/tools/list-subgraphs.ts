@@ -3,7 +3,13 @@ import { getBaseHeaders } from '../../../core/config.js';
 import { ToolContext } from './types.js';
 
 export const registerListSubgraphsTool = ({ server, opts }: ToolContext) => {
-  server.tool('list_subgraphs', 'List all subgraphs', async () => {
+  server.registerTool(
+    'list_subgraphs',
+    {
+      title: 'List Subgraphs',
+      description: 'List all subgraphs',
+    },
+    async () => {
     const resp = await opts.client.platform.getSubgraphs(
       {
         limit: 0,
