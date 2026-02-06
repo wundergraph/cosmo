@@ -231,6 +231,11 @@ export class AbstractSelectionRewriter {
       return;
     }
 
+    const type = this.schema.getType(ctx.node.typeCondition?.name.value ?? '');
+    if (!type || !this.isTypeWithFields(type)) {
+      return undefined;
+    }
+
     if (!this.inlineFragmentIsInterfaceType(ctx.node)) {
       // Returning undefined continues traversal without deleting the node.
       // If the inline fragment targets a type that doesn't implement the current interface,
@@ -241,11 +246,6 @@ export class AbstractSelectionRewriter {
         );
       }
 
-      const type = this.schema.getType(ctx.node.typeCondition?.name.value ?? '');
-      if (!type || !this.isTypeWithFields(type)) {
-        return undefined;
-      }
-
       this.rebalanceStack.push(true);
       this.typeStack.push(this.currentType);
       this.currentType = type;
@@ -253,6 +253,16 @@ export class AbstractSelectionRewriter {
     }
 
     this.rebalanceStack.push(false);
+
+    if (!isInterfaceType(type)) {
+      return undefined;
+    }
+
+    if (this.currentInterfaceRoot) {
+      this.interfaceRootStack.push(this.currentInterfaceRoot);
+    }
+
+    this.currentInterfaceRoot = type;
 
     this.appendValidInlineFragments(ctx.node.selectionSet);
     this.distributeFieldsIntoInlineFragments(ctx.node.selectionSet);
@@ -279,6 +289,8 @@ export class AbstractSelectionRewriter {
 
     if (this.rebalanceStack.pop() ?? false) {
       this.currentType = this.typeStack.pop() ?? this.currentType;
+    } else {
+      this.currentInterfaceRoot = this.interfaceRootStack.pop();
     }
   }
 
@@ -308,10 +320,15 @@ export class AbstractSelectionRewriter {
         continue;
       }
 
-      uniqueFragment.selectionSet.selections = [
-        ...uniqueFragment.selectionSet.selections,
-        ...selectedFragment.selectionSet.selections,
-      ];
+      const existingFieldNames = new Set(
+        uniqueFragment.selectionSet.selections.filter((s) => s.kind === Kind.FIELD).map((s) => s.name.value),
+      );
+
+      const missingFields = selectedFragment.selectionSet.selections.filter(
+        (s) => s.kind === Kind.FIELD && !existingFieldNames.has(s.name.value),
+      );
+
+      uniqueFragment.selectionSet.selections = [...uniqueFragment.selectionSet.selections, ...missingFields];
     }
 
     // Put the fields back in the selection set. If there are any fields that were not included in the inline fragments.
@@ -347,7 +364,7 @@ export class AbstractSelectionRewriter {
    * @param node - The selection set node to append inline fragments to
    */
   private appendValidInlineFragments(node: SelectionSetNode): void {
-    if (!isInterfaceType(this.currentType)) {
+    if (!this.currentInterfaceRoot) {
       return;
     }
 
@@ -357,8 +374,7 @@ export class AbstractSelectionRewriter {
     }
 
     const selectedInlineFragments = node.selections.filter((s) => s.kind === Kind.INLINE_FRAGMENT);
-    const possibleTypes = this.schema.getPossibleTypes(this.currentType);
-
+    const possibleTypes = this.getPossibleIntersectingTypes(this.currentInterfaceRoot, [...this.interfaceRootStack]);
     const newInlineFragments: InlineFragmentNode[] = [];
 
     for (const possibleType of possibleTypes) {
@@ -368,6 +384,20 @@ export class AbstractSelectionRewriter {
     }
 
     node.selections = [...fields, ...newInlineFragments, ...selectedInlineFragments];
+  }
+
+  private getPossibleIntersectingTypes(
+    currentInterfaceRoot: GraphQLInterfaceType,
+    ancestors: GraphQLInterfaceType[],
+  ): ReadonlyArray<GraphQLObjectType> {
+    const possibleTypes = this.schema.getPossibleTypes(currentInterfaceRoot);
+    const lastAncestor = ancestors.pop();
+    if (!lastAncestor) {
+      return possibleTypes;
+    }
+
+    const parentPossibleTypes = this.getPossibleIntersectingTypes(lastAncestor, ancestors);
+    return possibleTypes.filter((t) => parentPossibleTypes.some((p) => p.name === t.name));
   }
 
   /**

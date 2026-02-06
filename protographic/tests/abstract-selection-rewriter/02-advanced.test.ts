@@ -263,6 +263,43 @@ describe('AbstractSelectionRewriter - Advanced Cases', () => {
         }"
       `);
     });
+
+    it('should handle deeply nested interface intersections', () => {
+      const input = `
+        departments {
+          members {
+            ... on Permission {
+              scope
+              ... on Managed {
+                supervisor
+                ... on Employee {
+                  name
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Contractor {
+                scope
+                supervisor
+                name
+              }
+              ... on Intern {
+                scope
+              }
+            }
+          }
+        }"
+      `);
+    });
   });
 
   describe('Via organization (deep nesting)', () => {
@@ -625,13 +662,13 @@ describe('AbstractSelectionRewriter - Advanced Cases', () => {
                     supervisor
                     scope
                   }
-                  ... on Intern {
-                    scope
-                    school
-                  }
                   ... on Engineer {
                     supervisor
                     specialty
+                  }
+                  ... on Intern {
+                    scope
+                    school
                   }
                 }
               }
