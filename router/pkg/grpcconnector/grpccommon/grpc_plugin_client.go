@@ -137,7 +137,7 @@ func (g *GRPCPluginClient) SetClients(pluginClient *plugin.Client, clientConn gr
 	// Close the previous client connection if it exists
 	if g.cc != nil {
 		if closer, ok := g.cc.(io.Closer); ok {
-			closer.Close()
+			_ = closer.Close()
 		}
 	}
 

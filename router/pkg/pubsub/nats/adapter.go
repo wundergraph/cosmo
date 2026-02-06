@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
@@ -27,7 +26,7 @@ const (
 type Adapter interface {
 	datasource.Adapter
 	// Request sends a request to the specified subject and writes the response to the given writer
-	Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer) error
+	Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent) ([]byte, error)
 }
 
 // Ensure ProviderAdapter implements ProviderSubscriptionHooks
@@ -295,10 +294,10 @@ func (p *ProviderAdapter) Publish(ctx context.Context, conf datasource.PublishEv
 	return nil
 }
 
-func (p *ProviderAdapter) Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer) error {
+func (p *ProviderAdapter) Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent) ([]byte, error) {
 	reqConf, ok := cfg.(*PublishAndRequestEventConfiguration)
 	if !ok {
-		return datasource.NewError("publish event not support by nats provider", nil)
+		return nil, datasource.NewError("publish event not support by nats provider", nil)
 	}
 
 	log := p.logger.With(
@@ -308,12 +307,12 @@ func (p *ProviderAdapter) Request(ctx context.Context, cfg datasource.PublishEve
 	)
 
 	if p.client == nil {
-		return datasource.NewError("nats client not initialized", nil)
+		return nil, datasource.NewError("nats client not initialized", nil)
 	}
 
 	natsEvent, ok := event.Clone().(*MutableEvent)
 	if !ok {
-		return datasource.NewError("invalid event type for NATS adapter", nil)
+		return nil, datasource.NewError("invalid event type for NATS adapter", nil)
 	}
 
 	log.Debug("request", zap.ByteString("data", natsEvent.Data))
@@ -334,7 +333,7 @@ func (p *ProviderAdapter) Request(ctx context.Context, cfg datasource.PublishEve
 			ErrorType:           "request_error",
 			DestinationName:     reqConf.Subject,
 		})
-		return datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", reqConf.Subject), err)
+		return nil, datasource.NewError(fmt.Sprintf("error requesting from NATS subject %s", reqConf.Subject), err)
 	}
 
 	p.streamMetricStore.Produce(ctx, metric.StreamsEvent{
@@ -345,13 +344,7 @@ func (p *ProviderAdapter) Request(ctx context.Context, cfg datasource.PublishEve
 	})
 
 	// We don't collect metrics on err here as it's an error related to the writer
-	_, err = w.Write(msg.Data)
-	if err != nil {
-		log.Error("error writing response to writer", zap.Error(err))
-		return err
-	}
-
-	return err
+	return msg.Data, nil
 }
 
 func (p *ProviderAdapter) flush(ctx context.Context) error {

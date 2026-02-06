@@ -1,14 +1,14 @@
 package datasource
 
 import (
-	"github.com/cespare/xxhash/v2"
+	"net/http"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 type SubscriptionDataSource interface {
 	SubscriptionEventConfiguration(input []byte) (SubscriptionEventConfiguration, error)
-	Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error
-	UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) (err error)
+	Start(ctx *resolve.Context, header http.Header, input []byte, updater resolve.SubscriptionUpdater) error
 	SetHooks(hooks Hooks)
 }
 
