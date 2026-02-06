@@ -224,10 +224,10 @@ export class AbstractSelectionRewriter {
     this.appendValidInlineFragments(ctx.node.selectionSet);
     this.distributeFieldsIntoInlineFragments(ctx.node.selectionSet);
 
-    const index = this.currentSelectionSet?.selections.findIndex(
+    const index = this.currentSelectionSet.selections.findIndex(
       (s) => s.kind === Kind.INLINE_FRAGMENT && s.typeCondition?.name.value === ctx.node.typeCondition?.name.value,
     );
-    if (index === undefined) {
+    if (index < 0) {
       return;
     }
 
