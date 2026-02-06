@@ -300,6 +300,59 @@ describe('AbstractSelectionRewriter - Advanced Cases', () => {
         }"
       `);
     });
+
+    it('should handle multiple nested interface intersection paths', () => {
+      const input = `
+        departments {
+          members {
+            id
+            ... on Managed {
+              supervisor
+              ... on Permission {
+                scope
+              }
+            }
+            ... on Permission {
+              scope
+              ... on Managed {
+                supervisor
+                ... on Employee {
+                  name
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                id
+              }
+              ... on Engineer {
+                id
+                supervisor
+              }
+              ... on Contractor {
+                id
+                supervisor
+                scope
+                name
+              }
+              ... on Intern {
+                id
+                scope
+              }
+            }
+          }
+        }"
+      `);
+    });
   });
 
   describe('Via organization (deep nesting)', () => {
@@ -887,6 +940,87 @@ describe('AbstractSelectionRewriter - Advanced Cases', () => {
                   ... on Engineer {
                     id
                     specialty
+                  }
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should handle multiple nested interface intersections within Manager.reports', () => {
+      const input = `
+        departments {
+          members {
+            ... on Employee {
+              id
+              name
+              ... on Manager {
+                level
+                reports {
+                  id
+                  ... on Managed {
+                    supervisor
+                    ... on Permission {
+                      scope
+                    }
+                  }
+                  ... on Permission {
+                    scope
+                    ... on Managed {
+                      supervisor
+                      ... on Employee {
+                        name
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Engineer {
+                id
+                name
+              }
+              ... on Contractor {
+                id
+                name
+              }
+              ... on Intern {
+                id
+                name
+              }
+              ... on Manager {
+                id
+                name
+                level
+                reports {
+                  ... on Manager {
+                    id
+                  }
+                  ... on Engineer {
+                    id
+                    supervisor
+                  }
+                  ... on Contractor {
+                    id
+                    supervisor
+                    scope
+                    name
+                  }
+                  ... on Intern {
+                    id
+                    scope
                   }
                 }
               }
