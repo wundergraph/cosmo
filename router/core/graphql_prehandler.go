@@ -67,6 +67,7 @@ type PreHandlerOptions struct {
 	ComputeOperationSha256      bool
 	ApolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	DisableVariablesRemapping   bool
+	MapFieldArguments           bool
 	ExprManager                 *expr.Manager
 	OmitBatchExtensions         bool
 
@@ -102,6 +103,7 @@ type PreHandler struct {
 	apolloCompatibilityFlags    *config.ApolloCompatibilityFlags
 	variableParsePool           astjson.ParserPool
 	disableVariablesRemapping   bool
+	mapFieldArguments           bool
 	exprManager                 *expr.Manager
 	omitBatchExtensions         bool
 
@@ -160,6 +162,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		computeOperationSha256:    opts.ComputeOperationSha256,
 		apolloCompatibilityFlags:  opts.ApolloCompatibilityFlags,
 		disableVariablesRemapping: opts.DisableVariablesRemapping,
+		mapFieldArguments:         opts.MapFieldArguments,
 		exprManager:               opts.ExprManager,
 		omitBatchExtensions:       opts.OmitBatchExtensions,
 
@@ -783,7 +786,7 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	* Normalize the variables
 	 */
 
-	cached, uploadsMapping, err := operationKit.NormalizeVariables()
+	cached, uploadsMapping, fieldArgMapping, err := operationKit.NormalizeVariables()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
@@ -798,6 +801,7 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 		engineNormalizeSpan.End()
 		return err
 	}
+	// Store the field argument mapping for later use when creating Arguments
 	engineNormalizeSpan.SetAttributes(otel.WgVariablesNormalizationCacheHit.Bool(cached))
 	requestContext.operation.variablesNormalizationCacheHit = cached
 
@@ -907,6 +911,7 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 	requestContext.operation.rawContent = operationKit.parsedOperation.Request.Query
 	requestContext.operation.content = operationKit.parsedOperation.NormalizedRepresentation
 	requestContext.operation.variables, err = variablesParser.ParseBytes(operationKit.parsedOperation.Request.Variables)
+
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 		if !requestContext.operation.traceOptions.ExcludeNormalizeStats {
@@ -915,6 +920,14 @@ func (h *PreHandler) handleOperation(w http.ResponseWriter, req *http.Request, v
 		engineNormalizeSpan.End()
 		return err
 	}
+
+	if h.mapFieldArguments {
+		requestContext.operation.fieldArguments = NewArguments(
+			fieldArgMapping,
+			requestContext.operation.variables,
+		)
+	}
+
 	requestContext.operation.normalizationTime = time.Since(startNormalization)
 	requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
 	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizationTime)

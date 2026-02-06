@@ -125,6 +125,7 @@ type OperationProcessorOptions struct {
 	ComplexityLimits                                 *config.ComplexityLimits
 	ParserTokenizerLimits                            astparser.TokenizerLimits
 	OperationNameLengthLimit                         int
+	EnableFieldArgumentMapping                       bool
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -780,6 +781,10 @@ type VariablesNormalizationCacheEntry struct {
 	// request spec for file uploads.
 	uploadsMapping []uploads.UploadPathMapping
 
+	// fieldArgumentMapping maps field arguments to their variable names for fast lookup.
+	// This is populated during variable normalization and cached to avoid repeated AST walks.
+	fieldArgumentMapping astnormalization.FieldArgumentMapping
+
 	// reparse indicates whether the operation document needs to be reparsed from
 	// its string representation when retrieved from the cache.
 	reparse bool
@@ -907,10 +912,10 @@ func (o *OperationKit) normalizeVariablesCacheKey() uint64 {
 }
 
 // NormalizeVariables normalizes variables and returns a slice of upload mappings
-// if any of them were present in a query.
+// if any of them were present in a query, as well as the field argument mapping.
 // If normalized values were found in the cache, it skips normalization and returns the caching set to true.
 // If an error is returned, then caching is set to false.
-func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.UploadPathMapping, err error) {
+func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.UploadPathMapping, fieldArgMapping astnormalization.FieldArgumentMapping, err error) {
 	cacheKey := o.normalizeVariablesCacheKey()
 	if o.cache != nil && o.cache.variablesNormalizationCache != nil {
 		entry, ok := o.cache.variablesNormalizationCache.Get(cacheKey)
@@ -921,10 +926,10 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 
 			if entry.reparse {
 				if err = o.setAndParseOperationDoc(); err != nil {
-					return false, nil, err
+					return false, nil, nil, err
 				}
 			}
-			return true, entry.uploadsMapping, nil
+			return true, entry.uploadsMapping, entry.fieldArgumentMapping, nil
 		}
 	}
 
@@ -935,10 +940,13 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 	copy(operationRawBytesBefore, o.kit.doc.Input.RawBytes)
 
 	report := &operationreport.Report{}
-	uploadsMapping := o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
+	normalizerResult := o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
 	if report.HasErrors() {
-		return false, nil, &reportError{report: report}
+		return false, nil, nil, &reportError{report: report}
 	}
+
+	uploadsMapping := normalizerResult.UploadsMapping
+	fieldArgumentMapping := normalizerResult.FieldArgumentMapping
 
 	// Assuming the user sends a multi-operation document
 	// During normalization, we removed the unused operations from the document
@@ -959,14 +967,14 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return false, nil, err
+		return false, nil, nil, err
 	}
 	// Reset the doc with the original name
 	o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name = nameRef
 
 	_, err = o.kit.keyGen.Write(o.kit.normalizedOperation.Bytes())
 	if err != nil {
-		return false, nil, err
+		return false, nil, nil, err
 	}
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
@@ -976,6 +984,7 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 		if o.cache != nil && o.cache.variablesNormalizationCache != nil {
 			entry := VariablesNormalizationCacheEntry{
 				uploadsMapping:           uploadsMapping,
+				fieldArgumentMapping:     fieldArgumentMapping,
 				id:                       o.parsedOperation.ID,
 				normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 				variables:                o.parsedOperation.Request.Variables,
@@ -984,14 +993,14 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 			o.cache.variablesNormalizationCache.Set(cacheKey, entry, 1)
 		}
 
-		return false, uploadsMapping, nil
+		return false, uploadsMapping, fieldArgumentMapping, nil
 	}
 
 	o.kit.normalizedOperation.Reset()
 
 	err = o.kit.printer.Print(o.kit.doc, o.kit.normalizedOperation)
 	if err != nil {
-		return false, nil, err
+		return false, nil, nil, err
 	}
 
 	o.parsedOperation.NormalizedRepresentation = o.kit.normalizedOperation.String()
@@ -1000,6 +1009,7 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 	if o.cache != nil && o.cache.variablesNormalizationCache != nil {
 		entry := VariablesNormalizationCacheEntry{
 			uploadsMapping:           uploadsMapping,
+			fieldArgumentMapping:     fieldArgumentMapping,
 			id:                       o.parsedOperation.ID,
 			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 			variables:                o.parsedOperation.Request.Variables,
@@ -1008,7 +1018,7 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 		o.cache.variablesNormalizationCache.Set(cacheKey, entry, 1)
 	}
 
-	return false, uploadsMapping, nil
+	return false, uploadsMapping, fieldArgumentMapping, nil
 }
 
 func (o *OperationKit) remapVariablesCacheKey(disabled bool) uint64 {
@@ -1406,6 +1416,7 @@ type parseKitOptions struct {
 	apolloCompatibilityFlags                         config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
 	disableExposingVariablesContentOnValidationError bool
+	enableFieldArgumentMapping                       bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
@@ -1421,7 +1432,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			astnormalization.WithRemoveFragmentDefinitions(),
 			astnormalization.WithRemoveUnusedVariables(),
 		),
-		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
+		variablesNormalizer: astnormalization.NewVariablesNormalizer(options.enableFieldArgumentMapping),
 		variablesRemapper:   astnormalization.NewVariablesMapper(),
 		printer:             &astprinter.Printer{},
 		normalizedOperation: &bytes.Buffer{},
@@ -1460,6 +1471,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                   opts.ApolloRouterCompatibilityFlags,
 			disableExposingVariablesContentOnValidationError: opts.DisableExposingVariablesContentOnValidationError,
+			enableFieldArgumentMapping:                       opts.EnableFieldArgumentMapping,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {

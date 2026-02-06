@@ -295,7 +295,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		return nil, err
 	}
 
-	_, _, err = k.NormalizeVariables()
+	_, _, _, err = k.NormalizeVariables()
 	if err != nil {
 		return nil, err
 	}

@@ -1295,6 +1295,7 @@ func (s *graphServer) buildGraphMux(
 		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
+		EnableFieldArgumentMapping:                       s.subscriptionHooks.needFieldArgumentMapping(),
 	})
 	operationPlanner := NewOperationPlanner(executor, gm.planCache)
 
@@ -1471,6 +1472,7 @@ func (s *graphServer) buildGraphMux(
 		ComputeOperationSha256:      computeSha256,
 		ApolloCompatibilityFlags:    &s.apolloCompatibilityFlags,
 		DisableVariablesRemapping:   s.engineExecutionConfiguration.DisableVariablesRemapping,
+		MapFieldArguments:           s.subscriptionHooks.needFieldArgumentMapping(),
 		ExprManager:                 exprManager,
 		OmitBatchExtensions:         s.batchingConfig.OmitExtensions,
 
@@ -1496,6 +1498,7 @@ func (s *graphServer) buildGraphMux(
 			WebSocketConfiguration:    s.webSocketConfiguration,
 			ClientHeader:              s.clientHeader,
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
+			MapFieldArguments:         s.subscriptionHooks.needFieldArgumentMapping(),
 			ApolloCompatibilityFlags:  s.apolloCompatibilityFlags,
 		})
 

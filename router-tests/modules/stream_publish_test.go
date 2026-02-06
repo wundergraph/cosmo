@@ -358,4 +358,52 @@ func TestPublishHook(t *testing.T) {
 			require.Equal(t, []byte("3"), header.Value)
 		})
 	})
+
+	t.Run("Test Publish hook can access field arguments", func(t *testing.T) {
+		t.Parallel()
+
+		// This test verifies that the publish hook can access GraphQL field arguments
+		// via ctx.Operation().Arguments().
+
+		var capturedEmployeeID int
+
+		customModule := stream_publish.PublishModule{
+			HookCallCount: &atomic.Int32{},
+			Callback: func(ctx core.StreamPublishEventHandlerContext, events datasource.StreamEvents) (datasource.StreamEvents, error) {
+				args := ctx.Operation().Arguments()
+				if args != nil {
+					employeeIDArg := args.Get("mutation.updateEmployeeMyKafka.employeeID")
+					if employeeIDArg != nil {
+						capturedEmployeeID = employeeIDArg.GetInt()
+					}
+				}
+				return events, nil
+			},
+		}
+
+		cfg := config.Config{
+			Graph: config.Graph{},
+			Modules: map[string]interface{}{
+				"publishModule": customModule,
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsKafkaJSONTemplate,
+			EnableKafka:              true,
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(cfg.Modules),
+				core.WithCustomModules(&stream_publish.PublishModule{}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			events.KafkaEnsureTopicExists(t, xEnv, time.Second, "employeeUpdated")
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyKafka(employeeID: 5, update: {name: "test"}) { success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyKafka":{"success":true}}}`, resOne.Body)
+
+			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
+			assert.Equal(t, 5, capturedEmployeeID, "expected to capture employeeID argument value")
+		})
+	})
 }
