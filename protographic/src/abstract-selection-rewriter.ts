@@ -257,16 +257,16 @@ export class AbstractSelectionRewriter {
     const uniqueInlineFragments: InlineFragmentNode[] = [];
 
     for (const selectedFragment of selectedInlineFragments) {
-      const unqiueFragment = uniqueInlineFragments.find(
+      const uniqueFragment = uniqueInlineFragments.find(
         (f) => f.typeCondition?.name.value === selectedFragment.typeCondition?.name.value,
       );
-      if (!unqiueFragment) {
+      if (!uniqueFragment) {
         uniqueInlineFragments.push(selectedFragment);
         continue;
       }
 
-      unqiueFragment.selectionSet.selections = [
-        ...unqiueFragment.selectionSet.selections,
+      uniqueFragment.selectionSet.selections = [
+        ...uniqueFragment.selectionSet.selections,
         ...selectedFragment.selectionSet.selections,
       ];
     }
