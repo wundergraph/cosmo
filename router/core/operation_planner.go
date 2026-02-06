@@ -6,14 +6,14 @@ import (
 
 	"golang.org/x/sync/singleflight"
 
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-
-	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
-	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 )
 
 type planWithMetaData struct {
@@ -52,6 +52,9 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext) (*planWithMetaData
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
+
+	// Store plan config to access it from the operationContext.ComputeStaticCost()
+	ctx.planConfig = p.executor.PlanConfig
 
 	planner, err := plan.NewPlanner(p.executor.PlanConfig)
 	if err != nil {

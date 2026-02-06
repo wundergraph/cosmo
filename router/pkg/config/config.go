@@ -7,13 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
-
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/wundergraph/cosmo/router/internal/unique"
+	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 
@@ -438,6 +437,7 @@ type SecurityConfiguration struct {
 	BlockPersistedOperations    BlockOperationConfiguration `yaml:"block_persisted_operations" envPrefix:"SECURITY_BLOCK_PERSISTED_OPERATIONS_"`
 	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
+	CostAnalysis                *CostAnalysis               `yaml:"cost_analysis"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
 	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
@@ -468,6 +468,34 @@ type ComplexityLimits struct {
 
 	// When set to true, complexity validation is ignored for all introspection queries.
 	IgnoreIntrospection bool `yaml:"ignore_introspection" envDefault:"false" env:"SECURITY_COMPLEXITY_IGNORE_INTROSPECTION"`
+}
+
+// CostAnalysisMode defines how cost analysis behaves.
+type CostAnalysisMode string
+
+const (
+	CostAnalysisModeMeasure CostAnalysisMode = "measure"
+	CostAnalysisModeEnforce CostAnalysisMode = "enforce"
+)
+
+// CostAnalysis configures cost analysis based on @cost and @listSize directives.
+type CostAnalysis struct {
+	// Enabled controls whether cost analysis is active.
+	// When true, the router calculates costs for every operation.
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"SECURITY_COST_ANALYSIS_ENABLED"`
+
+	// Mode controls cost analysis behavior:
+	// - "measure": calculates costs without rejecting operations (for monitoring)
+	// - "enforce": calculates costs and rejects operations exceeding the estimated limit
+	Mode CostAnalysisMode `yaml:"mode,omitempty" envDefault:"measure" env:"SECURITY_COST_ANALYSIS_MODE"`
+
+	// EstimatedLimit is the maximum allowed estimated cost for a query.
+	// Requires Mode set to "enforce". Operations exceeding this limit are rejected.
+	EstimatedLimit int `yaml:"estimated_limit,omitempty" envDefault:"0" env:"SECURITY_COST_ANALYSIS_ESTIMATED_LIMIT"`
+
+	// EstimatedListSize is the default assumed size for list fields when no @listSize directive
+	// nor slicing argument is provided. Used as a multiplier for estimated cost calculation.
+	EstimatedListSize int `yaml:"estimated_list_size,omitempty" envDefault:"10" env:"SECURITY_COST_ANALYSIS_ESTIMATED_LIST_SIZE"`
 }
 
 type ComplexityLimit struct {

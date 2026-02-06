@@ -11,23 +11,21 @@ import (
 	"sync"
 	"time"
 
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 var _ RequestContext = (*requestContext)(nil)
@@ -504,6 +502,10 @@ type OperationContext interface {
 	// if called too early in request chain, it may be inaccurate for modules, using
 	// in Middleware is recommended
 	QueryPlanStats() (QueryPlanStats, error)
+
+	// Cost returns cost analysis results for the operation.
+	// This should be called after planning is complete; using in Middleware is recommended.
+	Cost() (OperationCost, error)
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -536,6 +538,7 @@ type operationContext struct {
 	variables  *astjson.Value
 	files      []*httpclient.FileUpload
 	clientInfo *ClientInfo
+	planConfig plan.Configuration
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
@@ -621,6 +624,12 @@ type QueryPlanStats struct {
 	TotalSubgraphFetches int
 	SubgraphFetches      map[string]int
 	SubgraphRootFields   []SubgraphRootField
+}
+
+// OperationCost holds cost analysis results for an operation.
+type OperationCost struct {
+	// Estimated is the static cost calculated before execution based on @cost and @listSize directives.
+	Estimated int
 }
 
 type SubgraphRootField struct {
@@ -719,6 +728,21 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 	}
 
 	return qps, nil
+}
+
+func (o *operationContext) Cost() (OperationCost, error) {
+	if o == nil || o.preparedPlan == nil || o.preparedPlan.preparedPlan == nil {
+		return OperationCost{}, errors.New("operation context or prepared plan is nil")
+	}
+
+	costCalc := o.preparedPlan.preparedPlan.GetStaticCostCalculator()
+	if costCalc == nil {
+		return OperationCost{}, errors.New("cost analysis is not enabled")
+	}
+
+	return OperationCost{
+		Estimated: costCalc.GetStaticCost(o.planConfig, o.variables),
+	}, nil
 }
 
 type SubgraphResolver struct {
