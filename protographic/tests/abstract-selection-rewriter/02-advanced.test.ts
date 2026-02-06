@@ -640,5 +640,223 @@ describe('AbstractSelectionRewriter - Advanced Cases', () => {
         }"
       `);
     });
+
+    it('should normalize Manager.reports with sub-interface selections', () => {
+      const input = `
+        departments {
+          members {
+            ... on Manager {
+              level
+              reports {
+                id
+                ... on Managed {
+                  supervisor
+                }
+                ... on Engineer {
+                  specialty
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                level
+                reports {
+                  ... on Manager {
+                    id
+                  }
+                  ... on Contractor {
+                    id
+                    supervisor
+                  }
+                  ... on Intern {
+                    id
+                  }
+                  ... on Engineer {
+                    supervisor
+                    id
+                    specialty
+                  }
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should normalize Manager.reports with mixed sub-interfaces and concrete types', () => {
+      const input = `
+        departments {
+          members {
+            ... on Manager {
+              level
+              reports {
+                name
+                ... on Managed {
+                  supervisor
+                }
+                ... on Permission {
+                  scope
+                }
+                ... on Contractor {
+                  agency
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                level
+                reports {
+                  ... on Manager {
+                    name
+                  }
+                  ... on Engineer {
+                    name
+                    supervisor
+                  }
+                  ... on Intern {
+                    name
+                    scope
+                  }
+                  ... on Contractor {
+                    supervisor
+                    scope
+                    name
+                    agency
+                  }
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
+
+    it('should normalize multiple levels of recursive Manager.reports with incremental types', () => {
+      const input = `
+        departments {
+          members {
+            ... on Manager {
+              level
+              reports {
+                id
+                ... on Manager {
+                  level
+                  reports {
+                    id
+                    name
+                    ... on Manager {
+                      level
+                      reports {
+                        id
+                        name
+                        ... on Manager { level }
+                        ... on Engineer { specialty }
+                        ... on Intern { school }
+                      }
+                    }
+                    ... on Engineer {
+                      specialty
+                    }
+                  }
+                }
+                ... on Engineer {
+                  specialty
+                }
+              }
+            }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Manager {
+                level
+                reports {
+                  ... on Contractor {
+                    id
+                  }
+                  ... on Intern {
+                    id
+                  }
+                  ... on Manager {
+                    id
+                    level
+                    reports {
+                      ... on Contractor {
+                        id
+                        name
+                      }
+                      ... on Intern {
+                        id
+                        name
+                      }
+                      ... on Manager {
+                        id
+                        name
+                        level
+                        reports {
+                          ... on Contractor {
+                            id
+                            name
+                          }
+                          ... on Manager {
+                            id
+                            name
+                            level
+                          }
+                          ... on Engineer {
+                            id
+                            name
+                            specialty
+                          }
+                          ... on Intern {
+                            id
+                            name
+                            school
+                          }
+                        }
+                      }
+                      ... on Engineer {
+                        id
+                        name
+                        specialty
+                      }
+                    }
+                  }
+                  ... on Engineer {
+                    id
+                    specialty
+                  }
+                }
+              }
+            }
+          }
+        }"
+      `);
+    });
   });
 });
