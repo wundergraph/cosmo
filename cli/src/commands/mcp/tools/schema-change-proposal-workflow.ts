@@ -20,7 +20,8 @@ export const registerSchemaChangeProposalWorkflowTool = ({
     'schema_change_proposal_workflow',
     {
       title: 'Schema Change Proposal Workflow',
-      description: 'Use this tool to generate a list of instructions to make a successful schema change for a Supergraph.',
+      description:
+        'Use this tool to generate a list of instructions to make a successful schema change for a Supergraph.',
       inputSchema: { change: z.string(), supergraph: z.string(), namespace: z.string().optional() },
     },
     ({ change, supergraph, namespace }) => ({
