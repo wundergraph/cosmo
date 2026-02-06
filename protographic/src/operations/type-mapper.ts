@@ -12,19 +12,8 @@ import {
   getNamedType,
   GraphQLScalarType,
 } from 'graphql';
-import { SCALAR_WRAPPER_TYPE_MAP } from '../types.js';
+import { SCALAR_TYPE_MAP, SCALAR_WRAPPER_TYPE_MAP } from '../types.js';
 import { unwrapNonNullType, isNestedListType, calculateNestingLevel } from './list-type-utils.js';
-
-/**
- * Maps GraphQL scalar types to Protocol Buffer types
- */
-const SCALAR_TYPE_MAP: Record<string, string> = {
-  ID: 'string',
-  String: 'string',
-  Int: 'int32',
-  Float: 'double',
-  Boolean: 'bool',
-};
 
 /**
  * Represents the proto type information for a GraphQL type
