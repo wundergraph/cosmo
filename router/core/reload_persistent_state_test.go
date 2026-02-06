@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func TestInMemorySwitchoverCache_UpdateInMemorySwitchoverCacheForConfigChanges(t *testing.T) {
+func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t *testing.T) {
 	t.Parallel()
 	t.Run("enable cache from disabled state", func(t *testing.T) {
 		t.Parallel()
@@ -118,7 +118,7 @@ func TestInMemorySwitchoverCache_UpdateInMemorySwitchoverCacheForConfigChanges(t
 	})
 }
 
-func TestInMemorySwitchOverCache_GetPlanCacheForFF(t *testing.T) {
+func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 	t.Parallel()
 	t.Run("returns operations for existing feature flag when enabled with ristretto cache", func(t *testing.T) {
 		t.Parallel()
@@ -197,7 +197,7 @@ func TestInMemorySwitchOverCache_GetPlanCacheForFF(t *testing.T) {
 	})
 }
 
-func TestInMemorySwitchOverCache_SetPlanCacheForFF(t *testing.T) {
+func TestInMemoryPlanCacheFallback_SetPlanCacheForFF(t *testing.T) {
 	t.Parallel()
 	t.Run("sets cache for feature flag when enabled", func(t *testing.T) {
 		t.Parallel()
@@ -249,7 +249,7 @@ func TestInMemorySwitchOverCache_SetPlanCacheForFF(t *testing.T) {
 	})
 }
 
-func TestInMemorySwitchOverCache_CleanupUnusedFeatureFlags(t *testing.T) {
+func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 	t.Parallel()
 	t.Run("removes unused feature flags", func(t *testing.T) {
 		t.Parallel()
@@ -335,7 +335,7 @@ func TestInMemorySwitchOverCache_CleanupUnusedFeatureFlags(t *testing.T) {
 	})
 }
 
-func TestInMemorySwitchOverCache_ProcessOnConfigChangeRestart(t *testing.T) {
+func TestInMemoryPlanCacheFallback_ProcessOnConfigChangeRestart(t *testing.T) {
 	t.Parallel()
 	t.Run("converts ristretto caches to operation slices", func(t *testing.T) {
 		t.Parallel()
@@ -410,7 +410,7 @@ func TestInMemorySwitchOverCache_ProcessOnConfigChangeRestart(t *testing.T) {
 	})
 }
 
-func TestInMemorySwitchOverCache_IsEnabled(t *testing.T) {
+func TestInMemoryPlanCacheFallback_IsEnabled(t *testing.T) {
 	t.Parallel()
 	t.Run("returns true when cache is enabled", func(t *testing.T) {
 		t.Parallel()

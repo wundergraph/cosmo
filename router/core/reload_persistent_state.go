@@ -10,31 +10,31 @@ import (
 
 type planCache = *ristretto.Cache[uint64, *planWithMetaData]
 
-// SwitchoverConfig This file describes any configuration which should persist or be shared across router restarts
-type SwitchoverConfig struct {
+// ReloadPersistentState This file describes any configuration which should persist or be shared across router restarts
+type ReloadPersistentState struct {
 	inMemoryPlanCacheFallback *InMemoryPlanCacheFallback
 }
 
-func NewSwitchoverConfig(logger *zap.Logger) *SwitchoverConfig {
-	return &SwitchoverConfig{
+func NewReloadPersistentState(logger *zap.Logger) *ReloadPersistentState {
+	return &ReloadPersistentState{
 		inMemoryPlanCacheFallback: &InMemoryPlanCacheFallback{
 			logger: logger,
 		},
 	}
 }
 
-// UpdateSwitchoverConfig updates the switchover config based on the provided config.
-func (s *SwitchoverConfig) UpdateSwitchoverConfig(config *Config) {
+// UpdateReloadPersistentState updates the fallback config based on the provided config.
+func (s *ReloadPersistentState) UpdateReloadPersistentState(config *Config) {
 	s.inMemoryPlanCacheFallback.updateStateFromConfig(config)
 }
 
 // CleanupFeatureFlags cleans up anything related to unused feature flags due to being now excluded
 // from the execution config
-func (s *SwitchoverConfig) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
+func (s *ReloadPersistentState) CleanupFeatureFlags(routerCfg *nodev1.RouterConfig) {
 	s.inMemoryPlanCacheFallback.cleanupUnusedFeatureFlags(routerCfg)
 }
 
-func (s *SwitchoverConfig) OnRouterConfigReload() {
+func (s *ReloadPersistentState) OnRouterConfigReload() {
 	// For cases of router config changes (not execution config), we shut down before creating the
 	// graph mux, because we need to initialize everything from the start
 	// This causes problems in using the previous planCache reference as it gets closed, so we need to
@@ -52,7 +52,7 @@ type InMemoryPlanCacheFallback struct {
 	logger                *zap.Logger
 }
 
-// updateStateFromConfig updates the internal state of the in-memory switchover cache based on the provided config
+// updateStateFromConfig updates the internal state of the in-memory fallback cache based on the provided config
 func (c *InMemoryPlanCacheFallback) updateStateFromConfig(config *Config) {
 	enabled := config.cacheWarmup != nil &&
 		config.cacheWarmup.Enabled &&
@@ -61,7 +61,7 @@ func (c *InMemoryPlanCacheFallback) updateStateFromConfig(config *Config) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	// If the configuration change occurred which disabled or enabled the switchover cache, we need to update the internal state
+	// If the configuration change occurred which disabled or enabled the fallback cache, we need to update the internal state
 	if enabled {
 		// Only initialize if its nil because its a first start, we dont want to override any old data in a map
 		if c.queriesForFeatureFlag == nil {
@@ -74,7 +74,7 @@ func (c *InMemoryPlanCacheFallback) updateStateFromConfig(config *Config) {
 	c.queriesForFeatureFlag = nil
 }
 
-// IsEnabled returns whether the in-memory switchover cache is enabled
+// IsEnabled returns whether the in-memory fallback cache is enabled
 func (c *InMemoryPlanCacheFallback) IsEnabled() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -126,13 +126,13 @@ func (c *InMemoryPlanCacheFallback) extractQueriesAndOverridePlanCache() {
 		return
 	}
 
-	switchoverMap := make(map[string]any)
+	fallbackMap := make(map[string]any)
 	for k, v := range c.queriesForFeatureFlag {
 		if cache, ok := v.(planCache); ok {
-			switchoverMap[k] = convertToNodeOperation(cache)
+			fallbackMap[k] = convertToNodeOperation(cache)
 		}
 	}
-	c.queriesForFeatureFlag = switchoverMap
+	c.queriesForFeatureFlag = fallbackMap
 }
 
 // cleanupUnusedFeatureFlags removes any feature flags that were removed from the execution config

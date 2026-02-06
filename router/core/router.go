@@ -83,14 +83,14 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		httpServer           *server
-		modules              []Module
-		EngineStats          statistics.EngineStatistics
-		playgroundHandler    func(http.Handler) http.Handler
-		proxy                ProxyFunc
-		disableUsageTracking bool
-		usage                UsageTracker
-		switchoverConfig     *SwitchoverConfig
+		httpServer            *server
+		modules               []Module
+		EngineStats           statistics.EngineStatistics
+		playgroundHandler     func(http.Handler) http.Handler
+		proxy                 ProxyFunc
+		disableUsageTracking  bool
+		usage                 UsageTracker
+		reloadPersistentState *ReloadPersistentState
 	}
 
 	UsageTracker interface {
@@ -606,7 +606,7 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 	r.httpServer.SwapGraphServer(ctx, server)
 
 	// Cleanup any unused feature flags in case a feature flag was removed
-	r.switchoverConfig.CleanupFeatureFlags(cfg)
+	r.reloadPersistentState.CleanupFeatureFlags(cfg)
 
 	return nil
 }
@@ -1175,12 +1175,12 @@ func (r *Router) Start(ctx context.Context) error {
 		healthCheckPath:    r.healthCheckPath,
 	})
 
-	if r.switchoverConfig == nil {
+	if r.reloadPersistentState == nil {
 		// This is only applicable for tests since we do not call here via the supervisor
-		r.switchoverConfig = NewSwitchoverConfig(r.logger)
+		r.reloadPersistentState = NewReloadPersistentState(r.logger)
 	}
 
-	r.switchoverConfig.UpdateSwitchoverConfig(&r.Config)
+	r.reloadPersistentState.UpdateReloadPersistentState(&r.Config)
 
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
@@ -2056,9 +2056,9 @@ func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
 	}
 }
 
-func WithSwitchoverConfig(cfg *SwitchoverConfig) Option {
+func WithReloadPersistentState(cfg *ReloadPersistentState) Option {
 	return func(r *Router) {
-		r.switchoverConfig = cfg
+		r.reloadPersistentState = cfg
 	}
 }
 

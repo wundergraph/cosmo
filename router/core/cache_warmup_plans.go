@@ -16,11 +16,11 @@ type PlanSource struct {
 }
 
 // NewPlanSource creates a new PlanSource with the given queries from the caller
-func NewPlanSource(switchoverCacheWarmerQueries []*nodev1.Operation) *PlanSource {
-	if switchoverCacheWarmerQueries == nil {
-		switchoverCacheWarmerQueries = make([]*nodev1.Operation, 0)
+func NewPlanSource(inMemoryPlanCacheFallbackQueries []*nodev1.Operation) *PlanSource {
+	if inMemoryPlanCacheFallbackQueries == nil {
+		inMemoryPlanCacheFallbackQueries = make([]*nodev1.Operation, 0)
 	}
-	return &PlanSource{queries: switchoverCacheWarmerQueries}
+	return &PlanSource{queries: inMemoryPlanCacheFallbackQueries}
 }
 
 // LoadItems loads the items from the plan source when called by the cache warmer

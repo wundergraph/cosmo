@@ -30,17 +30,17 @@ type RouterSupervisor struct {
 
 // RouterResources is a struct for holding resources used by the router.
 type RouterResources struct {
-	Config           *config.Config
-	Logger           *zap.Logger
-	SwitchoverConfig *SwitchoverConfig
+	Config                *config.Config
+	Logger                *zap.Logger
+	ReloadPersistentState *ReloadPersistentState
 }
 
 // RouterSupervisorOpts is a struct for configuring the router supervisor.
 type RouterSupervisorOpts struct {
-	BaseLogger       *zap.Logger
-	ConfigFactory    func() (*config.Config, error)
-	RouterFactory    func(ctx context.Context, res *RouterResources) (*Router, error)
-	SwitchoverConfig *SwitchoverConfig
+	BaseLogger            *zap.Logger
+	ConfigFactory         func() (*config.Config, error)
+	RouterFactory         func(ctx context.Context, res *RouterResources) (*Router, error)
+	ReloadPersistentState *ReloadPersistentState
 }
 
 // NewRouterSupervisor creates a new RouterSupervisor instance.
@@ -50,8 +50,8 @@ func NewRouterSupervisor(opts *RouterSupervisorOpts) (*RouterSupervisor, error) 
 		logger:        opts.BaseLogger.With(zap.String("component", "supervisor")),
 		configFactory: opts.ConfigFactory,
 		resources: &RouterResources{
-			Logger:           opts.BaseLogger,
-			SwitchoverConfig: opts.SwitchoverConfig,
+			Logger:                opts.BaseLogger,
+			ReloadPersistentState: opts.ReloadPersistentState,
 		},
 	}
 
@@ -159,7 +159,7 @@ func (rs *RouterSupervisor) Start() error {
 		rs.logger.Debug("Got shutdown signal", zap.Bool("shutdown", shutdown))
 
 		if !shutdown {
-			rs.router.switchoverConfig.OnRouterConfigReload()
+			rs.router.reloadPersistentState.OnRouterConfigReload()
 		}
 
 		if err := rs.stopRouter(); err != nil {

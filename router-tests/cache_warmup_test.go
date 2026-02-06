@@ -941,10 +941,10 @@ func TestCacheWarmup(t *testing.T) {
 	})
 }
 
-func TestInMemorySwitchoverCaching(t *testing.T) {
+func TestInMemoryPlanCacheFallback(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Verify the plan is cached on config restart when in memory switchover is enabled", func(t *testing.T) {
+	t.Run("Verify the plan is cached on config restart when in memory fallback is enabled", func(t *testing.T) {
 		t.Parallel()
 
 		pm := ConfigPollerMock{
