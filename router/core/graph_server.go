@@ -1422,6 +1422,7 @@ func (s *graphServer) buildGraphMux(
 		Log:                             s.logger,
 		EnableCacheResponseHeaders:      s.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders,
 		EnableResponseHeaderPropagation: s.headerRules != nil,
+		HeaderPropagation:               s.headerPropagation,
 		EngineStats:                     s.engineStats,
 		TracerProvider:                  s.tracerProvider,
 		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),

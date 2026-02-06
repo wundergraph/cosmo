@@ -310,7 +310,19 @@
     "CookieWhitelist": [
       "cookie1",
       "cookie2"
-    ]
+    ],
+    "Router": {
+      "Response": [
+        {
+          "Name": "X-Client-Version",
+          "Expression": "request.header.Get('User-Agent')"
+        },
+        {
+          "Name": "X-Request-ID",
+          "Expression": "request.header.Get('X-Request-ID') ?? 'default-request-id'"
+        }
+      ]
+    }
   },
   "TrafficShaping": {
     "All": {

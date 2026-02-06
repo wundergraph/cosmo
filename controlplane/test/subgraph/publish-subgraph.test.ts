@@ -819,7 +819,7 @@ describe('Publish subgraph tests', () => {
       });
 
       const grpcServiceName = genID('grpc-service');
-      const routingUrl = 'http://localhost:4001';
+      const routingUrl = 'localhost:4001';
 
       // First create the GRPC service subgraph
       await createGrpcServiceSubgraph(client, grpcServiceName, routingUrl);
@@ -854,7 +854,7 @@ describe('Publish subgraph tests', () => {
       });
 
       const grpcServiceName = genID('grpc-service');
-      const routingUrl = 'http://localhost:4001';
+      const routingUrl = 'localhost:4001';
 
       // Publish to a non-existent GRPC service subgraph (should create and publish)
       const publishResponse = await client.publishFederatedSubgraph({
@@ -898,7 +898,7 @@ describe('Publish subgraph tests', () => {
         namespace: 'default',
         schema: grpcServiceSDL,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: 'http://localhost:4002',
+        routingUrl: 'localhost:4002',
         proto: validGrpcProtoRequest,
         labels: [genUniqueLabel('grpc-service')],
       });
@@ -926,7 +926,7 @@ describe('Publish subgraph tests', () => {
         namespace: 'default',
         schema: grpcServiceSDL,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: 'http://localhost:4001',
+        routingUrl: 'localhost:4001',
         proto: validGrpcProtoRequest,
         labels: [genUniqueLabel('grpc-service')],
       });
@@ -943,7 +943,7 @@ describe('Publish subgraph tests', () => {
       });
 
       const grpcServiceName = genID('grpc-service');
-      const routingUrl = 'http://localhost:4001';
+      const routingUrl = 'localhost:4001';
 
       // First create a GRPC service subgraph
       await createGrpcServiceSubgraph(client, grpcServiceName, routingUrl);
@@ -970,7 +970,7 @@ describe('Publish subgraph tests', () => {
       });
 
       const grpcServiceName = genID('grpc-service');
-      const routingUrl = 'http://localhost:4001';
+      const routingUrl = 'localhost:4001';
 
       // Try to publish without proto
       const publishResponse = await client.publishFederatedSubgraph({
@@ -1044,7 +1044,7 @@ describe('Publish subgraph tests', () => {
         });
 
         const grpcServiceName = genID('grpc-service');
-        const routingUrl = 'http://localhost:4001';
+        const routingUrl = 'localhost:4001';
 
         authenticator.changeUserWithSuppliedContext({
           ...users.adminAliceCompanyA,
@@ -1082,7 +1082,7 @@ describe('Publish subgraph tests', () => {
       });
 
       const grpcServiceName = genID('grpc-service');
-      const routingUrl = 'http://localhost:4001';
+      const routingUrl = 'localhost:4001';
 
       authenticator.changeUserWithSuppliedContext({
         ...users.adminAliceCompanyA,
@@ -1112,7 +1112,7 @@ describe('Publish subgraph tests', () => {
         });
 
         const grpcServiceName = genID('grpc-service');
-        const routingUrl = 'http://localhost:4001';
+        const routingUrl = 'localhost:4001';
 
         // First create the GRPC service subgraph
         await createGrpcServiceSubgraph(client, grpcServiceName, routingUrl);
@@ -1135,5 +1135,93 @@ describe('Publish subgraph tests', () => {
         await server.close();
       },
     );
+
+    test('Should not allow publishing a GRPC service subgraph with HTTP/HTTPS routing URL', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+      // Test HTTP URL when creating and publishing in one step
+      const publishResponseHttp = await client.publishFederatedSubgraph({
+        name: genID('grpc-service-http'),
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'http://localhost:8080',
+        proto: validGrpcProtoRequest,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(publishResponseHttp.response?.code).toBe(EnumStatusCode.ERR);
+      expect(publishResponseHttp.response?.details).toContain('Routing URL must follow gRPC naming scheme');
+
+      // Test HTTPS URL when creating and publishing in one step
+      const publishResponseHttps = await client.publishFederatedSubgraph({
+        name: genID('grpc-service-https'),
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'https://example.com:8080',
+        proto: validGrpcProtoRequest,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(publishResponseHttps.response?.code).toBe(EnumStatusCode.ERR);
+      expect(publishResponseHttps.response?.details).toContain('Routing URL must follow gRPC naming scheme');
+
+      await server.close();
+    });
+
+    test('Should allow publishing a GRPC service subgraph with valid gRPC naming scheme URLs', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+      // Test DNS scheme
+      const publishResponseDns = await client.publishFederatedSubgraph({
+        name: genID('grpc-service-dns'),
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'dns:localhost:8080',
+        proto: validGrpcProtoRequest,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(publishResponseDns.response?.code).toBe(EnumStatusCode.OK);
+
+      // Test plain hostname (defaults to DNS)
+      const publishResponsePlain = await client.publishFederatedSubgraph({
+        name: genID('grpc-service-plain'),
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'localhost:8080',
+        proto: validGrpcProtoRequest,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(publishResponsePlain.response?.code).toBe(EnumStatusCode.OK);
+
+      // Test IPv4 scheme
+      const publishResponseIpv4 = await client.publishFederatedSubgraph({
+        name: genID('grpc-service-ipv4'),
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'ipv4:127.0.0.1:8080',
+        proto: validGrpcProtoRequest,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(publishResponseIpv4.response?.code).toBe(EnumStatusCode.OK);
+
+      await server.close();
+    });
   });
 });
