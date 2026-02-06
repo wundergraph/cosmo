@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compileGraphQLToMapping } from '../../src';
+import { compileGraphQLToMapping } from '../../src/index.js';
 
 describe('Basic GraphQL Schema to Proto Mapping', () => {
   it('maps a simple schema with scalar fields', () => {

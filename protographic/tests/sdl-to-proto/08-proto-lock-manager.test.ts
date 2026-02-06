@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { ProtoLockManager } from '../../src/proto-lock';
-import { compileGraphQLToProto } from '../../src';
+import { ProtoLockManager } from '../../src/proto-lock.js';
+import { compileGraphQLToProto } from '../../src/index.js';
 
 describe('ProtoLockManager', () => {
   test('should correctly initialize lock data with ordered fields', () => {

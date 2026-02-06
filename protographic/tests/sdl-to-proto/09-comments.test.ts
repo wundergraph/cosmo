@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { compileGraphQLToProto } from '../../src';
-import { expectValidProto } from '../util';
+import { compileGraphQLToProto } from '../../src/index.js';
+import { expectValidProto } from '../util.js';
 
 describe('SDL to Proto Comments', () => {
   it('should convert GraphQL type descriptions to Proto comments', () => {
@@ -312,6 +312,76 @@ describe('SDL to Proto Comments', () => {
         string name = 2;
         // Organization description
         google.protobuf.StringValue description = 3;
+      }"
+    `);
+  });
+
+  it('should sanitize block comment markers in descriptions', () => {
+    // Descriptions containing /* and */ should be sanitized to prevent breaking proto comments
+    const sdl = `
+      """
+      This type has problematic markers: /* start */ and more text.
+      Also handles nested /* comments */ in the middle.
+      """
+      type User {
+        "Field with /* inline markers */ in description"
+        id: ID!
+        
+        """
+        Multi-line with */closing first
+        and /*opening second
+        """
+        name: String!
+      }
+      
+      type Query {
+        "Query with /* block */ markers"
+        user: User
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition - this would fail if /* or */ were not sanitized in content
+    expectValidProto(protoText);
+
+    // Check that the sanitized versions are present in the comment content
+    // The original "/* start */" should become "/ * start * /"
+    expect(protoText).toContain('/ * start * /');
+    expect(protoText).toContain('/ * inline markers * /');
+    expect(protoText).toContain('/ * block * /');
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        // Query with / * block * / markers
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+      }
+
+      // Request message for user operation: Query with / * block * / markers.
+      message QueryUserRequest {
+      }
+      // Response message for user operation: Query with / * block * / markers.
+      message QueryUserResponse {
+        // Query with / * block * / markers
+        User user = 1;
+      }
+
+      /*
+       * This type has problematic markers: / * start * / and more text.
+       * Also handles nested / * comments * / in the middle.
+       */
+      message User {
+        // Field with / * inline markers * / in description
+        string id = 1;
+        /*
+         * Multi-line with * /closing first
+         * and / *opening second
+         */
+        string name = 2;
       }"
     `);
   });

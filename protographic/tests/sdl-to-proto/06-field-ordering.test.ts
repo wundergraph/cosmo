@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { buildSchema } from 'graphql';
-import { GraphQLToProtoTextVisitor } from '../../src/sdl-to-proto-visitor';
+import { isNull } from 'lodash-es';
+import { GraphQLToProtoTextVisitor } from '../../src/sdl-to-proto-visitor.js';
 import {
   getEnumValuesWithNumbers,
   getFieldNumbersFromMessage,
@@ -9,8 +10,7 @@ import {
   getEnumContent,
   getServiceMethods,
   getReservedNumbers,
-} from '../util';
-import { isNull } from 'lodash-es';
+} from '../util.js';
 
 describe('Field Ordering and Preservation', () => {
   describe('Basic Message Field Ordering', () => {
@@ -72,9 +72,9 @@ describe('Field Ordering and Preservation', () => {
 
       // Verify that each field has the same number in both protos
       expect(Object.keys(userFields1).length).toBe(3);
-      expect(userFields1['id']).toBe(userFields2['id']);
-      expect(userFields1['name']).toBe(userFields2['name']);
-      expect(userFields1['email']).toBe(userFields2['email']);
+      expect(userFields1.id).toBe(userFields2.id);
+      expect(userFields1.name).toBe(userFields2.name);
+      expect(userFields1.email).toBe(userFields2.email);
     });
 
     test('should handle adding and removing fields while preserving field numbers', () => {
@@ -105,8 +105,8 @@ describe('Field Ordering and Preservation', () => {
       const productFields1 = getFieldNumbersFromMessage(root1, 'Product');
 
       // Store original field numbers
-      const idNumber = productFields1['id'];
-      const priceNumber = productFields1['price'];
+      const idNumber = productFields1.id;
+      const priceNumber = productFields1.price;
 
       // Get the generated lock data
       const lockData = visitor1.getGeneratedLockData();
@@ -142,16 +142,16 @@ describe('Field Ordering and Preservation', () => {
       const productFields2 = getFieldNumbersFromMessage(root2, 'Product');
 
       // Verify that preserved fields kept the same numbers
-      expect(productFields2['id']).toBe(idNumber);
-      expect(productFields2['price']).toBe(priceNumber);
+      expect(productFields2.id).toBe(idNumber);
+      expect(productFields2.price).toBe(priceNumber);
 
       // Verify removed fields are not present
-      expect(productFields2['name']).toBeUndefined();
-      expect(productFields2['description']).toBeUndefined();
+      expect(productFields2.name).toBeUndefined();
+      expect(productFields2.description).toBeUndefined();
 
       // Verify new fields have been added
-      expect(productFields2['category']).toBeDefined();
-      expect(productFields2['in_stock']).toBeDefined();
+      expect(productFields2.category).toBeDefined();
+      expect(productFields2.in_stock).toBeDefined();
     });
   });
 
@@ -185,9 +185,9 @@ describe('Field Ordering and Preservation', () => {
       const postFields1 = getFieldNumbersFromMessage(root1, 'Post');
 
       // Store original field numbers
-      const idNumber = postFields1['id'];
-      const titleNumber = postFields1['title'];
-      const publishedNumber = postFields1['published'];
+      const idNumber = postFields1.id;
+      const titleNumber = postFields1.title;
+      const publishedNumber = postFields1.published;
 
       // Get the generated lock data
       const lockData = visitor1.getGeneratedLockData();
@@ -222,13 +222,13 @@ describe('Field Ordering and Preservation', () => {
       const postFields2 = getFieldNumbersFromMessage(root2, 'Post');
 
       // Verify fields were removed
-      expect(postFields2['content']).toBeUndefined();
-      expect(postFields2['tags']).toBeUndefined();
+      expect(postFields2.content).toBeUndefined();
+      expect(postFields2.tags).toBeUndefined();
 
       // Verify remaining fields kept their numbers
-      expect(postFields2['id']).toBe(idNumber);
-      expect(postFields2['title']).toBe(titleNumber);
-      expect(postFields2['published']).toBe(publishedNumber);
+      expect(postFields2.id).toBe(idNumber);
+      expect(postFields2.title).toBe(titleNumber);
+      expect(postFields2.published).toBe(publishedNumber);
 
       // Schema with re-added fields and new fields
       const modifiedSchema2 = buildSchema(`
@@ -260,16 +260,16 @@ describe('Field Ordering and Preservation', () => {
       const postFields3 = getFieldNumbersFromMessage(root3, 'Post');
 
       // Verify that all fields have assigned numbers
-      expect(postFields3['id']).toBe(idNumber);
-      expect(postFields3['title']).toBe(titleNumber);
-      expect(postFields3['published']).toBe(publishedNumber);
+      expect(postFields3.id).toBe(idNumber);
+      expect(postFields3.title).toBe(titleNumber);
+      expect(postFields3.published).toBe(publishedNumber);
 
       // Re-added fields get new numbers in the current implementation
-      expect(postFields3['content']).toBeDefined();
-      expect(postFields3['tags']).toBeDefined();
+      expect(postFields3.content).toBeDefined();
+      expect(postFields3.tags).toBeDefined();
 
       // Verify new field has been added
-      expect(postFields3['author']).toBeDefined();
+      expect(postFields3.author).toBeDefined();
     });
 
     test('should add reserved tag when fields are removed in first operation', () => {
@@ -333,8 +333,8 @@ describe('Field Ordering and Preservation', () => {
 
       // Get updated lock data and verify it contains reserved numbers
       const lockData2 = visitor2.getGeneratedLockData();
-      expect(lockData2!.messages['User'].reservedNumbers).toBeDefined();
-      expect(lockData2!.messages['User'].reservedNumbers!.length).toBeGreaterThan(0);
+      expect(lockData2!.messages.User.reservedNumbers).toBeDefined();
+      expect(lockData2!.messages.User.reservedNumbers!.length).toBeGreaterThan(0);
 
       // Now add a field back and add a new field
       const modifiedSchema2 = buildSchema(`
@@ -371,9 +371,9 @@ describe('Field Ordering and Preservation', () => {
       expect(userContent.reserved.length).toBeGreaterThan(0);
 
       // Verify fields exist
-      expect(userContent.fields['email']).toBeDefined();
-      expect(userContent.fields['phone']).toBeDefined();
-      expect(userContent.fields['age']).toBeUndefined();
+      expect(userContent.fields.email).toBeDefined();
+      expect(userContent.fields.phone).toBeDefined();
+      expect(userContent.fields.age).toBeUndefined();
     });
   });
 
@@ -410,9 +410,9 @@ describe('Field Ordering and Preservation', () => {
       const enumValues1 = getEnumValuesWithNumbers(root1, 'UserRole');
 
       // Store original enum value numbers
-      const adminNumber = enumValues1['USER_ROLE_ADMIN'];
-      const editorNumber = enumValues1['USER_ROLE_EDITOR'];
-      const viewerNumber = enumValues1['USER_ROLE_VIEWER'];
+      const adminNumber = enumValues1.USER_ROLE_ADMIN;
+      const editorNumber = enumValues1.USER_ROLE_EDITOR;
+      const viewerNumber = enumValues1.USER_ROLE_VIEWER;
 
       // Get the generated lock data
       const lockData = visitor1.getGeneratedLockData();
@@ -450,9 +450,9 @@ describe('Field Ordering and Preservation', () => {
       const enumValues2 = getEnumValuesWithNumbers(root2, 'UserRole');
 
       // Verify that enum values kept their numbers
-      expect(enumValues2['USER_ROLE_ADMIN']).toBe(adminNumber);
-      expect(enumValues2['USER_ROLE_EDITOR']).toBe(editorNumber);
-      expect(enumValues2['USER_ROLE_VIEWER']).toBe(viewerNumber);
+      expect(enumValues2.USER_ROLE_ADMIN).toBe(adminNumber);
+      expect(enumValues2.USER_ROLE_EDITOR).toBe(editorNumber);
+      expect(enumValues2.USER_ROLE_VIEWER).toBe(viewerNumber);
     });
 
     test('should handle adding, removing, and re-adding enum values', () => {
@@ -483,8 +483,8 @@ describe('Field Ordering and Preservation', () => {
       const enumValues1 = getEnumValuesWithNumbers(root1, 'Status');
 
       // Store original enum value numbers
-      const pendingNumber = enumValues1['STATUS_PENDING'];
-      const inactiveNumber = enumValues1['STATUS_INACTIVE'];
+      const pendingNumber = enumValues1.STATUS_PENDING;
+      const inactiveNumber = enumValues1.STATUS_INACTIVE;
 
       // Get the generated lock data
       const lockData = visitor1.getGeneratedLockData();
@@ -518,12 +518,12 @@ describe('Field Ordering and Preservation', () => {
       const enumValues2 = getEnumValuesWithNumbers(root2, 'Status');
 
       // Verify remaining enum values kept their numbers
-      expect(enumValues2['STATUS_PENDING']).toBe(pendingNumber);
-      expect(enumValues2['STATUS_INACTIVE']).toBe(inactiveNumber);
+      expect(enumValues2.STATUS_PENDING).toBe(pendingNumber);
+      expect(enumValues2.STATUS_INACTIVE).toBe(inactiveNumber);
 
       // Verify removed enum values are gone
-      expect(enumValues2['STATUS_ACTIVE']).toBeUndefined();
-      expect(enumValues2['STATUS_DELETED']).toBeUndefined();
+      expect(enumValues2.STATUS_ACTIVE).toBeUndefined();
+      expect(enumValues2.STATUS_DELETED).toBeUndefined();
 
       // Third schema with re-added values and new values
       const modifiedSchema2 = buildSchema(`
@@ -554,15 +554,15 @@ describe('Field Ordering and Preservation', () => {
       const enumValues3 = getEnumValuesWithNumbers(root3, 'Status');
 
       // Verify enum values have consistent numbers
-      expect(enumValues3['STATUS_PENDING']).toBe(pendingNumber);
-      expect(enumValues3['STATUS_INACTIVE']).toBe(inactiveNumber);
+      expect(enumValues3.STATUS_PENDING).toBe(pendingNumber);
+      expect(enumValues3.STATUS_INACTIVE).toBe(inactiveNumber);
 
       // Re-added enum values get new numbers in the current implementation
-      expect(enumValues3['STATUS_ACTIVE']).toBeDefined();
-      expect(enumValues3['STATUS_DELETED']).toBeDefined();
+      expect(enumValues3.STATUS_ACTIVE).toBeDefined();
+      expect(enumValues3.STATUS_DELETED).toBeDefined();
 
       // Verify new enum value has been added
-      expect(enumValues3['STATUS_ARCHIVED']).toBeDefined();
+      expect(enumValues3.STATUS_ARCHIVED).toBeDefined();
     });
 
     test('should add reserved tag when enum values are removed', () => {
@@ -629,7 +629,7 @@ describe('Field Ordering and Preservation', () => {
       const lockData2 = visitor2.getGeneratedLockData();
 
       // Verify the lock data contains reserved numbers for the removed enum values
-      expect(lockData2!.enums['UserRole'].reservedNumbers).toBeDefined();
+      expect(lockData2!.enums.UserRole.reservedNumbers).toBeDefined();
 
       // Third schema with one removed value re-added
       const modifiedSchema2 = buildSchema(`
@@ -669,10 +669,10 @@ describe('Field Ordering and Preservation', () => {
       expect(enumContent.reserved.length).toBeGreaterThan(0);
 
       // Verify VIEWER is present in the enum values
-      expect(enumContent.values['USER_ROLE_VIEWER']).toBeDefined();
+      expect(enumContent.values.USER_ROLE_VIEWER).toBeDefined();
 
       // Verify new value exists
-      expect(enumContent.values['USER_ROLE_MODERATOR']).toBeDefined();
+      expect(enumContent.values.USER_ROLE_MODERATOR).toBeDefined();
     });
   });
 
@@ -917,14 +917,14 @@ describe('Field Ordering and Preservation', () => {
       const addressFields1 = getFieldNumbersFromMessage(root1, 'Address');
 
       // Store original field numbers
-      const userIdNumber = userFields1['id'];
-      const userNameNumber = userFields1['name'];
-      const userAddressNumber = userFields1['address'];
+      const userIdNumber = userFields1.id;
+      const userNameNumber = userFields1.name;
+      const userAddressNumber = userFields1.address;
 
-      const streetNumber = addressFields1['street'];
-      const cityNumber = addressFields1['city'];
-      const stateNumber = addressFields1['state'];
-      const zipNumber = addressFields1['zip'];
+      const streetNumber = addressFields1.street;
+      const cityNumber = addressFields1.city;
+      const stateNumber = addressFields1.state;
+      const zipNumber = addressFields1.zip;
 
       // Get the generated lock data
       const lockData = visitor1.getGeneratedLockData();
@@ -965,15 +965,15 @@ describe('Field Ordering and Preservation', () => {
       const addressFields2 = getFieldNumbersFromMessage(root2, 'Address');
 
       // Verify that field numbers are preserved in User
-      expect(userFields2['id']).toBe(userIdNumber);
-      expect(userFields2['name']).toBe(userNameNumber);
-      expect(userFields2['address']).toBe(userAddressNumber);
+      expect(userFields2.id).toBe(userIdNumber);
+      expect(userFields2.name).toBe(userNameNumber);
+      expect(userFields2.address).toBe(userAddressNumber);
 
       // Verify that field numbers are preserved in Address
-      expect(addressFields2['street']).toBe(streetNumber);
-      expect(addressFields2['city']).toBe(cityNumber);
-      expect(addressFields2['state']).toBe(stateNumber);
-      expect(addressFields2['zip']).toBe(zipNumber);
+      expect(addressFields2.street).toBe(streetNumber);
+      expect(addressFields2.city).toBe(cityNumber);
+      expect(addressFields2.state).toBe(stateNumber);
+      expect(addressFields2.zip).toBe(zipNumber);
     });
 
     test('should handle nested message types with mutations', () => {
@@ -1026,27 +1026,27 @@ describe('Field Ordering and Preservation', () => {
 
       // Store original field numbers
       // Create product mutation
-      const createNameNumber = createProductFields['name'];
-      const createPriceNumber = createProductFields['price'];
-      const createDescNumber = createProductFields['description'];
+      const createNameNumber = createProductFields.name;
+      const createPriceNumber = createProductFields.price;
+      const createDescNumber = createProductFields.description;
 
       // Update product mutation
-      const updateIdNumber = updateProductFields['id'];
-      const updateNameNumber = updateProductFields['name'];
-      const updatePriceNumber = updateProductFields['price'];
+      const updateIdNumber = updateProductFields.id;
+      const updateNameNumber = updateProductFields.name;
+      const updatePriceNumber = updateProductFields.price;
 
       // Filter products mutation
-      const filterNumber = filterProductsFields['filter'];
+      const filterNumber = filterProductsFields.filter;
 
       // ProductFilter input type
-      const nameContainsNumber = productFilterFields['name_contains'];
-      const priceRangeNumber = productFilterFields['price_range'];
-      const inStockNumber = productFilterFields['in_stock'];
+      const nameContainsNumber = productFilterFields.name_contains;
+      const priceRangeNumber = productFilterFields.price_range;
+      const inStockNumber = productFilterFields.in_stock;
 
       // PriceRange input type
-      const minNumber = priceRangeFields['min'];
-      const maxNumber = priceRangeFields['max'];
-      const currencyNumber = priceRangeFields['currency'];
+      const minNumber = priceRangeFields.min;
+      const maxNumber = priceRangeFields.max;
+      const currencyNumber = priceRangeFields.currency;
 
       // Get the generated lock data
       const lockData = visitor1.getGeneratedLockData();
@@ -1100,28 +1100,28 @@ describe('Field Ordering and Preservation', () => {
 
       // Verify mutation field numbers are preserved
       // Create product
-      expect(createProductFields2['name']).toBe(createNameNumber);
-      expect(createProductFields2['price']).toBe(createPriceNumber);
-      expect(createProductFields2['description']).toBe(createDescNumber);
+      expect(createProductFields2.name).toBe(createNameNumber);
+      expect(createProductFields2.price).toBe(createPriceNumber);
+      expect(createProductFields2.description).toBe(createDescNumber);
 
       // Update product
-      expect(updateProductFields2['id']).toBe(updateIdNumber);
-      expect(updateProductFields2['name']).toBe(updateNameNumber);
-      expect(updateProductFields2['price']).toBe(updatePriceNumber);
+      expect(updateProductFields2.id).toBe(updateIdNumber);
+      expect(updateProductFields2.name).toBe(updateNameNumber);
+      expect(updateProductFields2.price).toBe(updatePriceNumber);
 
       // Filter products
-      expect(filterProductsFields2['filter']).toBe(filterNumber);
+      expect(filterProductsFields2.filter).toBe(filterNumber);
 
       // Verify nested input type field numbers are preserved
       // ProductFilter
-      expect(productFilterFields2['name_contains']).toBe(nameContainsNumber);
-      expect(productFilterFields2['price_range']).toBe(priceRangeNumber);
-      expect(productFilterFields2['in_stock']).toBe(inStockNumber);
+      expect(productFilterFields2.name_contains).toBe(nameContainsNumber);
+      expect(productFilterFields2.price_range).toBe(priceRangeNumber);
+      expect(productFilterFields2.in_stock).toBe(inStockNumber);
 
       // PriceRange
-      expect(priceRangeFields2['min']).toBe(minNumber);
-      expect(priceRangeFields2['max']).toBe(maxNumber);
-      expect(priceRangeFields2['currency']).toBe(currencyNumber);
+      expect(priceRangeFields2.min).toBe(minNumber);
+      expect(priceRangeFields2.max).toBe(maxNumber);
+      expect(priceRangeFields2.currency).toBe(currencyNumber);
     });
   });
 
@@ -1168,14 +1168,14 @@ describe('Field Ordering and Preservation', () => {
       const userListFields = getFieldNumbersFromMessage(userListType.root, 'List');
 
       // Store original field numbers for wrapper types (outer 'list' field)
-      const stringWrapperListFieldNumber = listOfStringWrapperFields['list'];
-      const intWrapperListFieldNumber = listOfIntWrapperFields['list'];
-      const userWrapperListFieldNumber = listOfUserWrapperFields['list'];
+      const stringWrapperListFieldNumber = listOfStringWrapperFields.list;
+      const intWrapperListFieldNumber = listOfIntWrapperFields.list;
+      const userWrapperListFieldNumber = listOfUserWrapperFields.list;
 
       // Store original field numbers for inner List types ('items' field)
-      const stringListItemsFieldNumber = stringListFields['items'];
-      const intListItemsFieldNumber = intListFields['items'];
-      const userListItemsFieldNumber = userListFields['items'];
+      const stringListItemsFieldNumber = stringListFields.items;
+      const intListItemsFieldNumber = intListFields.items;
+      const userListItemsFieldNumber = userListFields.items;
 
       // Verify all wrapper types have the 'list' field with field number 1
       expect(stringWrapperListFieldNumber).toBe(1);
@@ -1192,9 +1192,9 @@ describe('Field Ordering and Preservation', () => {
       expect(lockData).not.toBeNull();
 
       // Verify wrapper types are NOT in lock data (they're auto-generated with deterministic field numbers)
-      expect(lockData!.messages['ListOfString']).toBeUndefined();
-      expect(lockData!.messages['ListOfInt']).toBeUndefined();
-      expect(lockData!.messages['ListOfUser']).toBeUndefined();
+      expect(lockData!.messages.ListOfString).toBeUndefined();
+      expect(lockData!.messages.ListOfInt).toBeUndefined();
+      expect(lockData!.messages.ListOfUser).toBeUndefined();
 
       // Modified schema with additional nullable lists (triggers regeneration)
       const modifiedSchema = buildSchema(`
@@ -1242,18 +1242,18 @@ describe('Field Ordering and Preservation', () => {
       const floatListFields2 = getFieldNumbersFromMessage(floatListType2.root, 'List');
 
       // Verify wrapper field numbers are preserved (outer 'list' field)
-      expect(listOfStringWrapperFields2['list']).toBe(stringWrapperListFieldNumber);
-      expect(listOfIntWrapperFields2['list']).toBe(intWrapperListFieldNumber);
-      expect(listOfUserWrapperFields2['list']).toBe(userWrapperListFieldNumber);
+      expect(listOfStringWrapperFields2.list).toBe(stringWrapperListFieldNumber);
+      expect(listOfIntWrapperFields2.list).toBe(intWrapperListFieldNumber);
+      expect(listOfUserWrapperFields2.list).toBe(userWrapperListFieldNumber);
 
       // Verify inner List field numbers are preserved ('items' field)
-      expect(stringListFields2['items']).toBe(stringListItemsFieldNumber);
-      expect(intListFields2['items']).toBe(intListItemsFieldNumber);
-      expect(userListFields2['items']).toBe(userListItemsFieldNumber);
+      expect(stringListFields2.items).toBe(stringListItemsFieldNumber);
+      expect(intListFields2.items).toBe(intListItemsFieldNumber);
+      expect(userListFields2.items).toBe(userListItemsFieldNumber);
 
       // Verify new wrapper types have field number 1
-      expect(listOfFloatWrapperFields2['list']).toBe(1);
-      expect(floatListFields2['items']).toBe(1);
+      expect(listOfFloatWrapperFields2.list).toBe(1);
+      expect(floatListFields2.items).toBe(1);
     });
 
     test('should preserve field numbers for nested list wrapper types', () => {
@@ -1287,8 +1287,8 @@ describe('Field Ordering and Preservation', () => {
       const listOfListOfIntWrapperFields = getFieldNumbersFromMessage(root1, 'ListOfListOfInt');
 
       // For nested wrappers, they should have a 'list' field at the outer level
-      const nestedStringWrapperListFieldNumber = listOfListOfStringWrapperFields['list'];
-      const nestedIntWrapperListFieldNumber = listOfListOfIntWrapperFields['list'];
+      const nestedStringWrapperListFieldNumber = listOfListOfStringWrapperFields.list;
+      const nestedIntWrapperListFieldNumber = listOfListOfIntWrapperFields.list;
 
       // Verify nested wrapper types have the 'list' field with field number 1
       expect(nestedStringWrapperListFieldNumber).toBe(1);
@@ -1305,10 +1305,10 @@ describe('Field Ordering and Preservation', () => {
       const stringListFields = getFieldNumbersFromMessage(stringListType.root, 'List');
       const intListFields = getFieldNumbersFromMessage(intListType.root, 'List');
 
-      const simpleStringWrapperListFieldNumber = listOfStringWrapperFields['list'];
-      const simpleIntWrapperListFieldNumber = listOfIntWrapperFields['list'];
-      const stringListItemsFieldNumber = stringListFields['items'];
-      const intListItemsFieldNumber = intListFields['items'];
+      const simpleStringWrapperListFieldNumber = listOfStringWrapperFields.list;
+      const simpleIntWrapperListFieldNumber = listOfIntWrapperFields.list;
+      const stringListItemsFieldNumber = stringListFields.items;
+      const intListItemsFieldNumber = intListFields.items;
 
       expect(simpleStringWrapperListFieldNumber).toBe(1);
       expect(simpleIntWrapperListFieldNumber).toBe(1);
@@ -1320,10 +1320,10 @@ describe('Field Ordering and Preservation', () => {
       expect(lockData).not.toBeNull();
 
       // Verify wrapper types are NOT in lock data (they're auto-generated with deterministic field numbers)
-      expect(lockData!.messages['ListOfListOfString']).toBeUndefined();
-      expect(lockData!.messages['ListOfListOfInt']).toBeUndefined();
-      expect(lockData!.messages['ListOfString']).toBeUndefined();
-      expect(lockData!.messages['ListOfInt']).toBeUndefined();
+      expect(lockData!.messages.ListOfListOfString).toBeUndefined();
+      expect(lockData!.messages.ListOfListOfInt).toBeUndefined();
+      expect(lockData!.messages.ListOfString).toBeUndefined();
+      expect(lockData!.messages.ListOfInt).toBeUndefined();
 
       // Modified schema with additional nested lists
       const modifiedSchema = buildSchema(`
@@ -1358,11 +1358,11 @@ describe('Field Ordering and Preservation', () => {
       const listOfListOfUserWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfListOfUser');
 
       // Verify existing nested wrapper field numbers are preserved
-      expect(listOfListOfStringWrapperFields2['list']).toBe(nestedStringWrapperListFieldNumber);
-      expect(listOfListOfIntWrapperFields2['list']).toBe(nestedIntWrapperListFieldNumber);
+      expect(listOfListOfStringWrapperFields2.list).toBe(nestedStringWrapperListFieldNumber);
+      expect(listOfListOfIntWrapperFields2.list).toBe(nestedIntWrapperListFieldNumber);
 
       // Verify new nested wrapper type has field number 1
-      expect(listOfListOfUserWrapperFields2['list']).toBe(1);
+      expect(listOfListOfUserWrapperFields2.list).toBe(1);
 
       // Verify simple wrapper types are still preserved
       const listOfStringWrapperFields2 = getFieldNumbersFromMessage(root2, 'ListOfString');
@@ -1378,12 +1378,12 @@ describe('Field Ordering and Preservation', () => {
       const intListFields2 = getFieldNumbersFromMessage(intListType2.root, 'List');
       const userListFields2 = getFieldNumbersFromMessage(userListType2.root, 'List');
 
-      expect(listOfStringWrapperFields2['list']).toBe(simpleStringWrapperListFieldNumber);
-      expect(listOfIntWrapperFields2['list']).toBe(simpleIntWrapperListFieldNumber);
-      expect(stringListFields2['items']).toBe(stringListItemsFieldNumber);
-      expect(intListFields2['items']).toBe(intListItemsFieldNumber);
-      expect(listOfUserWrapperFields2['list']).toBe(1); // New simple wrapper for User
-      expect(userListFields2['items']).toBe(1); // New simple wrapper inner List for User
+      expect(listOfStringWrapperFields2.list).toBe(simpleStringWrapperListFieldNumber);
+      expect(listOfIntWrapperFields2.list).toBe(simpleIntWrapperListFieldNumber);
+      expect(stringListFields2.items).toBe(stringListItemsFieldNumber);
+      expect(intListFields2.items).toBe(intListItemsFieldNumber);
+      expect(listOfUserWrapperFields2.list).toBe(1); // New simple wrapper for User
+      expect(userListFields2.items).toBe(1); // New simple wrapper inner List for User
     });
 
     test('should handle mixed simple and nested wrapper types with field preservation', () => {
@@ -1428,14 +1428,14 @@ describe('Field Ordering and Preservation', () => {
       const userListFields = getFieldNumbersFromMessage(userListType.root, 'List');
 
       // Store original field numbers for wrapper types (outer 'list' field)
-      const simpleStringWrapperListFieldNumber = listOfStringWrapperFields['list'];
-      const simpleUserWrapperListFieldNumber = listOfUserWrapperFields['list'];
-      const nestedStringWrapperListFieldNumber = listOfListOfStringWrapperFields['list'];
-      const nestedUserWrapperListFieldNumber = listOfListOfUserWrapperFields['list'];
+      const simpleStringWrapperListFieldNumber = listOfStringWrapperFields.list;
+      const simpleUserWrapperListFieldNumber = listOfUserWrapperFields.list;
+      const nestedStringWrapperListFieldNumber = listOfListOfStringWrapperFields.list;
+      const nestedUserWrapperListFieldNumber = listOfListOfUserWrapperFields.list;
 
       // Store original field numbers for inner List types ('items' field)
-      const stringListItemsFieldNumber = stringListFields['items'];
-      const userListItemsFieldNumber = userListFields['items'];
+      const stringListItemsFieldNumber = stringListFields.items;
+      const userListItemsFieldNumber = userListFields.items;
 
       // Verify correct field numbers for different wrapper levels
       expect(simpleStringWrapperListFieldNumber).toBe(1); // Simple wrapper outer 'list' field
@@ -1450,10 +1450,10 @@ describe('Field Ordering and Preservation', () => {
       expect(lockData).not.toBeNull();
 
       // Verify wrapper types are NOT in lock data (they're auto-generated with deterministic field numbers)
-      expect(lockData!.messages['ListOfString']).toBeUndefined();
-      expect(lockData!.messages['ListOfListOfString']).toBeUndefined();
-      expect(lockData!.messages['ListOfUser']).toBeUndefined();
-      expect(lockData!.messages['ListOfListOfUser']).toBeUndefined();
+      expect(lockData!.messages.ListOfString).toBeUndefined();
+      expect(lockData!.messages.ListOfListOfString).toBeUndefined();
+      expect(lockData!.messages.ListOfUser).toBeUndefined();
+      expect(lockData!.messages.ListOfListOfUser).toBeUndefined();
 
       // Modified schema with some lists removed and new ones added
       const modifiedSchema = buildSchema(`
@@ -1501,17 +1501,17 @@ describe('Field Ordering and Preservation', () => {
       const intListFields2 = getFieldNumbersFromMessage(intListType2.root, 'List');
 
       // Verify wrapper field numbers are preserved (outer 'list' field)
-      expect(listOfStringWrapperFields2['list']).toBe(simpleStringWrapperListFieldNumber);
-      expect(listOfUserWrapperFields2['list']).toBe(simpleUserWrapperListFieldNumber);
-      expect(listOfListOfUserWrapperFields2['list']).toBe(nestedUserWrapperListFieldNumber);
+      expect(listOfStringWrapperFields2.list).toBe(simpleStringWrapperListFieldNumber);
+      expect(listOfUserWrapperFields2.list).toBe(simpleUserWrapperListFieldNumber);
+      expect(listOfListOfUserWrapperFields2.list).toBe(nestedUserWrapperListFieldNumber);
 
       // Verify inner List field numbers are preserved ('items' field)
-      expect(stringListFields2['items']).toBe(stringListItemsFieldNumber);
-      expect(userListFields2['items']).toBe(userListItemsFieldNumber);
+      expect(stringListFields2.items).toBe(stringListItemsFieldNumber);
+      expect(userListFields2.items).toBe(userListItemsFieldNumber);
 
       // Verify new wrapper types have field number 1
-      expect(listOfIntWrapperFields2['list']).toBe(1);
-      expect(intListFields2['items']).toBe(1);
+      expect(listOfIntWrapperFields2.list).toBe(1);
+      expect(intListFields2.items).toBe(1);
 
       // Verify removed wrapper type is not present
       // Check if the removed wrapper type exists in the proto
@@ -1519,7 +1519,7 @@ describe('Field Ordering and Preservation', () => {
       try {
         root2.lookupType('ListOfListOfString');
         listOfListOfStringExists = true;
-      } catch (e) {
+      } catch {
         // Type doesn't exist, which is expected when the field is removed
         listOfListOfStringExists = false;
       }

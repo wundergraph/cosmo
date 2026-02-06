@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { compileOperationsToProto } from '../../src';
-import { expectValidProto, getFieldNumbersFromMessage, loadProtoFromText } from '../util';
+import { compileOperationsToProto } from '../../src/index.js';
+import { expectValidProto, getFieldNumbersFromMessage, loadProtoFromText } from '../util.js';
 
 describe('Operations Field Ordering Stability', () => {
   describe('Response Message Field Ordering', () => {
@@ -154,8 +154,8 @@ describe('Operations Field Ordering Stability', () => {
       const root1 = loadProtoFromText(result1.proto);
       const productFields1 = getFieldNumbersFromMessage(root1, 'GetProductResponse.Product');
 
-      const idNumber = productFields1['id'];
-      const priceNumber = productFields1['price'];
+      const idNumber = productFields1.id;
+      const priceNumber = productFields1.price;
 
       // Second operation with some fields removed
       const operation2 = `
@@ -176,13 +176,13 @@ describe('Operations Field Ordering Stability', () => {
       const productFields2 = getFieldNumbersFromMessage(root2, 'GetProductResponse.Product');
 
       // Verify preserved fields kept their numbers
-      expect(productFields2['id']).toBe(idNumber);
-      expect(productFields2['price']).toBe(priceNumber);
+      expect(productFields2.id).toBe(idNumber);
+      expect(productFields2.price).toBe(priceNumber);
 
       // Verify removed fields are not present
-      expect(productFields2['name']).toBeUndefined();
-      expect(productFields2['description']).toBeUndefined();
-      expect(productFields2['in_stock']).toBeUndefined();
+      expect(productFields2.name).toBeUndefined();
+      expect(productFields2.description).toBeUndefined();
+      expect(productFields2.in_stock).toBeUndefined();
 
       // Third operation with fields re-added and new field
       const operation3 = `
@@ -235,19 +235,19 @@ describe('Operations Field Ordering Stability', () => {
       const productFields3 = getFieldNumbersFromMessage(root3, 'GetProductResponse.Product');
 
       // Verify original fields still have same numbers
-      expect(productFields3['id']).toBe(idNumber);
-      expect(productFields3['price']).toBe(priceNumber);
+      expect(productFields3.id).toBe(idNumber);
+      expect(productFields3.price).toBe(priceNumber);
 
       // Verify re-added fields exist (they get new numbers, not reusing old ones)
-      expect(productFields3['name']).toBeDefined();
-      expect(productFields3['description']).toBeDefined();
+      expect(productFields3.name).toBeDefined();
+      expect(productFields3.description).toBeDefined();
 
       // Verify new field exists
-      expect(productFields3['category']).toBeDefined();
+      expect(productFields3.category).toBeDefined();
 
       // Re-added fields should have higher numbers than original fields
-      expect(productFields3['name']).toBeGreaterThan(priceNumber);
-      expect(productFields3['description']).toBeGreaterThan(priceNumber);
+      expect(productFields3.name).toBeGreaterThan(priceNumber);
+      expect(productFields3.description).toBeGreaterThan(priceNumber);
     });
 
     test('should handle nested object field ordering', () => {
@@ -316,13 +316,13 @@ describe('Operations Field Ordering Stability', () => {
       const profileFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User.Profile');
 
       // Verify both parent and nested field numbers are preserved
-      expect(userFields2['id']).toBe(userFields1['id']);
-      expect(userFields2['name']).toBe(userFields1['name']);
-      expect(userFields2['profile']).toBe(userFields1['profile']);
+      expect(userFields2.id).toBe(userFields1.id);
+      expect(userFields2.name).toBe(userFields1.name);
+      expect(userFields2.profile).toBe(userFields1.profile);
 
-      expect(profileFields2['bio']).toBe(profileFields1['bio']);
-      expect(profileFields2['avatar']).toBe(profileFields1['avatar']);
-      expect(profileFields2['location']).toBe(profileFields1['location']);
+      expect(profileFields2.bio).toBe(profileFields1.bio);
+      expect(profileFields2.avatar).toBe(profileFields1.avatar);
+      expect(profileFields2.location).toBe(profileFields1.location);
     });
   });
 
@@ -355,10 +355,10 @@ describe('Operations Field Ordering Stability', () => {
       const root1 = loadProtoFromText(result1.proto);
       const requestFields1 = getFieldNumbersFromMessage(root1, 'SearchUsersRequest');
 
-      const idNumber = requestFields1['id'];
-      const nameNumber = requestFields1['name'];
-      const emailNumber = requestFields1['email'];
-      const ageNumber = requestFields1['age'];
+      const idNumber = requestFields1.id;
+      const nameNumber = requestFields1.name;
+      const emailNumber = requestFields1.email;
+      const ageNumber = requestFields1.age;
 
       // Second operation with completely different variable order
       const operation2 = `
@@ -379,10 +379,10 @@ describe('Operations Field Ordering Stability', () => {
       const requestFields2 = getFieldNumbersFromMessage(root2, 'SearchUsersRequest');
 
       // Verify field numbers are preserved
-      expect(requestFields2['id']).toBe(idNumber);
-      expect(requestFields2['name']).toBe(nameNumber);
-      expect(requestFields2['email']).toBe(emailNumber);
-      expect(requestFields2['age']).toBe(ageNumber);
+      expect(requestFields2.id).toBe(idNumber);
+      expect(requestFields2.name).toBe(nameNumber);
+      expect(requestFields2.email).toBe(emailNumber);
+      expect(requestFields2.age).toBe(ageNumber);
     });
 
     test('should handle adding and removing variables', () => {
@@ -413,8 +413,8 @@ describe('Operations Field Ordering Stability', () => {
       const root1 = loadProtoFromText(result1.proto);
       const requestFields1 = getFieldNumbersFromMessage(root1, 'FilterUsersRequest');
 
-      const nameNumber = requestFields1['name'];
-      const activeNumber = requestFields1['active'];
+      const nameNumber = requestFields1.name;
+      const activeNumber = requestFields1.active;
 
       // Second operation with some variables removed
       const operation2 = `
@@ -435,13 +435,13 @@ describe('Operations Field Ordering Stability', () => {
       const requestFields2 = getFieldNumbersFromMessage(root2, 'FilterUsersRequest');
 
       // Verify preserved variables kept their numbers
-      expect(requestFields2['name']).toBe(nameNumber);
-      expect(requestFields2['active']).toBe(activeNumber);
+      expect(requestFields2.name).toBe(nameNumber);
+      expect(requestFields2.active).toBe(activeNumber);
 
       // Verify removed variables are not present
-      expect(requestFields2['id']).toBeUndefined();
-      expect(requestFields2['age']).toBeUndefined();
-      expect(requestFields2['email']).toBeUndefined();
+      expect(requestFields2.id).toBeUndefined();
+      expect(requestFields2.age).toBeUndefined();
+      expect(requestFields2.email).toBeUndefined();
 
       // Third operation with variables re-added (no unused variables)
       const operation3 = `
@@ -489,12 +489,12 @@ describe('Operations Field Ordering Stability', () => {
       const requestFields3 = getFieldNumbersFromMessage(root3, 'FilterUsersRequest');
 
       // Verify original variables still have same numbers
-      expect(requestFields3['name']).toBe(nameNumber);
-      expect(requestFields3['active']).toBe(activeNumber);
+      expect(requestFields3.name).toBe(nameNumber);
+      expect(requestFields3.active).toBe(activeNumber);
 
       // Verify re-added variable exists (gets new number, not reusing old one)
-      expect(requestFields3['id']).toBeDefined();
-      expect(requestFields3['id']).toBeGreaterThan(activeNumber);
+      expect(requestFields3.id).toBeDefined();
+      expect(requestFields3.id).toBeGreaterThan(activeNumber);
     });
   });
 
@@ -538,10 +538,10 @@ describe('Operations Field Ordering Stability', () => {
       const root1 = loadProtoFromText(result1.proto);
       const inputFields1 = getFieldNumbersFromMessage(root1, 'UserInput');
 
-      const nameNumber = inputFields1['name'];
-      const emailNumber = inputFields1['email'];
-      const ageNumber = inputFields1['age'];
-      const activeNumber = inputFields1['active'];
+      const nameNumber = inputFields1.name;
+      const emailNumber = inputFields1.email;
+      const ageNumber = inputFields1.age;
+      const activeNumber = inputFields1.active;
 
       // Second operation - same input type should preserve field numbers
       const operation2 = `
@@ -562,10 +562,10 @@ describe('Operations Field Ordering Stability', () => {
       const inputFields2 = getFieldNumbersFromMessage(root2, 'UserInput');
 
       // Verify field numbers are preserved
-      expect(inputFields2['name']).toBe(nameNumber);
-      expect(inputFields2['email']).toBe(emailNumber);
-      expect(inputFields2['age']).toBe(ageNumber);
-      expect(inputFields2['active']).toBe(activeNumber);
+      expect(inputFields2.name).toBe(nameNumber);
+      expect(inputFields2.email).toBe(emailNumber);
+      expect(inputFields2.age).toBe(ageNumber);
+      expect(inputFields2.active).toBe(activeNumber);
     });
 
     test('should handle nested input objects with field reordering', () => {
@@ -621,17 +621,17 @@ describe('Operations Field Ordering Stability', () => {
       const prefsFields1 = getFieldNumbersFromMessage(root1, 'UserPreferences');
 
       // Store original field numbers
-      const filterBasicNumber = filterFields1['basic'];
-      const filterPrefsNumber = filterFields1['preferences'];
-      const filterMetadataNumber = filterFields1['metadata'];
+      const filterBasicNumber = filterFields1.basic;
+      const filterPrefsNumber = filterFields1.preferences;
+      const filterMetadataNumber = filterFields1.metadata;
 
-      const basicIdNumber = basicFields1['id'];
-      const basicNameNumber = basicFields1['name'];
-      const basicEmailNumber = basicFields1['email'];
+      const basicIdNumber = basicFields1.id;
+      const basicNameNumber = basicFields1.name;
+      const basicEmailNumber = basicFields1.email;
 
-      const prefsActiveNumber = prefsFields1['active'];
-      const prefsNotificationsNumber = prefsFields1['notifications'];
-      const prefsThemeNumber = prefsFields1['theme'];
+      const prefsActiveNumber = prefsFields1.active;
+      const prefsNotificationsNumber = prefsFields1.notifications;
+      const prefsThemeNumber = prefsFields1.theme;
 
       // Get the generated lock data
       const lockData = result1.lockData;
@@ -648,7 +648,7 @@ describe('Operations Field Ordering Stability', () => {
       `;
 
       const result2 = compileOperationsToProto(operation2, schema, {
-        lockData: lockData,
+        lockData,
       });
       expectValidProto(result2.proto);
 
@@ -658,19 +658,19 @@ describe('Operations Field Ordering Stability', () => {
       const prefsFields2 = getFieldNumbersFromMessage(root2, 'UserPreferences');
 
       // Verify parent input object field numbers are preserved
-      expect(filterFields2['basic']).toBe(filterBasicNumber);
-      expect(filterFields2['preferences']).toBe(filterPrefsNumber);
-      expect(filterFields2['metadata']).toBe(filterMetadataNumber);
+      expect(filterFields2.basic).toBe(filterBasicNumber);
+      expect(filterFields2.preferences).toBe(filterPrefsNumber);
+      expect(filterFields2.metadata).toBe(filterMetadataNumber);
 
       // Verify nested BasicInfo field numbers are preserved
-      expect(basicFields2['id']).toBe(basicIdNumber);
-      expect(basicFields2['name']).toBe(basicNameNumber);
-      expect(basicFields2['email']).toBe(basicEmailNumber);
+      expect(basicFields2.id).toBe(basicIdNumber);
+      expect(basicFields2.name).toBe(basicNameNumber);
+      expect(basicFields2.email).toBe(basicEmailNumber);
 
       // Verify nested UserPreferences field numbers are preserved
-      expect(prefsFields2['active']).toBe(prefsActiveNumber);
-      expect(prefsFields2['notifications']).toBe(prefsNotificationsNumber);
-      expect(prefsFields2['theme']).toBe(prefsThemeNumber);
+      expect(prefsFields2.active).toBe(prefsActiveNumber);
+      expect(prefsFields2.notifications).toBe(prefsNotificationsNumber);
+      expect(prefsFields2.theme).toBe(prefsThemeNumber);
     });
 
     test('should handle adding and removing fields in nested input objects', () => {
@@ -725,9 +725,9 @@ describe('Operations Field Ordering Stability', () => {
       const prefsFields1 = getFieldNumbersFromMessage(root1, 'UserPreferences');
 
       // Store original field numbers
-      const basicIdNumber = basicFields1['id'];
-      const basicEmailNumber = basicFields1['email'];
-      const prefsActiveNumber = prefsFields1['active'];
+      const basicIdNumber = basicFields1.id;
+      const basicEmailNumber = basicFields1.email;
+      const prefsActiveNumber = prefsFields1.active;
 
       const lockData1 = result1.lockData;
 
@@ -784,15 +784,15 @@ describe('Operations Field Ordering Stability', () => {
       const prefsFields2 = getFieldNumbersFromMessage(root2, 'UserPreferences');
 
       // Verify preserved fields kept their numbers
-      expect(basicFields2['id']).toBe(basicIdNumber);
-      expect(basicFields2['email']).toBe(basicEmailNumber);
-      expect(prefsFields2['active']).toBe(prefsActiveNumber);
+      expect(basicFields2.id).toBe(basicIdNumber);
+      expect(basicFields2.email).toBe(basicEmailNumber);
+      expect(prefsFields2.active).toBe(prefsActiveNumber);
 
       // Verify removed fields are not present
-      expect(basicFields2['name']).toBeUndefined();
-      expect(basicFields2['phone']).toBeUndefined();
-      expect(prefsFields2['notifications']).toBeUndefined();
-      expect(prefsFields2['theme']).toBeUndefined();
+      expect(basicFields2.name).toBeUndefined();
+      expect(basicFields2.phone).toBeUndefined();
+      expect(prefsFields2.notifications).toBeUndefined();
+      expect(prefsFields2.theme).toBeUndefined();
 
       const lockData2 = result2.lockData;
 
@@ -851,24 +851,24 @@ describe('Operations Field Ordering Stability', () => {
       const prefsFields3 = getFieldNumbersFromMessage(root3, 'UserPreferences');
 
       // Verify original fields still have same numbers
-      expect(basicFields3['id']).toBe(basicIdNumber);
-      expect(basicFields3['email']).toBe(basicEmailNumber);
-      expect(prefsFields3['active']).toBe(prefsActiveNumber);
+      expect(basicFields3.id).toBe(basicIdNumber);
+      expect(basicFields3.email).toBe(basicEmailNumber);
+      expect(prefsFields3.active).toBe(prefsActiveNumber);
 
       // Verify re-added fields exist (they get new numbers)
-      expect(basicFields3['name']).toBeDefined();
-      expect(basicFields3['phone']).toBeDefined();
-      expect(prefsFields3['notifications']).toBeDefined();
-      expect(prefsFields3['theme']).toBeDefined();
+      expect(basicFields3.name).toBeDefined();
+      expect(basicFields3.phone).toBeDefined();
+      expect(prefsFields3.notifications).toBeDefined();
+      expect(prefsFields3.theme).toBeDefined();
 
       // Verify new fields exist
-      expect(basicFields3['address']).toBeDefined();
-      expect(prefsFields3['language']).toBeDefined();
+      expect(basicFields3.address).toBeDefined();
+      expect(prefsFields3.language).toBeDefined();
 
       // Re-added and new fields should have higher numbers than original fields
-      expect(basicFields3['name']).toBeGreaterThan(basicEmailNumber);
-      expect(basicFields3['address']).toBeGreaterThan(basicEmailNumber);
-      expect(prefsFields3['language']).toBeGreaterThan(prefsActiveNumber);
+      expect(basicFields3.name).toBeGreaterThan(basicEmailNumber);
+      expect(basicFields3.address).toBeGreaterThan(basicEmailNumber);
+      expect(prefsFields3.language).toBeGreaterThan(prefsActiveNumber);
     });
 
     test('should handle deeply nested input objects (3 levels)', () => {
@@ -936,21 +936,21 @@ describe('Operations Field Ordering Stability', () => {
       const sortFields1 = getFieldNumbersFromMessage(root1, 'SortOptions');
 
       // Store original field numbers at each level
-      const criteriaFiltersNumber = criteriaFields1['filters'];
-      const criteriaSortingNumber = criteriaFields1['sorting'];
+      const criteriaFiltersNumber = criteriaFields1.filters;
+      const criteriaSortingNumber = criteriaFields1.sorting;
 
-      const filterGroupUserNumber = filterGroupFields1['user'];
-      const filterGroupDateNumber = filterGroupFields1['date'];
+      const filterGroupUserNumber = filterGroupFields1.user;
+      const filterGroupDateNumber = filterGroupFields1.date;
 
-      const userFiltersNameNumber = userFiltersFields1['name'];
-      const userFiltersEmailNumber = userFiltersFields1['email'];
-      const userFiltersActiveNumber = userFiltersFields1['active'];
+      const userFiltersNameNumber = userFiltersFields1.name;
+      const userFiltersEmailNumber = userFiltersFields1.email;
+      const userFiltersActiveNumber = userFiltersFields1.active;
 
-      const dateFiltersFromNumber = dateFiltersFields1['from'];
-      const dateFiltersToNumber = dateFiltersFields1['to'];
+      const dateFiltersFromNumber = dateFiltersFields1.from;
+      const dateFiltersToNumber = dateFiltersFields1.to;
 
-      const sortFieldNumber = sortFields1['field'];
-      const sortDirectionNumber = sortFields1['direction'];
+      const sortFieldNumber = sortFields1.field;
+      const sortDirectionNumber = sortFields1.direction;
 
       const lockData = result1.lockData;
 
@@ -965,7 +965,7 @@ describe('Operations Field Ordering Stability', () => {
       `;
 
       const result2 = compileOperationsToProto(operation2, schema, {
-        lockData: lockData,
+        lockData,
       });
       expectValidProto(result2.proto);
 
@@ -1029,21 +1029,21 @@ describe('Operations Field Ordering Stability', () => {
       const sortFields2 = getFieldNumbersFromMessage(root2, 'SortOptions');
 
       // Verify all field numbers are preserved at all nesting levels
-      expect(criteriaFields2['filters']).toBe(criteriaFiltersNumber);
-      expect(criteriaFields2['sorting']).toBe(criteriaSortingNumber);
+      expect(criteriaFields2.filters).toBe(criteriaFiltersNumber);
+      expect(criteriaFields2.sorting).toBe(criteriaSortingNumber);
 
-      expect(filterGroupFields2['user']).toBe(filterGroupUserNumber);
-      expect(filterGroupFields2['date']).toBe(filterGroupDateNumber);
+      expect(filterGroupFields2.user).toBe(filterGroupUserNumber);
+      expect(filterGroupFields2.date).toBe(filterGroupDateNumber);
 
-      expect(userFiltersFields2['name']).toBe(userFiltersNameNumber);
-      expect(userFiltersFields2['email']).toBe(userFiltersEmailNumber);
-      expect(userFiltersFields2['active']).toBe(userFiltersActiveNumber);
+      expect(userFiltersFields2.name).toBe(userFiltersNameNumber);
+      expect(userFiltersFields2.email).toBe(userFiltersEmailNumber);
+      expect(userFiltersFields2.active).toBe(userFiltersActiveNumber);
 
-      expect(dateFiltersFields2['from']).toBe(dateFiltersFromNumber);
-      expect(dateFiltersFields2['to']).toBe(dateFiltersToNumber);
+      expect(dateFiltersFields2.from).toBe(dateFiltersFromNumber);
+      expect(dateFiltersFields2.to).toBe(dateFiltersToNumber);
 
-      expect(sortFields2['field']).toBe(sortFieldNumber);
-      expect(sortFields2['direction']).toBe(sortDirectionNumber);
+      expect(sortFields2.field).toBe(sortFieldNumber);
+      expect(sortFields2.direction).toBe(sortDirectionNumber);
     });
   });
 
@@ -1084,10 +1084,10 @@ describe('Operations Field Ordering Stability', () => {
       const root1 = loadProtoFromText(result1.proto);
       const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponse.User');
 
-      const idNumber = userFields1['id'];
-      const nameNumber = userFields1['name'];
-      const emailNumber = userFields1['email'];
-      const ageNumber = userFields1['age'];
+      const idNumber = userFields1.id;
+      const nameNumber = userFields1.name;
+      const emailNumber = userFields1.email;
+      const ageNumber = userFields1.age;
 
       // Second operation with reordered fragment fields
       const operation2 = `
@@ -1114,10 +1114,10 @@ describe('Operations Field Ordering Stability', () => {
       const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User');
 
       // Verify field numbers are preserved
-      expect(userFields2['id']).toBe(idNumber);
-      expect(userFields2['name']).toBe(nameNumber);
-      expect(userFields2['email']).toBe(emailNumber);
-      expect(userFields2['age']).toBe(ageNumber);
+      expect(userFields2.id).toBe(idNumber);
+      expect(userFields2.name).toBe(nameNumber);
+      expect(userFields2.email).toBe(emailNumber);
+      expect(userFields2.age).toBe(ageNumber);
     });
 
     test('should handle mixed fragment spreads and inline fields with reordering', () => {
@@ -1391,9 +1391,9 @@ describe('Operations Field Ordering Stability', () => {
       const settingsFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User.Profile.Settings');
 
       // Verify deeply nested field numbers are preserved
-      expect(settingsFields2['theme']).toBe(settingsFields1['theme']);
-      expect(settingsFields2['notifications']).toBe(settingsFields1['notifications']);
-      expect(settingsFields2['language']).toBe(settingsFields1['language']);
+      expect(settingsFields2.theme).toBe(settingsFields1.theme);
+      expect(settingsFields2.notifications).toBe(settingsFields1.notifications);
+      expect(settingsFields2.language).toBe(settingsFields1.language);
     });
 
     test('should handle operations with both variable and response field reordering', () => {
@@ -1587,8 +1587,8 @@ describe('Operations Field Ordering Stability', () => {
       const userFields1 = getFieldNumbersFromMessage(root1, 'GetUserResponse.User');
       const userFields2 = getFieldNumbersFromMessage(root2, 'GetUserResponse.User');
 
-      expect(userFields2['id']).toBe(userFields1['id']);
-      expect(userFields2['name']).toBe(userFields1['name']);
+      expect(userFields2.id).toBe(userFields1.id);
+      expect(userFields2.name).toBe(userFields1.name);
     });
 
     test('should produce consistent output when run multiple times with same operation', () => {
