@@ -1,11 +1,12 @@
 package graphiql
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/wundergraph/cosmo/router/internal/test"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/wundergraph/cosmo/router/internal/test"
 )
 
 func TestHealthCheckHandler(t *testing.T) {
@@ -17,7 +18,7 @@ func TestHealthCheckHandler(t *testing.T) {
 
 	th := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("test"))
+		_, _ = w.Write([]byte("test"))
 	})
 
 	req := test.NewRequest(http.MethodGet, "/html")

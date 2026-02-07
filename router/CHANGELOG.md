@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.277.0](https://github.com/wundergraph/cosmo/compare/router@0.276.0...router@0.277.0) (2026-02-03)
+
+### Bug Fixes
+
+* dont forward content-* headers from client and subgraphs ([#2481](https://github.com/wundergraph/cosmo/issues/2481)) ([810344a](https://github.com/wundergraph/cosmo/commit/810344aead4d657290827cae33958989b2a76f92)) (@StarpTech)
+
+### Features
+
+* client response expressions ([#2472](https://github.com/wundergraph/cosmo/issues/2472)) ([f585037](https://github.com/wundergraph/cosmo/commit/f5850379a47b19a6bbc388e29268612a89540354)) (@SkArchon)
+
+# [0.276.0](https://github.com/wundergraph/cosmo/compare/router@0.275.1...router@0.276.0) (2026-02-02)
+
+### Features
+
+* set operation name also with persistent queries ([#2480](https://github.com/wundergraph/cosmo/issues/2480)) ([f3166dc](https://github.com/wundergraph/cosmo/commit/f3166dc7a67a74bd94f770be07960477b9300be0)) (@alepane21)
+
+## [0.275.1](https://github.com/wundergraph/cosmo/compare/router@0.275.0...router@0.275.1) (2026-01-26)
+
+### Bug Fixes
+
+* improve field resolver handling for nested resolver calls ([#2464](https://github.com/wundergraph/cosmo/issues/2464)) ([7fed361](https://github.com/wundergraph/cosmo/commit/7fed361030aae7ca10f06f282c77d1acef77e685)) (@Noroth)
+* **router:** flush errors on sse streams ([#2377](https://github.com/wundergraph/cosmo/issues/2377)) ([916d3ac](https://github.com/wundergraph/cosmo/commit/916d3acb4b91e248f930cd49d170129ce589d5de)) (@dkorittki)
+
 # [0.275.0](https://github.com/wundergraph/cosmo/compare/router@0.274.1...router@0.275.0) (2026-01-20)
 
 ### Bug Fixes

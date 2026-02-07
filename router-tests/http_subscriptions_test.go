@@ -92,7 +92,6 @@ func TestHeartbeats(t *testing.T) {
 						return
 					}
 
-					fmt.Println(string(line))
 					messages <- string(line)
 				}
 			}()
@@ -136,9 +135,9 @@ func TestHeartbeats(t *testing.T) {
 
 			resp, err := client.Do(req)
 			require.NoError(t, err)
+			defer resp.Body.Close()
 			require.Equal(t, http.StatusOK, resp.StatusCode)
 
-			defer resp.Body.Close()
 			reader := bufio.NewReader(resp.Body)
 
 			lines := make(chan string, 50)
@@ -193,6 +192,70 @@ func TestHeartbeats(t *testing.T) {
 			})
 
 			// Expect blank line after complete
+			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
+				assert.Equal(t, "", line)
+			})
+		})
+	})
+
+	t.Run("should write an error on sse", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithSubscriptionHeartbeatInterval(subscriptionHeartbeatInterval),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(h http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Subgraph forbidden","extensions":{"code":"FORBIDDEN"}}]}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			client := http.Client{
+				Timeout: time.Second * 100,
+			}
+
+			subscribePayload := []byte(`{"query":"subscription { countEmp(max: 5, intervalMilliseconds: 550) }"}`)
+
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+			req.Header.Set("Connection", "keep-alive")
+			req.Header.Set("Cache-Control", "no-cache")
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			reader := bufio.NewReader(resp.Body)
+			lines := make(chan string, 50)
+
+			go func() {
+				defer close(lines)
+				for {
+					line, _, err := reader.ReadLine()
+					if err != nil {
+						return
+					}
+					lines <- string(line)
+				}
+			}()
+
+			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
+				assert.Equal(t, "event: next", line)
+			})
+
+			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
+				assert.Equal(t, `data: {"errors":[{"message":"Subscription Upgrade request failed for Subgraph 'employees'.","extensions":{"statusCode":403}}],"data":null}`, line)
+			})
+
 			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
 				assert.Equal(t, "", line)
 			})

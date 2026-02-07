@@ -26,7 +26,7 @@ export interface TagInputStyleClassesProps {
 
 export interface TagInputProps
   extends OmittedInputProps,
-    VariantProps<typeof tagVariants> {
+  VariantProps<typeof tagVariants> {
   placeholder?: string;
   tags: Tag[];
   setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
@@ -93,7 +93,6 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
     } = props;
 
     const [inputValue, setInputValue] = React.useState("");
-    const [tagCount, setTagCount] = React.useState(Math.max(0, tags.length));
     const inputRef = React.useRef<HTMLInputElement>(null);
 
     if (
@@ -111,72 +110,127 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
       onInputChange?.(newValue);
     };
 
+    const tryAddTag = 
+      (rawText: string, nextTags: Tag[]) => {
+        const newTagText = rawText.trim();
+        if (!newTagText) {
+          return nextTags;
+        }
+        if (!allowDuplicates && nextTags.some((tag) => tag.text === newTagText)) {
+          return nextTags;
+        }
+        if (maxTags !== undefined && nextTags.length >= maxTags) {
+          return nextTags;
+        }
+        const newTagId = crypto.randomUUID();
+        onTagAdd?.(newTagText);
+        return [...nextTags, { id: newTagId, text: newTagText }];
+      };
+
+    const escapeForCharClass = (value: string) =>
+      value.replace(/[-\\^$*+?.()|[\]{}]/g, "\\$&");
+
+    const commitInputValue = 
+      (rawText: string, splitByDelimiters: boolean) => {
+        const trimmed = rawText.trim();
+        if (!trimmed) {
+          setInputValue("");
+          return;
+        }
+
+        const charDelimiters = delimiterList.filter((d) => d.length === 1);
+        const nextTagTexts =
+          splitByDelimiters && charDelimiters.length
+            ? trimmed
+              .split(
+                new RegExp(
+                  `[${charDelimiters.map(escapeForCharClass).join("")}]+`,
+                ),
+              )
+              .map((t) => t.trim())
+              .filter(Boolean)
+            : [trimmed];
+
+        // Use functional updater pattern to get latest state and avoid race conditions
+        setTags((prevTags) => {
+          let nextTags = prevTags;
+          for (const text of nextTagTexts) {
+            nextTags = tryAddTag(text, nextTags);
+          }
+          if (nextTags !== prevTags) {
+            return nextTags;
+          }
+          return prevTags;
+        });
+        setInputValue("");
+      };
+
     const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
       setActiveTagIndex(null); // Reset active tag index when the input field gains focus
       onFocus?.(event);
     };
 
     const handleInputBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+      // If the user pasted/typed text and clicks outside (e.g. submit button),
+      // ensure the pending input becomes a tag.
+      commitInputValue(inputValue, true);
       onBlur?.(event);
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (delimiterList.includes(e.key)) {
         e.preventDefault();
-        const newTagText = inputValue.trim();
-
-        const newTagId = crypto.randomUUID();
-
-        if (
-          newTagText &&
-          (allowDuplicates || !tags.some((tag) => tag.text === newTagText)) &&
-          (maxTags === undefined || tags.length < maxTags)
-        ) {
-          setTags([...tags, { id: newTagId, text: newTagText }]);
-          onTagAdd?.(newTagText);
-          setTagCount((prevTagCount) => prevTagCount + 1);
-        }
-        setInputValue("");
-      } else {
-        switch (e.key) {
-          case "Backspace":
-            if (e.currentTarget.value === "") {
-              e.preventDefault();
-              const newTags = [...tags];
-              newTags.splice(tagCount - 1, 1);
-              setTags(newTags);
-              setTagCount(newTags.length);
-            }
-            break;
-        }
+        commitInputValue(inputValue, false);
+      } else if (e.key === "Backspace" && inputValue.length === 0) {
+        setTags((prevTags) => {
+          if (prevTags.length > 0) {
+            const removedTag = prevTags[prevTags.length - 1];
+            const newTags = prevTags.slice(0, -1);
+            onTagRemove?.(removedTag.text);
+            return newTags;
+          }
+          return prevTags;
+        });
+        e.preventDefault();
       }
     };
 
+    const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      const pastedText = e.clipboardData.getData("text/plain");
+      commitInputValue(pastedText, true);
+    };
+
     const removeTag = (idToRemove: string) => {
-      setTags(tags.filter((tag) => tag.id !== idToRemove));
-      onTagRemove?.(tags.find((tag) => tag.id === idToRemove)?.text || "");
-      setTagCount((prevTagCount) => prevTagCount - 1);
+      setTags((prevTags) => {
+        const tagToRemove = prevTags.find((tag) => tag.id === idToRemove);
+        const newTags = prevTags.filter((tag) => tag.id !== idToRemove);
+        if (newTags.length !== prevTags.length) {
+          onTagRemove?.(tagToRemove?.text || "");
+          return newTags;
+        }
+        return prevTags;
+      });
     };
 
     const truncatedTags = truncate
       ? tags.map((tag) => ({
-          id: tag.id,
-          text:
-            tag.text?.length > truncate
-              ? `${tag.text.substring(0, truncate)}...`
-              : tag.text,
-        }))
+        id: tag.id,
+        text:
+          tag.text?.length > truncate
+            ? `${tag.text.substring(0, truncate)}...`
+            : tag.text,
+      }))
       : tags;
 
     return (
       <div
-        className={`flex w-full ${
-          inputFieldPosition === "bottom"
-            ? "flex-col"
-            : inputFieldPosition === "top"
+        className={`flex w-full ${inputFieldPosition === "bottom"
+          ? "flex-col"
+          : inputFieldPosition === "top"
             ? "flex-col-reverse"
             : "flex-row"
-        }`}
+          }`}
       >
         <div className="w-full">
           <div
@@ -220,6 +274,7 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
               onKeyDown={handleKeyDown}
               onFocus={handleInputFocus}
               onBlur={handleInputBlur}
+              onPaste={handlePaste}
               {...inputProps}
               className={cn(
                 "h-5 w-fit flex-1 border-0 bg-transparent px-1.5 focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-0",
@@ -235,7 +290,7 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
         {showCount && maxTags && (
           <div className="flex">
             <span className="ml-auto mt-1 text-sm text-muted-foreground">
-              {`${tagCount}`}/{`${maxTags}`}
+              {`${tags.length}`}/{`${maxTags}`}
             </span>
           </div>
         )}
