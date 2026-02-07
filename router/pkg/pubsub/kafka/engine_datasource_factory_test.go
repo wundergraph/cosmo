@@ -1,20 +1,15 @@
 package kafka
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 	"testing"
 
-	"github.com/cespare/xxhash/v2"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/pubsubtest"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 func TestKafkaEngineDataSourceFactory(t *testing.T) {
@@ -62,10 +57,9 @@ func TestEngineDataSourceFactoryWithMockAdapter(t *testing.T) {
 	require.NoError(t, err)
 
 	// Call Load on the data source
-	out := &bytes.Buffer{}
-	err = ds.Load(context.Background(), []byte(input), out)
+	data, err := ds.Load(context.Background(), nil, []byte(input))
 	require.NoError(t, err)
-	require.Equal(t, `{"__typename": "edfs__PublishResult", "success": true}`, out.String())
+	require.Equal(t, `{"__typename": "edfs__PublishResult", "success": true}`, string(data))
 }
 
 // TestEngineDataSourceFactory_GetResolveDataSource_WrongType tests the EngineDataSourceFactory with a mocked adapter
@@ -144,58 +138,4 @@ func TestKafkaEngineDataSourceFactoryMultiTopicSubscription(t *testing.T) {
 	require.Equal(t, 2, len(subscriptionConfig.Topics), "Expected 2 topics in subscription configuration")
 	require.Equal(t, "test-topic-1", subscriptionConfig.Topics[0], "Expected first topic to be 'test-topic-1'")
 	require.Equal(t, "test-topic-2", subscriptionConfig.Topics[1], "Expected second topic to be 'test-topic-2'")
-}
-
-func TestKafkaEngineDataSourceFactory_UniqueRequestID(t *testing.T) {
-	tests := []struct {
-		name          string
-		input         string
-		expectError   bool
-		expectedError error
-	}{
-		{
-			name:        "valid input",
-			input:       `{"topics":["topic1", "topic2"], "providerId":"test-provider"}`,
-			expectError: false,
-		},
-		{
-			name:          "missing topics",
-			input:         `{"providerId":"test-provider"}`,
-			expectError:   true,
-			expectedError: errors.New("Key path not found"),
-		},
-		{
-			name:          "missing providerId",
-			input:         `{"topics":["topic1", "topic2"]}`,
-			expectError:   true,
-			expectedError: errors.New("Key path not found"),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			factory := &EngineDataSourceFactory{
-				KafkaAdapter: datasource.NewMockProvider(t),
-			}
-			source, err := factory.ResolveDataSourceSubscription()
-			require.NoError(t, err)
-			ctx := &resolve.Context{}
-			input := []byte(tt.input)
-			xxh := xxhash.New()
-
-			err = source.UniqueRequestID(ctx, input, xxh)
-
-			if tt.expectError {
-				require.Error(t, err)
-				if tt.expectedError != nil {
-					// For jsonparser errors, just check if the error message contains the expected text
-					assert.Contains(t, err.Error(), tt.expectedError.Error())
-				}
-			} else {
-				require.NoError(t, err)
-				// Check that the hash has been updated
-				assert.NotEqual(t, 0, xxh.Sum64())
-			}
-		})
-	}
 }

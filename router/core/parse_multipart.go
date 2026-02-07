@@ -55,7 +55,9 @@ func (p *MultipartParser) processInMemoryFile(filePart []*multipart.FileHeader, 
 		return err
 	}
 
-	defer tempFile.Close()
+	defer func() {
+		_ = tempFile.Close()
+	}()
 	p.fileHandlers = append(p.fileHandlers, tempFile)
 	_, err = io.Copy(tempFile, file)
 	if err != nil {
@@ -71,7 +73,9 @@ func (p *MultipartParser) processFilePart(filePart []*multipart.FileHeader, uplo
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		_ = file.Close()
+	}()
 
 	if filePart[0].Size > int64(p.maxUploadFileSize) {
 		return &httpGraphqlError{
