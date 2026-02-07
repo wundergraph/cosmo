@@ -17,6 +17,7 @@ export const COST_DIRECTIVE = `
   directive @cost(weight: String!) on ARGUMENT_DEFINITION | ENUM | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | OBJECT | SCALAR
 `;
 
+
 export const EDFS_NATS_PUBLISH_DIRECTIVE = `
   directive @edfs__natsPublish(providerId: String! = "default", subject: String!) on FIELD_DEFINITION
 `;
@@ -75,6 +76,7 @@ export const KEY_DIRECTIVE = `
 export const LIST_SIZE_DIRECTIVE = `
   directive @listSize(assumedSize: Int, requireOneSlicingArgument: Boolean = true, sizedFields: [String!], slicingArguments: [String!]) on FIELD_DEFINITION
 `;
+
 
 export const OPENFED_FIELD_SET = `  scalar openfed__FieldSet`;
 

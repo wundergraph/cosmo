@@ -4,6 +4,7 @@ import { LIST_SIZE_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {
   federateSubgraphsSuccess,
   normalizeString,
+  normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
@@ -259,6 +260,107 @@ describe('@listSize directive tests', () => {
         ),
       );
     });
+
+    test('that @listSize from multiple subgraphs on different fields is preserved in federated schema', () => {
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphAListSize, subgraphBListSize],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            LIST_SIZE_DIRECTIVE +
+            `
+            type Post {
+              id: ID!
+            }
+
+            type Query {
+              posts: [Post!]! @listSize(assumedSize: 20)
+              users: [User!]! @listSize(assumedSize: 50)
+            }
+
+            type User {
+              id: ID!
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that @listSize from multiple subgraphs on the same entity field is deduplicated to first instance', () => {
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphAListSizeEntity, subgraphBListSizeEntity],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            LIST_SIZE_DIRECTIVE +
+            `
+            type Entity {
+              id: ID!
+              tags: [String!]! @listSize(assumedSize: 10)
+            }
+
+            type Query {
+              entity: Entity!
+            }
+          `,
+        ),
+      );
+    });
+  });
+
+  describe('validation tests', () => {
+    test('that @listSize with invalid slicingArguments produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithInvalidSlicingArg,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('does not reference a defined argument');
+    });
+
+    test('that @listSize with non-Int slicingArgument type produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNonIntSlicingArg,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
+    });
+
+    test('that @listSize with invalid sizedFields produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithInvalidSizedField,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('does not reference a defined field');
+    });
+
+    test('that @listSize with non-list sizedField produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNonListSizedField,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('must return a list type');
+    });
+
+    test('that @listSize on non-list field without sizedFields produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithListSizeOnNonListField,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('not a list type');
+    });
+
+    test('that @listSize on non-list field with sizedFields succeeds', () => {
+      normalizeSubgraphSuccess(subgraphWithSizedFields, ROUTER_COMPATIBILITY_VERSION_ONE);
+    });
   });
 });
 
@@ -365,6 +467,113 @@ const subgraphWithMultipleListSize: Subgraph = {
 
     type Post {
       id: ID!
+    }
+  `),
+};
+
+const subgraphWithInvalidSlicingArg: Subgraph = {
+  name: 'subgraph-listsize-invalid-slicing',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: Int): [User!]! @listSize(slicingArguments: ["first", "nonexistent"])
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithNonIntSlicingArg: Subgraph = {
+  name: 'subgraph-listsize-nonint-slicing',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(name: String): [User!]! @listSize(slicingArguments: ["name"])
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithInvalidSizedField: Subgraph = {
+  name: 'subgraph-listsize-invalid-sized',
+  url: '',
+  definitions: parse(`
+    type Query {
+      usersConnection(first: Int): Connection! @listSize(slicingArguments: ["first"], sizedFields: ["nonexistent"])
+    }
+    type Connection { edges: [Edge!]! }
+    type Edge { node: User! }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithNonListSizedField: Subgraph = {
+  name: 'subgraph-listsize-nonlist-sized',
+  url: '',
+  definitions: parse(`
+    type Query {
+      usersConnection(first: Int): Connection! @listSize(slicingArguments: ["first"], sizedFields: ["totalCount"])
+    }
+    type Connection { edges: [Edge!]! totalCount: Int! }
+    type Edge { node: User! }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithListSizeOnNonListField: Subgraph = {
+  name: 'subgraph-listsize-nonlist',
+  url: '',
+  definitions: parse(`
+    type Query {
+      user: User! @listSize(assumedSize: 1)
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphAListSize: Subgraph = {
+  name: 'subgraph-a-listsize',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users: [User!]! @listSize(assumedSize: 50)
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphBListSize: Subgraph = {
+  name: 'subgraph-b-listsize',
+  url: '',
+  definitions: parse(`
+    type Query {
+      posts: [Post!]! @listSize(assumedSize: 20)
+    }
+    type Post { id: ID! }
+  `),
+};
+
+const subgraphAListSizeEntity: Subgraph = {
+  name: 'subgraph-a-listsize-entity',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      tags: [String!]! @listSize(assumedSize: 10)
+    }
+  `),
+};
+
+const subgraphBListSizeEntity: Subgraph = {
+  name: 'subgraph-b-listsize-entity',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      tags: [String!]! @listSize(assumedSize: 50)
     }
   `),
 };

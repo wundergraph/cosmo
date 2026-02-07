@@ -4,6 +4,7 @@ import { COST_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {
   federateSubgraphsSuccess,
   normalizeString,
+  normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
@@ -282,6 +283,62 @@ describe('@cost directive tests', () => {
         ),
       );
     });
+
+    test('that @cost from multiple subgraphs on different fields is preserved in federated schema', () => {
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphACost, subgraphBCost],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            COST_DIRECTIVE +
+            `
+            type Query {
+              fieldA: String! @cost(weight: "10")
+              fieldB: String! @cost(weight: "20")
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that @cost from multiple subgraphs on the same entity field is deduplicated to first instance', () => {
+      const { federatedGraphSchema } = federateSubgraphsSuccess(
+        [subgraphACostEntity, subgraphBCostEntity],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            COST_DIRECTIVE +
+            `
+            type Entity {
+              id: ID!
+              name: String! @cost(weight: "5")
+            }
+
+            type Query {
+              entity: Entity!
+            }
+          `,
+        ),
+      );
+    });
+  });
+
+  describe('validation tests', () => {
+    test('that @cost with non-numeric weight produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithInvalidCostWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('not a valid numeric string');
+    });
+
+    test('that @cost with empty string weight produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithEmptyCostWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('not a valid numeric string');
+    });
   });
 });
 
@@ -417,6 +474,52 @@ const subgraphBCost: Subgraph = {
   definitions: parse(`
     type Query {
       fieldB: String! @cost(weight: "20")
+    }
+  `),
+};
+
+const subgraphACostEntity: Subgraph = {
+  name: 'subgraph-a-cost-entity',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @cost(weight: "5")
+    }
+  `),
+};
+
+const subgraphBCostEntity: Subgraph = {
+  name: 'subgraph-b-cost-entity',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @cost(weight: "10")
+    }
+  `),
+};
+
+const subgraphWithInvalidCostWeight: Subgraph = {
+  name: 'subgraph-cost-invalid',
+  url: '',
+  definitions: parse(`
+    type Query {
+      field: String! @cost(weight: "abc")
+    }
+  `),
+};
+
+const subgraphWithEmptyCostWeight: Subgraph = {
+  name: 'subgraph-cost-empty',
+  url: '',
+  definitions: parse(`
+    type Query {
+      field: String! @cost(weight: "")
     }
   `),
 };

@@ -92,6 +92,7 @@ import {
   fieldAlreadyProvidedErrorMessage,
   incompatibleInputValueDefaultValueTypeError,
   incompatibleTypeWithProvidesErrorMessage,
+  invalidCostWeightErrorMessage,
   inlineFragmentWithoutTypeConditionErrorMessage,
   invalidArgumentValueErrorMessage,
   invalidDirectiveDefinitionError,
@@ -129,6 +130,11 @@ import {
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
   invalidSubscriptionFilterLocationError,
+  listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage,
+  listSizeInvalidSlicingArgumentErrorMessage,
+  listSizeSizedFieldNotFoundErrorMessage,
+  listSizeSizedFieldNotListErrorMessage,
+  listSizeSlicingArgumentNotIntErrorMessage,
   invalidUnionMemberTypeError,
   multipleNamedTypeDefinitionError,
   noBaseScalarDefinitionError,
@@ -224,8 +230,10 @@ import {
   isFieldData,
   isInputNodeKind,
   isInputObjectDefinitionData,
+  isParentDataCompositeOutputType,
   isNodeExternalOrShareable,
   isOutputNodeKind,
+  isTypeNodeListType,
   isTypeRequired,
   isTypeValidImplementation,
   newConditionalFieldData,
@@ -261,6 +269,7 @@ import {
   CHANNELS,
   CONFIGURE_DESCRIPTION,
   CONSUMER_INACTIVE_THRESHOLD,
+  COST,
   CONSUMER_NAME,
   DEFAULT_EDFS_PROVIDER_ID,
   DESCRIPTION_OVERRIDE,
@@ -290,6 +299,7 @@ import {
   INTERFACE_OBJECT,
   KEY,
   LEVELS,
+  LIST_SIZE,
   LINK_IMPORT,
   LINK_PURPOSE,
   MUTATION,
@@ -320,6 +330,8 @@ import {
   SEMANTIC_NON_NULL,
   SERVICE_FIELD,
   SHAREABLE,
+  SIZED_FIELDS,
+  SLICING_ARGUMENTS,
   STREAM_CONFIGURATION,
   STREAM_NAME,
   STRING_SCALAR,
@@ -334,6 +346,7 @@ import {
   TOPIC,
   TOPICS,
   TYPENAME,
+  WEIGHT,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
@@ -353,6 +366,8 @@ import {
   ExtractArgumentDataResult,
   FieldSetData,
   FieldSetParentResult,
+  HandleCostDirectiveParams,
+  HandleListSizeDirectiveParams,
   HandleOverrideDirectiveParams,
   HandleRequiresScopesDirectiveParams,
   HandleSemanticNonNullDirectiveParams,
@@ -637,7 +652,9 @@ export class NormalizationFactory {
     const parentTypeName =
       data.kind === Kind.FIELD_DEFINITION ? data.renamedParentTypeName || data.originalParentTypeName : data.name;
     const isAuthenticated = directiveName === AUTHENTICATED;
+    const isCost = directiveName === COST;
     const isField = isFieldData(data);
+    const isListSize = directiveName === LIST_SIZE;
     const isOverride = directiveName === OVERRIDE;
     const isRequiresScopes = directiveName === REQUIRES_SCOPES;
     const isSemanticNonNull = directiveName === SEMANTIC_NON_NULL;
@@ -709,6 +726,14 @@ export class NormalizationFactory {
           directiveNode,
           errorMessages,
         });
+        continue;
+      }
+      if (isCost) {
+        this.handleCostDirective({ directiveCoords, directiveNode, errorMessages });
+        continue;
+      }
+      if (isListSize && isField) {
+        this.handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages });
         continue;
       }
       if (!isRequiresScopes || argumentName !== SCOPES) {
@@ -2312,6 +2337,87 @@ export class NormalizationFactory {
       );
     }
     data.nullLevelsBySubgraphName.set(this.subgraphName, levels);
+  }
+
+  handleCostDirective({ directiveCoords, directiveNode, errorMessages }: HandleCostDirectiveParams) {
+    const weightArg = directiveNode.arguments?.find((arg) => arg.name.value === WEIGHT);
+    if (!weightArg || weightArg.value.kind !== Kind.STRING) {
+      return;
+    }
+    const weightValue = (weightArg.value as StringValueNode).value;
+    if (weightValue.trim() === '' || isNaN(Number(weightValue))) {
+      errorMessages.push(invalidCostWeightErrorMessage(directiveCoords, weightValue));
+    }
+  }
+
+  handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages }: HandleListSizeDirectiveParams) {
+    const args = directiveNode.arguments;
+    if (!args) {
+      return;
+    }
+
+    let hasSizedFields = false;
+
+    for (const argumentNode of args) {
+      const argumentName = argumentNode.name.value;
+
+      if (argumentName === SLICING_ARGUMENTS && argumentNode.value.kind === Kind.LIST) {
+        for (const valueNode of (argumentNode.value as ListValueNode).values) {
+          if (valueNode.kind !== Kind.STRING) {
+            continue;
+          }
+          const slicingArgName = (valueNode as StringValueNode).value;
+          const argData = data.argumentDataByName.get(slicingArgName);
+          if (!argData) {
+            errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, slicingArgName));
+            continue;
+          }
+          if (argData.namedTypeName !== INT_SCALAR) {
+            errorMessages.push(
+              listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgName, printTypeNode(argData.type)),
+            );
+          }
+        }
+      }
+
+      if (argumentName === SIZED_FIELDS && argumentNode.value.kind === Kind.LIST) {
+        hasSizedFields = true;
+        const returnTypeName = data.namedTypeName;
+        const returnTypeData = this.parentDefinitionDataByTypeName.get(returnTypeName);
+        if (!returnTypeData || !isParentDataCompositeOutputType(returnTypeData)) {
+          continue;
+        }
+        for (const valueNode of (argumentNode.value as ListValueNode).values) {
+          if (valueNode.kind !== Kind.STRING) {
+            continue;
+          }
+          const sizedFieldName = (valueNode as StringValueNode).value;
+          const fieldData = returnTypeData.fieldDataByName.get(sizedFieldName);
+          if (!fieldData) {
+            errorMessages.push(
+              listSizeSizedFieldNotFoundErrorMessage(directiveCoords, sizedFieldName, returnTypeName),
+            );
+            continue;
+          }
+          if (!isTypeNodeListType(fieldData.type)) {
+            errorMessages.push(
+              listSizeSizedFieldNotListErrorMessage(
+                directiveCoords,
+                sizedFieldName,
+                returnTypeName,
+                printTypeNode(fieldData.type),
+              ),
+            );
+          }
+        }
+      }
+    }
+
+    if (!hasSizedFields && !isTypeNodeListType(data.type)) {
+      errorMessages.push(
+        listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(directiveCoords, printTypeNode(data.type)),
+      );
+    }
   }
 
   extractRequiredScopes({ directiveCoords, orScopes, requiredScopes }: HandleRequiresScopesDirectiveParams) {
