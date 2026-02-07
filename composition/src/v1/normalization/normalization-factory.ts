@@ -728,14 +728,6 @@ export class NormalizationFactory {
         });
         continue;
       }
-      if (isCost) {
-        this.handleCostDirective({ directiveCoords, directiveNode, errorMessages });
-        continue;
-      }
-      if (isListSize && isField) {
-        this.handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages });
-        continue;
-      }
       if (!isRequiresScopes || argumentName !== SCOPES) {
         continue;
       }
@@ -745,6 +737,12 @@ export class NormalizationFactory {
         orScopes: (argumentNode.value as ListValueNode).values,
         requiredScopes,
       });
+    }
+    if (isCost) {
+      this.handleCostDirective({ directiveCoords, directiveNode, errorMessages });
+    }
+    if (isListSize && isField) {
+      this.handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages });
     }
     if (duplicateArgumentNames.size > 0) {
       errorMessages.push(duplicateDirectiveArgumentDefinitionsErrorMessage([...duplicateArgumentNames]));
