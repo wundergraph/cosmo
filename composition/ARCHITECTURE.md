@@ -41,11 +41,11 @@ Think of composition as a 4-stage pipeline:
 
 ```mermaid
 flowchart LR
-  A["Subgraph SDLs"] --> B["NormalizationFactory\n(per subgraph)"]
-  B --> C["batchNormalize\n(cross-subgraph checks)"]
-  C --> D["FederationFactory\n(merge + build schemas)"]
-  D --> E["Graph.validate\n(resolvability)"]
-  E --> F["FederationResult\nAST + schema + config + warnings/errors"]
+  A["Subgraph SDLs"] --> B["NormalizationFactory<br/>(per subgraph)"]
+  B --> C["batchNormalize<br/>(cross-subgraph checks)"]
+  C --> D["FederationFactory<br/>(merge + build schemas)"]
+  D --> E["Graph.validate<br/>(resolvability)"]
+  E --> F["FederationResult<br/>AST + schema + config + warnings/errors"]
 ```
 
 ## 3. Where each stage lives
