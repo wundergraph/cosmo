@@ -310,6 +310,57 @@ describe('@listSize directive tests', () => {
         ),
       );
     });
+
+    test('that @listSize is not included in the client schema', () => {
+      const { federatedGraphClientSchema } = federateSubgraphsSuccess(
+        [subgraphWithAssumedSize],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+            type Query {
+              users: [User!]!
+            }
+
+            type User {
+              id: ID!
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that @listSize with all arguments is not included in the client schema', () => {
+      const { federatedGraphClientSchema } = federateSubgraphsSuccess(
+        [subgraphWithAllArguments],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+            type Connection {
+              edges: [Edge!]!
+              nodes: [User!]!
+            }
+
+            type Edge {
+              node: User!
+            }
+
+            type Query {
+              usersConnection(first: Int, last: Int): Connection!
+            }
+
+            type User {
+              id: ID!
+            }
+          `,
+        ),
+      );
+    });
   });
 
   describe('validation tests', () => {

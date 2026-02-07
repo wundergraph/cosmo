@@ -325,6 +325,107 @@ describe('@cost directive tests', () => {
         ),
       );
     });
+
+    test('that @cost on fields is not included in the client schema', () => {
+      const { federatedGraphClientSchema } = federateSubgraphsSuccess(
+        [subgraphWithCostOnField],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+            type Query {
+              expensiveField: String!
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that @cost on object types is not included in the client schema', () => {
+      const { federatedGraphClientSchema } = federateSubgraphsSuccess(
+        [subgraphWithCostOnObject],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+            type Query {
+              user: User!
+            }
+
+            type User {
+              id: ID!
+              name: String!
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that @cost on scalars is not included in the client schema', () => {
+      const { federatedGraphClientSchema } = federateSubgraphsSuccess(
+        [subgraphWithCostOnScalar],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+            scalar JSON
+
+            type Query {
+              data: JSON!
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that @cost on enums is not included in the client schema', () => {
+      const { federatedGraphClientSchema } = federateSubgraphsSuccess(
+        [subgraphWithCostOnEnum],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+            type Query {
+              status: Status!
+            }
+
+            enum Status {
+              ACTIVE
+              INACTIVE
+            }
+          `,
+        ),
+      );
+    });
+
+    test('that @cost on arguments is not included in the client schema', () => {
+      const { federatedGraphClientSchema } = federateSubgraphsSuccess(
+        [subgraphWithCostOnArgument],
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+            type Query {
+              search(query: String!): [Result!]!
+            }
+
+            type Result {
+              id: ID!
+            }
+          `,
+        ),
+      );
+    });
   });
 
   describe('validation tests', () => {
