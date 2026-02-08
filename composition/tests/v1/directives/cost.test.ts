@@ -440,6 +440,44 @@ describe('@cost directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('not a valid numeric string');
     });
+
+    test('that @cost on interface type produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInterface, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some(e => e.message.includes('invalid location') || e.message.includes('INTERFACE'))).toBe(true);
+    });
+
+    test('that @cost on union type produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithCostOnUnion, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some(e => e.message.includes('invalid location') || e.message.includes('UNION'))).toBe(true);
+    });
+
+    test('that @cost on input object type produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInputObject, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some(e => e.message.includes('invalid location') || e.message.includes('INPUT_OBJECT'))).toBe(true);
+    });
+  });
+
+  describe('directive definition compliance tests', () => {
+    test('that @cost without weight argument produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithCostNoWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('required argument');
+    });
+
+    test('that @cost with integer weight (not string) produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithCostIntegerWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('not a valid "String!" type');
+    });
+
+    test('that @cost with whitespace-only weight produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithCostWhitespaceWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('not a valid numeric string');
+    });
   });
 });
 
@@ -621,6 +659,95 @@ const subgraphWithEmptyCostWeight: Subgraph = {
   definitions: parse(`
     type Query {
       field: String! @cost(weight: "")
+    }
+  `),
+};
+
+const subgraphWithCostOnInterface: Subgraph = {
+  name: 'subgraph-cost-interface',
+  url: '',
+  definitions: parse(`
+    type Query {
+      node: Node!
+    }
+
+    interface Node @cost(weight: "10") {
+      id: ID!
+    }
+
+    type User implements Node {
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const subgraphWithCostOnUnion: Subgraph = {
+  name: 'subgraph-cost-union',
+  url: '',
+  definitions: parse(`
+    type Query {
+      result: SearchResult!
+    }
+
+    union SearchResult @cost(weight: "10") = User | Post
+
+    type User {
+      id: ID!
+      name: String!
+    }
+
+    type Post {
+      id: ID!
+      title: String!
+    }
+  `),
+};
+
+const subgraphWithCostOnInputObject: Subgraph = {
+  name: 'subgraph-cost-input-object',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(input: SearchInput!): [Result!]!
+    }
+
+    input SearchInput @cost(weight: "10") {
+      query: String!
+    }
+
+    type Result {
+      id: ID!
+    }
+  `),
+};
+
+const subgraphWithCostNoWeight: Subgraph = {
+  name: 'subgraph-cost-no-weight',
+  url: '',
+  definitions: parse(`
+    type Query {
+      field: String! @cost
+    }
+  `),
+};
+
+const subgraphWithCostIntegerWeight: Subgraph = {
+  name: 'subgraph-cost-integer-weight',
+  url: '',
+  definitions: parse(`
+    type Query {
+      field: String! @cost(weight: 10)
+    }
+  `),
+};
+
+const subgraphWithCostWhitespaceWeight: Subgraph = {
+  name: 'subgraph-cost-whitespace-weight',
+  url: '',
+  definitions: parse(`
+    type Query {
+      field: String! @cost(weight: "   ")
     }
   `),
 };

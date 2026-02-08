@@ -2370,6 +2370,16 @@ export class NormalizationFactory {
             errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, slicingArgName));
             continue;
           }
+          // Unwrap one level of NonNullType if present (GraphQL doesn't allow nested NonNull)
+          const unwrappedType = argData.type.kind === Kind.NON_NULL_TYPE ? argData.type.type : argData.type;
+          // Check if the unwrapped type is a ListType
+          if (unwrappedType.kind === Kind.LIST_TYPE) {
+            errorMessages.push(
+              listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgName, printTypeNode(argData.type)),
+            );
+            continue;
+          }
+          // Check that the named type is Int
           if (argData.namedTypeName !== INT_SCALAR) {
             errorMessages.push(
               listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgName, printTypeNode(argData.type)),

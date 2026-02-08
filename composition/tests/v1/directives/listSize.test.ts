@@ -382,6 +382,42 @@ describe('@listSize directive tests', () => {
       expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
     });
 
+    test('that @listSize with list-typed slicingArgument produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithListTypedSlicingArg,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
+    });
+
+    test('that @listSize with non-null list-typed slicingArgument produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNonNullListTypedSlicingArg,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
+    });
+
+    test('that @listSize with list of non-null Int slicingArgument produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithListOfNonNullIntSlicingArg,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
+    });
+
+    test('that @listSize with non-null list of non-null Int slicingArgument produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNonNullListOfNonNullIntSlicingArg,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
+    });
+
     test('that @listSize with invalid sizedFields produces an error', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraphWithInvalidSizedField,
@@ -408,9 +444,48 @@ describe('@listSize directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('not a list type');
     });
+  });
 
-    test('that @listSize on non-list field with sizedFields succeeds', () => {
-      normalizeSubgraphSuccess(subgraphWithSizedFields, ROUTER_COMPATIBILITY_VERSION_ONE);
+  describe('directive definition compliance tests', () => {
+    test('that @listSize with string assumedSize produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithInvalidAssumedSizeType,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('not a valid "Int" type');
+    });
+
+    test('that @listSize with single string slicingArguments succeeds due to list coercion', () => {
+      // GraphQL allows list coercion: "first" is coerced to ["first"]
+      normalizeSubgraphSuccess(subgraphWithNonListSlicingArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
+    });
+
+    test('that @listSize with null in slicingArguments array produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithNullInSlicingArguments,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('not a valid "[String!]" type');
+    });
+
+    test('that @listSize with integer sizedFields produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithIntegerSizedFields,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('not a valid "[String!]" type');
+    });
+
+    test('that @listSize with non-boolean requireOneSlicingArgument produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithInvalidRequireOneSlicingArgument,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('not a valid "Boolean" type');
     });
   });
 });
@@ -544,6 +619,50 @@ const subgraphWithNonIntSlicingArg: Subgraph = {
   `),
 };
 
+const subgraphWithListTypedSlicingArg: Subgraph = {
+  name: 'subgraph-listsize-list-slicing',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: [Int]): [User!]! @listSize(slicingArguments: ["first"])
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithNonNullListTypedSlicingArg: Subgraph = {
+  name: 'subgraph-listsize-nonnull-list-slicing',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: [Int]!): [User!]! @listSize(slicingArguments: ["first"])
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithListOfNonNullIntSlicingArg: Subgraph = {
+  name: 'subgraph-listsize-list-nonnull-int-slicing',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: [Int!]): [User!]! @listSize(slicingArguments: ["first"])
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithNonNullListOfNonNullIntSlicingArg: Subgraph = {
+  name: 'subgraph-listsize-nonnull-list-nonnull-int-slicing',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: [Int!]!): [User!]! @listSize(slicingArguments: ["first"])
+    }
+    type User { id: ID! }
+  `),
+};
+
 const subgraphWithInvalidSizedField: Subgraph = {
   name: 'subgraph-listsize-invalid-sized',
   url: '',
@@ -626,5 +745,62 @@ const subgraphBListSizeEntity: Subgraph = {
       id: ID!
       tags: [String!]! @listSize(assumedSize: 50)
     }
+  `),
+};
+
+const subgraphWithInvalidAssumedSizeType: Subgraph = {
+  name: 'subgraph-listsize-invalid-assumedsize',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users: [User!]! @listSize(assumedSize: "not an int")
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithNonListSlicingArguments: Subgraph = {
+  name: 'subgraph-listsize-nonlist-slicingargs',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: Int): [User!]! @listSize(slicingArguments: "first")
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithNullInSlicingArguments: Subgraph = {
+  name: 'subgraph-listsize-null-slicingargs',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: Int): [User!]! @listSize(slicingArguments: [null])
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithIntegerSizedFields: Subgraph = {
+  name: 'subgraph-listsize-integer-sizedfields',
+  url: '',
+  definitions: parse(`
+    type Query {
+      usersConnection(first: Int): Connection! @listSize(slicingArguments: ["first"], sizedFields: 123)
+    }
+    type Connection { edges: [Edge!]! }
+    type Edge { node: User! }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithInvalidRequireOneSlicingArgument: Subgraph = {
+  name: 'subgraph-listsize-invalid-requireone',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: Int): [User!]! @listSize(slicingArguments: ["first"], requireOneSlicingArgument: 123)
+    }
+    type User { id: ID! }
   `),
 };
