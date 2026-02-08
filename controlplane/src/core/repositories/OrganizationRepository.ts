@@ -939,33 +939,32 @@ export class OrganizationRepository {
     return result[0];
   }
 
-  public queueOrganizationDeletion(input: {
+  public async queueOrganizationDeletion(input: {
     organizationId: string;
     queuedBy?: string;
     deleteOrganizationQueue: DeleteOrganizationQueue;
+    deleteDelayInDays?: number;
   }) {
-    return this.db.transaction(async (tx) => {
-      const now = new Date();
-      await tx
-        .update(schema.organizations)
-        .set({
-          queuedForDeletionAt: now,
-          queuedForDeletionBy: input.queuedBy,
-        })
-        .where(eq(schema.organizations.id, input.organizationId));
+    const now = new Date();
+    await this.db
+      .update(schema.organizations)
+      .set({
+        queuedForDeletionAt: now,
+        queuedForDeletionBy: input.queuedBy,
+      })
+      .where(eq(schema.organizations.id, input.organizationId));
 
-      const deleteAt = addDays(now, delayForManualOrgDeletionInDays);
-      const delay = Number(deleteAt) - Number(now);
+    const deleteAt = addDays(now, input.deleteDelayInDays || delayForManualOrgDeletionInDays);
+    const delay = Number(deleteAt) - Number(now);
 
-      return await input.deleteOrganizationQueue.addJob(
-        {
-          organizationId: input.organizationId,
-        },
-        {
-          delay,
-        },
-      );
-    });
+    return await input.deleteOrganizationQueue.addJob(
+      {
+        organizationId: input.organizationId,
+      },
+      {
+        delay,
+      },
+    );
   }
 
   public restoreOrganization(input: { organizationId: string; deleteOrganizationQueue: DeleteOrganizationQueue }) {

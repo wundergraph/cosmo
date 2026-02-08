@@ -10,7 +10,7 @@ import { App } from 'octokit';
 import { Worker } from 'bullmq';
 import routes from './routes.js';
 import fastifyHealth from './plugins/health.js';
-import fastifyMetrics, { MetricsPluginOptions } from './plugins/metrics.js';
+import fastifyMetrics from './plugins/metrics.js';
 import fastifyDatabase from './plugins/database.js';
 import fastifyClickHouse from './plugins/clickhouse.js';
 import fastifyRedis from './plugins/redis.js';
@@ -53,6 +53,14 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
+import {
+  QueueInactiveOrganizationsDeletionQueue,
+  createQueueInactiveOrganizationsDeletionWorker,
+} from './workers/QueueInactiveOrganizationsDeletionWorker.js';
+import {
+  createNotifyOrganizationDeletionQueuedWorker,
+  NotifyOrganizationDeletionQueuedQueue,
+} from './workers/NotifyOrganizationDeletionQueuedWorker.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
@@ -393,6 +401,37 @@ export default async function build(opts: BuildConfig) {
       deleteOrganizationAuditLogsQueue,
     }),
   );
+
+  const notifyOrganizationDeletionQueuedQueue = new NotifyOrganizationDeletionQueuedQueue(
+    logger,
+    fastify.redisForQueue,
+  );
+  bullWorkers.push(
+    createNotifyOrganizationDeletionQueuedWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      logger,
+      mailer: mailerClient,
+    }),
+  );
+
+  const queueInactiveOrganizationsDeletionQueue = new QueueInactiveOrganizationsDeletionQueue(
+    logger,
+    fastify.redisForQueue,
+  );
+  bullWorkers.push(
+    createQueueInactiveOrganizationsDeletionWorker({
+      redisConnection: fastify.redisForWorker,
+      db: fastify.db,
+      realm: opts.keycloak.realm,
+      keycloak: keycloakClient,
+      deleteOrganizationQueue,
+      notifyOrganizationDeletionQueuedQueue,
+      logger,
+    }),
+  );
+
+  await queueInactiveOrganizationsDeletionQueue.scheduleJob();
 
   // required to verify webhook payloads
   await fastify.register(import('fastify-raw-body'), {
