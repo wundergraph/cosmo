@@ -1480,6 +1480,7 @@ func (s *graphServer) buildGraphMux(
 		EnableInboundRequestDeduplication:      s.engineExecutionConfiguration.EnableInboundRequestDeduplication,
 		ForceEnableInboundRequestDeduplication: s.engineExecutionConfiguration.ForceEnableInboundRequestDeduplication,
 		HasPreOriginHandlers:                   len(s.preOriginHandlers) != 0,
+		HeaderPropagation:                      s.headerPropagation,
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
 	})
 

@@ -198,7 +198,13 @@ func processBatchError(w http.ResponseWriter, r *http.Request, err error, reques
 		}
 	}
 
-	writeRequestErrors(r, w, statusCode, []graphqlerrors.RequestError{requestError}, requestLogger)
+	writeRequestErrors(writeRequestErrorsParams{
+		request:       r,
+		writer:        w,
+		statusCode:    statusCode,
+		requestErrors: []graphqlerrors.RequestError{requestError},
+		logger:        requestLogger,
+	})
 }
 
 func getFirstNonWhitespaceChar(r io.Reader, readerSize int) (*byte, *bufio.Reader, error) {
