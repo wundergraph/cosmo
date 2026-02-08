@@ -3,15 +3,18 @@ package integration
 import (
 	"cmp"
 	"encoding/json"
+	"io"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 
-	"github.com/wundergraph/cosmo/router/core"
-
 	"github.com/stretchr/testify/require"
+	failing_writer "github.com/wundergraph/cosmo/router-tests/modules/failing-writer"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.uber.org/zap/zapcore"
 )
 
 func compareErrors(t *testing.T, expectedErrors []testenv.GraphQLError, actualErrors []testenv.GraphQLError) {
@@ -1637,4 +1640,210 @@ func TestErrorLocations(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestSSEErrorResponseWriteFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should log warning when broken pipe error occurs writing SSE error response", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.WarnLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeBrokenPipe,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeBrokenPipe,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			require.Empty(t, body)
+
+			logs := xEnv.Observer().FilterMessage("Broken pipe, error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.WarnLevel, logs.All()[0].Level)
+		})
+	})
+
+	t.Run("should log error when generic write error occurs writing SSE error response", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeGeneric,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeGeneric,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			require.Empty(t, body)
+
+			logs := xEnv.Observer().FilterMessage("Error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
+		})
+	})
+}
+
+func TestErrorResponseBodyWriteFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should log warning when broken pipe error occurs writing error response body", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.WarnLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeBrokenPipe,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeBrokenPipe,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: "",
+			})
+			require.NoError(t, err)
+			require.NotNil(t, res)
+
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Empty(t, res.Body)
+
+			logs := xEnv.Observer().FilterMessage("Broken pipe, error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.WarnLevel, logs.All()[0].Level)
+		})
+	})
+
+	t.Run("should log error when generic write error occurs writing error response body", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeGeneric,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeGeneric,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: "",
+			})
+			require.NoError(t, err)
+			require.NotNil(t, res)
+
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Empty(t, res.Body)
+
+			logs := xEnv.Observer().FilterMessage("Error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
+		})
+	})
+}
+
+func TestMultipartErrorResponseWriteFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should log error when error occurs while writing multipart error response", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeBrokenPipe,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeBrokenPipe,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "multipart/mixed")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			_, err = io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			logs := xEnv.Observer().FilterMessage("error writing multipart response")
+			require.Equal(t, 1, logs.Len(), "Expected error log for multipart write failure")
+			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
+		})
+	})
+
 }

@@ -1,20 +1,37 @@
 package integration
 
 import (
+	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
 
-	"go.uber.org/zap/zapcore"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	failing_writer "github.com/wundergraph/cosmo/router-tests/modules/failing-writer"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.uber.org/zap/zapcore"
 )
+
+// mockSelfRegister implements selfregister.SelfRegister for testing parseRequestOptions error path
+type mockSelfRegister struct {
+	registrationInfo *nodev1.RegistrationInfo
+}
+
+func (m *mockSelfRegister) Register(_ context.Context) (*nodev1.RegistrationInfo, error) {
+	return m.registrationInfo, nil
+}
 
 func TestCacheControl(t *testing.T) {
 	t.Run("Unreachable subgraph causes no-cache", func(t *testing.T) {
@@ -1463,54 +1480,346 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
-		t.Run("should log errors (but not error out) when router response header rule evaluation fails at runtime", func(t *testing.T) {
+		t.Run("should log errors (but not error out)", func(t *testing.T) {
 			t.Parallel()
 
-			testenv.Run(t, &testenv.Config{
-				LogObservation: testenv.LogObservationConfig{
-					Enabled:  true,
-					LogLevel: zapcore.ErrorLevel,
-				},
-				RouterOptions: []core.Option{
-					core.WithHeaderRules(config.HeaderRules{
-						Router: config.RouterHeaderRules{
-							Response: []*config.RouterResponseHeaderRule{
-								{
-									Name:       "X-Valid-Header",
-									Expression: `"valid-value"`,
-								},
-								{
-									Name:       "X-Invalid-Header",
-									Expression: `string(int("a"))`,
+			t.Run("when request is successful", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.ErrorLevel,
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							Router: config.RouterHeaderRules{
+								Response: []*config.RouterResponseHeaderRule{
+									{
+										Name:       "X-Valid-Header",
+										Expression: `"valid-value"`,
+									},
+									{
+										Name:       "X-Invalid-Header",
+										Expression: `string(int("a"))`,
+									},
 								},
 							},
-						},
-					}),
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: queryEmployeeWithNoHobby,
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: queryEmployeeWithNoHobby,
+					})
+
+					require.Equal(t, "valid-value", res.Response.Header.Get("X-Valid-Header"))
+
+					_, headerExists := res.Response.Header["X-Invalid-Header"]
+					require.False(t, headerExists)
+
+					require.Equal(t, http.StatusOK, res.Response.StatusCode)
+					require.Contains(t, res.Body, `"data"`)
+
+					logs := xEnv.Observer()
+					require.NotNil(t, logs)
+
+					errorLogs := logs.FilterMessage("Failed to apply router response header rules").All()
+					require.Len(t, errorLogs, 1)
+
+					errorLog := errorLogs[0]
+					require.Equal(t, zapcore.ErrorLevel, errorLog.Level)
+					require.Equal(t, "Failed to apply router response header rules", errorLog.Message)
+					require.NotEmpty(t, errorLog.Context)
 				})
-
-				require.Equal(t, "valid-value", res.Response.Header.Get("X-Valid-Header"))
-
-				_, headerExists := res.Response.Header["X-Invalid-Header"]
-				require.False(t, headerExists)
-
-				require.Equal(t, http.StatusOK, res.Response.StatusCode)
-				require.Contains(t, res.Body, `"data"`)
-
-				logs := xEnv.Observer()
-				require.NotNil(t, logs)
-
-				errorLogs := logs.FilterMessage("Failed to apply router response header rules").All()
-				require.Len(t, errorLogs, 1)
-
-				errorLog := errorLogs[0]
-				require.Equal(t, zapcore.ErrorLevel, errorLog.Level)
-				require.Equal(t, "Failed to apply router response header rules", errorLog.Message)
-				require.NotEmpty(t, errorLog.Context)
 			})
+
+			t.Run("when request is not successful", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.ErrorLevel,
+					},
+					RouterOptions: []core.Option{
+						core.WithHeaderRules(config.HeaderRules{
+							Router: config.RouterHeaderRules{
+								Response: []*config.RouterResponseHeaderRule{
+									{
+										Name:       "X-Invalid-Header",
+										Expression: `string(int("a"))`,
+									},
+								},
+							},
+						}),
+						core.WithModulesConfig(map[string]interface{}{
+							"failingWriterModule": failing_writer.FailingWriterModule{
+								ErrorType: failing_writer.ErrorTypeGeneric,
+							},
+						}),
+						core.WithCustomModules(&failing_writer.FailingWriterModule{
+							ErrorType: failing_writer.ErrorTypeGeneric,
+						}),
+					},
+					Subgraphs: testenv.SubgraphsConfig{
+						Products: testenv.SubgraphConfig{
+							CloseOnStart: true,
+						},
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query: "",
+					})
+					require.NoError(t, err)
+					require.NotNil(t, res)
+
+					logs := xEnv.Observer()
+					require.NotNil(t, logs)
+
+					errorLogs := logs.FilterMessage("Failed to apply router response header rules on error cases").All()
+					require.Len(t, errorLogs, 1)
+
+					errorLog := errorLogs[0]
+					require.Equal(t, zapcore.ErrorLevel, errorLog.Level)
+					require.NotEmpty(t, errorLog.Context)
+				})
+			})
+		})
+	})
+}
+
+func TestHeaderPropagationOnErrorResponses(t *testing.T) {
+	t.Parallel()
+
+	t.Run("router response headers should be propagated on GraphQL validation errors", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					Router: config.RouterHeaderRules{
+						Response: []*config.RouterResponseHeaderRule{
+							{
+								Name:       "X-Error-Message",
+								Expression: `string(request.error)`,
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Send an invalid query that will cause a validation error
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ nonExistentField }`,
+			})
+			require.NoError(t, err)
+
+			require.Contains(t, res.Body, "errors")
+			require.Equal(t, "Cannot query field \"nonExistentField\" on type \"Query\".", res.Response.Header.Get("X-Error-Message"))
+		})
+	})
+
+	t.Run("router response headers should be propagated on bad request errors", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					Router: config.RouterHeaderRules{
+						Response: []*config.RouterResponseHeaderRule{
+
+							{
+								Name:       "X-Error-Message",
+								Expression: `string(request.error)`,
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Send a request with missing query
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: "", // Empty query should trigger a bad request error
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+
+			require.Contains(t, res.Body, "errors")
+			require.Equal(t, "empty request body", res.Response.Header.Get("X-Error-Message"))
+		})
+	})
+
+	t.Run("router response headers should be propagated on persisted query not found errors", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					Router: config.RouterHeaderRules{
+						Response: []*config.RouterResponseHeaderRule{
+							{
+								Name:       "X-Error-Message",
+								Expression: `string(request.error)`,
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Send a persisted query request with a hash that doesn't exist
+			nonExistentHash := "22222db46db40b5132295c0291d62fb65d6759a9eedfa4d5d612dd5ec54a6b39"
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Extensions: json.RawMessage(`{"persistedQuery": {"version": 1, "sha256Hash": "` + nonExistentHash + `"}}`),
+			})
+			require.NoError(t, err)
+
+			require.Contains(t, res.Body, "errors")
+			require.Equal(t, "operation '"+nonExistentHash+"' for client 'unknown' not found", res.Response.Header.Get("X-Error-Message"))
+		})
+	})
+
+	t.Run("router response headers should be propagated when subgraph is unreachable", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					Router: config.RouterHeaderRules{
+						Response: []*config.RouterResponseHeaderRule{
+							{
+								Name:       "X-Error-Message",
+								Expression: `string(request.error)`,
+							},
+						},
+					},
+				}),
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Products: testenv.SubgraphConfig{
+					CloseOnStart: true,
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id details { forename surname } notes } }`,
+			})
+
+			require.Contains(t, res.Body, "Failed to fetch from Subgraph")
+
+			require.Contains(t, res.Response.Header.Get("X-Error-Message"), "connect: connection refused Failed to fetch from Subgraph 'products' at Path: 'employees'.")
+		})
+	})
+
+	t.Run("router response headers should be propagated on file upload failure", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithFileUploadConfig(&config.FileUpload{
+					Enabled: false,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					Router: config.RouterHeaderRules{
+						Response: []*config.RouterResponseHeaderRule{
+							{
+								Name:       "X-Error-Message",
+								Expression: `string(request.error)`,
+							},
+						},
+					},
+				})},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			files := []testenv.FileUpload{
+				{VariablesPath: "variables.files.0", FileContent: []byte("File1 content as text")},
+			}
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     "mutation($files: [Upload!]!) { multipleUpload(files: $files)}",
+				Variables: []byte(`{"files":[null]}`),
+				Files:     files,
+			})
+			require.JSONEq(t, `{"errors":[{"message":"file upload disabled"}]}`, res.Body)
+
+			require.Equal(t, "file upload disabled", res.Response.Header.Get("X-Error-Message"))
+		})
+	})
+
+	t.Run("router response headers should NOT be propagated on subscription errors", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					Router: config.RouterHeaderRules{
+						Response: []*config.RouterResponseHeaderRule{
+							{
+								Name:       "X-Custom-Header",
+								Expression: `"should-not-appear"`,
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentSubscription }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			// Read the response body
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			// Response should contain an error
+			require.Contains(t, string(body), "errors")
+
+			// Router response headers should NOT be propagated for subscriptions
+			require.Empty(t, resp.Header.Get("X-Custom-Header"))
+		})
+	})
+
+	t.Run("router response headers should be propagated when failure due to invalid JWT token", func(t *testing.T) {
+		t.Parallel()
+
+		privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+		publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+		require.NoError(t, err)
+		publicKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: publicKeyBytes})
+
+		mockSR := &mockSelfRegister{
+			registrationInfo: &nodev1.RegistrationInfo{
+				GraphPublicKey: string(publicKeyPEM),
+				AccountLimits:  &nodev1.AccountLimits{},
+			},
+		}
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithDevelopmentMode(false), // Disable dev mode so JWT validation is required
+				core.WithSelfRegistration(mockSR),
+				core.WithHeaderRules(config.HeaderRules{
+					Router: config.RouterHeaderRules{
+						Response: []*config.RouterResponseHeaderRule{
+							{
+								Name:       "X-Error-Message",
+								Expression: `string(request.error)`,
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id } }`,
+				Header: map[string][]string{
+					"X-WG-Token": {"invalid-jwt-token"},
+				},
+			})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+
+			require.Contains(t, res.Body, "errors")
+			require.Equal(t, "token is malformed: token contains an invalid number of segments", res.Response.Header.Get("X-Error-Message"))
 		})
 	})
 }
