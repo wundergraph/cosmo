@@ -96,7 +96,6 @@ func TestHeartbeats(t *testing.T) {
 						return
 					}
 
-					fmt.Println(string(line))
 					messages <- string(line)
 				}
 			}()

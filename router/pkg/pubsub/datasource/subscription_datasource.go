@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/cespare/xxhash/v2"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -31,11 +32,7 @@ func (s *PubSubSubscriptionDataSource[C]) SubscriptionEventConfiguration(input [
 	return subscriptionConfiguration, err
 }
 
-func (s *PubSubSubscriptionDataSource[C]) UniqueRequestID(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
-	return s.uniqueRequestID(ctx, input, xxh)
-}
-
-func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, input []byte, updater resolve.SubscriptionUpdater) error {
+func (s *PubSubSubscriptionDataSource[C]) Start(ctx *resolve.Context, header http.Header, input []byte, updater resolve.SubscriptionUpdater) error {
 	subConf, err := s.SubscriptionEventConfiguration(input)
 	if err != nil {
 		return err
