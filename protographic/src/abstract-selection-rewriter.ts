@@ -236,14 +236,14 @@ export class AbstractSelectionRewriter {
    * @param ctx - The visitor context containing the current inline fragment node
    * @returns undefined to continue traversal, or nothing to skip
    */
-  private onEnterInlineFragment(ctx: VisitContext<InlineFragmentNode>): any {
+  private onEnterInlineFragment(ctx: VisitContext<InlineFragmentNode>): void {
     if (!ctx.parent || !this.currentSelectionSet) {
       return;
     }
 
     const type = this.schema.getType(ctx.node.typeCondition?.name.value ?? '');
     if (!type || !this.isTypeWithFields(type)) {
-      return undefined;
+      return;
     }
 
     if (!this.inlineFragmentIsInterfaceType(ctx.node)) {
@@ -259,13 +259,13 @@ export class AbstractSelectionRewriter {
       this.rebalanceStack.push(true);
       this.typeStack.push(this.currentType);
       this.currentType = type;
-      return undefined;
+      return;
     }
 
     this.rebalanceStack.push(false);
 
     if (!isInterfaceType(type)) {
-      return undefined;
+      return;
     }
 
     this.interfaceRootStack.push(type);
