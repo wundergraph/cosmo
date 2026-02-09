@@ -1414,7 +1414,7 @@ func (r *Router) configureUsageTracking(ctx context.Context) {
 	}
 	usageTracker, err := track.NewUsageTracker(r.logger, cfg)
 	if err != nil {
-		r.logger.Debug("failed to start usage tracking", zap.Error(err))
+		r.logger.Info("Failed to start usage tracking", zap.Error(err))
 		return
 	}
 	r.usage = usageTracker
