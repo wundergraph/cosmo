@@ -1,68 +1,56 @@
-extend schema
-  @link(
-    url: "https://specs.apollo.dev/federation/v2.5"
-    import: [
-      "@authenticated"
-      "@composeDirective"
-      "@external"
-      "@extends"
-      "@inaccessible"
-      "@interfaceObject"
-      "@override"
-      "@provides"
-      "@key"
-      "@requires"
-      "@requiresScopes"
-      "@shareable"
-      "@tag"
-    ]
-  )
+schema @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"]) {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
 
-directive @goField(
-  forceResolver: Boolean
-  name: String
-  omittable: Boolean
-) on INPUT_FIELD_DEFINITION | FIELD_DEFINITION
+directive @external on FIELD_DEFINITION | OBJECT
+
+directive @goField(forceResolver: Boolean, name: String, omittable: Boolean) on FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+
+directive @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT
+
+directive @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA
 
 directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
 
-type Query {
-  employee(id: Int!): Employee @openfed__requireFetchReasons
-  employeeAsList(id: Int!): [Employee]
-  employees: [Employee]
-  products: [Products!]!
-  teammates(team: Department!): [Employee!]!
-  firstEmployee: Employee! @tag(name: "internal")
-  findEmployeesBy(criteria: FindEmployeeCriteria!): [Employee!]!
+directive @requires(fields: openfed__FieldSet!) on FIELD_DEFINITION
+
+directive @requiresScopes(scopes: [[openfed__Scope!]!]!) on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+
+directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+
+directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+
+type City {
+  country: Country
+  name: String!
+  type: String!
 }
 
-scalar Upload
-
-type Mutation {
-  updateEmployeeTag(id: Int!, tag: String!): Employee
-
-  singleUpload(file: Upload!): Boolean!
-  singleUploadWithInput(arg: FileUpload!): Boolean!
-  multipleUpload(files: [Upload!]!): Boolean!
+type Consultancy @key(fields: "upc") {
+  isLeadAvailable: Boolean @requires(fields: "lead { isAvailable }")
+  lead: Employee!
+  upc: ID!
 }
 
-input FileUpload {
-  nested: DeeplyNestedFileUpload
-  nestedList: [Upload!]
+type Cosmo implements IProduct @key(fields: "upc") {
+  engineers: [Employee!]!
+  isLeadAvailable: Boolean @requires(fields: "lead { isAvailable }")
+  lead: Employee!
+  upc: ID!
+}
+
+type Country @key(fields: "key { name }", resolvable: false) {
+  key: CountryKey!
+}
+
+type CountryKey {
+  name: String!
 }
 
 input DeeplyNestedFileUpload {
   file: Upload!
-}
-
-type Subscription {
-  """
-  `currentTime` will return a stream of `Time` objects.
-  """
-  currentTime: Time!
-  countEmp(max: Int!, intervalMilliseconds: Int!): Int!
-  countEmp2(max: Int!, intervalMilliseconds: Int!): Int!
-  countFor(count: Int!): Int!
 }
 
 enum Department {
@@ -71,10 +59,34 @@ enum Department {
   OPERATIONS
 }
 
-interface RoleType {
+type Details {
+  forename: String! @shareable
+  location: Country!
+  pastLocations: [City!]!
+  surname: String! @shareable
+}
+
+type Employee @key(fields: "id") {
+  currentMood: Mood! @external
+  derivedMood: Mood! @requires(fields: "currentMood")
+  details: Details! @shareable
+  id: Int!
+  isAvailable: Boolean @external
+  notes: String @shareable
+  role: RoleType!
+  rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
+  rootFieldThrowsError: String @goField(forceResolver: true)
+  startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+  tag: String!
+  updatedAt: String!
+  testField: String!
+}
+
+type Engineer implements RoleType {
   departments: [Department!]!
-  title: [String!]!
   employees: [Employee!]! @goField(forceResolver: true)
+  engineerType: EngineerType!
+  title: [String!]!
 }
 
 enum EngineerType {
@@ -83,21 +95,47 @@ enum EngineerType {
   FULLSTACK
 }
 
-interface Identifiable @openfed__requireFetchReasons {
-  id: Int!
+type ErrorWrapper {
+  errorField: String @goField(forceResolver: true)
+  okField: String
 }
 
-type Engineer implements RoleType {
-  departments: [Department!]!
-  title: [String!]!
-  employees: [Employee!]! @goField(forceResolver: true)
-  engineerType: EngineerType!
+input FileUpload {
+  nested: DeeplyNestedFileUpload
+  nestedList: [Upload!]
+}
+
+input FindEmployeeCriteria @oneOf {
+  department: Department
+  id: Int
+  title: String
+}
+
+interface IProduct {
+  engineers: [Employee!]!
+  upc: ID!
+}
+
+interface Identifiable {
+  id: Int!
 }
 
 type Marketer implements RoleType {
   departments: [Department!]!
-  title: [String!]!
   employees: [Employee!]! @goField(forceResolver: true)
+  title: [String!]!
+}
+
+enum Mood {
+  HAPPY
+  SAD
+}
+
+type Mutation {
+  multipleUpload(files: [Upload!]!): Boolean!
+  singleUpload(file: Upload!): Boolean!
+  singleUploadWithInput(arg: FileUpload!): Boolean!
+  updateEmployeeTag(id: Int!, tag: String!): Employee
 }
 
 enum OperationType {
@@ -107,94 +145,58 @@ enum OperationType {
 
 type Operator implements RoleType {
   departments: [Department!]!
-  title: [String!]!
   employees: [Employee!]! @goField(forceResolver: true)
   operatorType: [OperationType!]!
-}
-
-type Details {
-  forename: String! @shareable
-  location: Country!
-  surname: String! @shareable
-  pastLocations: [City!]!
-}
-
-type City {
-  type: String!
-  name: String!
-  country: Country
-}
-
-# Using a nested key field simply because it can showcase potential bug
-# vectors / Federation capabilities.
-type Country @key(fields: "key { name }", resolvable: false) {
-  key: CountryKey!
-}
-
-type CountryKey {
-  name: String!
-}
-
-enum Mood {
-  HAPPY
-  SAD
-}
-
-type Employee implements Identifiable @key(fields: "id") {
-  details: Details! @shareable
-  id: Int!
-  tag: String!
-  role: RoleType!
-  notes: String @shareable
-  updatedAt: String!
-  startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
-  currentMood: Mood! @external
-  derivedMood: Mood! @requires(fields: "currentMood")
-  # From the `availability` service. Only defined for use in @requires
-  isAvailable: Boolean @external
-  rootFieldThrowsError: String @goField(forceResolver: true)
-  rootFieldErrorWrapper: ErrorWrapper @goField(forceResolver: true)
-}
-
-type ErrorWrapper {
-  okField: String
-  errorField: String @goField(forceResolver: true)
-}
-
-type Time {
-  unixTime: Int!
-  timeStamp: String!
+  title: [String!]!
 }
 
 union Products = Consultancy | Cosmo | SDK
 
-interface IProduct {
-  upc: ID!
-  engineers: [Employee!]!
+type Query {
+  employee(id: Int!): Employee @openfed__requireFetchReasons
+  employeeAsList(id: Int!): [Employee]
+  employees: [Employee]
+  findEmployeesBy(criteria: FindEmployeeCriteria!): [Employee!]!
+  firstEmployee: Employee! @tag(name: "internal")
+  products: [Products!]!
+  teammates(team: Department!): [Employee!]!
 }
 
-type Consultancy @key(fields: "upc") {
-  upc: ID!
-  lead: Employee!
-  isLeadAvailable: Boolean @requires(fields: "lead { isAvailable }")
-}
-
-type Cosmo implements IProduct @key(fields: "upc") {
-  upc: ID!
-  engineers: [Employee!]!
-  lead: Employee!
-  isLeadAvailable: Boolean @requires(fields: "lead { isAvailable }")
+interface RoleType {
+  departments: [Department!]!
+  employees: [Employee!]! @goField(forceResolver: true)
+  title: [String!]!
 }
 
 type SDK implements IProduct @key(fields: "upc") {
-  upc: ID!
   engineers: [Employee!]!
   owner: Employee!
   unicode: String!
+  upc: ID!
 }
 
-input FindEmployeeCriteria @oneOf {
-    id: Int
-    department: Department
-    title: String
+type Subscription {
+  countEmp(intervalMilliseconds: Int!, max: Int!): Int!
+  countEmp2(intervalMilliseconds: Int!, max: Int!): Int!
+  countFor(count: Int!): Int!
+  """`currentTime` will return a stream of `Time` objects."""
+  currentTime: Time!
 }
+
+type Time {
+  timeStamp: String!
+  unixTime: Int!
+}
+
+scalar Upload
+
+scalar link__Import
+
+enum link__Purpose {
+  EXECUTION
+  SECURITY
+}
+
+scalar openfed__FieldSet
+
+scalar openfed__Scope
