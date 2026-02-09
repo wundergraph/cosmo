@@ -108,15 +108,23 @@ type (
 
 // BuildGraphMuxOptions contains the configuration options for building a graph mux.
 type BuildGraphMuxOptions struct {
-	FeatureFlagName     string
-	RouterConfigVersion string
-	EngineConfig        *nodev1.EngineConfiguration
-	ConfigSubgraphs     []*nodev1.Subgraph
-	RoutingUrlGroupings map[string]map[string]bool
+	FeatureFlagName       string
+	RouterConfigVersion   string
+	EngineConfig          *nodev1.EngineConfiguration
+	ConfigSubgraphs       []*nodev1.Subgraph
+	RoutingUrlGroupings   map[string]map[string]bool
+	ReloadPersistentState *ReloadPersistentState
 }
 
 func (b BuildGraphMuxOptions) IsBaseGraph() bool {
 	return b.FeatureFlagName == ""
+}
+
+// buildMultiGraphHandlerOptions contains the configuration options for building a multi-graph handler.
+type buildMultiGraphHandlerOptions struct {
+	baseMux               *chi.Mux
+	featureFlagConfigs    map[string]*nodev1.FeatureFlagRouterExecutionConfig
+	reloadPersistentState *ReloadPersistentState
 }
 
 // newGraphServer creates a new server instance.
@@ -271,10 +279,11 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
-		RouterConfigVersion: s.baseRouterConfigVersion,
-		EngineConfig:        routerConfig.GetEngineConfig(),
-		ConfigSubgraphs:     routerConfig.GetSubgraphs(),
-		RoutingUrlGroupings: routingUrlGroupings,
+		RouterConfigVersion:   s.baseRouterConfigVersion,
+		EngineConfig:          routerConfig.GetEngineConfig(),
+		ConfigSubgraphs:       routerConfig.GetSubgraphs(),
+		RoutingUrlGroupings:   routingUrlGroupings,
+		ReloadPersistentState: r.reloadPersistentState,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build base mux: %w", err)
@@ -285,7 +294,11 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		s.logger.Info("Feature flags enabled", zap.Strings("flags", maps.Keys(featureFlagConfigMap)))
 	}
 
-	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, gm.mux, featureFlagConfigMap)
+	multiGraphHandler, err := s.buildMultiGraphHandler(ctx, buildMultiGraphHandlerOptions{
+		baseMux:               gm.mux,
+		featureFlagConfigs:    featureFlagConfigMap,
+		reloadPersistentState: r.reloadPersistentState,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to build feature flag handler: %w", err)
 	}
@@ -433,22 +446,22 @@ func getRoutingUrlGroupingForCircuitBreakers(
 
 func (s *graphServer) buildMultiGraphHandler(
 	ctx context.Context,
-	baseMux *chi.Mux,
-	featureFlagConfigs map[string]*nodev1.FeatureFlagRouterExecutionConfig,
+	opts buildMultiGraphHandlerOptions,
 ) (http.HandlerFunc, error) {
-	if len(featureFlagConfigs) == 0 {
-		return baseMux.ServeHTTP, nil
+	if len(opts.featureFlagConfigs) == 0 {
+		return opts.baseMux.ServeHTTP, nil
 	}
 
-	featureFlagToMux := make(map[string]*chi.Mux, len(featureFlagConfigs))
+	featureFlagToMux := make(map[string]*chi.Mux, len(opts.featureFlagConfigs))
 
 	// Build all the muxes for the feature flags in serial to avoid any race conditions
-	for featureFlagName, executionConfig := range featureFlagConfigs {
+	for featureFlagName, executionConfig := range opts.featureFlagConfigs {
 		gm, err := s.buildGraphMux(ctx, BuildGraphMuxOptions{
-			FeatureFlagName:     featureFlagName,
-			RouterConfigVersion: executionConfig.GetVersion(),
-			EngineConfig:        executionConfig.GetEngineConfig(),
-			ConfigSubgraphs:     executionConfig.Subgraphs,
+			FeatureFlagName:       featureFlagName,
+			RouterConfigVersion:   executionConfig.GetVersion(),
+			EngineConfig:          executionConfig.GetEngineConfig(),
+			ConfigSubgraphs:       executionConfig.Subgraphs,
+			ReloadPersistentState: opts.reloadPersistentState,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to build mux for feature flag '%s': %w", featureFlagName, err)
@@ -475,7 +488,7 @@ func (s *graphServer) buildMultiGraphHandler(
 			return
 		}
 
-		baseMux.ServeHTTP(w, r)
+		opts.baseMux.ServeHTTP(w, r)
 	}, nil
 }
 
@@ -1298,7 +1311,8 @@ func (s *graphServer) buildGraphMux(
 		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
 	})
-	operationPlanner := NewOperationPlanner(executor, gm.planCache)
+
+	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled())
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
@@ -1348,16 +1362,35 @@ func (s *graphServer) buildGraphMux(
 			)
 		}
 
-		if s.cacheWarmup.Source.Filesystem != nil {
+		switch {
+		case s.cacheWarmup.Source.Filesystem != nil:
 			warmupConfig.Source = NewFileSystemSource(&FileSystemSourceConfig{
 				RootPath: s.cacheWarmup.Source.Filesystem.Path,
 			})
-		} else {
+		// Enable in-memory plan cache fallback when:
+		// - Router has cache warmer with inMemoryFallback enabled, AND
+		// - Either:
+		//   - Using static execution config (not Cosmo): s.selfRegister == nil
+		//   - OR CDN cache warmer is explictly disabled
+		case s.cacheWarmup.InMemoryFallback && (s.selfRegister == nil || !s.Config.cacheWarmup.Source.CdnSource.Enabled):
+			// We first utilize the existing plan cache (if it was already set, i.e., not on the first start) to create a list of queries
+			// and then reset the plan cache to the new plan cache for this start afterwards.
+			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
+			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+		case s.Config.cacheWarmup.Source.CdnSource.Enabled:
+			// We use the in-memory cache as a fallback if enabled
+			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
+			if s.cacheWarmup.InMemoryFallback {
+				warmupConfig.FallbackSource = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
+				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+			}
 			cdnSource, err := NewCDNSource(s.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
 				return nil, fmt.Errorf("failed to create cdn source: %w", err)
 			}
 			warmupConfig.Source = cdnSource
+		default:
+			return nil, fmt.Errorf("unexpected cache warmer source provided")
 		}
 
 		err = WarmupCaches(ctx, warmupConfig)

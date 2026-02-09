@@ -2599,13 +2599,26 @@
                   "format": "file-path"
                 }
               }
+            },
+            "cdn": {
+              "type": "object",
+              "description": "The CDN source of the cache warmup items.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable or disable the CDN source for cache warmup.",
+                  "default": true
+                }
+              }
             }
           },
           "oneOf": [
             {
-              "required": [
-                "filesystem"
-              ]
+              "required": ["filesystem"]
+            },
+            {
+              "required": ["cdn"]
             }
           ]
         },
@@ -2626,6 +2639,11 @@
           "duration": {
             "minimum": "1s"
           }
+        },
+        "in_memory_fallback": {
+          "type": "boolean",
+          "description": "Enable in-memory fallback. When enabled, the router will reuse the cached query plans in memory and use it to rewarm the cache on schema changes and hot config reloads. The default value is true.",
+          "default": true
         }
       }
     },

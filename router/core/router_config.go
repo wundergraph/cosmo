@@ -317,6 +317,7 @@ func (c *Config) Usage() map[string]any {
 		} else {
 			usage["cache_warmup_source"] = "cdn"
 		}
+		usage["cache_warmup_in_memory_fallback_enabled"] = c.cacheWarmup.InMemoryFallback
 		usage["cache_warmup_workers"] = c.cacheWarmup.Workers
 		usage["cache_warmup_items_per_second"] = c.cacheWarmup.ItemsPerSecond
 		usage["cache_warmup_timeout"] = c.cacheWarmup.Timeout.String()
