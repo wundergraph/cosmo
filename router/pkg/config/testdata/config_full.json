@@ -673,11 +673,15 @@
   "CacheWarmup": {
     "Enabled": false,
     "Source": {
-      "Filesystem": null
+      "Filesystem": null,
+      "CdnSource": {
+        "Enabled": true
+      }
     },
     "Workers": 8,
     "ItemsPerSecond": 50,
-    "Timeout": 30000000000
+    "Timeout": 30000000000,
+    "InMemoryFallback": true
   },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
