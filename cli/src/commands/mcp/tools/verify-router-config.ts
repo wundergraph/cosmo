@@ -90,9 +90,12 @@ export async function validateRouterConfig(config: string): Promise<ValidationRe
 }
 
 export const registerVerifyRouterConfigTool = ({ server }: ToolContext) => {
-  server.tool(
+  server.registerTool(
     'cosmo-router-config-reference',
-    'Cosmo Router Configuration Reference helps you to understand how to configure the Router.',
+    {
+      title: 'Cosmo Router Configuration Reference',
+      description: 'Cosmo Router Configuration Reference helps you to understand how to configure the Router.',
+    },
     async () => {
       const getSchema = await axios.get(
         'https://raw.githubusercontent.com/wundergraph/cosmo/refs/heads/main/router/pkg/config/config.schema.json',
@@ -112,11 +115,15 @@ export const registerVerifyRouterConfigTool = ({ server }: ToolContext) => {
     },
   );
 
-  server.tool(
+  server.registerTool(
     'verify_router_config',
-    'Verify Cosmo Router Configurations. The config can be provided as JSON or YAML. This tool helps you to validate that a proposed configuration is valid.',
     {
-      config: z.string().describe('The router config to verify. Can be provided as JSON or YAML.'),
+      title: 'Verify Router Config',
+      description:
+        'Verify Cosmo Router Configurations. The config can be provided as JSON or YAML. This tool helps you to validate that a proposed configuration is valid.',
+      inputSchema: {
+        config: z.string().describe('The router config to verify. Can be provided as JSON or YAML.'),
+      },
     },
     async ({ config }) => {
       try {
