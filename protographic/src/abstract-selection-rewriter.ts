@@ -250,7 +250,7 @@ export class AbstractSelectionRewriter {
       // Returning undefined continues traversal without deleting the node.
       // If the inline fragment targets a type that doesn't implement the current interface,
       // we remove it from the selections.
-      if (!this.inlineFragmentIsValidForCurrentType(ctx.node)) {
+      if (!this.inlineFragmentIsValidForCurrentInterfaceRoot(ctx.node)) {
         this.currentSelectionSet.selections = this.currentSelectionSet.selections.filter(
           (s) => s.kind !== Kind.INLINE_FRAGMENT || s.typeCondition?.name.value !== ctx.node.typeCondition?.name.value,
         );
@@ -508,9 +508,9 @@ export class AbstractSelectionRewriter {
    * should be removed from the selection set.
    *
    * @param node - The inline fragment node to validate
-   * @returns true if the fragment is valid for the current type context, false otherwise
+   * @returns true if the fragment is valid for the current interface root context, false otherwise
    */
-  private inlineFragmentIsValidForCurrentType(node: InlineFragmentNode): boolean {
+  private inlineFragmentIsValidForCurrentInterfaceRoot(node: InlineFragmentNode): boolean {
     if (!isInterfaceType(this.currentInterfaceRoot)) {
       return true;
     }
@@ -526,7 +526,7 @@ export class AbstractSelectionRewriter {
       return false;
     }
 
-    return type.getInterfaces().some((i) => i.name === this.currentType.name);
+    return type.getInterfaces().some((i) => i.name === this.currentInterfaceRoot?.name);
   }
 
   /**
