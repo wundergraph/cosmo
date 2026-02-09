@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.43.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.42.30...@wundergraph/cosmo-shared@0.43.0) (2026-02-09)
+
+### Features
+
+* update @graphql-tools/utils version to 11.0.0 ([#2495](https://github.com/wundergraph/cosmo/issues/2495)) ([526b1a4](https://github.com/wundergraph/cosmo/commit/526b1a498ae709b67ec37626bfc665babafd8aa8)) (@thisisnithin)
+
 ## [0.42.30](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-shared@0.42.29...@wundergraph/cosmo-shared@0.42.30) (2026-01-27)
 
 **Note:** Version bump only for package @wundergraph/cosmo-shared
