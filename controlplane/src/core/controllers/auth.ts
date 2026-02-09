@@ -4,6 +4,7 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { and, eq, sql } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
 import { uid } from 'uid';
+import cookie from 'cookie';
 import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
@@ -375,12 +376,25 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       }
 
       if (orgs === 0) {
+        // Read UTM parameters from cookies
+        const cookies = cookie.parse(req.headers.cookie || '');
+        const utmSource = cookies.utm_source;
+        const utmMedium = cookies.utm_medium;
+        const utmCampaign = cookies.utm_campaign;
+        const utmContent = cookies.utm_content;
+        const utmTerm = cookies.utm_term;
+
         // Send a notification to the platform that a new user has been created
         opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
           user_id: userId,
           user_email: userEmail,
           user_first_name: firstName,
           user_last_name: lastName,
+          utm_source: utmSource,
+          utm_medium: utmMedium,
+          utm_campaign: utmCampaign,
+          utm_content: utmContent,
+          utm_term: utmTerm,
         });
       }
 
@@ -400,16 +414,26 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         // Set the sso cookie.
         opts.authUtils.createSsoCookie(res, ssoSlug);
       }
+      // Determine the target URL
+      let targetUrl = opts.webBaseUrl;
       if (redirectURL) {
-        if (redirectURL.startsWith(opts.webBaseUrl)) {
-          res.redirect(redirectURL);
-        } else {
-          res.redirect(opts.webBaseUrl);
+        try {
+          const redirectOrigin = new URL(redirectURL).origin;
+          const webBaseOrigin = new URL(opts.webBaseUrl).origin;
+          if (redirectOrigin === webBaseOrigin) {
+            targetUrl = redirectURL;
+          }
+        } catch {
+          // On parse error, keep targetUrl as opts.webBaseUrl
         }
-      } else if (orgs === 0) {
-        res.redirect(opts.webBaseUrl + '?migrate=true');
+      }
+
+      // Append onboarding parameter if the user has no orgs
+      if (orgs === 0) {
+        const separator = targetUrl.includes('?') ? '&' : '?';
+        res.redirect(targetUrl + separator + 'onboarding=true');
       } else {
-        res.redirect(opts.webBaseUrl);
+        res.redirect(targetUrl);
       }
     } catch (err: any) {
       if (err instanceof AuthenticationError) {

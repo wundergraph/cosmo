@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"time"
 
 	"github.com/buger/jsonparser"
 	"github.com/jensneuse/abstractlogger"
@@ -48,7 +49,7 @@ type FactoryResolver interface {
 }
 
 type ApiTransportFactory interface {
-	RoundTripper(enableSingleFlight bool, transport http.RoundTripper) http.RoundTripper
+	RoundTripper(transport http.RoundTripper) http.RoundTripper
 	DefaultHTTPProxyURL() *url.URL
 }
 
@@ -56,17 +57,18 @@ type DefaultFactoryResolver struct {
 	static *staticdatasource.Factory[staticdatasource.Configuration]
 	log    *zap.Logger
 
-	engineCtx          context.Context
-	enableSingleFlight bool
-	streamingClient    *http.Client
-	subscriptionClient graphql_datasource.GraphQLSubscriptionClient
+	engineCtx context.Context
 
-	httpClient          *http.Client
 	subgraphHTTPClients map[string]*http.Client
 	connector           *grpcconnector.Connector
 
 	factoryLogger abstractlogger.Logger
 	instanceData  InstanceData
+
+	baseTransport                 http.RoundTripper
+	transportFactory              ApiTransportFactory
+	defaultSubgraphRequestTimeout time.Duration
+	subscriptionClientOptions     []graphql_datasource.Options
 }
 
 func NewDefaultFactoryResolver(
@@ -77,20 +79,10 @@ func NewDefaultFactoryResolver(
 	subgraphTransports map[string]http.RoundTripper,
 	connector *grpcconnector.Connector,
 	log *zap.Logger,
-	enableSingleFlight bool,
 	enableNetPoll bool,
 	instanceData InstanceData,
 ) *DefaultFactoryResolver {
 	transportFactory := NewTransport(transportOptions)
-
-	defaultHTTPClient := &http.Client{
-		Timeout:   transportOptions.SubgraphTransportOptions.RequestTimeout,
-		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
-	}
-
-	streamingClient := &http.Client{
-		Transport: transportFactory.RoundTripper(enableSingleFlight, baseTransport),
-	}
 
 	subgraphHTTPClients := map[string]*http.Client{}
 
@@ -102,7 +94,7 @@ func NewDefaultFactoryResolver(
 
 		// make a new http client
 		subgraphClient := &http.Client{
-			Transport: transportFactory.RoundTripper(enableSingleFlight, subgraphTransport),
+			Transport: transportFactory.RoundTripper(subgraphTransport),
 			Timeout:   subgraphOpts.RequestTimeout,
 		}
 
@@ -140,26 +132,18 @@ func NewDefaultFactoryResolver(
 		}
 	}
 
-	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		defaultHTTPClient,
-		streamingClient,
-		ctx,
-		options...,
-	)
-
 	return &DefaultFactoryResolver{
-		static:             &staticdatasource.Factory[staticdatasource.Configuration]{},
-		log:                log,
-		factoryLogger:      factoryLogger,
-		engineCtx:          ctx,
-		enableSingleFlight: enableSingleFlight,
-		streamingClient:    streamingClient,
-		subscriptionClient: subscriptionClient,
-
-		httpClient:          defaultHTTPClient,
-		subgraphHTTPClients: subgraphHTTPClients,
-		connector:           connector,
-		instanceData:        instanceData,
+		static:                        &staticdatasource.Factory[staticdatasource.Configuration]{},
+		log:                           log,
+		factoryLogger:                 factoryLogger,
+		engineCtx:                     ctx,
+		subgraphHTTPClients:           subgraphHTTPClients,
+		connector:                     connector,
+		instanceData:                  instanceData,
+		baseTransport:                 baseTransport,
+		transportFactory:              transportFactory,
+		defaultSubgraphRequestTimeout: transportOptions.SubgraphTransportOptions.RequestTimeout,
+		subscriptionClientOptions:     options,
 	}
 }
 
@@ -173,11 +157,44 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 		}
 	}
 
-	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
-		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, d.subscriptionClient)
+	// we're creating one http client per subgraph
+	// learn more:
+	// https://goperf.dev/02-networking/efficient-net-use/?h=http.client#dont-share-httpclient-across-multiple-hosts
+
+	if d.transportFactory == nil || d.baseTransport == nil {
+		// dummy implementation for plan generator that doesn't make requests
+		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
+			http.DefaultClient,
+			http.DefaultClient,
+			d.engineCtx,
+			d.subscriptionClientOptions...,
+		)
+		return graphql_datasource.NewFactory(d.engineCtx, http.DefaultClient, subscriptionClient)
 	}
 
-	return graphql_datasource.NewFactory(d.engineCtx, d.httpClient, d.subscriptionClient)
+	defaultHTTPClient := &http.Client{
+		Timeout:   d.defaultSubgraphRequestTimeout,
+		Transport: d.transportFactory.RoundTripper(d.baseTransport),
+	}
+
+	streamingClient := &http.Client{
+		Transport: d.transportFactory.RoundTripper(d.baseTransport),
+	}
+
+	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
+		defaultHTTPClient,
+		streamingClient,
+		d.engineCtx,
+		d.subscriptionClientOptions...,
+	)
+
+	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
+		// it's intentional that we're not using the subgraphClient for subscriptions
+		// custom subgraph clients are intended to be used for custom timeouts, which is not relevant for subscriptions
+		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, subscriptionClient)
+	}
+
+	return graphql_datasource.NewFactory(d.engineCtx, defaultHTTPClient, subscriptionClient)
 }
 
 func (d *DefaultFactoryResolver) ResolveStaticFactory() (factory plan.PlannerFactory[staticdatasource.Configuration], err error) {

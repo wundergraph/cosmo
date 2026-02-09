@@ -61,6 +61,7 @@ type ParsedOperation struct {
 	// Type is a string representing the operation type. One of "query", "mutation", "subscription".
 	Type           string
 	Variables      *fastjson.Object
+	VariablesHash  uint64
 	RemapVariables map[string]string
 
 	// NormalizedRepresentation is the normalized representation of the operation as a string.
@@ -301,16 +302,10 @@ func (o *OperationKit) UnmarshalOperationFromURL(url *url.URL) error {
 // but extension and variables will be unmarshalled as JSON.RawMessage.
 // We always compact the variables and extensions to ensure that we produce easy to parse JSON for the engine
 func (o *OperationKit) UnmarshalOperationFromBody(data []byte) error {
-	buf := bytes.NewBuffer(make([]byte, len(data))[:0])
-	err := json.Compact(buf, data)
+	err := json.Unmarshal(data, &o.parsedOperation.Request)
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(buf.Bytes(), &o.parsedOperation.Request)
-	if err != nil {
-		return err
-	}
-
 	return o.unmarshalOperation()
 }
 
@@ -395,6 +390,12 @@ func (o *OperationKit) unmarshalOperation() error {
 	}
 
 	return nil
+}
+
+func (o *OperationKit) computeVariablesHash() {
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
+	o.parsedOperation.VariablesHash = o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 }
 
 func (o *OperationKit) ComputeOperationSha256() error {
@@ -931,11 +932,13 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 		}
 	}
 
-	variablesBefore := make([]byte, len(o.kit.doc.Input.Variables))
-	copy(variablesBefore, o.kit.doc.Input.Variables)
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.Variables)
+	variablesBefore := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
-	operationRawBytesBefore := make([]byte, len(o.kit.doc.Input.RawBytes))
-	copy(operationRawBytesBefore, o.kit.doc.Input.RawBytes)
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.RawBytes)
+	operationRawBytesBefore := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
 	report := &operationreport.Report{}
 	uploadsMapping := o.kit.variablesNormalizer.NormalizeOperation(o.kit.doc, o.operationProcessor.executor.ClientSchema, report)
@@ -973,9 +976,14 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 	}
 	o.parsedOperation.ID = o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()
+	o.computeVariablesHash()
+
+	_, _ = o.kit.keyGen.Write(o.kit.doc.Input.RawBytes)
+	operationRawBytesAfter := o.kit.keyGen.Sum64()
+	o.kit.keyGen.Reset()
 
 	// If the normalized form of the operation didn't change, we don't need to print it again
-	if bytes.Equal(o.kit.doc.Input.Variables, variablesBefore) && bytes.Equal(o.kit.doc.Input.RawBytes, operationRawBytesBefore) {
+	if o.parsedOperation.VariablesHash == variablesBefore && operationRawBytesAfter == operationRawBytesBefore {
 		if o.cache != nil && o.cache.variablesNormalizationCache != nil {
 			entry := VariablesNormalizationCacheEntry{
 				uploadsMapping:           uploadsMapping,
@@ -1140,13 +1148,20 @@ func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCac
 	o.parsedOperation.NormalizationCacheHit = true
 	o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 	o.parsedOperation.Type = entry.operationType
-	//  We will always only have a single operation definition in the document
+	// We will always only have a single operation definition in the document
 	// Because we removed the unused operations during normalization
 	o.operationDefinitionRef = 0
 	err := o.setAndParseOperationDoc()
 	if err != nil {
 		return err
 	}
+	// Set the operation name
+	name := o.kit.doc.OperationDefinitionNameString(o.operationDefinitionRef)
+	if name == "" {
+		return nil
+	}
+	o.parsedOperation.Request.OperationName = name
+	o.originalOperationNameRef = o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name
 	return nil
 }
 

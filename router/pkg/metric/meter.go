@@ -159,7 +159,8 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 func getTemporalitySelector(temporality otelconfig.ExporterTemporality, log *zap.Logger) func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
 	// https://github.com/open-telemetry/opentelemetry-go/blob/main/internal/shared/otlp/otlpmetric/oconf/envconfig.go.tmpl#L166-L177
 	// See the above link for selectors for different temporalities
-	if temporality == otelconfig.DeltaTemporality {
+	switch temporality {
+	case otelconfig.DeltaTemporality:
 		deltaTemporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
 			switch kind {
 			case sdkmetric.InstrumentKindCounter,
@@ -171,11 +172,11 @@ func getTemporalitySelector(temporality otelconfig.ExporterTemporality, log *zap
 			}
 		}
 		return deltaTemporalitySelector
-	} else if temporality == otelconfig.CumulativeTemporality {
+	case otelconfig.CumulativeTemporality:
 		return cumulativeTemporalitySelector
-	} else if temporality == otelconfig.CustomCloudTemporality {
+	case otelconfig.CustomCloudTemporality:
 		return defaultCloudTemporalitySelector
-	} else {
+	default:
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#metricreader
 		// if the temporality is not configured, we fallback the to the default as per OTEL-SDK
 		log.Debug("The temporality selector falls back to the default.")

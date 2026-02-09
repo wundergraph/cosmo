@@ -145,7 +145,10 @@
   "Headers": {
     "All": null,
     "Subgraphs": null,
-    "CookieWhitelist": null
+    "CookieWhitelist": null,
+    "Router": {
+      "Response": null
+    }
   },
   "TrafficShaping": {
     "All": {
@@ -374,6 +377,9 @@
       "AlwaysSkipLoader": false
     },
     "EnableSingleFlight": true,
+    "ForceEnableSingleFlight": false,
+    "EnableInboundRequestDeduplication": true,
+    "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 1024,

@@ -405,6 +405,137 @@ func TestForwardHeaders(t *testing.T) {
 			}
 		})
 	})
+
+	t.Run("Ignored headers are never forwarded from client", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that client headers in the ignoredHeaders list are never forwarded to subgraphs,
+		// even when propagation rules are configured. The router manages these headers itself.
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Content-Type",
+							},
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Content-Encoding",
+							},
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Connection",
+							},
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "Transfer-Encoding",
+							},
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "X-Custom-Header",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{
+					"Content-Type":      []string{"application/custom-from-client"},
+					"Content-Encoding":  []string{"gzip-from-client"},
+					"Connection":        []string{"keep-alive-from-client"},
+					"Transfer-Encoding": []string{"chunked-from-client"},
+					"X-Custom-Header":   []string{"should-be-forwarded"},
+				},
+				Query: `query {
+					contentType: headerValue(name:"Content-Type"),
+					contentEncoding: headerValue(name:"Content-Encoding"),
+					connection: headerValue(name:"Connection"),
+					transferEncoding: headerValue(name:"Transfer-Encoding"),
+					customHeader: headerValue(name:"X-Custom-Header")
+				}`,
+			})
+
+			// Parse the response to check individual values
+			var result struct {
+				Data struct {
+					ContentType      string `json:"contentType"`
+					ContentEncoding  string `json:"contentEncoding"`
+					Connection       string `json:"connection"`
+					TransferEncoding string `json:"transferEncoding"`
+					CustomHeader     string `json:"customHeader"`
+				} `json:"data"`
+			}
+			err := json.Unmarshal([]byte(res.Body), &result)
+			require.NoError(t, err)
+
+			// Client's ignored headers should NOT be forwarded (empty or router-managed values)
+			require.NotEqual(t, "application/custom-from-client", result.Data.ContentType, "Client Content-Type should not be forwarded")
+			require.NotEqual(t, "gzip-from-client", result.Data.ContentEncoding, "Client Content-Encoding should not be forwarded")
+			require.NotEqual(t, "keep-alive-from-client", result.Data.Connection, "Client Connection should not be forwarded")
+			require.NotEqual(t, "chunked-from-client", result.Data.TransferEncoding, "Client Transfer-Encoding should not be forwarded")
+
+			// Non-ignored headers SHOULD be forwarded
+			require.Equal(t, "should-be-forwarded", result.Data.CustomHeader, "Custom header should be forwarded")
+		})
+	})
+
+	t.Run("Ignored headers with regex matching are never forwarded from client", func(t *testing.T) {
+		t.Parallel()
+
+		// Test that client headers in the ignoredHeaders list are never forwarded even with regex matching
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Matching:  "^Content-.*", // Should match Content-Type, Content-Encoding, Content-Length
+							},
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Matching:  ".*", // Match all headers
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Header: http.Header{
+					"Content-Type":     []string{"application/custom-from-client"},
+					"Content-Encoding": []string{"gzip-from-client"},
+					"X-Custom-Header":  []string{"should-be-forwarded"},
+				},
+				Query: `query {
+					contentType: headerValue(name:"Content-Type"),
+					contentEncoding: headerValue(name:"Content-Encoding"),
+					customHeader: headerValue(name:"X-Custom-Header")
+				}`,
+			})
+
+			// Parse the response
+			var result struct {
+				Data struct {
+					ContentType     string `json:"contentType"`
+					ContentEncoding string `json:"contentEncoding"`
+					CustomHeader    string `json:"customHeader"`
+				} `json:"data"`
+			}
+			err := json.Unmarshal([]byte(res.Body), &result)
+			require.NoError(t, err)
+
+			// Client's Content-* headers should NOT be forwarded (router manages these)
+			require.NotEqual(t, "application/custom-from-client", result.Data.ContentType, "Client Content-Type should not be forwarded")
+			require.NotEqual(t, "gzip-from-client", result.Data.ContentEncoding, "Client Content-Encoding should not be forwarded")
+
+			// X-Custom-Header SHOULD be forwarded (not in ignored list)
+			require.Equal(t, "should-be-forwarded", result.Data.CustomHeader, "Custom header should be forwarded")
+		})
+	})
 }
 
 func TestForwardRenamedHeaders(t *testing.T) {

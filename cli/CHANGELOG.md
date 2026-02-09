@@ -4,6 +4,27 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.105.0](https://github.com/wundergraph/cosmo/compare/wgc@0.104.3...wgc@0.105.0) (2026-02-09)
+
+### Bug Fixes
+
+* vulnerabilities ([#2494](https://github.com/wundergraph/cosmo/issues/2494)) ([89cb868](https://github.com/wundergraph/cosmo/commit/89cb868664d1a35d85a7010aa19139b30f02a49a)) (@JivusAyrus)
+
+### Features
+
+* max number of persistent operations per request ([#2477](https://github.com/wundergraph/cosmo/issues/2477)) ([7b219ac](https://github.com/wundergraph/cosmo/commit/7b219acefa9439b51739da313acc8ad0d7b8239f)) (@alepane21)
+* update @graphql-tools/utils version to 11.0.0 ([#2495](https://github.com/wundergraph/cosmo/issues/2495)) ([526b1a4](https://github.com/wundergraph/cosmo/commit/526b1a498ae709b67ec37626bfc665babafd8aa8)) (@thisisnithin)
+
+## [0.104.3](https://github.com/wundergraph/cosmo/compare/wgc@0.104.2...wgc@0.104.3) (2026-02-02)
+
+### Bug Fixes
+
+* if an error is caught, exit immediately ([#2478](https://github.com/wundergraph/cosmo/issues/2478)) ([3816a75](https://github.com/wundergraph/cosmo/commit/3816a751cb7ba43e32782f19bbb4fcfbf05a1675)) (@alepane21)
+
+## [0.104.2](https://github.com/wundergraph/cosmo/compare/wgc@0.104.1...wgc@0.104.2) (2026-01-27)
+
+**Note:** Version bump only for package wgc
+
 ## [0.104.1](https://github.com/wundergraph/cosmo/compare/wgc@0.104.0...wgc@0.104.1) (2026-01-20)
 
 ### Bug Fixes

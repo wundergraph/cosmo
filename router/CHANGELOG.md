@@ -4,6 +4,33 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.278.0](https://github.com/wundergraph/cosmo/compare/router@0.277.0...router@0.278.0) (2026-02-09)
+
+### Bug Fixes
+
+* ensure router header expressions are set even on early return errors ([#2492](https://github.com/wundergraph/cosmo/issues/2492)) ([53a01d1](https://github.com/wundergraph/cosmo/commit/53a01d15374ccf819e8cc8b2f893ede8873dda27)) (@SkArchon)
+* update Apollo GraphQL client header names for consistency ([#2493](https://github.com/wundergraph/cosmo/issues/2493)) ([328875d](https://github.com/wundergraph/cosmo/commit/328875d5e8aa2c6402d4809c5550c996f745d9f0)) (@alepane21)
+
+### Features
+
+* improve memory management ([#2365](https://github.com/wundergraph/cosmo/issues/2365)) ([9c9d451](https://github.com/wundergraph/cosmo/commit/9c9d451c2b326a3cae1d9bde68348d6c999fe2f7)) (@jensneuse)
+
+# [0.277.0](https://github.com/wundergraph/cosmo/compare/router@0.276.0...router@0.277.0) (2026-02-03)
+
+### Bug Fixes
+
+* dont forward content-* headers from client and subgraphs ([#2481](https://github.com/wundergraph/cosmo/issues/2481)) ([810344a](https://github.com/wundergraph/cosmo/commit/810344aead4d657290827cae33958989b2a76f92)) (@StarpTech)
+
+### Features
+
+* client response expressions ([#2472](https://github.com/wundergraph/cosmo/issues/2472)) ([f585037](https://github.com/wundergraph/cosmo/commit/f5850379a47b19a6bbc388e29268612a89540354)) (@SkArchon)
+
+# [0.276.0](https://github.com/wundergraph/cosmo/compare/router@0.275.1...router@0.276.0) (2026-02-02)
+
+### Features
+
+* set operation name also with persistent queries ([#2480](https://github.com/wundergraph/cosmo/issues/2480)) ([f3166dc](https://github.com/wundergraph/cosmo/commit/f3166dc7a67a74bd94f770be07960477b9300be0)) (@alepane21)
+
 ## [0.275.1](https://github.com/wundergraph/cosmo/compare/router@0.275.0...router@0.275.1) (2026-01-26)
 
 ### Bug Fixes

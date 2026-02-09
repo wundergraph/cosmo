@@ -336,7 +336,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 	// We can parse the request options before creating the handler
 	// this avoids touching the client request across goroutines
 
-	executionOptions, traceOptions, err := h.preHandler.parseRequestOptions(r, clientInfo, requestLogger)
+	executionOptions, traceOptions, err := h.preHandler.parseExecutionAndTraceOptions(r, clientInfo, requestLogger)
 	if err != nil {
 		requestLogger.Error("Parse request options", zap.Error(err))
 		_ = c.Close()
@@ -927,6 +927,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	opContext.normalizationTime = time.Since(startNormalization)
 	opContext.content = operationKit.parsedOperation.NormalizedRepresentation
+	opContext.variablesHash = operationKit.parsedOperation.VariablesHash
 	opContext.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
 		return nil, nil, err
@@ -1014,7 +1015,6 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 			return
 		}
 	}
-
 	reqContext := buildRequestContext(requestContextOptions{
 		operationContext:    operationCtx,
 		requestLogger:       h.logger,
@@ -1023,25 +1023,38 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 		r:                   registration.clientRequest,
 	})
 
-	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
-		reqContext.expressionContext = *origCtx.expressionContext.Clone()
-	}
+	reqContext.operation.protocol = OperationProtocolWS
+	reqContext.operation.executionOptions = h.plannerOptions.ExecutionOptions
+	reqContext.operation.traceOptions = h.plannerOptions.TraceOptions
 
 	resolveCtx := resolve.NewContext(withRequestContext(h.ctx, reqContext))
+
 	resolveCtx.Variables = operationCtx.Variables()
+	resolveCtx.RemapVariables = operationCtx.remapVariables
+	resolveCtx.VariablesHash = operationCtx.variablesHash
 	resolveCtx.Request = resolve.Request{
 		Header: registration.clientRequest.Header,
-		ID:     h.initRequestID,
+		ID:     operationCtx.internalHash,
 	}
 	resolveCtx.RenameTypeNames = h.graphqlHandler.executor.RenameTypeNames
-	resolveCtx.RemapVariables = operationCtx.remapVariables
 	resolveCtx.TracingOptions = operationCtx.traceOptions
 	resolveCtx.Extensions = operationCtx.extensions
+	resolveCtx.ExecutionOptions = operationCtx.executionOptions
 
 	if h.forwardInitialPayload && operationCtx.initialPayload != nil {
 		resolveCtx.InitialPayload = operationCtx.initialPayload
 	}
 
+	if origCtx := getRequestContext(h.request.Context()); origCtx != nil {
+		reqContext.expressionContext = *origCtx.expressionContext.Clone()
+		if h.graphqlHandler.headerPropagation != nil {
+			resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
+				origCtx,
+				h.graphqlHandler.headerPropagation,
+				operationCtx.preparedPlan.preparedPlan,
+			)
+		}
+	}
 	if h.graphqlHandler.authorizer != nil {
 		resolveCtx = WithAuthorizationExtension(resolveCtx)
 		resolveCtx.SetAuthorizer(h.graphqlHandler.authorizer)
