@@ -333,6 +333,31 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 		require.Len(t, cache.queriesForFeatureFlag, 1)
 		require.Contains(t, cache.queriesForFeatureFlag, "ff1")
 	})
+
+	t.Run("removes feature flags when not in ConfigByFeatureFlagName", func(t *testing.T) {
+		t.Parallel()
+		cache := &InMemoryPlanCacheFallback{
+			queriesForFeatureFlag: make(map[string]any),
+		}
+		cache.queriesForFeatureFlag[""] = nil // base should be kept
+		cache.queriesForFeatureFlag["ff1"] = nil
+		cache.queriesForFeatureFlag["ff2"] = nil
+		cache.queriesForFeatureFlag["ff3"] = nil
+		cache.queriesForFeatureFlag["ff4"] = nil
+		cache.queriesForFeatureFlag["ff5"] = nil
+
+		routerCfg := &nodev1.RouterConfig{
+			FeatureFlagConfigs: nil,
+		}
+
+		cache.cleanupUnusedFeatureFlags(routerCfg)
+
+		require.Len(t, cache.queriesForFeatureFlag, 1)
+		require.Contains(t, cache.queriesForFeatureFlag, "")
+		require.NotContains(t, cache.queriesForFeatureFlag, "ff1")
+		require.NotContains(t, cache.queriesForFeatureFlag, "ff2")
+		require.NotContains(t, cache.queriesForFeatureFlag, "ff3")
+	})
 }
 
 func TestInMemoryPlanCacheFallback_ProcessOnConfigChangeRestart(t *testing.T) {

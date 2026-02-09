@@ -141,7 +141,7 @@ func (c *InMemoryPlanCacheFallback) cleanupUnusedFeatureFlags(routerCfg *nodev1.
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.queriesForFeatureFlag == nil || routerCfg.FeatureFlagConfigs == nil {
+	if c.queriesForFeatureFlag == nil {
 		return
 	}
 
@@ -150,7 +150,9 @@ func (c *InMemoryPlanCacheFallback) cleanupUnusedFeatureFlags(routerCfg *nodev1.
 		if ffName == "" {
 			continue
 		}
-		if _, exists := routerCfg.FeatureFlagConfigs.ConfigByFeatureFlagName[ffName]; !exists {
+		if routerCfg.FeatureFlagConfigs == nil {
+			delete(c.queriesForFeatureFlag, ffName)
+		} else if _, exists := routerCfg.FeatureFlagConfigs.ConfigByFeatureFlagName[ffName]; !exists {
 			delete(c.queriesForFeatureFlag, ffName)
 		}
 	}
