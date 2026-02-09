@@ -1322,11 +1322,6 @@ func (s *graphServer) buildGraphMux(
 	}
 
 	if s.cacheWarmup != nil && s.cacheWarmup.Enabled {
-
-		if s.graphApiToken == "" {
-			return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
-		}
-
 		processor := NewCacheWarmupPlanningProcessor(&CacheWarmupPlanningProcessorOptions{
 			OperationProcessor:        operationProcessor,
 			OperationPlanner:          operationPlanner,
@@ -1372,12 +1367,16 @@ func (s *graphServer) buildGraphMux(
 		// - Either:
 		//   - Using static execution config (not Cosmo): s.selfRegister == nil
 		//   - OR CDN cache warmer is explictly disabled
-		case s.cacheWarmup.InMemoryFallback && (s.selfRegister == nil || !s.Config.cacheWarmup.Source.CdnSource.Enabled):
+		case s.cacheWarmup.InMemoryFallback && (s.selfRegister == nil || !s.cacheWarmup.Source.CdnSource.Enabled):
 			// We first utilize the existing plan cache (if it was already set, i.e., not on the first start) to create a list of queries
 			// and then reset the plan cache to the new plan cache for this start afterwards.
 			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
 			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
-		case s.Config.cacheWarmup.Source.CdnSource.Enabled:
+		case s.cacheWarmup.Source.CdnSource.Enabled:
+			if s.graphApiToken == "" {
+				return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
+			}
+
 			// We use the in-memory cache as a fallback if enabled
 			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
 			if s.cacheWarmup.InMemoryFallback {
