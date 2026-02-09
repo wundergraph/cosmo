@@ -23,6 +23,15 @@ import {
   GraphQLInterfaceType,
   isObjectType,
   InlineFragmentNode,
+  isUnionType,
+  GraphQLAbstractType,
+  isAbstractType,
+  GraphQLUnionType,
+  print,
+  isSelectionNode,
+  GraphQLCompositeType,
+  SelectionNode,
+  isCompositeType,
 } from 'graphql';
 import { VisitContext } from './types.js';
 
@@ -59,9 +68,9 @@ export class AbstractSelectionRewriter {
   private readonly fieldSetDoc: DocumentNode;
   public readonly schema: GraphQLSchema;
   private currentType: GraphQLTypeWithFields;
-  private currentInterfaceRoot?: GraphQLInterfaceType;
-  private interfaceRootStack: GraphQLInterfaceType[] = [];
-  private ancestorStacks: GraphQLInterfaceType[][] = [];
+  private currentCompositeRoot?: GraphQLCompositeType;
+  private compositeTypeStack: GraphQLCompositeType[] = [];
+  private ancestorStacks: GraphQLCompositeType[][] = [];
   /** Stack for tracking parent types during nested field traversal */
   private typeStack: GraphQLTypeWithFields[] = [];
   /** Boolean stack indicating whether to restore type/selection context when leaving a selection set */
@@ -128,8 +137,17 @@ export class AbstractSelectionRewriter {
    * @param ctx - The visitor context containing the current node and its position in the AST
    */
   private onEnterSelectionSet(ctx: VisitContext<SelectionSetNode>): void {
+    console.log('onEnterSelectionSet', print(this.fieldSetDoc));
     if (!ctx.parent) {
       return;
+    }
+
+    if (isAbstractType(ctx.parent)) {
+      if (this.currentSelectionSet) {
+        this.selectionSetStack.push(this.currentSelectionSet);
+      }
+
+      this.currentSelectionSet = ctx.node;
     }
 
     if (!this.isFieldNode(ctx.parent)) {
@@ -158,21 +176,19 @@ export class AbstractSelectionRewriter {
 
     this.currentSelectionSet = ctx.node;
 
+    if (this.compositeTypeStack.length > 0) {
+      this.ancestorStacks.push([...this.compositeTypeStack]);
+      this.compositeTypeStack = [];
+    }
+
+    this.currentCompositeRoot = fieldType;
+    this.compositeTypeStack.push(this.currentCompositeRoot);
+
     // Only process selection sets for interface types
-    if (!isInterfaceType(fieldType)) {
-      return;
+    if (isAbstractType(fieldType)) {
+      this.appendValidInlineFragments(ctx.node);
+      this.distributeFieldsIntoInlineFragments(ctx.node);
     }
-
-    if (this.interfaceRootStack.length > 0) {
-      this.ancestorStacks.push([...this.interfaceRootStack]);
-      this.interfaceRootStack = [];
-    }
-
-    this.currentInterfaceRoot = fieldType;
-    this.interfaceRootStack.push(this.currentInterfaceRoot);
-
-    this.appendValidInlineFragments(ctx.node);
-    this.distributeFieldsIntoInlineFragments(ctx.node);
   }
 
   /**
@@ -186,6 +202,8 @@ export class AbstractSelectionRewriter {
    * @param ctx - The visitor context containing the current node and its position in the AST
    */
   private onLeaveSelectionSet(ctx: VisitContext<SelectionSetNode>): void {
+    console.log('onLeaveSelectionSet', print(this.fieldSetDoc));
+
     if (!ctx.parent) {
       return;
     }
@@ -208,13 +226,13 @@ export class AbstractSelectionRewriter {
     }
 
     if (
-      isInterfaceType(fieldType) &&
-      fieldType.name === this.currentInterfaceRoot?.name &&
-      this.interfaceRootStack.length === 1
+      isCompositeType(fieldType) &&
+      fieldType.name === this.currentCompositeRoot?.name &&
+      this.compositeTypeStack.length === 1
     ) {
-      this.interfaceRootStack = this.ancestorStacks.pop() ?? [];
-      if (this.interfaceRootStack.length > 0) {
-        this.currentInterfaceRoot = this.interfaceRootStack[0];
+      this.compositeTypeStack = this.ancestorStacks.pop() ?? [];
+      if (this.compositeTypeStack.length > 0) {
+        this.currentCompositeRoot = this.compositeTypeStack[0];
       }
     }
   }
@@ -237,20 +255,29 @@ export class AbstractSelectionRewriter {
    * @returns undefined to continue traversal, or nothing to skip
    */
   private onEnterInlineFragment(ctx: VisitContext<InlineFragmentNode>): void {
+    // console.log('onEnterInlineFragment', print(this.fieldSetDoc));
     if (!ctx.parent || !this.currentSelectionSet) {
       return;
     }
 
     const type = this.schema.getType(ctx.node.typeCondition?.name.value ?? '');
+
+    if (isUnionType(type)) {
+      this.unfoldUnionType(ctx);
+      this.compositeTypeStack.push(type);
+      this.rebalanceStack.push(false);
+      return;
+    }
+
     if (!type || !this.isTypeWithFields(type)) {
       return;
     }
 
-    if (!this.inlineFragmentIsInterfaceType(ctx.node)) {
+    if (!this.inlineFragmentIsAbstractType(ctx.node)) {
       // Returning undefined continues traversal without deleting the node.
       // If the inline fragment targets a type that doesn't implement the current interface,
       // we remove it from the selections.
-      if (!this.inlineFragmentIsValidForCurrentInterfaceRoot(ctx.node)) {
+      if (!this.inlineFragmentIsValidForCurrentAbstractRoot(ctx.node)) {
         this.currentSelectionSet.selections = this.currentSelectionSet.selections.filter(
           (s) => s.kind !== Kind.INLINE_FRAGMENT || s.typeCondition?.name.value !== ctx.node.typeCondition?.name.value,
         );
@@ -258,17 +285,18 @@ export class AbstractSelectionRewriter {
 
       this.rebalanceStack.push(true);
       this.typeStack.push(this.currentType);
+      this.compositeTypeStack.push(type);
       this.currentType = type;
       return;
     }
 
     this.rebalanceStack.push(false);
 
-    if (!isInterfaceType(type)) {
+    if (!isAbstractType(type)) {
       return;
     }
 
-    this.interfaceRootStack.push(type);
+    this.compositeTypeStack.push(type);
     this.appendValidInlineFragments(ctx.node.selectionSet);
     this.distributeFieldsIntoInlineFragments(ctx.node.selectionSet);
 
@@ -288,15 +316,61 @@ export class AbstractSelectionRewriter {
   }
 
   private onLeaveInlineFragment(ctx: VisitContext<InlineFragmentNode>): any {
+    console.log('onLeaveInlineFragment', print(this.fieldSetDoc));
+
     if (!ctx.parent || !this.currentSelectionSet) {
       return;
     }
 
     if (this.rebalanceStack.pop() ?? false) {
       this.currentType = this.typeStack.pop() ?? this.currentType;
+      this.compositeTypeStack.pop();
     } else {
-      this.interfaceRootStack.pop();
+      this.compositeTypeStack.pop();
     }
+  }
+
+  private unfoldUnionType(ctx: VisitContext<InlineFragmentNode>): void {
+    // if the parent is a selection set, we need to unfold the union type into the parent selection.
+    // We potentially have nested selection sets but the currentSelectionSet is only set for the top level field selection.
+    // const ancestor = ctx.ancestors.at(-1);
+    // if (this.isSelectionSetNode(ancestor)) {
+    //   this.unfoldSelectionNode(ctx.node, ancestor);
+    //   return;
+    // }
+
+    if (!this.currentSelectionSet) {
+      return;
+    }
+
+    this.unfoldSelectionNode(ctx.node, this.currentSelectionSet);
+  }
+
+  private unfoldSelectionNode(node: InlineFragmentNode, parent: SelectionSetNode) {
+    const index = parent.selections.findIndex(
+      (s) => s.kind === Kind.INLINE_FRAGMENT && s.typeCondition?.name.value === node.typeCondition?.name.value,
+    );
+    if (index < 0) {
+      return;
+    }
+
+    parent.selections = [
+      ...parent.selections.slice(0, index),
+      ...node.selectionSet.selections,
+      ...parent.selections.slice(index + 1),
+    ];
+  }
+
+  private isSelectionSetNode(node: ASTNode | ReadonlyArray<ASTNode> | undefined): node is SelectionSetNode {
+    if (!node) {
+      return false;
+    }
+
+    if (Array.isArray(node)) {
+      return false;
+    }
+
+    return (node as ASTNode).kind === Kind.SELECTION_SET;
   }
 
   /**
@@ -369,7 +443,7 @@ export class AbstractSelectionRewriter {
    * @param node - The selection set node to append inline fragments to
    */
   private appendValidInlineFragments(node: SelectionSetNode): void {
-    if (this.interfaceRootStack.length === 0) {
+    if (this.compositeTypeStack.length === 0) {
       return;
     }
 
@@ -378,7 +452,7 @@ export class AbstractSelectionRewriter {
       return;
     }
 
-    const currentStack = [...this.interfaceRootStack];
+    const currentStack = [...this.compositeTypeStack];
     const currentInterface = currentStack.pop();
     if (!currentInterface) {
       return;
@@ -398,10 +472,14 @@ export class AbstractSelectionRewriter {
   }
 
   private getPossibleIntersectingTypes(
-    currentInterfaceRoot: GraphQLInterfaceType,
-    ancestors: GraphQLInterfaceType[],
+    currentCompositeRoot: GraphQLCompositeType,
+    ancestors: GraphQLCompositeType[],
   ): ReadonlyArray<GraphQLObjectType> {
-    const possibleTypes = this.schema.getPossibleTypes(currentInterfaceRoot);
+    let possibleTypes: ReadonlyArray<GraphQLObjectType> = [];
+    possibleTypes = isObjectType(currentCompositeRoot)
+      ? [currentCompositeRoot]
+      : this.schema.getPossibleTypes(currentCompositeRoot);
+
     const lastAncestor = ancestors.pop();
     if (!lastAncestor) {
       return possibleTypes;
@@ -492,9 +570,9 @@ export class AbstractSelectionRewriter {
    * @param node - The inline fragment node to check
    * @returns true if the fragment targets an interface type, false otherwise
    */
-  private inlineFragmentIsInterfaceType(node: InlineFragmentNode): boolean {
+  private inlineFragmentIsAbstractType(node: InlineFragmentNode): boolean {
     const type = this.schema.getType(node.typeCondition?.name.value ?? '');
-    return isInterfaceType(type);
+    return isInterfaceType(type) || isUnionType(type);
   }
 
   /**
@@ -510,11 +588,7 @@ export class AbstractSelectionRewriter {
    * @param node - The inline fragment node to validate
    * @returns true if the fragment is valid for the current interface root context, false otherwise
    */
-  private inlineFragmentIsValidForCurrentInterfaceRoot(node: InlineFragmentNode): boolean {
-    if (!isInterfaceType(this.currentInterfaceRoot)) {
-      return true;
-    }
-
+  private inlineFragmentIsValidForCurrentAbstractRoot(node: InlineFragmentNode): boolean {
     const type = this.schema.getType(node.typeCondition?.name.value ?? '');
     if (!type) {
       // Type not found in schema - invalid fragment
@@ -526,7 +600,11 @@ export class AbstractSelectionRewriter {
       return false;
     }
 
-    return type.getInterfaces().some((i) => i.name === this.currentInterfaceRoot?.name);
+    if (isObjectType(this.currentCompositeRoot)) {
+      return type.name === this.currentCompositeRoot?.name;
+    }
+
+    return type.getInterfaces().some((i) => i.name === this.currentCompositeRoot?.name);
   }
 
   /**

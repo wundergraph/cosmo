@@ -58,6 +58,59 @@ function normalizeFieldSetWithComplexInterfaces(fieldSet: string, typeName: stri
   return print(doc);
 }
 
+const schemaWithDeepNesting = buildSchema(
+  `
+  type Query {
+    root: Root
+  }
+
+  type Root {
+    level1: [Level1Interface]
+  }
+
+  interface Level1Interface {
+    id: ID!
+    level2: [Level2Interface]
+  }
+
+  interface Level2Interface {
+    name: String
+  }
+
+  type Level1TypeA implements Level1Interface {
+    id: ID!
+    level2: [Level2Interface]
+    dataA: String
+  }
+
+  type Level1TypeB implements Level1Interface {
+    id: ID!
+    level2: [Level2Interface]
+    dataB: String
+  }
+
+  type Level1TypeC implements Level1Interface {
+    id: ID!
+    level2: [Level2TypeX]
+    dataC: String
+  }
+
+  type Level2TypeX implements Level2Interface {
+    name: String
+    valueX: Int
+  }
+
+  type Level2TypeY implements Level2Interface {
+    name: String
+    valueY: Float
+  }
+`,
+  {
+    assumeValid: true,
+    assumeValidSDL: true,
+  },
+);
+
 describe('AbstractSelectionRewriter', () => {
   it('should distribute interface field to all inline fragments', () => {
     const input = `
@@ -221,53 +274,6 @@ describe('AbstractSelectionRewriter', () => {
   });
 
   it('should handle deeply nested interfaces', () => {
-    const schemaWithDeepNesting = buildSchema(
-      `
-      type Query {
-        root: Root
-      }
-
-      type Root {
-        level1: [Level1Interface]
-      }
-
-      interface Level1Interface {
-        id: ID!
-        level2: [Level2Interface]
-      }
-
-      interface Level2Interface {
-        name: String
-      }
-
-      type Level1TypeA implements Level1Interface {
-        id: ID!
-        level2: [Level2Interface]
-        dataA: String
-      }
-
-      type Level1TypeB implements Level1Interface {
-        id: ID!
-        level2: [Level2Interface]
-        dataB: String
-      }
-
-      type Level2TypeX implements Level2Interface {
-        name: String
-        valueX: Int
-      }
-
-      type Level2TypeY implements Level2Interface {
-        name: String
-        valueY: Float
-      }
-    `,
-      {
-        assumeValid: true,
-        assumeValidSDL: true,
-      },
-    );
-
     const input = `
       root {
         level1 {
@@ -279,6 +285,7 @@ describe('AbstractSelectionRewriter', () => {
           }
           ... on Level1TypeA { dataA }
           ... on Level1TypeB { dataB }
+          ... on Level1TypeC { dataC }
         }
       }
     `;
@@ -300,9 +307,68 @@ describe('AbstractSelectionRewriter', () => {
                   name
                   valueX
                 }
-                ... on Level2TypeY {
+              }
+              dataA
+            }
+            ... on Level1TypeB {
+              id
+              level2 {
+                ... on Level2TypeX {
                   name
-                  valueY
+                  valueX
+                }
+              }
+              dataB
+            }
+            ... on Level1TypeC {
+              id
+              level2 {
+                ... on Level2TypeX {
+                  name
+                  valueX
+                }
+              }
+              dataC
+            }
+          }
+        }
+      }"
+    `);
+  });
+
+  it('should handle interface field narrowed to concrete type', () => {
+    const input = `
+      root {
+        level1 {
+          id
+          level2 {
+            name
+            ... on Level2TypeX { valueX }
+            ... on Level2TypeY { valueY }
+          }
+          ... on Level1TypeA { dataA }
+          ... on Level1TypeB { dataB }
+          ... on Level1TypeC { dataC }
+        }
+      }
+    `;
+
+    const doc = parse(`{ ${input} }`);
+    const objectType = schemaWithDeepNesting.getTypeMap().Query as GraphQLObjectType;
+    const rewriter = new AbstractSelectionRewriter(doc, schemaWithDeepNesting, objectType);
+    rewriter.normalize();
+    const result = print(doc);
+
+    expect(result).toMatchInlineSnapshot(`
+      "{
+        root {
+          level1 {
+            ... on Level1TypeA {
+              id
+              level2 {
+                ... on Level2TypeX {
+                  name
+                  valueX
                 }
               }
               dataA
@@ -314,12 +380,18 @@ describe('AbstractSelectionRewriter', () => {
                   name
                   valueX
                 }
-                ... on Level2TypeY {
-                  name
-                  valueY
-                }
               }
               dataB
+            }
+            ... on Level1TypeC {
+              id
+              level2 {
+                ... on Level2TypeX {
+                  name
+                  valueX
+                }
+              }
+              dataC
             }
           }
         }

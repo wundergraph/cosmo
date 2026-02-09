@@ -17,6 +17,7 @@ const advancedSchema = buildSchema(
   type Department {
     title: String
     members: [Employee]
+    interns: [Intern]
   }
 
   interface Employee {
@@ -31,6 +32,8 @@ const advancedSchema = buildSchema(
   interface Permission {
     scope: String
   }
+
+  union PermissionUnion = Contractor | Intern
 
   interface Project {
     projectId: ID!
@@ -122,6 +125,90 @@ function normalizeFieldSet(fieldSet: string, typeName: string): string {
   rewriter.normalize();
   return print(doc);
 }
+
+describe('Union type', () => {
+  it('should handle union type', () => {
+    const input = `
+      departments {
+        interns {
+          ... on PermissionUnion {
+            ... on Contractor { agency }
+            ... on Intern { school }
+          }
+        }
+      }
+    `;
+    const result = normalizeFieldSet(input, 'Query');
+    expect(result).toMatchInlineSnapshot(`
+      "{
+        departments {
+          interns {
+            ... on Intern {
+              school
+            }
+          }
+        }
+      }"
+    `);
+  });
+
+  it('should handle union type with nested interface selection', () => {
+    const input = `
+      departments {
+        members {
+          ... on PermissionUnion {
+            ... on Managed { supervisor }
+            ... on Permission { scope }
+          }
+        }
+      }
+    `;
+    const result = normalizeFieldSet(input, 'Query');
+    expect(result).toMatchInlineSnapshot(`
+      "{
+        departments {
+          members {
+            ... on Contractor {
+              supervisor
+              scope
+            }
+            ... on Intern {
+              scope
+            }
+          }
+        }
+      }"
+    `);
+  });
+  // TODO: normalize inline fragments on concrete types with union selections.
+  // it('should handle inline fragments on concrete types', () => {
+  //   const input = `
+  //     departments {
+  //       members {
+  //         ... on Intern {
+  //           ... on PermissionUnion {
+  //             ... on Managed { supervisor }
+  //             ... on Permission { scope }
+  //           }
+  //         }
+  //       }
+  //     }
+  //   `;
+
+  //   const result = normalizeFieldSet(input, 'Query');
+  //   expect(result).toMatchInlineSnapshot(`
+  //     "{
+  //       departments {
+  //         members {
+  //           ... on Intern {
+  //             scope
+  //           }
+  //         }
+  //       }
+  //     }"
+  //   `);
+  // })
+});
 
 describe('AbstractSelectionRewriter - Advanced Cases', () => {
   describe('Via departments (shallower nesting)', () => {
