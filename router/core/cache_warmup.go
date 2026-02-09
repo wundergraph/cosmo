@@ -362,6 +362,7 @@ func (c *CacheWarmupPlanningProcessor) ProcessOperation(ctx context.Context, ope
 		internalHash: k.parsedOperation.InternalID,
 	}
 
+	opContext.variablesHash = k.parsedOperation.VariablesHash
 	opContext.variables, err = astjson.ParseBytes(k.parsedOperation.Request.Variables)
 	if err != nil {
 		return nil, err
