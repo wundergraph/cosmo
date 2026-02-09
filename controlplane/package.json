@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.188.0",
+  "version": "0.189.0",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -49,7 +49,7 @@
     "@fastify/cors": "^9.0.1",
     "@graphql-eslint/eslint-plugin": "^3.20.1",
     "@graphql-inspector/core": "^6.2.1",
-    "@graphql-tools/utils": "^10.1.2",
+    "@graphql-tools/utils": "^11.0.0",
     "@keycloak/keycloak-admin-client": "26.2.5",
     "@octokit/webhooks-types": "^7.6.1",
     "@sentry/node": "^10.19.0",
