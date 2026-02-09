@@ -83,13 +83,15 @@ type (
 	// Router is the main application instance.
 	Router struct {
 		Config
-		httpServer           *server
-		modules              []Module
-		EngineStats          statistics.EngineStatistics
-		playgroundHandler    func(http.Handler) http.Handler
-		proxy                ProxyFunc
-		disableUsageTracking bool
-		usage                UsageTracker
+		httpServer            *server
+		modules               []Module
+		EngineStats           statistics.EngineStatistics
+		playgroundHandler     func(http.Handler) http.Handler
+		proxy                 ProxyFunc
+		disableUsageTracking  bool
+		usage                 UsageTracker
+		headerPropagation     *HeaderPropagation
+		reloadPersistentState *ReloadPersistentState
 	}
 
 	UsageTracker interface {
@@ -308,19 +310,18 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	r.headerRules = AddCacheControlPolicyToRules(r.headerRules, r.cacheControlPolicy)
-	hr, err := NewHeaderPropagation(r.headerRules)
+	var err error
+	r.headerPropagation, err = NewHeaderPropagation(r.headerRules)
 	if err != nil {
 		return nil, err
 	}
-
-	if hr.HasRequestRules() {
-		r.preOriginHandlers = append(r.preOriginHandlers, hr.OnOriginRequest)
-	}
-	if hr.HasResponseRules() {
-		r.postOriginHandlers = append(r.postOriginHandlers, hr.OnOriginResponse)
+	// we only add post origin handler for header rules
+	// pre handlers (header propagation rules) are handled via the engine
+	if r.headerPropagation != nil && r.headerPropagation.HasResponseRules() {
+		r.postOriginHandlers = append(r.postOriginHandlers, r.headerPropagation.OnOriginResponse)
 	}
 
-	defaultHeaders := []string{
+	defaultCorsHeaders := []string{
 		// Common headers
 		"authorization",
 		"origin",
@@ -346,16 +347,16 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	if r.clientHeader.Name != "" {
-		defaultHeaders = append(defaultHeaders, r.clientHeader.Name)
+		defaultCorsHeaders = append(defaultCorsHeaders, r.clientHeader.Name)
 	}
 	if r.clientHeader.Version != "" {
-		defaultHeaders = append(defaultHeaders, r.clientHeader.Version)
+		defaultCorsHeaders = append(defaultCorsHeaders, r.clientHeader.Version)
 	}
 
 	defaultMethods := []string{
 		"HEAD", "GET", "POST",
 	}
-	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultHeaders...))
+	r.corsOptions.AllowHeaders = stringsx.RemoveDuplicates(append(r.corsOptions.AllowHeaders, defaultCorsHeaders...))
 	r.corsOptions.AllowMethods = stringsx.RemoveDuplicates(append(r.corsOptions.AllowMethods, defaultMethods...))
 
 	if r.tlsConfig != nil && r.tlsConfig.Enabled {
@@ -604,6 +605,9 @@ func (r *Router) newServer(ctx context.Context, cfg *nodev1.RouterConfig) error 
 
 	r.httpServer.SwapGraphServer(ctx, server)
 
+	// Cleanup any unused feature flags in case a feature flag was removed
+	r.reloadPersistentState.CleanupFeatureFlags(cfg)
+
 	return nil
 }
 
@@ -724,56 +728,6 @@ func (r *Router) BaseURL() string {
 	return r.baseURL
 }
 
-// NewServer prepares a new server instance but does not start it. The method should only be used when you want to bootstrap
-// the server manually otherwise you can use Router.Start(). You're responsible for setting health checks status to ready with Server.HealthChecks().
-// The server can be shutdown with Router.Shutdown(). Use core.WithExecutionConfig to pass the initial config otherwise the Router will
-// try to fetch the config from the control plane. You can swap the router config by using Router.newGraphServer().
-func (r *Router) NewServer(ctx context.Context) (Server, error) {
-	if r.shutdown.Load() {
-		return nil, fmt.Errorf("router is shutdown. Create a new instance with router.NewRouter()")
-	}
-
-	if err := r.bootstrap(ctx); err != nil {
-		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
-	}
-
-	r.httpServer = newServer(&httpServerOptions{
-		addr:               r.listenAddr,
-		logger:             r.logger,
-		tlsConfig:          r.tlsConfig,
-		tlsServerConfig:    r.tlsServerConfig,
-		healthcheck:        r.healthcheck,
-		baseURL:            r.baseURL,
-		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
-		livenessCheckPath:  r.livenessCheckPath,
-		readinessCheckPath: r.readinessCheckPath,
-		healthCheckPath:    r.healthCheckPath,
-	})
-
-	// Start the server with the static config without polling
-	if r.staticExecutionConfig != nil {
-		r.logger.Info("Static execution config provided. Polling is disabled. Updating execution config is only possible by providing a config.")
-		return r.httpServer, r.newServer(ctx, r.staticExecutionConfig)
-	}
-
-	// when no static config is provided and no poller is configured, we can't start the server
-	if r.configPoller == nil {
-		return nil, fmt.Errorf("config fetcher not provided. Please provide a static execution config instead")
-	}
-
-	cfg, err := r.configPoller.GetRouterConfig(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get initial execution config: %w", err)
-	}
-
-	if err := r.newServer(ctx, cfg.Config); err != nil {
-		r.logger.Error("Failed to start server with initial config", zap.Error(err))
-		return nil, err
-	}
-
-	return r.httpServer, nil
-}
-
 // bootstrap initializes the Router. It is called by Start() and NewServer().
 // It should only be called once for a Router instance.
 func (r *Router) bootstrap(ctx context.Context) error {
@@ -884,11 +838,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		)
 	}
 
-	if r.Config.rateLimit != nil && r.Config.rateLimit.Enabled {
+	if r.rateLimit != nil && r.rateLimit.Enabled {
 		var err error
 		r.redisClient, err = rd.NewRedisCloser(&rd.RedisCloserOptions{
-			URLs:           r.Config.rateLimit.Storage.URLs,
-			ClusterEnabled: r.Config.rateLimit.Storage.ClusterEnabled,
+			URLs:           r.rateLimit.Storage.URLs,
+			ClusterEnabled: r.rateLimit.Storage.ClusterEnabled,
 			Logger:         r.logger,
 		})
 		if err != nil {
@@ -1221,6 +1175,13 @@ func (r *Router) Start(ctx context.Context) error {
 		healthCheckPath:    r.healthCheckPath,
 	})
 
+	if r.reloadPersistentState == nil {
+		// This is only applicable for tests since we do not call here via the supervisor
+		r.reloadPersistentState = NewReloadPersistentState(r.logger)
+	}
+
+	r.reloadPersistentState.UpdateReloadPersistentState(&r.Config)
+
 	// Start the server with the static config without polling
 	if r.staticExecutionConfig != nil {
 
@@ -1353,8 +1314,8 @@ func (r *Router) Start(ctx context.Context) error {
 		r.logger.Info("Rate limiting enabled",
 			zap.Int("rate", r.rateLimit.SimpleStrategy.Rate),
 			zap.Int("burst", r.rateLimit.SimpleStrategy.Burst),
-			zap.Duration("duration", r.Config.rateLimit.SimpleStrategy.Period),
-			zap.Bool("rejectExceeding", r.Config.rateLimit.SimpleStrategy.RejectExceedingRequests),
+			zap.Duration("duration", r.rateLimit.SimpleStrategy.Period),
+			zap.Bool("rejectExceeding", r.rateLimit.SimpleStrategy.RejectExceedingRequests),
 		)
 	}
 
@@ -1423,7 +1384,7 @@ func (r *Router) configureUsageTracking(ctx context.Context) (err error) {
 }
 
 func (r *Router) trackRouterConfigUsage() {
-	r.usage.TrackRouterConfigUsage(r.Config.Usage())
+	r.usage.TrackRouterConfigUsage(r.Usage())
 }
 
 type concSafeErrorJoiner struct {
@@ -1874,13 +1835,13 @@ func WithAccessController(controller *AccessController) Option {
 
 func WithAuthorizationConfig(cfg *config.AuthorizationConfiguration) Option {
 	return func(r *Router) {
-		r.Config.authorization = cfg
+		r.authorization = cfg
 	}
 }
 
 func WithRateLimitConfig(cfg *config.RateLimitConfiguration) Option {
 	return func(r *Router) {
-		r.Config.rateLimit = cfg
+		r.rateLimit = cfg
 	}
 }
 
@@ -1936,15 +1897,15 @@ func DefaultTransportRequestOptions() *TransportRequestOptions {
 	return &TransportRequestOptions{
 		RequestTimeout:         60 * time.Second,
 		TLSHandshakeTimeout:    10 * time.Second,
-		ResponseHeaderTimeout:  0 * time.Second,
+		ResponseHeaderTimeout:  30 * time.Second, // Set timeout to prevent indefinite hangs
 		ExpectContinueTimeout:  0 * time.Second,
 		KeepAliveProbeInterval: 30 * time.Second,
 		KeepAliveIdleTimeout:   90 * time.Second,
-		DialTimeout:            30 * time.Second,
+		DialTimeout:            10 * time.Second, // Reduced from 30s for faster failure detection
 
-		MaxConnsPerHost:     100,
-		MaxIdleConns:        1024,
-		MaxIdleConnsPerHost: 20,
+		MaxConnsPerHost:     1024,
+		MaxIdleConnsPerHost: 64,
+		MaxIdleConns:        64 * 10,
 	}
 }
 
@@ -2055,13 +2016,13 @@ func WithAnonymization(ipConfig *IPAnonymizationConfig) Option {
 
 func WithWebSocketConfiguration(cfg *config.WebSocketConfiguration) Option {
 	return func(r *Router) {
-		r.Config.webSocketConfiguration = cfg
+		r.webSocketConfiguration = cfg
 	}
 }
 
 func WithSubgraphErrorPropagation(cfg config.SubgraphErrorPropagationConfiguration) Option {
 	return func(r *Router) {
-		r.Config.subgraphErrorPropagation = cfg
+		r.subgraphErrorPropagation = cfg
 	}
 }
 
@@ -2092,6 +2053,12 @@ func WithTracingAttributes(attributes []config.CustomAttribute) Option {
 func WithConfigPollerConfig(cfg *RouterConfigPollerConfig) Option {
 	return func(r *Router) {
 		r.routerConfigPollerConfig = cfg
+	}
+}
+
+func WithReloadPersistentState(cfg *ReloadPersistentState) Option {
+	return func(r *Router) {
+		r.reloadPersistentState = cfg
 	}
 }
 

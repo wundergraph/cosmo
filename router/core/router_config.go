@@ -312,7 +312,7 @@ func (c *Config) Usage() map[string]any {
 	}
 
 	if c.routerConfigPollerConfig != nil {
-		usage["fallback_execution_config_storage_enabled"] = c.routerConfigPollerConfig.ExecutionConfig.FallbackStorage.Enabled
+		usage["fallback_execution_config_storage_enabled"] = c.routerConfigPollerConfig.FallbackStorage.Enabled
 	}
 	usage["cache_warmup"] = c.cacheWarmup != nil && c.cacheWarmup.Enabled
 	if c.cacheWarmup != nil && c.cacheWarmup.Enabled {
@@ -321,6 +321,7 @@ func (c *Config) Usage() map[string]any {
 		} else {
 			usage["cache_warmup_source"] = "cdn"
 		}
+		usage["cache_warmup_in_memory_fallback_enabled"] = c.cacheWarmup.InMemoryFallback
 		usage["cache_warmup_workers"] = c.cacheWarmup.Workers
 		usage["cache_warmup_items_per_second"] = c.cacheWarmup.ItemsPerSecond
 		usage["cache_warmup_timeout"] = c.cacheWarmup.Timeout.String()

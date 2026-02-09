@@ -80,12 +80,16 @@ func TestSanitizePathWithinDestDir(t *testing.T) {
 func TestSanitizePathWithinDestDirWithSymlinks(t *testing.T) {
 	tempDir, err := os.MkdirTemp("", "test-symlink")
 	require.NoError(t, err)
-	defer os.RemoveAll(tempDir)
+	defer func() {
+		_ = os.RemoveAll(tempDir)
+	}()
 
 	// Create a directory outside tempDir
 	outsideDir, err := os.MkdirTemp("", "test-outside")
 	require.NoError(t, err)
-	defer os.RemoveAll(outsideDir)
+	defer func() {
+		_ = os.RemoveAll(outsideDir)
+	}()
 
 	// Create a file inside tempDir
 	insideFile := filepath.Join(tempDir, "inside.txt")
