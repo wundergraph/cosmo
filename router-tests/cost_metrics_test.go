@@ -60,9 +60,9 @@ func TestOperationCostMetrics(t *testing.T) {
 				}
 			}
 
-			require.True(t, foundEstimated, "estimated cost metric should be recorded")
-			require.True(t, foundActual, "actual cost metric should be recorded")
-			require.True(t, foundDelta, "delta cost metric should be recorded")
+			require.True(t, foundEstimated)
+			require.True(t, foundActual)
+			require.True(t, foundDelta)
 
 			require.NotEmpty(t, estimatedHistogram.DataPoints)
 			require.NotEmpty(t, actualHistogram.DataPoints)
@@ -72,10 +72,9 @@ func TestOperationCostMetrics(t *testing.T) {
 			actualCost := actualHistogram.DataPoints[0].Sum
 			deltaCost := deltaHistogram.DataPoints[0].Sum
 
-			require.Greater(t, estimatedCost, int64(0), "estimated cost should be greater than 0")
-			require.Greater(t, actualCost, int64(0), "actual cost should be greater than 0")
-
-			require.Equal(t, actualCost-estimatedCost, deltaCost, "delta should equal actual - estimated")
+			require.Equal(t, int64(20), estimatedCost)
+			require.Equal(t, int64(20), actualCost)
+			require.Equal(t, int64(0), deltaCost)
 		})
 	})
 
@@ -222,9 +221,9 @@ func TestOperationCostMetrics(t *testing.T) {
 				}
 			}
 
-			require.False(t, foundEstimated, "estimated cost should not be recorded when cost analysis is disabled")
-			require.False(t, foundActual, "actual cost should not be recorded when cost analysis is disabled")
-			require.False(t, foundDelta, "delta cost should not be recorded when cost analysis is disabled")
+			require.False(t, foundEstimated)
+			require.False(t, foundActual)
+			require.False(t, foundDelta)
 		})
 	})
 }
