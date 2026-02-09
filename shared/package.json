@@ -34,7 +34,7 @@
   "dependencies": {
     "@bufbuild/protobuf": "^1.9.0",
     "@graphql-tools/schema": "^8.5.1",
-    "@graphql-tools/utils": "^9.2.1",
+    "@graphql-tools/utils": "^11.0.0",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "graphql": "^16.9.0",
