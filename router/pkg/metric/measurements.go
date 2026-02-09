@@ -10,6 +10,7 @@ import (
 type Measurements struct {
 	counters         map[string]otelmetric.Int64Counter
 	histograms       map[string]otelmetric.Float64Histogram
+	int64Histograms  map[string]otelmetric.Int64Histogram
 	upDownCounters   map[string]otelmetric.Int64UpDownCounter
 	gauges           map[string]otelmetric.Int64Gauge
 	observableGauges map[string]otelmetric.Int64ObservableGauge
@@ -21,6 +22,7 @@ func createMeasures(meter otelmetric.Meter, opts MetricOpts) (*Measurements, err
 	h := &Measurements{
 		counters:         map[string]otelmetric.Int64Counter{},
 		histograms:       map[string]otelmetric.Float64Histogram{},
+		int64Histograms:  map[string]otelmetric.Int64Histogram{},
 		upDownCounters:   map[string]otelmetric.Int64UpDownCounter{},
 		gauges:           map[string]otelmetric.Int64Gauge{},
 		observableGauges: map[string]otelmetric.Int64ObservableGauge{},
@@ -135,6 +137,34 @@ func createMeasures(meter otelmetric.Meter, opts MetricOpts) (*Measurements, err
 		}
 		h.counters[CircuitBreakerShortCircuitsCounter] = circuitBreakerShortCircuits
 	}
+
+	// Operation cost metrics
+	operationCostEstimated, err := meter.Int64Histogram(
+		OperationCostEstimatedHistogram,
+		OperationCostEstimatedHistogramOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create operation cost estimated histogram: %w", err)
+	}
+	h.int64Histograms[OperationCostEstimatedHistogram] = operationCostEstimated
+
+	operationCostActual, err := meter.Int64Histogram(
+		OperationCostActualHistogram,
+		OperationCostActualHistogramOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create operation cost actual histogram: %w", err)
+	}
+	h.int64Histograms[OperationCostActualHistogram] = operationCostActual
+
+	operationCostDelta, err := meter.Int64Histogram(
+		OperationCostDeltaHistogram,
+		OperationCostDeltaHistogramOptions...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create operation cost delta histogram: %w", err)
+	}
+	h.int64Histograms[OperationCostDeltaHistogram] = operationCostDelta
 
 	return h, nil
 }

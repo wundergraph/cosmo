@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
@@ -633,6 +632,8 @@ type operationContext struct {
 	variablesNormalizationCacheHit bool
 	variablesRemappingCacheHit     bool
 
+	actualListSizes map[string]int // Populated after execution for actual cost calculation
+
 	typeFieldUsageInfo        graphqlschemausage.TypeFieldMetrics
 	typeFieldUsageInfoMetrics []*graphqlmetrics.TypeFieldUsageInfo // Cached conversion result
 	argumentUsageInfo         []*graphqlmetrics.ArgumentUsageInfo
@@ -707,6 +708,12 @@ type QueryPlanStats struct {
 type OperationCost struct {
 	// Estimated is the static cost calculated before execution based on @cost and @listSize directives.
 	Estimated int
+	// Actual is the dynamic cost calculated after execution based on actual response data.
+	// This will be 0 if called before execution completes.
+	Actual int
+	// Delta is the difference between actual and estimated cost (Actual - Estimated).
+	// This will be 0 if called before execution completes.
+	Delta int
 }
 
 type SubgraphRootField struct {

@@ -742,8 +742,9 @@
     },
     "CostAnalysis": {
       "Enabled": true,
-      "StaticLimit": 1000,
-      "ListSize": 10
+      "Mode": "enforce",
+      "EstimatedLimit": 1000,
+      "EstimatedListSize": 10
     },
     "DepthLimit": null,
     "ParserLimits": {

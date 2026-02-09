@@ -454,8 +454,9 @@ security:
       ignore_persisted_operations: true
   cost_analysis:
     enabled: true
-    static_limit: 1000
-    list_size: 10
+    mode: enforce
+    estimated_limit: 1000
+    estimated_list_size: 10
   operation_name_length_limit: 2000
 persisted_operations:
   safelist:

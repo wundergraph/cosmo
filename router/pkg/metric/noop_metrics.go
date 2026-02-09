@@ -60,6 +60,15 @@ func (n NoopMetrics) MeasureCircuitBreakerShortCircuit(ctx context.Context, slic
 func (n NoopMetrics) SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
 }
 
+func (n NoopMetrics) MeasureOperationCostEstimated(ctx context.Context, cost int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+}
+
+func (n NoopMetrics) MeasureOperationCostActual(ctx context.Context, cost int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+}
+
+func (n NoopMetrics) MeasureOperationCostDelta(ctx context.Context, delta int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
+}
+
 func NewNoopMetrics() Store {
 	return &NoopMetrics{}
 }

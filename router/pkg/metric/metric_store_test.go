@@ -145,3 +145,140 @@ func createTestStore(t *testing.T, limit int, metricReader *metric.ManualReader)
 
 	return store
 }
+
+// TestOperationCostMetrics tests that operation cost metrics are recorded correctly
+func TestOperationCostMetrics(t *testing.T) {
+	t.Run("Should record estimated, actual, and delta cost metrics", func(t *testing.T) {
+		metricReader := metric.NewManualReader()
+		store := createTestStore(t, 0, metricReader)
+
+		ctx := context.Background()
+		attrs := []attribute.KeyValue{
+			attribute.String("operation_name", "MyQuery"),
+			attribute.String("operation_type", "query"),
+		}
+		opt := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
+
+		// Record cost metrics
+		store.MeasureOperationCostEstimated(ctx, 100, attrs, opt)
+		store.MeasureOperationCostActual(ctx, 150, attrs, opt)
+		store.MeasureOperationCostDelta(ctx, 50, attrs, opt)
+
+		// Collect metrics
+		var rm metricdata.ResourceMetrics
+		err := metricReader.Collect(ctx, &rm)
+		require.NoError(t, err)
+
+		// Verify we have metrics
+		require.NotEmpty(t, rm.ScopeMetrics)
+		require.NotEmpty(t, rm.ScopeMetrics[0].Metrics)
+
+		// Find our cost metrics
+		var estimatedHistogram, actualHistogram, deltaHistogram metricdata.Histogram[int64]
+		var foundEstimated, foundActual, foundDelta bool
+
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			switch m.Name {
+			case OperationCostEstimatedHistogram:
+				estimatedHistogram, foundEstimated = m.Data.(metricdata.Histogram[int64])
+			case OperationCostActualHistogram:
+				actualHistogram, foundActual = m.Data.(metricdata.Histogram[int64])
+			case OperationCostDeltaHistogram:
+				deltaHistogram, foundDelta = m.Data.(metricdata.Histogram[int64])
+			}
+		}
+
+		// Verify all three metrics were found and are Int64 histograms
+		require.True(t, foundEstimated, "estimated cost metric not found")
+		require.True(t, foundActual, "actual cost metric not found")
+		require.True(t, foundDelta, "delta cost metric not found")
+
+		// Verify data points exist
+		require.Len(t, estimatedHistogram.DataPoints, 1)
+		require.Len(t, actualHistogram.DataPoints, 1)
+		require.Len(t, deltaHistogram.DataPoints, 1)
+
+		// Verify the recorded values
+		require.Equal(t, uint64(1), estimatedHistogram.DataPoints[0].Count)
+		require.Equal(t, int64(100), estimatedHistogram.DataPoints[0].Sum)
+
+		require.Equal(t, uint64(1), actualHistogram.DataPoints[0].Count)
+		require.Equal(t, int64(150), actualHistogram.DataPoints[0].Sum)
+
+		require.Equal(t, uint64(1), deltaHistogram.DataPoints[0].Count)
+		require.Equal(t, int64(50), deltaHistogram.DataPoints[0].Sum)
+	})
+
+	t.Run("Should handle negative delta costs", func(t *testing.T) {
+		metricReader := metric.NewManualReader()
+		store := createTestStore(t, 0, metricReader)
+
+		ctx := context.Background()
+		attrs := []attribute.KeyValue{
+			attribute.String("operation_name", "MyQuery"),
+		}
+		opt := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
+
+		// Record when actual is less than estimated (negative delta)
+		store.MeasureOperationCostEstimated(ctx, 200, attrs, opt)
+		store.MeasureOperationCostActual(ctx, 100, attrs, opt)
+		store.MeasureOperationCostDelta(ctx, -100, attrs, opt)
+
+		// Collect metrics
+		var rm metricdata.ResourceMetrics
+		err := metricReader.Collect(ctx, &rm)
+		require.NoError(t, err)
+
+		// Find delta metric
+		var deltaHistogram metricdata.Histogram[int64]
+		var foundDelta bool
+
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			if m.Name == OperationCostDeltaHistogram {
+				deltaHistogram, foundDelta = m.Data.(metricdata.Histogram[int64])
+				break
+			}
+		}
+
+		require.True(t, foundDelta)
+		require.Len(t, deltaHistogram.DataPoints, 1)
+		require.Equal(t, int64(-100), deltaHistogram.DataPoints[0].Sum)
+	})
+
+	t.Run("Should aggregate multiple cost measurements", func(t *testing.T) {
+		metricReader := metric.NewManualReader()
+		store := createTestStore(t, 0, metricReader)
+
+		ctx := context.Background()
+		attrs := []attribute.KeyValue{
+			attribute.String("operation_name", "MyQuery"),
+		}
+		opt := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
+
+		// Record multiple measurements
+		store.MeasureOperationCostEstimated(ctx, 100, attrs, opt)
+		store.MeasureOperationCostEstimated(ctx, 200, attrs, opt)
+		store.MeasureOperationCostEstimated(ctx, 300, attrs, opt)
+
+		// Collect metrics
+		var rm metricdata.ResourceMetrics
+		err := metricReader.Collect(ctx, &rm)
+		require.NoError(t, err)
+
+		// Find estimated metric
+		var estimatedHistogram metricdata.Histogram[int64]
+		var foundEstimated bool
+
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			if m.Name == OperationCostEstimatedHistogram {
+				estimatedHistogram, foundEstimated = m.Data.(metricdata.Histogram[int64])
+				break
+			}
+		}
+
+		require.True(t, foundEstimated)
+		require.Len(t, estimatedHistogram.DataPoints, 1)
+		require.Equal(t, uint64(3), estimatedHistogram.DataPoints[0].Count)
+		require.Equal(t, int64(600), estimatedHistogram.DataPoints[0].Sum) // 100 + 200 + 300
+	})
+}

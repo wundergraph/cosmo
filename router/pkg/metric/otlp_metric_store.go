@@ -143,6 +143,18 @@ func (h *OtlpMetricStore) MeasureSchemaFieldUsage(_ context.Context, _ int64, _ 
 	// Do not record schema usage in OpenTelemetry
 }
 
+func (h *OtlpMetricStore) MeasureOperationCostEstimated(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
+	h.measurements.int64Histograms[OperationCostEstimatedHistogram].Record(ctx, cost, opts...)
+}
+
+func (h *OtlpMetricStore) MeasureOperationCostActual(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
+	h.measurements.int64Histograms[OperationCostActualHistogram].Record(ctx, cost, opts...)
+}
+
+func (h *OtlpMetricStore) MeasureOperationCostDelta(ctx context.Context, delta int64, opts ...otelmetric.RecordOption) {
+	h.measurements.int64Histograms[OperationCostDeltaHistogram].Record(ctx, delta, opts...)
+}
+
 func (h *OtlpMetricStore) Flush(ctx context.Context) error {
 	return h.meterProvider.ForceFlush(ctx)
 }

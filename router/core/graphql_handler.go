@@ -202,6 +202,12 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
+		
+		// Capture actual list sizes for actual cost calculation
+		if info != nil && info.ActualListSizes != nil {
+			reqCtx.operation.actualListSizes = info.ActualListSizes
+		}
+		
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
 			h.WriteError(resolveCtx, err, p.Response, w)

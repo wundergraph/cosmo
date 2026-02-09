@@ -150,6 +150,24 @@ func (h *PromMetricStore) MeasureSchemaFieldUsage(ctx context.Context, schemaUsa
 	}
 }
 
+func (h *PromMetricStore) MeasureOperationCostEstimated(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.int64Histograms[OperationCostEstimatedHistogram]; ok {
+		c.Record(ctx, cost, opts...)
+	}
+}
+
+func (h *PromMetricStore) MeasureOperationCostActual(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.int64Histograms[OperationCostActualHistogram]; ok {
+		c.Record(ctx, cost, opts...)
+	}
+}
+
+func (h *PromMetricStore) MeasureOperationCostDelta(ctx context.Context, delta int64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.int64Histograms[OperationCostDeltaHistogram]; ok {
+		c.Record(ctx, delta, opts...)
+	}
+}
+
 func (h *PromMetricStore) Flush(ctx context.Context) error {
 	return h.meterProvider.ForceFlush(ctx)
 }

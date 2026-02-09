@@ -74,6 +74,23 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	rm.MeasureRequestSize(ctx, m.requestContentLength, sliceAttrs, o)
 	rm.MeasureResponseSize(ctx, int64(responseSize), sliceAttrs, o)
 
+	// Record operation cost metrics
+	if reqContext.operation != nil && reqContext.operation.preparedPlan != nil && reqContext.operation.preparedPlan.preparedPlan != nil {
+		if costCalc := reqContext.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
+			estimated := costCalc.EstimateCost(reqContext.operation.planConfig, reqContext.operation.variables)
+			rm.MeasureOperationCostEstimated(ctx, int64(estimated), sliceAttrs, o)
+
+			// Calculate actual cost if actualListSizes is available (after execution)
+			if reqContext.operation.actualListSizes != nil && len(reqContext.operation.actualListSizes) > 0 {
+				actual := costCalc.ActualCost(reqContext.operation.planConfig, reqContext.operation.actualListSizes)
+				delta := actual - estimated
+
+				rm.MeasureOperationCostActual(ctx, int64(actual), sliceAttrs, o)
+				rm.MeasureOperationCostDelta(ctx, int64(delta), sliceAttrs, o)
+			}
+		}
+	}
+
 	// Export schema usage info to configured exporters
 	if reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
 		// GraphQL metrics export (to metrics service)
