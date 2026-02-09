@@ -4,12 +4,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/trace"
 	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -167,7 +168,7 @@ func (p *GRPCPlugin) cleanupPluginWorkDir() {
 	defer p.mu.Unlock()
 
 	if p.workDir != "" {
-		os.RemoveAll(p.workDir)
+		_ = os.RemoveAll(p.workDir)
 		p.workDir = ""
 	}
 }
