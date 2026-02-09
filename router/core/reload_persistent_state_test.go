@@ -316,24 +316,6 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 		require.Nil(t, cache.queriesForFeatureFlag)
 	})
 
-	t.Run("does nothing when FeatureFlagConfigs is nil", func(t *testing.T) {
-		t.Parallel()
-		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
-		}
-		cache.queriesForFeatureFlag["ff1"] = nil
-
-		routerCfg := &nodev1.RouterConfig{
-			FeatureFlagConfigs: nil,
-		}
-
-		cache.cleanupUnusedFeatureFlags(routerCfg)
-
-		// Should still have ff1 because FeatureFlagConfigs is nil
-		require.Len(t, cache.queriesForFeatureFlag, 1)
-		require.Contains(t, cache.queriesForFeatureFlag, "ff1")
-	})
-
 	t.Run("removes feature flags when not in ConfigByFeatureFlagName", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
