@@ -61,6 +61,7 @@ export class AbstractSelectionRewriter {
   private currentType: GraphQLTypeWithFields;
   private currentInterfaceRoot?: GraphQLInterfaceType;
   private interfaceRootStack: GraphQLInterfaceType[] = [];
+  private ancestorStacks: GraphQLInterfaceType[][] = [];
   /** Stack for tracking parent types during nested field traversal */
   private typeStack: GraphQLTypeWithFields[] = [];
   /** Boolean stack indicating whether to restore type/selection context when leaving a selection set */
@@ -162,11 +163,13 @@ export class AbstractSelectionRewriter {
       return;
     }
 
-    if (this.currentInterfaceRoot) {
-      this.interfaceRootStack.push(this.currentInterfaceRoot);
+    if (this.interfaceRootStack.length > 0) {
+      this.ancestorStacks.push([...this.interfaceRootStack]);
+      this.interfaceRootStack = [];
     }
 
     this.currentInterfaceRoot = fieldType;
+    this.interfaceRootStack.push(this.currentInterfaceRoot);
 
     this.appendValidInlineFragments(ctx.node);
     this.distributeFieldsIntoInlineFragments(ctx.node);
@@ -204,8 +207,15 @@ export class AbstractSelectionRewriter {
       return;
     }
 
-    if (isInterfaceType(fieldType) && fieldType.name === this.currentInterfaceRoot?.name) {
-      this.currentInterfaceRoot = this.interfaceRootStack.pop();
+    if (
+      isInterfaceType(fieldType) &&
+      fieldType.name === this.currentInterfaceRoot?.name &&
+      this.interfaceRootStack.length === 1
+    ) {
+      this.interfaceRootStack = this.ancestorStacks.pop() ?? [];
+      if (this.interfaceRootStack.length > 0) {
+        this.currentInterfaceRoot = this.interfaceRootStack[0];
+      }
     }
   }
 
@@ -258,12 +268,7 @@ export class AbstractSelectionRewriter {
       return undefined;
     }
 
-    if (this.currentInterfaceRoot) {
-      this.interfaceRootStack.push(this.currentInterfaceRoot);
-    }
-
-    this.currentInterfaceRoot = type;
-
+    this.interfaceRootStack.push(type);
     this.appendValidInlineFragments(ctx.node.selectionSet);
     this.distributeFieldsIntoInlineFragments(ctx.node.selectionSet);
 
@@ -290,7 +295,7 @@ export class AbstractSelectionRewriter {
     if (this.rebalanceStack.pop() ?? false) {
       this.currentType = this.typeStack.pop() ?? this.currentType;
     } else {
-      this.currentInterfaceRoot = this.interfaceRootStack.pop();
+      this.interfaceRootStack.pop();
     }
   }
 
@@ -364,7 +369,7 @@ export class AbstractSelectionRewriter {
    * @param node - The selection set node to append inline fragments to
    */
   private appendValidInlineFragments(node: SelectionSetNode): void {
-    if (!this.currentInterfaceRoot) {
+    if (this.interfaceRootStack.length === 0) {
       return;
     }
 
@@ -373,8 +378,14 @@ export class AbstractSelectionRewriter {
       return;
     }
 
+    const currentStack = [...this.interfaceRootStack];
+    const currentInterface = currentStack.pop();
+    if (!currentInterface) {
+      return;
+    }
+
     const selectedInlineFragments = node.selections.filter((s) => s.kind === Kind.INLINE_FRAGMENT);
-    const possibleTypes = this.getPossibleIntersectingTypes(this.currentInterfaceRoot, [...this.interfaceRootStack]);
+    const possibleTypes = this.getPossibleIntersectingTypes(currentInterface, currentStack);
     const newInlineFragments: InlineFragmentNode[] = [];
 
     for (const possibleType of possibleTypes) {
