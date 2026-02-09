@@ -139,9 +139,6 @@ func (u *UsageTracker) findRepositoryURL() {
 }
 
 func (u *UsageTracker) TrackExecutionConfigUsage(usage map[string]any) {
-	if u == nil || u.client == nil {
-		return
-	}
 	props := u.baseProperties()
 	for k, v := range usage {
 		props.Set(fmt.Sprintf("execution_config_%s", k), v)
@@ -158,9 +155,6 @@ func (u *UsageTracker) TrackExecutionConfigUsage(usage map[string]any) {
 }
 
 func (u *UsageTracker) TrackRouterConfigUsage(usage map[string]any) {
-	if u == nil || u.client == nil {
-		return
-	}
 	props := u.baseProperties()
 	for k, v := range usage {
 		props.Set(fmt.Sprintf("router_config_%s", k), v)
@@ -195,18 +189,11 @@ func (u *UsageTracker) posthogLogger() posthog.Logger {
 }
 
 func (u *UsageTracker) Close() {
-	if u == nil || u.client == nil {
-		return
-	}
 	_ = u.trackRouterUptime(uptimeOptions{closed: true})
 	_ = u.client.Close()
 }
 
 func (u *UsageTracker) TrackUptime(ctx context.Context) {
-	if u == nil || u.client == nil {
-		return
-	}
-
 	var err error
 
 	u.start = time.Now()

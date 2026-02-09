@@ -1202,9 +1202,7 @@ func (r *Router) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to bootstrap router: %w", err)
 	}
 
-	if err := r.configureUsageTracking(ctx); err != nil {
-		r.logger.Info("failed to start usage tracking", zap.Error(err))
-	}
+	r.configureUsageTracking(ctx)
 
 	r.trackRouterConfigUsage()
 
@@ -1396,15 +1394,15 @@ func (u *UsageTrackerNoOp) Close() {}
 
 func (u *UsageTrackerNoOp) TrackUptime(_ context.Context) {}
 
-func (r *Router) configureUsageTracking(ctx context.Context) (err error) {
+func (r *Router) configureUsageTracking(ctx context.Context) {
+	r.usage = &UsageTrackerNoOp{}
 	if r.disableUsageTracking {
-		r.usage = &UsageTrackerNoOp{}
-		return nil
+		r.logger.Debug("Usage tracking is disabled by the configuration")
+		return
 	}
 	if os.Getenv("COSMO_TELEMETRY_DISABLED") == "true" || os.Getenv("DO_NOT_TRACK") == "1" {
-		r.usage = &UsageTrackerNoOp{}
-		r.logger.Info("Usage tracking is disabled.")
-		return nil
+		r.logger.Debug("Usage tracking is disabled by the environment variable")
+		return
 	}
 	cfg := track.UsageTrackerConfig{
 		GraphApiToken: r.graphApiToken,
@@ -1414,18 +1412,16 @@ func (r *Router) configureUsageTracking(ctx context.Context) (err error) {
 		InstanceID:    r.instanceID,
 		ClusterName:   r.clusterName,
 	}
-	r.usage, err = track.NewUsageTracker(r.logger, cfg)
+	usageTracker, err := track.NewUsageTracker(r.logger, cfg)
 	if err != nil {
-		return err
+		r.logger.Debug("failed to start usage tracking", zap.Error(err))
+		return
 	}
+	r.usage = usageTracker
 	go r.usage.TrackUptime(ctx)
-	return nil
 }
 
 func (r *Router) trackRouterConfigUsage() {
-	if r.usage == nil {
-		return
-	}
 	r.usage.TrackRouterConfigUsage(r.Usage())
 }
 
