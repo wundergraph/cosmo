@@ -5,12 +5,15 @@ import { getBaseHeaders } from '../../../core/config.js';
 import { ToolContext } from './types.js';
 
 export const registerGetSubgraphsTool = ({ server, opts }: ToolContext) => {
-  server.tool(
+  server.registerTool(
     'get_subgraphs',
-    'Get details for one or more subgraphs, including the SDL/GraphQL Schema for each.',
     {
-      names: z.array(z.string()).describe('The names of the subgraphs'),
-      namespace: z.string().optional().describe('The namespace of the subgraphs'),
+      title: 'Get Subgraphs',
+      description: 'Get details for one or more subgraphs, including the SDL/GraphQL Schema for each.',
+      inputSchema: {
+        names: z.array(z.string()).describe('The names of the subgraphs'),
+        namespace: z.string().optional().describe('The namespace of the subgraphs'),
+      },
     },
     async (params) => {
       const results: Array<Partial<Subgraph> & { sdl?: string }> = [];
@@ -18,7 +21,7 @@ export const registerGetSubgraphsTool = ({ server, opts }: ToolContext) => {
 
       // Fetch details for all subgraphs first to potentially leverage batching if the API supports it later.
       // Currently, it iterates and fetches one by one.
-      const subgraphDetailsPromises = params.names.map((name) =>
+      const subgraphDetailsPromises = params.names.map((name: string) =>
         opts.client.platform
           .getSubgraphs(
             {
