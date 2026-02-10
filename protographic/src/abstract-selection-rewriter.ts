@@ -80,6 +80,8 @@ export class AbstractSelectionRewriter {
   /** Stack for preserving parent selection set context during nested traversal */
   private selectionSetStack: SelectionSetNode[] = [];
 
+  private inlineFragmentStack: InlineFragmentNode[] = [];
+
   /**
    * Creates a new AbstractSelectionRewriter instance.
    *
@@ -137,17 +139,8 @@ export class AbstractSelectionRewriter {
    * @param ctx - The visitor context containing the current node and its position in the AST
    */
   private onEnterSelectionSet(ctx: VisitContext<SelectionSetNode>): void {
-    console.log('onEnterSelectionSet', print(this.fieldSetDoc));
     if (!ctx.parent) {
       return;
-    }
-
-    if (isAbstractType(ctx.parent)) {
-      if (this.currentSelectionSet) {
-        this.selectionSetStack.push(this.currentSelectionSet);
-      }
-
-      this.currentSelectionSet = ctx.node;
     }
 
     if (!this.isFieldNode(ctx.parent)) {
@@ -173,7 +166,6 @@ export class AbstractSelectionRewriter {
     if (this.currentSelectionSet) {
       this.selectionSetStack.push(this.currentSelectionSet);
     }
-
     this.currentSelectionSet = ctx.node;
 
     if (this.compositeTypeStack.length > 0) {
@@ -202,8 +194,6 @@ export class AbstractSelectionRewriter {
    * @param ctx - The visitor context containing the current node and its position in the AST
    */
   private onLeaveSelectionSet(ctx: VisitContext<SelectionSetNode>): void {
-    console.log('onLeaveSelectionSet', print(this.fieldSetDoc));
-
     if (!ctx.parent) {
       return;
     }
@@ -255,10 +245,11 @@ export class AbstractSelectionRewriter {
    * @returns undefined to continue traversal, or nothing to skip
    */
   private onEnterInlineFragment(ctx: VisitContext<InlineFragmentNode>): void {
-    // console.log('onEnterInlineFragment', print(this.fieldSetDoc));
     if (!ctx.parent || !this.currentSelectionSet) {
       return;
     }
+
+    this.inlineFragmentStack.push(ctx.node);
 
     const type = this.schema.getType(ctx.node.typeCondition?.name.value ?? '');
 
@@ -274,19 +265,31 @@ export class AbstractSelectionRewriter {
     }
 
     if (!this.inlineFragmentIsAbstractType(ctx.node)) {
-      // Returning undefined continues traversal without deleting the node.
-      // If the inline fragment targets a type that doesn't implement the current interface,
-      // we remove it from the selections.
-      if (!this.inlineFragmentIsValidForCurrentAbstractRoot(ctx.node)) {
-        this.currentSelectionSet.selections = this.currentSelectionSet.selections.filter(
-          (s) => s.kind !== Kind.INLINE_FRAGMENT || s.typeCondition?.name.value !== ctx.node.typeCondition?.name.value,
-        );
-      }
-
       this.rebalanceStack.push(true);
       this.typeStack.push(this.currentType);
       this.compositeTypeStack.push(type);
       this.currentType = type;
+
+      // Returning undefined continues traversal without deleting the node.
+      // If the inline fragment targets a type that doesn't implement the current interface,
+      // we remove it from the selections.
+      if (!this.inlineFragmentIsValidForCurrentAbstractRoot(ctx.node)) {
+        let parent = this.currentSelectionSet;
+        if (this.inlineFragmentStack.length > 1) {
+          const inlineFragment = this.inlineFragmentStack.at(-2);
+          if (!inlineFragment) {
+            return;
+          }
+
+          parent = inlineFragment.selectionSet;
+        }
+
+        parent.selections = parent.selections.filter(
+          (s) => s.kind !== Kind.INLINE_FRAGMENT || s.typeCondition?.name.value !== ctx.node.typeCondition?.name.value,
+        );
+      }
+
+      this.inlineFragmentStack.pop();
       return;
     }
 
@@ -300,27 +303,26 @@ export class AbstractSelectionRewriter {
     this.appendValidInlineFragments(ctx.node.selectionSet);
     this.distributeFieldsIntoInlineFragments(ctx.node.selectionSet);
 
-    const index = this.currentSelectionSet.selections.findIndex(
-      (s) => s.kind === Kind.INLINE_FRAGMENT && s.typeCondition?.name.value === ctx.node.typeCondition?.name.value,
-    );
-    if (index < 0) {
-      return;
+    let parent = this.currentSelectionSet;
+    if (this.inlineFragmentStack.length > 1) {
+      const inlineFragment = this.inlineFragmentStack.at(-2);
+      if (!inlineFragment) {
+        return;
+      }
+
+      parent = inlineFragment.selectionSet;
     }
 
-    // Replace the inline fragment in the current selection set with its selections (unwrap)
-    this.currentSelectionSet.selections = [
-      ...this.currentSelectionSet.selections.slice(0, index),
-      ...ctx.node.selectionSet.selections,
-      ...this.currentSelectionSet.selections.slice(index + 1),
-    ];
+    this.unfoldSelectionNodeToParent(ctx.node, parent);
+    this.inlineFragmentStack.pop();
   }
 
   private onLeaveInlineFragment(ctx: VisitContext<InlineFragmentNode>): any {
-    console.log('onLeaveInlineFragment', print(this.fieldSetDoc));
-
     if (!ctx.parent || !this.currentSelectionSet) {
       return;
     }
+
+    this.inlineFragmentStack.pop();
 
     if (this.rebalanceStack.pop() ?? false) {
       this.currentType = this.typeStack.pop() ?? this.currentType;
@@ -331,22 +333,25 @@ export class AbstractSelectionRewriter {
   }
 
   private unfoldUnionType(ctx: VisitContext<InlineFragmentNode>): void {
-    // if the parent is a selection set, we need to unfold the union type into the parent selection.
-    // We potentially have nested selection sets but the currentSelectionSet is only set for the top level field selection.
-    // const ancestor = ctx.ancestors.at(-1);
-    // if (this.isSelectionSetNode(ancestor)) {
-    //   this.unfoldSelectionNode(ctx.node, ancestor);
-    //   return;
-    // }
+    let parent = this.currentSelectionSet;
+    if (this.inlineFragmentStack.length > 1) {
+      const inlineFragment = this.inlineFragmentStack.at(-2);
+      if (!inlineFragment) {
+        return;
+      }
 
-    if (!this.currentSelectionSet) {
+      parent = inlineFragment.selectionSet;
+    }
+
+    if (!parent) {
       return;
     }
 
-    this.unfoldSelectionNode(ctx.node, this.currentSelectionSet);
+    this.unfoldSelectionNodeToParent(ctx.node, parent);
+    this.inlineFragmentStack.pop();
   }
 
-  private unfoldSelectionNode(node: InlineFragmentNode, parent: SelectionSetNode) {
+  private unfoldSelectionNodeToParent(node: InlineFragmentNode, parent: SelectionSetNode): void {
     const index = parent.selections.findIndex(
       (s) => s.kind === Kind.INLINE_FRAGMENT && s.typeCondition?.name.value === node.typeCondition?.name.value,
     );
@@ -359,18 +364,6 @@ export class AbstractSelectionRewriter {
       ...node.selectionSet.selections,
       ...parent.selections.slice(index + 1),
     ];
-  }
-
-  private isSelectionSetNode(node: ASTNode | ReadonlyArray<ASTNode> | undefined): node is SelectionSetNode {
-    if (!node) {
-      return false;
-    }
-
-    if (Array.isArray(node)) {
-      return false;
-    }
-
-    return (node as ASTNode).kind === Kind.SELECTION_SET;
   }
 
   /**

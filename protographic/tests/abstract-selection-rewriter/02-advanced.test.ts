@@ -180,6 +180,7 @@ describe('Union type', () => {
       }"
     `);
   });
+
   // TODO: normalize inline fragments on concrete types with union selections.
   // it('should handle inline fragments on concrete types', () => {
   //   const input = `
