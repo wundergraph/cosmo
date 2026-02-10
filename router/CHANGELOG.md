@@ -4,6 +4,29 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.279.1](https://github.com/wundergraph/cosmo/compare/router@0.279.0...router@0.279.1) (2026-02-09)
+
+### Bug Fixes
+
+* cache warmer graph token validation cleanup ([#2496](https://github.com/wundergraph/cosmo/issues/2496)) ([8546ee1](https://github.com/wundergraph/cosmo/commit/8546ee12f767cbf5385ec3716b8f9559f1b081f3)) (@SkArchon)
+
+# [0.279.0](https://github.com/wundergraph/cosmo/compare/router@0.278.0...router@0.279.0) (2026-02-09)
+
+### Features
+
+* rewarm cache from planner cache on schema change ([#2445](https://github.com/wundergraph/cosmo/issues/2445)) ([23e2dcf](https://github.com/wundergraph/cosmo/commit/23e2dcfa0498bfe4cf690dc279eccefca3ad3c03)) (@SkArchon)
+
+# [0.278.0](https://github.com/wundergraph/cosmo/compare/router@0.277.0...router@0.278.0) (2026-02-09)
+
+### Bug Fixes
+
+* ensure router header expressions are set even on early return errors ([#2492](https://github.com/wundergraph/cosmo/issues/2492)) ([53a01d1](https://github.com/wundergraph/cosmo/commit/53a01d15374ccf819e8cc8b2f893ede8873dda27)) (@SkArchon)
+* update Apollo GraphQL client header names for consistency ([#2493](https://github.com/wundergraph/cosmo/issues/2493)) ([328875d](https://github.com/wundergraph/cosmo/commit/328875d5e8aa2c6402d4809c5550c996f745d9f0)) (@alepane21)
+
+### Features
+
+* improve memory management ([#2365](https://github.com/wundergraph/cosmo/issues/2365)) ([9c9d451](https://github.com/wundergraph/cosmo/commit/9c9d451c2b326a3cae1d9bde68348d6c999fe2f7)) (@jensneuse)
+
 # [0.277.0](https://github.com/wundergraph/cosmo/compare/router@0.276.0...router@0.277.0) (2026-02-03)
 
 ### Bug Fixes
