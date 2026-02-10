@@ -501,6 +501,8 @@ export const addKeycloakUser = async ({
   try {
     id = await keycloakClient.addKeycloakUser({
       email: userTestData.email,
+      firstName: 'Test',
+      lastName: 'User',
       realm: realmName,
       isPasswordTemp: false,
       password: 'wunder@123',
