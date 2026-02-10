@@ -11,6 +11,7 @@ import {
   MagnifyingGlassIcon,
   RocketLaunchIcon,
 } from "@heroicons/react/24/outline";
+import { getSignupContent, type SignupVariant } from "@/lib/signup-content";
 
 /**
  * Auth Card - The card container for auth forms
@@ -129,17 +130,31 @@ export const TrustedCompanies = () => {
 /**
  * Marketing Header - Title and description for the right side
  */
-export const MarketingHeader = () => {
+export const MarketingHeader = ({
+  title,
+  description,
+}: {
+  title?: string;
+  description?: string;
+}) => {
+  const defaultTitle = "Cosmo: Open-Source\nGraphQL Federation Solution";
+  const defaultDescription =
+    "Unify distributed APIs into one federated graph. Platform teams get observability and control. Service teams ship independently.";
+
+  const displayTitle = title || defaultTitle;
+  const displayDescription = description || defaultDescription;
+
   return (
     <div className="text-center">
       <h1 className="bg-[linear-gradient(180deg,#FFFFFF_50%,#999999_100%)] bg-clip-text text-2xl font-bold leading-[130%] text-transparent sm:text-[32px]">
-        Cosmo: Open-Source
-        <br />
-        GraphQL Federation Solution
+        {displayTitle.split("\n").map((line, index) => (
+          <span key={index}>
+            {line}
+            {index < displayTitle.split("\n").length - 1 && <br />}
+          </span>
+        ))}
       </h1>
-      <p className="mx-auto mt-4 max-w-md text-sm text-white/85">
-        Unify distributed APIs into one federated graph. Platform teams get observability and control. Service teams ship independently.
-      </p>
+      <p className="mx-auto mt-4 max-w-md text-sm text-white/85">{displayDescription}</p>
     </div>
   );
 };
@@ -170,7 +185,34 @@ const FeatureItem = ({
 /**
  * Product Cosmo Stack - Marketing content with features list
  */
-export const ProductCosmoStack = ({ variant = "login" }: { variant?: "login" | "signup" }) => {
+export const ProductCosmoStack = ({
+  variant = "login",
+  signupVariant,
+}: {
+  variant?: "login" | "signup";
+  signupVariant?: "default" | "apollo";
+}) => {
+  // Icon mapping function
+  const getIcon = (iconName: string) => {
+    const iconClass = "h-6 w-6 text-purple-500";
+    switch (iconName) {
+      case "bolt":
+        return <BoltIcon className={iconClass} />;
+      case "code-bracket":
+        return <CodeBracketIcon className={iconClass} />;
+      case "shield-check":
+        return <ShieldCheckIcon className={iconClass} />;
+      case "share":
+        return <ShareIcon className={iconClass} />;
+      case "magnifying-glass":
+        return <MagnifyingGlassIcon className={iconClass} />;
+      case "rocket-launch":
+        return <RocketLaunchIcon className={iconClass} />;
+      default:
+        return <BoltIcon className={iconClass} />;
+    }
+  };
+
   const loginFeatures = [
     {
       icon: <BoltIcon className="h-6 w-6 text-purple-500" />,
@@ -192,38 +234,55 @@ export const ProductCosmoStack = ({ variant = "login" }: { variant?: "login" | "
     },
   ];
 
-  const signupFeatures = [
-    {
-      icon: <ShareIcon className="h-6 w-6 text-purple-500" />,
-      title: "Federate Any API, Not Just GraphQL",
-      description:
-        "Connect REST, gRPC, and GraphQL services without rewrites. Cosmo Connect wraps existing APIs into your graph without forcing migrations.",
-    },
-    {
-      icon: <MagnifyingGlassIcon className="h-6 w-6 text-purple-500" />,
-      title: "Track Every Query Across Your Entire Graph",
-      description:
-        "Native OpenTelemetry tracing from gateway to subgraph. Find slow queries and failing services in seconds with zero instrumentation required.",
-    },
-    {
-      icon: <ShieldCheckIcon className="h-6 w-6 text-purple-500" />,
-      title: "Catch Breaking Changes Before Deployment",
-      description:
-        "Schema checks run automatically in CI/CD. Service teams ship on their own schedule, while platform teams prevent breaking changes from reaching production.",
-    },
-    {
-      icon: <RocketLaunchIcon className="h-6 w-6 text-purple-500" />,
-      title: "Built for Scale and Performance",
-      description:
-        "Go router with sub-millisecond overhead. Deploy with built-in caching, rate limiting, and security controls wherever your infrastructure lives.",
-    },
-  ];
+  // For signup variant, use content from configuration if signupVariant is provided
+  let signupFeatures;
+  let marketingTitle: string | undefined;
+  let marketingDescription: string | undefined;
+
+  if (variant === "signup" && signupVariant) {
+    const content = getSignupContent(signupVariant);
+    marketingTitle = content.marketingTitle;
+    marketingDescription = content.marketingDescription;
+    signupFeatures = content.features.map((feature) => ({
+      icon: getIcon(feature.icon),
+      title: feature.title,
+      description: feature.description,
+    }));
+  } else {
+    // Default signup features
+    signupFeatures = [
+      {
+        icon: <ShareIcon className="h-6 w-6 text-purple-500" />,
+        title: "Federate Any API, Not Just GraphQL",
+        description:
+          "Connect REST, gRPC, and GraphQL services without rewrites. Cosmo Connect wraps existing APIs into your graph without forcing migrations.",
+      },
+      {
+        icon: <MagnifyingGlassIcon className="h-6 w-6 text-purple-500" />,
+        title: "Track Every Query Across Your Entire Graph",
+        description:
+          "Native OpenTelemetry tracing from gateway to subgraph. Find slow queries and failing services in seconds with zero instrumentation required.",
+      },
+      {
+        icon: <ShieldCheckIcon className="h-6 w-6 text-purple-500" />,
+        title: "Catch Breaking Changes Before Deployment",
+        description:
+          "Schema checks run automatically in CI/CD. Service teams ship on their own schedule, while platform teams prevent breaking changes from reaching production.",
+      },
+      {
+        icon: <RocketLaunchIcon className="h-6 w-6 text-purple-500" />,
+        title: "Built for Scale and Performance",
+        description:
+          "Go router with sub-millisecond overhead. Deploy with built-in caching, rate limiting, and security controls wherever your infrastructure lives.",
+      },
+    ];
+  }
 
   const features = variant === "login" ? loginFeatures : signupFeatures;
 
   return (
     <div className="flex w-full flex-col px-2 sm:max-w-[43.2rem] sm:px-8">
-      <MarketingHeader />
+      <MarketingHeader title={marketingTitle} description={marketingDescription} />
       <div className="mt-10 flex flex-col gap-6">
         {features.map((feature, index) => (
           <FeatureItem

@@ -140,6 +140,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [currentOrgSlug, router, setOrgSlugCookie]);
 
+  const isPublicPath = publicPaths.includes(router.pathname);
+
   const { data, error, isFetching } = useQuery<
     Session | null,
     UnauthorizedError | Error
@@ -147,6 +149,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     {
       queryKey: ["user", router.asPath],
       queryFn: () => fetchSession(),
+      enabled: router.isReady && !isPublicPath,
       retry(failureCount, error) {
         if (error instanceof UnauthorizedError) return false;
         return failureCount < 3;
