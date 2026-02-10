@@ -40,8 +40,16 @@ export function initializeCosmoUser(
       logger.error(error, 'Token validation failed');
     }
 
-    if (!tokenPayload) {
-      // We couldn't decode the JWT
+    // Ensure that the token is valid
+    if (
+      !tokenPayload ||
+      tokenPayload.iss !== `${opts.keycloakClient.client.baseUrl}/realms/${opts.keycloakRealm}` ||
+      !tokenPayload.sub ||
+      !tokenPayload.email ||
+      !tokenPayload.exp ||
+      tokenPayload.exp <= Date.now() / 1000
+    ) {
+      // The token is invalid
       return {
         response: {
           code: EnumStatusCode.ERR_BAD_REQUEST,

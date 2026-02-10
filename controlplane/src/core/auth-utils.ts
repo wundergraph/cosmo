@@ -429,7 +429,7 @@ export default class AuthUtils {
     const lastName = tokenPayload.family_name || '';
 
     const [insertedSession, numberOfOrganizations] = await db.transaction(async (tx) => {
-      const advisoryLockRows = await db.execute(sql`select pg_try_advisory_xact_lock(hashtext(${userId})) as acquired`);
+      const advisoryLockRows = await tx.execute(sql`select pg_try_advisory_xact_lock(hashtext(${userId})) as acquired`);
       if (!advisoryLockRows?.[0]?.acquired) {
         // We need to identify when we failed to acquire the lock because another request already acquired it
         return [undefined, -1];
@@ -459,7 +459,7 @@ export default class AuthUtils {
     if (numberOfOrganizations === 0) {
       // Send a notification to the platform that a new user has been created
       try {
-        platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
+        await platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
           user_id: userId,
           user_email: userEmail,
           user_first_name: firstName,

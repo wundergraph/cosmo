@@ -110,8 +110,11 @@ export default class Keycloak {
       try {
         const verifyResult = await jwtVerify<CustomAccessTokenClaims>(token, key);
         return verifyResult.payload;
-      } catch {
+      } catch (error: unknown) {
         // We need to verify all the signing keys retrieved from Keycloak, we need to not throw
+        if (error instanceof Error) {
+          errors.push(error);
+        }
       }
     }
 
