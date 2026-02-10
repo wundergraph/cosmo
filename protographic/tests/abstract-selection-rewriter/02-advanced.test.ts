@@ -181,34 +181,33 @@ describe('Union type', () => {
     `);
   });
 
-  // TODO: normalize inline fragments on concrete types with union selections.
-  // it('should handle inline fragments on concrete types', () => {
-  //   const input = `
-  //     departments {
-  //       members {
-  //         ... on Intern {
-  //           ... on PermissionUnion {
-  //             ... on Managed { supervisor }
-  //             ... on Permission { scope }
-  //           }
-  //         }
-  //       }
-  //     }
-  //   `;
+  it('should handle inline fragments on concrete types', () => {
+    const input = `
+      departments {
+        members {
+          ... on Intern {
+            ... on PermissionUnion {
+              ... on Managed { supervisor }
+              ... on Permission { scope }
+            }
+          }
+        }
+      }
+    `;
 
-  //   const result = normalizeFieldSet(input, 'Query');
-  //   expect(result).toMatchInlineSnapshot(`
-  //     "{
-  //       departments {
-  //         members {
-  //           ... on Intern {
-  //             scope
-  //           }
-  //         }
-  //       }
-  //     }"
-  //   `);
-  // })
+    const result = normalizeFieldSet(input, 'Query');
+    expect(result).toMatchInlineSnapshot(`
+      "{
+        departments {
+          members {
+            ... on Intern {
+              scope
+            }
+          }
+        }
+      }"
+    `);
+  })
 });
 
 describe('AbstractSelectionRewriter - Advanced Cases', () => {

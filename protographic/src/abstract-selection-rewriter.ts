@@ -81,6 +81,9 @@ export class AbstractSelectionRewriter {
   private selectionSetStack: SelectionSetNode[] = [];
 
   private inlineFragmentStack: InlineFragmentNode[] = [];
+  /** Stack tracking enclosing concrete type inline fragments for correct parent resolution
+   * when unfolding unions/abstracts nested inside concrete type fragments */
+  private concreteFragmentStack: InlineFragmentNode[] = [];
 
   /**
    * Creates a new AbstractSelectionRewriter instance.
@@ -198,6 +201,7 @@ export class AbstractSelectionRewriter {
       return;
     }
 
+    this.collapseRedundantFragments(ctx.node, ctx.parent);
     this.mergeInlineFragments(ctx.node);
     this.removeEmptyInlineFragments(ctx.node);
 
@@ -289,6 +293,10 @@ export class AbstractSelectionRewriter {
         );
       }
 
+      // Track this concrete fragment so nested union/abstract processing can find
+      // the correct parent selection set when unfolding.
+      this.concreteFragmentStack.push(ctx.node);
+
       this.inlineFragmentStack.pop();
       return;
     }
@@ -303,14 +311,10 @@ export class AbstractSelectionRewriter {
     this.appendValidInlineFragments(ctx.node.selectionSet);
     this.distributeFieldsIntoInlineFragments(ctx.node.selectionSet);
 
-    let parent = this.currentSelectionSet;
-    if (this.inlineFragmentStack.length > 1) {
-      const inlineFragment = this.inlineFragmentStack.at(-2);
-      if (!inlineFragment) {
-        return;
-      }
-
-      parent = inlineFragment.selectionSet;
+    const parent = this.getEnclosingSelectionSet(ctx.node);
+    if (!parent) {
+      this.inlineFragmentStack.pop();
+      return;
     }
 
     this.unfoldSelectionNodeToParent(ctx.node, parent);
@@ -327,21 +331,15 @@ export class AbstractSelectionRewriter {
     if (this.rebalanceStack.pop() ?? false) {
       this.currentType = this.typeStack.pop() ?? this.currentType;
       this.compositeTypeStack.pop();
+      // Pop the concrete fragment stack (pushed during enter for concrete types)
+      this.concreteFragmentStack.pop();
     } else {
       this.compositeTypeStack.pop();
     }
   }
 
   private unfoldUnionType(ctx: VisitContext<InlineFragmentNode>): void {
-    let parent = this.currentSelectionSet;
-    if (this.inlineFragmentStack.length > 1) {
-      const inlineFragment = this.inlineFragmentStack.at(-2);
-      if (!inlineFragment) {
-        return;
-      }
-
-      parent = inlineFragment.selectionSet;
-    }
+    const parent = this.getEnclosingSelectionSet(ctx.node);
 
     if (!parent) {
       return;
@@ -364,6 +362,48 @@ export class AbstractSelectionRewriter {
       ...node.selectionSet.selections,
       ...parent.selections.slice(index + 1),
     ];
+  }
+
+  /**
+   * Resolves the correct enclosing selection set for union/abstract type unfolding.
+   *
+   * The resolution order is:
+   * 1. If `inlineFragmentStack` has depth > 1, use the parent fragment's selection set
+   * 2. If the node can be found in `currentSelectionSet`, use it
+   * 3. If inside a concrete type inline fragment (tracked by concreteFragmentStack)
+   *    and the node can be found there, use that fragment's selection set
+   * 4. Fall back to `currentSelectionSet`
+   */
+  private getEnclosingSelectionSet(node: InlineFragmentNode): SelectionSetNode | undefined {
+    if (this.inlineFragmentStack.length > 1) {
+      return this.inlineFragmentStack.at(-2)?.selectionSet;
+    }
+
+    const typeName = node.typeCondition?.name?.value;
+
+    // Check if the node is a direct child of currentSelectionSet
+    if (
+      this.currentSelectionSet?.selections?.some(
+        (s) => s.kind === Kind.INLINE_FRAGMENT && s.typeCondition?.name?.value === typeName,
+      )
+    ) {
+      return this.currentSelectionSet;
+    }
+
+    // Fall back to the enclosing concrete fragment's selection set
+    // (e.g., when a union is directly inside a concrete type inline fragment)
+    if (this.concreteFragmentStack.length > 0) {
+      const concreteFragment = this.concreteFragmentStack.at(-1);
+      if (
+        concreteFragment?.selectionSet?.selections?.some(
+          (s) => s.kind === Kind.INLINE_FRAGMENT && s.typeCondition?.name?.value === typeName,
+        )
+      ) {
+        return concreteFragment.selectionSet;
+      }
+    }
+
+    return this.currentSelectionSet;
   }
 
   /**
@@ -406,6 +446,37 @@ export class AbstractSelectionRewriter {
     // Put the fields back in the selection set. If there are any fields that were not included in the inline fragments.
     const fields = node.selections.filter((s) => s.kind === Kind.FIELD);
     node.selections = [...fields, ...uniqueInlineFragments];
+  }
+
+  /**
+   * Collapses redundant nested inline fragments whose type condition matches
+   * the enclosing inline fragment's type condition.
+   *
+   * When processing abstract types inside a concrete type inline fragment,
+   * the normalization may produce nested fragments like:
+   *   `... on Intern { ... on Intern { scope } }`
+   * This method unwraps the inner fragment, yielding:
+   *   `... on Intern { scope }`
+   *
+   * @param node - The selection set node to clean up
+   * @param parent - The parent AST node (checked for InlineFragment type)
+   */
+  private collapseRedundantFragments(node: SelectionSetNode, parent: ASTNode | ReadonlyArray<ASTNode>): void {
+    if (Array.isArray(parent) || (parent as ASTNode).kind !== Kind.INLINE_FRAGMENT) {
+      return;
+    }
+
+    const parentFragment = parent as InlineFragmentNode;
+    const parentTypeName = parentFragment.typeCondition?.name?.value;
+    if (!parentTypeName) {
+      return;
+    }
+
+    node.selections = node.selections.flatMap((s) =>
+      s.kind === Kind.INLINE_FRAGMENT && s.typeCondition?.name?.value === parentTypeName
+        ? s.selectionSet.selections
+        : [s],
+    );
   }
 
   /**
