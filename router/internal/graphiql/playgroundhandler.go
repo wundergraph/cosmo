@@ -2,10 +2,11 @@ package graphiql
 
 import (
 	"bytes"
-	"golang.org/x/sync/semaphore"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"golang.org/x/sync/semaphore"
 )
 
 type PlaygroundOptions struct {
@@ -43,8 +44,8 @@ func NewPlayground(opts *PlaygroundOptions) func(http.Handler) http.Handler {
 }
 
 func (p *Playground) initPlayground() {
-	tpl := strings.Replace(p.opts.Html, "{{graphqlURL}}", p.opts.GraphqlURL, -1)
-	tpl = strings.Replace(tpl, "{{playgroundPath}}", p.opts.PlaygroundPath, -1)
+	tpl := strings.ReplaceAll(p.opts.Html, "{{graphqlURL}}", p.opts.GraphqlURL)
+	tpl = strings.ReplaceAll(tpl, "{{playgroundPath}}", p.opts.PlaygroundPath)
 	play := []byte(tpl)
 	p.templateBytes = play
 }

@@ -30,15 +30,17 @@ type RouterSupervisor struct {
 
 // RouterResources is a struct for holding resources used by the router.
 type RouterResources struct {
-	Config *config.Config
-	Logger *zap.Logger
+	Config                *config.Config
+	Logger                *zap.Logger
+	ReloadPersistentState *ReloadPersistentState
 }
 
 // RouterSupervisorOpts is a struct for configuring the router supervisor.
 type RouterSupervisorOpts struct {
-	BaseLogger    *zap.Logger
-	ConfigFactory func() (*config.Config, error)
-	RouterFactory func(ctx context.Context, res *RouterResources) (*Router, error)
+	BaseLogger            *zap.Logger
+	ConfigFactory         func() (*config.Config, error)
+	RouterFactory         func(ctx context.Context, res *RouterResources) (*Router, error)
+	ReloadPersistentState *ReloadPersistentState
 }
 
 // NewRouterSupervisor creates a new RouterSupervisor instance.
@@ -48,7 +50,8 @@ func NewRouterSupervisor(opts *RouterSupervisorOpts) (*RouterSupervisor, error) 
 		logger:        opts.BaseLogger.With(zap.String("component", "supervisor")),
 		configFactory: opts.ConfigFactory,
 		resources: &RouterResources{
-			Logger: opts.BaseLogger,
+			Logger:                opts.BaseLogger,
+			ReloadPersistentState: opts.ReloadPersistentState,
 		},
 	}
 
@@ -135,18 +138,18 @@ var (
 // Start starts the router supervisor.
 func (rs *RouterSupervisor) Start() error {
 	if err := rs.loadConfig(); err != nil {
-		return fmt.Errorf("%w: failed to load config: %w", ErrStartupFailed, err)
+		return fmt.Errorf("%w: failed to load config: %v", ErrStartupFailed, err)
 	}
 
 	for {
 		rs.logger.Debug("Creating Router")
 		if err := rs.createRouter(); err != nil {
-			return fmt.Errorf("%w: failed to create router: %w", ErrStartupFailed, err)
+			return fmt.Errorf("%w: failed to create router: %v", ErrStartupFailed, err)
 		}
 
 		rs.logger.Debug("Starting Router")
 		if err := rs.startRouter(); err != nil {
-			return fmt.Errorf("%w: failed to start router: %w", ErrStartupFailed, err)
+			return fmt.Errorf("%w: failed to start router: %v", ErrStartupFailed, err)
 		}
 
 		rs.logger.Info("Router started")
@@ -154,6 +157,11 @@ func (rs *RouterSupervisor) Start() error {
 		shutdown := <-rs.shutdownChan
 
 		rs.logger.Debug("Got shutdown signal", zap.Bool("shutdown", shutdown))
+
+		if !shutdown {
+			rs.router.reloadPersistentState.OnRouterConfigReload()
+		}
+
 		if err := rs.stopRouter(); err != nil {
 			if errors.Is(err, context.DeadlineExceeded) {
 				rs.logger.Warn("Router shutdown deadline exceeded. Consider increasing the shutdown delay")

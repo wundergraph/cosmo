@@ -145,12 +145,15 @@ func Main() {
 			logger.Error("failed to start pyroscope", zap.Error(err))
 		}
 		if pyro != nil {
-			defer pyro.Stop()
+			defer func() {
+				_ = pyro.Stop()
+			}()
 		}
 	}
 
 	rs, err := core.NewRouterSupervisor(&core.RouterSupervisorOpts{
-		BaseLogger: baseLogger,
+		BaseLogger:            baseLogger,
+		ReloadPersistentState: core.NewReloadPersistentState(baseLogger),
 		ConfigFactory: func() (*config.Config, error) {
 			result, err := config.LoadConfig(*configPathFlag)
 			if err != nil {

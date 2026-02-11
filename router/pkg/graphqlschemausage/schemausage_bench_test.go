@@ -98,7 +98,7 @@ func setupBenchmark(b *testing.B) (plan.Plan, *ast.Document, *ast.Document, *ast
 	inputVariables, err := astjson.ParseBytes(op.Input.Variables)
 	require.NoError(b, err)
 
-	merged, _, err := astjson.MergeValues(vars, inputVariables)
+	merged, _, err := astjson.MergeValues(nil, vars, inputVariables)
 	require.NoError(b, err)
 
 	return generatedPlan, &op, &def, merged

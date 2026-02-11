@@ -43,13 +43,16 @@ export default async function main(opts: BaseCommandOptions, input: SupergraphCh
 }
 
 export function registerSupergraphChangelogTool({ server, opts }: ToolContext) {
-  server.tool(
+  server.registerTool(
     'supergraph_changelog',
-    'Fetch the changelog for a federated graph / Supergraph.',
-    SupergraphChangelogInputSchema.shape,
-    async (toolInput: SupergraphChangelogInput) => {
+    {
+      title: 'Supergraph Changelog',
+      description: 'Fetch the changelog for a federated graph / Supergraph.',
+      inputSchema: SupergraphChangelogInputSchema.shape,
+    },
+    async (toolInput) => {
       const mainOutput = await main(opts, toolInput);
-      // The .tool method expects a specific return format
+      // The registerTool method expects a specific return format
       return { content: [{ type: 'text', text: JSON.stringify(mainOutput, null, 2) }] };
     },
   );
