@@ -41,9 +41,10 @@ func TestArgumentMapping(t *testing.T) {
 			`,
 			variables: `{"userId": "123"}`,
 			assertions: func(t *testing.T, result Arguments) {
-				idArg := result.Get("query.user.id")
-				require.NotNil(t, idArg, "expected 'id' argument on 'user' field")
-				assert.Equal(t, "123", string(idArg.GetStringBytes()))
+				expected := map[string]any{
+					"query.user.id": "123",
+				}
+				assertFieldArgMap(t, expected, result)
 			},
 		},
 		{
@@ -67,9 +68,10 @@ func TestArgumentMapping(t *testing.T) {
 			`,
 			variables: `{}`,
 			assertions: func(t *testing.T, result Arguments) {
-				idArg := result.Get("query.user.id")
-				require.NotNil(t, idArg, "expected 'id' argument on 'user' field")
-				assert.Equal(t, "123", string(idArg.GetStringBytes()))
+				expected := map[string]any{
+					"query.user.id": "123",
+				}
+				assertFieldArgMap(t, expected, result)
 			},
 		},
 		{
@@ -100,19 +102,12 @@ func TestArgumentMapping(t *testing.T) {
 			`,
 			variables: `{"userId": "user-1", "limit": 10, "offset": 5}`,
 			assertions: func(t *testing.T, result Arguments) {
-				// Assert root field argument
-				userIdArg := result.Get("query.user.id")
-				require.NotNil(t, userIdArg)
-				assert.Equal(t, "user-1", string(userIdArg.GetStringBytes()))
-
-				// Assert nested field arguments (dot notation path)
-				limitArg := result.Get("query.user.posts.limit")
-				require.NotNil(t, limitArg, "expected 'limit' argument on 'user.posts' field")
-				assert.Equal(t, 10, limitArg.GetInt())
-
-				offsetArg := result.Get("query.user.posts.offset")
-				require.NotNil(t, offsetArg, "expected 'offset' argument on 'user.posts' field")
-				assert.Equal(t, 5, offsetArg.GetInt())
+				expected := map[string]any{
+					"query.user.id":           "user-1",
+					"query.user.posts.limit":  10,
+					"query.user.posts.offset": 5,
+				}
+				assertFieldArgMap(t, expected, result)
 			},
 		},
 		{
@@ -162,13 +157,11 @@ func TestArgumentMapping(t *testing.T) {
 			`,
 			variables: `{"userId": "user-123", "postSlug": "my-post"}`,
 			assertions: func(t *testing.T, result Arguments) {
-				userIdArg := result.Get("query.user.id")
-				require.NotNil(t, userIdArg)
-				assert.Equal(t, "user-123", string(userIdArg.GetStringBytes()))
-
-				postSlugArg := result.Get("query.post.slug")
-				require.NotNil(t, postSlugArg)
-				assert.Equal(t, "my-post", string(postSlugArg.GetStringBytes()))
+				expected := map[string]any{
+					"query.user.id":   "user-123",
+					"query.post.slug": "my-post",
+				}
+				assertFieldArgMap(t, expected, result)
 			},
 		},
 		{
@@ -274,25 +267,247 @@ func TestArgumentMapping(t *testing.T) {
 			`,
 			variables: `{"id1": "user-1", "id2": "user-2"}`,
 			assertions: func(t *testing.T, result Arguments) {
-				// Access arguments using the alias, not the field name
-				aIdArg := result.Get("query.a.id")
-				require.NotNil(t, aIdArg, "expected 'id' argument on aliased field 'a'")
-				assert.Equal(t, "user-1", string(aIdArg.GetStringBytes()))
-
-				bIdArg := result.Get("query.b.id")
-				require.NotNil(t, bIdArg, "expected 'id' argument on aliased field 'b'")
-				assert.Equal(t, "user-2", string(bIdArg.GetStringBytes()))
+				expected := map[string]any{
+					"query.a.id": "user-1",
+					"query.b.id": "user-2",
+				}
+				assertFieldArgMap(t, expected, result)
 
 				// Using the field name should not find the arguments
 				userIdArg := result.Get("query.user.id")
 				assert.Nil(t, userIdArg, "expected nil when using field name instead of alias")
 			},
 		},
+		{
+			// After normalization, named fragments are inlined, so arguments should be
+			// accessible via the normal field path (not fragment definition path)
+			name: "arguments from named fragments are accessible via spreaded path",
+			schema: `
+				type Query {
+					user(id: ID!): User
+				}
+				type User {
+					id: ID!
+					name: String!
+					posts(limit: Int!, offset: Int): [Post!]!
+					friends(first: Int!): [User!]!
+				}
+				type Post {
+					id: ID!
+					title: String!
+				}
+			`,
+			operation: `
+				fragment UserPosts on User {
+					posts(limit: $postsLimit, offset: $postsOffset) {
+						id
+						title
+					}
+				}
+
+				fragment UserFriends on User {
+					friends(first: $friendsCount) {
+						id
+						name
+					}
+				}
+
+				query GetUser($userId: ID!, $postsLimit: Int!, $postsOffset: Int, $friendsCount: Int!) {
+					user(id: $userId) {
+						id
+						name
+						...UserPosts
+						...UserFriends
+					}
+				}
+			`,
+			variables: `{"userId": "user-1", "postsLimit": 10, "postsOffset": 5, "friendsCount": 20}`,
+			assertions: func(t *testing.T, result Arguments) {
+				expected := map[string]any{
+					"query.user.id":            "user-1",
+					"query.user.posts.limit":   10,
+					"query.user.posts.offset":  5,
+					"query.user.friends.first": 20,
+				}
+				assertFieldArgMap(t, expected, result)
+			},
+		},
+		{
+			// Inline fragments remain in the AST after normalization and must be accessible
+			// with $TypeName notation.
+			name: "arguments within inline fragments are accessible with $TypeName prefix",
+			schema: `
+				type Query {
+					search(query: String!): [SearchResult!]!
+				}
+
+				union SearchResult = User | Post
+
+				type User {
+					id: ID!
+					name(format: String): String!
+					email(verified: Boolean): String!
+				}
+
+				type Post {
+					id: ID!
+					title(truncate: Int): String!
+					content: String!
+				}
+			`,
+			operation: `
+				query GetSearchResults($searchQuery: String!, $nameFormat: String, $verifiedOnly: Boolean) {
+					search(query: $searchQuery) {
+						... on User {
+							id
+							name(format: $nameFormat)
+							email(verified: $verifiedOnly)
+						}
+						... on Post {
+							id
+							title(truncate: 100)
+							content
+						}
+					}
+				}
+			`,
+			variables: `{"searchQuery": "test", "nameFormat": "uppercase", "verifiedOnly": true}`,
+			assertions: func(t *testing.T, result Arguments) {
+				expected := map[string]any{
+					"query.search.query":                "test",
+					"query.search.$User.name.format":    "uppercase",
+					"query.search.$User.email.verified": true,
+					"query.search.$Post.title.truncate": 100,
+				}
+				assertFieldArgMap(t, expected, result)
+			},
+		},
+		{
+			name: "arguments in nested inline fragments are accessible",
+			schema: `
+				interface Titleable {
+					title(f1: Int): String
+				}
+
+				interface Nameable {
+					name(f2: Int): String
+				}
+
+				type Trophie implements Titleable {
+					title(f1: Int): String
+				}
+
+				type Doctor implements Titleable & Nameable {
+					title(f1: Int): String
+					name(f2: Int): String
+					profession(f3: Int): String
+				}
+
+				type Person implements Nameable {
+					name(f2: Int): String
+					hobby(f4: Int): String
+				}
+
+				type Query {
+					title(f1: Int): Titleable
+				}
+			`,
+			operation: `
+				query {
+					title(f1: 1) {
+						... on Nameable {
+							name(f2: 2)
+							... on Doctor {
+								profession(f3: 3)
+							}
+							... on Person {
+								hobby(f4: 4)
+							}
+						}
+					}
+				}
+			`,
+			variables: ``,
+			assertions: func(t *testing.T, result Arguments) {
+				expected := map[string]any{
+					"query.title.f1":                              1,
+					"query.title.$Nameable.name.f2":               2,
+					"query.title.$Nameable.$Doctor.profession.f3": 3,
+					"query.title.$Nameable.$Person.hobby.f4":      4,
+				}
+				assertFieldArgMap(t, expected, result)
+			},
+		},
+		{
+			// The engine removes inline fragments from operations,
+			// if they are inaccessable. This can happen on nested interface selections
+			// where a fragment type implements an interface but not the other.
+			// We expect a field argument inside such a fragment to still be part
+			// of the mapping.
+			name: "arguments in unreachable inline fragments are accessible",
+			schema: `
+				interface Titleable {
+					title(f1: Int): String
+				}
+
+				interface Nameable {
+					name(f2: Int): String
+				}
+
+				type Trophie implements Titleable {
+					title(f1: Int): String
+				}
+
+				type Doctor implements Titleable & Nameable {
+					title(f1: Int): String
+					name(f2: Int): String
+					profession(f3: Int): String
+				}
+
+				type Person implements Nameable {
+					name(f2: Int): String
+					hobby(f4: Int): String
+				}
+
+				type Query {
+					title(f1: Int): Titleable
+				}
+			`,
+			operation: `
+				query($v1: Int, $v2: Int, $v3: Int, $v4: Int) {
+  					title { # returns Titleable
+    					title(f1: $v1)
+    					... on Nameable {
+      						name(f2: $v2)
+      						... on Doctor {
+      						  profession(f3: $v3)
+      						}
+      						... on Person { # implements Nameable but not Titleable
+      						  hobby(f4: $v4)
+      						}
+    					}
+  					}
+				}
+			`,
+			variables: `{"v1": 1, "v2": 2, "v3": 3, "v4": 4}`,
+			assertions: func(t *testing.T, result Arguments) {
+				expected := map[string]any{
+					"query.title.title.f1":                        1,
+					"query.title.$Nameable.name.f2":               2,
+					"query.title.$Nameable.$Doctor.profession.f3": 3,
+					"query.title.$Nameable.$Person.hobby.f4":      4, // should exist
+				}
+				assertFieldArgMap(t, expected, result)
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Parse schema
+			// Mimic what the router is doing by first parsing the schema and operation,
+			// then normalize the query and only then normalize the variables (and create
+			// field argument mapping)
+
 			schema, report := astparser.ParseGraphqlDocumentString(tc.schema)
 			require.False(t, report.HasErrors(), "failed to parse schema")
 			err := asttransform.MergeDefinitionWithBaseSchema(&schema)
@@ -337,4 +552,23 @@ func TestNewArguments_EmptyMapping(t *testing.T) {
 	// Test that empty mapping returns empty Arguments
 	result := NewArguments(astnormalization.FieldArgumentMapping{}, nil)
 	assert.Nil(t, result.Get("query.user.id"))
+}
+
+func assertFieldArgMap(t *testing.T, expected map[string]any, result Arguments) {
+	for path, expectedValue := range expected {
+		jsonValue := result.Get(path)
+		require.NotNil(t, jsonValue, "no value found at path '%s'", path)
+
+		switch valType := jsonValue.Type(); valType {
+		case astjson.TypeNumber:
+			// in tests we assume its always int
+			assert.Equal(t, expectedValue, jsonValue.GetInt())
+		case astjson.TypeString:
+			assert.Equal(t, expectedValue, string(jsonValue.GetStringBytes()))
+		case astjson.TypeFalse, astjson.TypeTrue:
+			assert.Equal(t, expectedValue, jsonValue.GetBool())
+		default:
+			t.Fatalf("can't assert on unknown astjson type '%s'", valType)
+		}
+	}
 }
