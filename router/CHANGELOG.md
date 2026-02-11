@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.279.1](https://github.com/wundergraph/cosmo/compare/router@0.279.0...router@0.279.1) (2026-02-09)
+
+### Bug Fixes
+
+* cache warmer graph token validation cleanup ([#2496](https://github.com/wundergraph/cosmo/issues/2496)) ([8546ee1](https://github.com/wundergraph/cosmo/commit/8546ee12f767cbf5385ec3716b8f9559f1b081f3)) (@SkArchon)
+
+# [0.279.0](https://github.com/wundergraph/cosmo/compare/router@0.278.0...router@0.279.0) (2026-02-09)
+
+### Features
+
+* rewarm cache from planner cache on schema change ([#2445](https://github.com/wundergraph/cosmo/issues/2445)) ([23e2dcf](https://github.com/wundergraph/cosmo/commit/23e2dcfa0498bfe4cf690dc279eccefca3ad3c03)) (@SkArchon)
+
 # [0.278.0](https://github.com/wundergraph/cosmo/compare/router@0.277.0...router@0.278.0) (2026-02-09)
 
 ### Bug Fixes
