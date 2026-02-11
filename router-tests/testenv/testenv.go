@@ -410,8 +410,10 @@ type MCPConfig struct {
 	Port    int
 }
 
-var redisHost = "redis://localhost:6379"
-var redisClusterHost = "redis://localhost:7001"
+var (
+	redisHost        = "redis://localhost:6379"
+	redisClusterHost = "redis://localhost:7001"
+)
 
 // CreateTestSupervisorEnv is currently tailored specifically for /lifecycle/supervisor_test.go, refer to that test
 // for usage example. CreateTestSupervisorEnv is not a drop-in replacement for CreateTestEnv!
@@ -1769,10 +1771,10 @@ func grpcURL(endpoint string) string {
 	return "dns:///" + endpoint
 }
 
-func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+func ReadAndCheckJSON(t testing.TB, conn *websocket.Conn, v any) (err error) {
 	_, payload, err := conn.ReadMessage()
 	if err != nil {
-		return err
+		return fmt.Errorf("read message: %w", err)
 	}
 	if err := json.Unmarshal(payload, &v); err != nil {
 		t.Logf("Failed to decode WebSocket message. Raw payload: %s", string(payload))
@@ -2760,6 +2762,8 @@ func WSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, p []byt
 }
 
 func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
+	t.Helper()
+
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
 	attempts := 0

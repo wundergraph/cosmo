@@ -38,9 +38,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
-var (
-	errClientTerminatedConnection = errors.New("client terminated connection")
-)
+var errClientTerminatedConnection = errors.New("client terminated connection")
 
 type WebsocketMiddlewareOptions struct {
 	OperationProcessor *OperationProcessor
@@ -68,7 +66,6 @@ type WebsocketMiddlewareOptions struct {
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
-
 	handler := &WebsocketHandler{
 		ctx:                       ctx,
 		operationProcessor:        opts.OperationProcessor,
@@ -167,7 +164,6 @@ func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Durati
 }
 
 func (c *wsConnectionWrapper) ReadJSON(v any) error {
-
 	if c.readTimeout > 0 {
 		err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
 		if err != nil {
@@ -184,7 +180,6 @@ func (c *wsConnectionWrapper) ReadJSON(v any) error {
 }
 
 func (c *wsConnectionWrapper) WriteText(text string) error {
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -270,9 +265,7 @@ type WebsocketHandler struct {
 }
 
 func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {
-	var (
-		subProtocol string
-	)
+	var subProtocol string
 
 	requestID := middleware.GetReqID(r.Context())
 	requestContext := getRequestContext(r.Context())
@@ -601,8 +594,10 @@ type websocketResponseWriter struct {
 	propagateErrors bool
 }
 
-var _ http.ResponseWriter = (*websocketResponseWriter)(nil)
-var _ resolve.SubscriptionResponseWriter = (*websocketResponseWriter)(nil)
+var (
+	_ http.ResponseWriter                = (*websocketResponseWriter)(nil)
+	_ resolve.SubscriptionResponseWriter = (*websocketResponseWriter)(nil)
+)
 
 func newWebsocketResponseWriter(id string, protocol wsproto.Proto, propagateErrors bool, logger *zap.Logger, stats statistics.EngineStatistics) *websocketResponseWriter {
 	return &websocketResponseWriter{
@@ -649,7 +644,6 @@ func (rw *websocketResponseWriter) Write(data []byte) (int, error) {
 
 func (rw *websocketResponseWriter) Flush() error {
 	if rw.buf.Len() > 0 {
-		rw.logger.Debug("flushing", zap.Int("bytes", rw.buf.Len()))
 		payload := rw.buf.Bytes()
 		var extensions []byte
 		var err error
@@ -764,9 +758,7 @@ type forwardConfig struct {
 	regexAllowList      []*regexp.Regexp
 }
 
-var (
-	detectNonRegex = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
-)
+var detectNonRegex = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
 	return &WebSocketConnectionHandler{
@@ -817,7 +809,6 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegistration) (*ParsedOperation, *operationContext, error) {
-
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
 		return nil, nil, err
@@ -964,7 +955,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 }
 
 func (h *WebSocketConnectionHandler) executeSubscription(registration *SubscriptionRegistration) {
-
 	rw := newWebsocketResponseWriter(registration.msg.ID, h.protocol, h.graphqlHandler.subgraphErrorPropagation.Enabled, h.logger, h.stats)
 
 	_, operationCtx, err := h.parseAndPlan(registration)

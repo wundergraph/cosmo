@@ -14,17 +14,36 @@ execution_config:
     path: './__schemas/config.json'
     # watch: true
 
+router_registration: false
+
 log_level: debug
 
+headers:
+  all:
+    request:
+      - op: propagate
+        named: X-User-Id
+
 watch_config:
-  enabled: true
+  enabled: false
   interval: '10s'
 
   startup_delay:
     enabled: false
     maximum: '10s'
 
+access_logs:
+  enabled: false
+  level: info
+  add_stacktrace: true
+
 telemetry:
+  metrics:
+    prometheus:
+      enabled: true
+      connection_stats: true
+      engine_stats:
+        subscriptions: true
   tracing:
     enabled: true
     sampling_rate: 1
@@ -47,9 +66,10 @@ plugins:
 
 engine:
   max_concurrent_resolvers: 1024
+  enable_single_flight: true
   debug:
-    report_websocket_connections: true
-    report_memory_usage: true
+    report_websocket_connections: false
+    report_memory_usage: false
 
 events:
   providers:

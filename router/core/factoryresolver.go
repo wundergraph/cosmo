@@ -23,6 +23,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
+
 	grpcdatasource "github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/grpc_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/staticdatasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -71,7 +72,7 @@ type DefaultFactoryResolver struct {
 	baseTransport                 http.RoundTripper
 	transportFactory              ApiTransportFactory
 	defaultSubgraphRequestTimeout time.Duration
-	subscriptionClientOptions     []graphql_datasource.Options
+	subscriptionClientOptions     []graphql_datasource.SubscriptionClientOption
 }
 
 func NewDefaultFactoryResolver(
@@ -121,30 +122,23 @@ func NewDefaultFactoryResolver(
 		factoryLogger = abstractlogger.NewZapLogger(log, abstractlogger.DebugLevel)
 	}
 
-	var netPollConfig graphql_datasource.NetPollConfiguration
-
-	netPollConfig.ApplyDefaults()
-
-	netPollConfig.Enable = enableNetPoll
-
-	options := []graphql_datasource.Options{
+	options := []graphql_datasource.SubscriptionClientOption{
 		graphql_datasource.WithLogger(factoryLogger),
-		graphql_datasource.WithNetPollConfiguration(netPollConfig),
 	}
 
 	if subscriptionClientOptions != nil {
 		if subscriptionClientOptions.PingInterval > 0 {
 			options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
 		}
-		if subscriptionClientOptions.ReadTimeout > 0 {
-			options = append(options, graphql_datasource.WithReadTimeout(subscriptionClientOptions.ReadTimeout))
-		}
+		// if subscriptionClientOptions.ReadTimeout > 0 {
+		// 	options = append(options, subscriptionclient.WithReadTimeout(subscriptionClientOptions.ReadTimeout))
+		// }
 		if subscriptionClientOptions.PingTimeout > 0 {
 			options = append(options, graphql_datasource.WithPingTimeout(subscriptionClientOptions.PingTimeout))
 		}
-		if subscriptionClientOptions.FrameTimeout > 0 {
-			options = append(options, graphql_datasource.WithFrameTimeout(subscriptionClientOptions.FrameTimeout))
-		}
+		// if subscriptionClientOptions.FrameTimeout > 0 {
+		// 	options = append(options, subscriptionclient.With(subscriptionClientOptions.FrameTimeout))
+		// }
 	}
 
 	return &DefaultFactoryResolver{
@@ -178,10 +172,7 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 
 	if d.transportFactory == nil || d.baseTransport == nil {
 		// dummy implementation for plan generator that doesn't make requests
-		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-			http.DefaultClient,
-			http.DefaultClient,
-			d.engineCtx,
+		subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(d.engineCtx,
 			d.subscriptionClientOptions...,
 		)
 		return graphql_datasource.NewFactory(d.engineCtx, http.DefaultClient, subscriptionClient)
@@ -197,11 +188,13 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 	}
 
 	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		defaultHTTPClient,
-		streamingClient,
 		d.engineCtx,
-		d.subscriptionClientOptions...,
+		append([]graphql_datasource.SubscriptionClientOption{graphql_datasource.WithUpgradeClient(defaultHTTPClient), graphql_datasource.WithStreamingClient(streamingClient)}, d.subscriptionClientOptions...)...,
 	)
+
+	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
+		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, subscriptionClient)
+	}
 
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
 		// it's intentional that we're not using the subgraphClient for subscriptions
