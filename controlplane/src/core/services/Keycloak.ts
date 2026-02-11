@@ -3,16 +3,10 @@ import { RequiredActionAlias } from '@keycloak/keycloak-admin-client/lib/defs/re
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { uid } from 'uid';
 import { FastifyBaseLogger } from 'fastify';
-import { decodeJwt, JWK, importJWK, JSONWebKeySet, KeyLike, JWTPayload, jwtVerify, decodeProtectedHeader } from 'jose';
-import { lru } from 'tiny-lru';
-import axios from 'axios';
+import { decodeJwt } from 'jose';
 import { MemberRole } from '../../db/models.js';
 import { organizationRoleEnum } from '../../db/schema.js';
 import { AuthenticationError } from '../errors/errors.js';
-import { CustomAccessTokenClaims } from '../../types/index.js';
-
-type KeyLikeWithId = KeyLike & { kid?: string };
-type SigningKey = KeyLikeWithId | Uint8Array;
 
 export default class Keycloak {
   client: KeycloakAdminClient;
@@ -22,7 +16,6 @@ export default class Keycloak {
   realm = '';
 
   private logger: FastifyBaseLogger;
-  readonly #signingKeysCache = lru<SigningKey[]>(5, 3 * 60 * 60 * 1000);
 
   constructor(options: {
     apiUrl: string;
@@ -81,74 +74,6 @@ export default class Keycloak {
       }
       throw err;
     }
-  }
-
-  async verifyToken({ token, realm }: { realm?: string; token: string }): Promise<CustomAccessTokenClaims | undefined> {
-    // Ensure that the provided value is a valid JWT before we go fetching signing keys and validating it
-    const jwtHeader = decodeProtectedHeader(token);
-    const signingKeys = await this.#getSigningKeys(realm);
-    if (signingKeys.length === 0) {
-      throw new Error('No valid signing key found');
-    }
-
-    // If the header of the token provides the `kid` property, we should try to find a matching key instead of
-    // testing all the existing keys
-    if (jwtHeader.kid) {
-      const key = signingKeys.find((k) => !(k instanceof Uint8Array) && k.kid === jwtHeader.kid);
-      if (!key) {
-        // The doesn't match any of the existing keys
-        throw new Error('No valid signing key found');
-      }
-
-      const verifyResult = await jwtVerify<CustomAccessTokenClaims>(token, key);
-      return verifyResult.payload;
-    }
-
-    // Try to verify the token with all the existing keys until we find a valid one
-    const errors: Error[] = [];
-    for (const key of signingKeys) {
-      try {
-        const verifyResult = await jwtVerify<CustomAccessTokenClaims>(token, key);
-        return verifyResult.payload;
-      } catch (error: unknown) {
-        // We need to verify all the signing keys retrieved from Keycloak, we need to not throw
-        if (error instanceof Error) {
-          errors.push(error);
-        }
-      }
-    }
-
-    if (errors.length === 0) {
-      throw new Error('None of the signing keys could be used to verify the token');
-    }
-
-    throw new AggregateError(errors, 'Token verification failed');
-  }
-
-  async #getSigningKeys(realm?: string): Promise<SigningKey[]> {
-    const jwkEndpoint = `${this.client.baseUrl}/realms/${realm || this.realm}/protocol/openid-connect/certs`;
-    let keys = this.#signingKeysCache.get(jwkEndpoint);
-    if (keys) {
-      return keys;
-    }
-
-    keys = [];
-    const response = await axios.get<JSONWebKeySet>(jwkEndpoint);
-    for (const key of response.data.keys) {
-      try {
-        const importedJwk = await importJWK<KeyLikeWithId>(key);
-        if (!(importedJwk instanceof Uint8Array)) {
-          importedJwk.kid = key.kid;
-        }
-
-        keys.push(importedJwk);
-      } catch {
-        // ignore
-      }
-    }
-
-    this.#signingKeysCache.set(jwkEndpoint, keys);
-    return keys;
   }
 
   public async roleExists({ realm, roleName }: { realm?: string; roleName: string }): Promise<boolean> {

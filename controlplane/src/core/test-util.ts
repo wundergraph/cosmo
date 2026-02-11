@@ -4,7 +4,8 @@ import nuid from 'nuid';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { pino } from 'pino';
-import { AuthContext, Label, OrganizationGroupDTO } from '../types/index.js';
+import { decodeJwt } from 'jose';
+import { AuthContext, Label, OrganizationGroupDTO, UserInfoEndpointResponse } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { organizationRoleEnum } from '../db/schema.js';
 import { OrganizationRole } from '../db/models.js';
@@ -268,6 +269,20 @@ export function createTestAuthenticator(users: TestAuthenticatorOptions): TestAu
         throw new Error('No active context found');
       }
       return Promise.resolve(activeContext);
+    },
+    getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined> {
+      if (!token || token.trim().length === 0) {
+        return Promise.resolve(undefined);
+      }
+
+      try {
+        const result = decodeJwt<UserInfoEndpointResponse>(token);
+        return Promise.resolve(result);
+      } catch {
+        // ignore
+      }
+
+      return Promise.resolve(undefined);
     },
     changeUser(user: TestUser) {
       if (!(user in users)) {

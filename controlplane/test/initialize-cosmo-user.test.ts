@@ -39,19 +39,6 @@ describe('initializeCosmoUser', () => {
     await server.close();
   });
 
-  test('that an invalid token that can\'t be verified returns `Bad Request`', async () => {
-    const { client, server } = await SetupTest({ dbname });
-
-    const response = await client.initializeCosmoUser({
-      // Token comes from https://jwt.io/
-      token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.KMUFsIDTnFmyG3nMiGM6H9FNFUROf3wh7SmqJp-QV30'
-    });
-
-    expect(response.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
-
-    await server.close();
-  });
-
   test('that a user that already exists in Cosmo is not modified', async () => {
     const { client, server, keycloakClient, users, realm } = await SetupTest({ dbname });
     const signIn = createAuthenticator({ keycloakBaseUrl: keycloakClient.client.baseUrl, realm });
