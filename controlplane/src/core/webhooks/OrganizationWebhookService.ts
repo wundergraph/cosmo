@@ -765,7 +765,7 @@ export class OrganizationWebhookService {
     }
 
     if (overwriteErrorMessage) {
-      // The error message was overwritten by the response, either the response provided an error message
+      // The response overwrote the error message, either the response provided an error message
       // or the data validation failed
       await this.db
         .update(schema.webhookDeliveries)

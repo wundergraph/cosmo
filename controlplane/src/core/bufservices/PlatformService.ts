@@ -174,6 +174,7 @@ import { getWorkspace } from './workspace/getWorkspace.js';
 import { verifyAPIKeyGraphAccess } from './api-key/verifyAPIKeyGraphAccess.js';
 import { getSubgraphCheckExtensionsConfig } from './check-extensions/getSubgraphCheckExtensionsConfig.js';
 import { configureSubgraphCheckExtensions } from './check-extensions/configureSubgraphCheckExtensions.js';
+import { initializeCosmoUser } from './user/initializeCosmoUser.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -474,6 +475,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getSubgraphByName: (req, ctx) => {
       return getSubgraphByName(opts, req, ctx);
+    },
+
+    initializeCosmoUser: (req, ctx) => {
+      return initializeCosmoUser(opts, req, ctx);
     },
 
     getFederatedGraphs: (req, ctx) => {

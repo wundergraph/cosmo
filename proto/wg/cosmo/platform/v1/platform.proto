@@ -3088,6 +3088,14 @@ message VerifyAPIKeyGraphAccessResponse {
   bool hasWriteAccessToGraph = 3;
 }
 
+message InitializeCosmoUserRequest {
+   string token = 1;
+}
+
+message InitializeCosmoUserResponse {
+   Response response = 1;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3158,6 +3166,9 @@ service PlatformService {
   rpc GetPersistedOperations(GetPersistedOperationsRequest) returns (GetPersistedOperationsResponse) {}
   // GetAuditLogs returns the audit logs of the organization
   rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse) {}
+
+  // InitializeCosmoUser takes a bearer token
+  rpc InitializeCosmoUser(InitializeCosmoUserRequest) returns (InitializeCosmoUserResponse) {}
 
   // For Studio and CLI
 
