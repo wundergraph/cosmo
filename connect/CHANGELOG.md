@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.129.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.128.0...@wundergraph/cosmo-connect@0.129.0) (2026-02-12)
+
+### Features
+
+* endpoint to list user organizations ([#2502](https://github.com/wundergraph/cosmo/issues/2502)) ([a9a0955](https://github.com/wundergraph/cosmo/commit/a9a0955a87276104f963e9d19fc23822a9aa8d33)) (@wilsonrivera)
+* implement endpoint to ensure user is initialized in Cosmo ([#2497](https://github.com/wundergraph/cosmo/issues/2497)) ([31b005f](https://github.com/wundergraph/cosmo/commit/31b005f4ac0845e9e54ff0c89b971ddde5589eaa)) (@wilsonrivera)
+
 # [0.128.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.127.3...@wundergraph/cosmo-connect@0.128.0) (2026-01-27)
 
 ### Features
