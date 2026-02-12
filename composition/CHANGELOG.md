@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.51.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.51.0...@wundergraph/composition@0.51.1) (2026-02-12)
+
+### Bug Fixes
+
+* do not re-evaluate internal graph nodes if all its descendants a… ([#2499](https://github.com/wundergraph/cosmo/issues/2499)) ([2fa2dfd](https://github.com/wundergraph/cosmo/commit/2fa2dfd35b78b0e84fa18dcb99590cdee5abec08)) (@Aenimus)
+
 # [0.51.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.50.0...@wundergraph/composition@0.51.0) (2026-02-09)
 
 ### Features
