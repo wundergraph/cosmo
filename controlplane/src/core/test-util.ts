@@ -4,7 +4,6 @@ import nuid from 'nuid';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { pino } from 'pino';
-import { decodeJwt } from 'jose';
 import { AuthContext, Label, OrganizationGroupDTO, UserInfoEndpointResponse } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { organizationRoleEnum } from '../db/schema.js';
@@ -243,7 +242,11 @@ export type TestAuthenticatorOptions = {
   -readonly [key in keyof typeof TestUser]?: UserTestData & AuthContext;
 } & DefaultTestAuthenticatorOptions;
 
-export function createTestAuthenticator(users: TestAuthenticatorOptions): TestAuthenticator {
+export function createTestAuthenticator(
+  users: TestAuthenticatorOptions,
+  keycloakBaseUrl: string,
+  realm: string,
+): TestAuthenticator {
   let activeContext: UserTestData & AuthContext = users.adminAliceCompanyA;
 
   return {
@@ -270,19 +273,25 @@ export function createTestAuthenticator(users: TestAuthenticatorOptions): TestAu
       }
       return Promise.resolve(activeContext);
     },
-    getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined> {
+    async getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined> {
       if (!token || token.trim().length === 0) {
-        return Promise.resolve(undefined);
+        return undefined;
       }
 
       try {
-        const result = decodeJwt<UserInfoEndpointResponse>(token);
-        return Promise.resolve(result);
+        const response = await fetch(`${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/userinfo`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        return response.ok ? ((await response.json()) as UserInfoEndpointResponse) : undefined;
       } catch {
         // ignore
       }
 
-      return Promise.resolve(undefined);
+      return undefined;
     },
     changeUser(user: TestUser) {
       if (!(user in users)) {

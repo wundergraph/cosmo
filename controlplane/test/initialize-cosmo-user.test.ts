@@ -1,9 +1,9 @@
-import { randomUUID } from "node:crypto";
+import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
 import { afterAllSetup, beforeAllSetup } from '../src/core/test-util.js';
-import { UserRepository } from "../src/core/repositories/UserRepository.js";
-import { OrganizationRepository } from "../src/core/repositories/OrganizationRepository.js";
+import { UserRepository } from '../src/core/repositories/UserRepository.js';
+import { OrganizationRepository } from '../src/core/repositories/OrganizationRepository.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -39,9 +39,21 @@ describe('initializeCosmoUser', () => {
     await server.close();
   });
 
+  test('that a request with an invalid access token is rejected', async () => {
+    const { client, server } = await SetupTest({ dbname });
+
+    const initializeCosmoUserResponse = await client.initializeCosmoUser({
+      // The token was obtained from jwt.io
+      token: 'eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.jYW04zLDHfR1v7xdrW3lCGZrMIsVe0vWCfVkN2DRns2c3MN-mcp_-RE6TN9umSBYoNV-mnb31wFf8iun3fB6aDS6m_OXAiURVEKrPFNGlR38JSHUtsFzqTOj-wFrJZN4RwvZnNGSMvK3wzzUriZqmiNLsG8lktlEn6KA4kYVaM61_NpmPHWAjGExWv7cjHYupcjMSmR8uMTwN5UuAwgW6FRstCJEfoxwb0WKiyoaSlDuIiHZJ0cyGhhEmmAPiCwtPAwGeaL1yZMcp0p82cpTQ5Qb-7CtRov3N4DcOHgWYk6LomPR5j5cCkePAz87duqyzSMpCB0mCOuE3CU2VMtGeQ',
+    });
+    expect(initializeCosmoUserResponse?.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
+
+    await server.close();
+  });
+
   test('that a user that already exists in Cosmo is not modified', async () => {
     const { client, server, keycloakClient, users, realm } = await SetupTest({ dbname });
-    const signIn = createAuthenticator({ keycloakBaseUrl: keycloakClient.client.baseUrl, realm });
+    const signIn = createSignInFn({ keycloakBaseUrl: keycloakClient.client.baseUrl, realm });
 
     const userRepo = new UserRepository(server.log, server.db);
     const orgRepo = new OrganizationRepository(server.log, server.db);
@@ -55,10 +67,10 @@ describe('initializeCosmoUser', () => {
     expect(orgMemberships.length).toBe(1);
 
     // Authenticate the user to get an ID token
-    const { id_token: idToken } = await signIn(users.adminAliceCompanyA.email, 'wunder@123');
+    const { access_token: token } = await signIn(users.adminAliceCompanyA.email, 'wunder@123');
 
     // Initialize the user in the database by accessing the RPC
-    const initializeCosmoUserResponse = await client.initializeCosmoUser({ token: idToken });
+    const initializeCosmoUserResponse = await client.initializeCosmoUser({ token });
     expect(initializeCosmoUserResponse?.response?.code).toBe(EnumStatusCode.OK);
 
     await server.close();
@@ -66,7 +78,7 @@ describe('initializeCosmoUser', () => {
 
   test('that a user that does not exists in Cosmo is initialized correctly', async () => {
     const { client, server, keycloakClient, realm } = await SetupTest({ dbname });
-    const signIn = createAuthenticator({ keycloakBaseUrl: keycloakClient.client.baseUrl, realm });
+    const signIn = createSignInFn({ keycloakBaseUrl: keycloakClient.client.baseUrl, realm });
 
     const userEmail = randomUUID() + '@wg.com';
     const userRepo = new UserRepository(server.log, server.db);
@@ -93,10 +105,10 @@ describe('initializeCosmoUser', () => {
     expect(user).toBeNull();
 
     // Authenticate the new user to get an ID token
-    const { id_token: idToken } = await signIn(userEmail, 'wunder@123');
+    const { access_token: token } = await signIn(userEmail, 'wunder@123');
 
     // Initialize the user in the database by accessing the RPC
-    const initializeCosmoUserResponse = await client.initializeCosmoUser({ token: idToken });
+    const initializeCosmoUserResponse = await client.initializeCosmoUser({ token });
     expect(initializeCosmoUserResponse?.response?.code).toBe(EnumStatusCode.OK);
 
     // Ensure that everything is initialized as expected
@@ -116,10 +128,10 @@ describe('initializeCosmoUser', () => {
 });
 
 type AuthResponse = {
-  id_token: string;
+  access_token: string;
 }
 
-function createAuthenticator({ keycloakBaseUrl, realm }: { keycloakBaseUrl: string, realm: string }) {
+function createSignInFn({ keycloakBaseUrl, realm }: { keycloakBaseUrl: string, realm: string }) {
   return async (username: string, password: string): Promise<AuthResponse> => {
     const response = await fetch(
       `${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/token`,
@@ -141,7 +153,7 @@ function createAuthenticator({ keycloakBaseUrl, realm }: { keycloakBaseUrl: stri
     }
 
     const respObj = await response.json() as AuthResponse;
-    if (!respObj.id_token) {
+    if (!respObj.access_token) {
       throw new Error('No ID token returned from Keycloak');
     }
 

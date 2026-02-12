@@ -114,8 +114,6 @@ export const SetupTest = async function ({
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
 
-  const authenticator = createTestAuthenticator(users);
-
   const realm = 'test';
   const loginRealm = 'master';
   const apiUrl = 'http://localhost:8080';
@@ -124,6 +122,7 @@ export const SetupTest = async function ({
   const adminPassword = 'changeme';
   const webBaseUrl = 'http://localhost:3000';
 
+  const authenticator = createTestAuthenticator(users, apiUrl, realm);
   const keycloakClient = new Keycloak({
     apiUrl,
     realm: loginRealm,
