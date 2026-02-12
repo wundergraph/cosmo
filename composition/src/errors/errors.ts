@@ -339,7 +339,7 @@ export function unexpectedEdgeFatalError(typeName: string, edgeNames: Array<stri
   return new Error(
     `Fatal: The type "${typeName}" visited the following unexpected edge` +
       (edgeNames.length > 1 ? 's' : '') +
-      `:\n " ${edgeNames.join(QUOTATION_JOIN)}".`,
+      `:\n "${edgeNames.join(QUOTATION_JOIN)}".`,
   );
 }
 
