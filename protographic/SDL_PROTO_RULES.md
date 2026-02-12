@@ -20,6 +20,7 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 - ✓ Federation entity lookups with a single key
 - ✓ Federation entity lookups with multiple keys
 - ✓ Federation entity lookups with compound keys
+- ✓ Federation @requires directive (entity field dependencies)
 
 #### Data Types
 
@@ -42,7 +43,8 @@ Rules should follow [Proto Best Practices](https://protobuf.dev/best-practices/d
 #### Federation Features
 
 - ✗ Federation entity lookups with nested keys
-- ✗ @requires directive
+- ✗ Abstract types (interfaces/unions) in @requires field selections
+- ✗ Inline fragments in @requires field selections
 
 #### GraphQL Features
 
@@ -141,6 +143,149 @@ message LookupProductByIdResponse {
   repeated Product result = 1;
 }
 ```
+
+### Required Fields (@requires)
+
+The `@requires` directive declares that a field depends on external fields from other subgraphs to be resolved. It is always defined on an entity (a type with `@key`). For each field with `@requires`, a dedicated RPC method is generated that receives the entity key and the required external fields, and returns the computed field value.
+
+This directive is part of Apollo Federation and enables a service to compute fields that depend on data owned by other services, without those services needing to know about the computed field.
+
+#### Basic Required Fields
+
+For a simple `@requires` directive with scalar fields:
+
+```graphql
+type Product @key(fields: "id") {
+  id: ID!
+  price: Float! @external
+  itemCount: Int! @external
+  stockHealthScore: Float! @requires(fields: "itemCount price")
+}
+```
+
+Maps to:
+
+```protobuf
+rpc RequireProductStockHealthScoreById(RequireProductStockHealthScoreByIdRequest) 
+    returns (RequireProductStockHealthScoreByIdResponse) {}
+
+message RequireProductStockHealthScoreByIdRequest {
+  // Context provides the context for the required fields method
+  repeated RequireProductStockHealthScoreByIdContext context = 1;
+}
+
+message RequireProductStockHealthScoreByIdContext {
+  // The key message is provided by the entity lookup generation and re-used.
+  LookupProductByIdRequestKey key = 1;
+  RequireProductStockHealthScoreByIdFields fields = 2;
+}
+
+message RequireProductStockHealthScoreByIdResponse {
+  // Result provides the result for the required fields method
+  repeated RequireProductStockHealthScoreByIdResult result = 1;
+}
+
+message RequireProductStockHealthScoreByIdResult {
+  double stock_health_score = 1;
+}
+
+message RequireProductStockHealthScoreByIdFields {
+  int32 item_count = 1;
+  double price = 2;
+}
+```
+
+**Naming Convention**: `Require{EntityType}{FieldName}By{KeyFields}`
+
+For the example above: `RequireProductStockHealthScoreById`
+- Entity type: `Product`
+- Field name: `StockHealthScore`
+- Key fields: `Id` (from the `@key` directive)
+
+#### Message Structure Breakdown
+
+Five messages are generated for each `@requires` field:
+
+1. **Request Message** (`Require...Request`): Wraps a repeated context for batch processing
+2. **Context Message** (`Require...Context`): Pairs the entity key with the required fields
+   - `key`: References the same key structure as the entity lookup (`Lookup...RequestKey`)
+   - `fields`: Contains the external fields specified in `@requires`
+3. **Fields Message** (`Require...Fields`): Contains only the fields from the `@requires` selection (converted to snake_case)
+4. **Response Message** (`Require...Response`): Wraps a repeated result for batch processing
+5. **Result Message** (`Require...Result`): Contains only the resolved field value (the one with `@requires`)
+
+The context message links the entity key (which identifies the entity) with the required external fields (which provide the data needed to compute the field).
+
+#### Nested Required Fields
+
+The `@requires` directive supports nested field selections for complex types:
+
+```graphql
+type Product @key(fields: "id") {
+  id: ID!
+  manufacturerId: ID! @external
+  details: ProductDetails! @external
+  name: String! @requires(fields: "manufacturerId details { description reviewSummary { status message } }")
+  price: Float!
+}
+
+type ProductDetails {
+  id: ID!
+  description: String!
+  title: String!
+  reviewSummary: ActionResult!
+}
+
+type ActionResult {
+  status: String!
+  message: String!
+}
+```
+
+Maps to:
+
+```protobuf
+rpc RequireProductNameById(RequireProductNameByIdRequest) 
+    returns (RequireProductNameByIdResponse) {}
+
+message RequireProductNameByIdRequest {
+  repeated RequireProductNameByIdContext context = 1;
+}
+
+message RequireProductNameByIdContext {
+  LookupProductByIdRequestKey key = 1;
+  RequireProductNameByIdFields fields = 2;
+}
+
+message RequireProductNameByIdResponse {
+  repeated RequireProductNameByIdResult result = 1;
+}
+
+message RequireProductNameByIdResult {
+  string name = 1;
+}
+
+message RequireProductNameByIdFields {
+  message ProductDetails {
+    message ActionResult {
+      string status = 1;
+      string message = 2;
+    }
+    
+    string description = 1;
+    ActionResult review_summary = 2;
+  }
+  
+  string manufacturer_id = 1;
+  ProductDetails details = 2;
+}
+```
+
+**Key Points**:
+- The `Fields` message contains only the selected subset from the `@requires` directive, not the full types
+- Nested types are generated as nested proto messages within the `Fields` message
+- Only the selected fields from nested types are included (e.g., `description` and `reviewSummary` from `ProductDetails`, not `id` or `title`)
+- Field order in the proto matches the normalized selection order
 
 ## Field Resolvers
 
@@ -727,3 +872,5 @@ This approach ensures that documentation and business context from the GraphQL s
 ## Federation Support
 
 Types with Federation's `@key` directive generate dedicated lookup methods rather than using the `_entities` field approach used in pure GraphQL. The lookup methods are optimized for batch processing of entities.
+
+Additionally, fields marked with the `@requires` directive generate separate RPC methods that compute field values based on external dependencies. Each `@requires` field produces its own RPC method that receives the entity key along with the required external fields, enabling cross-subgraph field resolution. See [Required Fields (@requires)](#required-fields-requires) for detailed examples and message structure documentation.
