@@ -578,6 +578,11 @@ type OperationContext interface {
 	// if called too early in request chain, it may be inaccurate for modules, using
 	// in Middleware is recommended
 	QueryPlanStats() (QueryPlanStats, error)
+
+	// Timings returns the timing information for various stages of operation processing
+	// if called too early in request chain, it may be inaccurate for modules, using
+	// in Middleware is recommended
+	Timings() OperationTimings
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -689,6 +694,15 @@ func (o *operationContext) Sha256Hash() string {
 	return o.sha256Hash
 }
 
+func (o *operationContext) Timings() OperationTimings {
+	return OperationTimings{
+		ParsingTime:       o.parsingTime,
+		ValidationTime:    o.validationTime,
+		PlanningTime:      o.planningTime,
+		NormalizationTime: o.normalizationTime,
+	}
+}
+
 // GetTypeFieldUsageInfoMetrics returns the cached conversion of typeFieldUsageInfo.
 // This avoids repeated allocations when multiple exporters need the same data.
 func (o *operationContext) GetTypeFieldUsageInfoMetrics() []*graphqlmetrics.TypeFieldUsageInfo {
@@ -696,6 +710,14 @@ func (o *operationContext) GetTypeFieldUsageInfoMetrics() []*graphqlmetrics.Type
 		o.typeFieldUsageInfoMetrics = o.typeFieldUsageInfo.IntoGraphQLMetrics()
 	}
 	return o.typeFieldUsageInfoMetrics
+}
+
+// OperationTimings contains timing information for various stages of operation processing
+type OperationTimings struct {
+	ParsingTime time.Duration
+	ValidationTime time.Duration
+	PlanningTime time.Duration
+	NormalizationTime time.Duration
 }
 
 type QueryPlanStats struct {
