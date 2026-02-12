@@ -1411,6 +1411,7 @@ func (s *graphServer) buildGraphMux(
 	loaderHooks := NewEngineRequestHooks(
 		gm.metricStore,
 		subgraphAccessLogger,
+		s.logger,
 		s.tracerProvider,
 		tracingAttExpressions,
 		telemetryAttExpressions,

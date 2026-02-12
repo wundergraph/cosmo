@@ -64,9 +64,13 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 		attrs = append(attrs, rotel.WgRequestError.Bool(true))
 		attrOpt := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
 
+		m.logger.Info("logging metrics with attributes 1", zap.Any("attributes", attrs))
+
 		rm.MeasureRequestCount(ctx, sliceAttrs, attrOpt)
 		rm.MeasureLatency(ctx, latency, sliceAttrs, attrOpt)
 	} else {
+		m.logger.Info("logging metrics with attributes 2", zap.Any("attributes", attrs))
+
 		rm.MeasureRequestCount(ctx, sliceAttrs, o)
 		rm.MeasureLatency(ctx, latency, sliceAttrs, o)
 	}
@@ -104,6 +108,11 @@ type OperationMetricsOptions struct {
 func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 	operationStartTime := time.Now()
 
+	logger := opts.Logger
+	if logger == nil {
+		logger = zap.NewNop()
+	}
+
 	inflightMetric := opts.RouterMetrics.MetricStore().MeasureInFlight(context.Background(), opts.SliceAttributes, opts.InFlightAddOption)
 	return &OperationMetrics{
 		requestContentLength:     opts.RequestContentLength,
@@ -111,7 +120,7 @@ func newOperationMetrics(opts OperationMetricsOptions) *OperationMetrics {
 		inflightMetric:           inflightMetric,
 		routerConfigVersion:      opts.RouterConfigVersion,
 		routerMetrics:            opts.RouterMetrics,
-		logger:                   opts.Logger,
+		logger:                   logger,
 		trackUsageInfo:           opts.TrackUsageInfo,
 		prometheusTrackUsageInfo: opts.PrometheusTrackUsageInfo,
 	}
