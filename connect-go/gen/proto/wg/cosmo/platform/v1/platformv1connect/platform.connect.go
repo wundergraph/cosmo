@@ -148,9 +148,9 @@ const (
 	// PlatformServiceGetAuditLogsProcedure is the fully-qualified name of the PlatformService's
 	// GetAuditLogs RPC.
 	PlatformServiceGetAuditLogsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetAuditLogs"
-	// PlatformServiceListOrganizationsProcedure is the fully-qualified name of the PlatformService's
-	// ListOrganizations RPC.
-	PlatformServiceListOrganizationsProcedure = "/wg.cosmo.platform.v1.PlatformService/ListOrganizations"
+	// PlatformServiceInitializeCosmoUserProcedure is the fully-qualified name of the PlatformService's
+	// InitializeCosmoUser RPC.
+	PlatformServiceInitializeCosmoUserProcedure = "/wg.cosmo.platform.v1.PlatformService/InitializeCosmoUser"
 	// PlatformServiceGetFederatedGraphsProcedure is the fully-qualified name of the PlatformService's
 	// GetFederatedGraphs RPC.
 	PlatformServiceGetFederatedGraphsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetFederatedGraphs"
@@ -599,7 +599,7 @@ var (
 	platformServicePublishPersistedOperationsMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("PublishPersistedOperations")
 	platformServiceGetPersistedOperationsMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetPersistedOperations")
 	platformServiceGetAuditLogsMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetAuditLogs")
-	platformServiceListOrganizationsMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("ListOrganizations")
+	platformServiceInitializeCosmoUserMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("InitializeCosmoUser")
 	platformServiceGetFederatedGraphsMethodDescriptor                    = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphs")
 	platformServiceGetFederatedGraphsBySubgraphLabelsMethodDescriptor    = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphsBySubgraphLabels")
 	platformServiceGetFederatedGraphByNameMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("GetFederatedGraphByName")
@@ -802,8 +802,8 @@ type PlatformServiceClient interface {
 	GetPersistedOperations(context.Context, *connect.Request[v1.GetPersistedOperationsRequest]) (*connect.Response[v1.GetPersistedOperationsResponse], error)
 	// GetAuditLogs returns the audit logs of the organization
 	GetAuditLogs(context.Context, *connect.Request[v1.GetAuditLogsRequest]) (*connect.Response[v1.GetAuditLogsResponse], error)
-	// ListOrganizations returns all the organization the authenticated user is a member of
-	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
+	// InitializeCosmoUser takes a bearer token
+	InitializeCosmoUser(context.Context, *connect.Request[v1.InitializeCosmoUserRequest]) (*connect.Response[v1.InitializeCosmoUserResponse], error)
 	// GetFederatedGraphs returns the list of federated graphs.
 	GetFederatedGraphs(context.Context, *connect.Request[v1.GetFederatedGraphsRequest]) (*connect.Response[v1.GetFederatedGraphsResponse], error)
 	// GetFederatedGraphsBySubgraphLabels returns the list of federated graphs based on the subgraph labels
@@ -1307,10 +1307,10 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceGetAuditLogsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		listOrganizations: connect.NewClient[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse](
+		initializeCosmoUser: connect.NewClient[v1.InitializeCosmoUserRequest, v1.InitializeCosmoUserResponse](
 			httpClient,
-			baseURL+PlatformServiceListOrganizationsProcedure,
-			connect.WithSchema(platformServiceListOrganizationsMethodDescriptor),
+			baseURL+PlatformServiceInitializeCosmoUserProcedure,
+			connect.WithSchema(platformServiceInitializeCosmoUserMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getFederatedGraphs: connect.NewClient[v1.GetFederatedGraphsRequest, v1.GetFederatedGraphsResponse](
@@ -2173,7 +2173,7 @@ type platformServiceClient struct {
 	publishPersistedOperations            *connect.Client[v1.PublishPersistedOperationsRequest, v1.PublishPersistedOperationsResponse]
 	getPersistedOperations                *connect.Client[v1.GetPersistedOperationsRequest, v1.GetPersistedOperationsResponse]
 	getAuditLogs                          *connect.Client[v1.GetAuditLogsRequest, v1.GetAuditLogsResponse]
-	listOrganizations                     *connect.Client[v1.ListOrganizationsRequest, v1.ListOrganizationsResponse]
+	initializeCosmoUser                   *connect.Client[v1.InitializeCosmoUserRequest, v1.InitializeCosmoUserResponse]
 	getFederatedGraphs                    *connect.Client[v1.GetFederatedGraphsRequest, v1.GetFederatedGraphsResponse]
 	getFederatedGraphsBySubgraphLabels    *connect.Client[v1.GetFederatedGraphsBySubgraphLabelsRequest, v1.GetFederatedGraphsBySubgraphLabelsResponse]
 	getFederatedGraphByName               *connect.Client[v1.GetFederatedGraphByNameRequest, v1.GetFederatedGraphByNameResponse]
@@ -2502,9 +2502,9 @@ func (c *platformServiceClient) GetAuditLogs(ctx context.Context, req *connect.R
 	return c.getAuditLogs.CallUnary(ctx, req)
 }
 
-// ListOrganizations calls wg.cosmo.platform.v1.PlatformService.ListOrganizations.
-func (c *platformServiceClient) ListOrganizations(ctx context.Context, req *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error) {
-	return c.listOrganizations.CallUnary(ctx, req)
+// InitializeCosmoUser calls wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser.
+func (c *platformServiceClient) InitializeCosmoUser(ctx context.Context, req *connect.Request[v1.InitializeCosmoUserRequest]) (*connect.Response[v1.InitializeCosmoUserResponse], error) {
+	return c.initializeCosmoUser.CallUnary(ctx, req)
 }
 
 // GetFederatedGraphs calls wg.cosmo.platform.v1.PlatformService.GetFederatedGraphs.
@@ -3282,8 +3282,8 @@ type PlatformServiceHandler interface {
 	GetPersistedOperations(context.Context, *connect.Request[v1.GetPersistedOperationsRequest]) (*connect.Response[v1.GetPersistedOperationsResponse], error)
 	// GetAuditLogs returns the audit logs of the organization
 	GetAuditLogs(context.Context, *connect.Request[v1.GetAuditLogsRequest]) (*connect.Response[v1.GetAuditLogsResponse], error)
-	// ListOrganizations returns all the organization the authenticated user is a member of
-	ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error)
+	// InitializeCosmoUser takes a bearer token
+	InitializeCosmoUser(context.Context, *connect.Request[v1.InitializeCosmoUserRequest]) (*connect.Response[v1.InitializeCosmoUserResponse], error)
 	// GetFederatedGraphs returns the list of federated graphs.
 	GetFederatedGraphs(context.Context, *connect.Request[v1.GetFederatedGraphsRequest]) (*connect.Response[v1.GetFederatedGraphsResponse], error)
 	// GetFederatedGraphsBySubgraphLabels returns the list of federated graphs based on the subgraph labels
@@ -3783,10 +3783,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceGetAuditLogsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceListOrganizationsHandler := connect.NewUnaryHandler(
-		PlatformServiceListOrganizationsProcedure,
-		svc.ListOrganizations,
-		connect.WithSchema(platformServiceListOrganizationsMethodDescriptor),
+	platformServiceInitializeCosmoUserHandler := connect.NewUnaryHandler(
+		PlatformServiceInitializeCosmoUserProcedure,
+		svc.InitializeCosmoUser,
+		connect.WithSchema(platformServiceInitializeCosmoUserMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetFederatedGraphsHandler := connect.NewUnaryHandler(
@@ -4684,8 +4684,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceGetPersistedOperationsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetAuditLogsProcedure:
 			platformServiceGetAuditLogsHandler.ServeHTTP(w, r)
-		case PlatformServiceListOrganizationsProcedure:
-			platformServiceListOrganizationsHandler.ServeHTTP(w, r)
+		case PlatformServiceInitializeCosmoUserProcedure:
+			platformServiceInitializeCosmoUserHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFederatedGraphsProcedure:
 			platformServiceGetFederatedGraphsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetFederatedGraphsBySubgraphLabelsProcedure:
@@ -5117,8 +5117,8 @@ func (UnimplementedPlatformServiceHandler) GetAuditLogs(context.Context, *connec
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.GetAuditLogs is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) ListOrganizations(context.Context, *connect.Request[v1.ListOrganizationsRequest]) (*connect.Response[v1.ListOrganizationsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.ListOrganizations is not implemented"))
+func (UnimplementedPlatformServiceHandler) InitializeCosmoUser(context.Context, *connect.Request[v1.InitializeCosmoUserRequest]) (*connect.Response[v1.InitializeCosmoUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetFederatedGraphs(context.Context, *connect.Request[v1.GetFederatedGraphsRequest]) (*connect.Response[v1.GetFederatedGraphsResponse], error) {

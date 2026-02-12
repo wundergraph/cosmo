@@ -39,7 +39,7 @@ export type EventType<T extends keyof EventMap> = {
 };
 
 export interface IPlatformWebhookService {
-  send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]): void;
+  send<T extends keyof EventMap>(eventName: T, eventData: EventMap[T]): Promise<void>;
 }
 
 export class PlatformWebhookService implements IPlatformWebhookService {
@@ -100,5 +100,6 @@ export class MockPlatformWebhookService implements IPlatformWebhookService {
 
   send<T extends keyof EventMap>(eventName: T, eventPayload: EventMap[T]) {
     this.sentEvents.push({ eventName, eventPayload });
+    return Promise.resolve();
   }
 }
