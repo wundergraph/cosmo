@@ -3096,6 +3096,20 @@ message InitializeCosmoUserResponse {
    Response response = 1;
 }
 
+message ListOrganizationsRequest {}
+
+message ListOrganizationsResponse {
+   message OrganizationMembership {
+     string id = 1;
+     string slug = 2;
+     string name = 3;
+     repeated string roles = 4;
+   }
+
+   Response response = 1;
+   repeated OrganizationMembership organizations = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3167,8 +3181,11 @@ service PlatformService {
   // GetAuditLogs returns the audit logs of the organization
   rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse) {}
 
-  // InitializeCosmoUser takes a bearer token
+  // InitializeCosmoUser takes a bearer token and ensures that the user associated with it (if valid) exists in Cosmo
   rpc InitializeCosmoUser(InitializeCosmoUserRequest) returns (InitializeCosmoUserResponse) {}
+
+  // ListOrganizations returns all the organization the authenticated user is a member of
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse) {}
 
   // For Studio and CLI
 

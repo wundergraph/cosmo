@@ -175,6 +175,7 @@ import { verifyAPIKeyGraphAccess } from './api-key/verifyAPIKeyGraphAccess.js';
 import { getSubgraphCheckExtensionsConfig } from './check-extensions/getSubgraphCheckExtensionsConfig.js';
 import { configureSubgraphCheckExtensions } from './check-extensions/configureSubgraphCheckExtensions.js';
 import { initializeCosmoUser } from './user/initializeCosmoUser.js';
+import { listOrganizations } from './organization/listOrganizations.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -487,6 +488,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     getFederatedGraphsBySubgraphLabels: (req, ctx) => {
       return getFederatedGraphsBySubgraphLabels(opts, req, ctx);
+    },
+
+    listOrganizations: (req, ctx) => {
+      return listOrganizations(opts, req, ctx);
     },
 
     getFederatedGraphSDLByName: (req, ctx) => {
