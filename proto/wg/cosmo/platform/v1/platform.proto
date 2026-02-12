@@ -3103,8 +3103,7 @@ message ListOrganizationsResponse {
      string id = 1;
      string slug = 2;
      string name = 3;
-     bool isOrganizationAdminOrDeveloper = 4;
-     bool isOrganizationApiKeyManager = 5;
+     repeated string roles = 4;
    }
 
    Response response = 1;
@@ -3182,7 +3181,7 @@ service PlatformService {
   // GetAuditLogs returns the audit logs of the organization
   rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse) {}
 
-  // InitializeCosmoUser takes a bearer token
+  // InitializeCosmoUser takes a bearer token and ensures that the user associated with it (if valid) exists in Cosmo
   rpc InitializeCosmoUser(InitializeCosmoUserRequest) returns (InitializeCosmoUserResponse) {}
 
   // ListOrganizations returns all the organization the authenticated user is a member of

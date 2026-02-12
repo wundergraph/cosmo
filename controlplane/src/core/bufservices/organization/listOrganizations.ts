@@ -29,8 +29,7 @@ export function listOrganizations(
         id: org.id,
         slug: org.slug,
         name: org.name,
-        isOrganizationAdminOrDeveloper: org.rbac.isOrganizationAdminOrDeveloper,
-        isOrganizationApiKeyManager: org.rbac.isOrganizationApiKeyManager,
+        roles: org.rbac.roles,
       })),
     };
   });
