@@ -4,6 +4,17 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.280.0](https://github.com/wundergraph/cosmo/compare/router@0.279.1...router@0.280.0) (2026-02-11)
+
+### Bug Fixes
+
+* requires is not ignored when all fields provided ([#2498](https://github.com/wundergraph/cosmo/issues/2498)) ([746b1e3](https://github.com/wundergraph/cosmo/commit/746b1e3e6981dc10a3139b9fe859070b295eb2ec)) (@devsergiy)
+* show posthog errors only on debug logs and don't treat them as important ([#2489](https://github.com/wundergraph/cosmo/issues/2489)) ([4b780fe](https://github.com/wundergraph/cosmo/commit/4b780feecf49153550b2453f5bfb0b889534876b)) (@alepane21)
+
+### Features
+
+* expose query operation timings ([#2491](https://github.com/wundergraph/cosmo/issues/2491)) ([010e8e2](https://github.com/wundergraph/cosmo/commit/010e8e2d0eb6927aa130b0e902cae688b3b6515e)) (@AlenaSviridenko)
+
 ## [0.279.1](https://github.com/wundergraph/cosmo/compare/router@0.279.0...router@0.279.1) (2026-02-09)
 
 ### Bug Fixes
