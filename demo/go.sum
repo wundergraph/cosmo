@@ -71,6 +71,7 @@ github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgraph-io/ristretto/v2 v2.1.0 h1:59LjpOJLNDULHh8MC4UaegN52lC4JnO2dITsie/Pa8I=
 github.com/dgraph-io/ristretto/v2 v2.1.0/go.mod h1:uejeqfYXpUomfse0+lO+13ATz4TypQYLJZzBSAemuB4=
+github.com/dgraph-io/ristretto/v2 v2.4.0/go.mod h1:0KsrXtXvnv0EqnzyowllbVJB8yBonswa2lTCK2gGo9E=
 github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13 h1:fAjc9m62+UWV/WAFKLNi6ZS0675eEUC9y3AlwSbQu1Y=
 github.com/dgryski/go-farm v0.0.0-20200201041132-a6ae2369ad13/go.mod h1:SqUrOPUnsFjfmXRMNPybcSiG0BgUW2AuFH8PAnS2iTw=
 github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f h1:lO4WD4F/rVNCu3HqELle0jiPLLBs70cWOduZpkS1E78=
@@ -292,6 +293,7 @@ github.com/ravilushqa/otelgqlgen v0.13.1 h1:V+zFE75iDd2/CSzy5kKnb+Fi09SsE5535wv9
 github.com/ravilushqa/otelgqlgen v0.13.1/go.mod h1:ZIyWykK2paCuNi9k8gk5edcNSwDJuxZaW90vZXpafxw=
 github.com/redis/go-redis/v9 v9.4.0 h1:Yzoz33UZw9I/mFhx4MNrB6Fk+XHO1VukNcCa1+lwyKk=
 github.com/redis/go-redis/v9 v9.4.0/go.mod h1:hdY0cQFCN4fnSYT6TkisLufl/4W5UIXyv0b/CLO2V2M=
+github.com/redis/go-redis/v9 v9.7.3/go.mod h1:bGUrSggJ9X9GUmZpZNEOQKaANxSGgOEBRltRTZHSvrA=
 github.com/rogpeppe/go-internal v1.3.0/go.mod h1:M8bDsm7K2OlrFYOpmOWEs/qY81heoFRclV5y23lUDJ4=
 github.com/rogpeppe/go-internal v1.6.1/go.mod h1:xXDCJY+GAPziupqXw64V24skbSoqbTEfhy4qGm1nDQc=
 github.com/rogpeppe/go-internal v1.13.1 h1:KvO1DLK/DRN07sQ1LQKScxyZJuNnedQ5/wKSR38lUII=
@@ -379,12 +381,15 @@ github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-1
 github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e/go.mod h1:WZ0yBeaDSGHqDMcQrP1JRYgCj9atF7ORXF8srnd2Sro=
 github.com/wundergraph/cosmo/router v0.0.0-20260206112736-7b219acefa94 h1:6ZoWPuppgrMdFMqjMCyBR9T+9VLv1K49ozdb1cH047U=
 github.com/wundergraph/cosmo/router v0.0.0-20260206112736-7b219acefa94/go.mod h1:vWfvuHXo1IdUV3eZ/gwFrqA1JXSRTKd8c5v+tJQteNs=
+github.com/wundergraph/cosmo/router v0.0.0-20260213090732-c8009933b2d1 h1:31CTsQCxlkfK4aYCoJnJxkG7QpNG7Au+ukAqxFksNMg=
+github.com/wundergraph/cosmo/router v0.0.0-20260213090732-c8009933b2d1/go.mod h1:We+sYVVSnWyylJRHpELaR0GOZndk1UI4gtf2zceZEmA=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20260206112736-7b219acefa94 h1:jVJ1d8kCdnSuRV9y/xwoOIZazGtJ62Le8RAtGJ3tY7w=
 github.com/wundergraph/cosmo/router-tests v0.0.0-20260206112736-7b219acefa94/go.mod h1:szCtE0/vSSTOk9HHnabDk++Kg77dVefc3A170f83eXw=
 github.com/wundergraph/go-arena v1.1.0 h1:9+wSRkJAkA2vbYHp6s8tEGhPViRGQNGXqPHT0QzhdIc=
 github.com/wundergraph/go-arena v1.1.0/go.mod h1:ROOysEHWJjLQ8FSfNxZCziagb7Qw2nXY3/vgKRh7eWw=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.245 h1:MYewlXgIhI9jusocPUeyo346J3M5cqzc6ddru1qp+S8=
 github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.245/go.mod h1:mX25ASEQiKamxaFSK6NZihh0oDCigIuzro30up4mFH4=
+github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.248/go.mod h1:MFbY0QI8ncF60DHs7yyyiyyhWyld0WE1JokiyTVY8j4=
 github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 h1:FnBeRrxr7OU4VvAzt5X7s6266i6cSVkkFPS0TuXWbIg=
 github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
 github.com/yosida95/uritemplate/v3 v3.0.2 h1:Ed3Oyj9yrmi9087+NczuL5BwkIc4wvTb5zIM+UJPGz4=
