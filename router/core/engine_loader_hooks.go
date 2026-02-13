@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -232,7 +233,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	if responseInfo.Err != nil {
 		// Set error status. This is the fetch error from the engine
 		// Downstream errors are extracted from the subgraph response
-		span.SetStatus(codes.Error, responseInfo.Err.Error())
+		rtrace.SetSanitizedSpanStatus(span, codes.Error, responseInfo.Err.Error())
 		span.RecordError(responseInfo.Err)
 
 		var errorCodesAttr []string

@@ -9,6 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
@@ -139,4 +140,104 @@ func TestGetClientHeader(t *testing.T) {
 	r.Header.Set("client-version", clientVersion)
 	require.Equal(t, clientName, GetClientHeader(r.Header, []string{"client-name", "graphql-client-name", "apollographql-client-name"}, "unknown"))
 	require.Equal(t, clientVersion, GetClientHeader(r.Header, []string{"client-version", "graphql-client-version", "apollographql-client-version"}, "missing"))
+}
+
+// statusRecorder is a test helper that records span status
+type statusRecorder struct {
+	code        codes.Code
+	description string
+	attrs       []trace.EventOption
+}
+
+func (r *statusRecorder) OnEnd(s sdktrace.ReadOnlySpan) {
+	r.code = s.Status().Code
+	r.description = s.Status().Description
+}
+
+func (*statusRecorder) Shutdown(context.Context) error                      { return nil }
+func (*statusRecorder) ForceFlush(context.Context) error                    { return nil }
+func (*statusRecorder) OnStart(_ context.Context, _ sdktrace.ReadWriteSpan) {}
+
+func TestSetSanitizedSpanStatus(t *testing.T) {
+	tests := []struct {
+		name        string
+		code        codes.Code
+		description string
+		expected    string
+	}{
+		{
+			name:        "valid UTF-8 string",
+			code:        codes.Error,
+			description: "this is a valid error message",
+			expected:    "this is a valid error message",
+		},
+		{
+			name:        "empty description",
+			code:        codes.Error,
+			description: "",
+			expected:    "",
+		},
+		{
+			name:        "invalid UTF-8 with binary data",
+			code:        codes.Error,
+			description: "error: \xff\xfe invalid utf8",
+			expected:    "error: \ufffd invalid utf8",
+		},
+		{
+			name:        "invalid UTF-8 sequence at start",
+			code:        codes.Error,
+			description: "\xc3\x28 starts with invalid",
+			expected:    "\ufffd( starts with invalid",
+		},
+		{
+			name:        "invalid UTF-8 sequence in middle",
+			code:        codes.Error,
+			description: "middle \xed\xa0\x80 invalid",
+			expected:    "middle \ufffd invalid",
+		},
+		{
+			name:        "invalid UTF-8 sequence at end",
+			code:        codes.Error,
+			description: "ends with invalid \xff",
+			expected:    "ends with invalid \ufffd",
+		},
+		{
+			name:        "multiple invalid sequences",
+			code:        codes.Error,
+			description: "error \xff data \xfe more \xc0",
+			expected:    "error \ufffd data \ufffd more \ufffd",
+		},
+		{
+			name:        "ok status with valid UTF-8",
+			code:        codes.Ok,
+			description: "operation completed successfully",
+			expected:    "",
+		},
+		{
+			name:        "unset status",
+			code:        codes.Unset,
+			description: "",
+			expected:    "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := &statusRecorder{}
+			tp := sdktrace.NewTracerProvider(
+				sdktrace.WithSpanProcessor(recorder),
+			)
+			defer func() { _ = tp.Shutdown(context.Background()) }()
+
+			ctx := context.Background()
+			tracer := tp.Tracer("test")
+			_, span := tracer.Start(ctx, "test span")
+
+			SetSanitizedSpanStatus(span, tt.code, tt.description)
+			span.End()
+
+			require.Equal(t, tt.code, recorder.code, "status code should match")
+			require.Equal(t, tt.expected, recorder.description, "status description should be sanitized")
+		})
+	}
 }
