@@ -9,6 +9,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
+import { hubUserAgent } from '../../constants.js';
 
 export function deleteAPIKey(
   opts: RouterOptions,
@@ -41,6 +42,16 @@ export function deleteAPIKey(
 
     if (!authContext.rbac.isOrganizationApiKeyManager) {
       throw new UnauthorizedError();
+    }
+
+    const clientHdr = ctx.requestHeader.get('user-agent')?.toLowerCase() ?? '';
+    if (apiKey.external && !clientHdr.includes(hubUserAgent)) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'You cannot delete a external API keys.',
+        },
+      };
     }
 
     if (apiKey.group?.id) {

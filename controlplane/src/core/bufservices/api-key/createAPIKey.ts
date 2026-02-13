@@ -10,6 +10,7 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
+import { hubUserAgent } from '../../constants.js';
 
 export function createAPIKey(
   opts: RouterOptions,
@@ -35,6 +36,7 @@ export function createAPIKey(
     // Check if the organization has reached the limit of 200 API keys
     const apiKeysCount = await apiKeyRepo.getAPIKeysCount({
       organizationID: authContext.organizationId,
+      includeExternal: false,
     });
 
     if (apiKeysCount >= 200) {
@@ -97,12 +99,14 @@ export function createAPIKey(
       };
     }
 
+    const clientHdr = ctx.requestHeader.get('user-agent')?.toLowerCase() ?? '';
     const generatedAPIKey = ApiKeyGenerator.generate();
     await apiKeyRepo.addAPIKey({
       name: keyName,
       organizationID: authContext.organizationId,
       userID: authContext.userId || req.userID,
       key: generatedAPIKey,
+      isExternal: (req.external ?? false) && clientHdr.includes(hubUserAgent),
       expiresAt: req.expires,
       groupId: orgGroup.groupId,
       permissions: req.permissions,
