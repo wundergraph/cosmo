@@ -1153,11 +1153,11 @@ func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCac
 		return err
 	}
 	// Set the operation name
-	name := o.kit.doc.OperationDefinitionNameString(o.operationDefinitionRef)
-	if name == "" {
+	nameBytes := o.kit.doc.OperationDefinitionNameBytes(o.operationDefinitionRef)
+	if len(nameBytes) == 0 {
 		return nil
 	}
-	o.parsedOperation.Request.OperationName = name
+	o.parsedOperation.Request.OperationName = string(nameBytes)
 	o.originalOperationNameRef = o.kit.doc.OperationDefinitions[o.operationDefinitionRef].Name
 	return nil
 }
