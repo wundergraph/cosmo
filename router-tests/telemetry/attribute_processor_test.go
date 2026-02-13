@@ -10,6 +10,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -293,7 +294,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 		})
 	})
 
-	t.Run("IPAnonymization redacts http.client_ip attribute", func(t *testing.T) {
+	t.Run("IPAnonymization redacts IP attributes", func(t *testing.T) {
 		t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -313,21 +314,21 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			sn := exporter.GetSpans().Snapshots()
 			require.NotEmpty(t, sn)
 
-			// Check that http.client_ip is redacted in spans that have it
-			clientIPCount := 0
+			// Check that IP addresses are redacted (checks both http.client_ip and net.sock.peer.addr)
+			redactedIPCount := 0
 			for _, span := range sn {
 				for _, attr := range span.Attributes() {
-					if attr.Key == attribute.Key("http.client_ip") {
-						clientIPCount++
+					if attr.Key == semconv.HTTPClientIPKey || attr.Key == semconv.NetSockPeerAddrKey {
+						redactedIPCount++
 						require.Equal(t, "[REDACTED]", attr.Value.AsString())
 					}
 				}
 			}
-			require.Positive(t, clientIPCount, "http.client_ip attribute should be present at least once")
+			require.Positive(t, redactedIPCount)
 		})
 	})
 
-	t.Run("IPAnonymization hashes http.client_ip attribute", func(t *testing.T) {
+	t.Run("IPAnonymization hashes IP attributes", func(t *testing.T) {
 		t.Parallel()
 
 		exporter := tracetest.NewInMemoryExporter(t)
@@ -347,19 +348,19 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			sn := exporter.GetSpans().Snapshots()
 			require.NotEmpty(t, sn)
 
-			// Check that http.client_ip is hashed (64 char hex) in spans that have it
-			clientIPCount := 0
+			// Check that IP addresses are hashed (64 char hex) in spans that have them
+			hashedIPCount := 0
 			for _, span := range sn {
 				for _, attr := range span.Attributes() {
-					if attr.Key == attribute.Key("http.client_ip") {
-						clientIPCount++
+					if attr.Key == semconv.HTTPClientIPKey || attr.Key == semconv.NetSockPeerAddrKey {
+						hashedIPCount++
 						value := attr.Value.AsString()
 						require.Len(t, value, 64)
 						require.NotEqual(t, "[REDACTED]", value)
 					}
 				}
 			}
-			require.Positive(t, clientIPCount, "http.client_ip attribute should be present at least once")
+			require.Positive(t, hashedIPCount)
 		})
 	})
 }
