@@ -1,15 +1,13 @@
 import { FastifyPluginCallback, FastifyReply, FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { and, eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { lru } from 'tiny-lru';
-import { uid } from 'uid';
 import cookie from 'cookie';
-import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { cosmoIdpHintCookieName, decodeJWT, DEFAULT_SESSION_MAX_AGE_SEC, encrypt } from '../crypto/jwt.js';
 import { CustomAccessTokenClaims, UserInfoEndpointResponse, UserSession } from '../../types/index.js';
 import * as schema from '../../db/schema.js';
-import { organizationsMembers, sessions, users } from '../../db/schema.js';
+import { sessions } from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import AuthUtils from '../auth-utils.js';
 import WebSessionAuthenticator from '../services/WebSessionAuthenticator.js';
@@ -17,8 +15,6 @@ import Keycloak from '../services/Keycloak.js';
 import { IPlatformWebhookService } from '../webhooks/PlatformWebhookService.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationInvitationRepository } from '../repositories/OrganizationInvitationRepository.js';
-import { DefaultNamespace, NamespaceRepository } from '../repositories/NamespaceRepository.js';
-import { OrganizationGroupRepository } from '../repositories/OrganizationGroupRepository.js';
 
 export type AuthControllerOptions = {
   db: PostgresJsDatabase<typeof schema>;
@@ -162,211 +158,20 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
       const sessionExpiresIn = DEFAULT_SESSION_MAX_AGE_SEC;
       const sessionExpiresDate = new Date(Date.now() + 1000 * sessionExpiresIn);
 
-      const userId = accessTokenPayload.sub!;
-      const userEmail = accessTokenPayload.email!;
-      const firstName = accessTokenPayload.given_name || '';
-      const lastName = accessTokenPayload.family_name || '';
-
-      const insertedSession = await opts.db.transaction(async (tx) => {
-        // Upsert the user
-        await tx
-          .insert(users)
-          .values({
-            id: userId,
-            email: accessTokenPayload.email,
-          })
-          .onConflictDoUpdate({
-            target: users.id,
-            // Update the fields when the user already exists
-            set: {
-              email: accessTokenPayload.email,
-            },
-          })
-          .execute();
-
-        if (accessTokenPayload.groups && accessTokenPayload.groups.length > 0) {
-          const keycloakOrgs = new Set(accessTokenPayload.groups.map((grp) => grp.split('/')[1]));
-          const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
-          const orgGroupRepo = new OrganizationGroupRepository(tx);
-
-          // delete all the org member roles
-          for (const slug of keycloakOrgs) {
-            const dbOrg = await orgRepo.bySlug(slug);
-
-            if (!dbOrg) {
-              continue;
-            }
-
-            const orgMember = await orgRepo.getOrganizationMember({ organizationID: dbOrg.id, userID: userId });
-            if (!orgMember) {
-              continue;
-            }
-
-            await tx
-              .delete(schema.organizationGroupMembers)
-              .where(eq(schema.organizationGroupMembers.organizationMemberId, orgMember.orgMemberID));
-          }
-
-          // upserting the members into the orgs and inserting their roles.
-          for (const kcGroup of accessTokenPayload.groups) {
-            const slug = kcGroup.split('/')[1];
-            const dbOrg = await orgRepo.bySlug(slug);
-            if (!dbOrg) {
-              continue;
-            }
-
-            const insertedMember = await tx
-              .insert(organizationsMembers)
-              .values({
-                userId,
-                organizationId: dbOrg.id,
-              })
-              .onConflictDoUpdate({
-                target: [organizationsMembers.userId, organizationsMembers.organizationId],
-                // Update the fields only when the org member already exists
-                set: {
-                  userId,
-                  organizationId: dbOrg.id,
-                },
-              })
-              .returning()
-              .execute();
-
-            const groupName = kcGroup.split('/')?.[2];
-            if (!groupName) {
-              continue;
-            }
-
-            const orgGroup = await orgGroupRepo.byName({
-              organizationId: dbOrg.id,
-              name: groupName,
-            });
-
-            if (!orgGroup) {
-              // The group doesn't exist for the organization, instead of failing, we'll just skip the group
-              continue;
-            }
-
-            await orgGroupRepo.addUserToGroup({
-              organizationMemberId: insertedMember[0].id,
-              groupId: orgGroup.groupId,
-            });
-          }
-        }
-
-        // If there is already a session for this user, update it.
-        // Otherwise, insert a new session. Because we use an Idp like keycloak,
-        // we can assume that the user will have only one session per client at a time.
-        const insertedSessions = await tx
-          .insert(sessions)
-          .values({
-            userId,
-            idToken,
-            accessToken,
-            refreshToken,
-            expiresAt: sessionExpiresDate,
-          })
-          .onConflictDoUpdate({
-            target: sessions.userId,
-            // Update the fields when the session already exists
-            set: {
-              idToken,
-              accessToken,
-              refreshToken,
-              expiresAt: sessionExpiresDate,
-              updatedAt: new Date(),
-            },
-          })
-          .returning({
-            id: sessions.id,
-            userId: sessions.userId,
-          })
-          .execute();
-
-        return insertedSessions[0];
-      });
-
-      const orgs = await opts.db.transaction(async (tx) => {
-        const advisoryLockRows = await tx.execute(
-          sql`select pg_try_advisory_xact_lock(hashtext(${userId})) as acquired`,
-        );
-
-        if (!advisoryLockRows?.[0]?.acquired) {
-          // We need to identify when we failed to acquire the lock because another request already acquired it
-          return -1;
-        }
-
-        const orgRepo = new OrganizationRepository(req.log, tx, opts.defaultBillingPlanId);
-
-        // Check if the user is already a member of at least one organization
-        const existingMemberships = await tx
-          .select({ one: sql<number>`1`.as('one') })
-          .from(organizationsMembers)
-          .where(and(eq(organizationsMembers.userId, userId), eq(organizationsMembers.active, true)))
-          .limit(1)
-          .execute();
-
-        if (existingMemberships.length > 0) {
-          return existingMemberships.length;
-        }
-
-        // Authenticate on Keycloak and create the organization group
-        await opts.keycloakClient.authenticateClient();
-
-        const organizationSlug = uid(8);
-        const [kcRootGroupId, kcCreatedGroups] = await opts.keycloakClient.seedGroup({
-          userID: userId,
-          organizationSlug,
-          realm: opts.keycloakRealm,
-        });
-
-        // Create the new organization and add the user as a member of the organization
-        const insertedOrg = await orgRepo.createOrganization({
-          organizationName: userEmail.split('@')[0],
-          organizationSlug,
-          ownerID: userId,
-          kcGroupId: kcRootGroupId,
-        });
-
-        const orgMember = await orgRepo.addOrganizationMember({
-          organizationID: insertedOrg.id,
-          userID: userId,
-        });
-
-        // Create the organization groups
-        const orgGroupRepo = new OrganizationGroupRepository(tx);
-
-        await orgGroupRepo.importKeycloakGroups({
-          organizationId: insertedOrg.id,
-          kcGroups: kcCreatedGroups,
-        });
-
-        const orgAdminGroup = await orgGroupRepo.byName({
-          organizationId: insertedOrg.id,
-          name: 'admin',
-        });
-
-        if (orgAdminGroup) {
-          await orgGroupRepo.addUserToGroup({
-            organizationMemberId: orgMember.id,
-            groupId: orgAdminGroup.groupId,
-          });
-        }
-
-        // Create the default namespace for the organization
-        const namespaceRepo = new NamespaceRepository(tx, insertedOrg.id);
-        const ns = await namespaceRepo.create({
-          name: DefaultNamespace,
-          createdBy: userId,
-        });
-
-        if (!ns) {
-          throw new Error(`Could not create ${DefaultNamespace} namespace`);
-        }
-
-        // We return an empty even when we just created the organization, that way we can still send the
-        // user registered webhook and prompt the user to migrate
-        return 0;
+      const [insertedSession, orgs] = await AuthUtils.handleAuthCallback({
+        db: opts.db,
+        keycloakClient: opts.keycloakClient,
+        keycloakRealm: opts.keycloakRealm,
+        tokenPayload: accessTokenPayload,
+        platformWebhooks: opts.platformWebhooks,
+        logger: req.log,
+        defaultBillingPlanId: opts.defaultBillingPlanId,
+        cookies: cookie.parse(req.headers.cookie || ''),
+        sessionData: {
+          accessToken,
+          refreshToken,
+          idToken,
+        },
       });
 
       if (orgs === -1) {
@@ -375,35 +180,12 @@ const plugin: FastifyPluginCallback<AuthControllerOptions> = function Auth(fasti
         return;
       }
 
-      if (orgs === 0) {
-        // Read UTM parameters from cookies
-        const cookies = cookie.parse(req.headers.cookie || '');
-        const utmSource = cookies.utm_source;
-        const utmMedium = cookies.utm_medium;
-        const utmCampaign = cookies.utm_campaign;
-        const utmContent = cookies.utm_content;
-        const utmTerm = cookies.utm_term;
-
-        // Send a notification to the platform that a new user has been created
-        opts.platformWebhooks.send(PlatformEventName.USER_REGISTER_SUCCESS, {
-          user_id: userId,
-          user_email: userEmail,
-          user_first_name: firstName,
-          user_last_name: lastName,
-          utm_source: utmSource,
-          utm_medium: utmMedium,
-          utm_campaign: utmCampaign,
-          utm_content: utmContent,
-          utm_term: utmTerm,
-        });
-      }
-
       // Create a JWT token containing the session id and user id.
       const jwt = await encrypt<UserSession>({
         maxAgeInSeconds: sessionExpiresIn,
         token: {
-          iss: userId,
-          sessionId: insertedSession.id,
+          sessionId: insertedSession!.id,
+          iss: insertedSession!.userId,
         },
         secret: opts.jwtSecret,
       });
