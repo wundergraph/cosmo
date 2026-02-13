@@ -142,11 +142,9 @@ func TestGetClientHeader(t *testing.T) {
 	require.Equal(t, clientVersion, GetClientHeader(r.Header, []string{"client-version", "graphql-client-version", "apollographql-client-version"}, "missing"))
 }
 
-// statusRecorder is a test helper that records span status
 type statusRecorder struct {
 	code        codes.Code
 	description string
-	attrs       []trace.EventOption
 }
 
 func (r *statusRecorder) OnEnd(s sdktrace.ReadOnlySpan) {
