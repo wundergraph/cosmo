@@ -102,6 +102,46 @@ func TestPersistedOperationCachePopulatesOperationName(t *testing.T) {
 	require.Equal(t, "TestOperation", kit.parsedOperation.Request.OperationName)
 }
 
+func TestPersistedOperationCacheOperationNameIsStableAcrossKitReuse(t *testing.T) {
+	executor := &Executor{
+		PlanConfig:      plan.Configuration{},
+		RouterSchema:    nil,
+		Resolver:        nil,
+		RenameTypeNames: nil,
+	}
+	processor := NewOperationProcessor(OperationProcessorOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        1,
+	})
+
+	kit1, err := processor.NewKit()
+	require.NoError(t, err)
+
+	err = kit1.handleFoundPersistedOperationEntry(NormalizationCacheEntry{
+		normalizedRepresentation: "query FirstName { a }",
+		operationType:            "query",
+	})
+	require.NoError(t, err)
+
+	firstName := kit1.parsedOperation.Request.OperationName
+	require.Equal(t, "FirstName", firstName)
+
+	kit1.Free()
+
+	kit2, err := processor.NewKit()
+	require.NoError(t, err)
+	defer kit2.Free()
+
+	err = kit2.handleFoundPersistedOperationEntry(NormalizationCacheEntry{
+		normalizedRepresentation: "query SecondName { a }",
+		operationType:            "query",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "SecondName", kit2.parsedOperation.Request.OperationName)
+	require.Equal(t, "FirstName", firstName)
+}
+
 func TestParseOperationProcessor(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
