@@ -18,6 +18,13 @@ type SanitizeUTF8Config struct {
 // If config.LogSanitizations is true and logger is provided, it will log a warning
 // for each attribute with invalid UTF-8.
 func SanitizeUTF8(config *SanitizeUTF8Config, logger *zap.Logger) AttributeTransformer {
+	if config == nil || !config.Enabled {
+		return func(kv attribute.KeyValue) (attribute.Value, bool) {
+			return kv.Value, false
+		}
+	}
+
+	// Only create nop logger when we actually need logging
 	if config.LogSanitizations && logger == nil {
 		logger = zap.NewNop()
 	}

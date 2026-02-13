@@ -77,7 +77,9 @@ func TestSanitizeUTF8(t *testing.T) {
 		expected := attribute.String(key, "[REDACTED]")
 
 		// With both redaction and sanitization, redaction runs first and handles the attribute
-		attributes := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Redact), SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), passStr)
+		redactTransformer, err := RedactKeys([]attribute.Key{key}, Redact)
+		require.NoError(t, err)
+		attributes := testAttributes(NewAttributeProcessorOption(redactTransformer, SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), passStr)
 		require.Contains(t, attributes, expected)
 	})
 

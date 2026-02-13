@@ -69,7 +69,9 @@ func TestAttributeProcessor(t *testing.T) {
 		t.Parallel()
 
 		// With no attributes, nothing should happen
-		attributes := testAttributes(NewAttributeProcessorOption(RedactKeys([]attribute.Key{"secret"}, Redact)))
+		redactTransformer, err := RedactKeys([]attribute.Key{"secret"}, Redact)
+		require.NoError(t, err)
+		attributes := testAttributes(NewAttributeProcessorOption(redactTransformer))
 		require.Empty(t, attributes)
 	})
 
@@ -91,8 +93,10 @@ func TestAttributeProcessor(t *testing.T) {
 
 		// RedactKeys should handle "secret", so trackingTransformer should NOT see "secret"
 		// but SHOULD see "other"
+		redactTransformer, err := RedactKeys([]attribute.Key{secretKey}, Redact)
+		require.NoError(t, err)
 		attributes := testAttributes(
-			NewAttributeProcessorOption(RedactKeys([]attribute.Key{secretKey}, Redact), trackingTransformer),
+			NewAttributeProcessorOption(redactTransformer, trackingTransformer),
 			secret, other,
 		)
 
@@ -121,8 +125,10 @@ func TestMultipleTransformers(t *testing.T) {
 		secret := attribute.String(string(secretKey), "value")
 		invalidUTF8 := attribute.String(string(otherKey), string([]byte{0x80}))
 
+		redactTransformer, err := RedactKeys([]attribute.Key{secretKey}, Redact)
+		require.NoError(t, err)
 		attributes := testAttributes(
-			NewAttributeProcessorOption(RedactKeys([]attribute.Key{secretKey}, Redact), SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
+			NewAttributeProcessorOption(redactTransformer, SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
 			secret, invalidUTF8,
 		)
 
@@ -140,8 +146,10 @@ func TestMultipleTransformers(t *testing.T) {
 		key := attribute.Key("password")
 		invalidUTF8Password := attribute.String(string(key), string([]byte{'s', 'e', 'c', 'r', 'e', 't', 0x80}))
 
+		redactTransformer, err := RedactKeys([]attribute.Key{key}, Redact)
+		require.NoError(t, err)
 		attributes := testAttributes(
-			NewAttributeProcessorOption(RedactKeys([]attribute.Key{key}, Redact), SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
+			NewAttributeProcessorOption(redactTransformer, SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
 			invalidUTF8Password,
 		)
 
@@ -159,8 +167,10 @@ func TestMultipleTransformers(t *testing.T) {
 		flag := attribute.Bool("flag", true)
 		invalidUTF8 := attribute.String("message", string([]byte{0x80}))
 
+		redactTransformer, err := RedactKeys([]attribute.Key{secretKey}, Redact)
+		require.NoError(t, err)
 		attributes := testAttributes(
-			NewAttributeProcessorOption(RedactKeys([]attribute.Key{secretKey}, Redact), SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
+			NewAttributeProcessorOption(redactTransformer, SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
 			secret, count, flag, invalidUTF8,
 		)
 
@@ -225,8 +235,12 @@ func benchCombinedTransformers(redacted, total, invalidUTF8 int) func(*testing.B
 	}
 
 	s := benchSpan{attrs: attrs}
+	redactTransformer, err := RedactKeys(keys, Redact)
+	if err != nil {
+		panic(err)
+	}
 	ac := NewAttributeProcessor(
-		RedactKeys(keys, Redact),
+		redactTransformer,
 		SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil),
 	)
 	ctx := context.Background()

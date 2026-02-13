@@ -314,13 +314,16 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.NotEmpty(t, sn)
 
 			// Check that http.client_ip is redacted in spans that have it
+			clientIPCount := 0
 			for _, span := range sn {
 				for _, attr := range span.Attributes() {
 					if attr.Key == attribute.Key("http.client_ip") {
+						clientIPCount++
 						require.Equal(t, "[REDACTED]", attr.Value.AsString())
 					}
 				}
 			}
+			require.Positive(t, clientIPCount, "http.client_ip attribute should be present at least once")
 		})
 	})
 
@@ -345,15 +348,18 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.NotEmpty(t, sn)
 
 			// Check that http.client_ip is hashed (64 char hex) in spans that have it
+			clientIPCount := 0
 			for _, span := range sn {
 				for _, attr := range span.Attributes() {
 					if attr.Key == attribute.Key("http.client_ip") {
+						clientIPCount++
 						value := attr.Value.AsString()
 						require.Len(t, value, 64)
 						require.NotEqual(t, "[REDACTED]", value)
 					}
 				}
 			}
+			require.Positive(t, clientIPCount, "http.client_ip attribute should be present at least once")
 		})
 	})
 }

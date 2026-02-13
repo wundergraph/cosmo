@@ -3,6 +3,7 @@ package attributeprocessor
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -23,7 +24,8 @@ const (
 
 // RedactKeys returns a transformer that redacts attributes matching the given keys.
 // The redactFunc is called with the original attribute to produce the replacement value.
-func RedactKeys(keys []attribute.Key, ipAnonymizationMethod IPAnonymizationMethod) AttributeTransformer {
+// Returns an error if the ipAnonymizationMethod is not supported.
+func RedactKeys(keys []attribute.Key, ipAnonymizationMethod IPAnonymizationMethod) (AttributeTransformer, error) {
 	var rFunc func(attribute.KeyValue) string
 
 	switch ipAnonymizationMethod {
@@ -37,6 +39,8 @@ func RedactKeys(keys []attribute.Key, ipAnonymizationMethod IPAnonymizationMetho
 		rFunc = func(_ attribute.KeyValue) string {
 			return "[REDACTED]"
 		}
+	default:
+		return nil, fmt.Errorf("unsupported IP anonymization method: %s", ipAnonymizationMethod)
 	}
 
 	keySet := make(map[attribute.Key]struct{}, len(keys))
@@ -49,5 +53,5 @@ func RedactKeys(keys []attribute.Key, ipAnonymizationMethod IPAnonymizationMetho
 			return attribute.StringValue(rFunc(kv)), true
 		}
 		return kv.Value, false
-	}
+	}, nil
 }

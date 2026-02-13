@@ -151,7 +151,11 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 	// The orders of the transformers indicate the priority.
 	if config.IPAnonymization != nil && config.IPAnonymization.Enabled {
-		transformers = append(transformers, attributeprocessor.RedactKeys(SensitiveAttributes, config.IPAnonymization.Method))
+		redactTransformer, err := attributeprocessor.RedactKeys(SensitiveAttributes, config.IPAnonymization.Method)
+		if err != nil {
+			return nil, err
+		}
+		transformers = append(transformers, redactTransformer)
 	}
 	if config.SanitizeUTF8 != nil && config.SanitizeUTF8.Enabled {
 		transformers = append(transformers, attributeprocessor.SanitizeUTF8(config.SanitizeUTF8, config.Logger))
