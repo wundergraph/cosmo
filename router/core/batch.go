@@ -6,6 +6,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/cespare/xxhash/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -17,8 +20,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
-	"io"
-	"net/http"
 )
 
 type BatchedOperationId struct{}
@@ -197,7 +198,13 @@ func processBatchError(w http.ResponseWriter, r *http.Request, err error, reques
 		}
 	}
 
-	writeRequestErrors(r, w, statusCode, []graphqlerrors.RequestError{requestError}, requestLogger)
+	writeRequestErrors(writeRequestErrorsParams{
+		request:       r,
+		writer:        w,
+		statusCode:    statusCode,
+		requestErrors: []graphqlerrors.RequestError{requestError},
+		logger:        requestLogger,
+	})
 }
 
 func getFirstNonWhitespaceChar(r io.Reader, readerSize int) (*byte, *bufio.Reader, error) {
@@ -220,7 +227,7 @@ func getFirstNonWhitespaceChar(r io.Reader, readerSize int) (*byte, *bufio.Reade
 		// we check the characters based on this RFC https://datatracker.ietf.org/doc/html/rfc8259
 		// and also the array decode function in goccy/go-json (which is the library we used to decode)
 		case ' ', '\n', '\t', '\r':
-			bufReader.ReadByte()
+			_, _ = bufReader.ReadByte()
 			continue
 		default:
 			return &peekByte, bufReader, nil

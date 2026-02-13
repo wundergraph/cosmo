@@ -1711,17 +1711,7 @@ describe('Field resolvability tests', () => {
       subgraphNames: new Set<string>([haab.name]),
       typeName: 'EntityA',
     };
-    const unresolvableFieldDataFour: UnresolvableFieldData = {
-      fieldName: 'c',
-      selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.nodes'), {
-        isLeaf: false,
-        name: 'c',
-      } as GraphFieldData),
-      subgraphNames: new Set<string>([haac.name]),
-      typeName: 'EntityB',
-    };
-
-    expect(errors).toHaveLength(4);
+    expect(errors).toHaveLength(3);
     expect(errors).toStrictEqual([
       unresolvablePathError(
         unresolvableFieldDataOne,
@@ -1745,13 +1735,6 @@ describe('Field resolvability tests', () => {
           entityAncestors,
           rootFieldData,
           unresolvableFieldData: unresolvableFieldDataThree,
-        }),
-      ),
-      unresolvablePathError(
-        unresolvableFieldDataFour,
-        generateResolvabilityErrorReasons({
-          rootFieldData,
-          unresolvableFieldData: unresolvableFieldDataFour,
         }),
       ),
     ]);

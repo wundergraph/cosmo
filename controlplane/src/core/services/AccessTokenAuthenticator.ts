@@ -62,4 +62,8 @@ export default class AccessTokenAuthenticator {
       rbac,
     };
   }
+
+  public getUserInfo(accessToken: string) {
+    return this.authUtils.getUserInfo(accessToken);
+  }
 }
