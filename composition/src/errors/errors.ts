@@ -103,7 +103,7 @@ export function incompatibleInputValueDefaultValuesError(
 
 export function incompatibleSharedEnumError(parentName: string): Error {
   return new Error(
-    `Enum "${parentName}" was used as both an input and output but was inconsistently defined across inclusive subgraphs.`,
+    `Enum "${parentName}" was used as both an input and output but was inconsistently defined across inclusive subgraphs. To update an Enum used as both an input and output, add any new Enum values with the @inaccessible directive in the origin subgraph. Next, add those new Enum values to all other subgraphs that define the Enum—this time without the @inaccessible directive. Finally, once all subgraphs have been updated, remove @inaccessible from the Enum values in the origin subgraph.`,
   );
 }
 
@@ -339,7 +339,7 @@ export function unexpectedEdgeFatalError(typeName: string, edgeNames: Array<stri
   return new Error(
     `Fatal: The type "${typeName}" visited the following unexpected edge` +
       (edgeNames.length > 1 ? 's' : '') +
-      `:\n " ${edgeNames.join(QUOTATION_JOIN)}".`,
+      `:\n "${edgeNames.join(QUOTATION_JOIN)}".`,
   );
 }
 

@@ -132,14 +132,14 @@ const Override = ({
                   href={
                     path
                       ? {
-                          pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
-                          query: {
-                            organizationSlug,
-                            namespace,
-                            slug: router.query.slug,
-                            typename: path?.split(".")?.[0],
-                          },
-                        }
+                        pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
+                        query: {
+                          organizationSlug,
+                          namespace,
+                          slug: router.query.slug,
+                          typename: path?.split(".")?.[0],
+                        },
+                      }
                       : "#"
                   }
                 >
@@ -316,10 +316,9 @@ export const ConfigureOverride = () => {
           <>
             <div className="flex w-full flex-row items-center justify-between rounded-lg border px-4 py-3 shadow-sm">
               <div className="flex flex-col gap-y-2">
-                <Label htmlFor="ignore-all">Ignore All</Label>
+                <Label htmlFor="ignore-all">Ignore operation</Label>
                 <p className="text-[0.8rem] text-muted-foreground">
-                  Future checks will not fail if any breaking changes are observed
-                  for this operation
+                  This operation will not be used in future checks.
                 </p>
               </div>
 
@@ -330,16 +329,16 @@ export const ConfigureOverride = () => {
                 onCheckedChange={() =>
                   data.ignoreAll
                     ? removeIgnoreAll({
-                        graphName: graphContext?.graph?.name,
-                        namespace: graphContext?.graph?.namespace,
-                        operationHash,
-                      })
+                      graphName: graphContext?.graph?.name,
+                      namespace: graphContext?.graph?.namespace,
+                      operationHash,
+                    })
                     : createIgnoreAll({
-                        operationHash,
-                        operationName,
-                        graphName: graphContext?.graph?.name,
-                        namespace: graphContext?.graph?.namespace,
-                      })
+                      operationHash,
+                      operationName,
+                      graphName: graphContext?.graph?.name,
+                      namespace: graphContext?.graph?.namespace,
+                    })
                 }
               />
             </div>
@@ -354,7 +353,7 @@ export const ConfigureOverride = () => {
               <EmptyState
                 className="z-50 -mt-44"
                 icon={<InformationCircleIcon />}
-                title="Ignoring All Changes"
+                title="Operation ignored"
               />
             </div>
           )}

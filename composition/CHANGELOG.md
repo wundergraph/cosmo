@@ -4,6 +4,34 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.51.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.51.0...@wundergraph/composition@0.51.1) (2026-02-12)
+
+### Bug Fixes
+
+* do not re-evaluate internal graph nodes if all its descendants a… ([#2499](https://github.com/wundergraph/cosmo/issues/2499)) ([2fa2dfd](https://github.com/wundergraph/cosmo/commit/2fa2dfd35b78b0e84fa18dcb99590cdee5abec08)) (@Aenimus)
+
+# [0.51.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.50.0...@wundergraph/composition@0.51.0) (2026-02-09)
+
+### Features
+
+* update @graphql-tools/utils version to 11.0.0 ([#2495](https://github.com/wundergraph/cosmo/issues/2495)) ([526b1a4](https://github.com/wundergraph/cosmo/commit/526b1a498ae709b67ec37626bfc665babafd8aa8)) (@thisisnithin)
+
+# [0.50.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.49.2...@wundergraph/composition@0.50.0) (2026-01-20)
+
+### Features
+
+* add an explanation on how to deal when adding a value to a shared enum ([#2456](https://github.com/wundergraph/cosmo/issues/2456)) ([57dc1b9](https://github.com/wundergraph/cosmo/commit/57dc1b90e07d09a25f8887c46eb73622362ff752)) (@alepane21)
+
+## [0.49.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.49.1...@wundergraph/composition@0.49.2) (2026-01-16)
+
+### Bug Fixes
+
+* operation validation false positives ([#2460](https://github.com/wundergraph/cosmo/issues/2460)) ([057e762](https://github.com/wundergraph/cosmo/commit/057e7621c777b961854bd0472e73a5da0e9e5186)) (@Aenimus)
+
+## [0.49.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.49.0...@wundergraph/composition@0.49.1) (2026-01-09)
+
+**Note:** Version bump only for package @wundergraph/composition
+
 # [0.49.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.48.5...@wundergraph/composition@0.49.0) (2025-12-15)
 
 ### Features

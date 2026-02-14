@@ -3,15 +3,18 @@ package integration
 import (
 	"cmp"
 	"encoding/json"
+	"io"
 	"net/http"
 	"slices"
+	"strings"
 	"testing"
 
-	"github.com/wundergraph/cosmo/router/core"
-
 	"github.com/stretchr/testify/require"
+	failing_writer "github.com/wundergraph/cosmo/router-tests/modules/failing-writer"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.uber.org/zap/zapcore"
 )
 
 func compareErrors(t *testing.T, expectedErrors []testenv.GraphQLError, actualErrors []testenv.GraphQLError) {
@@ -1492,4 +1495,355 @@ func TestErrorPropagation(t *testing.T) {
 			require.Equal(t, expected, resp.Body)
 		})
 	})
+
+}
+
+func TestErrorLocations(t *testing.T) {
+	t.Parallel()
+
+	t.Run("Handle invalid locations", func(t *testing.T) {
+		t.Parallel()
+
+		tests := []struct {
+			name                        string
+			subgraphErrorsInput         string
+			expectedWrappedResponse     string
+			expectedPassthroughResponse string
+		}{
+			{
+				name:                        "all locations invalid - removes locations field",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":-1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "mixed valid and invalid locations - keeps only valid",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":0,"column":10},{"line":3,"column":-2},{"line":4,"column":15}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":4,"column":15}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":4,"column":15}],"extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "location with missing line field - removes that location",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"column":10}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","locations":[{"line":1,"column":5}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","locations":[{"line":1,"column":5}],"extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "all locations missing fields - removes locations field",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1},{"column":5}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "location with invalid type - removes that location",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":"invalid","column":10}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","locations":[{"line":1,"column":5}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","locations":[{"line":1,"column":5}],"extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "all locations with invalid types - removes locations field",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":"invalid","column":5},{"line":2,"column":"invalid"}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "locations is not an array - removes locations field",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":"invalid","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "multiple errors with different location scenarios",
+				subgraphErrorsInput:         `[{"message":"Error 1","locations":[{"line":1,"column":5}],"extensions":{"code":"ERR1"}},{"message":"Error 2","locations":[{"line":0,"column":0}],"extensions":{"code":"ERR2"}},{"message":"Error 3","locations":[{"line":3,"column":10},{"line":-1,"column":5}],"extensions":{"code":"ERR3"}}]`,
+				expectedWrappedResponse:     `[{"message":"Error 1","locations":[{"line":1,"column":5}],"extensions":{"code":"ERR1"}},{"message":"Error 2","extensions":{"code":"ERR2"}},{"message":"Error 3","locations":[{"line":3,"column":10}],"extensions":{"code":"ERR3"}}]`,
+				expectedPassthroughResponse: `[{"message":"Error 1","locations":[{"line":1,"column":5}],"extensions":{"code":"ERR1","statusCode":200}},{"message":"Error 2","extensions":{"code":"ERR2","statusCode":200}},{"message":"Error 3","locations":[{"line":3,"column":10}],"extensions":{"code":"ERR3","statusCode":200}}]`,
+			},
+			{
+				name:                        "valid locations - unchanged",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":2,"column":10}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":2,"column":10}],"extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","locations":[{"line":1,"column":5},{"line":2,"column":10}],"extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+			{
+				name:                        "no locations field - unchanged",
+				subgraphErrorsInput:         `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedWrappedResponse:     `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}]`,
+				expectedPassthroughResponse: `[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}]`,
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				t.Parallel()
+
+				t.Run("wrapped mode", func(t *testing.T) {
+					t.Parallel()
+					testenv.Run(t, &testenv.Config{
+						ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+							cfg.Enabled = true
+							cfg.Mode = config.SubgraphErrorPropagationModeWrapped
+							cfg.OmitLocations = false
+						},
+						Subgraphs: testenv.SubgraphsConfig{
+							Employees: testenv.SubgraphConfig{
+								Middleware: func(handler http.Handler) http.Handler {
+									return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+										w.WriteHeader(http.StatusOK)
+										subgraphResponse := `{"errors":` + tt.subgraphErrorsInput + `}`
+										if _, err := w.Write([]byte(subgraphResponse)); err != nil {
+											http.Error(w, err.Error(), http.StatusInternalServerError)
+										}
+									})
+								},
+							},
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Query: `{ employees { id details { forename surname } notes } }`,
+						})
+
+						expectedBody := `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":` + tt.expectedWrappedResponse + `,"statusCode":200}}],"data":{"employees":null}}`
+						require.JSONEq(t, expectedBody, res.Body)
+					})
+				})
+
+				t.Run("passthrough mode", func(t *testing.T) {
+					t.Parallel()
+					testenv.Run(t, &testenv.Config{
+						ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+							cfg.Enabled = true
+							cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+							cfg.OmitLocations = false
+						},
+						Subgraphs: testenv.SubgraphsConfig{
+							Employees: testenv.SubgraphConfig{
+								Middleware: func(handler http.Handler) http.Handler {
+									return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+										w.WriteHeader(http.StatusOK)
+										subgraphResponse := `{"errors":` + tt.subgraphErrorsInput + `}`
+										if _, err := w.Write([]byte(subgraphResponse)); err != nil {
+											http.Error(w, err.Error(), http.StatusInternalServerError)
+										}
+									})
+								},
+							},
+						},
+					}, func(t *testing.T, xEnv *testenv.Environment) {
+						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Query: `{ employees { id details { forename surname } notes } }`,
+						})
+
+						expectedBody := `{"errors":` + tt.expectedPassthroughResponse + `,"data":{"employees":null}}`
+						require.JSONEq(t, expectedBody, res.Body)
+					})
+				})
+			})
+		}
+	})
+}
+
+func TestSSEErrorResponseWriteFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should log warning when broken pipe error occurs writing SSE error response", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.WarnLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeBrokenPipe,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeBrokenPipe,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			require.Empty(t, body)
+
+			logs := xEnv.Observer().FilterMessage("Broken pipe, error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.WarnLevel, logs.All()[0].Level)
+		})
+	})
+
+	t.Run("should log error when generic write error occurs writing SSE error response", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeGeneric,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeGeneric,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			require.Empty(t, body)
+
+			logs := xEnv.Observer().FilterMessage("Error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
+		})
+	})
+}
+
+func TestErrorResponseBodyWriteFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should log warning when broken pipe error occurs writing error response body", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.WarnLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeBrokenPipe,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeBrokenPipe,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: "",
+			})
+			require.NoError(t, err)
+			require.NotNil(t, res)
+
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Empty(t, res.Body)
+
+			logs := xEnv.Observer().FilterMessage("Broken pipe, error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.WarnLevel, logs.All()[0].Level)
+		})
+	})
+
+	t.Run("should log error when generic write error occurs writing error response body", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeGeneric,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeGeneric,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: "",
+			})
+			require.NoError(t, err)
+			require.NotNil(t, res)
+
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Empty(t, res.Body)
+
+			logs := xEnv.Observer().FilterMessage("Error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
+		})
+	})
+}
+
+func TestMultipartErrorResponseWriteFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should log error when error occurs while writing multipart error response", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeBrokenPipe,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeBrokenPipe,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "multipart/mixed")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			_, err = io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			logs := xEnv.Observer().FilterMessage("error writing multipart response")
+			require.Equal(t, 1, logs.Len(), "Expected error log for multipart write failure")
+			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
+		})
+	})
+
 }

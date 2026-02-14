@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
-  DialogContent, DialogDescription, DialogFooter,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -17,6 +19,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Loader } from "@/components/ui/loader";
+import { Pagination } from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
@@ -58,12 +61,8 @@ import {
 import { ExpiresAt } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import copy from "copy-to-clipboard";
 import Link from "next/link";
-import {
-  Dispatch,
-  SetStateAction,
-  useEffect, useId,
-  useState,
-} from "react";
+import { useRouter } from "next/router";
+import { Dispatch, SetStateAction, useEffect, useId, useState } from "react";
 import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
 import { GroupSelect } from "@/components/group-select";
@@ -119,12 +118,10 @@ const CreateAPIKeyDialog = ({
 
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `An API key with the name ${arg} already exists`
+          message: `An API key with the name ${arg} already exists`,
         });
       }),
-    groupId: z
-      .string()
-      .uuid({ message: "Select a valid group" })
+    groupId: z.string().uuid({ message: "Select a valid group" }),
   });
 
   type CreateAPIKeyInput = z.infer<typeof createAPIKeyInputSchema>;
@@ -161,7 +158,7 @@ const CreateAPIKeyDialog = ({
             refresh();
             reset();
           } else if (d.response?.details) {
-            setError('name', { message: d.response.details });
+            setError("name", { message: d.response.details });
           }
         },
         onError: () => {
@@ -192,13 +189,16 @@ const CreateAPIKeyDialog = ({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => {
-      setOpen(v);
-      if (!v) {
-        setSelectedPermissions([]);
-        reset();
-      }
-    }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) {
+          setSelectedPermissions([]);
+          reset();
+        }
+      }}
+    >
       <DialogTrigger>
         <Button>
           <div className="flex items-center gap-x-2">
@@ -216,8 +216,15 @@ const CreateAPIKeyDialog = ({
           onSubmit={handleSubmit(onSubmit)}
         >
           <div className="flex flex-col gap-y-2">
-            <label className="text-sm font-semibold" htmlFor={nameInputId}>Name</label>
-            <Input className="w-full" id={nameInputId} type="text" {...register("name")} />
+            <label className="text-sm font-semibold" htmlFor={nameInputId}>
+              Name
+            </label>
+            <Input
+              className="w-full"
+              id={nameInputId}
+              type="text"
+              {...register("name")}
+            />
             {errors.name && (
               <span className="px-2 text-xs text-destructive">
                 {errors.name.message}
@@ -225,12 +232,21 @@ const CreateAPIKeyDialog = ({
             )}
           </div>
           <div className="flex flex-col gap-y-2">
-            <label className="text-sm font-semibold" htmlFor={expiresInputLabel}>Expires</label>
+            <label
+              className="text-sm font-semibold"
+              htmlFor={expiresInputLabel}
+            >
+              Expires
+            </label>
             <Select
               value={expires}
               onValueChange={(value) => setExpires(value)}
             >
-              <SelectTrigger value={expires} className="w-[200px] lg:w-full" id={expiresInputLabel}>
+              <SelectTrigger
+                value={expires}
+                className="w-[200px] lg:w-full"
+                id={expiresInputLabel}
+              >
                 <SelectValue aria-label={expires}>{expires}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -246,15 +262,19 @@ const CreateAPIKeyDialog = ({
           </div>
 
           <div className="flex flex-col gap-y-2">
-            <label className="text-sm font-semibold" htmlFor={groupInputLabel}>Group</label>
+            <label className="text-sm font-semibold" htmlFor={groupInputLabel}>
+              Group
+            </label>
             <GroupSelect
               id={groupInputLabel}
-              value={watch('groupId')}
-              onValueChange={(group) => setValue(
-                'groupId',
-                group.groupId,
-                { shouldValidate: true, shouldDirty: true, shouldTouch: true },
-              )}
+              value={watch("groupId")}
+              onValueChange={(group) =>
+                setValue("groupId", group.groupId, {
+                  shouldValidate: true,
+                  shouldDirty: true,
+                  shouldTouch: true,
+                })
+              }
             />
 
             {errors.groupId && (
@@ -589,7 +609,13 @@ export const CreateAPIKey = ({
   );
 };
 
-const UpdateAPIKey = ({ selectedApiKeyName, open, selectedGroupId, refresh, onOpenChange }: {
+const UpdateAPIKey = ({
+  selectedApiKeyName,
+  open,
+  selectedGroupId,
+  refresh,
+  onOpenChange,
+}: {
   open: boolean;
   selectedApiKeyName: string | undefined;
   selectedGroupId: string | undefined;
@@ -629,7 +655,10 @@ const UpdateAPIKey = ({ selectedApiKeyName, open, selectedGroupId, refresh, onOp
         />
 
         <DialogFooter>
-          <Button variant="secondary" onClick={() => onOpenChangeCallback(false)}>
+          <Button
+            variant="secondary"
+            onClick={() => onOpenChangeCallback(false)}
+          >
             Cancel
           </Button>
           <Button
@@ -640,30 +669,36 @@ const UpdateAPIKey = ({ selectedApiKeyName, open, selectedGroupId, refresh, onOp
                 return;
               }
 
-              mutate({ name: selectedApiKeyName, groupId }, {
-                onSuccess(d){
-                  if (d.response?.code === EnumStatusCode.OK) {
-                    onOpenChange(false);
-                    toast({
-                      description: "API key group updated successfully.",
-                      duration: 3000,
-                    });
+              mutate(
+                { name: selectedApiKeyName, groupId },
+                {
+                  onSuccess(d) {
+                    if (d.response?.code === EnumStatusCode.OK) {
+                      onOpenChange(false);
+                      toast({
+                        description: "API key group updated successfully.",
+                        duration: 3000,
+                      });
 
-                    refresh();
-                  } else {
+                      refresh();
+                    } else {
+                      toast({
+                        description:
+                          d.response?.details ??
+                          "Could not update the API key. Please try again.",
+                        duration: 3000,
+                      });
+                    }
+                  },
+                  onError() {
                     toast({
-                      description: d.response?.details ?? "Could not update the API key. Please try again.",
+                      description:
+                        "Could not update the API key. Please try again.",
                       duration: 3000,
                     });
-                  }
+                  },
                 },
-                onError(){
-                  toast({
-                    description: "Could not update the API key. Please try again.",
-                    duration: 3000,
-                  });
-                },
-              });
+              );
             }}
           >
             Save
@@ -676,19 +711,37 @@ const UpdateAPIKey = ({ selectedApiKeyName, open, selectedGroupId, refresh, onOp
 
 const APIKeysPage: NextPageWithLayout = () => {
   const checkUserAccess = useCheckUserAccess();
-  const { data, isLoading, error, refetch } = useQuery(getAPIKeys);
+  const router = useRouter();
+
+  const pageNumber = router.query.page
+    ? parseInt(router.query.page as string)
+    : 1;
+
+  const limit = Number.parseInt((router.query.pageSize as string) || "10");
+
+  const { data, isLoading, error, refetch } = useQuery(getAPIKeys, {
+    limit: limit > 50 ? 50 : limit,
+    offset: (pageNumber - 1) * limit,
+  });
 
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [openUpdateDialog, setOpenUpdateDialog] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<{ apiKeyName: string; groupId: string | undefined; }>();
+  const [selectedGroup, setSelectedGroup] = useState<{
+    apiKeyName: string;
+    groupId: string | undefined;
+  }>();
   const [apiKey, setApiKey] = useState<string | undefined>();
   const [deleteApiKeyName, setDeleteApiKeyName] = useState<
     string | undefined
   >();
   const [openApiKeyCreatedDialog, setOpenApiKeyCreatedDialog] = useState(false);
 
-  const canCreateAPIKey = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
-  const canManageAPIKeys = canCreateAPIKey || checkUserAccess({ rolesToBe: ['organization-apikey-manager'] });
+  const canCreateAPIKey = checkUserAccess({
+    rolesToBe: ["organization-admin", "organization-developer"],
+  });
+  const canManageAPIKeys =
+    canCreateAPIKey ||
+    checkUserAccess({ rolesToBe: ["organization-apikey-manager"] });
 
   useEffect(() => {
     if (!openApiKeyCreatedDialog) setApiKey(undefined);
@@ -700,7 +753,7 @@ const APIKeysPage: NextPageWithLayout = () => {
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon />}
-        title="Could not retrieve federated graphs"
+        title="Could not retrieve API keys"
         description={
           data?.response?.details || error?.message || "Please try again"
         }
@@ -709,10 +762,11 @@ const APIKeysPage: NextPageWithLayout = () => {
     );
 
   const apiKeys = data.apiKeys;
+  const noOfPages = Math.ceil((data.count || 0) / limit);
 
   return (
     <div className="flex flex-col gap-y-6">
-      {apiKeys.length === 0 ? (
+      {apiKeys.length === 0 && pageNumber === 1 ? (
         <Empty
           apiKey={apiKey}
           setApiKey={setApiKey}
@@ -799,7 +853,14 @@ const APIKeysPage: NextPageWithLayout = () => {
               </TableHeader>
               <TableBody>
                 {apiKeys.map(
-                  ({ name, createdBy, createdAt, lastUsedAt, expiresAt, group }) => {
+                  ({
+                    name,
+                    createdBy,
+                    createdAt,
+                    lastUsedAt,
+                    expiresAt,
+                    group,
+                  }) => {
                     return (
                       <TableRow key={name}>
                         <TableCell className="font-medium">{name}</TableCell>
@@ -809,7 +870,11 @@ const APIKeysPage: NextPageWithLayout = () => {
                             ? formatDateTime(new Date(expiresAt))
                             : "Never"}
                         </TableCell>
-                        <TableCell className={!group?.id ? "text-muted-foreground" : undefined}>
+                        <TableCell
+                          className={
+                            !group?.id ? "text-muted-foreground" : undefined
+                          }
+                        >
                           {group?.name ?? "-"}
                         </TableCell>
                         <TableCell>
@@ -863,6 +928,11 @@ const APIKeysPage: NextPageWithLayout = () => {
               </TableBody>
             </Table>
           </TableWrapper>
+          <Pagination
+            limit={limit}
+            noOfPages={noOfPages}
+            pageNumber={pageNumber}
+          />
         </>
       )}
     </div>

@@ -137,14 +137,18 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "RouterURL": ""
+    "RouterURL": "",
+    "OmitToolNamePrefix": false
   },
   "DemoMode": false,
   "Modules": null,
   "Headers": {
     "All": null,
     "Subgraphs": null,
-    "CookieWhitelist": null
+    "CookieWhitelist": null,
+    "Router": {
+      "Response": null
+    }
   },
   "TrafficShaping": {
     "All": {
@@ -311,11 +315,15 @@
   "CacheWarmup": {
     "Enabled": false,
     "Source": {
-      "Filesystem": null
+      "Filesystem": null,
+      "CdnSource": {
+        "Enabled": true
+      }
     },
     "Workers": 8,
     "ItemsPerSecond": 50,
-    "Timeout": 30000000000
+    "Timeout": 30000000000,
+    "InMemoryFallback": true
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
@@ -372,6 +380,9 @@
       "AlwaysSkipLoader": false
     },
     "EnableSingleFlight": true,
+    "ForceEnableSingleFlight": false,
+    "EnableInboundRequestDeduplication": true,
+    "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 1024,

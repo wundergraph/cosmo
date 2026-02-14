@@ -1,11 +1,9 @@
 package nats
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"strings"
 	"testing"
 
@@ -90,7 +88,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 				})).Return(nil)
 			},
 			expectError:     false,
-			expectedOutput:  `{"success": true}`,
+			expectedOutput:  `{"__typename": "edfs__PublishResult", "success": true}`,
 			expectPublished: true,
 		},
 		{
@@ -100,7 +98,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 				m.On("Publish", mock.Anything, mock.Anything, mock.Anything).Return(errors.New("publish error"))
 			},
 			expectError:     false, // The Load method doesn't return the publish error directly
-			expectedOutput:  `{"success": false}`,
+			expectedOutput:  `{"__typename": "edfs__PublishResult", "success": false}`,
 			expectPublished: true,
 		},
 		{
@@ -123,16 +121,15 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 
 			ctx := context.Background()
 			input := []byte(tt.input)
-			var out bytes.Buffer
 
-			err := dataSource.Load(ctx, input, &out)
+			data, err := dataSource.Load(ctx, nil, input)
 
 			if tt.expectError {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 				if tt.expectedOutput != "" {
-					assert.Equal(t, tt.expectedOutput, out.String())
+					assert.Equal(t, tt.expectedOutput, string(data))
 				}
 			}
 		})
@@ -142,7 +139,7 @@ func TestNatsPublishDataSource_Load(t *testing.T) {
 func TestNatsPublishDataSource_LoadWithFiles(t *testing.T) {
 	dataSource := &NatsPublishDataSource{}
 	assert.Panics(t, func() {
-		dataSource.LoadWithFiles(context.Background(), []byte{}, nil, &bytes.Buffer{})
+		_, _ = dataSource.LoadWithFiles(context.Background(), nil, []byte{}, nil)
 	}, "Expected LoadWithFiles to panic with 'not implemented'")
 }
 
@@ -163,11 +160,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 						event.Subject == "test-subject"
 				}), mock.MatchedBy(func(event datasource.StreamEvent) bool {
 					return event != nil && strings.EqualFold(string(event.GetData()), `{"message":"hello"}`)
-				}), mock.Anything).Run(func(args mock.Arguments) {
-					// Write response to the output buffer
-					w := args.Get(3).(io.Writer)
-					_, _ = w.Write([]byte(`{"response":"success"}`))
-				}).Return(nil)
+				}), mock.Anything).Return([]byte(`{"response":"success"}`), nil)
 			},
 			expectError:    false,
 			expectedOutput: `{"response":"success"}`,
@@ -176,7 +169,7 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 			name:  "request error",
 			input: `{"subject":"test-subject", "event": {"data":{"message":"hello"}}, "providerId":"test-provider"}`,
 			mockSetup: func(m *MockAdapter) {
-				m.On("Request", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(errors.New("request error"))
+				m.On("Request", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, errors.New("request error"))
 			},
 			expectError:    true,
 			expectedOutput: "",
@@ -202,16 +195,15 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 
 			ctx := context.Background()
 			input := []byte(tt.input)
-			var out bytes.Buffer
 
-			err := dataSource.Load(ctx, input, &out)
+			data, err := dataSource.Load(ctx, nil, input)
 
 			if tt.expectError {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
 				if tt.expectedOutput != "" {
-					assert.Equal(t, tt.expectedOutput, out.String())
+					assert.Equal(t, tt.expectedOutput, string(data))
 				}
 			}
 		})
@@ -221,6 +213,6 @@ func TestNatsRequestDataSource_Load(t *testing.T) {
 func TestNatsRequestDataSource_LoadWithFiles(t *testing.T) {
 	dataSource := &NatsRequestDataSource{}
 	assert.Panics(t, func() {
-		dataSource.LoadWithFiles(context.Background(), []byte{}, nil, &bytes.Buffer{})
+		_, _ = dataSource.LoadWithFiles(context.Background(), nil, []byte{}, nil)
 	}, "Expected LoadWithFiles to panic with 'not implemented'")
 }

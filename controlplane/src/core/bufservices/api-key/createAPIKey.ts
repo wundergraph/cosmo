@@ -9,6 +9,7 @@ import { ApiKeyGenerator } from '../../services/ApiGenerator.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { RBACEvaluator } from '../../services/RBACEvaluator.js';
 
 export function createAPIKey(
   opts: RouterOptions,
@@ -30,6 +31,21 @@ export function createAPIKey(
     }
 
     const keyName = req.name.trim();
+
+    // Check if the organization has reached the limit of 200 API keys
+    const apiKeysCount = await apiKeyRepo.getAPIKeysCount({
+      organizationID: authContext.organizationId,
+    });
+
+    if (apiKeysCount >= 200) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: 'Cannot create API key. Organization has reached the maximum limit of 200 API keys',
+        },
+        apiKey: '',
+      };
+    }
 
     const apiKeyModel = await apiKeyRepo.getAPIKeyByName({
       organizationID: authContext.organizationId,
@@ -70,8 +86,18 @@ export function createAPIKey(
       };
     }
 
-    const generatedAPIKey = ApiKeyGenerator.generate();
+    const rbac = new RBACEvaluator([orgGroup]);
+    if (rbac.isOrganizationAdmin && !authContext.rbac.isOrganizationAdmin) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `You don't have access to create an API key with the group "${orgGroup.name}"`,
+        },
+        apiKey: '',
+      };
+    }
 
+    const generatedAPIKey = ApiKeyGenerator.generate();
     await apiKeyRepo.addAPIKey({
       name: keyName,
       organizationID: authContext.organizationId,

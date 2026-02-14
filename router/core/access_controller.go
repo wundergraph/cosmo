@@ -49,7 +49,7 @@ func NewAccessController(opts AccessControllerOptions) (*AccessController, error
 func (a *AccessController) Access(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
 	auth, err := authentication.AuthenticateHTTPRequest(r.Context(), a.authenticators, r)
 	if err != nil {
-		return nil, ErrUnauthorized
+		return nil, errors.Join(err, ErrUnauthorized)
 	}
 	if auth != nil {
 		w.Header().Set("X-Authenticated-By", auth.Authenticator())

@@ -31,10 +31,13 @@ export type IntrospectSubgraphInput = z.infer<typeof introspectSubgraphInputSche
  * @param config.opts - Base command options.
  */
 export const registerIntrospectSubgraphTool = ({ server, opts }: { server: McpServer; opts: BaseCommandOptions }) => {
-  server.tool(
-    'introspect_subgraph', // Tool name
-    'Introspects a subgraph and returns its GraphQL schema (SDL).', // Tool description
-    introspectSubgraphInputSchema.shape, // Pass the raw shape
+  server.registerTool(
+    'introspect_subgraph',
+    {
+      title: 'Introspect Subgraph',
+      description: 'Introspects a subgraph and returns its GraphQL schema (SDL).',
+      inputSchema: introspectSubgraphInputSchema.shape,
+    },
     async ({ routingUrl, header, useRawIntrospection }: IntrospectSubgraphInput) => {
       // Destructure input fields directly
       try {

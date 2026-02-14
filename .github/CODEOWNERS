@@ -6,11 +6,11 @@
 
 /admission-server/ @JivusAyrus @StarpTech @thisisnithin
 /cdn-server/ @JivusAyrus @StarpTech @thisisnithin
-/cli/ @endigma @JivusAyrus @StarpTech @jensneuse @endigma
+/cli/ @endigma @JivusAyrus @StarpTech @jensneuse @wilsonrivera
 /composition/ @Aenimus @JivusAyrus @StarpTech @thisisnithin
 /composition-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @thisisnithin
-/connect/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma
-/connect-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma
+/connect/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera
+/connect-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera
 /controlplane/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
 /graphqlmetrics/ @Noroth @StarpTech
 /helm/ @Noroth @StarpTech
@@ -19,7 +19,7 @@
 /otelcollector/ @Noroth @StarpTech
 /playground/ @wundergraph/Router @thisisnithin @StarpTech
 /proto/ @JivusAyrus @wilsonrivera @StarpTech @endigma
-/protographic/ @Noroth @StarpTech @endigma
+/protographic/ @Noroth @StarpTech @endigma @dkorittki
 # Same owner for router and tests to avoid requesting too many reviewers
 /router/ @Noroth @devsergiy @StarpTech @jensneuse @endigma
 /router-tests/ @Noroth @devsergiy @StarpTech @jensneuse @endigma

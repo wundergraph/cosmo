@@ -70,13 +70,23 @@ export class EntityWalker {
     if (edge.node.isLeaf) {
       return { visited: true, areDescendantsResolved: true };
     }
+    const edgeSelectionPath = `${selectionPath}.${edge.edgeName}`;
+
+    // If the edge and all its descendants are already resolved, there is nothing further to check.
+    const data = this.getNodeResolutionData({
+      node: edge.node,
+      selectionPath: edgeSelectionPath,
+    });
+    if (data.areDescendantsResolved()) {
+      return { visited: true, areDescendantsResolved: true };
+    }
     if (!add(edge.visitedIndices, this.index)) {
       /* This check is necessary to avoid infinite loops inexpensively.
        * If the edge has been visited before, any unresolvable will be propagated by the first instance.
        * Descendant paths need to be cleaned up to avoid false positives.
        */
       this.removeUnresolvablePaths({
-        selectionPath: `${selectionPath}.${edge.edgeName}`,
+        selectionPath: edgeSelectionPath,
         removeDescendantPaths: true,
       });
       return { visited: true, areDescendantsResolved: true, isRevisitedNode: true };
@@ -90,22 +100,18 @@ export class EntityWalker {
         return { visited: true, areDescendantsResolved: true };
       }
       this.encounteredEntityNodeNames.add(edge.node.nodeName);
-      getValueOrDefault(
-        this.selectionPathByEntityNodeName,
-        edge.node.nodeName,
-        () => `${selectionPath}.${edge.edgeName}`,
-      );
+      getValueOrDefault(this.selectionPathByEntityNodeName, edge.node.nodeName, () => edgeSelectionPath);
       return { visited: true, areDescendantsResolved: false };
     }
     if (edge.node.isAbstract) {
       return this.visitEntityDescendantAbstractNode({
         node: edge.node,
-        selectionPath: `${selectionPath}.${edge.edgeName}`,
+        selectionPath: edgeSelectionPath,
       });
     }
     return this.visitEntityDescendantConcreteNode({
       node: edge.node,
-      selectionPath: `${selectionPath}.${edge.edgeName}`,
+      selectionPath: edgeSelectionPath,
     });
   }
 
@@ -115,10 +121,8 @@ export class EntityWalker {
       return { visited: true, areDescendantsResolved: true };
     }
     const data = this.getNodeResolutionData({ node, selectionPath });
-    if (data.isResolved()) {
-      if (data.areDescendantsResolved()) {
-        return { visited: true, areDescendantsResolved: true };
-      }
+    if (data.isResolved() && data.areDescendantsResolved()) {
+      return { visited: true, areDescendantsResolved: true };
     }
     let removeDescendantPaths: true | undefined = undefined;
     for (const [fieldName, edge] of node.headToTailEdges) {
@@ -189,6 +193,7 @@ export class EntityWalker {
         originData.addResolvedFieldName(fieldName);
         if (areDescendantsResolved) {
           originData.resolvedDescendantNames.add(fieldName);
+          this.removeUnresolvablePaths({ selectionPath: `.${fieldName}`, removeDescendantPaths: true });
         }
       }
       return;
