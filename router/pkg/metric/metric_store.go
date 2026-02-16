@@ -9,10 +9,9 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.uber.org/zap"
-
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.uber.org/zap"
 )
 
 // Server HTTP metrics.
@@ -448,7 +447,6 @@ func (h *Metrics) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64
 	}
 }
 
-// Flush flushes the metrics to the backend synchronously.
 func (h *Metrics) MeasureOperationCostEstimated(ctx context.Context, cost int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
 	opts := []otelmetric.RecordOption{h.baseAttributesOpt, opt}
 
@@ -503,8 +501,8 @@ func (h *Metrics) MeasureOperationCostDelta(ctx context.Context, delta int64, sl
 	h.otlpRequestMetrics.MeasureOperationCostDelta(ctx, delta, opts...)
 }
 
+// Flush flushes the metrics to the backend synchronously.
 func (h *Metrics) Flush(ctx context.Context) error {
-
 	var err error
 
 	if errOtlp := h.otlpRequestMetrics.Flush(ctx); errOtlp != nil {

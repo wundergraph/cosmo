@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
@@ -249,21 +250,29 @@ func TestOperationCost(t *testing.T) {
 					}
 				}
 
-				require.True(t, foundEstimated)
-				require.True(t, foundActual)
-				require.True(t, foundDelta)
+				require.True(t, foundEstimated, "estimated cost metric should be recorded")
+				require.True(t, foundActual, "actual cost metric should be recorded")
+				require.True(t, foundDelta, "delta cost metric should be recorded")
 
 				require.NotEmpty(t, estimatedHistogram.DataPoints)
 				require.NotEmpty(t, actualHistogram.DataPoints)
 				require.NotEmpty(t, deltaHistogram.DataPoints)
 
-				estimatedCost := estimatedHistogram.DataPoints[0].Sum
-				actualCost := actualHistogram.DataPoints[0].Sum
-				deltaCost := deltaHistogram.DataPoints[0].Sum
+				// Aggregate across all datapoints to avoid relying on ordering
+				var estimatedSum, actualSum, deltaSum int64
+				for _, dp := range estimatedHistogram.DataPoints {
+					estimatedSum += dp.Sum
+				}
+				for _, dp := range actualHistogram.DataPoints {
+					actualSum += dp.Sum
+				}
+				for _, dp := range deltaHistogram.DataPoints {
+					deltaSum += dp.Sum
+				}
 
-				require.Equal(t, int64(20), estimatedCost)
-				require.Equal(t, int64(20), actualCost)
-				require.Equal(t, int64(0), deltaCost)
+				require.Equal(t, int64(20), estimatedSum)
+				require.Equal(t, int64(20), actualSum)
+				require.Equal(t, int64(0), deltaSum)
 
 				// Verify that cost metrics carry the correct operation attributes
 				for _, dp := range []metricdata.HistogramDataPoint[int64]{
@@ -446,4 +455,17 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 	})
+}
+
+// findInt64DataPoint returns the first int64 HistogramDataPoint whose attribute set
+// contains the given attribute key-value pair. Returns nil if no match is found.
+func findInt64DataPoint(t *testing.T, dps []metricdata.HistogramDataPoint[int64], match attribute.KeyValue) *metricdata.HistogramDataPoint[int64] {
+	t.Helper()
+	for i := range dps {
+		val, ok := dps[i].Attributes.Value(match.Key)
+		if ok && val == match.Value {
+			return &dps[i]
+		}
+	}
+	return nil
 }
