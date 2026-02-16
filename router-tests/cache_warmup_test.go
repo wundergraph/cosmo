@@ -593,6 +593,27 @@ func TestCacheWarmup(t *testing.T) {
 		featureOperationCount := int64(1)
 		invalidOperationCount := int64(1)
 
+		t.Run("fails when graph token is missing with CDN cache warmup enabled", func(t *testing.T) {
+			t.Parallel()
+			testenv.FailsOnStartup(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+						Enabled: true,
+						Source: config.CacheWarmupSource{
+							CdnSource: config.CacheWarmupCDNSource{
+								Enabled: true,
+							},
+						},
+					}),
+					// Override the default graph API token with an empty string
+					core.WithGraphApiToken(""),
+				},
+			}, func(t *testing.T, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "graph token is required for cache warmup in order to communicate with the CDN")
+			})
+		})
+
 		t.Run("cache warmup disabled with CDN config", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{

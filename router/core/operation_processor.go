@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -1156,7 +1157,7 @@ func (o *OperationKit) handleFoundPersistedOperationEntry(entry NormalizationCac
 		return err
 	}
 	// Set the operation name
-	name := o.kit.doc.OperationDefinitionNameString(o.operationDefinitionRef)
+	name := strings.Clone(o.kit.doc.OperationDefinitionNameString(o.operationDefinitionRef))
 	if name == "" {
 		return nil
 	}
