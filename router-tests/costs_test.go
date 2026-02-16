@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/attribute"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
@@ -396,17 +395,23 @@ func TestOperationCost(t *testing.T) {
 				require.NoError(t, err)
 
 				// Cost metrics should NOT be recorded for operations that fail to parse/plan
-				var foundEstimated bool
-			outer:
+				var foundEstimated, foundActual, foundDelta bool
 				for _, scopeMetric := range rm.ScopeMetrics {
 					for _, m := range scopeMetric.Metrics {
 						if m.Name == metric.OperationCostEstimatedHistogram {
 							foundEstimated = true
-							break outer
+						}
+						if m.Name == metric.OperationCostActualHistogram {
+							foundActual = true
+						}
+						if m.Name == metric.OperationCostDeltaHistogram {
+							foundDelta = true
 						}
 					}
 				}
-				require.False(t, foundEstimated, "cost metrics should not be recorded for operations with parse/plan errors")
+				require.False(t, foundEstimated)
+				require.False(t, foundActual)
+				require.False(t, foundDelta)
 			})
 		})
 
@@ -455,17 +460,4 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 	})
-}
-
-// findInt64DataPoint returns the first int64 HistogramDataPoint whose attribute set
-// contains the given attribute key-value pair. Returns nil if no match is found.
-func findInt64DataPoint(t *testing.T, dps []metricdata.HistogramDataPoint[int64], match attribute.KeyValue) *metricdata.HistogramDataPoint[int64] {
-	t.Helper()
-	for i := range dps {
-		val, ok := dps[i].Attributes.Value(match.Key)
-		if ok && val == match.Value {
-			return &dps[i]
-		}
-	}
-	return nil
 }
