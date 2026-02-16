@@ -1416,7 +1416,7 @@ type parseKitOptions struct {
 	apolloCompatibilityFlags                                  config.ApolloCompatibilityFlags
 	apolloRouterCompatibilityFlags                            config.ApolloRouterCompatibilityFlags
 	disableExposingVariablesContentOnValidationError          bool
-	relaxSubgraphOperationFieldSelectionMergingNullability     bool
+	relaxSubgraphOperationFieldSelectionMergingNullability    bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
