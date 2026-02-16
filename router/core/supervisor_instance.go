@@ -50,10 +50,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		}
 	}
 
-	options, err := optionsFromResources(logger, cfg, params.ReloadPersistentState)
-	if err != nil {
-		return nil, fmt.Errorf("could not build router options: %w", err)
-	}
+	options := optionsFromResources(logger, cfg, params.ReloadPersistentState)
 	options = append(options, additionalOptions...)
 
 	authenticators, err := setupAuthenticators(ctx, logger, cfg)
@@ -184,7 +181,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 	return NewRouter(options...)
 }
 
-func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersistentState *ReloadPersistentState) ([]Option, error) {
+func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersistentState *ReloadPersistentState) []Option {
 	options := []Option{
 		WithListenerAddr(config.ListenAddr),
 		WithOverrideRoutingURL(config.OverrideRoutingURL),
@@ -276,11 +273,9 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithDemoMode(config.DemoMode),
 		WithStreamsHandlerConfiguration(config.Events.Handlers),
 		WithReloadPersistentState(reloadPersistentState),
+		WithSubgraphTLSConfiguration(config.TLS.Subgraph),
 	}
-
-	options = append(options, WithSubgraphTLSConfiguration(config.TLS.Subgraph))
-
-	return options, nil
+	return options
 }
 
 func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Config) ([]authentication.Authenticator, error) {
