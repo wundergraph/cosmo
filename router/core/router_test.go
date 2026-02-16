@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -518,12 +517,13 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	})
 }
 
-func TestNewSubgraphTLSConfig(t *testing.T) {
+func TestBuildSubgraphTLSConfigs(t *testing.T) {
 	t.Run("returns nil when no TLS configured", func(t *testing.T) {
-		cfg := &config.Config{}
-		result, err := NewSubgraphTLSConfig(cfg)
+		cfg := &config.SubgraphTLSConfiguration{}
+		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(cfg)
 		assert.NoError(t, err)
-		assert.Nil(t, result)
+		assert.Nil(t, defaultTLS)
+		assert.Nil(t, perSubgraphTLS)
 	})
 
 	t.Run("builds global client TLS config", func(t *testing.T) {
@@ -531,50 +531,40 @@ func TestNewSubgraphTLSConfig(t *testing.T) {
 		certPath, keyPath := generateTestCert(t, dir, "client")
 		caPath, _ := generateTestCert(t, dir, "ca")
 
-		cfg := &config.Config{
-			TLS: config.TLSConfiguration{
-				Subgraph: config.SubgraphTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						CertificateChain: certPath,
-						Key:     keyPath,
-						CaFile:  caPath,
-					},
-				},
+		cfg := &config.SubgraphTLSConfiguration{
+			All: config.TLSClientCertConfiguration{
+				CertificateChain: certPath,
+				Key:              keyPath,
+				CaFile:           caPath,
 			},
 		}
 
-		result, err := NewSubgraphTLSConfig(cfg)
+		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(cfg)
 		assert.NoError(t, err)
-		require.NotNil(t, result)
-		require.NotNil(t, result.DefaultClientTLS)
-		assert.Len(t, result.DefaultClientTLS.Certificates, 1)
-		assert.NotNil(t, result.DefaultClientTLS.RootCAs)
-		assert.Empty(t, result.PerSubgraphTLS)
+		require.NotNil(t, defaultTLS)
+		assert.Len(t, defaultTLS.Certificates, 1)
+		assert.NotNil(t, defaultTLS.RootCAs)
+		assert.Empty(t, perSubgraphTLS)
 	})
 
 	t.Run("builds per-subgraph TLS config", func(t *testing.T) {
 		dir := t.TempDir()
 		certPath, keyPath := generateTestCert(t, dir, "products")
 
-		cfg := &config.Config{
-			TLS: config.TLSConfiguration{
-				Subgraph: config.SubgraphTLSConfiguration{
-					Subgraphs: map[string]config.TLSClientCertConfiguration{
-						"products": {
-							CertificateChain: certPath,
-							Key:     keyPath,
-						},
-					},
+		cfg := &config.SubgraphTLSConfiguration{
+			Subgraphs: map[string]config.TLSClientCertConfiguration{
+				"products": {
+					CertificateChain: certPath,
+					Key:              keyPath,
 				},
 			},
 		}
 
-		result, err := NewSubgraphTLSConfig(cfg)
+		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(cfg)
 		assert.NoError(t, err)
-		require.NotNil(t, result)
-		assert.Nil(t, result.DefaultClientTLS)
-		require.Contains(t, result.PerSubgraphTLS, "products")
-		assert.Len(t, result.PerSubgraphTLS["products"].Certificates, 1)
+		assert.Nil(t, defaultTLS)
+		require.Contains(t, perSubgraphTLS, "products")
+		assert.Len(t, perSubgraphTLS["products"].Certificates, 1)
 	})
 
 	t.Run("builds both global and per-subgraph TLS config", func(t *testing.T) {
@@ -582,76 +572,66 @@ func TestNewSubgraphTLSConfig(t *testing.T) {
 		globalCert, globalKey := generateTestCert(t, dir, "global")
 		productsCert, productsKey := generateTestCert(t, dir, "products")
 
-		cfg := &config.Config{
-			TLS: config.TLSConfiguration{
-				Subgraph: config.SubgraphTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						CertificateChain: globalCert,
-						Key:     globalKey,
-					},
-					Subgraphs: map[string]config.TLSClientCertConfiguration{
-						"products": {
-							CertificateChain: productsCert,
-							Key:     productsKey,
-						},
-					},
+		cfg := &config.SubgraphTLSConfiguration{
+			All: config.TLSClientCertConfiguration{
+				CertificateChain: globalCert,
+				Key:              globalKey,
+			},
+			Subgraphs: map[string]config.TLSClientCertConfiguration{
+				"products": {
+					CertificateChain: productsCert,
+					Key:              productsKey,
 				},
 			},
 		}
 
-		result, err := NewSubgraphTLSConfig(cfg)
+		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(cfg)
 		assert.NoError(t, err)
-		require.NotNil(t, result)
-		require.NotNil(t, result.DefaultClientTLS)
-		require.Contains(t, result.PerSubgraphTLS, "products")
+		require.NotNil(t, defaultTLS)
+		require.Contains(t, perSubgraphTLS, "products")
 	})
 
 	t.Run("errors on invalid global cert", func(t *testing.T) {
-		cfg := &config.Config{
-			TLS: config.TLSConfiguration{
-				Subgraph: config.SubgraphTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						CertificateChain: "/nonexistent/cert.pem",
-						Key:     "/nonexistent/key.pem",
-					},
-				},
+		cfg := &config.SubgraphTLSConfiguration{
+			All: config.TLSClientCertConfiguration{
+				CertificateChain: "/nonexistent/cert.pem",
+				Key:              "/nonexistent/key.pem",
 			},
 		}
 
-		_, err := NewSubgraphTLSConfig(cfg)
+		_, _, err := buildSubgraphTLSConfigs(cfg)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "global subgraph TLS config")
 	})
 
 	t.Run("errors on invalid per-subgraph cert", func(t *testing.T) {
-		cfg := &config.Config{
-			TLS: config.TLSConfiguration{
-				Subgraph: config.SubgraphTLSConfiguration{
-					Subgraphs: map[string]config.TLSClientCertConfiguration{
-						"products": {
-							CertificateChain: "/nonexistent/cert.pem",
-							Key:     "/nonexistent/key.pem",
-						},
-					},
+		cfg := &config.SubgraphTLSConfiguration{
+			Subgraphs: map[string]config.TLSClientCertConfiguration{
+				"products": {
+					CertificateChain: "/nonexistent/cert.pem",
+					Key:              "/nonexistent/key.pem",
 				},
 			},
 		}
 
-		_, err := NewSubgraphTLSConfig(cfg)
+		_, _, err := buildSubgraphTLSConfigs(cfg)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), `subgraph "products"`)
 	})
 }
 
-func TestWithSubgraphTLSConfig(t *testing.T) {
-	tlsCfg := &SubgraphTLSConfig{
-		PerSubgraphTLS: map[string]*tls.Config{},
+func TestWithSubgraphTLSConfiguration(t *testing.T) {
+	cfg := config.SubgraphTLSConfiguration{
+		All: config.TLSClientCertConfiguration{
+			CertificateChain: "/path/to/cert.pem",
+			Key:              "/path/to/key.pem",
+		},
 	}
 
 	options := []Option{
-		WithSubgraphTLSConfig(tlsCfg),
+		WithSubgraphTLSConfiguration(cfg),
 	}
 	router, err := NewRouter(options...)
 	assert.NoError(t, err)
-	assert.Equal(t, tlsCfg, router.subgraphTLSConfig)
+	assert.Equal(t, cfg, router.subgraphTLSConfiguration)
 }

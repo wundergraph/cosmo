@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -146,12 +145,16 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		traceDialer = NewTraceDialer()
 	}
 
-	// Resolve default and per-subgraph client TLS configs
-	var defaultClientTLS *tls.Config
-	perSubgraphTLS := map[string]*tls.Config{}
-	if r.subgraphTLSConfig != nil {
-		defaultClientTLS = r.subgraphTLSConfig.DefaultClientTLS
-		perSubgraphTLS = r.subgraphTLSConfig.PerSubgraphTLS
+	// Build subgraph client TLS configs (mTLS for outbound subgraph connections)
+	defaultClientTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(&r.subgraphTLSConfiguration)
+	if err != nil {
+		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
+	}
+	if defaultClientTLS != nil {
+		r.logger.Info("Global client TLS configured for subgraph connections")
+	}
+	for name := range perSubgraphTLS {
+		r.logger.Info("Per-subgraph client TLS configured", zap.String("subgraph", name))
 	}
 
 	// Base transport

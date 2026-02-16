@@ -278,20 +278,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithReloadPersistentState(reloadPersistentState),
 	}
 
-	// Build subgraph client TLS config (mTLS for outbound subgraph connections)
-	subgraphTLS, err := NewSubgraphTLSConfig(config)
-	if err != nil {
-		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
-	}
-	if subgraphTLS != nil {
-		options = append(options, WithSubgraphTLSConfig(subgraphTLS))
-		if subgraphTLS.DefaultClientTLS != nil {
-			logger.Info("Global client TLS configured for subgraph connections")
-		}
-		for name := range subgraphTLS.PerSubgraphTLS {
-			logger.Info("Per-subgraph client TLS configured", zap.String("subgraph", name))
-		}
-	}
+	options = append(options, WithSubgraphTLSConfiguration(config.TLS.Subgraph))
 
 	return options, nil
 }

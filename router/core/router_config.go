@@ -115,7 +115,7 @@ type Config struct {
 	localhostFallbackInsideDocker bool
 	tlsServerConfig               *tls.Config
 	tlsConfig                     *TlsConfig
-	subgraphTLSConfig             *SubgraphTLSConfig
+	subgraphTLSConfiguration      config.SubgraphTLSConfiguration
 	telemetryAttributes           []config.CustomAttribute
 	tracePropagators              []propagation.TextMapPropagator
 	compositePropagator           propagation.TextMapPropagator

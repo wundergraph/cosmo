@@ -187,14 +187,6 @@ func (r *SubgraphCircuitBreakerOptions) IsEnabled() bool {
 	return r.CircuitBreaker.Enabled || len(r.SubgraphMap) > 0
 }
 
-// SubgraphTLSConfig holds the client TLS configuration for outbound connections to subgraphs.
-type SubgraphTLSConfig struct {
-	// DefaultClientTLS is the global client TLS config applied to all subgraph connections.
-	DefaultClientTLS *tls.Config
-	// PerSubgraphTLS overrides the global config for specific subgraphs (keyed by subgraph name).
-	PerSubgraphTLS map[string]*tls.Config
-}
-
 // buildTLSClientConfig creates a *tls.Config from a TLSClientCertConfiguration.
 func buildTLSClientConfig(clientCfg *config.TLSClientCertConfiguration) (*tls.Config, error) {
 	if clientCfg == nil {
@@ -230,39 +222,38 @@ func buildTLSClientConfig(clientCfg *config.TLSClientCertConfiguration) (*tls.Co
 	return tlsConfig, nil
 }
 
-// NewSubgraphTLSConfig creates a SubgraphTLSConfig from the router config.
-// Returns nil if no client TLS is configured (no error).
-func NewSubgraphTLSConfig(cfg *config.Config) (*SubgraphTLSConfig, error) {
-	allCfg := &cfg.TLS.Subgraph.All
+// buildSubgraphTLSConfigs builds the default and per-subgraph TLS configs from raw configuration.
+// Returns (defaultClientTLS, perSubgraphTLS, error).
+func buildSubgraphTLSConfigs(cfg *config.SubgraphTLSConfiguration) (*tls.Config, map[string]*tls.Config, error) {
+	allCfg := &cfg.All
 	hasAll := allCfg.CertificateChain != "" || allCfg.CaFile != "" || allCfg.InsecureSkipCaVerification
-	hasPerSubgraph := len(cfg.TLS.Subgraph.Subgraphs) > 0
+	hasPerSubgraph := len(cfg.Subgraphs) > 0
 
 	if !hasAll && !hasPerSubgraph {
-		return nil, nil
+		return nil, nil, nil
 	}
 
-	result := &SubgraphTLSConfig{
-		PerSubgraphTLS: make(map[string]*tls.Config),
-	}
+	var defaultClientTLS *tls.Config
+	perSubgraphTLS := make(map[string]*tls.Config)
 
 	if hasAll {
 		defaultTLS, err := buildTLSClientConfig(allCfg)
 		if err != nil {
-			return nil, fmt.Errorf("failed to build global subgraph TLS config: %w", err)
+			return nil, nil, fmt.Errorf("failed to build global subgraph TLS config: %w", err)
 		}
-		result.DefaultClientTLS = defaultTLS
+		defaultClientTLS = defaultTLS
 	}
 
-	for name, sgCfg := range cfg.TLS.Subgraph.Subgraphs {
+	for name, sgCfg := range cfg.Subgraphs {
 		sgCfgCopy := sgCfg
 		subgraphTLS, err := buildTLSClientConfig(&sgCfgCopy)
 		if err != nil {
-			return nil, fmt.Errorf("failed to build TLS config for subgraph %q: %w", name, err)
+			return nil, nil, fmt.Errorf("failed to build TLS config for subgraph %q: %w", name, err)
 		}
-		result.PerSubgraphTLS[name] = subgraphTLS
+		perSubgraphTLS[name] = subgraphTLS
 	}
 
-	return result, nil
+	return defaultClientTLS, perSubgraphTLS, nil
 }
 
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
@@ -2115,9 +2106,9 @@ func WithTLSConfig(cfg *TlsConfig) Option {
 	}
 }
 
-func WithSubgraphTLSConfig(cfg *SubgraphTLSConfig) Option {
+func WithSubgraphTLSConfiguration(cfg config.SubgraphTLSConfiguration) Option {
 	return func(r *Router) {
-		r.subgraphTLSConfig = cfg
+		r.subgraphTLSConfiguration = cfg
 	}
 }
 
