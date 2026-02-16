@@ -524,6 +524,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
 	}
 
+	if ca := r.securityConfiguration.CostAnalysis; ca != nil && ca.Enabled {
+		if ca.EstimatedListSize <= 0 {
+			return nil, errors.New("cost analysis is enabled but 'estimated_list_size' is not set. Please provide a positive value for 'security.cost_analysis.estimated_list_size'")
+		}
+	}
+
 	if r.securityConfiguration.DepthLimit != nil {
 		r.logger.Warn("The security configuration field 'depth_limit' is deprecated, and will be removed. Use 'security.complexity_limits.depth' instead.")
 

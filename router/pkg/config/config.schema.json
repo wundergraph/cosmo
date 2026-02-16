@@ -2913,16 +2913,15 @@
               "default": "measure",
               "description": "Controls cost analysis behavior: 'measure' calculates costs without rejecting operations; 'enforce' rejects operations exceeding the estimated cost limit."
             },
-            "estimated_limit": {
+            "max_estimated_limit": {
               "type": "integer",
-              "description": "Maximum allowed estimated cost for a query. Only enforced when mode is 'enforce'.",
+              "description": "Maximum allowed estimated cost for a query. Only enforced when its value is positive and mode is 'enforce'.",
               "default": 0,
               "minimum": 0
             },
             "estimated_list_size": {
               "type": "integer",
-              "description": "Default assumed size for list fields when no @listSize directive is specified. Used for estimated cost calculation.",
-              "default": 10,
+              "description": "Default assumed size for list fields when no @listSize directive is specified. Required for estimated cost calculation.",
               "minimum": 1
             }
           }

@@ -455,7 +455,7 @@ security:
   cost_analysis:
     enabled: true
     mode: enforce
-    estimated_limit: 1000
+    max_estimated_limit: 1000
     estimated_list_size: 10
   operation_name_length_limit: 2000
 persisted_operations:

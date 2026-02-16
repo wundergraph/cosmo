@@ -497,13 +497,13 @@ type CostAnalysis struct {
 	// - "enforce": calculates costs and rejects operations exceeding the estimated limit
 	Mode CostAnalysisMode `yaml:"mode,omitempty" envDefault:"measure" env:"SECURITY_COST_ANALYSIS_MODE"`
 
-	// EstimatedLimit is the maximum allowed estimated cost for a query.
+	// MaxEstimatedLimit is the maximum allowed estimated cost for a query.
 	// Requires Mode set to "enforce". Operations exceeding this limit are rejected.
-	EstimatedLimit int `yaml:"estimated_limit,omitempty" envDefault:"0" env:"SECURITY_COST_ANALYSIS_ESTIMATED_LIMIT"`
+	MaxEstimatedLimit int `yaml:"max_estimated_limit,omitempty" envDefault:"0" env:"SECURITY_COST_ANALYSIS_MAX_ESTIMATED_LIMIT"`
 
 	// EstimatedListSize is the default assumed size for list fields when no @listSize directive
 	// nor slicing argument is provided. Used as a multiplier for estimated cost calculation.
-	EstimatedListSize int `yaml:"estimated_list_size,omitempty" envDefault:"10" env:"SECURITY_COST_ANALYSIS_ESTIMATED_LIST_SIZE"`
+	EstimatedListSize int `yaml:"estimated_list_size,omitempty" envDefault:"0" env:"SECURITY_COST_ANALYSIS_ESTIMATED_LIST_SIZE"`
 }
 
 type ComplexityLimit struct {
