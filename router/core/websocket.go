@@ -359,7 +359,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		Protocol:                     protocol,
 		Logger:                       requestLogger,
 		Stats:                        h.stats,
-		ConnectionID:                 resolve.ConnectionIDs.Inc(),
+		ConnectionID:                 resolve.ConnectionIDs.Add(1),
 		ClientInfo:                   clientInfo,
 		InitRequestID:                requestID,
 		ForwardUpgradeHeaders:        h.forwardUpgradeHeadersConfig,
@@ -1119,7 +1119,7 @@ func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error 
 		ConnectionID:   h.connectionID,
 		SubscriptionID: subscriptionID,
 	}
-	return h.graphqlHandler.executor.Resolver.AsyncCompleteSubscription(id)
+	return h.graphqlHandler.executor.Resolver.CompleteSubscription(id)
 }
 
 func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, msg *wsproto.Message) (err error) {
@@ -1277,7 +1277,7 @@ func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {
 func (h *WebSocketConnectionHandler) Close(unsubscribe bool) {
 	if unsubscribe {
 		// Remove any pending IDs associated with this connection
-		err := h.graphqlHandler.executor.Resolver.AsyncUnsubscribeClient(h.connectionID)
+		err := h.graphqlHandler.executor.Resolver.UnsubscribeClient(h.connectionID)
 		if err != nil {
 			h.logger.Debug("Unsubscribing client", zap.Error(err))
 		}

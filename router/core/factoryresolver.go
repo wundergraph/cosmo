@@ -193,10 +193,6 @@ func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (pla
 	)
 
 	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
-		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, subscriptionClient)
-	}
-
-	if subgraphClient, ok := d.subgraphHTTPClients[subgraphName]; ok {
 		// it's intentional that we're not using the subgraphClient for subscriptions
 		// custom subgraph clients are intended to be used for custom timeouts, which is not relevant for subscriptions
 		return graphql_datasource.NewFactory(d.engineCtx, subgraphClient, subscriptionClient)
