@@ -1388,17 +1388,17 @@ func (o *OperationKit) ValidateStaticCost(preparedPlan plan.Plan, variables *fas
 	}
 
 	// Only enforce limits in enforce mode
-	if costAnalysis.Mode != config.CostAnalysisModeEnforce {
-		return nil
-	}
-
-	if costAnalysis.MaxEstimatedLimit <= 0 {
+	if costAnalysis.Mode != config.CostAnalysisModeEnforce || costAnalysis.MaxEstimatedLimit <= 0 {
 		return nil
 	}
 
 	costCalc := preparedPlan.GetCostCalculator()
 	if costCalc == nil {
-		return nil
+		// If the engine fails to create a calculator, this check won't let to bypass the validation.
+		return &httpGraphqlError{
+			message:    "cost analysis is enabled in enforce mode but the cost calculator is unavailable",
+			statusCode: http.StatusInternalServerError,
+		}
 	}
 
 	estimatedCost := costCalc.EstimateCost(o.operationProcessor.executor.PlanConfig, variables)
