@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.191.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.190.0...controlplane@0.191.0) (2026-02-16)
+
+### Features
+
+* add support to mark API keys as external ([#2507](https://github.com/wundergraph/cosmo/issues/2507)) ([483d5c8](https://github.com/wundergraph/cosmo/commit/483d5c8e7ffbc2f71fcafdb745d20fc68670bb0c)) (@wilsonrivera)
+
 # [0.190.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.189.1...controlplane@0.190.0) (2026-02-12)
 
 ### Features
