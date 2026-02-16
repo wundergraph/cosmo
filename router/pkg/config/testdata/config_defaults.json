@@ -119,7 +119,7 @@
       "All": {
         "CertificateChain": "",
         "Key": "",
-        "CaFile": "",
+        "CertificateAuthority": "",
         "InsecureSkipCaVerification": false
       },
       "Subgraphs": null

@@ -150,12 +150,6 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	if err != nil {
 		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
 	}
-	if defaultClientTLS != nil {
-		r.logger.Info("Global client TLS configured for subgraph connections")
-	}
-	for name := range perSubgraphTLS {
-		r.logger.Info("Per-subgraph client TLS configured", zap.String("subgraph", name))
-	}
 
 	// Base transport
 	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "", defaultClientTLS)
@@ -170,6 +164,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy, traceDialer, subgraph, clientTLS)
 		subgraphTransports[subgraph] = subgraphBaseTransport
 	}
+
 	// Create transports for subgraphs with per-subgraph TLS configs that don't have
 	// per-subgraph transport options (they inherit the base transport options).
 	for subgraph, sgTLS := range perSubgraphTLS {

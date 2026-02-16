@@ -495,7 +495,7 @@
                     "format": "file-path",
                     "description": "The path to the client private key file for this subgraph."
                   },
-                  "ca_file": {
+                  "certificate_authority": {
                     "type": "string",
                     "format": "file-path",
                     "description": "The path to the CA certificate file for verifying this subgraph's server certificate."

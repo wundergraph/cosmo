@@ -797,7 +797,7 @@ type TLSServerConfiguration struct {
 type TLSClientCertConfiguration struct {
 	CertificateChain   string `yaml:"certificate_chain,omitempty" env:"TLS_CLIENT_CERT_FILE"`
 	Key                string `yaml:"key,omitempty" env:"TLS_CLIENT_KEY_FILE"`
-	CaFile             string `yaml:"ca_file,omitempty" env:"TLS_CLIENT_CA_FILE"`
+	CertificateAuthority string `yaml:"certificate_authority,omitempty" env:"TLS_CLIENT_CA_FILE"`
 	InsecureSkipCaVerification bool `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"TLS_CLIENT_INSECURE_SKIP_CA_VERIFICATION"`
 }
 
