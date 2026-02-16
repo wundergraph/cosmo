@@ -28,6 +28,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/redis"
 
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
@@ -313,6 +314,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	}
 	natSources := map[string]*nats.ProviderAdapter{}
 	kafkaSources := map[string]*kafka.ProviderAdapter{}
+	redisSources := map[string]*redis.ProviderAdapter{}
 	for _, ds := range routerConfig.GetEngineConfig().GetDatasourceConfigurations() {
 		if ds.GetKind() != nodev1.DataSourceKind_PUBSUB || ds.GetCustomEvents() == nil {
 			continue
@@ -332,6 +334,15 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 				kafkaSources[providerId] = nil
 				routerEngineConfig.Events.Providers.Kafka = append(routerEngineConfig.Events.Providers.Kafka, config.KafkaEventSource{
 					ID: providerId,
+				})
+			}
+		}
+		for _, redisConfig := range ds.GetCustomEvents().GetRedis() {
+			providerId := redisConfig.GetEngineEventConfiguration().GetProviderId()
+			if _, ok := redisSources[providerId]; !ok {
+				redisSources[providerId] = nil
+				routerEngineConfig.Events.Providers.Redis = append(routerEngineConfig.Events.Providers.Redis, config.RedisEventSource{
+					ID:   providerId,
 				})
 			}
 		}
