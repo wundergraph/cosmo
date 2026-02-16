@@ -104,6 +104,18 @@ func NewDefaultFactoryResolver(
 		subgraphHTTPClients[subgraph] = subgraphClient
 	}
 
+	// Create HTTP clients for subgraphs that have per-subgraph transports (e.g. per-subgraph TLS)
+	// but no per-subgraph transport options. These use the default request timeout.
+	for subgraph, subgraphTransport := range subgraphTransports {
+		if _, exists := subgraphHTTPClients[subgraph]; !exists {
+			subgraphClient := &http.Client{
+				Transport: transportFactory.RoundTripper(subgraphTransport),
+				Timeout:   transportOptions.SubgraphTransportOptions.RequestTimeout,
+			}
+			subgraphHTTPClients[subgraph] = subgraphClient
+		}
+	}
+
 	var factoryLogger abstractlogger.Logger
 	if log != nil {
 		factoryLogger = abstractlogger.NewZapLogger(log, abstractlogger.DebugLevel)

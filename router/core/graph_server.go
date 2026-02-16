@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -145,14 +146,34 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		traceDialer = NewTraceDialer()
 	}
 
+	// Resolve default and per-subgraph client TLS configs
+	var defaultClientTLS *tls.Config
+	perSubgraphTLS := map[string]*tls.Config{}
+	if r.subgraphTLSConfig != nil {
+		defaultClientTLS = r.subgraphTLSConfig.DefaultClientTLS
+		perSubgraphTLS = r.subgraphTLSConfig.PerSubgraphTLS
+	}
+
 	// Base transport
-	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "")
+	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "", defaultClientTLS)
 
 	// Subgraph transports
 	subgraphTransports := map[string]*http.Transport{}
 	for subgraph, subgraphOpts := range r.subgraphTransportOptions.SubgraphMap {
-		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy, traceDialer, subgraph)
+		clientTLS := defaultClientTLS
+		if sgTLS, ok := perSubgraphTLS[subgraph]; ok {
+			clientTLS = sgTLS
+		}
+		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy, traceDialer, subgraph, clientTLS)
 		subgraphTransports[subgraph] = subgraphBaseTransport
+	}
+	// Create transports for subgraphs with per-subgraph TLS configs that don't have
+	// per-subgraph transport options (they inherit the base transport options).
+	for subgraph, sgTLS := range perSubgraphTLS {
+		if _, exists := subgraphTransports[subgraph]; !exists {
+			subgraphBaseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, subgraph, sgTLS)
+			subgraphTransports[subgraph] = subgraphBaseTransport
+		}
 	}
 
 	ctx, cancel := context.WithCancel(ctx)

@@ -114,6 +114,15 @@
         "CertFile": "",
         "Required": false
       }
+    },
+    "Subgraph": {
+      "All": {
+        "CertificateChain": "",
+        "Key": "",
+        "CaFile": "",
+        "InsecureSkipCaVerification": false
+      },
+      "Subgraphs": null
     }
   },
   "CacheControl": {

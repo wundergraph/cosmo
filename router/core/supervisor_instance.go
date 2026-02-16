@@ -50,7 +50,10 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		}
 	}
 
-	options := optionsFromResources(logger, cfg, params.ReloadPersistentState)
+	options, err := optionsFromResources(logger, cfg, params.ReloadPersistentState)
+	if err != nil {
+		return nil, fmt.Errorf("could not build router options: %w", err)
+	}
 	options = append(options, additionalOptions...)
 
 	authenticators, err := setupAuthenticators(ctx, logger, cfg)
@@ -181,7 +184,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 	return NewRouter(options...)
 }
 
-func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersistentState *ReloadPersistentState) []Option {
+func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersistentState *ReloadPersistentState) ([]Option, error) {
 	options := []Option{
 		WithListenerAddr(config.ListenAddr),
 		WithOverrideRoutingURL(config.OverrideRoutingURL),
@@ -275,7 +278,22 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithReloadPersistentState(reloadPersistentState),
 	}
 
-	return options
+	// Build subgraph client TLS config (mTLS for outbound subgraph connections)
+	subgraphTLS, err := NewSubgraphTLSConfig(config)
+	if err != nil {
+		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
+	}
+	if subgraphTLS != nil {
+		options = append(options, WithSubgraphTLSConfig(subgraphTLS))
+		if subgraphTLS.DefaultClientTLS != nil {
+			logger.Info("Global client TLS configured for subgraph connections")
+		}
+		for name := range subgraphTLS.PerSubgraphTLS {
+			logger.Info("Per-subgraph client TLS configured", zap.String("subgraph", name))
+		}
+	}
+
+	return options, nil
 }
 
 func setupAuthenticators(ctx context.Context, logger *zap.Logger, cfg *config.Config) ([]authentication.Authenticator, error) {

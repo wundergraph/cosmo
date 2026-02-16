@@ -187,6 +187,84 @@ func (r *SubgraphCircuitBreakerOptions) IsEnabled() bool {
 	return r.CircuitBreaker.Enabled || len(r.SubgraphMap) > 0
 }
 
+// SubgraphTLSConfig holds the client TLS configuration for outbound connections to subgraphs.
+type SubgraphTLSConfig struct {
+	// DefaultClientTLS is the global client TLS config applied to all subgraph connections.
+	DefaultClientTLS *tls.Config
+	// PerSubgraphTLS overrides the global config for specific subgraphs (keyed by subgraph name).
+	PerSubgraphTLS map[string]*tls.Config
+}
+
+// buildTLSClientConfig creates a *tls.Config from a TLSClientCertConfiguration.
+func buildTLSClientConfig(clientCfg *config.TLSClientCertConfiguration) (*tls.Config, error) {
+	if clientCfg == nil {
+		return nil, nil
+	}
+
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: clientCfg.InsecureSkipCaVerification,
+	}
+
+	// Load client certificate and key if provided
+	if clientCfg.CertificateChain != "" && clientCfg.Key != "" {
+		cert, err := tls.LoadX509KeyPair(clientCfg.CertificateChain, clientCfg.Key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to load client TLS cert and key: %w", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	// Load custom CA for verifying subgraph server certificates
+	if clientCfg.CaFile != "" {
+		caCert, err := os.ReadFile(clientCfg.CaFile)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read client TLS CA file: %w", err)
+		}
+		caPool := x509.NewCertPool()
+		if ok := caPool.AppendCertsFromPEM(caCert); !ok {
+			return nil, errors.New("failed to append client TLS CA cert to pool")
+		}
+		tlsConfig.RootCAs = caPool
+	}
+
+	return tlsConfig, nil
+}
+
+// NewSubgraphTLSConfig creates a SubgraphTLSConfig from the router config.
+// Returns nil if no client TLS is configured (no error).
+func NewSubgraphTLSConfig(cfg *config.Config) (*SubgraphTLSConfig, error) {
+	allCfg := &cfg.TLS.Subgraph.All
+	hasAll := allCfg.CertificateChain != "" || allCfg.CaFile != "" || allCfg.InsecureSkipCaVerification
+	hasPerSubgraph := len(cfg.TLS.Subgraph.Subgraphs) > 0
+
+	if !hasAll && !hasPerSubgraph {
+		return nil, nil
+	}
+
+	result := &SubgraphTLSConfig{
+		PerSubgraphTLS: make(map[string]*tls.Config),
+	}
+
+	if hasAll {
+		defaultTLS, err := buildTLSClientConfig(allCfg)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build global subgraph TLS config: %w", err)
+		}
+		result.DefaultClientTLS = defaultTLS
+	}
+
+	for name, sgCfg := range cfg.TLS.Subgraph.Subgraphs {
+		sgCfgCopy := sgCfg
+		subgraphTLS, err := buildTLSClientConfig(&sgCfgCopy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build TLS config for subgraph %q: %w", name, err)
+		}
+		result.PerSubgraphTLS[name] = subgraphTLS
+	}
+
+	return result, nil
+}
+
 // NewRouter creates a new Router instance. Router.Start() must be called to start the server.
 // Alternatively, use Router.NewServer() to create a new server instance without starting it.
 func NewRouter(opts ...Option) (*Router, error) {
@@ -2037,6 +2115,12 @@ func WithTLSConfig(cfg *TlsConfig) Option {
 	}
 }
 
+func WithSubgraphTLSConfig(cfg *SubgraphTLSConfig) Option {
+	return func(r *Router) {
+		r.subgraphTLSConfig = cfg
+	}
+}
+
 func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
 	return func(r *Router) {
 		r.telemetryAttributes = attributes
@@ -2145,7 +2229,7 @@ func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Opt
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string) *http.Transport {
+func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string, clientTLS *tls.Config) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
@@ -2174,6 +2258,8 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 		// Will return nil when HTTP(S)_PROXY does not exist or is empty.
 		// This will prevent the transport from handling the proxy when it is not needed.
 		Proxy: proxy,
+		// TLSClientConfig configures client TLS for outbound subgraph connections (mTLS).
+		TLSClientConfig: clientTLS,
 	}
 
 	if traceDialer != nil {

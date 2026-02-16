@@ -214,6 +214,7 @@ type GlobalSubgraphRequestRule struct {
 	MaxConnsPerHost     *int `yaml:"max_conns_per_host,omitempty" envDefault:"100"`
 	MaxIdleConns        *int `yaml:"max_idle_conns,omitempty" envDefault:"1024"`
 	MaxIdleConnsPerHost *int `yaml:"max_idle_conns_per_host,omitempty" envDefault:"20"`
+
 }
 
 type SubgraphTrafficRequestRule struct {
@@ -793,8 +794,23 @@ type TLSServerConfiguration struct {
 	ClientAuth TLSClientAuthConfiguration `yaml:"client_auth,omitempty"`
 }
 
+type TLSClientCertConfiguration struct {
+	CertificateChain   string `yaml:"certificate_chain,omitempty" env:"TLS_CLIENT_CERT_FILE"`
+	Key                string `yaml:"key,omitempty" env:"TLS_CLIENT_KEY_FILE"`
+	CaFile             string `yaml:"ca_file,omitempty" env:"TLS_CLIENT_CA_FILE"`
+	InsecureSkipCaVerification bool `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"TLS_CLIENT_INSECURE_SKIP_CA_VERIFICATION"`
+}
+
+type SubgraphTLSConfiguration struct {
+	// All applies to all subgraph connections.
+	All TLSClientCertConfiguration `yaml:"all"`
+	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
+	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+}
+
 type TLSConfiguration struct {
-	Server TLSServerConfiguration `yaml:"server"`
+	Server   TLSServerConfiguration   `yaml:"server"`
+	Subgraph SubgraphTLSConfiguration `yaml:"subgraph"`
 }
 
 type SubgraphErrorPropagationMode string

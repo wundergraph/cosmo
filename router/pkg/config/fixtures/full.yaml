@@ -33,6 +33,21 @@ liveness_check_path: '/health/live'
 router_registration: true
 graphql_path: /graphql
 dev_mode: false
+tls:
+  server:
+    enabled: false
+  subgraph:
+    all:
+      certificate_chain: '/path/to/client.crt'
+      key: '/path/to/client.key'
+      ca_file: '/path/to/ca.crt'
+      insecure_skip_ca_verification: false
+    subgraphs:
+      products:
+        certificate_chain: '/path/to/products-client.crt'
+        key: '/path/to/products-client.key'
+        ca_file: '/path/to/products-ca.crt'
+        insecure_skip_ca_verification: false
 instance_id: ''
 graphql_metrics:
   enabled: true
