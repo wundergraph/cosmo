@@ -214,7 +214,6 @@ type GlobalSubgraphRequestRule struct {
 	MaxConnsPerHost     *int `yaml:"max_conns_per_host,omitempty" envDefault:"100"`
 	MaxIdleConns        *int `yaml:"max_idle_conns,omitempty" envDefault:"1024"`
 	MaxIdleConnsPerHost *int `yaml:"max_idle_conns_per_host,omitempty" envDefault:"20"`
-
 }
 
 type SubgraphTrafficRequestRule struct {
@@ -795,10 +794,10 @@ type TLSServerConfiguration struct {
 }
 
 type TLSClientCertConfiguration struct {
-	CertificateChain   string `yaml:"certificate_chain,omitempty" env:"TLS_CLIENT_CERT_FILE"`
-	Key                string `yaml:"key,omitempty" env:"TLS_CLIENT_KEY_FILE"`
-	CertificateAuthority string `yaml:"certificate_authority,omitempty" env:"TLS_CLIENT_CA_FILE"`
-	InsecureSkipCaVerification bool `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"TLS_CLIENT_INSECURE_SKIP_CA_VERIFICATION"`
+	CertificateChain           string `yaml:"certificate_chain,omitempty" env:"TLS_CLIENT_CERT_FILE"`
+	Key                        string `yaml:"key,omitempty" env:"TLS_CLIENT_KEY_FILE"`
+	CertificateAuthority       string `yaml:"certificate_authority,omitempty" env:"TLS_CLIENT_CA_FILE"`
+	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"TLS_CLIENT_INSECURE_SKIP_CA_VERIFICATION"`
 }
 
 type SubgraphTLSConfiguration struct {

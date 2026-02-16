@@ -12,14 +12,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// loadSubgraphMTLSCert loads a TLS certificate from the testdata/tls directory.
-func loadSubgraphMTLSCert(t *testing.T, certFile, keyFile string) tls.Certificate {
-	t.Helper()
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	require.NoError(t, err)
-	return cert
-}
-
 // loadSubgraphMTLSCACertPool loads a CA certificate pool from a PEM file.
 func loadSubgraphMTLSCACertPool(t *testing.T, caFile string) *x509.CertPool {
 	t.Helper()
@@ -54,7 +46,7 @@ func TestSubgraphMTLS(t *testing.T) {
 		t.Parallel()
 
 		// Subgraph is a TLS server (httptest generates a self-signed cert for 127.0.0.1).
-		// Router uses InsecureSkipVerify to trust it.
+		// Router uses InsecureSkipCaVerification to trust it.
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -62,9 +54,9 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfig(&core.SubgraphTLSConfig{
-					DefaultClientTLS: &tls.Config{
-						InsecureSkipVerify: true,
+				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+					All: config.TLSClientCertConfiguration{
+						InsecureSkipCaVerification: true,
 					},
 				}),
 			},
@@ -80,8 +72,6 @@ func TestSubgraphMTLS(t *testing.T) {
 		t.Parallel()
 
 		// Subgraph requires client cert signed by testdata/tls/cert.pem CA
-		clientCert := loadSubgraphMTLSCert(t, "testdata/tls/cert.pem", "testdata/tls/key.pem")
-
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -89,12 +79,13 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfig(&core.SubgraphTLSConfig{
-					DefaultClientTLS: &tls.Config{
-						// InsecureSkipVerify for httptest's self-signed server cert
-						InsecureSkipVerify: true,
+				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+					All: config.TLSClientCertConfiguration{
+						// InsecureSkipCaVerification for httptest's self-signed server cert
+						InsecureSkipCaVerification: true,
 						// Present client cert for mTLS
-						Certificates: []tls.Certificate{clientCert},
+						CertificateChain: "testdata/tls/cert.pem",
+						Key:              "testdata/tls/key.pem",
 					},
 				}),
 			},
@@ -117,9 +108,9 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfig(&core.SubgraphTLSConfig{
-					DefaultClientTLS: &tls.Config{
-						InsecureSkipVerify: true,
+				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+					All: config.TLSClientCertConfiguration{
+						InsecureSkipCaVerification: true,
 						// NO client certificate — should cause mTLS failure
 					},
 				}),
@@ -139,8 +130,6 @@ func TestSubgraphMTLS(t *testing.T) {
 		t.Parallel()
 
 		// Subgraph requires client cert signed by cert.pem CA, but router presents cert-2
-		wrongCert := loadSubgraphMTLSCert(t, "testdata/tls/cert-2.pem", "testdata/tls/key-2.pem")
-
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -148,10 +137,11 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfig(&core.SubgraphTLSConfig{
-					DefaultClientTLS: &tls.Config{
-						InsecureSkipVerify: true,
-						Certificates:      []tls.Certificate{wrongCert},
+				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+					All: config.TLSClientCertConfiguration{
+						InsecureSkipCaVerification: true,
+						CertificateChain:          "testdata/tls/cert-2.pem",
+						Key:                       "testdata/tls/key-2.pem",
 					},
 				}),
 			},
@@ -168,8 +158,6 @@ func TestSubgraphMTLS(t *testing.T) {
 		t.Parallel()
 
 		// Subgraph requires client cert
-		clientCert := loadSubgraphMTLSCert(t, "testdata/tls/cert.pem", "testdata/tls/key.pem")
-
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -177,12 +165,13 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfig(&core.SubgraphTLSConfig{
+				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
 					// No global client TLS — would fail without per-subgraph override
-					PerSubgraphTLS: map[string]*tls.Config{
+					Subgraphs: map[string]config.TLSClientCertConfiguration{
 						"employees": {
-							InsecureSkipVerify: true,
-							Certificates:       []tls.Certificate{clientCert},
+							InsecureSkipCaVerification: true,
+							CertificateChain:          "testdata/tls/cert.pem",
+							Key:                       "testdata/tls/key.pem",
 						},
 					},
 				}),
@@ -193,28 +182,5 @@ func TestSubgraphMTLS(t *testing.T) {
 			})
 			require.JSONEq(t, employeesIDData, res.Body)
 		})
-	})
-
-	t.Run("Router config builds SubgraphTLSConfig from config struct", func(t *testing.T) {
-		t.Parallel()
-
-		cfg := &config.Config{
-			TLS: config.TLSConfiguration{
-				Subgraph: config.SubgraphTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						CertificateChain: "testdata/tls/cert.pem",
-						Key:     "testdata/tls/key.pem",
-						CaFile:   "testdata/tls/cert.pem",
-					},
-				},
-			},
-		}
-
-		subgraphTLS, err := core.NewSubgraphTLSConfig(cfg)
-		require.NoError(t, err)
-		require.NotNil(t, subgraphTLS)
-		require.NotNil(t, subgraphTLS.DefaultClientTLS)
-		require.Len(t, subgraphTLS.DefaultClientTLS.Certificates, 1)
-		require.NotNil(t, subgraphTLS.DefaultClientTLS.RootCAs)
 	})
 }
