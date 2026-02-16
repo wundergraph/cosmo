@@ -10,44 +10,38 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// makeConsultancyUpcNullable modifies the graphqlSchema and graphqlClientSchema
-// to change Consultancy.upc from ID! to ID (nullable),
-// creating a scalar nullability difference with Cosmo.upc which stays ID!.
-func makeConsultancyUpcNullable(routerConfig *nodev1.RouterConfig) {
-	old := "type Consultancy {\n  upc: ID!\n  lead: Employee!\n  isLeadAvailable: Boolean\n  name: ProductName!\n}"
-	updated := "type Consultancy {\n  upc: ID\n  lead: Employee!\n  isLeadAvailable: Boolean\n  name: ProductName!\n}"
-
-	routerConfig.EngineConfig.GraphqlSchema = strings.Replace(
-		routerConfig.EngineConfig.GraphqlSchema, old, updated, 1,
-	)
-	if routerConfig.EngineConfig.GraphqlClientSchema != nil {
-		modified := strings.Replace(
-			*routerConfig.EngineConfig.GraphqlClientSchema, old, updated, 1,
-		)
-		routerConfig.EngineConfig.GraphqlClientSchema = &modified
-	}
-}
-
-// makeConsultancyLeadNullable modifies the graphqlSchema and graphqlClientSchema
-// to change Consultancy.lead from Employee! to Employee (nullable),
-// creating a non-scalar nullability difference with Cosmo.lead which stays Employee!.
-func makeConsultancyLeadNullable(routerConfig *nodev1.RouterConfig) {
-	old := "type Consultancy {\n  upc: ID!\n  lead: Employee!\n  isLeadAvailable: Boolean\n  name: ProductName!\n}"
-	updated := "type Consultancy {\n  upc: ID!\n  lead: Employee\n  isLeadAvailable: Boolean\n  name: ProductName!\n}"
-
-	routerConfig.EngineConfig.GraphqlSchema = strings.Replace(
-		routerConfig.EngineConfig.GraphqlSchema, old, updated, 1,
-	)
-	if routerConfig.EngineConfig.GraphqlClientSchema != nil {
-		modified := strings.Replace(
-			*routerConfig.EngineConfig.GraphqlClientSchema, old, updated, 1,
-		)
-		routerConfig.EngineConfig.GraphqlClientSchema = &modified
-	}
-}
-
 func TestRelaxedFieldSelectionNullability(t *testing.T) {
 	t.Parallel()
+
+	makeConsultancyUpcNullable := func(routerConfig *nodev1.RouterConfig) {
+		old := "type Consultancy {\n  upc: ID!\n  lead: Employee!\n  isLeadAvailable: Boolean\n  name: ProductName!\n}"
+		updated := "type Consultancy {\n  upc: ID\n  lead: Employee!\n  isLeadAvailable: Boolean\n  name: ProductName!\n}"
+
+		routerConfig.EngineConfig.GraphqlSchema = strings.Replace(
+			routerConfig.EngineConfig.GraphqlSchema, old, updated, 1,
+		)
+		if routerConfig.EngineConfig.GraphqlClientSchema != nil {
+			modified := strings.Replace(
+				*routerConfig.EngineConfig.GraphqlClientSchema, old, updated, 1,
+			)
+			routerConfig.EngineConfig.GraphqlClientSchema = &modified
+		}
+	}
+
+	makeConsultancyLeadNullable := func(routerConfig *nodev1.RouterConfig) {
+		old := "type Consultancy {\n  upc: ID!\n  lead: Employee!\n  isLeadAvailable: Boolean\n  name: ProductName!\n}"
+		updated := "type Consultancy {\n  upc: ID!\n  lead: Employee\n  isLeadAvailable: Boolean\n  name: ProductName!\n}"
+
+		routerConfig.EngineConfig.GraphqlSchema = strings.Replace(
+			routerConfig.EngineConfig.GraphqlSchema, old, updated, 1,
+		)
+		if routerConfig.EngineConfig.GraphqlClientSchema != nil {
+			modified := strings.Replace(
+				*routerConfig.EngineConfig.GraphqlClientSchema, old, updated, 1,
+			)
+			routerConfig.EngineConfig.GraphqlClientSchema = &modified
+		}
+	}
 
 	t.Run("default rejects differing scalar nullability on union members", func(t *testing.T) {
 		t.Parallel()
