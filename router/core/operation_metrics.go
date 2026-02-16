@@ -81,9 +81,9 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 			rm.MeasureOperationCostEstimated(ctx, int64(estimated), sliceAttrs, o)
 
 			// Calculate actual cost if actualListSizes is available (after execution)
-			if reqContext.operation.actualListSizes != nil && len(reqContext.operation.actualListSizes) > 0 {
+			if reqContext.operation.actualListSizes != nil {
 				actual := costCalc.ActualCost(reqContext.operation.planConfig, reqContext.operation.actualListSizes)
-				delta := actual - estimated
+				delta := estimated - actual
 
 				rm.MeasureOperationCostActual(ctx, int64(actual), sliceAttrs, o)
 				rm.MeasureOperationCostDelta(ctx, int64(delta), sliceAttrs, o)

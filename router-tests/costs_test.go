@@ -219,7 +219,7 @@ func TestOperationCost(t *testing.T) {
 					cfg.CostAnalysis = &config.CostAnalysis{
 						Enabled:           true,
 						Mode:              config.CostAnalysisModeMeasure,
-						EstimatedListSize: 10,
+						EstimatedListSize: 15,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -269,9 +269,9 @@ func TestOperationCost(t *testing.T) {
 					deltaSum += dp.Sum
 				}
 
-				require.Equal(t, int64(20), estimatedSum)
+				require.Equal(t, int64(30), estimatedSum)
 				require.Equal(t, int64(20), actualSum)
-				require.Equal(t, int64(0), deltaSum)
+				require.Equal(t, int64(10), deltaSum)
 
 				// Verify that cost metrics carry the correct operation attributes
 				for _, dp := range []metricdata.HistogramDataPoint[int64]{
