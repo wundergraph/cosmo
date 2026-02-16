@@ -151,6 +151,7 @@ export async function seedTest(
         organizationID: org.id,
         userID: userTestData.userId,
         expiresAt: ExpiresAt.NEVER,
+        isExternal: false,
         groupId: orgGroup.groupId,
         permissions: createScimKey ? ['scim'] : [],
       });
