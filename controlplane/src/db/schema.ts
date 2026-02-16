@@ -1191,6 +1191,7 @@ export const apiKeys = pgTable(
     groupId: uuid('group_id').references(() => organizationGroups.id, {
       onDelete: 'set null',
     }),
+    external: boolean('external').notNull().default(false),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     expiresAt: timestamp('expires_at', { withTimezone: true }),

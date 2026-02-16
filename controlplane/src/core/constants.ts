@@ -1,5 +1,7 @@
 import * as z from 'zod';
 
+export const hubUserAgent = 'cosmo-hub';
+
 export const maxRowLimitForChecks = 100_000;
 
 export const apiKeyPermissions = [

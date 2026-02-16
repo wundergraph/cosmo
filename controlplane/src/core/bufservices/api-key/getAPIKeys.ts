@@ -32,6 +32,7 @@ export function getAPIKeys(
 
     const count = await apiKeyRepo.getAPIKeysCount({
       organizationID: authContext.organizationId,
+      includeExternal: true,
     });
 
     return {

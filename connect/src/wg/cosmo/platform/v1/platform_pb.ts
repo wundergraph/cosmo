@@ -8194,6 +8194,11 @@ export class APIKey extends Message<APIKey> {
    */
   group?: APIKey_Group;
 
+  /**
+   * @generated from field: bool external = 8;
+   */
+  external = false;
+
   constructor(data?: PartialMessage<APIKey>) {
     super();
     proto3.util.initPartial(data, this);
@@ -8209,6 +8214,7 @@ export class APIKey extends Message<APIKey> {
     { no: 5, name: "lastUsedAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 6, name: "expiresAt", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 7, name: "group", kind: "message", T: APIKey_Group, opt: true },
+    { no: 8, name: "external", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): APIKey {
@@ -8392,6 +8398,11 @@ export class CreateAPIKeyRequest extends Message<CreateAPIKeyRequest> {
    */
   permissions: string[] = [];
 
+  /**
+   * @generated from field: optional bool external = 6;
+   */
+  external?: boolean;
+
   constructor(data?: PartialMessage<CreateAPIKeyRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -8405,6 +8416,7 @@ export class CreateAPIKeyRequest extends Message<CreateAPIKeyRequest> {
     { no: 3, name: "expires", kind: "enum", T: proto3.getEnumType(ExpiresAt) },
     { no: 4, name: "groupId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 5, name: "permissions", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 6, name: "external", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateAPIKeyRequest {

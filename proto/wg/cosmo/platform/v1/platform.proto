@@ -1101,6 +1101,7 @@ message APIKey{
   string lastUsedAt = 5;
   string expiresAt = 6;
   optional Group group = 7;
+  bool external = 8;
 }
 
 message GetAPIKeysRequest {
@@ -1127,6 +1128,7 @@ message CreateAPIKeyRequest {
   ExpiresAt expires = 3;
   string groupId = 4;
   repeated string permissions = 5;
+  optional bool external = 6;
 }
 
 message CreateAPIKeyResponse {

@@ -105,6 +105,7 @@ const createTempUser = async (
       organizationID: personalOrg.id,
       userID: keycloakUserID,
       expiresAt: ExpiresAt.NEVER,
+      isExternal: false,
       groupId: personalOrgAdminGroup.groupId,
       permissions: [],
     });
@@ -140,6 +141,7 @@ const createTempUser = async (
       organizationID: org!.id,
       userID: keycloakUserID,
       expiresAt: ExpiresAt.NEVER,
+      isExternal: false,
       groupId: orgAdminGroup!.groupId,
       permissions: [],
     });
