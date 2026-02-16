@@ -416,7 +416,11 @@ func toUpperSnakeCase(s string) string {
 // This follows Relay's error classification pattern for critical errors.
 func (h *RPCHandler) makeCriticalGraphQLError(errors []GraphQLError, httpStatus int) error {
 	// Serialize GraphQL errors to JSON for metadata
-	errorsJSON, _ := json.Marshal(errors)
+	errorsJSON, err := json.Marshal(errors)
+	if err != nil {
+		h.logger.Error("failed to marshal GraphQL errors", zap.Error(err))
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to marshal GraphQL errors: %w", err))
+	}
 
 	// Create Connect error with CRITICAL classification
 	// Use CodeUnknown for GraphQL errors (not CodeInternal which implies server defects)
@@ -444,7 +448,11 @@ func (h *RPCHandler) makeCriticalGraphQLError(errors []GraphQLError, httpStatus 
 // This follows Relay's pattern for field-level errors where some data was successfully retrieved.
 func (h *RPCHandler) makePartialGraphQLError(errors []GraphQLError, data json.RawMessage, httpStatus int) error {
 	// Serialize errors to JSON for metadata
-	errorsJSON, _ := json.Marshal(errors)
+	errorsJSON, err := json.Marshal(errors)
+	if err != nil {
+		h.logger.Error("failed to marshal GraphQL errors", zap.Error(err))
+		return connect.NewError(connect.CodeInternal, fmt.Errorf("failed to marshal GraphQL errors: %w", err))
+	}
 
 	// Compact the partial data JSON to remove whitespace
 	var compactData bytes.Buffer
