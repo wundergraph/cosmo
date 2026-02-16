@@ -49,7 +49,7 @@ export function updateAPIKey(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: 'You cannot update external API keys.',
+          details: 'You cannot update an external API key.',
         },
       };
     }

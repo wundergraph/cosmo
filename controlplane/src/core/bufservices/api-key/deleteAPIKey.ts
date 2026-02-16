@@ -49,7 +49,7 @@ export function deleteAPIKey(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: 'You cannot delete a external API keys.',
+          details: 'You cannot delete an external API key.',
         },
       };
     }

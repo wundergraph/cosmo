@@ -161,12 +161,13 @@ export class ApiKeyRepository {
   }
 
   public async getAPIKeysCount(input: { organizationID: string; includeExternal: boolean }): Promise<number> {
+    const condition = eq(apiKeys.organizationId, input.organizationID);
     const result = await this.db
       .select({
         count: count(),
       })
       .from(apiKeys)
-      .where(and(eq(apiKeys.organizationId, input.organizationID), eq(apiKeys.external, input.includeExternal)))
+      .where(input.includeExternal ? condition : and(condition, eq(apiKeys.external, false)))
       .execute();
 
     return result[0]?.count ?? 0;
