@@ -9,7 +9,6 @@ import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { RBACEvaluator } from '../../services/RBACEvaluator.js';
-import { hubUserAgent } from '../../constants.js';
 
 export function updateAPIKey(
   opts: RouterOptions,
@@ -42,16 +41,6 @@ export function updateAPIKey(
 
     if (!authContext.rbac.isOrganizationApiKeyManager) {
       throw new UnauthorizedError();
-    }
-
-    const clientHdr = ctx.requestHeader.get('user-agent')?.toLowerCase() ?? '';
-    if (apiKey.external && !clientHdr.includes(hubUserAgent)) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'You cannot update an external API key.',
-        },
-      };
     }
 
     const orgGroup = await orgGroupRepo.byId({
