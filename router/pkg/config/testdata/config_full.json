@@ -747,7 +747,7 @@
     "CostAnalysis": {
       "Enabled": true,
       "Mode": "enforce",
-      "EstimatedLimit": 1000,
+      "MaxEstimatedLimit": 1000,
       "EstimatedListSize": 10
     },
     "DepthLimit": null,
