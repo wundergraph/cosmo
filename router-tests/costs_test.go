@@ -7,10 +7,12 @@ import (
 	"github.com/stretchr/testify/require"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
+	otel "github.com/wundergraph/cosmo/router/pkg/otel"
 )
 
 func TestOperationCost(t *testing.T) {
@@ -262,6 +264,36 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, int64(20), estimatedCost)
 				require.Equal(t, int64(20), actualCost)
 				require.Equal(t, int64(0), deltaCost)
+
+				// Verify that cost metrics carry the correct operation attributes
+				for _, dp := range []metricdata.HistogramDataPoint[int64]{
+					estimatedHistogram.DataPoints[0],
+					actualHistogram.DataPoints[0],
+					deltaHistogram.DataPoints[0],
+				} {
+					val, ok := dp.Attributes.Value(otel.WgOperationName)
+					require.True(t, ok, "cost metric should have wg.operation.name attribute")
+					require.Equal(t, "", val.AsString())
+
+					val, ok = dp.Attributes.Value(otel.WgOperationType)
+					require.True(t, ok, "cost metric should have wg.operation.type attribute")
+					require.Equal(t, "query", val.AsString())
+
+					val, ok = dp.Attributes.Value(otel.WgOperationProtocol)
+					require.True(t, ok, "cost metric should have wg.operation.protocol attribute")
+					require.Equal(t, "http", val.AsString())
+
+					val, ok = dp.Attributes.Value(otel.WgClientName)
+					require.True(t, ok, "cost metric should have wg.client.name attribute")
+					require.Equal(t, "unknown", val.AsString())
+
+					val, ok = dp.Attributes.Value(otel.WgClientVersion)
+					require.True(t, ok, "cost metric should have wg.client.version attribute")
+					require.Equal(t, "missing", val.AsString())
+
+					require.True(t, dp.Attributes.HasValue(semconv.HTTPStatusCodeKey),
+						"cost metric should have http.status_code attribute")
+				}
 			})
 		})
 
