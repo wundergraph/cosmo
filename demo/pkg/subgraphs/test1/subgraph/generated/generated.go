@@ -715,6 +715,7 @@ type ComplexityRoot struct {
 	}
 
 	TimestampedString struct {
+		Extensions     func(childComplexity int) int
 		InitialPayload func(childComplexity int) int
 		Seq            func(childComplexity int) int
 		Total          func(childComplexity int) int
@@ -5057,6 +5058,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Thing.B(childComplexity), true
 
+	case "TimestampedString.extensions":
+		if e.complexity.TimestampedString.Extensions == nil {
+			break
+		}
+
+		return e.complexity.TimestampedString.Extensions(childComplexity), true
+
 	case "TimestampedString.initialPayload":
 		if e.complexity.TimestampedString.InitialPayload == nil {
 			break
@@ -6377,6 +6385,7 @@ type TimestampedString {
     "Total number of responses to be sent"
     total: Int!
     initialPayload: Map
+    extensions: Map
 }
 
 type Subscription {
@@ -7185,7 +7194,8 @@ type ZBigObject {
     xFieldOnZBigObject: Float!
     yFieldOnZBigObject: String!
     zFieldOnZBigObject: Int!
-}`, BuiltIn: false},
+}
+`, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
 	directive @authenticated on FIELD_DEFINITION | OBJECT | INTERFACE | SCALAR | ENUM
 	directive @composeDirective(name: String!) repeatable on SCHEMA
@@ -32417,6 +32427,8 @@ func (ec *executionContext) fieldContext_Subscription_headerValue(ctx context.Co
 				return ec.fieldContext_TimestampedString_total(ctx, field)
 			case "initialPayload":
 				return ec.fieldContext_TimestampedString_initialPayload(ctx, field)
+			case "extensions":
+				return ec.fieldContext_TimestampedString_extensions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type TimestampedString", field.Name)
 		},
@@ -32498,6 +32510,8 @@ func (ec *executionContext) fieldContext_Subscription_initPayloadValue(ctx conte
 				return ec.fieldContext_TimestampedString_total(ctx, field)
 			case "initialPayload":
 				return ec.fieldContext_TimestampedString_initialPayload(ctx, field)
+			case "extensions":
+				return ec.fieldContext_TimestampedString_extensions(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type TimestampedString", field.Name)
 		},
@@ -34030,6 +34044,47 @@ func (ec *executionContext) _TimestampedString_initialPayload(ctx context.Contex
 }
 
 func (ec *executionContext) fieldContext_TimestampedString_initialPayload(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "TimestampedString",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Map does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _TimestampedString_extensions(ctx context.Context, field graphql.CollectedField, obj *model.TimestampedString) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_TimestampedString_extensions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Extensions, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(map[string]any)
+	fc.Result = res
+	return ec.marshalOMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_TimestampedString_extensions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "TimestampedString",
 		Field:      field,
@@ -47397,6 +47452,8 @@ func (ec *executionContext) _TimestampedString(ctx context.Context, sel ast.Sele
 			}
 		case "initialPayload":
 			out.Values[i] = ec._TimestampedString_initialPayload(ctx, field, obj)
+		case "extensions":
+			out.Values[i] = ec._TimestampedString_extensions(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/test1/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/test1/subgraph/model"
@@ -188,6 +189,8 @@ func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, rep
 	}
 	ch := make(chan *model.TimestampedString, 1)
 
+	opCtx := graphql.GetOperationContext(ctx)
+
 	if repeat == nil {
 		repeat = new(int)
 		*repeat = 1
@@ -214,6 +217,7 @@ func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, rep
 				Seq:            ii,
 				Total:          *repeat,
 				InitialPayload: payload,
+				Extensions:     opCtx.Extensions,
 			}:
 			}
 		}
@@ -299,5 +303,7 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 // Subscription returns generated.SubscriptionResolver implementation.
 func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
 
-type queryResolver struct{ *Resolver }
-type subscriptionResolver struct{ *Resolver }
+type (
+	queryResolver        struct{ *Resolver }
+	subscriptionResolver struct{ *Resolver }
+)

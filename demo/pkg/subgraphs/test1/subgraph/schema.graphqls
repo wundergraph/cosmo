@@ -75,6 +75,7 @@ type TimestampedString {
     "Total number of responses to be sent"
     total: Int!
     initialPayload: Map
+    extensions: Map
 }
 
 type Subscription {
