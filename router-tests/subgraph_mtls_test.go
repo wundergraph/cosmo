@@ -140,8 +140,8 @@ func TestSubgraphMTLS(t *testing.T) {
 				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
 					All: config.TLSClientCertConfiguration{
 						InsecureSkipCaVerification: true,
-						CertFile: "testdata/tls/cert-2.pem",
-						KeyFile:  "testdata/tls/key-2.pem",
+						CertFile:                   "testdata/tls/cert-2.pem",
+						KeyFile:                    "testdata/tls/key-2.pem",
 					},
 				}),
 			},
@@ -170,8 +170,8 @@ func TestSubgraphMTLS(t *testing.T) {
 					Subgraphs: map[string]config.TLSClientCertConfiguration{
 						"employees": {
 							InsecureSkipCaVerification: true,
-							CertFile: "testdata/tls/cert.pem",
-							KeyFile:  "testdata/tls/key.pem",
+							CertFile:                   "testdata/tls/cert.pem",
+							KeyFile:                    "testdata/tls/key.pem",
 						},
 					},
 				}),

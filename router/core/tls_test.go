@@ -7,13 +7,14 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"github.com/stretchr/testify/require"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 // generateTestCert creates a self-signed certificate and key in the given directory.
@@ -59,7 +60,11 @@ func generateTestCert(t *testing.T, prefix string) (certPath, keyPath string) {
 }
 
 func TestBuildTLSClientConfig(t *testing.T) {
+	t.Parallel()
+
 	t.Run("returns config with insecure_skip_ca_verification only", func(t *testing.T) {
+		t.Parallel()
+
 		tlsCfg, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
 			InsecureSkipCaVerification: true,
 		})
@@ -71,6 +76,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	})
 
 	t.Run("loads client cert and key", func(t *testing.T) {
+		t.Parallel()
+
 		certPath, keyPath := generateTestCert(t, "client")
 
 		tlsCfg, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
@@ -83,6 +90,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	})
 
 	t.Run("loads CA file", func(t *testing.T) {
+		t.Parallel()
+
 		certPath, _ := generateTestCert(t, "ca")
 
 		tlsCfg, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
@@ -94,6 +103,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	})
 
 	t.Run("errors on invalid cert path", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
 			CertFile: "/nonexistent/cert.pem",
 			KeyFile:  "/nonexistent/key.pem",
@@ -103,6 +114,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	})
 
 	t.Run("errors on invalid CA path", func(t *testing.T) {
+		t.Parallel()
+
 		_, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
 			CaFile: "/nonexistent/ca.pem",
 		})
@@ -111,6 +124,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	})
 
 	t.Run("returns nil when no TLS configured", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &config.SubgraphTLSConfiguration{}
 		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(cfg)
 		require.NoError(t, err)
@@ -119,6 +134,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	})
 
 	t.Run("builds global client TLS config", func(t *testing.T) {
+		t.Parallel()
+
 		certPath, keyPath := generateTestCert(t, "client")
 		caPath, _ := generateTestCert(t, "ca")
 
@@ -139,6 +156,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	})
 
 	t.Run("builds per-subgraph TLS config", func(t *testing.T) {
+		t.Parallel()
+
 		certPath, keyPath := generateTestCert(t, "products")
 
 		cfg := &config.SubgraphTLSConfiguration{
@@ -158,6 +177,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	})
 
 	t.Run("builds both global and per-subgraph TLS config", func(t *testing.T) {
+		t.Parallel()
+
 		globalCert, globalKey := generateTestCert(t, "global")
 		productsCert, productsKey := generateTestCert(t, "products")
 
@@ -181,6 +202,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	})
 
 	t.Run("errors on invalid global cert", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &config.SubgraphTLSConfiguration{
 			All: config.TLSClientCertConfiguration{
 				CertFile: "/nonexistent/cert.pem",
@@ -194,6 +217,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	})
 
 	t.Run("errors on invalid per-subgraph cert", func(t *testing.T) {
+		t.Parallel()
+
 		cfg := &config.SubgraphTLSConfiguration{
 			Subgraphs: map[string]config.TLSClientCertConfiguration{
 				"products": {

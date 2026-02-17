@@ -5,8 +5,9 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"os"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 // buildTLSClientConfig creates a *tls.Config from a TLSClientCertConfiguration.

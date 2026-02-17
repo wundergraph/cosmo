@@ -1318,12 +1318,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableNetPoll:            true,
-		EnableSingleFlight:       true,
-		EnableInboundRequestDeduplication:      false,
-		EnableRequestTracing:     true,
-		EnableNormalizationCache: true,
-		NormalizationCacheSize:   1024,
+		EnableNetPoll:                     true,
+		EnableSingleFlight:                true,
+		EnableInboundRequestDeduplication: false,
+		EnableRequestTracing:              true,
+		EnableNormalizationCache:          true,
+		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
 			PrintQueryPlans:            false,
@@ -1666,28 +1666,20 @@ func testVersionedTokenClaims() jwt.MapClaims {
 	}
 }
 
-func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
+func makeSubgraphTestServer(_ testing.TB, handler http.Handler, tlsConfig *tls.Config) *httptest.Server {
 	// NewUnstartedServer binds an ephemeral port.
 	// We want to avoid using freeport because it creates too much strain on the network stack:
 	// freeport checks if port is available by listening on it and then closing the listener.
 	// On Linux trying to listen on the just-closed port could lead to the "unable to bind" error.
 	s := httptest.NewUnstartedServer(handler)
+
+	if tlsConfig != nil {
+		s.TLS = tlsConfig
+		s.StartTLS()
+		return s
+	}
 	s.Start()
 	return s
-}
-
-func makeSafeTLSHttpTestServer(t testing.TB, handler http.Handler, tlsConfig *tls.Config) *httptest.Server {
-	s := httptest.NewUnstartedServer(handler)
-	s.TLS = tlsConfig
-	s.StartTLS()
-	return s
-}
-
-func makeSubgraphTestServer(t testing.TB, handler http.Handler, tlsConfig *tls.Config) *httptest.Server {
-	if tlsConfig != nil {
-		return makeSafeTLSHttpTestServer(t, handler, tlsConfig)
-	}
-	return makeSafeHttpTestServer(t, handler)
 }
 
 func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.Server, string) {
