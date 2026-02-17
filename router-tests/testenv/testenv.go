@@ -391,6 +391,7 @@ type SubgraphConfig struct {
 	Middleware   func(http.Handler) http.Handler
 	Delay        time.Duration
 	CloseOnStart bool
+
 	// TLSConfig enables TLS on this subgraph server. When set, the subgraph uses StartTLS()
 	// instead of Start(). This is useful for testing mTLS between the router and subgraphs.
 	TLSConfig *tls.Config

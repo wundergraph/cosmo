@@ -17,48 +17,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// generateTestCert creates a self-signed certificate and key in the given directory.
-// Returns the paths to the cert and key files.
-func generateTestCert(t *testing.T, prefix string) (certPath, keyPath string) {
-	t.Helper()
-
-	dir := t.TempDir()
-
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-
-	template := &x509.Certificate{
-		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{CommonName: prefix + "-test"},
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature,
-		IsCA:                  true,
-		BasicConstraintsValid: true,
-	}
-
-	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
-	require.NoError(t, err)
-
-	certPath = filepath.Join(dir, prefix+".crt")
-	certFile, err := os.Create(certPath)
-	require.NoError(t, err)
-	require.NoError(t, pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}))
-	err = certFile.Close()
-	require.NoError(t, err)
-
-	keyPath = filepath.Join(dir, prefix+".key")
-	keyFile, err := os.Create(keyPath)
-	require.NoError(t, err)
-	keyDER, err := x509.MarshalECPrivateKey(key)
-	require.NoError(t, err)
-	require.NoError(t, pem.Encode(keyFile, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}))
-	err = keyFile.Close()
-	require.NoError(t, err)
-
-	return certPath, keyPath
-}
-
 func TestBuildTLSClientConfig(t *testing.T) {
 	t.Parallel()
 
@@ -68,6 +26,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 		tlsCfg, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
 			InsecureSkipCaVerification: true,
 		})
+
 		require.NoError(t, err)
 		require.NotNil(t, tlsCfg)
 		require.True(t, tlsCfg.InsecureSkipVerify)
@@ -84,6 +43,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			CertFile: certPath,
 			KeyFile:  keyPath,
 		})
+
 		require.NoError(t, err)
 		require.NotNil(t, tlsCfg)
 		require.Len(t, tlsCfg.Certificates, 1)
@@ -110,7 +70,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			KeyFile:  "/nonexistent/key.pem",
 		})
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to load client TLS cert and key")
+		require.EqualError(t, err, "failed to load client TLS cert and key: open /nonexistent/cert.pem: no such file or directory")
 	})
 
 	t.Run("errors on invalid CA path", func(t *testing.T) {
@@ -120,7 +80,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 			CaFile: "/nonexistent/ca.pem",
 		})
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "failed to read client TLS CA file")
+		require.EqualError(t, err, "failed to read client TLS CA file: open /nonexistent/ca.pem: no such file or directory")
 	})
 
 	t.Run("returns nil when no TLS configured", func(t *testing.T) {
@@ -213,7 +173,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 
 		_, _, err := buildSubgraphTLSConfigs(cfg)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), "global subgraph TLS config")
+		require.EqualError(t, err, "failed to build global subgraph TLS config: failed to load client TLS cert and key: open /nonexistent/cert.pem: no such file or directory")
 	})
 
 	t.Run("errors on invalid per-subgraph cert", func(t *testing.T) {
@@ -230,6 +190,46 @@ func TestBuildTLSClientConfig(t *testing.T) {
 
 		_, _, err := buildSubgraphTLSConfigs(cfg)
 		require.Error(t, err)
-		require.Contains(t, err.Error(), `subgraph "products"`)
+		require.EqualError(t, err, `failed to build TLS config for subgraph "products": failed to load client TLS cert and key: open /nonexistent/cert.pem: no such file or directory`)
 	})
+}
+
+// generateTestCert creates a self-signed certificate and key in the given directory.
+// Returns the paths to the cert and key files.
+func generateTestCert(t *testing.T, prefix string) (certPath, keyPath string) {
+	t.Helper()
+
+	dir := t.TempDir()
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	template := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: prefix + "-test"},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature,
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+	}
+
+	certDER, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	require.NoError(t, err)
+
+	certPath = filepath.Join(dir, prefix+".crt")
+	certFile, err := os.Create(certPath)
+	require.NoError(t, err)
+	require.NoError(t, pem.Encode(certFile, &pem.Block{Type: "CERTIFICATE", Bytes: certDER}))
+	require.NoError(t, certFile.Close())
+
+	keyPath = filepath.Join(dir, prefix+".key")
+	keyFile, err := os.Create(keyPath)
+	require.NoError(t, err)
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	require.NoError(t, err)
+	require.NoError(t, pem.Encode(keyFile, &pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}))
+	require.NoError(t, keyFile.Close())
+
+	return certPath, keyPath
 }
