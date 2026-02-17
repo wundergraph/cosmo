@@ -65,7 +65,7 @@ func getErrorType(err error) errorType {
 	if errors.Is(err, context.Canceled) {
 		return errorTypeContextCanceled
 	}
-	var upgradeErr *transport.ErrFailedUpgrade
+	var upgradeErr transport.ErrFailedUpgrade
 	if errors.As(err, &upgradeErr) {
 		return errorTypeUpgradeFailed
 	}
@@ -131,7 +131,6 @@ func trackFinalResponseError(ctx context.Context, err error) {
 }
 
 func getAggregatedSubgraphErrorCodes(err error) []string {
-
 	if unwrapped, ok := err.(multiError); ok {
 
 		errs := unwrapped.Unwrap()
@@ -160,7 +159,6 @@ func getSubgraphNames(ds []resolve.DataSourceInfo) []string {
 }
 
 func getAggregatedSubgraphServiceNames(err error) []string {
-
 	if unwrapped, ok := err.(multiError); ok {
 
 		errs := unwrapped.Unwrap()
@@ -183,7 +181,6 @@ func getAggregatedSubgraphServiceNames(err error) []string {
 // propagateSubgraphErrors propagates the subgraph errors to the request context
 func propagateSubgraphErrors(ctx *resolve.Context) {
 	err := ctx.SubgraphErrors()
-
 	if err != nil {
 		trackFinalResponseError(ctx.Context(), err)
 	}
