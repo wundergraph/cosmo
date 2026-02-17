@@ -867,6 +867,7 @@ func TestWebSockets(t *testing.T) {
 			},
 				[]byte(`{"Custom-Auth":"test"}`),
 			)
+
 			err := testenv.WSWriteJSON(t, conn, &testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
@@ -880,10 +881,8 @@ func TestWebSockets(t *testing.T) {
 			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
-			if !assert.Equal(t, "next", msg.Type) {
-				t.Errorf("expected type 'next', got '%s'", msg.Type)
-				t.Errorf("%s", string(msg.Payload))
-			}
+			assert.Equal(t, "next", msg.Type, "payload: %s", string(msg.Payload))
+
 			err = json.Unmarshal(msg.Payload, &payload)
 			require.NoError(t, err)
 			require.Equal(t, float64(1), payload.Data.CurrentTime.UnixTime)
@@ -1492,124 +1491,84 @@ func TestWebSockets(t *testing.T) {
 			_ = client.Run()
 		})
 	})
-	t.Run("forward extensions", func(t *testing.T) {
+
+	t.Run("extensions are forwarded", func(t *testing.T) {
 		t.Parallel()
-
-		t.Skip("borked, needs a look at how the URL param forwarding should work")
-
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Make sure sending two simultaneous subscriptions with different extensions
-			// triggers two subscriptions to the upstream
-			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			conn2 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			var err error
-			err = conn1.WriteJSON(&testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"token":"123"}}`),
-			})
-			require.NoError(t, err)
-
-			err = conn2.WriteJSON(&testenv.WebSocketMessage{
-				ID:      "2",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"token":"456"}}`),
-			})
-			require.NoError(t, err)
-
-			var msg testenv.WebSocketMessage
-			var payload struct {
-				Data struct {
-					InitialPayload struct {
-						Extensions struct {
-							Token string `json:"token"`
-						} `json:"extensions"`
-					} `json:"initialPayload"`
-				} `json:"data"`
-			}
-			err = conn1.ReadJSON(&msg)
-			require.NoError(t, err)
-			err = json.Unmarshal(msg.Payload, &payload)
-			require.NoError(t, err)
-			require.Equal(t, "123", payload.Data.InitialPayload.Extensions.Token)
-
-			err = conn2.ReadJSON(&msg)
-			require.NoError(t, err)
-			err = json.Unmarshal(msg.Payload, &payload)
-			require.NoError(t, err)
-			require.Equal(t, "456", payload.Data.InitialPayload.Extensions.Token)
-		})
-	})
-	t.Run("forward query params via initial payload", func(t *testing.T) {
-		t.Parallel()
-
-		t.Skip("borked, needs a look at how the URL param forwarding should work")
 
 		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Make sure sending two simultaneous subscriptions with different extensions
 			// triggers two subscriptions to the upstream
 
-			xEnv.SetExtraURLQueryValues(url.Values{
-				"Authorization": []string{"token 123"},
-			})
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil, json.RawMessage(`{"token":"conn1-token"}`))
+			conn2 := xEnv.InitGraphQLWebSocketConnection(nil, nil, json.RawMessage(`{"token":"conn2-token"}`))
 
-			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
-			var err error
-			err = conn1.WriteJSON(&testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }","extensions":{"token":"456"}}`),
-			})
-			require.NoError(t, err)
-
-			var msg testenv.WebSocketMessage
-			var payload struct {
-				Data struct {
-					InitialPayload json.RawMessage `json:"initialPayload"`
-				} `json:"data"`
-			}
-			err = conn1.ReadJSON(&msg)
-			require.NoError(t, err)
-			err = json.Unmarshal(msg.Payload, &payload)
-			require.NoError(t, err)
-			require.Equal(t, `{"extensions":{"token":"456","upgradeQueryParams":{"Authorization":"token 123"}}}`, string(payload.Data.InitialPayload))
-		})
-	})
-	t.Run("forward query params via initial payload alongside existing", func(t *testing.T) {
-		t.Parallel()
-
-		t.Skip("borked, needs a look at how the URL param forwarding should work")
-
-		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Make sure sending two simultaneous subscriptions with different extensions
-			// triggers two subscriptions to the upstream
-
-			xEnv.SetExtraURLQueryValues(url.Values{
-				"Authorization": []string{"token 123"},
-			})
-
-			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 			var err error
 			err = conn1.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
 				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
 			})
+			require.NoError(t, err, "write conn1 message")
+
+			err = conn2.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "2",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { initialPayload(repeat:3) }"}`),
+			})
+			require.NoError(t, err, "write conn2 message")
+
+			// Check conn1 message
+			{
+				var msg testenv.WebSocketMessage
+				err = conn1.ReadJSON(&msg)
+				require.NoError(t, err, "read conn1 message")
+
+				token, err := jsonparser.GetString(msg.Payload, "data", "initialPayload", "token")
+				require.NoError(t, err, "get token from conn1 message: %s", string(msg.Payload))
+
+				require.Equal(t, "conn1-token", token)
+			}
+
+			// Check conn2 message
+			{
+				var msg testenv.WebSocketMessage
+				err = conn2.ReadJSON(&msg)
+				require.NoError(t, err, "read conn2 message")
+
+				token, err := jsonparser.GetString(msg.Payload, "data", "initialPayload", "token")
+				require.NoError(t, err, "get token from conn2 message: %s", string(msg.Payload))
+
+				require.Equal(t, "conn2-token", token)
+			}
+		})
+	})
+
+	t.Run("query params are forwarded via subscription extensions", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			xEnv.SetExtraURLQueryValues(url.Values{
+				"Authorization": []string{"query token 123"},
+			})
+
+			conn1 := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+			var err error
+			err = conn1.WriteJSON(&testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"subscription { metadata { subscribeExtensions } }","extensions":{"ext-token":"456"}}`),
+			})
 			require.NoError(t, err)
 
 			var msg testenv.WebSocketMessage
-			var payload struct {
-				Data struct {
-					InitialPayload json.RawMessage `json:"initialPayload"`
-				} `json:"data"`
-			}
 			err = conn1.ReadJSON(&msg)
-			require.NoError(t, err)
-			err = json.Unmarshal(msg.Payload, &payload)
-			require.NoError(t, err)
-			require.Equal(t, `{"extensions":{"upgradeQueryParams":{"Authorization":"token 123"}}}`, string(payload.Data.InitialPayload))
+			require.NoError(t, err, "read msg err: %s", string(msg.Payload))
+
+			// Query params should be forwarded as part of the subscription payload extensions, actual extensions should be untouched
+			require.Equal(t, `{"data":{"metadata":{"subscribeExtensions":{"ext-token":"456","upgradeQueryParams":{"Authorization":"query token 123"}}}}}`, string(msg.Payload))
 		})
 	})
+
 	t.Run("same graphql path as playground", func(t *testing.T) {
 		t.Parallel()
 
@@ -1630,6 +1589,7 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, `{"data":{"initialPayload":{"123":456,"extensions":{"hello":"world"}}}}`, string(msg.Payload))
 		})
 	})
+
 	t.Run("different path", func(t *testing.T) {
 		t.Parallel()
 
@@ -2626,8 +2586,6 @@ func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
 
 func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
 	t.Parallel()
-
-	t.Skip("not implemented")
 
 	t.Run("epoll", func(t *testing.T) {
 		t.Parallel()

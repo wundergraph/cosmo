@@ -674,10 +674,16 @@ type ComplexityRoot struct {
 		Value func(childComplexity int) int
 	}
 
+	SubscribeMetadata struct {
+		InitialPayload      func(childComplexity int) int
+		SubscribeExtensions func(childComplexity int) int
+	}
+
 	Subscription struct {
 		HeaderValue      func(childComplexity int, name string, repeat *int) int
 		InitPayloadValue func(childComplexity int, key string, repeat *int) int
 		InitialPayload   func(childComplexity int, repeat *int) int
+		Metadata         func(childComplexity int, repeat int) int
 		ReturnsError     func(childComplexity int) int
 	}
 
@@ -926,7 +932,8 @@ type SubscriptionResolver interface {
 	HeaderValue(ctx context.Context, name string, repeat *int) (<-chan *model.TimestampedString, error)
 	InitPayloadValue(ctx context.Context, key string, repeat *int) (<-chan *model.TimestampedString, error)
 	InitialPayload(ctx context.Context, repeat *int) (<-chan map[string]any, error)
-	ReturnsError(ctx context.Context) (<-chan *string, error)
+	ReturnsError(ctx context.Context) (<-chan string, error)
+	Metadata(ctx context.Context, repeat int) (<-chan *model.SubscribeMetadata, error)
 }
 
 type executableSchema struct {
@@ -4826,6 +4833,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Secret.Value(childComplexity), true
 
+	case "SubscribeMetadata.initialPayload":
+		if e.complexity.SubscribeMetadata.InitialPayload == nil {
+			break
+		}
+
+		return e.complexity.SubscribeMetadata.InitialPayload(childComplexity), true
+
+	case "SubscribeMetadata.subscribeExtensions":
+		if e.complexity.SubscribeMetadata.SubscribeExtensions == nil {
+			break
+		}
+
+		return e.complexity.SubscribeMetadata.SubscribeExtensions(childComplexity), true
+
 	case "Subscription.headerValue":
 		if e.complexity.Subscription.HeaderValue == nil {
 			break
@@ -4861,6 +4882,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Subscription.InitialPayload(childComplexity, args["repeat"].(*int)), true
+
+	case "Subscription.metadata":
+		if e.complexity.Subscription.Metadata == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_metadata_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.Metadata(childComplexity, args["repeat"].(int)), true
 
 	case "Subscription.returnsError":
 		if e.complexity.Subscription.ReturnsError == nil {
@@ -6388,6 +6421,11 @@ type TimestampedString {
     extensions: Map
 }
 
+type SubscribeMetadata {
+   initialPayload: Map
+   subscribeExtensions: Map
+}
+
 type Subscription {
     "Returns a stream with the value of the received HTTP header."
     headerValue(name: String!, repeat: Int): TimestampedString!
@@ -6395,7 +6433,9 @@ type Subscription {
     initPayloadValue(key: String!, repeat: Int): TimestampedString!
     "Returns a stream with the value of the WS initial payload."
     initialPayload(repeat: Int): Map
-    returnsError: String
+    returnsError: String!
+    "Returns a stream with the values of the WS initial payload and subscribe extensions"
+    metadata(repeat: Int! = 1): SubscribeMetadata!
 }
 
 type Employee @key(fields: "id") {
@@ -7957,6 +7997,34 @@ func (ec *executionContext) field_Subscription_initialPayload_argsRepeat(
 	}
 
 	var zeroVal *int
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Subscription_metadata_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Subscription_metadata_argsRepeat(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["repeat"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Subscription_metadata_argsRepeat(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (int, error) {
+	if _, ok := rawArgs["repeat"]; !ok {
+		var zeroVal int
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("repeat"))
+	if tmp, ok := rawArgs["repeat"]; ok {
+		return ec.unmarshalNInt2int(ctx, tmp)
+	}
+
+	var zeroVal int
 	return zeroVal, nil
 }
 
@@ -32364,6 +32432,88 @@ func (ec *executionContext) fieldContext_Secret_value(_ context.Context, field g
 	return fc, nil
 }
 
+func (ec *executionContext) _SubscribeMetadata_initialPayload(ctx context.Context, field graphql.CollectedField, obj *model.SubscribeMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SubscribeMetadata_initialPayload(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.InitialPayload, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(map[string]any)
+	fc.Result = res
+	return ec.marshalOMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SubscribeMetadata_initialPayload(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SubscribeMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Map does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SubscribeMetadata_subscribeExtensions(ctx context.Context, field graphql.CollectedField, obj *model.SubscribeMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SubscribeMetadata_subscribeExtensions(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SubscribeExtensions, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(map[string]any)
+	fc.Result = res
+	return ec.marshalOMap2map(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SubscribeMetadata_subscribeExtensions(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SubscribeMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Map does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Subscription_headerValue(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
 	fc, err := ec.fieldContext_Subscription_headerValue(ctx, field)
 	if err != nil {
@@ -32617,11 +32767,14 @@ func (ec *executionContext) _Subscription_returnsError(ctx context.Context, fiel
 		return nil
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return nil
 	}
 	return func(ctx context.Context) graphql.Marshaler {
 		select {
-		case res, ok := <-resTmp.(<-chan *string):
+		case res, ok := <-resTmp.(<-chan string):
 			if !ok {
 				return nil
 			}
@@ -32629,7 +32782,7 @@ func (ec *executionContext) _Subscription_returnsError(ctx context.Context, fiel
 				w.Write([]byte{'{'})
 				graphql.MarshalString(field.Alias).MarshalGQL(w)
 				w.Write([]byte{':'})
-				ec.marshalOString2ᚖstring(ctx, field.Selections, res).MarshalGQL(w)
+				ec.marshalNString2string(ctx, field.Selections, res).MarshalGQL(w)
 				w.Write([]byte{'}'})
 			})
 		case <-ctx.Done():
@@ -32647,6 +32800,81 @@ func (ec *executionContext) fieldContext_Subscription_returnsError(_ context.Con
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Subscription_metadata(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	fc, err := ec.fieldContext_Subscription_metadata(ctx, field)
+	if err != nil {
+		return nil
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = nil
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Subscription().Metadata(rctx, fc.Args["repeat"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return nil
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return nil
+	}
+	return func(ctx context.Context) graphql.Marshaler {
+		select {
+		case res, ok := <-resTmp.(<-chan *model.SubscribeMetadata):
+			if !ok {
+				return nil
+			}
+			return graphql.WriterFunc(func(w io.Writer) {
+				w.Write([]byte{'{'})
+				graphql.MarshalString(field.Alias).MarshalGQL(w)
+				w.Write([]byte{':'})
+				ec.marshalNSubscribeMetadata2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐSubscribeMetadata(ctx, field.Selections, res).MarshalGQL(w)
+				w.Write([]byte{'}'})
+			})
+		case <-ctx.Done():
+			return nil
+		}
+	}
+}
+
+func (ec *executionContext) fieldContext_Subscription_metadata(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "initialPayload":
+				return ec.fieldContext_SubscribeMetadata_initialPayload(ctx, field)
+			case "subscribeExtensions":
+				return ec.fieldContext_SubscribeMetadata_subscribeExtensions(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SubscribeMetadata", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_metadata_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -47190,6 +47418,44 @@ func (ec *executionContext) _Secret(ctx context.Context, sel ast.SelectionSet, o
 	return out
 }
 
+var subscribeMetadataImplementors = []string{"SubscribeMetadata"}
+
+func (ec *executionContext) _SubscribeMetadata(ctx context.Context, sel ast.SelectionSet, obj *model.SubscribeMetadata) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, subscribeMetadataImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SubscribeMetadata")
+		case "initialPayload":
+			out.Values[i] = ec._SubscribeMetadata_initialPayload(ctx, field, obj)
+		case "subscribeExtensions":
+			out.Values[i] = ec._SubscribeMetadata_subscribeExtensions(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var subscriptionImplementors = []string{"Subscription"}
 
 func (ec *executionContext) _Subscription(ctx context.Context, sel ast.SelectionSet) func(ctx context.Context) graphql.Marshaler {
@@ -47211,6 +47477,8 @@ func (ec *executionContext) _Subscription(ctx context.Context, sel ast.Selection
 		return ec._Subscription_initialPayload(ctx, fields[0])
 	case "returnsError":
 		return ec._Subscription_returnsError(ctx, fields[0])
+	case "metadata":
+		return ec._Subscription_metadata(ctx, fields[0])
 	default:
 		panic("unknown field " + strconv.Quote(fields[0].Name))
 	}
@@ -49294,6 +49562,20 @@ func (ec *executionContext) marshalNString2ᚕᚕstringᚄ(ctx context.Context, 
 	}
 
 	return ret
+}
+
+func (ec *executionContext) marshalNSubscribeMetadata2githubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐSubscribeMetadata(ctx context.Context, sel ast.SelectionSet, v model.SubscribeMetadata) graphql.Marshaler {
+	return ec._SubscribeMetadata(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNSubscribeMetadata2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐSubscribeMetadata(ctx context.Context, sel ast.SelectionSet, v *model.SubscribeMetadata) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SubscribeMetadata(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNThing2ᚕᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋtest1ᚋsubgraphᚋmodelᚐThingᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Thing) graphql.Marshaler {

@@ -78,6 +78,11 @@ type TimestampedString {
     extensions: Map
 }
 
+type SubscribeMetadata {
+   initialPayload: Map
+   subscribeExtensions: Map
+}
+
 type Subscription {
     "Returns a stream with the value of the received HTTP header."
     headerValue(name: String!, repeat: Int): TimestampedString!
@@ -85,7 +90,9 @@ type Subscription {
     initPayloadValue(key: String!, repeat: Int): TimestampedString!
     "Returns a stream with the value of the WS initial payload."
     initialPayload(repeat: Int): Map
-    returnsError: String
+    returnsError: String!
+    "Returns a stream with the values of the WS initial payload and subscribe extensions"
+    metadata(repeat: Int! = 1): SubscribeMetadata!
 }
 
 type Employee @key(fields: "id") {

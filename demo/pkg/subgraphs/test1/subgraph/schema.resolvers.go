@@ -233,6 +233,8 @@ func (r *subscriptionResolver) InitPayloadValue(ctx context.Context, key string,
 	}
 	ch := make(chan *model.TimestampedString, 1)
 
+	opCtx := graphql.GetOperationContext(ctx)
+
 	if repeat == nil {
 		repeat = new(int)
 		*repeat = 1
@@ -254,6 +256,7 @@ func (r *subscriptionResolver) InitPayloadValue(ctx context.Context, key string,
 				Seq:            ii,
 				Total:          *repeat,
 				InitialPayload: payload,
+				Extensions:     opCtx.Extensions,
 			}:
 			}
 		}
@@ -293,8 +296,43 @@ func (r *subscriptionResolver) InitialPayload(ctx context.Context, repeat *int) 
 }
 
 // ReturnsError is the resolver for the returnsError field.
-func (r *subscriptionResolver) ReturnsError(ctx context.Context) (<-chan *string, error) {
+func (r *subscriptionResolver) ReturnsError(ctx context.Context) (<-chan string, error) {
 	return nil, errors.New("this is an error")
+}
+
+// Metadata is the resolver for the metadata field.
+func (r *subscriptionResolver) Metadata(ctx context.Context, repeat int) (<-chan *model.SubscribeMetadata, error) {
+	payload := injector.InitPayload(ctx)
+	if payload == nil {
+		payload = make(map[string]any)
+	}
+
+	opCtx := graphql.GetOperationContext(ctx)
+	if opCtx == nil {
+		return nil, errors.New("operation context not found")
+	}
+
+	ch := make(chan *model.SubscribeMetadata, 1)
+
+	go func() {
+		defer close(ch)
+
+		for range repeat {
+			// In our example we'll send the current time every second.
+			time.Sleep(100 * time.Millisecond)
+			select {
+			case <-ctx.Done():
+				return
+
+			case ch <- &model.SubscribeMetadata{
+				InitialPayload:      payload,
+				SubscribeExtensions: opCtx.Extensions,
+			}:
+			}
+		}
+	}()
+
+	return ch, nil
 }
 
 // Query returns generated.QueryResolver implementation.

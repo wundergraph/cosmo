@@ -668,6 +668,11 @@ type Secret struct {
 	Value *string `json:"value,omitempty"`
 }
 
+type SubscribeMetadata struct {
+	InitialPayload      map[string]any `json:"initialPayload,omitempty"`
+	SubscribeExtensions map[string]any `json:"subscribeExtensions,omitempty"`
+}
+
 type Subscription struct {
 }
 
