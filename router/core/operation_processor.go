@@ -124,11 +124,12 @@ type OperationProcessorOptions struct {
 	IntrospectionEnabled                             bool
 	ApolloCompatibilityFlags                         config.ApolloCompatibilityFlags
 	ApolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
-	DisableExposingVariablesContentOnValidationError bool
-	ComplexityLimits                                 *config.ComplexityLimits
+	DisableExposingVariablesContentOnValidationError          bool
+	RelaxSubgraphOperationFieldSelectionMergingNullability    bool
+	ComplexityLimits                                          *config.ComplexityLimits
 	CostAnalysis                                     *config.CostAnalysis
-	ParserTokenizerLimits                            astparser.TokenizerLimits
-	OperationNameLengthLimit                         int
+	ParserTokenizerLimits                                     astparser.TokenizerLimits
+	OperationNameLengthLimit                                  int
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -1449,9 +1450,10 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 }
 
 type parseKitOptions struct {
-	apolloCompatibilityFlags                         config.ApolloCompatibilityFlags
-	apolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
-	disableExposingVariablesContentOnValidationError bool
+	apolloCompatibilityFlags                                  config.ApolloCompatibilityFlags
+	apolloRouterCompatibilityFlags                            config.ApolloRouterCompatibilityFlags
+	disableExposingVariablesContentOnValidationError          bool
+	relaxSubgraphOperationFieldSelectionMergingNullability    bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
@@ -1480,12 +1482,21 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			},
 			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
 		}),
-		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
-			apollocompatibility.Flags{
-				UseGraphQLValidationFailedStatus: options.apolloCompatibilityFlags.UseGraphQLValidationFailedStatus.Enabled,
-			},
-		)),
+		operationValidator: createOperationValidator(options),
 	}
+}
+
+func createOperationValidator(options *parseKitOptions) *astvalidation.OperationValidator {
+	var opts []astvalidation.Option
+	opts = append(opts, astvalidation.WithApolloCompatibilityFlags(
+		apollocompatibility.Flags{
+			UseGraphQLValidationFailedStatus: options.apolloCompatibilityFlags.UseGraphQLValidationFailedStatus.Enabled,
+		},
+	))
+	if options.relaxSubgraphOperationFieldSelectionMergingNullability {
+		opts = append(opts, astvalidation.WithRelaxFieldSelectionMergingNullability())
+	}
+	return astvalidation.DefaultOperationValidator(opts...)
 }
 
 func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
@@ -1504,9 +1515,10 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		complexityLimits:         opts.ComplexityLimits,
 		costAnalysis:             opts.CostAnalysis,
 		parseKitOptions: &parseKitOptions{
-			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
-			apolloRouterCompatibilityFlags:                   opts.ApolloRouterCompatibilityFlags,
-			disableExposingVariablesContentOnValidationError: opts.DisableExposingVariablesContentOnValidationError,
+			apolloCompatibilityFlags:                              opts.ApolloCompatibilityFlags,
+			apolloRouterCompatibilityFlags:                        opts.ApolloRouterCompatibilityFlags,
+			disableExposingVariablesContentOnValidationError:      opts.DisableExposingVariablesContentOnValidationError,
+			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {
