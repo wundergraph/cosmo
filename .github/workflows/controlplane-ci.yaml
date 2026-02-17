@@ -72,6 +72,13 @@ jobs:
       - name: Build
         run: pnpm run --filter ./controlplane --filter ./connect --filter ./shared --filter ./composition --filter ./protographic build
 
+      - name: Check `dist` directory structure
+        run: |
+          if [ ! -f "dist/index.js" ]; then
+            exit 1
+          fi
+        shell: bash
+
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
