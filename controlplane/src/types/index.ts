@@ -319,6 +319,7 @@ export interface APIKeyDTO {
   name: string;
   createdAt: string;
   lastUsedAt: string;
+  external: boolean;
   expiresAt: string;
   createdBy: string;
   group: { id: string; name: string } | undefined;

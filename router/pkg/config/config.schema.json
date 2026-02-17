@@ -3283,6 +3283,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enables validation of resolved input field set specified as an argument for \"requires\" directive. If this field set 'points' to a nullable fields marked as external, and if router resolves such a field set with null values with errors pointing to those values, then it will not provide such entities to the resolver of the field on which directive was specified."
+        },
+        "relax_subgraph_operation_field_selection_merging_nullability": {
+          "type": "boolean",
+          "default": false,
+          "description": "Relaxes nullability validation for field selection merging when enclosing types are non-overlapping concrete object types. When enabled, fields with differing nullability (e.g. String! vs String) in inline fragments on different union member types will not cause validation errors."
         }
       }
     },
