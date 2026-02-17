@@ -814,6 +814,91 @@ func TestSingleFlight(t *testing.T) {
 			require.Equal(t, numOfOperations, globalRequests)
 		})
 	})
+	t.Run("inbound dedup warm variable cache with same auth header should not cross-contaminate", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
+				engineExecutionConfiguration.EnableSingleFlight = true
+				engineExecutionConfiguration.ForceEnableSingleFlight = false
+				engineExecutionConfiguration.EnableInboundRequestDeduplication = true
+				engineExecutionConfiguration.MaxConcurrentResolvers = 0
+				engineExecutionConfiguration.EnableNormalizationCache = true
+				engineExecutionConfiguration.NormalizationCacheSize = 1024
+			},
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Named:     "Authorization",
+								Operation: config.HeaderRuleOperationPropagate,
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			query := `query($arg: [String!]!) { rootFieldWithListArg(arg: $arg) }`
+			authHeaderValue := "Bearer api-key-aa3"
+
+			// Warm the variable normalization path for both variants first.
+			warmA := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     query,
+				Variables: []byte(`{"arg":["a"]}`),
+				Header: http.Header{
+					"Authorization": []string{authHeaderValue},
+				},
+			})
+			require.Equal(t, `{"data":{"rootFieldWithListArg":["a"]}}`, warmA.Body)
+			warmAB := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:     query,
+				Variables: []byte(`{"arg":["a","b"]}`),
+				Header: http.Header{
+					"Authorization": []string{authHeaderValue},
+				},
+			})
+			require.Equal(t, `{"data":{"rootFieldWithListArg":["a","b"]}}`, warmAB.Body)
+
+			var (
+				numOfOperations = int64(20)
+				ready, done     sync.WaitGroup
+			)
+			ready.Add(int(numOfOperations))
+			done.Add(int(numOfOperations))
+			trigger := make(chan struct{})
+
+			for i := int64(0); i < numOfOperations; i++ {
+				go func(index int64) {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+
+					variables := []byte(`{"arg":["a"]}`)
+					expected := `{"data":{"rootFieldWithListArg":["a"]}}`
+					if index%2 == 1 {
+						variables = []byte(`{"arg":["a","b"]}`)
+						expected = `{"data":{"rootFieldWithListArg":["a","b"]}}`
+					}
+
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query:     query,
+						Variables: variables,
+						Header: http.Header{
+							"Authorization": []string{authHeaderValue},
+						},
+					})
+					require.Equal(t, expected, res.Body)
+				}(i)
+			}
+
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+		})
+	})
 	t.Run("query with unique headers - should not deduplicate", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
