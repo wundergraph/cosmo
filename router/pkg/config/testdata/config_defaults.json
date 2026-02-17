@@ -40,6 +40,11 @@
         "EngineStats": {
           "Subscriptions": false
         },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false,
+          "DeltaEnabled": false
+        },
         "CircuitBreaker": false,
         "Streams": false,
         "ExcludeMetrics": null,
@@ -55,6 +60,11 @@
         "Streams": false,
         "EngineStats": {
           "Subscriptions": false
+        },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false,
+          "DeltaEnabled": false
         },
         "CircuitBreaker": false,
         "ExcludeMetrics": null,
