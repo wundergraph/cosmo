@@ -144,15 +144,21 @@ func (h *OtlpMetricStore) MeasureSchemaFieldUsage(_ context.Context, _ int64, _ 
 }
 
 func (h *OtlpMetricStore) MeasureOperationCostEstimated(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
-	h.measurements.int64Histograms[OperationCostEstimatedHistogram].Record(ctx, cost, opts...)
+	if c, ok := h.measurements.int64Histograms[OperationCostEstimatedHistogram]; ok {
+		c.Record(ctx, cost, opts...)
+	}
 }
 
 func (h *OtlpMetricStore) MeasureOperationCostActual(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
-	h.measurements.int64Histograms[OperationCostActualHistogram].Record(ctx, cost, opts...)
+	if c, ok := h.measurements.int64Histograms[OperationCostActualHistogram]; ok {
+		c.Record(ctx, cost, opts...)
+	}
 }
 
 func (h *OtlpMetricStore) MeasureOperationCostDelta(ctx context.Context, delta int64, opts ...otelmetric.RecordOption) {
-	h.measurements.int64Histograms[OperationCostDeltaHistogram].Record(ctx, delta, opts...)
+	if c, ok := h.measurements.int64Histograms[OperationCostDeltaHistogram]; ok {
+		c.Record(ctx, delta, opts...)
+	}
 }
 
 func (h *OtlpMetricStore) Flush(ctx context.Context) error {

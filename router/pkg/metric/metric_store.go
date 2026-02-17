@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -143,6 +144,7 @@ type (
 
 	MetricOpts struct {
 		EnableCircuitBreaker bool
+		CostStats            config.CostStats
 	}
 
 	// Provider is the interface that wraps the basic metric methods.

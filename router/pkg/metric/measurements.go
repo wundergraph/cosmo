@@ -139,32 +139,38 @@ func createMeasures(meter otelmetric.Meter, opts MetricOpts) (*Measurements, err
 	}
 
 	// Operation cost metrics
-	operationCostEstimated, err := meter.Int64Histogram(
-		OperationCostEstimatedHistogram,
-		OperationCostEstimatedHistogramOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create operation cost estimated histogram: %w", err)
+	if opts.CostStats.EstimatedEnabled {
+		operationCostEstimated, err := meter.Int64Histogram(
+			OperationCostEstimatedHistogram,
+			OperationCostEstimatedHistogramOptions...,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create operation cost estimated histogram: %w", err)
+		}
+		h.int64Histograms[OperationCostEstimatedHistogram] = operationCostEstimated
 	}
-	h.int64Histograms[OperationCostEstimatedHistogram] = operationCostEstimated
 
-	operationCostActual, err := meter.Int64Histogram(
-		OperationCostActualHistogram,
-		OperationCostActualHistogramOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create operation cost actual histogram: %w", err)
+	if opts.CostStats.ActualEnabled {
+		operationCostActual, err := meter.Int64Histogram(
+			OperationCostActualHistogram,
+			OperationCostActualHistogramOptions...,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create operation cost actual histogram: %w", err)
+		}
+		h.int64Histograms[OperationCostActualHistogram] = operationCostActual
 	}
-	h.int64Histograms[OperationCostActualHistogram] = operationCostActual
 
-	operationCostDelta, err := meter.Int64Histogram(
-		OperationCostDeltaHistogram,
-		OperationCostDeltaHistogramOptions...,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create operation cost delta histogram: %w", err)
+	if opts.CostStats.DeltaEnabled {
+		operationCostDelta, err := meter.Int64Histogram(
+			OperationCostDeltaHistogram,
+			OperationCostDeltaHistogramOptions...,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create operation cost delta histogram: %w", err)
+		}
+		h.int64Histograms[OperationCostDeltaHistogram] = operationCostDelta
 	}
-	h.int64Histograms[OperationCostDeltaHistogram] = operationCostDelta
 
 	return h, nil
 }

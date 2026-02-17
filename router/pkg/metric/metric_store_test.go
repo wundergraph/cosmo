@@ -9,6 +9,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.opentelemetry.io/otel/attribute"
 	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -133,6 +134,11 @@ func createTestStore(t *testing.T, limit int, metricReader *metric.ManualReader)
 
 	opts := MetricOpts{
 		EnableCircuitBreaker: true,
+		CostStats: config.CostStats{
+			EstimatedEnabled: true,
+			ActualEnabled:    true,
+			DeltaEnabled:     true,
+		},
 	}
 	store, err := NewStore(opts, opts,
 		WithCardinalityLimit(limit),

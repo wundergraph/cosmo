@@ -95,6 +95,12 @@ type EngineStats struct {
 	Subscriptions bool `yaml:"subscriptions" envDefault:"false" env:"ENGINE_STATS_SUBSCRIPTIONS"`
 }
 
+type CostStats struct {
+	EstimatedEnabled bool `yaml:"estimated_enabled" envDefault:"false" env:"COST_STATS_ESTIMATED_ENABLED"`
+	ActualEnabled    bool `yaml:"actual_enabled" envDefault:"false" env:"COST_STATS_ACTUAL_ENABLED"`
+	DeltaEnabled     bool `yaml:"delta_enabled" envDefault:"false" env:"COST_STATS_DELTA_ENABLED"`
+}
+
 type Prometheus struct {
 	Enabled             bool        `yaml:"enabled" envDefault:"true" env:"PROMETHEUS_ENABLED"`
 	Path                string      `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
@@ -103,6 +109,7 @@ type Prometheus struct {
 	ConnectionStats     bool        `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
 	Streams             bool        `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
 	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
+	CostStats           CostStats   `yaml:"cost_stats" envPrefix:"PROMETHEUS_"`
 	CircuitBreaker      bool        `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
 	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
@@ -146,6 +153,7 @@ type MetricsOTLP struct {
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
+	CostStats           CostStats             `yaml:"cost_stats" envPrefix:"METRICS_OTLP_"`
 	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
 	Streams             bool                  `yaml:"streams" envDefault:"false" env:"METRICS_OTLP_STREAM"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
@@ -445,7 +453,7 @@ type SecurityConfiguration struct {
 	BlockPersistedOperations    BlockOperationConfiguration `yaml:"block_persisted_operations" envPrefix:"SECURITY_BLOCK_PERSISTED_OPERATIONS_"`
 	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
-	CostAnalysis                *CostAnalysis               `yaml:"cost_analysis"`
+	CostAnalysis                *CostAnalysis               `yaml:"cost_analysis" envPrefix:"SECURITY_COST_ANALYSIS_"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
 	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
@@ -490,20 +498,20 @@ const (
 type CostAnalysis struct {
 	// Enabled controls whether cost analysis is active.
 	// When true, the router calculates costs for every operation.
-	Enabled bool `yaml:"enabled" envDefault:"false" env:"SECURITY_COST_ANALYSIS_ENABLED"`
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 
 	// Mode controls cost analysis behavior:
 	// - "measure": calculates costs without rejecting operations (for monitoring)
 	// - "enforce": calculates costs and rejects operations exceeding the estimated limit
-	Mode CostAnalysisMode `yaml:"mode,omitempty" envDefault:"measure" env:"SECURITY_COST_ANALYSIS_MODE"`
+	Mode CostAnalysisMode `yaml:"mode,omitempty" envDefault:"measure" env:"MODE"`
 
 	// MaxEstimatedLimit is the maximum allowed estimated cost for a query.
 	// Requires Mode set to "enforce". Operations exceeding this limit are rejected.
-	MaxEstimatedLimit int `yaml:"max_estimated_limit,omitempty" envDefault:"0" env:"SECURITY_COST_ANALYSIS_MAX_ESTIMATED_LIMIT"`
+	MaxEstimatedLimit int `yaml:"max_estimated_limit,omitempty" envDefault:"0" env:"MAX_ESTIMATED_LIMIT"`
 
 	// EstimatedListSize is the default assumed size for list fields when no @listSize directive
 	// nor slicing argument is provided. Used as a multiplier for estimated cost calculation.
-	EstimatedListSize int `yaml:"estimated_list_size,omitempty" envDefault:"0" env:"SECURITY_COST_ANALYSIS_ESTIMATED_LIST_SIZE"`
+	EstimatedListSize int `yaml:"estimated_list_size,omitempty" envDefault:"0" env:"ESTIMATED_LIST_SIZE"`
 }
 
 type ComplexityLimit struct {

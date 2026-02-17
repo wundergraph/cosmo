@@ -212,8 +212,12 @@ func TestOperationCost(t *testing.T) {
 
 			testenv.Run(t, &testenv.Config{
 				MetricReader: metricReader,
-				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-					cfg.EnableRequestTracing = true
+				MetricOptions: testenv.MetricOptions{
+					OTLPCostStats: config.CostStats{
+						EstimatedEnabled: true,
+						ActualEnabled:    true,
+						DeltaEnabled:     true,
+					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
 					cfg.CostAnalysis = &config.CostAnalysis{
@@ -312,8 +316,12 @@ func TestOperationCost(t *testing.T) {
 
 			testenv.Run(t, &testenv.Config{
 				MetricReader: metricReader,
-				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-					cfg.EnableRequestTracing = true
+				MetricOptions: testenv.MetricOptions{
+					OTLPCostStats: config.CostStats{
+						EstimatedEnabled: true,
+						ActualEnabled:    true,
+						DeltaEnabled:     true,
+					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
 					cfg.CostAnalysis = &config.CostAnalysis{
@@ -371,8 +379,12 @@ func TestOperationCost(t *testing.T) {
 
 			testenv.Run(t, &testenv.Config{
 				MetricReader: metricReader,
-				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-					cfg.EnableRequestTracing = true
+				MetricOptions: testenv.MetricOptions{
+					OTLPCostStats: config.CostStats{
+						EstimatedEnabled: true,
+						ActualEnabled:    true,
+						DeltaEnabled:     true,
+					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
 					cfg.CostAnalysis = &config.CostAnalysis{
@@ -422,8 +434,12 @@ func TestOperationCost(t *testing.T) {
 
 			testenv.Run(t, &testenv.Config{
 				MetricReader: metricReader,
-				ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-					cfg.EnableRequestTracing = true
+				MetricOptions: testenv.MetricOptions{
+					OTLPCostStats: config.CostStats{
+						EstimatedEnabled: true,
+						ActualEnabled:    true,
+						DeltaEnabled:     true,
+					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
 					cfg.CostAnalysis = &config.CostAnalysis{
