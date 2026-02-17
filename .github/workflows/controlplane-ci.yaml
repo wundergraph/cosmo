@@ -74,7 +74,7 @@ jobs:
 
       - name: Check `dist` directory structure
         run: |
-          if [ ! -f "dist/index.js" ]; then
+          if [ ! -f "controlplane/dist/index.js" ]; then
             exit 1
           fi
         shell: bash
