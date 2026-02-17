@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,6 +13,7 @@ import (
 	service "github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/data"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -603,12 +605,27 @@ func (p *ProjectsService) QueryProjects(ctx context.Context, req *service.QueryP
 	logger := hclog.FromContext(ctx)
 	logger.Info("QueryProjects")
 
+	var excludedProjectIDs []string
+	md, found := metadata.FromIncomingContext(ctx)
+	if found {
+		// gRPC metadata keys are case-insensitive and stored in lowercase
+		excludedProjectIDs = md.Get("x-excluded-projectids")
+
+		// verify no bad metadata is sent by the router
+		if len(md.Get("host")) > 0 {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid request: host header must not be set in metadata")
+		}
+	}
+
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
 	// Populate relationships for all projects
 	var populatedProjects []*service.Project
 	for _, project := range data.ServiceProjects {
+		if slices.Contains(excludedProjectIDs, project.Id) {
+			continue
+		}
 		populatedProjects = append(populatedProjects, p.populateProjectRelationships(project))
 	}
 

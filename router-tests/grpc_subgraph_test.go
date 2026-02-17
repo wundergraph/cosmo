@@ -1,11 +1,14 @@
 package integration
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestGRPCSubgraph(t *testing.T) {
@@ -278,4 +281,104 @@ func TestGRPCSubgraph(t *testing.T) {
 			})
 	})
 
+	t.Run("Should propagate headers to gRPC subgraph as metadata", func(t *testing.T) {
+		t.Parallel()
+
+		config := testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+			EnableGRPC:               true,
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "X-Excluded-ProjectIds",
+							},
+						},
+					},
+				}),
+			},
+		}
+
+		testenv.Run(t, &config, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("baseline: no header returns all 7 projects", func(t *testing.T) {
+				t.Parallel()
+
+				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+				})
+
+				require.JSONEq(t, `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
+			})
+
+			t.Run("exclude single project", func(t *testing.T) {
+				t.Parallel()
+
+				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"X-Excluded-ProjectIds": []string{"1"},
+					},
+				})
+
+				require.JSONEq(t, `{"data":{"projects":[{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
+			})
+
+			t.Run("exclude multiple projects", func(t *testing.T) {
+				t.Parallel()
+
+				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"X-Excluded-ProjectIds": []string{"1", "3"},
+					},
+				})
+
+				require.JSONEq(t, `{"data":{"projects":[{"id":"2","name":"Microservices Revolution"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
+			})
+		})
+	})
+
+	t.Run("Should filter certain headers from gRPC subgraph metadata", func(t *testing.T) {
+		t.Parallel()
+
+		config := testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+			EnableGRPC:               true,
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								// allow everything
+								Operation: config.HeaderRuleOperationPropagate,
+								Matching:  ".*",
+							},
+						},
+					},
+				}),
+			},
+		}
+
+		testenv.Run(t, &config, func(t *testing.T, xEnv *testenv.Environment) {
+			t.Run("Unsafe headers should be filtered", func(t *testing.T) {
+				t.Parallel()
+
+				// The gRPC subgraph is configured to exclude projects based on X-Excluded-ProjectIds metadata
+				// If Host header leaks through as metadata, it won't affect the query result
+				// But we can verify the request succeeds without gRPC errors
+				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"Host":                  []string{"malicious-host.example.com"},
+						"X-Excluded-ProjectIds": []string{"1"},
+					},
+				})
+
+				// Should exclude project 1, meaning Host header was filtered and didn't interfere
+				require.JSONEq(t, `{"data":{"projects":[{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
+			})
+		})
+	})
 }
