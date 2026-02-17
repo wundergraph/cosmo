@@ -7883,19 +7883,19 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
-			statusCodeKey := attribute.Key("http.status_code")
+			statusCode401 := semconv.HTTPStatusCode(http.StatusUnauthorized)
 
 			// Verify http_status_code=401 on router.http.requests
 			requestsMetric := integration.GetMetricByName(&scopeMetric, "router.http.requests")
+			require.NotNil(t, requestsMetric)
 			requestsData := requestsMetric.Data.(metricdata.Sum[int64])
-			val, _ := requestsData.DataPoints[0].Attributes.Value(statusCodeKey)
-			require.Equal(t, int64(http.StatusUnauthorized), val.AsInt64())
+			require.True(t, integration.HasDataPointWithAttribute(requestsData.DataPoints, statusCode401))
 
 			// Verify http_status_code=401 on router.http.request.duration_milliseconds
 			durationMetric := integration.GetMetricByName(&scopeMetric, "router.http.request.duration_milliseconds")
+			require.NotNil(t, durationMetric)
 			durationData := durationMetric.Data.(metricdata.Histogram[float64])
-			val, _ = durationData.DataPoints[0].Attributes.Value(statusCodeKey)
-			require.Equal(t, int64(http.StatusUnauthorized), val.AsInt64())
+			require.True(t, integration.HasHistogramDataPointWithAttribute(durationData.DataPoints, statusCode401))
 		})
 	})
 
