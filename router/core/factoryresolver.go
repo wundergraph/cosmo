@@ -104,7 +104,7 @@ func NewDefaultFactoryResolver(
 		subgraphHTTPClients[subgraph] = subgraphClient
 	}
 
-	// Create HTTP clients for subgraphs that have per-subgraph transports (e.g. per-subgraph TLS)
+	// Create HTTP clients for subgraphs that have per-subgraph TLS
 	// but no per-subgraph transport options. These use the default request timeout.
 	for subgraph, subgraphTransport := range subgraphTransports {
 		if _, exists := subgraphHTTPClients[subgraph]; !exists {

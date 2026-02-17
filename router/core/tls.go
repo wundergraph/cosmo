@@ -16,8 +16,8 @@ func buildTLSClientConfig(clientCfg *config.TLSClientCertConfiguration) (*tls.Co
 	}
 
 	// Load client certificate and key if provided
-	if clientCfg.CertificateChain != "" && clientCfg.Key != "" {
-		cert, err := tls.LoadX509KeyPair(clientCfg.CertificateChain, clientCfg.Key)
+	if clientCfg.CertFile != "" && clientCfg.KeyFile != "" {
+		cert, err := tls.LoadX509KeyPair(clientCfg.CertFile, clientCfg.KeyFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to load client TLS cert and key: %w", err)
 		}
@@ -25,8 +25,8 @@ func buildTLSClientConfig(clientCfg *config.TLSClientCertConfiguration) (*tls.Co
 	}
 
 	// Load custom CA for verifying subgraph server certificates
-	if clientCfg.CertificateAuthority != "" {
-		caCert, err := os.ReadFile(clientCfg.CertificateAuthority)
+	if clientCfg.CaFile != "" {
+		caCert, err := os.ReadFile(clientCfg.CaFile)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read client TLS CA file: %w", err)
 		}
@@ -43,7 +43,7 @@ func buildTLSClientConfig(clientCfg *config.TLSClientCertConfiguration) (*tls.Co
 // buildSubgraphTLSConfigs builds the default and per-subgraph TLS configs from raw configuration.
 // Returns (defaultClientTLS, perSubgraphTLS, error).
 func buildSubgraphTLSConfigs(cfg *config.SubgraphTLSConfiguration) (*tls.Config, map[string]*tls.Config, error) {
-	hasAll := (cfg.All.CertificateChain != "" && cfg.All.Key != "") || cfg.All.CertificateAuthority != "" || cfg.All.InsecureSkipCaVerification
+	hasAll := (cfg.All.CertFile != "" && cfg.All.KeyFile != "") || cfg.All.CaFile != "" || cfg.All.InsecureSkipCaVerification
 
 	// If no global TLS config is provided and there are no subgraph specific TLS configs
 	if !hasAll && len(cfg.Subgraphs) == 0 {

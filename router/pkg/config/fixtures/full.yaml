@@ -38,15 +38,15 @@ tls:
     enabled: false
   subgraph:
     all:
-      certificate_chain: '/path/to/client.crt'
-      key: '/path/to/client.key'
-      certificate_authority: '/path/to/ca.crt'
+      cert_file: '/path/to/client.crt'
+      key_file: '/path/to/client.key'
+      ca_file: '/path/to/ca.crt'
       insecure_skip_ca_verification: false
     subgraphs:
       products:
-        certificate_chain: '/path/to/products-client.crt'
-        key: '/path/to/products-client.key'
-        certificate_authority: '/path/to/products-ca.crt'
+        cert_file: '/path/to/products-client.crt'
+        key_file: '/path/to/products-client.key'
+        ca_file: '/path/to/products-ca.crt'
         insecure_skip_ca_verification: false
 instance_id: ''
 graphql_metrics:

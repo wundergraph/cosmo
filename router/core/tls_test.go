@@ -74,8 +74,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 		certPath, keyPath := generateTestCert(t, "client")
 
 		tlsCfg, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
-			CertificateChain: certPath,
-			Key:              keyPath,
+			CertFile: certPath,
+			KeyFile:  keyPath,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, tlsCfg)
@@ -86,7 +86,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 		certPath, _ := generateTestCert(t, "ca")
 
 		tlsCfg, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
-			CertificateAuthority: certPath,
+			CaFile: certPath,
 		})
 		require.NoError(t, err)
 		require.NotNil(t, tlsCfg)
@@ -95,8 +95,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 
 	t.Run("errors on invalid cert path", func(t *testing.T) {
 		_, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
-			CertificateChain: "/nonexistent/cert.pem",
-			Key:              "/nonexistent/key.pem",
+			CertFile: "/nonexistent/cert.pem",
+			KeyFile:  "/nonexistent/key.pem",
 		})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to load client TLS cert and key")
@@ -104,7 +104,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 
 	t.Run("errors on invalid CA path", func(t *testing.T) {
 		_, err := buildTLSClientConfig(&config.TLSClientCertConfiguration{
-			CertificateAuthority: "/nonexistent/ca.pem",
+			CaFile: "/nonexistent/ca.pem",
 		})
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "failed to read client TLS CA file")
@@ -124,9 +124,9 @@ func TestBuildTLSClientConfig(t *testing.T) {
 
 		cfg := &config.SubgraphTLSConfiguration{
 			All: config.TLSClientCertConfiguration{
-				CertificateChain:     certPath,
-				Key:                  keyPath,
-				CertificateAuthority: caPath,
+				CertFile: certPath,
+				KeyFile:  keyPath,
+				CaFile:   caPath,
 			},
 		}
 
@@ -144,8 +144,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 		cfg := &config.SubgraphTLSConfiguration{
 			Subgraphs: map[string]config.TLSClientCertConfiguration{
 				"products": {
-					CertificateChain: certPath,
-					Key:              keyPath,
+					CertFile: certPath,
+					KeyFile:  keyPath,
 				},
 			},
 		}
@@ -163,13 +163,13 @@ func TestBuildTLSClientConfig(t *testing.T) {
 
 		cfg := &config.SubgraphTLSConfiguration{
 			All: config.TLSClientCertConfiguration{
-				CertificateChain: globalCert,
-				Key:              globalKey,
+				CertFile: globalCert,
+				KeyFile:  globalKey,
 			},
 			Subgraphs: map[string]config.TLSClientCertConfiguration{
 				"products": {
-					CertificateChain: productsCert,
-					Key:              productsKey,
+					CertFile: productsCert,
+					KeyFile:  productsKey,
 				},
 			},
 		}
@@ -183,8 +183,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	t.Run("errors on invalid global cert", func(t *testing.T) {
 		cfg := &config.SubgraphTLSConfiguration{
 			All: config.TLSClientCertConfiguration{
-				CertificateChain: "/nonexistent/cert.pem",
-				Key:              "/nonexistent/key.pem",
+				CertFile: "/nonexistent/cert.pem",
+				KeyFile:  "/nonexistent/key.pem",
 			},
 		}
 
@@ -197,8 +197,8 @@ func TestBuildTLSClientConfig(t *testing.T) {
 		cfg := &config.SubgraphTLSConfiguration{
 			Subgraphs: map[string]config.TLSClientCertConfiguration{
 				"products": {
-					CertificateChain: "/nonexistent/cert.pem",
-					Key:              "/nonexistent/key.pem",
+					CertFile: "/nonexistent/cert.pem",
+					KeyFile:  "/nonexistent/key.pem",
 				},
 			},
 		}

@@ -452,17 +452,17 @@
               "description": "TLS configuration applied to all subgraph connections.",
               "additionalProperties": false,
               "properties": {
-                "certificate_chain": {
+                "cert_file": {
                   "type": "string",
                   "format": "file-path",
                   "description": "The path to the client certificate chain file. Used to authenticate the router to subgraphs. May include intermediate certificates."
                 },
-                "key": {
+                "key_file": {
                   "type": "string",
                   "format": "file-path",
                   "description": "The path to the client private key file."
                 },
-                "certificate_authority": {
+                "ca_file": {
                   "type": "string",
                   "format": "file-path",
                   "description": "The path to the CA certificate file. Used to verify subgraph server certificates. If not set, the system's root CAs are used."
@@ -474,8 +474,8 @@
                 }
               },
               "dependencies": {
-                "certificate_chain": ["key"],
-                "key": ["certificate_chain"]
+                "cert_file": ["key_file"],
+                "key_file": ["cert_file"]
               }
             },
             "subgraphs": {
@@ -485,17 +485,17 @@
                 "type": "object",
                 "additionalProperties": false,
                 "properties": {
-                  "certificate_chain": {
+                  "cert_file": {
                     "type": "string",
                     "format": "file-path",
                     "description": "The path to the client certificate chain file for this subgraph. May include intermediate certificates."
                   },
-                  "key": {
+                  "key_file": {
                     "type": "string",
                     "format": "file-path",
                     "description": "The path to the client private key file for this subgraph."
                   },
-                  "certificate_authority": {
+                  "ca_file": {
                     "type": "string",
                     "format": "file-path",
                     "description": "The path to the CA certificate file for verifying this subgraph's server certificate."
@@ -507,8 +507,8 @@
                   }
                 },
                 "dependencies": {
-                  "certificate_chain": ["key"],
-                  "key": ["certificate_chain"]
+                  "cert_file": ["key_file"],
+                  "key_file": ["cert_file"]
                 }
               }
             }

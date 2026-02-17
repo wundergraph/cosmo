@@ -147,16 +147,16 @@
     },
     "Subgraph": {
       "All": {
-        "CertificateChain": "/path/to/client.crt",
-        "Key": "/path/to/client.key",
-        "CertificateAuthority": "/path/to/ca.crt",
+        "CertFile": "/path/to/client.crt",
+        "KeyFile": "/path/to/client.key",
+        "CaFile": "/path/to/ca.crt",
         "InsecureSkipCaVerification": false
       },
       "Subgraphs": {
         "products": {
-          "CertificateChain": "/path/to/products-client.crt",
-          "Key": "/path/to/products-client.key",
-          "CertificateAuthority": "/path/to/products-ca.crt",
+          "CertFile": "/path/to/products-client.crt",
+          "KeyFile": "/path/to/products-client.key",
+          "CaFile": "/path/to/products-ca.crt",
           "InsecureSkipCaVerification": false
         }
       }
