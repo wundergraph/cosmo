@@ -73,10 +73,7 @@ jobs:
         run: pnpm run --filter ./controlplane --filter ./connect --filter ./shared --filter ./composition --filter ./protographic build
 
       - name: Check `dist` directory structure
-        run: |
-          if [ ! -f "controlplane/dist/index.js" ]; then
-            exit 1
-          fi
+        run: '[ ! -f "controlplane/dist/index.js" ] || exit 1'
         shell: bash
 
       - uses: actions/setup-java@v4
