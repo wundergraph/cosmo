@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -15,16 +14,16 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
-
-	"github.com/expr-lang/expr/vm"
+ 	"github.com/expr-lang/expr/vm"
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -32,37 +31,7 @@ import (
 )
 
 var (
-	_              EnginePostOriginHandler = (*HeaderPropagation)(nil)
-	ignoredHeaders                         = []string{
-		"Alt-Svc",
-		"Connection",
-		"Proxy-Connection", // non-standard but still sent by libcurl and rejected by e.g. google
-
-		// Hop-by-hop headers
-		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection
-		"Keep-Alive",
-		"Proxy-Authenticate",
-		"Proxy-Authorization",
-		"Te",      // canonicalized version of "TE"
-		"Trailer", // not Trailers per URL above; https://www.rfc-editor.org/errata_search.php?eid=4522
-		"Transfer-Encoding",
-		"Upgrade",
-
-		// Content Negotiation. We must never propagate the client headers to the upstream
-		// The router has to decide on its own what to send to the upstream
-		"Content-Type",
-		"Content-Encoding",
-		"Content-Length",
-		"Accept-Encoding",
-		"Accept-Charset",
-		"Accept",
-
-		// Web Socket negotiation headers. We must never propagate the client headers to the upstream.
-		"Sec-Websocket-Extensions",
-		"Sec-Websocket-Key",
-		"Sec-Websocket-Protocol",
-		"Sec-Websocket-Version",
-	}
+	_ EnginePostOriginHandler = (*HeaderPropagation)(nil)
 	cacheControlKey       = "Cache-Control"
 	expiresKey            = "Expires"
 	noCache               = "no-cache"
@@ -475,7 +444,7 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 	}
 
 	if rule.Named != "" {
-		if slices.Contains(ignoredHeaders, rule.Named) {
+		if _, ok := headers.SkippedHeaders[rule.Named]; ok {
 			return
 		}
 
@@ -495,7 +464,7 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 					result = !result
 				}
 				if result {
-					if slices.Contains(ignoredHeaders, name) {
+					if _, ok := headers.SkippedHeaders[name]; ok {
 						continue
 					}
 					values := res.Header.Values(name)
@@ -567,7 +536,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 
 	if rule.Rename != "" && rule.Named != "" {
 		// Ignore the rule when the target header is in the ignored list
-		if slices.Contains(ignoredHeaders, rule.Rename) {
+		if _, ok := headers.SkippedHeaders[rule.Rename]; ok {
 			return
 		}
 
@@ -590,7 +559,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 	 */
 
 	if rule.Named != "" {
-		if slices.Contains(ignoredHeaders, rule.Named) {
+		if _, ok := headers.SkippedHeaders[rule.Named]; ok {
 			return
 		}
 
@@ -623,7 +592,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 				 */
 				if rule.Rename != "" && rule.Named == "" {
 
-					if slices.Contains(ignoredHeaders, rule.Rename) {
+					if _, ok := headers.SkippedHeaders[rule.Rename]; ok {
 						continue
 					}
 
@@ -642,7 +611,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 				/**
 				 *	Propagate the header as is
 				 */
-				if slices.Contains(ignoredHeaders, name) {
+				if _, ok := headers.SkippedHeaders[name]; ok {
 					continue
 				}
 				header.Set(name, ctx.Request().Header.Get(name))
