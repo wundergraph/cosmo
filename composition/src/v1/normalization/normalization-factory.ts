@@ -2385,7 +2385,7 @@ export class NormalizationFactory {
         const typeName = data.renamedParentTypeName || data.originalParentTypeName;
         const fieldCoord = `${typeName}.${data.name}`;
         const fieldWeight = getValueOrDefault(this.costs.fieldWeights, fieldCoord, (): FieldWeightConfiguration => ({
-          typeName, fieldName: data.name, argumentWeights: {},
+          typeName, fieldName: data.name,
         }));
         fieldWeight.weight = weightValue;
         break;
@@ -2397,14 +2397,17 @@ export class NormalizationFactory {
           const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
           const parentFieldCoord = `${typeName}.${ivData.fieldName}`;
           const fieldWeight = getValueOrDefault(this.costs.fieldWeights, parentFieldCoord, (): FieldWeightConfiguration => ({
-            typeName, fieldName: ivData.fieldName!, argumentWeights: {},
+            typeName, fieldName: ivData.fieldName!,
           }));
+          if (!fieldWeight.argumentWeights) {
+            fieldWeight.argumentWeights = {};
+          }
           fieldWeight.argumentWeights[ivData.name] = weightValue;
         } else {
           const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
           const fieldCoord = `${typeName}.${ivData.name}`;
           const fieldWeight = getValueOrDefault(this.costs.fieldWeights, fieldCoord, (): FieldWeightConfiguration => ({
-            typeName, fieldName: ivData.name, argumentWeights: {},
+            typeName, fieldName: ivData.name,
           }));
           fieldWeight.weight = weightValue;
         }
@@ -2422,7 +2425,7 @@ export class NormalizationFactory {
     let hasSizedFields = false;
     const typeName = data.renamedParentTypeName || data.originalParentTypeName;
     const listSizeConfig: FieldListSizeConfiguration = {
-      typeName, fieldName: data.name, slicingArguments: [], sizedFields: [],
+      typeName, fieldName: data.name,
     };
 
     for (const argumentNode of args) {
@@ -2437,6 +2440,9 @@ export class NormalizationFactory {
       }
 
       if (argumentName === SLICING_ARGUMENTS && argumentNode.value.kind === Kind.LIST) {
+        if (!listSizeConfig.slicingArguments) {
+          listSizeConfig.slicingArguments = [];
+        }
         for (const valueNode of (argumentNode.value as ListValueNode).values) {
           if (valueNode.kind !== Kind.STRING) {
             continue;
@@ -2465,6 +2471,9 @@ export class NormalizationFactory {
 
       if (argumentName === SIZED_FIELDS && argumentNode.value.kind === Kind.LIST) {
         hasSizedFields = true;
+        if (!listSizeConfig.sizedFields) {
+          listSizeConfig.sizedFields = [];
+        }
         const returnTypeName = data.namedTypeName;
         const returnTypeData = this.parentDefinitionDataByTypeName.get(returnTypeName);
         if (!returnTypeData || !isParentDataCompositeOutputType(returnTypeData)) {

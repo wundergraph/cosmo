@@ -414,7 +414,7 @@ describe('@cost directive tests', () => {
     test('that @cost on a field populates fieldWeights correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.fieldWeights.get('Query.expensiveField')).toEqual({
-        typeName: 'Query', fieldName: 'expensiveField', weight: 10, argumentWeights: {},
+        typeName: 'Query', fieldName: 'expensiveField', weight: 10,
       });
     });
 
@@ -428,7 +428,7 @@ describe('@cost directive tests', () => {
     test('that @cost on an input field populates fieldWeights correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnInputField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.fieldWeights.get('SearchInput.query')).toEqual({
-        typeName: 'SearchInput', fieldName: 'query', weight: 5, argumentWeights: {},
+        typeName: 'SearchInput', fieldName: 'query', weight: 5,
       });
     });
 

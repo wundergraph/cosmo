@@ -111,15 +111,15 @@ export type FieldWeightConfiguration = {
     typeName: TypeName;
     fieldName: FieldName;
     weight?: number;
-    argumentWeights: { [key: string]: number };
+    argumentWeights?: { [key: string]: number };
 };
 
 export type FieldListSizeConfiguration = {
     typeName: TypeName;
     fieldName: FieldName;
     assumedSize?: number;
-    slicingArguments: string[];
-    sizedFields: FieldName[];
+    slicingArguments?: string[];
+    sizedFields?: FieldName[];
     requireOneSlicingArgument?: boolean;
 };
 

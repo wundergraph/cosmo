@@ -349,14 +349,14 @@ describe('@listSize directive tests', () => {
     test('that @listSize with assumedSize populates listSizes correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithAssumedSize, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.listSizes.get('Query.users')).toEqual({
-        typeName: 'Query', fieldName: 'users', assumedSize: 100, slicingArguments: [], sizedFields: [],
+        typeName: 'Query', fieldName: 'users', assumedSize: 100,
       });
     });
 
     test('that @listSize with slicingArguments populates listSizes correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithSlicingArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.listSizes.get('Query.users')).toEqual({
-        typeName: 'Query', fieldName: 'users', slicingArguments: ['first', 'last'], sizedFields: [],
+        typeName: 'Query', fieldName: 'users', slicingArguments: ['first', 'last'],
       });
     });
 
