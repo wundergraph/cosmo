@@ -295,7 +295,9 @@ func TestGRPCSubgraph(t *testing.T) {
 			}
 		}
 
-		t.Run("forwarded header arrives as metadata with correct value", func(t *testing.T) {
+		t.Run("header arrives as metadata with correct value", func(t *testing.T) {
+			// Assert that headers included in propagation rules are part
+			// of gRPC metadata.
 			t.Parallel()
 
 			var captured metadata.MD
@@ -311,6 +313,10 @@ func TestGRPCSubgraph(t *testing.T) {
 									Operation: config.HeaderRuleOperationPropagate,
 									Named:     "X-Tenant-Id",
 								},
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Region-Name",
+								},
 							},
 						},
 					}),
@@ -324,15 +330,19 @@ func TestGRPCSubgraph(t *testing.T) {
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { projects { id name } }`,
 					Header: http.Header{
-						"X-Tenant-Id": []string{"acme"},
+						"X-Tenant-Id":   []string{"acme"},
+						"X-Region-Name": []string{"frankfurt"},
 					},
 				})
 
 				require.Equal(t, []string{"acme"}, captured.Get("x-tenant-id"))
+				require.Equal(t, []string{"frankfurt"}, captured.Get("x-region-name"))
 			})
 		})
 
 		t.Run("header not in propagation rules is absent from metadata", func(t *testing.T) {
+			// Assert that headers not included in propagation rules are not part
+			// of gRPC metadata.
 			t.Parallel()
 
 			var captured metadata.MD
@@ -372,6 +382,8 @@ func TestGRPCSubgraph(t *testing.T) {
 		})
 
 		t.Run("header with multiple values arrives as multiple metadata values", func(t *testing.T) {
+			// HTTP headers can be set with multiple values. They should appear with all values
+			// on the gRPC metadata as well.
 			t.Parallel()
 
 			var captured metadata.MD
@@ -409,6 +421,9 @@ func TestGRPCSubgraph(t *testing.T) {
 		})
 
 		t.Run("unsafe headers are absent from metadata", func(t *testing.T) {
+			// The router avoids passing certain headers to datasources,
+			// see router/core/header_rule_engine.go.
+			// This test ensures grpc datasources are covered by this as well.
 			t.Parallel()
 
 			var captured metadata.MD
@@ -437,17 +452,137 @@ func TestGRPCSubgraph(t *testing.T) {
 				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { projects { id name } }`,
 					Header: http.Header{
-						"X-Custom":          []string{"value"},
-						"Host":              []string{"evil.example.com"},
-						"Te":                []string{"trailers"},
-						"Transfer-Encoding": []string{"chunked"},
+						// safe header — must arrive
+						"X-Custom": []string{"value"},
+
+						// handled by HTTP stack, never in r.Header
+						"Host": []string{"evil.example.com"},
+
+						// hop-by-hop / connection headers
+						"Alt-Svc":             []string{"h3=\":443\""},
+						"Connection":          []string{"keep-alive"},
+						"Keep-Alive":          []string{"timeout=5"},
+						"Proxy-Authenticate":  []string{"Basic"},
+						"Proxy-Authorization": []string{"Basic dXNlcjpwYXNz"},
+						"Proxy-Connection":    []string{"keep-alive"},
+						"Te":                  []string{"trailers"},
+						"Trailer":             []string{"Expires"},
+						"Transfer-Encoding":   []string{"chunked"},
+						"Upgrade":             []string{"websocket"},
+
+						// content negotiation
+						"Accept":           []string{"application/json"},
+						"Accept-Charset":   []string{"utf-8"},
+						"Accept-Encoding":  []string{"gzip, deflate"},
+						"Content-Encoding": []string{"gzip"},
+						"Content-Length":   []string{"42"},
+						"Content-Type":     []string{"application/json"},
+
+						// WebSocket upgrade
+						"Sec-Websocket-Extensions": []string{"permessage-deflate"},
+						"Sec-Websocket-Key":        []string{"dGhlIHNhbXBsZSBub25jZQ=="},
+						"Sec-Websocket-Protocol":   []string{"chat"},
+						"Sec-Websocket-Version":    []string{"13"},
 					},
 				})
 
+				// custom header should arrive
 				require.Equal(t, []string{"value"}, captured.Get("x-custom"))
+
+				// ensure content-type is overwritten by grpc client
+				require.Equal(t, []string{"application/grpc"}, captured.Get("content-type"))
+
+				// host is handled by the HTTP stack and never forwarded
 				require.Empty(t, captured.Get("host"))
+
+				// hop-by-hop / connection headers
+				require.Empty(t, captured.Get("alt-svc"))
+				require.Empty(t, captured.Get("connection"))
+				require.Empty(t, captured.Get("keep-alive"))
+				require.Empty(t, captured.Get("proxy-authenticate"))
+				require.Empty(t, captured.Get("proxy-authorization"))
+				require.Empty(t, captured.Get("proxy-connection"))
 				require.Empty(t, captured.Get("te"))
+				require.Empty(t, captured.Get("trailer"))
 				require.Empty(t, captured.Get("transfer-encoding"))
+				require.Empty(t, captured.Get("upgrade"))
+
+				// content negotiation
+				require.Empty(t, captured.Get("accept"))
+				require.Empty(t, captured.Get("accept-charset"))
+				require.Empty(t, captured.Get("accept-encoding"))
+				require.Empty(t, captured.Get("content-encoding"))
+				require.Empty(t, captured.Get("content-length"))
+
+				// WebSocket upgrade
+				require.Empty(t, captured.Get("sec-websocket-extensions"))
+				require.Empty(t, captured.Get("sec-websocket-key"))
+				require.Empty(t, captured.Get("sec-websocket-protocol"))
+				require.Empty(t, captured.Get("sec-websocket-version"))
+
+				// gRPC client correctness:
+				// HTTP/2 pseudo-headers — the gRPC transport explicitly whitelists
+				// :authority and user-agent so they appear in metadata.
+				require.NotEmpty(t, captured.Get(":authority"))
+				require.NotEmpty(t, captured.Get("user-agent"))
+
+				// gRPC client correctness:
+				// All other pseudo-headers (:method, :path, :scheme) are classified
+				// as reserved and stripped by the gRPC transport before reaching
+				// user-space, so they never appear regardless of router rules.
+				require.Empty(t, captured.Get(":method"))
+				require.Empty(t, captured.Get(":path"))
+				require.Empty(t, captured.Get(":scheme"))
+			})
+		})
+
+		t.Run("safe headers are present in metadata", func(t *testing.T) {
+			// Ensure that http standard headers, which are safe and useful for subgraphs,
+			// are included in the metadata unmodified.
+			t.Parallel()
+
+			var captured metadata.MD
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+				EnableGRPC:               true,
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								// Propagate each header explicitly so the test is
+								// independent of any default propagation behaviour.
+								{Operation: config.HeaderRuleOperationPropagate, Named: "Authorization"},
+								{Operation: config.HeaderRuleOperationPropagate, Named: "Cookie"},
+								{Operation: config.HeaderRuleOperationPropagate, Named: "Traceparent"},
+								{Operation: config.HeaderRuleOperationPropagate, Named: "Tracestate"},
+								{Operation: config.HeaderRuleOperationPropagate, Named: "Accept-Language"},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Projects: testenv.SubgraphConfig{
+						GRPCInterceptor: captureInterceptor(&captured),
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"Authorization":   []string{"Bearer eyJhbGciOiJSUzI1NiJ9"},
+						"Cookie":          []string{"session=abc123; theme=dark"},
+						"Traceparent":     []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"},
+						"Tracestate":      []string{"rojo=00f067aa0ba902b7"},
+						"Accept-Language": []string{"de-DE,de;q=0.9,en;q=0.8"},
+					},
+				})
+
+				require.Equal(t, []string{"Bearer eyJhbGciOiJSUzI1NiJ9"}, captured.Get("authorization"))
+				require.Equal(t, []string{"session=abc123; theme=dark"}, captured.Get("cookie"))
+				require.Equal(t, []string{"00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"}, captured.Get("traceparent"))
+				require.Equal(t, []string{"rojo=00f067aa0ba902b7"}, captured.Get("tracestate"))
+				require.Equal(t, []string{"de-DE,de;q=0.9,en;q=0.8"}, captured.Get("accept-language"))
 			})
 		})
 	})
