@@ -207,13 +207,16 @@ export const CONNECT_FIELD_RESOLVER_DEFINITION: DirectiveDefinitionNode = {
   repeatable: false,
 };
 
-// directive @cost(weight: String!) on ARGUMENT_DEFINITION | ENUM | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | OBJECT | SCALAR
+// directive @cost(weight: Int!) on ARGUMENT_DEFINITION | ENUM | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | OBJECT | SCALAR
 export const COST_DEFINITION: DirectiveDefinitionNode = {
   arguments: [
     {
       kind: Kind.INPUT_VALUE_DEFINITION,
       name: stringToNameNode(WEIGHT),
-      type: REQUIRED_STRING_TYPE_NODE,
+      type: {
+        kind: Kind.NON_NULL_TYPE,
+        type: stringToNamedTypeNode(INT_SCALAR),
+      },
     },
   ],
   kind: Kind.DIRECTIVE_DEFINITION,

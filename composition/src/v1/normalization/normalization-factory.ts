@@ -92,7 +92,6 @@ import {
   fieldAlreadyProvidedErrorMessage,
   incompatibleInputValueDefaultValueTypeError,
   incompatibleTypeWithProvidesErrorMessage,
-  invalidCostWeightErrorMessage,
   inlineFragmentWithoutTypeConditionErrorMessage,
   invalidArgumentValueErrorMessage,
   invalidDirectiveDefinitionError,
@@ -1134,15 +1133,10 @@ export class NormalizationFactory {
           continue;
         }
         const weightArg = directive.arguments?.find((a) => a.name.value === WEIGHT);
-        if (!weightArg || weightArg.value.kind !== Kind.STRING) {
+        if (!weightArg || weightArg.value.kind !== Kind.INT) {
           continue;
         }
-        const weightValue = (weightArg.value as StringValueNode).value;
-        const coord = `@${directiveName}(${argNode.name.value}: ...)`;
-        if (weightValue.trim() === '' || isNaN(Number(weightValue))) {
-          this.errors.push(invalidDirectiveError(COST, coord, '1st', [invalidCostWeightErrorMessage(coord, weightValue)]));
-          continue;
-        }
+        const weightValue = parseInt((weightArg.value as IntValueNode).value, 10);
         if (!this.costs.directiveArgumentWeights) {
           this.costs.directiveArgumentWeights = new Map();
         }
@@ -2377,14 +2371,10 @@ export class NormalizationFactory {
 
   handleCostDirective({ data, directiveCoords, directiveNode, errorMessages }: HandleCostDirectiveParams) {
     const weightArg = directiveNode.arguments?.find((arg) => arg.name.value === WEIGHT);
-    if (!weightArg || weightArg.value.kind !== Kind.STRING) {
+    if (!weightArg || weightArg.value.kind !== Kind.INT) {
       return;
     }
-    const weightValue = (weightArg.value as StringValueNode).value;
-    if (weightValue.trim() === '' || isNaN(Number(weightValue))) {
-      errorMessages.push(invalidCostWeightErrorMessage(directiveCoords, weightValue));
-      return;
-    }
+    const weightValue = parseInt((weightArg.value as IntValueNode).value, 10);
     switch (data.kind) {
       case Kind.OBJECT_TYPE_DEFINITION:
       case Kind.SCALAR_TYPE_DEFINITION:

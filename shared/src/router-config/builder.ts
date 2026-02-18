@@ -53,14 +53,14 @@ function costsToCostConfiguration(costs: Costs): CostConfiguration | undefined {
     const argumentWeights: { [key: string]: number } = {};
     if (fw.argumentWeights) {
       for (const [argName, argWeight] of fw.argumentWeights) {
-        argumentWeights[argName] = Number(argWeight);
+        argumentWeights[argName] = argWeight;
       }
     }
     fieldWeights.push(
       new FieldWeightConfiguration({
         typeName,
         fieldName,
-        weight: fw.weight !== undefined ? Number(fw.weight) : undefined,
+        weight: fw.weight,
         argumentWeights,
       }),
     );
@@ -83,12 +83,12 @@ function costsToCostConfiguration(costs: Costs): CostConfiguration | undefined {
   }
   const typeWeights: { [key: string]: number } = {};
   for (const [typeName, weight] of costs.typeWeights) {
-    typeWeights[typeName] = Number(weight);
+    typeWeights[typeName] = weight;
   }
   const directiveArgumentWeights: { [key: string]: number } = {};
   if (costs.directiveArgumentWeights) {
     for (const [coord, weight] of costs.directiveArgumentWeights) {
-      directiveArgumentWeights[coord] = Number(weight);
+      directiveArgumentWeights[coord] = weight;
     }
   }
   return new CostConfiguration({ fieldWeights, listSizes, typeWeights, directiveArgumentWeights });

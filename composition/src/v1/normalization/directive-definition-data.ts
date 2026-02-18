@@ -242,7 +242,10 @@ export const COST_DEFINITION_DATA: DirectiveDefinitionData = {
       WEIGHT,
       {
         name: WEIGHT,
-        typeNode: REQUIRED_STRING_TYPE_NODE,
+        typeNode: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(INT_SCALAR),
+        },
       },
     ],
   ]),

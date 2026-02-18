@@ -1695,13 +1695,6 @@ export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOf
   );
 }
 
-export function invalidCostWeightErrorMessage(directiveCoords: string, value: string): string {
-  return (
-    ` The "weight" argument value "${value}" on "${directiveCoords}" is not a valid numeric string.` +
-    ` The value must be a parseable number (e.g., "5", "2.5", "-3").`
-  );
-}
-
 export function listSizeInvalidSlicingArgumentErrorMessage(directiveCoords: string, argumentName: string): string {
   return ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" does not reference a defined argument on this field.`;
 }

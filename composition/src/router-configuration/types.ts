@@ -102,16 +102,16 @@ export type Costs = {
     listSizes: Map<string, ListSizeConfiguration>;
 
     // Key: TypeName
-    typeWeights: Map<string, string>;
+    typeWeights: Map<string, number>;
 
     // Key: "directiveName.argumentName"
-    directiveArgumentWeights?: Map<string, string>;
+    directiveArgumentWeights?: Map<string, number>;
 };
 
 export type FieldWeight = {
-    weight?: string;
+    weight?: number;
     // Key: "argumentName"
-    argumentWeights?: Map<string, string>;
+    argumentWeights?: Map<string, number>;
 };
 
 export type ListSizeConfiguration = {

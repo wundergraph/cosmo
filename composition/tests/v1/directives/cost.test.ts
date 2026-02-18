@@ -25,7 +25,7 @@ describe('@cost directive tests', () => {
             COST_DIRECTIVE +
             `
             type Query {
-              expensiveField: String! @cost(weight: "10")
+              expensiveField: String! @cost(weight: 10)
             }
           `,
         ),
@@ -40,7 +40,7 @@ describe('@cost directive tests', () => {
             COST_DIRECTIVE +
             `
             type Query {
-              search(query: String! @cost(weight: "5")): [Result!]!
+              search(query: String! @cost(weight: 5)): [Result!]!
             }
 
             type Result {
@@ -62,7 +62,7 @@ describe('@cost directive tests', () => {
               user: User!
             }
 
-            type User @cost(weight: "100") {
+            type User @cost(weight: 100) {
               id: ID!
               name: String!
             }
@@ -78,7 +78,7 @@ describe('@cost directive tests', () => {
           NORMALIZATION_SCHEMA_QUERY +
             COST_DIRECTIVE +
             `
-            scalar JSON @cost(weight: "50")
+            scalar JSON @cost(weight: 50)
 
             type Query {
               data: JSON!
@@ -99,7 +99,7 @@ describe('@cost directive tests', () => {
               status: Status!
             }
 
-            enum Status @cost(weight: "1") {
+            enum Status @cost(weight: 1) {
               ACTIVE
               INACTIVE
             }
@@ -124,22 +124,7 @@ describe('@cost directive tests', () => {
             }
 
             input SearchInput {
-              query: String! @cost(weight: "5")
-            }
-          `,
-        ),
-      );
-    });
-
-    test('that @cost with decimal weight value is correctly normalized', () => {
-      const { schema } = normalizeSubgraphSuccess(subgraphWithDecimalCost, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(schemaToSortedNormalizedString(schema)).toBe(
-        normalizeString(
-          NORMALIZATION_SCHEMA_QUERY +
-            COST_DIRECTIVE +
-            `
-            type Query {
-              field: String! @cost(weight: "2.5")
+              query: String! @cost(weight: 5)
             }
           `,
         ),
@@ -154,7 +139,7 @@ describe('@cost directive tests', () => {
             COST_DIRECTIVE +
             `
             type Query {
-              optimizedField(useCache: Boolean!): String! @cost(weight: "-5")
+              optimizedField(useCache: Boolean!): String! @cost(weight: -5)
             }
           `,
         ),
@@ -169,9 +154,9 @@ describe('@cost directive tests', () => {
             COST_DIRECTIVE +
             `
             type Query {
-              cheap: String! @cost(weight: "1")
-              expensive: String! @cost(weight: "100")
-              medium: String! @cost(weight: "10")
+              cheap: String! @cost(weight: 1)
+              expensive: String! @cost(weight: 100)
+              medium: String! @cost(weight: 10)
             }
           `,
         ),
@@ -191,7 +176,7 @@ describe('@cost directive tests', () => {
             COST_DIRECTIVE +
             `
             type Query {
-              expensiveField: String! @cost(weight: "10")
+              expensiveField: String! @cost(weight: 10)
             }
           `,
         ),
@@ -209,9 +194,9 @@ describe('@cost directive tests', () => {
             COST_DIRECTIVE +
             `
             type Query {
-              cheap: String! @cost(weight: "1")
-              expensive: String! @cost(weight: "100")
-              medium: String! @cost(weight: "10")
+              cheap: String! @cost(weight: 1)
+              expensive: String! @cost(weight: 100)
+              medium: String! @cost(weight: 10)
             }
           `,
         ),
@@ -232,7 +217,7 @@ describe('@cost directive tests', () => {
               user: User!
             }
 
-            type User @cost(weight: "100") {
+            type User @cost(weight: 100) {
               id: ID!
               name: String!
             }
@@ -251,7 +236,7 @@ describe('@cost directive tests', () => {
           SCHEMA_QUERY_DEFINITION +
             COST_DIRECTIVE +
             `
-            scalar JSON @cost(weight: "50")
+            scalar JSON @cost(weight: 50)
 
             type Query {
               data: JSON!
@@ -275,7 +260,7 @@ describe('@cost directive tests', () => {
               status: Status!
             }
 
-            enum Status @cost(weight: "1") {
+            enum Status @cost(weight: 1) {
               ACTIVE
               INACTIVE
             }
@@ -295,8 +280,8 @@ describe('@cost directive tests', () => {
             COST_DIRECTIVE +
             `
             type Query {
-              fieldA: String! @cost(weight: "10")
-              fieldB: String! @cost(weight: "20")
+              fieldA: String! @cost(weight: 10)
+              fieldB: String! @cost(weight: 20)
             }
           `,
         ),
@@ -406,16 +391,16 @@ describe('@cost directive tests', () => {
   });
 
   describe('validation tests', () => {
-    test('that @cost with non-numeric weight produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(subgraphWithInvalidCostWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
+    test('that @cost with string weight produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithStringCostWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('not a valid numeric string');
+      expect(errors[0].message).toContain('Int!');
     });
 
-    test('that @cost with empty string weight produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(subgraphWithEmptyCostWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
+    test('that @cost with decimal weight produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithDecimalCost, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('not a valid numeric string');
+      expect(errors[0].message).toContain('Int!');
     });
 
     test('that @cost on interface type produces an error', () => {
@@ -441,7 +426,7 @@ describe('@cost directive tests', () => {
     test('that @cost on a custom directive argument is extracted into costs.directiveArgumentWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnDirectiveArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.directiveArgumentWeights).toBeDefined();
-      expect(costs.directiveArgumentWeights!.get('myDirective.arg1')).toBe('5');
+      expect(costs.directiveArgumentWeights!.get('myDirective.arg1')).toBe(5);
     });
 
     test('that @cost on multiple directive arguments is extracted correctly', () => {
@@ -450,17 +435,8 @@ describe('@cost directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(costs.directiveArgumentWeights).toBeDefined();
-      expect(costs.directiveArgumentWeights!.get('myDirective.arg1')).toBe('3');
-      expect(costs.directiveArgumentWeights!.get('myDirective.arg2')).toBe('7');
-    });
-
-    test('that @cost with invalid weight on a directive argument produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(
-        subgraphWithInvalidCostOnDirectiveArgument,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('not a valid numeric string');
+      expect(costs.directiveArgumentWeights!.get('myDirective.arg1')).toBe(3);
+      expect(costs.directiveArgumentWeights!.get('myDirective.arg2')).toBe(7);
     });
 
     test('that costs without directive argument weights has undefined directiveArgumentWeights', () => {
@@ -475,18 +451,6 @@ describe('@cost directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('required argument');
     });
-
-    test('that @cost with integer weight (not string) produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(subgraphWithCostIntegerWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('not a valid "String!" type');
-    });
-
-    test('that @cost with whitespace-only weight produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(subgraphWithCostWhitespaceWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('not a valid numeric string');
-    });
   });
 });
 
@@ -495,7 +459,7 @@ const subgraphWithCostOnField: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      expensiveField: String! @cost(weight: "10")
+      expensiveField: String! @cost(weight: 10)
     }
   `),
 };
@@ -505,7 +469,7 @@ const subgraphWithCostOnArgument: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      search(query: String! @cost(weight: "5")): [Result!]!
+      search(query: String! @cost(weight: 5)): [Result!]!
     }
 
     type Result {
@@ -522,7 +486,7 @@ const subgraphWithCostOnObject: Subgraph = {
       user: User!
     }
 
-    type User @cost(weight: "100") {
+    type User @cost(weight: 100) {
       id: ID!
       name: String!
     }
@@ -537,7 +501,7 @@ const subgraphWithCostOnScalar: Subgraph = {
       data: JSON!
     }
 
-    scalar JSON @cost(weight: "50")
+    scalar JSON @cost(weight: 50)
   `),
 };
 
@@ -549,7 +513,7 @@ const subgraphWithCostOnEnum: Subgraph = {
       status: Status!
     }
 
-    enum Status @cost(weight: "1") {
+    enum Status @cost(weight: 1) {
       ACTIVE
       INACTIVE
     }
@@ -565,7 +529,7 @@ const subgraphWithCostOnInputField: Subgraph = {
     }
 
     input SearchInput {
-      query: String! @cost(weight: "5")
+      query: String! @cost(weight: 5)
     }
 
     type Result {
@@ -579,7 +543,7 @@ const subgraphWithDecimalCost: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      field: String! @cost(weight: "2.5")
+      field: String! @cost(weight: 2.5)
     }
   `),
 };
@@ -589,7 +553,7 @@ const subgraphWithNegativeCost: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      optimizedField(useCache: Boolean!): String! @cost(weight: "-5")
+      optimizedField(useCache: Boolean!): String! @cost(weight: -5)
     }
   `),
 };
@@ -599,9 +563,9 @@ const subgraphWithMultipleCosts: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      cheap: String! @cost(weight: "1")
-      medium: String! @cost(weight: "10")
-      expensive: String! @cost(weight: "100")
+      cheap: String! @cost(weight: 1)
+      medium: String! @cost(weight: 10)
+      expensive: String! @cost(weight: 100)
     }
   `),
 };
@@ -611,7 +575,7 @@ const subgraphACost: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      fieldA: String! @cost(weight: "10")
+      fieldA: String! @cost(weight: 10)
     }
   `),
 };
@@ -621,7 +585,7 @@ const subgraphBCost: Subgraph = {
   url: '',
   definitions: parse(`
     type Query {
-      fieldB: String! @cost(weight: "20")
+      fieldB: String! @cost(weight: 20)
     }
   `),
 };
@@ -636,7 +600,7 @@ const subgraphACostEntity: Subgraph = {
 
     type Entity @key(fields: "id") {
       id: ID!
-      name: String! @cost(weight: "5")
+      name: String! @cost(weight: 5)
     }
   `),
 };
@@ -647,27 +611,17 @@ const subgraphBCostEntity: Subgraph = {
   definitions: parse(`
     type Entity @key(fields: "id") {
       id: ID!
-      name: String! @cost(weight: "10")
+      name: String! @cost(weight: 10)
     }
   `),
 };
 
-const subgraphWithInvalidCostWeight: Subgraph = {
-  name: 'subgraph-cost-invalid',
+const subgraphWithStringCostWeight: Subgraph = {
+  name: 'subgraph-cost-string-weight',
   url: '',
   definitions: parse(`
     type Query {
-      field: String! @cost(weight: "abc")
-    }
-  `),
-};
-
-const subgraphWithEmptyCostWeight: Subgraph = {
-  name: 'subgraph-cost-empty',
-  url: '',
-  definitions: parse(`
-    type Query {
-      field: String! @cost(weight: "")
+      field: String! @cost(weight: "10")
     }
   `),
 };
@@ -680,7 +634,7 @@ const subgraphWithCostOnInterface: Subgraph = {
       node: Node!
     }
 
-    interface Node @cost(weight: "10") {
+    interface Node @cost(weight: 10) {
       id: ID!
     }
 
@@ -699,7 +653,7 @@ const subgraphWithCostOnUnion: Subgraph = {
       result: SearchResult!
     }
 
-    union SearchResult @cost(weight: "10") = User | Post
+    union SearchResult @cost(weight: 10) = User | Post
 
     type User {
       id: ID!
@@ -721,7 +675,7 @@ const subgraphWithCostOnInputObject: Subgraph = {
       search(input: SearchInput!): [Result!]!
     }
 
-    input SearchInput @cost(weight: "10") {
+    input SearchInput @cost(weight: 10) {
       query: String!
     }
 
@@ -741,31 +695,11 @@ const subgraphWithCostNoWeight: Subgraph = {
   `),
 };
 
-const subgraphWithCostIntegerWeight: Subgraph = {
-  name: 'subgraph-cost-integer-weight',
-  url: '',
-  definitions: parse(`
-    type Query {
-      field: String! @cost(weight: 10)
-    }
-  `),
-};
-
-const subgraphWithCostWhitespaceWeight: Subgraph = {
-  name: 'subgraph-cost-whitespace-weight',
-  url: '',
-  definitions: parse(`
-    type Query {
-      field: String! @cost(weight: "   ")
-    }
-  `),
-};
-
 const subgraphWithCostOnDirectiveArgument: Subgraph = {
   name: 'subgraph-cost-directive-arg',
   url: '',
   definitions: parse(`
-    directive @myDirective(arg1: String @cost(weight: "5")) on FIELD_DEFINITION
+    directive @myDirective(arg1: String @cost(weight: 5)) on FIELD_DEFINITION
 
     type Query {
       field: String! @myDirective(arg1: "hello")
@@ -777,7 +711,7 @@ const subgraphWithCostOnMultipleDirectiveArguments: Subgraph = {
   name: 'subgraph-cost-directive-multi-args',
   url: '',
   definitions: parse(`
-    directive @myDirective(arg1: String @cost(weight: "3"), arg2: Int @cost(weight: "7")) on FIELD_DEFINITION
+    directive @myDirective(arg1: String @cost(weight: 3), arg2: Int @cost(weight: 7)) on FIELD_DEFINITION
 
     type Query {
       field: String! @myDirective(arg1: "hello", arg2: 42)
@@ -785,14 +719,3 @@ const subgraphWithCostOnMultipleDirectiveArguments: Subgraph = {
   `),
 };
 
-const subgraphWithInvalidCostOnDirectiveArgument: Subgraph = {
-  name: 'subgraph-cost-directive-arg-invalid',
-  url: '',
-  definitions: parse(`
-    directive @myDirective(arg1: String @cost(weight: "abc")) on FIELD_DEFINITION
-
-    type Query {
-      field: String! @myDirective(arg1: "hello")
-    }
-  `),
-};
