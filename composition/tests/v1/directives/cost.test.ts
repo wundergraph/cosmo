@@ -363,19 +363,21 @@ describe('@cost directive tests', () => {
     test('that @cost on interface type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInterface, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(e => e.message.includes('invalid location') || e.message.includes('INTERFACE'))).toBe(true);
+      expect(errors.some((e) => e.message.includes('invalid location') || e.message.includes('INTERFACE'))).toBe(true);
     });
 
     test('that @cost on union type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnUnion, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(e => e.message.includes('invalid location') || e.message.includes('UNION'))).toBe(true);
+      expect(errors.some((e) => e.message.includes('invalid location') || e.message.includes('UNION'))).toBe(true);
     });
 
     test('that @cost on input object type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInputObject, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some(e => e.message.includes('invalid location') || e.message.includes('INPUT_OBJECT'))).toBe(true);
+      expect(errors.some((e) => e.message.includes('invalid location') || e.message.includes('INPUT_OBJECT'))).toBe(
+        true,
+      );
     });
   });
 
@@ -414,21 +416,27 @@ describe('@cost directive tests', () => {
     test('that @cost on a field populates fieldWeights correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.fieldWeights.get('Query.expensiveField')).toEqual({
-        typeName: 'Query', fieldName: 'expensiveField', weight: 10,
+        typeName: 'Query',
+        fieldName: 'expensiveField',
+        weight: 10,
       });
     });
 
     test('that @cost on a field argument populates fieldWeights.argumentWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.fieldWeights.get('Query.search')).toEqual({
-        typeName: 'Query', fieldName: 'search', argumentWeights: { query: 5 },
+        typeName: 'Query',
+        fieldName: 'search',
+        argumentWeights: { query: 5 },
       });
     });
 
     test('that @cost on an input field populates fieldWeights correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnInputField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.fieldWeights.get('SearchInput.query')).toEqual({
-        typeName: 'SearchInput', fieldName: 'query', weight: 5,
+        typeName: 'SearchInput',
+        fieldName: 'query',
+        weight: 5,
       });
     });
 
@@ -465,7 +473,10 @@ describe('@cost directive tests', () => {
     test('that @cost on both a field and its argument populates a single FieldWeightConfiguration', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnFieldAndArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.fieldWeights.get('Query.search')).toEqual({
-        typeName: 'Query', fieldName: 'search', weight: 10, argumentWeights: { query: 3 },
+        typeName: 'Query',
+        fieldName: 'search',
+        weight: 10,
+        argumentWeights: { query: 3 },
       });
     });
 
@@ -717,4 +728,3 @@ const subgraphWithNoCostDirectives: Subgraph = {
     }
   `),
 };
-

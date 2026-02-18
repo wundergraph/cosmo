@@ -2384,9 +2384,14 @@ export class NormalizationFactory {
       case Kind.FIELD_DEFINITION: {
         const typeName = data.renamedParentTypeName || data.originalParentTypeName;
         const fieldCoord = `${typeName}.${data.name}`;
-        const fieldWeight = getValueOrDefault(this.costs.fieldWeights, fieldCoord, (): FieldWeightConfiguration => ({
-          typeName, fieldName: data.name,
-        }));
+        const fieldWeight = getValueOrDefault(
+          this.costs.fieldWeights,
+          fieldCoord,
+          (): FieldWeightConfiguration => ({
+            typeName,
+            fieldName: data.name,
+          }),
+        );
         fieldWeight.weight = weightValue;
         break;
       }
@@ -2396,9 +2401,14 @@ export class NormalizationFactory {
         if (ivData.isArgument && ivData.fieldName) {
           const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
           const parentFieldCoord = `${typeName}.${ivData.fieldName}`;
-          const fieldWeight = getValueOrDefault(this.costs.fieldWeights, parentFieldCoord, (): FieldWeightConfiguration => ({
-            typeName, fieldName: ivData.fieldName!,
-          }));
+          const fieldWeight = getValueOrDefault(
+            this.costs.fieldWeights,
+            parentFieldCoord,
+            (): FieldWeightConfiguration => ({
+              typeName,
+              fieldName: ivData.fieldName!,
+            }),
+          );
           if (!fieldWeight.argumentWeights) {
             fieldWeight.argumentWeights = {};
           }
@@ -2406,9 +2416,14 @@ export class NormalizationFactory {
         } else {
           const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
           const fieldCoord = `${typeName}.${ivData.name}`;
-          const fieldWeight = getValueOrDefault(this.costs.fieldWeights, fieldCoord, (): FieldWeightConfiguration => ({
-            typeName, fieldName: ivData.name,
-          }));
+          const fieldWeight = getValueOrDefault(
+            this.costs.fieldWeights,
+            fieldCoord,
+            (): FieldWeightConfiguration => ({
+              typeName,
+              fieldName: ivData.name,
+            }),
+          );
           fieldWeight.weight = weightValue;
         }
         break;
@@ -2425,7 +2440,8 @@ export class NormalizationFactory {
     let hasSizedFields = false;
     const typeName = data.renamedParentTypeName || data.originalParentTypeName;
     const listSizeConfig: FieldListSizeConfiguration = {
-      typeName, fieldName: data.name,
+      typeName,
+      fieldName: data.name,
     };
 
     for (const argumentNode of args) {
@@ -2487,9 +2503,7 @@ export class NormalizationFactory {
           listSizeConfig.sizedFields.push(sizedFieldName);
           const fieldData = returnTypeData.fieldDataByName.get(sizedFieldName);
           if (!fieldData) {
-            errorMessages.push(
-              listSizeSizedFieldNotFoundErrorMessage(directiveCoords, sizedFieldName, returnTypeName),
-            );
+            errorMessages.push(listSizeSizedFieldNotFoundErrorMessage(directiveCoords, sizedFieldName, returnTypeName));
             continue;
           }
           if (!isTypeNodeListType(fieldData.type)) {

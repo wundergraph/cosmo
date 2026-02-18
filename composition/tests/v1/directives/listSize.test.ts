@@ -264,28 +264,19 @@ describe('@listSize directive tests', () => {
 
   describe('validation tests', () => {
     test('that @listSize with invalid slicingArguments produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(
-        subgraphWithInvalidSlicingArg,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const { errors } = normalizeSubgraphFailure(subgraphWithInvalidSlicingArg, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('does not reference a defined argument');
     });
 
     test('that @listSize with non-Int slicingArgument type produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(
-        subgraphWithNonIntSlicingArg,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const { errors } = normalizeSubgraphFailure(subgraphWithNonIntSlicingArg, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
     });
 
     test('that @listSize with list-typed slicingArgument produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(
-        subgraphWithListTypedSlicingArg,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const { errors } = normalizeSubgraphFailure(subgraphWithListTypedSlicingArg, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
     });
@@ -318,28 +309,19 @@ describe('@listSize directive tests', () => {
     });
 
     test('that @listSize with invalid sizedFields produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(
-        subgraphWithInvalidSizedField,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const { errors } = normalizeSubgraphFailure(subgraphWithInvalidSizedField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('does not reference a defined field');
     });
 
     test('that @listSize with non-list sizedField produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(
-        subgraphWithNonListSizedField,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const { errors } = normalizeSubgraphFailure(subgraphWithNonListSizedField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('must return a list type');
     });
 
     test('that @listSize on non-list field without sizedFields produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(
-        subgraphWithListSizeOnNonListField,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const { errors } = normalizeSubgraphFailure(subgraphWithListSizeOnNonListField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('not a list type');
     });
@@ -349,26 +331,36 @@ describe('@listSize directive tests', () => {
     test('that @listSize with assumedSize populates listSizes correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithAssumedSize, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.listSizes.get('Query.users')).toEqual({
-        typeName: 'Query', fieldName: 'users', assumedSize: 100,
+        typeName: 'Query',
+        fieldName: 'users',
+        assumedSize: 100,
       });
     });
 
     test('that @listSize with slicingArguments populates listSizes correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithSlicingArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.listSizes.get('Query.users')).toEqual({
-        typeName: 'Query', fieldName: 'users', slicingArguments: ['first', 'last'],
+        typeName: 'Query',
+        fieldName: 'users',
+        slicingArguments: ['first', 'last'],
       });
     });
 
     test('that @listSize with sizedFields populates listSizes correctly', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithSizedFields, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.listSizes.get('Query.usersConnection')).toEqual({
-        typeName: 'Query', fieldName: 'usersConnection', slicingArguments: ['first'], sizedFields: ['edges', 'nodes'],
+        typeName: 'Query',
+        fieldName: 'usersConnection',
+        slicingArguments: ['first'],
+        sizedFields: ['edges', 'nodes'],
       });
     });
 
     test('that @listSize with requireOneSlicingArgument populates listSizes correctly', () => {
-      const { costs } = normalizeSubgraphSuccess(subgraphWithRequireOneSlicingArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithRequireOneSlicingArgument,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
       const ls = costs.listSizes.get('Query.users');
       expect(ls).toBeDefined();
       expect(ls!.requireOneSlicingArgument).toBe(false);
@@ -378,8 +370,12 @@ describe('@listSize directive tests', () => {
     test('that @listSize with all arguments populates listSizes with all fields', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithAllArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.listSizes.get('Query.usersConnection')).toEqual({
-        typeName: 'Query', fieldName: 'usersConnection', assumedSize: 50,
-        slicingArguments: ['first', 'last'], sizedFields: ['edges', 'nodes'], requireOneSlicingArgument: true,
+        typeName: 'Query',
+        fieldName: 'usersConnection',
+        assumedSize: 50,
+        slicingArguments: ['first', 'last'],
+        sizedFields: ['edges', 'nodes'],
+        requireOneSlicingArgument: true,
       });
     });
 
@@ -393,10 +389,7 @@ describe('@listSize directive tests', () => {
 
   describe('directive definition compliance tests', () => {
     test('that @listSize with string assumedSize produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(
-        subgraphWithInvalidAssumedSizeType,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const { errors } = normalizeSubgraphFailure(subgraphWithInvalidAssumedSizeType, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('not a valid "Int" type');
     });
@@ -407,19 +400,13 @@ describe('@listSize directive tests', () => {
     });
 
     test('that @listSize with null in slicingArguments array produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(
-        subgraphWithNullInSlicingArguments,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const { errors } = normalizeSubgraphFailure(subgraphWithNullInSlicingArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('not a valid "[String!]" type');
     });
 
     test('that @listSize with integer sizedFields produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(
-        subgraphWithIntegerSizedFields,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const { errors } = normalizeSubgraphFailure(subgraphWithIntegerSizedFields, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('not a valid "[String!]" type');
     });

@@ -95,31 +95,30 @@ export type ConfigurationData = {
 };
 
 export type Costs = {
-    // Key: "TypeName.fieldName" (lookup handle for O(1) merge during normalization)
-    fieldWeights: Map<FieldCoords, FieldWeightConfiguration>;
+  // Key: "TypeName.fieldName" (lookup handle for O(1) merge during normalization)
+  fieldWeights: Map<FieldCoords, FieldWeightConfiguration>;
 
-    // Key: "TypeName.fieldName" (lookup handle for O(1) merge during normalization)
-    listSizes: Map<FieldCoords, FieldListSizeConfiguration>;
+  // Key: "TypeName.fieldName" (lookup handle for O(1) merge during normalization)
+  listSizes: Map<FieldCoords, FieldListSizeConfiguration>;
 
-    typeWeights: { [key: string]: number };
+  typeWeights: { [key: string]: number };
 
-    // Key: "directiveName.argumentName"
-    directiveArgumentWeights?: { [key: string]: number };
+  // Key: "directiveName.argumentName"
+  directiveArgumentWeights?: { [key: string]: number };
 };
 
 export type FieldWeightConfiguration = {
-    typeName: TypeName;
-    fieldName: FieldName;
-    weight?: number;
-    argumentWeights?: { [key: string]: number };
+  typeName: TypeName;
+  fieldName: FieldName;
+  weight?: number;
+  argumentWeights?: { [key: string]: number };
 };
 
 export type FieldListSizeConfiguration = {
-    typeName: TypeName;
-    fieldName: FieldName;
-    assumedSize?: number;
-    slicingArguments?: string[];
-    sizedFields?: FieldName[];
-    requireOneSlicingArgument?: boolean;
+  typeName: TypeName;
+  fieldName: FieldName;
+  assumedSize?: number;
+  slicingArguments?: string[];
+  sizedFields?: FieldName[];
+  requireOneSlicingArgument?: boolean;
 };
-
