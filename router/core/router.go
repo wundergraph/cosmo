@@ -315,12 +315,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if err != nil {
 		return nil, err
 	}
-	// we only add post origin handler for header rules
-	// pre handlers (header propagation rules) are handled via the engine
-	if r.headerPropagation != nil && r.headerPropagation.HasResponseRules() {
-		r.postOriginHandlers = append(r.postOriginHandlers, r.headerPropagation.OnOriginResponse)
-	}
-
 	defaultCorsHeaders := []string{
 		// Common headers
 		"authorization",
