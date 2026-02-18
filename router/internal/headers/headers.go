@@ -36,8 +36,3 @@ var SkippedHeaders = map[string]struct{}{
 	// Additional headers that should not be forwarded
 	"Host": {},
 }
-
-// IgnoredHeaderPrefixes are prefixes for headers that should not be forwarded to downstream services.
-var IgnoredHeaderPrefixes = []string{
-	"Grpc-", // reserved in gRPC metadata
-}

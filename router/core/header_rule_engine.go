@@ -38,14 +38,20 @@ var (
 	caseInsensitiveRegexp                         = "(?i)"
 )
 
+// ignoredHeaderPrefixes are prefixes for headers that should not be forwarded to downstream services.
+var ignoredHeaderPrefixes = []string{
+	"Grpc-", // reserved in gRPC metadata
+}
+
 // isIgnoredHeader reports whether a header should never be propagated to subgraphs.
 // It checks both the exact ignoredHeaders list and any prefix in ignoredHeaderPrefixes.
 func isIgnoredHeader(name string) bool {
+	canonicalName := http.CanonicalHeaderKey(name)
+
 	if _, ok := headers.SkippedHeaders[name]; ok {
 		return true
 	}
-	canonicalName := http.CanonicalHeaderKey(name)
-	for _, prefix := range headers.IgnoredHeaderPrefixes {
+	for _, prefix := range ignoredHeaderPrefixes {
 		if strings.HasPrefix(canonicalName, prefix) {
 			return true
 		}
