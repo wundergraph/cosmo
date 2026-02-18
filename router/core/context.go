@@ -136,7 +136,8 @@ type RequestContext interface {
 
 	// SetWildcardScope marks this request as having a wildcard scope that
 	// satisfies all @requiresScopes checks. The request must still be
-	// authenticated for @authenticated checks to pass.
+	// authenticated; unauthenticated requests are rejected before scope
+	// checks are evaluated.
 	SetWildcardScope(wildcard bool)
 
 	// SetCustomFieldValueRenderer overrides the default field value rendering behavior
