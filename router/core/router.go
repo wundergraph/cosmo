@@ -315,10 +315,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Response header rules are applied in the engine loader hooks (OnFinished),
-	// not in the transport post-handler, so that both singleflight leaders and
-	// followers are handled uniformly via ApplyResponseHeaderRules.
-
 	defaultCorsHeaders := []string{
 		// Common headers
 		"authorization",

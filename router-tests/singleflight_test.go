@@ -908,7 +908,6 @@ func TestSingleFlight(t *testing.T) {
 				ready, done sync.WaitGroup
 			)
 			ready.Add(total)
-			done.Add(total)
 			trigger := make(chan struct{})
 
 			type result struct {
@@ -920,16 +919,17 @@ func TestSingleFlight(t *testing.T) {
 			idx := 0
 			for _, id := range variableValues {
 				for j := 0; j < numPerVariable; j++ {
-					go func(slot, varVal int) {
+					slot := idx
+					varVal := id
+					done.Go(func() {
 						ready.Done()
-						defer done.Done()
 						<-trigger
 						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 							Query:     `query($id: Int!) { employee(id: $id) { id details { forename } } }`,
 							Variables: []byte(fmt.Sprintf(`{"id": %d}`, varVal)),
 						})
 						results[slot] = result{body: res.Body, requested: varVal}
-					}(idx, id)
+					})
 					idx++
 				}
 			}
@@ -1329,19 +1329,18 @@ func runConcurrentSingleflightRequests(t *testing.T, xEnv *testenv.Environment, 
 	t.Helper()
 	var ready, done sync.WaitGroup
 	ready.Add(n)
-	done.Add(n)
 	trigger := make(chan struct{})
 	responses := make([]*testenv.TestResponse, n)
 	for i := 0; i < n; i++ {
-		go func(idx int) {
+		idx := i
+		done.Go(func() {
 			ready.Done()
-			defer done.Done()
 			<-trigger
 			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: query})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusOK, resp.Response.StatusCode)
 			responses[idx] = resp
-		}(i)
+		})
 	}
 	ready.Wait()
 	close(trigger)
