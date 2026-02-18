@@ -1134,6 +1134,65 @@ func TestSingleFlight(t *testing.T) {
 			}
 		})
 	})
+	t.Run("mixed global and subgraph-specific response header rules with singleflight", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      "X-Global-Header",
+								Value:     "global-value",
+							},
+						},
+					},
+					Subgraphs: map[string]*config.GlobalHeaderRule{
+						"employees": {
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationSet,
+									Name:      "X-Employees-Header",
+									Value:     "employees-value",
+								},
+							},
+						},
+						"family": {
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationSet,
+									Name:      "X-Family-Header",
+									Value:     "family-value",
+								},
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// This query fans out to employees (root) and family (entity resolution for hasChildren)
+			query := `{ employee(id: 1) { id details { forename hasChildren } } }`
+
+			responses := runConcurrentSingleflightRequests(t, xEnv, query, 5)
+			for i, res := range responses {
+				require.Contains(t, res.Body, `"employee"`)
+				require.Equal(t, "global-value", res.Response.Header.Get("X-Global-Header"),
+					"response %d missing global X-Global-Header", i)
+				require.Equal(t, "employees-value", res.Response.Header.Get("X-Employees-Header"),
+					"response %d missing subgraph-specific X-Employees-Header", i)
+				require.Equal(t, "family-value", res.Response.Header.Get("X-Family-Header"),
+					"response %d missing subgraph-specific X-Family-Header", i)
+			}
+		})
+	})
 }
 
 // runConcurrentSingleflightRequests sends n identical GraphQL requests concurrently,
