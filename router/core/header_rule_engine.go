@@ -449,11 +449,13 @@ func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestCon
 
 func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropagation, res *http.Response, rule *config.ResponseHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
+		propagation.m.Lock()
 		propagation.header.Set(rule.Name, rule.Value)
 		if rule.Name == cacheControlKey {
 			// Handle the case where the cache control header is set explicitly
 			propagation.setCacheControl = true
 		}
+		propagation.m.Unlock()
 		return
 	}
 
@@ -639,10 +641,14 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 }
 
 func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule) {
+	propagation.m.Lock()
 	if propagation.setCacheControl {
+		propagation.m.Unlock()
 		// Handle the case where the cache control header is set explicitly using the set propagation rule
 		return
 	}
+	previousCacheControl := propagation.previousCacheControl
+	propagation.m.Unlock()
 
 	ctx := res.Request.Context()
 	tracer := rtrace.TracerFromContext(ctx)
@@ -658,7 +664,13 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 
 	// Set no-cache for all mutations, to ensure that requests to mutate data always work as expected (without returning cached data)
 	if resolve.GetOperationTypeFromContext(ctx) == ast.OperationTypeMutation {
+		propagation.m.Lock()
+		if propagation.setCacheControl {
+			propagation.m.Unlock()
+			return
+		}
 		propagation.header.Set(cacheControlKey, noCache)
+		propagation.m.Unlock()
 		return
 	}
 
@@ -668,7 +680,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	dateHeader, _ := http.ParseTime(res.Header.Get("Date"))
 	lastModifiedHeader, _ := http.ParseTime(res.Header.Get("Last-Modified"))
 
-	if propagation.previousCacheControl == nil && reqCacheHeader == "" && resCacheHeader == "" && expiresHeader.IsZero() && rule.Default == "" {
+	if previousCacheControl == nil && reqCacheHeader == "" && resCacheHeader == "" && expiresHeader.IsZero() && rule.Default == "" {
 		// There is no default/previous value to set, and since no cache control headers have been set, exit early
 		return
 	}
@@ -696,21 +708,31 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		otel.WgResponseCacheControlExpiration.String(rv.OutExpirationTime.String()),
 	)
 
-	// Add each cache control object to the policies list
-	policies := []*cachedirective.Object{obj}
+	var defaultPolicy *cachedirective.Object
 	if rule.Default != "" {
 		defaultResponseCache, _ := cachedirective.ParseResponseCacheControl(rule.Default)
-		policies = append(policies, &cachedirective.Object{RespDirectives: defaultResponseCache})
+		defaultPolicy = &cachedirective.Object{RespDirectives: defaultResponseCache}
+	}
+
+	propagation.m.Lock()
+	defer propagation.m.Unlock()
+	if propagation.setCacheControl {
+		// We compute restrictivePolicy outside the lock. If a concurrent
+		// response applied an explicit `set` Cache-Control rule in the meantime,
+		// that explicit value must win; drop this computed result.
+		return
+	}
+	// Merge with the current shared state under lock to avoid lost updates when
+	// multiple subgraph responses compute policies concurrently.
+	policies := []*cachedirective.Object{obj}
+	if defaultPolicy != nil {
+		policies = append(policies, defaultPolicy)
 	}
 	if propagation.previousCacheControl != nil {
 		policies = append(policies, propagation.previousCacheControl)
 	}
 
-	// Determine the most restrictive cache policy and cache control header
 	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies)
-
-	propagation.m.Lock()
-	defer propagation.m.Unlock()
 	propagation.previousCacheControl = restrictivePolicy
 	if cacheControlHeader != "" {
 		propagation.header.Set(cacheControlKey, cacheControlHeader)
