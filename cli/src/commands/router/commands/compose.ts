@@ -30,6 +30,16 @@ import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
 const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
 
+/**
+ * Expands environment variables in a string using ${VAR_NAME} syntax.
+ * Consistent with Go's os.ExpandEnv() used in router config.yaml.
+ */
+export function expandEnvVars(content: string): string {
+  return content.replace(/\${([^}]+)}/g, (_, varName) => {
+    return process.env[varName] ?? '';
+  });
+}
+
 type ConfigSubgraph = StandardSubgraphConfig | SubgraphPluginConfig | GRPCSubgraphConfig;
 
 type StandardSubgraphConfig = {
@@ -183,7 +193,8 @@ export default (opts: BaseCommandOptions) => {
     }
 
     const fileContent = (await readFile(inputFile)).toString();
-    const config = yaml.load(fileContent) as Config;
+    const expandedContent = expandEnvVars(fileContent);
+    const config = yaml.load(expandedContent) as Config;
 
     const subgraphs: SubgraphMetadata[] = [];
 
