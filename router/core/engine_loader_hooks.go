@@ -47,21 +47,14 @@ type engineLoaderHooks struct {
 	metricAttributeExpressions    *attributeExpressions
 
 	storeSubgraphResponseBody bool
+	appLogger                 *zap.Logger
 }
 
 type engineLoaderHooksRequestContext struct {
 	startTime time.Time
 }
 
-func NewEngineRequestHooks(
-	metricStore metric.Store,
-	logger *requestlogger.SubgraphAccessLogger,
-	tracerProvider *sdktrace.TracerProvider,
-	tracingAttributes *attributeExpressions,
-	telemetryAttributes *attributeExpressions,
-	metricAttributes *attributeExpressions,
-	storeSubgraphResponseBody bool,
-) resolve.LoaderHooks {
+func NewEngineRequestHooks(metricStore metric.Store, logger *requestlogger.SubgraphAccessLogger, appLogger *zap.Logger, tracerProvider *sdktrace.TracerProvider, tracingAttributes *attributeExpressions, telemetryAttributes *attributeExpressions, metricAttributes *attributeExpressions, storeSubgraphResponseBody bool) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
 		tracer = tracerProvider.Tracer(
@@ -75,6 +68,10 @@ func NewEngineRequestHooks(
 		)
 	}
 
+	if appLogger == nil {
+		appLogger = zap.NewNop()
+	}
+
 	return &engineLoaderHooks{
 		tracer:                        tracer,
 		metricStore:                   metricStore,
@@ -82,6 +79,7 @@ func NewEngineRequestHooks(
 		tracingAttributeExpressions:   tracingAttributes,
 		metricAttributeExpressions:    metricAttributes,
 		accessLogger:                  logger,
+		appLogger:                     appLogger,
 		storeSubgraphResponseBody:     storeSubgraphResponseBody,
 	}
 }
@@ -284,9 +282,14 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		metricAttrs = append(metricAttrs, rotel.WgRequestError.Bool(true))
 
 		attrOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
+
+		f.appLogger.Info("logging metrics with attributes a", zap.Any("attributes", metricAttrs))
+
 		f.metricStore.MeasureRequestCount(ctx, metricSliceAttrs, attrOpt)
 		f.metricStore.MeasureLatency(ctx, latency, metricSliceAttrs, attrOpt)
 	} else {
+		f.appLogger.Info("logging metrics with attributes b", zap.Any("attributes", metricAttrs))
+
 		f.metricStore.MeasureRequestCount(ctx, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
 		f.metricStore.MeasureLatency(ctx, latency, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
 	}
