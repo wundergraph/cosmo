@@ -77,6 +77,11 @@ func (a *CosmoAuthorizer) AuthorizeObjectField(ctx *resolve.Context, dataSourceI
 	return a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
 }
 
+func hasWildcardScope(ctx context.Context) bool {
+	v, ok := ctx.Value(wildcardScopeKey{}).(bool)
+	return ok && v
+}
+
 func (a *CosmoAuthorizer) validateScopes(ctx *resolve.Context, coordinate resolve.GraphCoordinate, requiredOrScopes []*nodev1.Scopes, isAuthenticated bool, actual []string) (result *resolve.AuthorizationDeny) {
 	if !isAuthenticated {
 		return &resolve.AuthorizationDeny{
@@ -84,6 +89,9 @@ func (a *CosmoAuthorizer) validateScopes(ctx *resolve.Context, coordinate resolv
 		}
 	}
 	if len(requiredOrScopes) == 0 {
+		return nil
+	}
+	if hasWildcardScope(ctx.Context()) {
 		return nil
 	}
 WithNext:
