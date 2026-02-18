@@ -47,6 +47,7 @@ type engineLoaderHooks struct {
 	metricAttributeExpressions    *attributeExpressions
 
 	storeSubgraphResponseBody bool
+	headerPropagation         *HeaderPropagation
 }
 
 type engineLoaderHooksRequestContext struct {
@@ -61,6 +62,7 @@ func NewEngineRequestHooks(
 	telemetryAttributes *attributeExpressions,
 	metricAttributes *attributeExpressions,
 	storeSubgraphResponseBody bool,
+	headerPropagation *HeaderPropagation,
 ) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
@@ -83,6 +85,7 @@ func NewEngineRequestHooks(
 		metricAttributeExpressions:    metricAttributes,
 		accessLogger:                  logger,
 		storeSubgraphResponseBody:     storeSubgraphResponseBody,
+		headerPropagation:             headerPropagation,
 	}
 }
 
@@ -140,6 +143,12 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 
 	if responseInfo == nil {
 		responseInfo = &resolve.ResponseInfo{}
+	}
+
+	// Apply response header propagation rules for singleflight followers.
+	// OnOriginResponse only fires during the leader's HTTP call; followers need rules applied here.
+	if f.headerPropagation != nil && responseInfo.ResponseHeaders != nil {
+		f.headerPropagation.ApplyResponseHeaderRules(ctx, responseInfo.ResponseHeaders, ds.Name)
 	}
 
 	commonAttrs := []attribute.KeyValue{

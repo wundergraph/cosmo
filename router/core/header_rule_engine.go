@@ -420,6 +420,34 @@ func hashHeaderStable(hdr http.Header) uint64 {
 	return d.Sum64()
 }
 
+// ApplyResponseHeaderRules applies response header rules using the given headers and subgraph name.
+// This is used by the engine loader hooks to apply response header rules for singleflight followers
+// whose subgraph fetches were deduplicated (OnOriginResponse only fires for the leader's HTTP call).
+func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string) {
+	propagation := getResponseHeaderPropagation(ctx)
+	if propagation == nil {
+		return
+	}
+
+	// Create a synthetic response to pass to applyResponseRule, which expects *http.Response
+	resp := &http.Response{
+		Header: headers,
+	}
+	resp.Request = (&http.Request{}).WithContext(ctx)
+
+	for _, rule := range h.rules.All.Response {
+		h.applyResponseRule(propagation, resp, rule)
+	}
+
+	if subgraphName != "" {
+		if subgraphRules, ok := h.rules.Subgraphs[subgraphName]; ok {
+			for _, rule := range subgraphRules.Response {
+				h.applyResponseRule(propagation, resp, rule)
+			}
+		}
+	}
+}
+
 func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
 	// In the case of an error response, it is possible that the response is nil
 	if resp == nil {

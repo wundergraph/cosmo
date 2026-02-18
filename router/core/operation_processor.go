@@ -786,6 +786,10 @@ type VariablesNormalizationCacheEntry struct {
 	// reparse indicates whether the operation document needs to be reparsed from
 	// its string representation when retrieved from the cache.
 	reparse bool
+
+	// variablesHash is the hash of the normalized variables, used as part of the
+	// inbound singleflight deduplication key.
+	variablesHash uint64
 }
 
 type RemapVariablesCacheEntry struct {
@@ -921,6 +925,7 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 			o.parsedOperation.ID = entry.id
 			o.parsedOperation.Request.Variables = entry.variables
+			o.parsedOperation.VariablesHash = entry.variablesHash
 
 			if entry.reparse {
 				if err = o.setAndParseOperationDoc(); err != nil {
@@ -990,6 +995,7 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 				normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 				variables:                o.parsedOperation.Request.Variables,
 				reparse:                  false,
+				variablesHash:            o.parsedOperation.VariablesHash,
 			}
 			o.cache.variablesNormalizationCache.Set(cacheKey, entry, 1)
 		}
@@ -1014,6 +1020,7 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 			variables:                o.parsedOperation.Request.Variables,
 			reparse:                  true,
+			variablesHash:            o.parsedOperation.VariablesHash,
 		}
 		o.cache.variablesNormalizationCache.Set(cacheKey, entry, 1)
 	}

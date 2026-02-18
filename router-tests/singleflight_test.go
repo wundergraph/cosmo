@@ -869,4 +869,279 @@ func TestSingleFlight(t *testing.T) {
 			require.Equal(t, numOfOperations, globalRequests)
 		})
 	})
+	t.Run("different variables with warm cache should not collide in inbound dedup", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:                true,
+					ForceEnableSingleFlight:           false,
+					EnableInboundRequestDeduplication: true,
+					MaxConcurrentResolvers:            0,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			variableValues := []int{1, 2, 3, 4, 5}
+
+			// Phase 1: Warm the variables normalization cache with sequential requests
+			for _, id := range variableValues {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query($id: Int!) { employee(id: $id) { id details { forename } } }`,
+					Variables: []byte(fmt.Sprintf(`{"id": %d}`, id)),
+				})
+				v, err := astjson.Parse(res.Body)
+				require.NoError(t, err)
+				emp := v.Get("data", "employee")
+				if emp != nil && emp.Type() == astjson.TypeObject {
+					require.Equal(t, id, emp.GetInt("id"))
+				}
+			}
+
+			// Phase 2: Send concurrent requests with different variables (cache is now warm)
+			// Without the fix, all cache-hit requests get VariablesHash=0, causing them to
+			// collide in the inbound singleflight and return wrong data.
+			numPerVariable := 2
+			total := numPerVariable * len(variableValues)
+			var (
+				ready, done sync.WaitGroup
+			)
+			ready.Add(total)
+			done.Add(total)
+			trigger := make(chan struct{})
+
+			type result struct {
+				body      string
+				requested int
+			}
+			results := make([]result, total)
+
+			idx := 0
+			for _, id := range variableValues {
+				for j := 0; j < numPerVariable; j++ {
+					go func(slot, varVal int) {
+						ready.Done()
+						defer done.Done()
+						<-trigger
+						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Query:     `query($id: Int!) { employee(id: $id) { id details { forename } } }`,
+							Variables: []byte(fmt.Sprintf(`{"id": %d}`, varVal)),
+						})
+						results[slot] = result{body: res.Body, requested: varVal}
+					}(idx, id)
+					idx++
+				}
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+
+			// Verify each response matches its requested variable (no cross-contamination)
+			for _, r := range results {
+				v, err := astjson.Parse(r.body)
+				require.NoError(t, err)
+				emp := v.Get("data", "employee")
+				if emp != nil && emp.Type() == astjson.TypeObject {
+					actualID := emp.GetInt("id")
+					require.Equal(t, r.requested, actualID,
+						"response for variable id=%d returned employee id=%d (cross-contamination)", r.requested, actualID)
+				}
+			}
+		})
+	})
+	t.Run("response header set rule with singleflight followers", func(t *testing.T) {
+
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      "X-Custom-Header",
+								Value:     "test-value",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var (
+				numOfOperations = int64(5)
+				ready, done     sync.WaitGroup
+			)
+			ready.Add(int(numOfOperations))
+			done.Add(int(numOfOperations))
+			trigger := make(chan struct{})
+			responses := make([]*testenv.TestResponse, numOfOperations)
+
+			for i := int64(0); i < numOfOperations; i++ {
+				go func(idx int64) {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query: `{ employee(id: 1) { id } }`,
+					})
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.Response.StatusCode)
+					responses[idx] = resp
+				}(i)
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+
+			for i, res := range responses {
+				require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+				require.Equal(t, "test-value", res.Response.Header.Get("X-Custom-Header"),
+					"response %d missing X-Custom-Header", i)
+			}
+		})
+	})
+	t.Run("cache control propagation with singleflight followers", func(t *testing.T) {
+
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+				Value:   "max-age=300",
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Cache-Control", "max-age=120")
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Verify single request works
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id } }`,
+			})
+			require.NotEmpty(t, res.Response.Header.Get("Cache-Control"), "single request should have Cache-Control")
+
+			var (
+				numOfOperations = int64(5)
+				ready, done     sync.WaitGroup
+			)
+			ready.Add(int(numOfOperations))
+			done.Add(int(numOfOperations))
+			trigger := make(chan struct{})
+			responses := make([]*testenv.TestResponse, numOfOperations)
+
+			for i := int64(0); i < numOfOperations; i++ {
+				go func(idx int64) {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query: `{ employee(id: 1) { id } }`,
+					})
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.Response.StatusCode)
+					responses[idx] = resp
+				}(i)
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+
+			for i, res := range responses {
+				cc := res.Response.Header.Get("Cache-Control")
+				require.NotEmpty(t, cc, "response %d missing Cache-Control header", i)
+			}
+		})
+	})
+	t.Run("multiple response set rules with singleflight followers", func(t *testing.T) {
+
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      "X-Header-A",
+								Value:     "value-a",
+							},
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      "X-Header-B",
+								Value:     "value-b",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Verify single request works
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id } }`,
+			})
+			require.Equal(t, "value-a", res.Response.Header.Get("X-Header-A"), "single request should have X-Header-A")
+			require.Equal(t, "value-b", res.Response.Header.Get("X-Header-B"), "single request should have X-Header-B")
+
+			var (
+				numOfOperations = int64(5)
+				ready, done     sync.WaitGroup
+			)
+			ready.Add(int(numOfOperations))
+			done.Add(int(numOfOperations))
+			trigger := make(chan struct{})
+			responses := make([]*testenv.TestResponse, numOfOperations)
+
+			for i := int64(0); i < numOfOperations; i++ {
+				go func(idx int64) {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query: `{ employee(id: 1) { id } }`,
+					})
+					require.NoError(t, err)
+					require.Equal(t, http.StatusOK, resp.Response.StatusCode)
+					responses[idx] = resp
+				}(i)
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+
+			for i, res := range responses {
+				require.Equal(t, "value-a", res.Response.Header.Get("X-Header-A"),
+					"response %d missing X-Header-A", i)
+				require.Equal(t, "value-b", res.Response.Header.Get("X-Header-B"),
+					"response %d missing X-Header-B", i)
+			}
+		})
+	})
 }
