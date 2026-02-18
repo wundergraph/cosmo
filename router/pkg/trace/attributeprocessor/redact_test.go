@@ -22,88 +22,87 @@ func TestRedactKeys(t *testing.T) {
 		replaced = attribute.String(key, "[REDACTED]")
 	)
 
-	t.Run("Empty", func(t *testing.T) {
+	t.Run("no transformers should leave attributes unchanged", func(t *testing.T) {
 		t.Parallel()
 
-		// No transformers means no changes
-		attributes := testAttributes(NewAttributeProcessorOption(), name, passStr, eID)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(), name, passStr, eID)
 		require.Contains(t, attributes, name)
 		require.Contains(t, attributes, eID)
 		require.Contains(t, attributes, passStr)
 	})
-	t.Run("EmptyAfterCreation", func(t *testing.T) {
+	t.Run("no transformers should leave attributes set after creation unchanged", func(t *testing.T) {
 		t.Parallel()
 
-		attributes := testAttributesAfterCreation(NewAttributeProcessorOption(), name, passStr, eID)
+		attributes := testAttributesAfterCreation(t.Context(), NewAttributeProcessorOption(), name, passStr, eID)
 		require.Contains(t, attributes, name)
 		require.Contains(t, attributes, eID)
 		require.Contains(t, attributes, passStr)
 	})
 
-	t.Run("SingleStringAttribute", func(t *testing.T) {
+	t.Run("should redact a single string attribute by key", func(t *testing.T) {
 		t.Parallel()
 
 		transformer, err := RedactKeys([]attribute.Key{key}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributes(NewAttributeProcessorOption(transformer), name, passStr, eID)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(transformer), name, passStr, eID)
 		require.Contains(t, attributes, name)
 		require.Contains(t, attributes, eID)
 		require.Contains(t, attributes, replaced)
 	})
-	t.Run("SingleStringAttributeAfterCreation", func(t *testing.T) {
+	t.Run("should redact a single string attribute set after creation", func(t *testing.T) {
 		t.Parallel()
 
 		transformer, err := RedactKeys([]attribute.Key{key}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributesAfterCreation(NewAttributeProcessorOption(transformer), name, passStr, eID)
+		attributes := testAttributesAfterCreation(t.Context(), NewAttributeProcessorOption(transformer), name, passStr, eID)
 		require.Contains(t, attributes, name)
 		require.Contains(t, attributes, eID)
 		require.Contains(t, attributes, replaced)
 	})
 
-	t.Run("NoMatchingKey", func(t *testing.T) {
+	t.Run("should not redact attributes when no keys match", func(t *testing.T) {
 		t.Parallel()
 
 		transformer, err := RedactKeys([]attribute.Key{"secret"}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributes(NewAttributeProcessorOption(transformer), name, passStr, eID)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(transformer), name, passStr, eID)
 		require.Contains(t, attributes, name)
 		require.Contains(t, attributes, eID)
 		require.Contains(t, attributes, passStr)
 	})
-	t.Run("NoMatchingKeyAfterCreation", func(t *testing.T) {
+	t.Run("should not redact attributes set after creation when no keys match", func(t *testing.T) {
 		t.Parallel()
 
 		transformer, err := RedactKeys([]attribute.Key{"secret"}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributesAfterCreation(NewAttributeProcessorOption(transformer), name, passStr, eID)
+		attributes := testAttributesAfterCreation(t.Context(), NewAttributeProcessorOption(transformer), name, passStr, eID)
 		require.Contains(t, attributes, name)
 		require.Contains(t, attributes, eID)
 		require.Contains(t, attributes, passStr)
 	})
 
-	t.Run("DifferentValueTypes", func(t *testing.T) {
+	t.Run("should redact non-string attribute types by key", func(t *testing.T) {
 		t.Parallel()
 
 		transformer, err := RedactKeys([]attribute.Key{key}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributes(NewAttributeProcessorOption(transformer), name, passBool, eID)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(transformer), name, passBool, eID)
 		require.Contains(t, attributes, name)
 		require.Contains(t, attributes, eID)
 		require.Contains(t, attributes, replaced)
 	})
-	t.Run("DifferentValueTypesAfterCreation", func(t *testing.T) {
+	t.Run("should redact non-string attribute types set after creation", func(t *testing.T) {
 		t.Parallel()
 
 		transformer, err := RedactKeys([]attribute.Key{key}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributesAfterCreation(NewAttributeProcessorOption(transformer), name, passBool, eID)
+		attributes := testAttributesAfterCreation(t.Context(), NewAttributeProcessorOption(transformer), name, passBool, eID)
 		require.Contains(t, attributes, name)
 		require.Contains(t, attributes, eID)
 		require.Contains(t, attributes, replaced)
 	})
 
-	t.Run("MultipleKeys", func(t *testing.T) {
+	t.Run("should redact multiple keys simultaneously", func(t *testing.T) {
 		t.Parallel()
 
 		secret := attribute.String("secret", "my-secret")
@@ -112,7 +111,7 @@ func TestRedactKeys(t *testing.T) {
 
 		transformer, err := RedactKeys([]attribute.Key{"secret", "api_key"}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributes(
+		attributes := testAttributes(t.Context(),
 			NewAttributeProcessorOption(transformer),
 			secret, apiKey, normal,
 		)
@@ -127,19 +126,17 @@ func TestRedactKeysUnsupportedMethod(t *testing.T) {
 
 	const key = "password"
 
-	t.Run("UnsupportedMethod", func(t *testing.T) {
+	t.Run("should return error for unsupported method", func(t *testing.T) {
 		t.Parallel()
 
-		// Test that unsupported methods return an error
 		_, err := RedactKeys([]attribute.Key{key}, "unsupported")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "unsupported IP anonymization method")
 	})
 
-	t.Run("EmptyMethod", func(t *testing.T) {
+	t.Run("should return error for empty method", func(t *testing.T) {
 		t.Parallel()
 
-		// Test that empty method returns an error
 		_, err := RedactKeys([]attribute.Key{key}, "")
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "unsupported IP anonymization method")
@@ -152,12 +149,12 @@ func TestRedactKeysWithHash(t *testing.T) {
 	const key = "password"
 	passStr := attribute.String(key, "super-secret-pswd")
 
-	t.Run("HashMethod", func(t *testing.T) {
+	t.Run("should produce a hex hash of the attribute value", func(t *testing.T) {
 		t.Parallel()
 
 		transformer, err := RedactKeys([]attribute.Key{key}, Hash)
 		require.NoError(t, err)
-		attributes := testAttributes(NewAttributeProcessorOption(transformer), passStr)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(transformer), passStr)
 
 		// Find the password attribute
 		var hashedValue string
@@ -174,16 +171,15 @@ func TestRedactKeysWithHash(t *testing.T) {
 		require.NotEqual(t, "[REDACTED]", hashedValue, "Value should be hashed, not redacted")
 	})
 
-	t.Run("HashIsDeterministic", func(t *testing.T) {
+	t.Run("should produce deterministic hashes for the same value", func(t *testing.T) {
 		t.Parallel()
 
-		// Same value should produce same hash
 		transformer1, err := RedactKeys([]attribute.Key{key}, Hash)
 		require.NoError(t, err)
 		transformer2, err := RedactKeys([]attribute.Key{key}, Hash)
 		require.NoError(t, err)
-		attributes1 := testAttributes(NewAttributeProcessorOption(transformer1), passStr)
-		attributes2 := testAttributes(NewAttributeProcessorOption(transformer2), passStr)
+		attributes1 := testAttributes(t.Context(), NewAttributeProcessorOption(transformer1), passStr)
+		attributes2 := testAttributes(t.Context(), NewAttributeProcessorOption(transformer2), passStr)
 
 		var hash1, hash2 string
 		for _, attr := range attributes1 {
@@ -203,7 +199,7 @@ func TestRedactKeysWithHash(t *testing.T) {
 		require.Equal(t, hash1, hash2)
 	})
 
-	t.Run("DifferentValuesProduceDifferentHashes", func(t *testing.T) {
+	t.Run("should produce different hashes for different values", func(t *testing.T) {
 		t.Parallel()
 
 		pass1 := attribute.String(key, "password1")
@@ -213,8 +209,8 @@ func TestRedactKeysWithHash(t *testing.T) {
 		require.NoError(t, err)
 		transformer2, err := RedactKeys([]attribute.Key{key}, Hash)
 		require.NoError(t, err)
-		attributes1 := testAttributes(NewAttributeProcessorOption(transformer1), pass1)
-		attributes2 := testAttributes(NewAttributeProcessorOption(transformer2), pass2)
+		attributes1 := testAttributes(t.Context(), NewAttributeProcessorOption(transformer1), pass1)
+		attributes2 := testAttributes(t.Context(), NewAttributeProcessorOption(transformer2), pass2)
 
 		var hash1, hash2 string
 		for _, attr := range attributes1 {

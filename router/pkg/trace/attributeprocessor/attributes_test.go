@@ -24,12 +24,11 @@ func (*attrRecorder) ForceFlush(context.Context) error                 { return 
 func (*attrRecorder) OnStart(_ context.Context, _ trace.ReadWriteSpan) {}
 
 // testAttributes creates a span with the given attributes at creation time and returns the recorded attributes
-func testAttributes(opt trace.TracerProviderOption, attrs ...attribute.KeyValue) []attribute.KeyValue {
+func testAttributes(ctx context.Context, opt trace.TracerProviderOption, attrs ...attribute.KeyValue) []attribute.KeyValue {
 	r := &attrRecorder{}
 	tp := trace.NewTracerProvider(opt, trace.WithSpanProcessor(r))
-	defer func() { _ = tp.Shutdown(context.Background()) }()
+	defer func() { _ = tp.Shutdown(ctx) }()
 
-	ctx := context.Background()
 	tracer := tp.Tracer("testAttributes")
 	_, s := tracer.Start(ctx, "span name", api.WithAttributes(attrs...))
 	s.End()
@@ -37,12 +36,11 @@ func testAttributes(opt trace.TracerProviderOption, attrs ...attribute.KeyValue)
 }
 
 // testAttributesAfterCreation creates a span and sets attributes after creation, then returns the recorded attributes
-func testAttributesAfterCreation(opt trace.TracerProviderOption, attrs ...attribute.KeyValue) []attribute.KeyValue {
+func testAttributesAfterCreation(ctx context.Context, opt trace.TracerProviderOption, attrs ...attribute.KeyValue) []attribute.KeyValue {
 	r := &attrRecorder{}
 	tp := trace.NewTracerProvider(opt, trace.WithSpanProcessor(r))
-	defer func() { _ = tp.Shutdown(context.Background()) }()
+	defer func() { _ = tp.Shutdown(ctx) }()
 
-	ctx := context.Background()
 	tracer := tp.Tracer("testAttributes")
 	_, s := tracer.Start(ctx, "span name")
 	s.SetAttributes(attrs...)
@@ -53,32 +51,29 @@ func testAttributesAfterCreation(opt trace.TracerProviderOption, attrs ...attrib
 func TestAttributeProcessor(t *testing.T) {
 	t.Parallel()
 
-	t.Run("NoTransformers", func(t *testing.T) {
+	t.Run("with no transformers, attributes should remain unchanged", func(t *testing.T) {
 		t.Parallel()
 
-		// With no transformers, attributes should remain unchanged
 		name := attribute.String("name", "bob")
 		count := attribute.Int("count", 42)
 
-		attributes := testAttributes(NewAttributeProcessorOption(), name, count)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(), name, count)
 		require.Contains(t, attributes, name)
 		require.Contains(t, attributes, count)
 	})
 
-	t.Run("EmptyAttributes", func(t *testing.T) {
+	t.Run("with no attributes, result should be empty", func(t *testing.T) {
 		t.Parallel()
 
-		// With no attributes, nothing should happen
 		redactTransformer, err := RedactKeys([]attribute.Key{"secret"}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributes(NewAttributeProcessorOption(redactTransformer))
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(redactTransformer))
 		require.Empty(t, attributes)
 	})
 
-	t.Run("FirstTransformerHandlesAttribute", func(t *testing.T) {
+	t.Run("handled attribute should be skipped by subsequent transformers", func(t *testing.T) {
 		t.Parallel()
 
-		// When first transformer handles an attribute, second transformer should be skipped for that attribute
 		secretKey := attribute.Key("secret")
 		otherKey := attribute.Key("other")
 		secret := attribute.String(string(secretKey), "value")
@@ -95,7 +90,7 @@ func TestAttributeProcessor(t *testing.T) {
 		// but SHOULD see "other"
 		redactTransformer, err := RedactKeys([]attribute.Key{secretKey}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributes(
+		attributes := testAttributes(t.Context(),
 			NewAttributeProcessorOption(redactTransformer, trackingTransformer),
 			secret, other,
 		)
@@ -114,11 +109,9 @@ func TestAttributeProcessor(t *testing.T) {
 func TestMultipleTransformers(t *testing.T) {
 	t.Parallel()
 
-	t.Run("TransformersAppliedInOrder", func(t *testing.T) {
+	t.Run("should apply redact before sanitize in order", func(t *testing.T) {
 		t.Parallel()
 
-		// First transformer handles "secret" key
-		// Second transformer handles all strings (SanitizeUTF8)
 		secretKey := attribute.Key("secret")
 		otherKey := attribute.Key("other")
 
@@ -127,7 +120,7 @@ func TestMultipleTransformers(t *testing.T) {
 
 		redactTransformer, err := RedactKeys([]attribute.Key{secretKey}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributes(
+		attributes := testAttributes(t.Context(),
 			NewAttributeProcessorOption(redactTransformer, SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
 			secret, invalidUTF8,
 		)
@@ -138,17 +131,15 @@ func TestMultipleTransformers(t *testing.T) {
 		require.Contains(t, attributes, attribute.String(string(otherKey), "\ufffd"))
 	})
 
-	t.Run("RedactedAttributeNotSanitized", func(t *testing.T) {
+	t.Run("redacted attribute should not be passed to sanitize", func(t *testing.T) {
 		t.Parallel()
 
-		// When an attribute is redacted, it should not be passed to sanitize
-		// (the redacted value is already valid UTF-8)
 		key := attribute.Key("password")
 		invalidUTF8Password := attribute.String(string(key), string([]byte{'s', 'e', 'c', 'r', 'e', 't', 0x80}))
 
 		redactTransformer, err := RedactKeys([]attribute.Key{key}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributes(
+		attributes := testAttributes(t.Context(),
 			NewAttributeProcessorOption(redactTransformer, SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
 			invalidUTF8Password,
 		)
@@ -157,10 +148,9 @@ func TestMultipleTransformers(t *testing.T) {
 		require.Contains(t, attributes, attribute.String(string(key), "[REDACTED]"))
 	})
 
-	t.Run("MixedAttributeTypes", func(t *testing.T) {
+	t.Run("should only affect string attributes in mixed types", func(t *testing.T) {
 		t.Parallel()
 
-		// Test with mixed attribute types - only strings should be affected
 		secretKey := attribute.Key("secret")
 		secret := attribute.String(string(secretKey), "value")
 		count := attribute.Int("count", 42)
@@ -169,7 +159,7 @@ func TestMultipleTransformers(t *testing.T) {
 
 		redactTransformer, err := RedactKeys([]attribute.Key{secretKey}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributes(
+		attributes := testAttributes(t.Context(),
 			NewAttributeProcessorOption(redactTransformer, SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)),
 			secret, count, flag, invalidUTF8,
 		)

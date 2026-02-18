@@ -13,15 +13,15 @@ import (
 func TestSanitizeUTF8(t *testing.T) {
 	t.Parallel()
 
-	t.Run("ValidUTF8Unchanged", func(t *testing.T) {
+	t.Run("valid UTF-8 strings should remain unchanged", func(t *testing.T) {
 		t.Parallel()
 
 		validStr := attribute.String("message", "Hello, World!")
-		attributes := testAttributes(NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), validStr)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), validStr)
 		require.Contains(t, attributes, validStr)
 	})
 
-	t.Run("InvalidUTF8Sanitized", func(t *testing.T) {
+	t.Run("invalid UTF-8 bytes should be replaced with replacement character", func(t *testing.T) {
 		t.Parallel()
 
 		// Create an invalid UTF-8 string with a byte sequence that is not valid UTF-8
@@ -30,11 +30,11 @@ func TestSanitizeUTF8(t *testing.T) {
 		invalidStr := attribute.String("message", invalidBytes)
 		expected := attribute.String("message", "\ufffd")
 
-		attributes := testAttributes(NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), invalidStr)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), invalidStr)
 		require.Contains(t, attributes, expected)
 	})
 
-	t.Run("MixedUTF8Sanitized", func(t *testing.T) {
+	t.Run("mixed valid and invalid UTF-8 should only replace invalid bytes", func(t *testing.T) {
 		t.Parallel()
 
 		// Valid UTF-8 followed by invalid bytes
@@ -42,33 +42,32 @@ func TestSanitizeUTF8(t *testing.T) {
 		mixedStr := attribute.String("message", mixedBytes)
 		expected := attribute.String("message", "Hi\ufffd!")
 
-		attributes := testAttributes(NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), mixedStr)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), mixedStr)
 		require.Contains(t, attributes, expected)
 	})
 
-	t.Run("NoTransformers", func(t *testing.T) {
+	t.Run("without sanitizer, invalid UTF-8 should remain unchanged", func(t *testing.T) {
 		t.Parallel()
 
 		invalidBytes := string([]byte{0x80, 0x81, 0x82})
 		invalidStr := attribute.String("message", invalidBytes)
 
-		// With no transformers, the invalid string should remain unchanged
-		attributes := testAttributes(NewAttributeProcessorOption(), invalidStr)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(), invalidStr)
 		require.Contains(t, attributes, invalidStr)
 	})
 
-	t.Run("NonStringAttributesUnchanged", func(t *testing.T) {
+	t.Run("non-string attributes should not be modified", func(t *testing.T) {
 		t.Parallel()
 
 		intAttr := attribute.Int("count", 42)
 		boolAttr := attribute.Bool("flag", true)
 
-		attributes := testAttributes(NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), intAttr, boolAttr)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), intAttr, boolAttr)
 		require.Contains(t, attributes, intAttr)
 		require.Contains(t, attributes, boolAttr)
 	})
 
-	t.Run("RedactionTakesPrecedenceOverSanitization", func(t *testing.T) {
+	t.Run("redaction should take precedence over sanitization", func(t *testing.T) {
 		t.Parallel()
 
 		const key = "password"
@@ -76,49 +75,45 @@ func TestSanitizeUTF8(t *testing.T) {
 		passStr := attribute.String(key, invalidBytes)
 		expected := attribute.String(key, "[REDACTED]")
 
-		// With both redaction and sanitization, redaction runs first and handles the attribute
 		redactTransformer, err := RedactKeys([]attribute.Key{key}, Redact)
 		require.NoError(t, err)
-		attributes := testAttributes(NewAttributeProcessorOption(redactTransformer, SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), passStr)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(redactTransformer, SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), passStr)
 		require.Contains(t, attributes, expected)
 	})
 
-	t.Run("EmptyStringUnchanged", func(t *testing.T) {
+	t.Run("empty strings should remain unchanged", func(t *testing.T) {
 		t.Parallel()
 
 		emptyStr := attribute.String("empty", "")
-		attributes := testAttributes(NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), emptyStr)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), emptyStr)
 		require.Contains(t, attributes, emptyStr)
 	})
 
-	t.Run("UnicodeCharactersPreserved", func(t *testing.T) {
+	t.Run("valid unicode characters should be preserved", func(t *testing.T) {
 		t.Parallel()
 
-		// Valid UTF-8 with various unicode characters should be preserved
 		unicodeStr := attribute.String("message", "Hello, 世界! 🌍 Ñoño")
-		attributes := testAttributes(NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), unicodeStr)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), unicodeStr)
 		require.Contains(t, attributes, unicodeStr)
 	})
 
-	t.Run("MultipleInvalidSequences", func(t *testing.T) {
+	t.Run("multiple separate invalid sequences should each be replaced", func(t *testing.T) {
 		t.Parallel()
 
-		// Multiple separate invalid sequences should each be replaced
 		// "Hi" + invalid + "there" + invalid + "!"
 		mixedBytes := string([]byte{'H', 'i', 0x80, 't', 'h', 'e', 'r', 'e', 0x81, '!'})
 		mixedStr := attribute.String("message", mixedBytes)
 		expected := attribute.String("message", "Hi\ufffdthere\ufffd!")
 
-		attributes := testAttributes(NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), mixedStr)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), mixedStr)
 		require.Contains(t, attributes, expected)
 	})
 
-	t.Run("StringSliceAttributeUnchanged", func(t *testing.T) {
+	t.Run("string slice attributes should not be modified", func(t *testing.T) {
 		t.Parallel()
 
-		// String slice attributes should not be modified (only simple strings are processed)
 		sliceAttr := attribute.StringSlice("tags", []string{"tag1", "tag2"})
-		attributes := testAttributes(NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), sliceAttr)
+		attributes := testAttributes(t.Context(), NewAttributeProcessorOption(SanitizeUTF8(&SanitizeUTF8Config{Enabled: true}, nil)), sliceAttr)
 		require.Contains(t, attributes, sliceAttr)
 	})
 }

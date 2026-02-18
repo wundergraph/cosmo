@@ -71,8 +71,8 @@ type ResponseTraceHeader struct {
 }
 
 type SanitizeUTF8Config struct {
-	Enabled          bool `yaml:"enabled" envDefault:"false" env:"TRACING_SANITIZE_UTF8_ENABLED"`
-	LogSanitizations bool `yaml:"log_sanitizations" envDefault:"false" env:"TRACING_SANITIZE_UTF8_LOG_SANITIZATIONS"`
+	Enabled          bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	LogSanitizations bool `yaml:"log_sanitizations" envDefault:"false" env:"LOG_SANITIZATIONS"`
 }
 
 type Tracing struct {
@@ -89,7 +89,7 @@ type Tracing struct {
 	TracingGlobalFeatures `yaml:",inline"`
 
 	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values
-	SanitizeUTF8 SanitizeUTF8Config `yaml:"sanitize_utf8"`
+	SanitizeUTF8 SanitizeUTF8Config `yaml:"sanitize_utf8" envPrefix:"TRACING_SANITIZE_UTF8_"`
 }
 
 type PropagationConfig struct {
