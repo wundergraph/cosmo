@@ -284,7 +284,7 @@ func TestGRPCSubgraph(t *testing.T) {
 			})
 	})
 
-	t.Run("Should sent http headers as gRPC metadata to subgraphs", func(t *testing.T) {
+	t.Run("Should send http headers as gRPC metadata to subgraphs", func(t *testing.T) {
 		t.Parallel()
 
 		captureInterceptor := func(captured *metadata.MD) grpc.UnaryServerInterceptor {
@@ -489,7 +489,8 @@ func TestGRPCSubgraph(t *testing.T) {
 				// custom header should arrive
 				require.Equal(t, []string{"value"}, captured.Get("x-custom"))
 
-				// ensure content-type is overwritten by grpc client
+				// ensure content-type is present with the correct value
+				// even if the request headers have a different value
 				require.Equal(t, []string{"application/grpc"}, captured.Get("content-type"))
 
 				// host is handled by the HTTP stack and never forwarded
