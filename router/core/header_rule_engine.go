@@ -63,11 +63,30 @@ var (
 		"Sec-Websocket-Protocol",
 		"Sec-Websocket-Version",
 	}
+	ignoredHeaderPrefixes = []string{
+		// reserved by the gRPC protocol spec
+		"Grpc-",
+	}
 	cacheControlKey       = "Cache-Control"
 	expiresKey            = "Expires"
 	noCache               = "no-cache"
 	caseInsensitiveRegexp = "(?i)"
 )
+
+// isIgnoredHeader reports whether a header should never be propagated to subgraphs.
+// It checks both the exact ignoredHeaders list and any prefix in ignoredHeaderPrefixes.
+func isIgnoredHeader(name string) bool {
+	if slices.Contains(ignoredHeaders, name) {
+		return true
+	}
+	canonicalName := http.CanonicalHeaderKey(name)
+	for _, prefix := range ignoredHeaderPrefixes {
+		if strings.HasPrefix(canonicalName, prefix) {
+			return true
+		}
+	}
+	return false
+}
 
 type responseHeaderPropagationKey struct{}
 
@@ -464,7 +483,7 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 	}
 
 	if rule.Named != "" {
-		if slices.Contains(ignoredHeaders, rule.Named) {
+		if isIgnoredHeader(rule.Named) {
 			return
 		}
 
@@ -484,7 +503,7 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 					result = !result
 				}
 				if result {
-					if slices.Contains(ignoredHeaders, name) {
+					if isIgnoredHeader(name) {
 						continue
 					}
 					values := res.Header.Values(name)
@@ -556,7 +575,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 
 	if rule.Rename != "" && rule.Named != "" {
 		// Ignore the rule when the target header is in the ignored list
-		if slices.Contains(ignoredHeaders, rule.Rename) {
+		if isIgnoredHeader(rule.Rename) {
 			return
 		}
 
@@ -579,7 +598,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 	 */
 
 	if rule.Named != "" {
-		if slices.Contains(ignoredHeaders, rule.Named) {
+		if isIgnoredHeader(rule.Named) {
 			return
 		}
 
@@ -612,7 +631,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 				 */
 				if rule.Rename != "" && rule.Named == "" {
 
-					if slices.Contains(ignoredHeaders, rule.Rename) {
+					if isIgnoredHeader(rule.Rename) {
 						continue
 					}
 
@@ -631,7 +650,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 				/**
 				 *	Propagate the header as is
 				 */
-				if slices.Contains(ignoredHeaders, name) {
+				if isIgnoredHeader(name) {
 					continue
 				}
 				header.Set(name, ctx.Request().Header.Get(name))
