@@ -211,19 +211,14 @@ export default (opts: BaseCommandOptions) => {
     );
 
     if (!result.success) {
-      const compositionErrorsTable = new Table({
-        head: [pc.bold(pc.white('ERROR_MESSAGE'))],
-        colWidths: [120],
-        wordWrap: true,
-      });
-
       console.log(
-        pc.red(`We found composition errors, while composing.\n${pc.bold('Please check the errors below:')}`),
+        pc.red(`We found composition errors, while composing.\n${pc.bold('Please check the errors below:')}\n`),
       );
       for (const compositionError of result.errors) {
-        compositionErrorsTable.push([compositionError.message]);
+        console.log(pc.red('─'.repeat(80)));
+        console.log(compositionError.message);
       }
-      console.log(compositionErrorsTable.toString());
+      console.log(pc.red('─'.repeat(80)));
       process.exitCode = 1;
       return;
     }
@@ -591,23 +586,18 @@ async function buildFeatureFlagsConfig(
     );
 
     if (!featureResult.success) {
-      const compositionErrorsTable = new Table({
-        head: [pc.bold(pc.white('ERROR_MESSAGE'))],
-        colWidths: [120],
-        wordWrap: true,
-      });
-
       console.log(
         pc.red(
           `We found composition errors, while composing the feature flag ${pc.italic(ff.name)}.\n${pc.bold(
             'Please check the errors below:',
-          )}`,
+          )}\n`,
         ),
       );
       for (const compositionError of featureResult.errors) {
-        compositionErrorsTable.push([compositionError.message]);
+        console.log(pc.red('─'.repeat(80)));
+        console.log(compositionError.message);
       }
-      console.log(compositionErrorsTable.toString());
+      console.log(pc.red('─'.repeat(80)));
       continue;
     }
 
