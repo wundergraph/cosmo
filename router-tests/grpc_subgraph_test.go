@@ -537,6 +537,46 @@ func TestGRPCSubgraph(t *testing.T) {
 			})
 		})
 
+		t.Run("grpc-reserved headers never reach the subgraph", func(t *testing.T) {
+			// Headers prefixed with "grpc-" are reserved by the gRPC protocol spec.
+			// Even when wildcard propagation is configured, they must never appear
+			// on the subgraph.
+			t.Parallel()
+
+			var captured metadata.MD
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+				EnableGRPC:               true,
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Matching:  ".*",
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Projects: testenv.SubgraphConfig{
+						GRPCInterceptor: captureInterceptor(&captured),
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"Grpc-ReservedHeader": []string{"should be ignored"},
+					},
+				})
+
+				require.Empty(t, captured.Get("grpc-reservedheader"))
+			})
+		})
+
 		t.Run("safe headers are present in metadata", func(t *testing.T) {
 			// Ensure that http standard headers, which are safe and useful for subgraphs,
 			// are included in the metadata unmodified.
