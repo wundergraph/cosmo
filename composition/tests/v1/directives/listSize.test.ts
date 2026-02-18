@@ -159,7 +159,7 @@ describe('@listSize directive tests', () => {
   });
 
   describe('federation tests', () => {
-    test('that @listSize with assumedSize is preserved in federated schema', () => {
+    test('that @listSize is stripped from federated schema', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphWithAssumedSize],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -167,10 +167,9 @@ describe('@listSize directive tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            LIST_SIZE_DIRECTIVE +
             `
             type Query {
-              users: [User!]! @listSize(assumedSize: 100)
+              users: [User!]!
             }
 
             type User {
@@ -181,29 +180,7 @@ describe('@listSize directive tests', () => {
       );
     });
 
-    test('that @listSize with slicingArguments is preserved in federated schema', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithSlicingArguments],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            LIST_SIZE_DIRECTIVE +
-            `
-            type Query {
-              users(first: Int, last: Int): [User!]! @listSize(slicingArguments: ["first", "last"])
-            }
-
-            type User {
-              id: ID!
-            }
-          `,
-        ),
-      );
-    });
-
-    test('that @listSize with all arguments is preserved in federated schema', () => {
+    test('that @listSize with all arguments is stripped from federated schema', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphWithAllArguments],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -211,7 +188,6 @@ describe('@listSize directive tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            LIST_SIZE_DIRECTIVE +
             `
             type Connection {
               edges: [Edge!]!
@@ -223,88 +199,11 @@ describe('@listSize directive tests', () => {
             }
 
             type Query {
-              usersConnection(first: Int, last: Int): Connection! @listSize(assumedSize: 50, slicingArguments: ["first", "last"], sizedFields: ["edges", "nodes"], requireOneSlicingArgument: true)
+              usersConnection(first: Int, last: Int): Connection!
             }
 
             type User {
               id: ID!
-            }
-          `,
-        ),
-      );
-    });
-
-    test('that multiple @listSize directives on different fields are preserved in federated schema', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithMultipleListSize],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            LIST_SIZE_DIRECTIVE +
-            `
-            type Post {
-              id: ID!
-            }
-
-            type Query {
-              posts: [Post!]! @listSize(assumedSize: 20)
-              users: [User!]! @listSize(assumedSize: 100)
-            }
-
-            type User {
-              id: ID!
-            }
-          `,
-        ),
-      );
-    });
-
-    test('that @listSize from multiple subgraphs on different fields is preserved in federated schema', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphAListSize, subgraphBListSize],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            LIST_SIZE_DIRECTIVE +
-            `
-            type Post {
-              id: ID!
-            }
-
-            type Query {
-              posts: [Post!]! @listSize(assumedSize: 20)
-              users: [User!]! @listSize(assumedSize: 50)
-            }
-
-            type User {
-              id: ID!
-            }
-          `,
-        ),
-      );
-    });
-
-    test('that @listSize from multiple subgraphs on the same entity field is deduplicated to first instance', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphAListSizeEntity, subgraphBListSizeEntity],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            LIST_SIZE_DIRECTIVE +
-            `
-            type Entity {
-              id: ID!
-              tags: [String!]! @listSize(assumedSize: 10)
-            }
-
-            type Query {
-              entity: Entity!
             }
           `,
         ),
@@ -743,54 +642,6 @@ const subgraphWithListSizeOnNonListField: Subgraph = {
       user: User! @listSize(assumedSize: 1)
     }
     type User { id: ID! }
-  `),
-};
-
-const subgraphAListSize: Subgraph = {
-  name: 'subgraph-a-listsize',
-  url: '',
-  definitions: parse(`
-    type Query {
-      users: [User!]! @listSize(assumedSize: 50)
-    }
-    type User { id: ID! }
-  `),
-};
-
-const subgraphBListSize: Subgraph = {
-  name: 'subgraph-b-listsize',
-  url: '',
-  definitions: parse(`
-    type Query {
-      posts: [Post!]! @listSize(assumedSize: 20)
-    }
-    type Post { id: ID! }
-  `),
-};
-
-const subgraphAListSizeEntity: Subgraph = {
-  name: 'subgraph-a-listsize-entity',
-  url: '',
-  definitions: parse(`
-    type Query {
-      entity: Entity!
-    }
-
-    type Entity @key(fields: "id") {
-      id: ID!
-      tags: [String!]! @listSize(assumedSize: 10)
-    }
-  `),
-};
-
-const subgraphBListSizeEntity: Subgraph = {
-  name: 'subgraph-b-listsize-entity',
-  url: '',
-  definitions: parse(`
-    type Entity @key(fields: "id") {
-      id: ID!
-      tags: [String!]! @listSize(assumedSize: 50)
-    }
   `),
 };
 

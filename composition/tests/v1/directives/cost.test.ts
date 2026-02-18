@@ -165,7 +165,7 @@ describe('@cost directive tests', () => {
   });
 
   describe('federation tests', () => {
-    test('that @cost is preserved in federated schema', () => {
+    test('that @cost on fields is stripped from federated schema', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphWithCostOnField],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -173,37 +173,16 @@ describe('@cost directive tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            COST_DIRECTIVE +
             `
             type Query {
-              expensiveField: String! @cost(weight: 10)
+              expensiveField: String!
             }
           `,
         ),
       );
     });
 
-    test('that multiple @cost directives on different fields are preserved in federated schema', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithMultipleCosts],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            COST_DIRECTIVE +
-            `
-            type Query {
-              cheap: String! @cost(weight: 1)
-              expensive: String! @cost(weight: 100)
-              medium: String! @cost(weight: 10)
-            }
-          `,
-        ),
-      );
-    });
-
-    test('that @cost on object types is preserved in federated schema', () => {
+    test('that @cost on object types is stripped from federated schema', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphWithCostOnObject],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -211,13 +190,12 @@ describe('@cost directive tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            COST_DIRECTIVE +
             `
             type Query {
               user: User!
             }
 
-            type User @cost(weight: 100) {
+            type User {
               id: ID!
               name: String!
             }
@@ -226,7 +204,7 @@ describe('@cost directive tests', () => {
       );
     });
 
-    test('that @cost on scalars is preserved in federated schema', () => {
+    test('that @cost on scalars is stripped from federated schema', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphWithCostOnScalar],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -234,9 +212,8 @@ describe('@cost directive tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            COST_DIRECTIVE +
             `
-            scalar JSON @cost(weight: 50)
+            scalar JSON
 
             type Query {
               data: JSON!
@@ -246,7 +223,7 @@ describe('@cost directive tests', () => {
       );
     });
 
-    test('that @cost on enums is preserved in federated schema', () => {
+    test('that @cost on enums is stripped from federated schema', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
         [subgraphWithCostOnEnum],
         ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -254,34 +231,14 @@ describe('@cost directive tests', () => {
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
-            COST_DIRECTIVE +
             `
             type Query {
               status: Status!
             }
 
-            enum Status @cost(weight: 1) {
+            enum Status {
               ACTIVE
               INACTIVE
-            }
-          `,
-        ),
-      );
-    });
-
-    test('that @cost from multiple subgraphs on different fields is preserved in federated schema', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphACost, subgraphBCost],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            COST_DIRECTIVE +
-            `
-            type Query {
-              fieldA: String! @cost(weight: 10)
-              fieldB: String! @cost(weight: 20)
             }
           `,
         ),
@@ -634,52 +591,6 @@ const subgraphWithMultipleCosts: Subgraph = {
       cheap: String! @cost(weight: 1)
       medium: String! @cost(weight: 10)
       expensive: String! @cost(weight: 100)
-    }
-  `),
-};
-
-const subgraphACost: Subgraph = {
-  name: 'subgraph-a-cost',
-  url: '',
-  definitions: parse(`
-    type Query {
-      fieldA: String! @cost(weight: 10)
-    }
-  `),
-};
-
-const subgraphBCost: Subgraph = {
-  name: 'subgraph-b-cost',
-  url: '',
-  definitions: parse(`
-    type Query {
-      fieldB: String! @cost(weight: 20)
-    }
-  `),
-};
-
-const subgraphACostEntity: Subgraph = {
-  name: 'subgraph-a-cost-entity',
-  url: '',
-  definitions: parse(`
-    type Query {
-      entity: Entity!
-    }
-
-    type Entity @key(fields: "id") {
-      id: ID!
-      name: String! @cost(weight: 5)
-    }
-  `),
-};
-
-const subgraphBCostEntity: Subgraph = {
-  name: 'subgraph-b-cost-entity',
-  url: '',
-  definitions: parse(`
-    type Entity @key(fields: "id") {
-      id: ID!
-      name: String! @cost(weight: 10)
     }
   `),
 };

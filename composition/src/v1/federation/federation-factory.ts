@@ -190,7 +190,6 @@ import {
   AUTHENTICATED,
   AUTHORIZATION_DIRECTIVES,
   CONDITION,
-  COST,
   DEPRECATED,
   ENUM_VALUE,
   FIELD,
@@ -200,7 +199,6 @@ import {
   INPUT_OBJECT,
   LEFT_PARENTHESIS,
   LIST,
-  LIST_SIZE,
   NON_REPEATABLE_PERSISTED_DIRECTIVES,
   NOT_UPPER,
   OBJECT,
@@ -245,10 +243,8 @@ import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
 import { ExtractPersistedDirectivesParams, ValidateOneOfDirectiveParams } from './params';
 import {
   AUTHENTICATED_DEFINITION,
-  COST_DEFINITION,
   DEPRECATED_DEFINITION,
   INACCESSIBLE_DEFINITION,
-  LIST_SIZE_DEFINITION,
   ONE_OF_DEFINITION,
   REQUIRES_SCOPES_DEFINITION,
   SEMANTIC_NON_NULL_DEFINITION,
@@ -282,10 +278,8 @@ export class FederationFactory {
   parentTagDataByTypeName = new Map<TypeName, ParentTagData>();
   persistedDirectiveDefinitionByDirectiveName = new Map<DirectiveName, DirectiveDefinitionNode>([
     [AUTHENTICATED, AUTHENTICATED_DEFINITION],
-    [COST, COST_DEFINITION],
     [DEPRECATED, DEPRECATED_DEFINITION],
     [INACCESSIBLE, INACCESSIBLE_DEFINITION],
-    [LIST_SIZE, LIST_SIZE_DEFINITION],
     [ONE_OF, ONE_OF_DEFINITION],
     [REQUIRES_SCOPES, REQUIRES_SCOPES_DEFINITION],
     [SEMANTIC_NON_NULL, SEMANTIC_NON_NULL_DEFINITION],
