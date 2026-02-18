@@ -1064,6 +1064,76 @@ func TestSingleFlight(t *testing.T) {
 			}
 		})
 	})
+	t.Run("multi-subgraph response header propagation with singleflight", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      "X-Custom-Header",
+								Value:     "multi-subgraph-value",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// This query fans out to multiple subgraphs: employees, family, availability, mood
+			query := `{ employee(id: 1) { id details { forename surname } isAvailable currentMood } }`
+
+			responses := runConcurrentSingleflightRequests(t, xEnv, query, 5)
+			for i, res := range responses {
+				require.Contains(t, res.Body, `"employee"`)
+				require.Equal(t, "multi-subgraph-value", res.Response.Header.Get("X-Custom-Header"),
+					"response %d missing X-Custom-Header from multi-subgraph query", i)
+			}
+		})
+	})
+	t.Run("subgraph-specific response header rule with singleflight", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					Subgraphs: map[string]*config.GlobalHeaderRule{
+						"employees": {
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationSet,
+									Name:      "X-Subgraph-Header",
+									Value:     "employees-value",
+								},
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// This query hits the employees subgraph, so the subgraph-specific rule should apply
+			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employees { id } }`, 5)
+			for i, res := range responses {
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+				require.Equal(t, "employees-value", res.Response.Header.Get("X-Subgraph-Header"),
+					"response %d missing subgraph-specific X-Subgraph-Header", i)
+			}
+		})
+	})
 }
 
 // runConcurrentSingleflightRequests sends n identical GraphQL requests concurrently,

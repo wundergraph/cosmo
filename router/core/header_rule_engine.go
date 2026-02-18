@@ -76,10 +76,6 @@ type responseHeaderPropagation struct {
 	m                    *sync.Mutex
 	previousCacheControl *cachedirective.Object
 	setCacheControl      bool
-	// originResponseApplied tracks subgraph names for which OnOriginResponse
-	// already applied response header rules (i.e. the leader's HTTP call).
-	// ApplyResponseHeaderRules skips these to avoid double-application.
-	originResponseApplied map[string]struct{}
 }
 
 func WithResponseHeaderPropagation(ctx *resolve.Context) *resolve.Context {
@@ -424,27 +420,23 @@ func hashHeaderStable(hdr http.Header) uint64 {
 	return d.Sum64()
 }
 
-// ApplyResponseHeaderRules applies response header rules for singleflight followers
-// whose subgraph fetches were deduplicated (OnOriginResponse only fires for the leader's HTTP call).
-// If OnOriginResponse already applied rules for this subgraph (leader path), this is a no-op.
-func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string) {
+// ApplyResponseHeaderRules applies response header rules for a subgraph fetch.
+// Called from OnFinished for every fetch (both singleflight leaders and followers).
+func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string, statusCode int, request *http.Request) {
 	propagation := getResponseHeaderPropagation(ctx)
 	if propagation == nil {
 		return
 	}
 
-	// Skip if OnOriginResponse already applied rules for this subgraph (leader path).
-	propagation.m.Lock()
-	_, alreadyApplied := propagation.originResponseApplied[subgraphName]
-	propagation.m.Unlock()
-	if alreadyApplied {
-		return
-	}
-
 	resp := &http.Response{
-		Header: headers,
+		StatusCode: statusCode,
+		Header:     headers,
 	}
-	resp.Request = (&http.Request{}).WithContext(ctx)
+	if request != nil {
+		resp.Request = request
+	} else {
+		resp.Request = (&http.Request{}).WithContext(ctx)
+	}
 
 	for _, rule := range h.rules.All.Response {
 		h.applyResponseRule(propagation, resp, rule)
@@ -460,35 +452,9 @@ func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, header
 }
 
 func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
-	// In the case of an error response, it is possible that the response is nil
-	if resp == nil {
-		return nil
-	}
-
-	propagation := getResponseHeaderPropagation(resp.Request.Context())
-	if propagation == nil {
-		return resp
-	}
-
-	for _, rule := range h.rules.All.Response {
-		h.applyResponseRule(propagation, resp, rule)
-	}
-
-	subgraph := ctx.ActiveSubgraph(resp.Request)
-	if subgraph != nil {
-		if subgraphRules, ok := h.rules.Subgraphs[subgraph.Name]; ok {
-			for _, rule := range subgraphRules.Response {
-				h.applyResponseRule(propagation, resp, rule)
-			}
-		}
-		propagation.m.Lock()
-		if propagation.originResponseApplied == nil {
-			propagation.originResponseApplied = make(map[string]struct{})
-		}
-		propagation.originResponseApplied[subgraph.Name] = struct{}{}
-		propagation.m.Unlock()
-	}
-
+	// Response header rules are now applied in the engine loader hooks (OnFinished)
+	// via ApplyResponseHeaderRules, not here. This ensures both singleflight leaders
+	// and followers are handled uniformly. This method is kept for module compatibility.
 	return resp
 }
 

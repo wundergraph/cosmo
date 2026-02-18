@@ -145,11 +145,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		responseInfo = &resolve.ResponseInfo{}
 	}
 
-	// Apply response header propagation rules for singleflight followers.
-	// OnOriginResponse only fires for the leader's HTTP call; followers need rules applied here.
-	// ApplyResponseHeaderRules is a no-op if OnOriginResponse already ran for this subgraph.
+	// Apply response header propagation rules for this subgraph fetch.
+	// This handles both singleflight leaders and followers uniformly.
 	if f.headerPropagation != nil && responseInfo.ResponseHeaders != nil {
-		f.headerPropagation.ApplyResponseHeaderRules(ctx, responseInfo.ResponseHeaders, ds.Name)
+		f.headerPropagation.ApplyResponseHeaderRules(ctx, responseInfo.ResponseHeaders, ds.Name, responseInfo.StatusCode, responseInfo.Request)
 	}
 
 	commonAttrs := []attribute.KeyValue{
