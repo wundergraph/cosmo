@@ -75,6 +75,73 @@ func TestOperationProcessorPersistentOperations(t *testing.T) {
 	}
 }
 
+func TestPersistedOperationCachePopulatesOperationName(t *testing.T) {
+	executor := &Executor{
+		PlanConfig:      plan.Configuration{},
+		RouterSchema:    nil,
+		Resolver:        nil,
+		RenameTypeNames: nil,
+	}
+	processor := NewOperationProcessor(OperationProcessorOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        1,
+	})
+
+	kit, err := processor.NewKit()
+	require.NoError(t, err)
+	defer kit.Free()
+
+	entry := NormalizationCacheEntry{
+		normalizedRepresentation: "query TestOperation { a }",
+		operationType:            "query",
+	}
+
+	err = kit.handleFoundPersistedOperationEntry(entry)
+	require.NoError(t, err)
+	require.Equal(t, "TestOperation", kit.parsedOperation.Request.OperationName)
+}
+
+func TestPersistedOperationCacheOperationNameIsStableAcrossKitReuse(t *testing.T) {
+	executor := &Executor{
+		PlanConfig:      plan.Configuration{},
+		RouterSchema:    nil,
+		Resolver:        nil,
+		RenameTypeNames: nil,
+	}
+	processor := NewOperationProcessor(OperationProcessorOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        1,
+	})
+
+	kit1, err := processor.NewKit()
+	require.NoError(t, err)
+
+	err = kit1.handleFoundPersistedOperationEntry(NormalizationCacheEntry{
+		normalizedRepresentation: "query FirstName { a }",
+		operationType:            "query",
+	})
+	require.NoError(t, err)
+
+	firstName := kit1.parsedOperation.Request.OperationName
+	require.Equal(t, "FirstName", firstName)
+
+	kit1.Free()
+
+	kit2, err := processor.NewKit()
+	require.NoError(t, err)
+	defer kit2.Free()
+
+	err = kit2.handleFoundPersistedOperationEntry(NormalizationCacheEntry{
+		normalizedRepresentation: "query SecondName { a }",
+		operationType:            "query",
+	})
+	require.NoError(t, err)
+	require.Equal(t, "SecondName", kit2.parsedOperation.Request.OperationName)
+	require.Equal(t, "FirstName", firstName)
+}
+
 func TestParseOperationProcessor(t *testing.T) {
 	executor := &Executor{
 		PlanConfig:      plan.Configuration{},
@@ -355,6 +422,103 @@ const nonSchemaIntrospectionQueryWithMultipleQueries = `{"operationName":"Hello"
 const nonTypeIntrospectionQueryWithMultipleQueries = `{"operationName":"Hello","query":"query Hello { world } query IntrospectionQuery { __type(name: \"Droid\") { name } }"}`
 const typeIntrospectionWithAdditionalFields = `{"operationName":null,"variables":{},"query":"query Intro { __typename __type(name: \"Query\"){ name } }"}`
 const mutationQuery = `{"operationName":null,"query":"mutation Foo {bar}"}`
+
+func TestUnmarshalOperationFromBody(t *testing.T) {
+	executor := &Executor{
+		PlanConfig:      plan.Configuration{},
+		RouterSchema:    nil,
+		Resolver:        nil,
+		RenameTypeNames: nil,
+	}
+	parser := NewOperationProcessor(OperationProcessorOptions{
+		Executor:                executor,
+		MaxOperationSizeInBytes: 10 << 20,
+		ParseKitPoolSize:        4,
+	})
+	testCases := []struct {
+		Name          string
+		Input         string
+		ExpectedQuery string
+		ExpectedVars  string
+		ExpectedOp    string
+		ExpectedError error
+	}{
+		{
+			Name:          "JSON with extra whitespace and newlines",
+			Input:         "{\n  \"query\": \"query { initialPayload(repeat:3) }\",\n  \"variables\": {\n    \"foo\": \"bar\",\n    \"baz\": [1, 2, 3]\n  },\n  \"operationName\": \"TestOperation\"\n}",
+			ExpectedQuery: "query { initialPayload(repeat:3) }",
+			ExpectedVars:  `{"foo":"bar","baz":[1,2,3]}`,
+			ExpectedOp:    "TestOperation",
+			ExpectedError: nil,
+		},
+		{
+			Name:          "JSON with tabs and multiple spaces",
+			Input:         "{\t\"query\":\t\t\"query { user { name } }\",\t\"variables\":\t{\t\t\"id\":\t123\t},\t\"operationName\":\t\"GetUser\"\t}",
+			ExpectedQuery: "query { user { name } }",
+			ExpectedVars:  `{"id":123}`,
+			ExpectedOp:    "GetUser",
+			ExpectedError: nil,
+		},
+		{
+			Name:          "Already compacted JSON",
+			Input:         `{"query":"query { test }","variables":{"x":1},"operationName":"Test"}`,
+			ExpectedQuery: "query { test }",
+			ExpectedVars:  `{"x":1}`,
+			ExpectedOp:    "Test",
+			ExpectedError: nil,
+		},
+		{
+			Name: "JSON with nested objects and arrays",
+			Input: `{
+				"query": "query { user(id: $id) { name profile { email } } }",
+				"variables": {
+					"id": "123",
+					"metadata": {
+						"tags": ["tag1", "tag2"],
+						"count": 42
+					}
+				},
+				"operationName": "GetUser"
+			}`,
+			ExpectedQuery: "query { user(id: $id) { name profile { email } } }",
+			ExpectedVars:  `{"id":"123","metadata":{"tags":["tag1","tag2"],"count":42}}`,
+			ExpectedOp:    "GetUser",
+			ExpectedError: nil,
+		},
+		{
+			Name: "JSON with null values",
+			Input: `{
+				"query": "query { test }",
+				"variables": null,
+				"operationName": null
+			}`,
+			ExpectedQuery: "query { test }",
+			ExpectedVars:  `{}`,
+			ExpectedOp:    "",
+			ExpectedError: nil,
+		},
+	}
+	for _, tc := range testCases {
+		tc := tc
+		t.Run(tc.Name, func(t *testing.T) {
+			kit, err := parser.NewKit()
+			require.NoError(t, err)
+			defer kit.Free()
+
+			err = kit.UnmarshalOperationFromBody([]byte(tc.Input))
+
+			if tc.ExpectedError != nil {
+				require.EqualError(t, err, tc.ExpectedError.Error())
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, kit.parsedOperation)
+				assert.Equal(t, tc.ExpectedQuery, kit.parsedOperation.Request.Query)
+				require.JSONEq(t, tc.ExpectedVars, string(kit.parsedOperation.Request.Variables))
+				assert.Equal(t, tc.ExpectedOp, kit.parsedOperation.Request.OperationName)
+			}
+		})
+	}
+}
 
 func TestOperationProcessorIntrospectionQuery(t *testing.T) {
 	executor := &Executor{

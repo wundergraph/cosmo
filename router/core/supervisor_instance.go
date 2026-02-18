@@ -50,7 +50,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 		}
 	}
 
-	options := optionsFromResources(logger, cfg)
+	options := optionsFromResources(logger, cfg, params.ReloadPersistentState)
 	options = append(options, additionalOptions...)
 
 	authenticators, err := setupAuthenticators(ctx, logger, cfg)
@@ -181,7 +181,7 @@ func newRouter(ctx context.Context, params RouterResources, additionalOptions ..
 	return NewRouter(options...)
 }
 
-func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
+func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersistentState *ReloadPersistentState) []Option {
 	options := []Option{
 		WithListenerAddr(config.ListenAddr),
 		WithOverrideRoutingURL(config.OverrideRoutingURL),
@@ -269,9 +269,11 @@ func optionsFromResources(logger *zap.Logger, config *config.Config) []Option {
 		WithClientHeader(config.ClientHeader),
 		WithCacheWarmupConfig(&config.CacheWarmup),
 		WithMCP(config.MCP),
+		WithConnectRPC(config.ConnectRPC),
 		WithPlugins(config.Plugins),
 		WithDemoMode(config.DemoMode),
 		WithStreamsHandlerConfiguration(config.Events.Handlers),
+		WithReloadPersistentState(reloadPersistentState),
 	}
 
 	return options

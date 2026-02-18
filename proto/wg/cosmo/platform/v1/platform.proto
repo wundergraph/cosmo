@@ -1101,6 +1101,7 @@ message APIKey{
   string lastUsedAt = 5;
   string expiresAt = 6;
   optional Group group = 7;
+  bool external = 8;
 }
 
 message GetAPIKeysRequest {
@@ -1127,6 +1128,7 @@ message CreateAPIKeyRequest {
   ExpiresAt expires = 3;
   string groupId = 4;
   repeated string permissions = 5;
+  optional bool external = 6;
 }
 
 message CreateAPIKeyResponse {
@@ -3088,6 +3090,28 @@ message VerifyAPIKeyGraphAccessResponse {
   bool hasWriteAccessToGraph = 3;
 }
 
+message InitializeCosmoUserRequest {
+   string token = 1;
+}
+
+message InitializeCosmoUserResponse {
+   Response response = 1;
+}
+
+message ListOrganizationsRequest {}
+
+message ListOrganizationsResponse {
+   message OrganizationMembership {
+     string id = 1;
+     string slug = 2;
+     string name = 3;
+     repeated string roles = 4;
+   }
+
+   Response response = 1;
+   repeated OrganizationMembership organizations = 2;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3158,6 +3182,12 @@ service PlatformService {
   rpc GetPersistedOperations(GetPersistedOperationsRequest) returns (GetPersistedOperationsResponse) {}
   // GetAuditLogs returns the audit logs of the organization
   rpc GetAuditLogs(GetAuditLogsRequest) returns (GetAuditLogsResponse) {}
+
+  // InitializeCosmoUser takes a bearer token and ensures that the user associated with it (if valid) exists in Cosmo
+  rpc InitializeCosmoUser(InitializeCosmoUserRequest) returns (InitializeCosmoUserResponse) {}
+
+  // ListOrganizations returns all the organization the authenticated user is a member of
+  rpc ListOrganizations(ListOrganizationsRequest) returns (ListOrganizationsResponse) {}
 
   // For Studio and CLI
 

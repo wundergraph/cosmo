@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/redis"
 
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
@@ -314,6 +314,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 	}
 	natSources := map[string]*nats.ProviderAdapter{}
 	kafkaSources := map[string]*kafka.ProviderAdapter{}
+	redisSources := map[string]*redis.ProviderAdapter{}
 	for _, ds := range routerConfig.GetEngineConfig().GetDatasourceConfigurations() {
 		if ds.GetKind() != nodev1.DataSourceKind_PUBSUB || ds.GetCustomEvents() == nil {
 			continue
@@ -336,27 +337,25 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 				})
 			}
 		}
+		for _, redisConfig := range ds.GetCustomEvents().GetRedis() {
+			providerId := redisConfig.GetEngineEventConfiguration().GetProviderId()
+			if _, ok := redisSources[providerId]; !ok {
+				redisSources[providerId] = nil
+				routerEngineConfig.Events.Providers.Redis = append(routerEngineConfig.Events.Providers.Redis, config.RedisEventSource{
+					ID:   providerId,
+				})
+			}
+		}
 	}
 
 	var netPollConfig graphql_datasource.NetPollConfiguration
 	netPollConfig.ApplyDefaults()
 
-	subscriptionClient := graphql_datasource.NewGraphQLSubscriptionClient(
-		http.DefaultClient,
-		http.DefaultClient,
-		context.Background(),
-		graphql_datasource.WithLogger(log.NoopLogger),
-		graphql_datasource.WithNetPollConfiguration(netPollConfig),
-	)
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	loader := NewLoader(ctx, false, &DefaultFactoryResolver{
-		engineCtx:          ctx,
-		httpClient:         http.DefaultClient,
-		streamingClient:    http.DefaultClient,
-		subscriptionClient: subscriptionClient,
+		engineCtx: ctx,
 	}, logger, subscriptionHooks{})
 
 	// this generates the plan configuration using the data source factories from the config package

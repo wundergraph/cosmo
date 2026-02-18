@@ -56,7 +56,10 @@ import { useToast } from "@/components/ui/use-toast";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useHydratePlaygroundStateFromUrl } from "@/hooks/use-hydrate-playground-state-from-url";
 import { useLocalStorage } from "@/hooks/use-local-storage";
-import { PLAYGROUND_DEFAULT_HEADERS_TEMPLATE, PLAYGROUND_DEFAULT_QUERY_TEMPLATE } from "@/lib/constants";
+import {
+  PLAYGROUND_DEFAULT_HEADERS_TEMPLATE,
+  PLAYGROUND_DEFAULT_QUERY_TEMPLATE,
+} from "@/lib/constants";
 import { NextPageWithLayout } from "@/lib/page";
 import { parseSchema } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
@@ -84,13 +87,10 @@ import {
 import { sentenceCase } from "change-case";
 import crypto from "crypto";
 import { GraphiQL } from "graphiql";
-import {
-  GraphQLSchema,
-  parse,
-  validate,
-} from "graphql";
+import { GraphQLSchema, parse, validate } from "graphql";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/router";
+import posthog from "posthog-js";
 import { ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { FaNetworkWired } from "react-icons/fa";
@@ -304,6 +304,10 @@ const graphiQLFetch = async (
     const responseData = await response.clone().json();
 
     await executePostScripts(graphId, requestBody, responseData);
+
+    posthog.capture("cosmo_studio_query_executed", {
+      query_success: response.ok && !responseData.errors,
+    });
 
     onFetch(
       await response.clone().json(),
@@ -712,8 +716,8 @@ const ConfigSelect = () => {
         {type === "featureFlag"
           ? "Feature flag"
           : type === "subgraph"
-          ? "Subgraph"
-          : "Graph"}{" "}
+            ? "Subgraph"
+            : "Graph"}{" "}
         :
       </span>
       <Select
@@ -925,7 +929,14 @@ const PlaygroundPage: NextPageWithLayout = () => {
   });
 
   const [isHydrated, setIsHydrated] = useState(false);
-  useHydratePlaygroundStateFromUrl(tabsState, setQuery, setUpdatedVariables, setHeaders, setTabsState, isGraphiqlRendered);
+  useHydratePlaygroundStateFromUrl(
+    tabsState,
+    setQuery,
+    setUpdatedVariables,
+    setHeaders,
+    setTabsState,
+    isGraphiqlRendered,
+  );
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
@@ -1253,7 +1264,6 @@ const PlaygroundPage: NextPageWithLayout = () => {
     };
   }, [theme]);
 
-
   if (!graphContext?.graph) return null;
 
   return (
@@ -1289,7 +1299,11 @@ const PlaygroundPage: NextPageWithLayout = () => {
             query={query}
             variables={updatedVariables}
             onEditQuery={setQuery}
-            headers={headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE ? undefined : headers}
+            headers={
+              headers === PLAYGROUND_DEFAULT_HEADERS_TEMPLATE
+                ? undefined
+                : headers
+            }
             defaultHeaders={PLAYGROUND_DEFAULT_HEADERS_TEMPLATE}
             onEditHeaders={setHeaders}
             plugins={[
@@ -1298,7 +1312,7 @@ const PlaygroundPage: NextPageWithLayout = () => {
               }),
             ]}
             // null stops introspection and undefined forces introspection if schema is null
-            schema={isLoading ? null : schema ?? undefined}
+            schema={isLoading ? null : (schema ?? undefined)}
             onTabChange={setTabsState}
           />
           {isMounted && <PlaygroundPortal />}

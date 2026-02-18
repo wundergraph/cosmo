@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/wundergraph/cosmo/router/internal/expr"
+	"net/http"
 	"slices"
 	"sync/atomic"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/expr"
 
 	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/requestlogger"
@@ -46,6 +48,7 @@ type engineLoaderHooks struct {
 	metricAttributeExpressions    *attributeExpressions
 
 	storeSubgraphResponseBody bool
+	headerPropagation         *HeaderPropagation
 }
 
 type engineLoaderHooksRequestContext struct {
@@ -60,6 +63,7 @@ func NewEngineRequestHooks(
 	telemetryAttributes *attributeExpressions,
 	metricAttributes *attributeExpressions,
 	storeSubgraphResponseBody bool,
+	headerPropagation *HeaderPropagation,
 ) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
@@ -82,6 +86,7 @@ func NewEngineRequestHooks(
 		metricAttributeExpressions:    metricAttributes,
 		accessLogger:                  logger,
 		storeSubgraphResponseBody:     storeSubgraphResponseBody,
+		headerPropagation:             headerPropagation,
 	}
 }
 
@@ -121,6 +126,21 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		return
 	}
 
+	if responseInfo == nil {
+		responseInfo = &resolve.ResponseInfo{}
+	}
+
+	// Apply response header rules for ALL fetches (primary, entity resolution,
+	// singleflight leaders and followers). Must run before the tracing/metrics
+	// early returns below, which may not pass for all fetch contexts.
+	if f.headerPropagation != nil {
+		headers := responseInfo.ResponseHeaders
+		if headers == nil {
+			headers = make(http.Header)
+		}
+		f.headerPropagation.ApplyResponseHeaderRules(ctx, headers, ds.Name, responseInfo.StatusCode, responseInfo.Request)
+	}
+
 	reqContext := getRequestContext(ctx)
 
 	if reqContext == nil {
@@ -136,10 +156,6 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
-
-	if responseInfo == nil {
-		responseInfo = &resolve.ResponseInfo{}
-	}
 
 	commonAttrs := []attribute.KeyValue{
 		semconv.HTTPStatusCode(responseInfo.StatusCode),
