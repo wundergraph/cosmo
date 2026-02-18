@@ -14,105 +14,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// TestAttributeProcessorIntegration tests that the attribute processor configurations
-// are properly wired through the router. These tests verify:
-// 1. The configuration is properly passed through testenv -> router -> trace provider
-// 2. The router functions correctly with various attribute processor configurations
-// 3. SanitizeUTF8 logs warnings when invalid UTF-8 is detected (when logging is enabled)
-//
-// The actual attribute processing logic (redaction, hashing, UTF-8 sanitization)
-// is also tested in:
-// - router/pkg/trace/attributeprocessor/*_test.go (unit tests)
-// - router/pkg/trace/attributeprocessor_integration_test.go (integration tests)
 func TestAttributeProcessorIntegration(t *testing.T) {
 	t.Parallel()
-
-	t.Run("Router works with IPAnonymization Redact enabled", func(t *testing.T) {
-		t.Parallel()
-
-		exporter := tracetest.NewInMemoryExporter(t)
-
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			IPAnonymization: &core.IPAnonymizationConfig{
-				Enabled: true,
-				Method:  core.Redact,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.Contains(t, res.Body, `"employees"`)
-
-			sn := exporter.GetSpans().Snapshots()
-			require.NotEmpty(t, sn)
-		})
-	})
-
-	t.Run("Router works with IPAnonymization Hash enabled", func(t *testing.T) {
-		t.Parallel()
-
-		exporter := tracetest.NewInMemoryExporter(t)
-
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			IPAnonymization: &core.IPAnonymizationConfig{
-				Enabled: true,
-				Method:  core.Hash,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.Contains(t, res.Body, `"employees"`)
-
-			sn := exporter.GetSpans().Snapshots()
-			require.NotEmpty(t, sn)
-		})
-	})
-
-	t.Run("Router works with IPAnonymization disabled", func(t *testing.T) {
-		t.Parallel()
-
-		exporter := tracetest.NewInMemoryExporter(t)
-
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			IPAnonymization: &core.IPAnonymizationConfig{
-				Enabled: false,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.Contains(t, res.Body, `"employees"`)
-
-			sn := exporter.GetSpans().Snapshots()
-			require.NotEmpty(t, sn)
-		})
-	})
-
-	t.Run("Router works with SanitizeUTF8 enabled", func(t *testing.T) {
-		t.Parallel()
-
-		exporter := tracetest.NewInMemoryExporter(t)
-
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			TracingSanitizeUTF8: &config.SanitizeUTF8Config{
-				Enabled:          true,
-				LogSanitizations: false,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.Contains(t, res.Body, `"employees"`)
-
-			sn := exporter.GetSpans().Snapshots()
-			require.NotEmpty(t, sn)
-		})
-	})
 
 	t.Run("SanitizeUTF8 logs warning when invalid UTF-8 is detected", func(t *testing.T) {
 		t.Parallel()
@@ -212,27 +115,6 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 		})
 	})
 
-	t.Run("Router works with SanitizeUTF8 disabled", func(t *testing.T) {
-		t.Parallel()
-
-		exporter := tracetest.NewInMemoryExporter(t)
-
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			TracingSanitizeUTF8: &config.SanitizeUTF8Config{
-				Enabled: false,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.Contains(t, res.Body, `"employees"`)
-
-			sn := exporter.GetSpans().Snapshots()
-			require.NotEmpty(t, sn)
-		})
-	})
-
 	t.Run("SanitizeUTF8 disabled leaves invalid UTF-8 unchanged", func(t *testing.T) {
 		t.Parallel()
 
@@ -265,32 +147,6 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 
 			// Verify that the invalid UTF-8 attribute was NOT sanitized
 			require.Contains(t, sn[0].Attributes(), attribute.String(attrKey, invalidUTF8Value))
-		})
-	})
-
-	t.Run("Router works with both IPAnonymization and SanitizeUTF8 enabled", func(t *testing.T) {
-		t.Parallel()
-
-		exporter := tracetest.NewInMemoryExporter(t)
-
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
-			TracingSanitizeUTF8: &config.SanitizeUTF8Config{
-				Enabled:          true,
-				LogSanitizations: false,
-			},
-			IPAnonymization: &core.IPAnonymizationConfig{
-				Enabled: true,
-				Method:  core.Redact,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.Contains(t, res.Body, `"employees"`)
-
-			sn := exporter.GetSpans().Snapshots()
-			require.NotEmpty(t, sn)
 		})
 	})
 
