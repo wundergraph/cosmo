@@ -271,6 +271,12 @@ export function buildEnumType(enumType: GraphQLEnumType, options?: RequestBuilde
   for (const enumValue of enumValues) {
     // Prefix enum values with the enum type name to avoid collisions
     const protoEnumValue = graphqlEnumValueToProtoEnumValue(enumType.name, enumValue.name);
+
+    // Skip if this collides with the auto-generated UNSPECIFIED value at position 0
+    if (protoEnumValue === unspecifiedValue) {
+      continue;
+    }
+
     protoEnum.add(protoEnumValue, enumNumber);
 
     // Note: protobufjs doesn't have direct comment support for enum values
