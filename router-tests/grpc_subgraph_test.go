@@ -1,10 +1,13 @@
 package integration
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -281,103 +284,170 @@ func TestGRPCSubgraph(t *testing.T) {
 			})
 	})
 
-	t.Run("Should propagate headers to gRPC subgraph as metadata", func(t *testing.T) {
+	t.Run("Should sent http headers as gRPC metadata to subgraphs", func(t *testing.T) {
 		t.Parallel()
 
-		config := testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
-			EnableGRPC:               true,
-			RouterOptions: []core.Option{
-				core.WithHeaderRules(config.HeaderRules{
-					All: &config.GlobalHeaderRule{
-						Request: []*config.RequestHeaderRule{
-							{
-								Operation: config.HeaderRuleOperationPropagate,
-								Named:     "X-Excluded-ProjectIds",
-							},
-						},
-					},
-				}),
-			},
+		captureInterceptor := func(captured *metadata.MD) grpc.UnaryServerInterceptor {
+			return func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+				md, _ := metadata.FromIncomingContext(ctx)
+				*captured = md.Copy()
+				return handler(ctx, req)
+			}
 		}
 
-		testenv.Run(t, &config, func(t *testing.T, xEnv *testenv.Environment) {
-			t.Run("baseline: no header returns all 7 projects", func(t *testing.T) {
-				t.Parallel()
+		t.Run("forwarded header arrives as metadata with correct value", func(t *testing.T) {
+			t.Parallel()
 
-				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `query { projects { id name } }`,
-				})
+			var captured metadata.MD
 
-				require.JSONEq(t, `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
-			})
-
-			t.Run("exclude single project", func(t *testing.T) {
-				t.Parallel()
-
-				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+				EnableGRPC:               true,
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Tenant-Id",
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Projects: testenv.SubgraphConfig{
+						GRPCInterceptor: captureInterceptor(&captured),
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { projects { id name } }`,
 					Header: http.Header{
-						"X-Excluded-ProjectIds": []string{"1"},
+						"X-Tenant-Id": []string{"acme"},
 					},
 				})
 
-				require.JSONEq(t, `{"data":{"projects":[{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
-			})
-
-			t.Run("exclude multiple projects", func(t *testing.T) {
-				t.Parallel()
-
-				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `query { projects { id name } }`,
-					Header: http.Header{
-						"X-Excluded-ProjectIds": []string{"1", "3"},
-					},
-				})
-
-				require.JSONEq(t, `{"data":{"projects":[{"id":"2","name":"Microservices Revolution"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
+				require.Equal(t, []string{"acme"}, captured.Get("x-tenant-id"))
 			})
 		})
-	})
 
-	t.Run("Should filter certain headers from gRPC subgraph metadata", func(t *testing.T) {
-		t.Parallel()
+		t.Run("header not in propagation rules is absent from metadata", func(t *testing.T) {
+			t.Parallel()
 
-		config := testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
-			EnableGRPC:               true,
-			RouterOptions: []core.Option{
-				core.WithHeaderRules(config.HeaderRules{
-					All: &config.GlobalHeaderRule{
-						Request: []*config.RequestHeaderRule{
-							{
-								// allow everything
-								Operation: config.HeaderRuleOperationPropagate,
-								Matching:  ".*",
+			var captured metadata.MD
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+				EnableGRPC:               true,
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Allowed",
+								},
 							},
 						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Projects: testenv.SubgraphConfig{
+						GRPCInterceptor: captureInterceptor(&captured),
 					},
-				}),
-			},
-		}
-
-		testenv.Run(t, &config, func(t *testing.T, xEnv *testenv.Environment) {
-			t.Run("Unsafe headers should be filtered", func(t *testing.T) {
-				t.Parallel()
-
-				// The gRPC subgraph is configured to exclude projects based on X-Excluded-ProjectIds metadata
-				// If Host header leaks through as metadata, it won't affect the query result
-				// But we can verify the request succeeds without gRPC errors
-				response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { projects { id name } }`,
 					Header: http.Header{
-						"Host":                  []string{"malicious-host.example.com"},
-						"X-Excluded-ProjectIds": []string{"1"},
+						"X-Allowed":     []string{"yes"},
+						"X-Not-Allowed": []string{"secret"},
 					},
 				})
 
-				// Should exclude project 1, meaning Host header was filtered and didn't interfere
-				require.JSONEq(t, `{"data":{"projects":[{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
+				require.Equal(t, []string{"yes"}, captured.Get("x-allowed"))
+				require.Empty(t, captured.Get("x-not-allowed"))
+			})
+		})
+
+		t.Run("header with multiple values arrives as multiple metadata values", func(t *testing.T) {
+			t.Parallel()
+
+			var captured metadata.MD
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+				EnableGRPC:               true,
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Role",
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Projects: testenv.SubgraphConfig{
+						GRPCInterceptor: captureInterceptor(&captured),
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"X-Role": []string{"admin", "editor"},
+					},
+				})
+
+				require.Equal(t, []string{"admin", "editor"}, captured.Get("x-role"))
+			})
+		})
+
+		t.Run("unsafe headers are absent from metadata", func(t *testing.T) {
+			t.Parallel()
+
+			var captured metadata.MD
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
+				EnableGRPC:               true,
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Request: []*config.RequestHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Matching:  ".*", // mark all headers as forwardable
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Projects: testenv.SubgraphConfig{
+						GRPCInterceptor: captureInterceptor(&captured),
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { projects { id name } }`,
+					Header: http.Header{
+						"X-Custom":          []string{"value"},
+						"Host":              []string{"evil.example.com"},
+						"Te":                []string{"trailers"},
+						"Transfer-Encoding": []string{"chunked"},
+					},
+				})
+
+				require.Equal(t, []string{"value"}, captured.Get("x-custom"))
+				require.Empty(t, captured.Get("host"))
+				require.Empty(t, captured.Get("te"))
+				require.Empty(t, captured.Get("transfer-encoding"))
 			})
 		})
 	})
