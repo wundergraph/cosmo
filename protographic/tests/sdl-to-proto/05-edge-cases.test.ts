@@ -660,4 +660,84 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }"
     `);
   });
+
+  test('should not duplicate UNSPECIFIED when enum explicitly declares it', () => {
+    const sdl = `
+      enum State {
+        UNSPECIFIED
+        ACTIVE
+        INACTIVE
+      }
+
+      type Query {
+        state: State
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+    expectValidProto(protoText);
+
+    // STATE_UNSPECIFIED should appear exactly once at position 0
+    expect(protoText).toContain('STATE_UNSPECIFIED = 0;');
+    expect(protoText).not.toMatch(/STATE_UNSPECIFIED = [1-9]/);
+    expect(protoText).toContain('STATE_ACTIVE =');
+    expect(protoText).toContain('STATE_INACTIVE =');
+  });
+
+  test('should handle enum with only UNSPECIFIED value', () => {
+    const sdl = `
+      enum OnlyUnspecified {
+        UNSPECIFIED
+      }
+
+      type Query {
+        value: OnlyUnspecified
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+    expectValidProto(protoText);
+
+    expect(protoText).toContain('ONLY_UNSPECIFIED_UNSPECIFIED = 0;');
+    expect(protoText).not.toMatch(/ONLY_UNSPECIFIED_UNSPECIFIED = [1-9]/);
+  });
+
+  test('should handle enum with explicit UNSPECIFIED across schema evolution with lock data', () => {
+    const sdl1 = `
+      enum Status {
+        UNSPECIFIED
+        ACTIVE
+      }
+
+      type Query {
+        status: Status
+      }
+    `;
+
+    const result1 = compileGraphQLToProto(sdl1);
+    expectValidProto(result1.proto);
+    expect(result1.proto).toContain('STATUS_UNSPECIFIED = 0;');
+    expect(result1.proto).toContain('STATUS_ACTIVE =');
+
+    // Add a new value with existing lock data
+    const sdl2 = `
+      enum Status {
+        UNSPECIFIED
+        ACTIVE
+        INACTIVE
+      }
+
+      type Query {
+        status: Status
+      }
+    `;
+
+    const result2 = compileGraphQLToProto(sdl2, { lockData: result1.lockData! });
+    expectValidProto(result2.proto);
+
+    expect(result2.proto).toContain('STATUS_UNSPECIFIED = 0;');
+    expect(result2.proto).not.toMatch(/STATUS_UNSPECIFIED = [1-9]/);
+    expect(result2.proto).toContain('STATUS_ACTIVE =');
+    expect(result2.proto).toContain('STATUS_INACTIVE =');
+  });
 });

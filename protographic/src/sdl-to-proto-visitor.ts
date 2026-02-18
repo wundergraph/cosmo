@@ -1875,9 +1875,12 @@ Example:
     const unspecifiedValue = createEnumUnspecifiedValue(type.name);
     this.protoText.push(`  ${unspecifiedValue} = 0;`);
 
-    // Use lock manager to order enum values
+    // Use lock manager to order enum values, filtering out any value whose proto name
+    // collides with the auto-generated UNSPECIFIED value (already emitted at position 0)
     const values = type.getValues();
-    const valueNames = values.map((v) => v.name);
+    const valueNames = values
+      .filter((v) => graphqlEnumValueToProtoEnumValue(type.name, v.name) !== unspecifiedValue)
+      .map((v) => v.name);
     const orderedValueNames = this.lockManager.reconcileEnumValueOrder(type.name, valueNames);
 
     for (const valueName of orderedValueNames) {
@@ -1885,6 +1888,11 @@ Example:
       if (!value) continue;
 
       const protoEnumValue = graphqlEnumValueToProtoEnumValue(type.name, value.name);
+
+      // Safety guard: skip if proto name collides with the auto-generated UNSPECIFIED value
+      if (protoEnumValue === unspecifiedValue) {
+        continue;
+      }
 
       const deprecationInfo = this.enumValueIsDeprecated(value);
 
