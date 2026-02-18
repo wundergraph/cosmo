@@ -182,8 +182,8 @@ import {
   ConfigurationData,
   Costs,
   EventConfiguration,
-  FieldWeight,
-  ListSizeConfiguration,
+  FieldListSizeConfiguration,
+  FieldWeightConfiguration,
   NatsEventType,
   RequiredFieldConfiguration,
 } from '../../router-configuration/types';
@@ -413,7 +413,7 @@ export class NormalizationFactory {
   concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
   conditionalFieldDataByCoords = new Map<string, ConditionalFieldData>();
   configurationDataByTypeName = new Map<TypeName, ConfigurationData>();
-  costs: Costs = { fieldWeights: new Map(), listSizes: new Map(), typeWeights: new Map() };
+  costs: Costs = { fieldWeights: new Map(), listSizes: new Map(), typeWeights: {} };
   customDirectiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
   definedDirectiveNames = new Set<string>();
   directiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
@@ -1138,9 +1138,9 @@ export class NormalizationFactory {
         }
         const weightValue = parseInt((weightArg.value as IntValueNode).value, 10);
         if (!this.costs.directiveArgumentWeights) {
-          this.costs.directiveArgumentWeights = new Map();
+          this.costs.directiveArgumentWeights = {};
         }
-        this.costs.directiveArgumentWeights.set(`${directiveName}.${argNode.name.value}`, weightValue);
+        this.costs.directiveArgumentWeights[`${directiveName}.${argNode.name.value}`] = weightValue;
       }
     }
   }
@@ -2379,11 +2379,14 @@ export class NormalizationFactory {
       case Kind.OBJECT_TYPE_DEFINITION:
       case Kind.SCALAR_TYPE_DEFINITION:
       case Kind.ENUM_TYPE_DEFINITION:
-        this.costs.typeWeights.set(data.name, weightValue);
+        this.costs.typeWeights[data.name] = weightValue;
         break;
       case Kind.FIELD_DEFINITION: {
-        const fieldCoord = `${data.renamedParentTypeName || data.originalParentTypeName}.${data.name}`;
-        const fieldWeight = getValueOrDefault(this.costs.fieldWeights, fieldCoord, () => ({} as FieldWeight));
+        const typeName = data.renamedParentTypeName || data.originalParentTypeName;
+        const fieldCoord = `${typeName}.${data.name}`;
+        const fieldWeight = getValueOrDefault(this.costs.fieldWeights, fieldCoord, (): FieldWeightConfiguration => ({
+          typeName, fieldName: data.name, argumentWeights: {},
+        }));
         fieldWeight.weight = weightValue;
         break;
       }
@@ -2391,15 +2394,18 @@ export class NormalizationFactory {
       case Kind.ARGUMENT: {
         const ivData = data as InputValueData;
         if (ivData.isArgument && ivData.fieldName) {
-          const parentFieldCoord = `${ivData.renamedParentTypeName || ivData.originalParentTypeName}.${ivData.fieldName}`;
-          const fieldWeight = getValueOrDefault(this.costs.fieldWeights, parentFieldCoord, () => ({} as FieldWeight));
-          if (!fieldWeight.argumentWeights) {
-            fieldWeight.argumentWeights = new Map();
-          }
-          fieldWeight.argumentWeights.set(ivData.name, weightValue);
+          const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
+          const parentFieldCoord = `${typeName}.${ivData.fieldName}`;
+          const fieldWeight = getValueOrDefault(this.costs.fieldWeights, parentFieldCoord, (): FieldWeightConfiguration => ({
+            typeName, fieldName: ivData.fieldName!, argumentWeights: {},
+          }));
+          fieldWeight.argumentWeights[ivData.name] = weightValue;
         } else {
-          const fieldCoord = `${ivData.renamedParentTypeName || ivData.originalParentTypeName}.${ivData.name}`;
-          const fieldWeight = getValueOrDefault(this.costs.fieldWeights, fieldCoord, () => ({} as FieldWeight));
+          const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
+          const fieldCoord = `${typeName}.${ivData.name}`;
+          const fieldWeight = getValueOrDefault(this.costs.fieldWeights, fieldCoord, (): FieldWeightConfiguration => ({
+            typeName, fieldName: ivData.name, argumentWeights: {},
+          }));
           fieldWeight.weight = weightValue;
         }
         break;
@@ -2414,7 +2420,10 @@ export class NormalizationFactory {
     }
 
     let hasSizedFields = false;
-    const listSizeConfig: ListSizeConfiguration = {};
+    const typeName = data.renamedParentTypeName || data.originalParentTypeName;
+    const listSizeConfig: FieldListSizeConfiguration = {
+      typeName, fieldName: data.name, slicingArguments: [], sizedFields: [],
+    };
 
     for (const argumentNode of args) {
       const argumentName = argumentNode.name.value;
@@ -2428,13 +2437,12 @@ export class NormalizationFactory {
       }
 
       if (argumentName === SLICING_ARGUMENTS && argumentNode.value.kind === Kind.LIST) {
-        const slicingArgs: string[] = [];
         for (const valueNode of (argumentNode.value as ListValueNode).values) {
           if (valueNode.kind !== Kind.STRING) {
             continue;
           }
           const slicingArgName = (valueNode as StringValueNode).value;
-          slicingArgs.push(slicingArgName);
+          listSizeConfig.slicingArguments.push(slicingArgName);
           const argData = data.argumentDataByName.get(slicingArgName);
           if (!argData) {
             errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, slicingArgName));
@@ -2453,14 +2461,10 @@ export class NormalizationFactory {
             );
           }
         }
-        if (slicingArgs.length > 0) {
-          listSizeConfig.slicingArguments = slicingArgs;
-        }
       }
 
       if (argumentName === SIZED_FIELDS && argumentNode.value.kind === Kind.LIST) {
         hasSizedFields = true;
-        const sizedFieldNames: string[] = [];
         const returnTypeName = data.namedTypeName;
         const returnTypeData = this.parentDefinitionDataByTypeName.get(returnTypeName);
         if (!returnTypeData || !isParentDataCompositeOutputType(returnTypeData)) {
@@ -2471,7 +2475,7 @@ export class NormalizationFactory {
             continue;
           }
           const sizedFieldName = (valueNode as StringValueNode).value;
-          sizedFieldNames.push(sizedFieldName);
+          listSizeConfig.sizedFields.push(sizedFieldName);
           const fieldData = returnTypeData.fieldDataByName.get(sizedFieldName);
           if (!fieldData) {
             errorMessages.push(
@@ -2490,9 +2494,6 @@ export class NormalizationFactory {
             );
           }
         }
-        if (sizedFieldNames.length > 0) {
-          listSizeConfig.sizedFields = sizedFieldNames;
-        }
       }
     }
 
@@ -2502,7 +2503,7 @@ export class NormalizationFactory {
       );
     }
 
-    const fieldCoord = `${data.renamedParentTypeName || data.originalParentTypeName}.${data.name}`;
+    const fieldCoord = `${typeName}.${data.name}`;
     this.costs.listSizes.set(fieldCoord, listSizeConfig);
   }
 

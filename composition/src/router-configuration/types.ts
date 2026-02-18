@@ -1,4 +1,4 @@
-import {FieldName, TypeName} from '../types/types';
+import { FieldCoords, FieldName, TypeName } from '../types/types';
 
 export type NatsEventType = 'subscribe' | 'publish' | 'request';
 
@@ -95,29 +95,31 @@ export type ConfigurationData = {
 };
 
 export type Costs = {
-    // Key: "TypeName.fieldName"
-    fieldWeights: Map<string, FieldWeight>;
+    // Key: "TypeName.fieldName" (lookup handle for O(1) merge during normalization)
+    fieldWeights: Map<FieldCoords, FieldWeightConfiguration>;
 
-    // Key: "TypeName.fieldName"
-    listSizes: Map<string, ListSizeConfiguration>;
+    // Key: "TypeName.fieldName" (lookup handle for O(1) merge during normalization)
+    listSizes: Map<FieldCoords, FieldListSizeConfiguration>;
 
-    // Key: TypeName
-    typeWeights: Map<string, number>;
+    typeWeights: { [key: string]: number };
 
     // Key: "directiveName.argumentName"
-    directiveArgumentWeights?: Map<string, number>;
+    directiveArgumentWeights?: { [key: string]: number };
 };
 
-export type FieldWeight = {
+export type FieldWeightConfiguration = {
+    typeName: TypeName;
+    fieldName: FieldName;
     weight?: number;
-    // Key: "argumentName"
-    argumentWeights?: Map<string, number>;
+    argumentWeights: { [key: string]: number };
 };
 
-export type ListSizeConfiguration = {
+export type FieldListSizeConfiguration = {
+    typeName: TypeName;
+    fieldName: FieldName;
     assumedSize?: number;
-    slicingArguments?: string[];
-    sizedFields?: string[];
+    slicingArguments: string[];
+    sizedFields: FieldName[];
     requireOneSlicingArgument?: boolean;
 };
 

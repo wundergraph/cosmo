@@ -446,6 +446,52 @@ describe('@listSize directive tests', () => {
     });
   });
 
+  describe('costs.listSizes internal structure tests', () => {
+    test('that @listSize with assumedSize populates listSizes correctly', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithAssumedSize, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.listSizes.get('Query.users')).toEqual({
+        typeName: 'Query', fieldName: 'users', assumedSize: 100, slicingArguments: [], sizedFields: [],
+      });
+    });
+
+    test('that @listSize with slicingArguments populates listSizes correctly', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithSlicingArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.listSizes.get('Query.users')).toEqual({
+        typeName: 'Query', fieldName: 'users', slicingArguments: ['first', 'last'], sizedFields: [],
+      });
+    });
+
+    test('that @listSize with sizedFields populates listSizes correctly', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithSizedFields, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.listSizes.get('Query.usersConnection')).toEqual({
+        typeName: 'Query', fieldName: 'usersConnection', slicingArguments: ['first'], sizedFields: ['edges', 'nodes'],
+      });
+    });
+
+    test('that @listSize with requireOneSlicingArgument populates listSizes correctly', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithRequireOneSlicingArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const ls = costs.listSizes.get('Query.users');
+      expect(ls).toBeDefined();
+      expect(ls!.requireOneSlicingArgument).toBe(false);
+      expect(ls!.slicingArguments).toEqual(['first']);
+    });
+
+    test('that @listSize with all arguments populates listSizes with all fields', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithAllArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.listSizes.get('Query.usersConnection')).toEqual({
+        typeName: 'Query', fieldName: 'usersConnection', assumedSize: 50,
+        slicingArguments: ['first', 'last'], sizedFields: ['edges', 'nodes'], requireOneSlicingArgument: true,
+      });
+    });
+
+    test('that multiple @listSize directives on different fields populate listSizes for each', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithMultipleListSize, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.listSizes.size).toBe(2);
+      expect(costs.listSizes.get('Query.users')?.assumedSize).toBe(100);
+      expect(costs.listSizes.get('Query.posts')?.assumedSize).toBe(20);
+    });
+  });
+
   describe('directive definition compliance tests', () => {
     test('that @listSize with string assumedSize produces an error', () => {
       const { errors } = normalizeSubgraphFailure(

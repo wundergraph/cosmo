@@ -41,57 +41,20 @@ import { invalidRouterCompatibilityVersion, normalizationFailureError } from './
 import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 
 function costsToCostConfiguration(costs: Costs): CostConfiguration | undefined {
-  const hasDirectiveArgWeights = costs.directiveArgumentWeights && costs.directiveArgumentWeights.size > 0;
-  if (costs.fieldWeights.size === 0 && costs.listSizes.size === 0 && costs.typeWeights.size === 0 && !hasDirectiveArgWeights) {
+  const hasDirectiveArgWeights = costs.directiveArgumentWeights
+    && Object.keys(costs.directiveArgumentWeights).length > 0;
+  if (
+    costs.fieldWeights.size === 0 && costs.listSizes.size === 0
+    && Object.keys(costs.typeWeights).length === 0 && !hasDirectiveArgWeights
+  ) {
     return undefined;
   }
-  const fieldWeights: FieldWeightConfiguration[] = [];
-  for (const [coord, fw] of costs.fieldWeights) {
-    const dotIndex = coord.indexOf('.');
-    const typeName = dotIndex >= 0 ? coord.substring(0, dotIndex) : coord;
-    const fieldName = dotIndex >= 0 ? coord.substring(dotIndex + 1) : '';
-    const argumentWeights: { [key: string]: number } = {};
-    if (fw.argumentWeights) {
-      for (const [argName, argWeight] of fw.argumentWeights) {
-        argumentWeights[argName] = argWeight;
-      }
-    }
-    fieldWeights.push(
-      new FieldWeightConfiguration({
-        typeName,
-        fieldName,
-        weight: fw.weight,
-        argumentWeights,
-      }),
-    );
-  }
-  const listSizes: FieldListSizeConfiguration[] = [];
-  for (const [coord, ls] of costs.listSizes) {
-    const dotIndex = coord.indexOf('.');
-    const typeName = dotIndex >= 0 ? coord.substring(0, dotIndex) : coord;
-    const fieldName = dotIndex >= 0 ? coord.substring(dotIndex + 1) : '';
-    listSizes.push(
-      new FieldListSizeConfiguration({
-        typeName,
-        fieldName,
-        assumedSize: ls.assumedSize,
-        slicingArguments: ls.slicingArguments ?? [],
-        sizedFields: ls.sizedFields ?? [],
-        requireOneSlicingArgument: ls.requireOneSlicingArgument,
-      }),
-    );
-  }
-  const typeWeights: { [key: string]: number } = {};
-  for (const [typeName, weight] of costs.typeWeights) {
-    typeWeights[typeName] = weight;
-  }
-  const directiveArgumentWeights: { [key: string]: number } = {};
-  if (costs.directiveArgumentWeights) {
-    for (const [coord, weight] of costs.directiveArgumentWeights) {
-      directiveArgumentWeights[coord] = weight;
-    }
-  }
-  return new CostConfiguration({ fieldWeights, listSizes, typeWeights, directiveArgumentWeights });
+  return new CostConfiguration({
+    fieldWeights: [...costs.fieldWeights.values()].map(fw => new FieldWeightConfiguration(fw)),
+    listSizes: [...costs.listSizes.values()].map(ls => new FieldListSizeConfiguration(ls)),
+    typeWeights: costs.typeWeights,
+    directiveArgumentWeights: costs.directiveArgumentWeights ?? {},
+  });
 }
 
 export interface Input {

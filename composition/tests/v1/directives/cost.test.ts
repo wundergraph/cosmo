@@ -426,7 +426,7 @@ describe('@cost directive tests', () => {
     test('that @cost on a custom directive argument is extracted into costs.directiveArgumentWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnDirectiveArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.directiveArgumentWeights).toBeDefined();
-      expect(costs.directiveArgumentWeights!.get('myDirective.arg1')).toBe(5);
+      expect(costs.directiveArgumentWeights!['myDirective.arg1']).toBe(5);
     });
 
     test('that @cost on multiple directive arguments is extracted correctly', () => {
@@ -435,8 +435,8 @@ describe('@cost directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(costs.directiveArgumentWeights).toBeDefined();
-      expect(costs.directiveArgumentWeights!.get('myDirective.arg1')).toBe(3);
-      expect(costs.directiveArgumentWeights!.get('myDirective.arg2')).toBe(7);
+      expect(costs.directiveArgumentWeights!['myDirective.arg1']).toBe(3);
+      expect(costs.directiveArgumentWeights!['myDirective.arg2']).toBe(7);
     });
 
     test('that costs without directive argument weights has undefined directiveArgumentWeights', () => {
@@ -450,6 +450,74 @@ describe('@cost directive tests', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostNoWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('required argument');
+    });
+  });
+
+  describe('costs internal structure tests', () => {
+    test('that @cost on a field populates fieldWeights correctly', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnField, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.fieldWeights.get('Query.expensiveField')).toEqual({
+        typeName: 'Query', fieldName: 'expensiveField', weight: 10, argumentWeights: {},
+      });
+    });
+
+    test('that @cost on a field argument populates fieldWeights.argumentWeights', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.fieldWeights.get('Query.search')).toEqual({
+        typeName: 'Query', fieldName: 'search', argumentWeights: { query: 5 },
+      });
+    });
+
+    test('that @cost on an input field populates fieldWeights correctly', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnInputField, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.fieldWeights.get('SearchInput.query')).toEqual({
+        typeName: 'SearchInput', fieldName: 'query', weight: 5, argumentWeights: {},
+      });
+    });
+
+    test('that @cost on an object type populates typeWeights', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnObject, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.typeWeights['User']).toBe(100);
+    });
+
+    test('that @cost on a scalar populates typeWeights', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnScalar, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.typeWeights['JSON']).toBe(50);
+    });
+
+    test('that @cost on an enum populates typeWeights', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnEnum, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.typeWeights['Status']).toBe(1);
+    });
+
+    test('that @cost with negative weight populates fieldWeights correctly', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithNegativeCost, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const fw = costs.fieldWeights.get('Query.optimizedField');
+      expect(fw).toBeDefined();
+      expect(fw!.weight).toBe(-5);
+    });
+
+    test('that @cost on multiple fields populates fieldWeights for each', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithMultipleCosts, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.fieldWeights.size).toBe(3);
+      expect(costs.fieldWeights.get('Query.cheap')?.weight).toBe(1);
+      expect(costs.fieldWeights.get('Query.medium')?.weight).toBe(10);
+      expect(costs.fieldWeights.get('Query.expensive')?.weight).toBe(100);
+    });
+
+    test('that @cost on both a field and its argument populates a single FieldWeightConfiguration', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnFieldAndArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.fieldWeights.get('Query.search')).toEqual({
+        typeName: 'Query', fieldName: 'search', weight: 10, argumentWeights: { query: 3 },
+      });
+    });
+
+    test('that a subgraph without cost directives has empty costs', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithNoCostDirectives, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.fieldWeights.size).toBe(0);
+      expect(costs.listSizes.size).toBe(0);
+      expect(Object.keys(costs.typeWeights).length).toBe(0);
+      expect(costs.directiveArgumentWeights).toBeUndefined();
     });
   });
 });
@@ -715,6 +783,26 @@ const subgraphWithCostOnMultipleDirectiveArguments: Subgraph = {
 
     type Query {
       field: String! @myDirective(arg1: "hello", arg2: 42)
+    }
+  `),
+};
+
+const subgraphWithCostOnFieldAndArgument: Subgraph = {
+  name: 'subgraph-cost-field-and-arg',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(query: String! @cost(weight: 3)): [String!]! @cost(weight: 10)
+    }
+  `),
+};
+
+const subgraphWithNoCostDirectives: Subgraph = {
+  name: 'subgraph-no-cost',
+  url: '',
+  definitions: parse(`
+    type Query {
+      hello: String!
     }
   `),
 };
