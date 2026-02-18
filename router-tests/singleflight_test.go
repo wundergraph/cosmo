@@ -869,4 +869,481 @@ func TestSingleFlight(t *testing.T) {
 			require.Equal(t, numOfOperations, globalRequests)
 		})
 	})
+	t.Run("different variables with warm cache should not collide in inbound dedup", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:                true,
+					ForceEnableSingleFlight:           false,
+					EnableInboundRequestDeduplication: true,
+					MaxConcurrentResolvers:            0,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			variableValues := []int{1, 2, 3, 4, 5}
+
+			// Phase 1: Warm the variables normalization cache with sequential requests
+			for _, id := range variableValues {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query:     `query($id: Int!) { employee(id: $id) { id details { forename } } }`,
+					Variables: []byte(fmt.Sprintf(`{"id": %d}`, id)),
+				})
+				v, err := astjson.Parse(res.Body)
+				require.NoError(t, err)
+				emp := v.Get("data", "employee")
+				require.NotNil(t, emp, "expected employee object in response for id=%d", id)
+				require.Equal(t, id, emp.GetInt("id"))
+			}
+
+			// Phase 2: Send concurrent requests with different variables (cache is now warm)
+			// Without the fix, all cache-hit requests get VariablesHash=0, causing them to
+			// collide in the inbound singleflight and return wrong data.
+			numPerVariable := 2
+			total := numPerVariable * len(variableValues)
+			var (
+				ready, done sync.WaitGroup
+			)
+			ready.Add(total)
+			trigger := make(chan struct{})
+
+			type result struct {
+				body      string
+				requested int
+			}
+			results := make([]result, total)
+
+			idx := 0
+			for _, id := range variableValues {
+				for j := 0; j < numPerVariable; j++ {
+					slot := idx
+					varVal := id
+					done.Go(func() {
+						ready.Done()
+						<-trigger
+						res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+							Query:     `query($id: Int!) { employee(id: $id) { id details { forename } } }`,
+							Variables: []byte(fmt.Sprintf(`{"id": %d}`, varVal)),
+						})
+						results[slot] = result{body: res.Body, requested: varVal}
+					})
+					idx++
+				}
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+
+			// Verify each response matches its requested variable (no cross-contamination)
+			for _, r := range results {
+				v, err := astjson.Parse(r.body)
+				require.NoError(t, err)
+				emp := v.Get("data", "employee")
+				require.NotNil(t, emp, "expected employee object in response for id=%d", r.requested)
+				actualID := emp.GetInt("id")
+				require.Equal(t, r.requested, actualID,
+					"response for variable id=%d returned employee id=%d (cross-contamination)", r.requested, actualID)
+			}
+		})
+	})
+	t.Run("response header set rule with singleflight followers", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      "X-Custom-Header",
+								Value:     "test-value",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employee(id: 1) { id } }`, 5)
+			for i, res := range responses {
+				require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+				require.Equal(t, "test-value", res.Response.Header.Get("X-Custom-Header"),
+					"response %d missing X-Custom-Header", i)
+			}
+		})
+	})
+	t.Run("cache control propagation with singleflight followers", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+				Value:   "max-age=300",
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Cache-Control", "max-age=120")
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Verify single request works
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id } }`,
+			})
+			require.Equal(t, "max-age=120", res.Response.Header.Get("Cache-Control"), "single request should have Cache-Control")
+
+			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employee(id: 1) { id } }`, 5)
+			for i, res := range responses {
+				require.Equal(t, "max-age=120", res.Response.Header.Get("Cache-Control"),
+					"response %d has wrong Cache-Control header", i)
+			}
+		})
+	})
+	t.Run("multiple response set rules with singleflight followers", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      "X-Header-A",
+								Value:     "value-a",
+							},
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      "X-Header-B",
+								Value:     "value-b",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Verify single request works
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 1) { id } }`,
+			})
+			require.Equal(t, "value-a", res.Response.Header.Get("X-Header-A"), "single request should have X-Header-A")
+			require.Equal(t, "value-b", res.Response.Header.Get("X-Header-B"), "single request should have X-Header-B")
+
+			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employee(id: 1) { id } }`, 5)
+			for i, res := range responses {
+				require.Equal(t, "value-a", res.Response.Header.Get("X-Header-A"),
+					"response %d missing X-Header-A", i)
+				require.Equal(t, "value-b", res.Response.Header.Get("X-Header-B"),
+					"response %d missing X-Header-B", i)
+			}
+		})
+	})
+	t.Run("multi-subgraph response header propagation with singleflight", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      "X-Custom-Header",
+								Value:     "multi-subgraph-value",
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// This query fans out to multiple subgraphs: employees, family, availability, mood
+			query := `{ employee(id: 1) { id details { forename surname } isAvailable currentMood } }`
+
+			responses := runConcurrentSingleflightRequests(t, xEnv, query, 5)
+			for i, res := range responses {
+				require.Contains(t, res.Body, `"employee"`)
+				require.Equal(t, "multi-subgraph-value", res.Response.Header.Get("X-Custom-Header"),
+					"response %d missing X-Custom-Header from multi-subgraph query", i)
+			}
+		})
+	})
+	t.Run("subgraph-specific response header rule with singleflight", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					Subgraphs: map[string]*config.GlobalHeaderRule{
+						"employees": {
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationSet,
+									Name:      "X-Subgraph-Header",
+									Value:     "employees-value",
+								},
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// This query hits the employees subgraph, so the subgraph-specific rule should apply
+			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employees { id } }`, 5)
+			for i, res := range responses {
+				require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+				require.Equal(t, "employees-value", res.Response.Header.Get("X-Subgraph-Header"),
+					"response %d missing subgraph-specific X-Subgraph-Header", i)
+			}
+		})
+	})
+	t.Run("mixed global and subgraph-specific response header rules with singleflight", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationSet,
+								Name:      "X-Global-Header",
+								Value:     "global-value",
+							},
+						},
+					},
+					Subgraphs: map[string]*config.GlobalHeaderRule{
+						"employees": {
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationSet,
+									Name:      "X-Employees-Header",
+									Value:     "employees-value",
+								},
+							},
+						},
+						"family": {
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationSet,
+									Name:      "X-Family-Header",
+									Value:     "family-value",
+								},
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// This query fans out to employees (root) and family (entity resolution for hasChildren)
+			query := `{ employee(id: 1) { id details { forename hasChildren } } }`
+
+			responses := runConcurrentSingleflightRequests(t, xEnv, query, 5)
+			for i, res := range responses {
+				require.Contains(t, res.Body, `"employee"`)
+				require.Equal(t, "global-value", res.Response.Header.Get("X-Global-Header"),
+					"response %d missing global X-Global-Header", i)
+				require.Equal(t, "employees-value", res.Response.Header.Get("X-Employees-Header"),
+					"response %d missing subgraph-specific X-Employees-Header", i)
+				require.Equal(t, "family-value", res.Response.Header.Get("X-Family-Header"),
+					"response %d missing subgraph-specific X-Family-Header", i)
+			}
+		})
+	})
+	t.Run("propagate named response header with singleflight followers", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("X-Custom-Header", "custom-value")
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "X-Custom-Header",
+								Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employee(id: 1) { id } }`, 5)
+			for i, res := range responses {
+				require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
+				require.Equal(t, "custom-value", res.Response.Header.Get("X-Custom-Header"),
+					"response %d missing propagated X-Custom-Header", i)
+			}
+		})
+	})
+	t.Run("most restrictive cache control with two subgraphs and singleflight", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			CacheControlPolicy: config.CacheControlPolicy{
+				Enabled: true,
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Cache-Control", "max-age=120")
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+				Hobbies: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Cache-Control", "max-age=60")
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Query that fans out to employees + hobbies
+			query := `{ employee(id: 1) { id hobbies { ... on Gaming { name } } } }`
+
+			responses := runConcurrentSingleflightRequests(t, xEnv, query, 5)
+			for i, res := range responses {
+				require.Contains(t, res.Body, `"employee"`)
+				require.Equal(t, "max-age=60", res.Response.Header.Get("Cache-Control"),
+					"response %d should have most restrictive Cache-Control (max-age=60)", i)
+			}
+		})
+	})
+	t.Run("subgraph-specific propagate rule with entity resolution and singleflight", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalDelay: time.Millisecond * 100,
+				Family: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("X-Family-Data", "family-resolved")
+							handler.ServeHTTP(w, r)
+						})
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithEngineExecutionConfig(config.EngineExecutionConfiguration{
+					EnableSingleFlight:     true,
+					MaxConcurrentResolvers: 0,
+				}),
+				core.WithHeaderRules(config.HeaderRules{
+					Subgraphs: map[string]*config.GlobalHeaderRule{
+						"family": {
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "X-Family-Data",
+									Algorithm: config.ResponseHeaderRuleAlgorithmLastWrite,
+								},
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Query triggers entity resolution to family subgraph for hasChildren
+			query := `{ employee(id: 1) { id details { forename hasChildren } } }`
+
+			responses := runConcurrentSingleflightRequests(t, xEnv, query, 5)
+			for i, res := range responses {
+				require.Contains(t, res.Body, `"employee"`)
+				require.Equal(t, "family-resolved", res.Response.Header.Get("X-Family-Data"),
+					"response %d missing propagated X-Family-Data from entity resolution", i)
+			}
+		})
+	})
+}
+
+// runConcurrentSingleflightRequests sends n identical GraphQL requests concurrently,
+// using a barrier to maximize overlap and trigger singleflight deduplication.
+func runConcurrentSingleflightRequests(t *testing.T, xEnv *testenv.Environment, query string, n int) []*testenv.TestResponse {
+	t.Helper()
+	var ready, done sync.WaitGroup
+	ready.Add(n)
+	trigger := make(chan struct{})
+	responses := make([]*testenv.TestResponse, n)
+	for i := 0; i < n; i++ {
+		idx := i
+		done.Go(func() {
+			ready.Done()
+			<-trigger
+			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: query})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, resp.Response.StatusCode)
+			responses[idx] = resp
+		})
+	}
+	ready.Wait()
+	close(trigger)
+	done.Wait()
+	return responses
 }
