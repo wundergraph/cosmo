@@ -39,6 +39,17 @@ describe('expandEnvVars', () => {
     expect(expandEnvVars('no variables here')).toBe('no variables here');
   });
 
+  test('does not expand bare $VAR without braces', () => {
+    process.env.FOO = 'bar';
+    expect(expandEnvVars('$FOO')).toBe('$FOO');
+  });
+
+  test('does not expand nested ${FOO${BAR}}', () => {
+    process.env.BAR = 'baz';
+    // Matches ${FOO${BAR} (up to first }), looks up "FOO${BAR" which is undefined
+    expect(expandEnvVars('${FOO${BAR}}')).toBe('}');
+  });
+
   test('handles variable in Authorization header context', () => {
     process.env.API_TOKEN = 'secret123';
     const input = `headers:

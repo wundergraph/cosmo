@@ -1,5 +1,5 @@
 /* eslint-disable no-template-curly-in-string */
-import { existsSync, mkdirSync, readFileSync, rmdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { Command } from 'commander';
@@ -34,7 +34,7 @@ describe('router compose with env var interpolation', () => {
     mkdirSync(tmpDir, { recursive: true });
 
     testContext.onTestFinished(() => {
-      rmdirSync(tmpDir, { recursive: true });
+      rmSync(tmpDir, { recursive: true, force: true });
     });
 
     writeFileSync(join(tmpDir, 'subgraph.graphql'), 'type Query { hello: String }');

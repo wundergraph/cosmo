@@ -32,7 +32,8 @@ const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
 
 /**
  * Expands environment variables in a string using ${VAR_NAME} syntax.
- * Consistent with Go's os.ExpandEnv() used in router config.yaml.
+ * Only the curly-brace form is supported; bare $VAR references are not expanded.
+ * Undefined variables are replaced with an empty string.
  */
 export function expandEnvVars(content: string): string {
   return content.replace(/\${([^}]+)}/g, (_, varName) => {
@@ -172,7 +173,8 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
 export default (opts: BaseCommandOptions) => {
   const command = new Command('compose');
   command.description(
-    'Generates a router config from a local composition file. This makes it easy to test your router without a control-plane connection. For production, please use the "router fetch" command',
+    // eslint-disable-next-line no-template-curly-in-string
+    'Generates a router config from a local composition file. Environment variables can be referenced in the input YAML using ${VAR_NAME} syntax. This makes it easy to test your router without a control-plane connection. For production, please use the "router fetch" command',
   );
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
