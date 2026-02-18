@@ -254,6 +254,11 @@ export function buildInputObjectMessage(
 /**
  * Builds an enum type from a GraphQL enum type
  *
+ * An auto-generated UNSPECIFIED value is added at position 0 (required by proto3).
+ * If the GraphQL enum contains a value that maps to the same proto name (e.g.
+ * `UNSPECIFIED` in enum `State` producing `STATE_UNSPECIFIED`), it is deduplicated
+ * into the auto-generated zero-position entry rather than being assigned a separate number.
+ *
  * @param enumType - The GraphQL enum type
  * @param options - Optional configuration
  * @returns A protobuf Enum object

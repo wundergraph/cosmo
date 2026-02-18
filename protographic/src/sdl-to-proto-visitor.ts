@@ -1889,11 +1889,6 @@ Example:
 
       const protoEnumValue = graphqlEnumValueToProtoEnumValue(type.name, value.name);
 
-      // Safety guard: skip if proto name collides with the auto-generated UNSPECIFIED value
-      if (protoEnumValue === unspecifiedValue) {
-        continue;
-      }
-
       const deprecationInfo = this.enumValueIsDeprecated(value);
 
       // Add enum value description as comment
@@ -1911,7 +1906,8 @@ Example:
       if (lockData.enums[type.name] && lockData.enums[type.name].fields[value.name]) {
         valueNumber = lockData.enums[type.name].fields[value.name];
       } else {
-        // This should never happen since we just reconciled
+        // Indicates a bug in lock reconciliation; fail fast rather than silently
+        // producing a proto enum value with number 0, which would collide with UNSPECIFIED.
         throw new Error(`Missing enum value number for ${type.name}.${value.name}`);
       }
 
