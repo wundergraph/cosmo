@@ -34,7 +34,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 					All: config.TLSClientCertConfiguration{
 						InsecureSkipCaVerification: true,
 					},
@@ -58,7 +58,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 					All: config.TLSClientCertConfiguration{
 						InsecureSkipCaVerification: false,
 					},
@@ -83,7 +83,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 					All: config.TLSClientCertConfiguration{
 						// InsecureSkipCaVerification for httptest's self-signed server cert
 						InsecureSkipCaVerification: true,
@@ -112,7 +112,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 					All: config.TLSClientCertConfiguration{
 						InsecureSkipCaVerification: true,
 						// NO client certificate — should cause mTLS failure
@@ -141,7 +141,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 					All: config.TLSClientCertConfiguration{
 						InsecureSkipCaVerification: true,
 						CertFile:                   "testdata/tls/cert-2.pem",
@@ -169,7 +169,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 					// No global client TLS — would fail without per-subgraph override
 					Subgraphs: map[string]config.TLSClientCertConfiguration{
 						"employees": {
@@ -206,7 +206,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 					All: config.TLSClientCertConfiguration{
 						// Trust the server cert via CaFile instead of InsecureSkipCaVerification
 						CaFile: certPath,
@@ -233,7 +233,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 					All: config.TLSClientCertConfiguration{
 						InsecureSkipCaVerification: true,
 						// Wrong client cert at global level
@@ -281,7 +281,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				},
 			},
 			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 					All: config.TLSClientCertConfiguration{
 						// Verify server cert via CaFile
 						CaFile: certPath,
@@ -321,7 +321,7 @@ func TestSubgraphMTLS(t *testing.T) {
 						},
 					},
 				})),
-				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 					All: config.TLSClientCertConfiguration{
 						InsecureSkipCaVerification: true,
 					},
@@ -354,7 +354,7 @@ func TestSubgraphMTLS(t *testing.T) {
 						},
 					},
 				})),
-				core.WithSubgraphTLSConfiguration(config.SubgraphTLSConfiguration{
+				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 					Subgraphs: map[string]config.TLSClientCertConfiguration{
 						"employees": {
 							InsecureSkipCaVerification: true,

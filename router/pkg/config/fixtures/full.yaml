@@ -36,7 +36,7 @@ dev_mode: false
 tls:
   server:
     enabled: false
-  subgraph:
+  client:
     all:
       cert_file: '/path/to/client.crt'
       key_file: '/path/to/client.key'

@@ -442,7 +442,7 @@
             ]
           }
         },
-        "subgraph": {
+        "client": {
           "type": "object",
           "description": "The TLS configuration for outbound connections from the router to subgraphs. Enables mTLS by presenting a client certificate when connecting to subgraphs.",
           "additionalProperties": false,

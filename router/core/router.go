@@ -2037,7 +2037,7 @@ func WithTLSConfig(cfg *TlsConfig) Option {
 	}
 }
 
-func WithSubgraphTLSConfiguration(cfg config.SubgraphTLSConfiguration) Option {
+func WithSubgraphTLSConfiguration(cfg config.ClientTLSConfiguration) Option {
 	return func(r *Router) {
 		r.subgraphTLSConfiguration = cfg
 	}

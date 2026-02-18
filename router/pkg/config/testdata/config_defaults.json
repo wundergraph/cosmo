@@ -115,7 +115,7 @@
         "Required": false
       }
     },
-    "Subgraph": {
+    "Client": {
       "All": {
         "CertFile": "",
         "KeyFile": "",

@@ -43,7 +43,7 @@ func buildTLSClientConfig(clientCfg *config.TLSClientCertConfiguration) (*tls.Co
 
 // buildSubgraphTLSConfigs builds the default and per-subgraph TLS configs from raw configuration.
 // Returns (defaultClientTLS, perSubgraphTLS, error).
-func buildSubgraphTLSConfigs(cfg *config.SubgraphTLSConfiguration) (*tls.Config, map[string]*tls.Config, error) {
+func buildSubgraphTLSConfigs(cfg *config.ClientTLSConfiguration) (*tls.Config, map[string]*tls.Config, error) {
 	hasAll := (cfg.All.CertFile != "" && cfg.All.KeyFile != "") || cfg.All.CaFile != "" || cfg.All.InsecureSkipCaVerification
 
 	// If no global TLS config is provided and there are no subgraph specific TLS configs

@@ -801,7 +801,7 @@ type TLSClientCertConfiguration struct {
 	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"TLS_CLIENT_INSECURE_SKIP_CA_VERIFICATION"`
 }
 
-type SubgraphTLSConfiguration struct {
+type ClientTLSConfiguration struct {
 	// All applies to all subgraph connections.
 	All TLSClientCertConfiguration `yaml:"all"`
 	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
@@ -809,8 +809,8 @@ type SubgraphTLSConfiguration struct {
 }
 
 type TLSConfiguration struct {
-	Server   TLSServerConfiguration   `yaml:"server"`
-	Subgraph SubgraphTLSConfiguration `yaml:"subgraph"`
+	Server TLSServerConfiguration `yaml:"server"`
+	Client ClientTLSConfiguration `yaml:"client"`
 }
 
 type SubgraphErrorPropagationMode string

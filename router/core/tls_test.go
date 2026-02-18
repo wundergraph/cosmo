@@ -86,7 +86,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	t.Run("returns nil when no TLS configured", func(t *testing.T) {
 		t.Parallel()
 
-		cfg := &config.SubgraphTLSConfiguration{}
+		cfg := &config.ClientTLSConfiguration{}
 		defaultTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(cfg)
 		require.NoError(t, err)
 		require.Nil(t, defaultTLS)
@@ -99,7 +99,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 		certPath, keyPath := generateTestCert(t, "client")
 		caPath, _ := generateTestCert(t, "ca")
 
-		cfg := &config.SubgraphTLSConfiguration{
+		cfg := &config.ClientTLSConfiguration{
 			All: config.TLSClientCertConfiguration{
 				CertFile: certPath,
 				KeyFile:  keyPath,
@@ -120,7 +120,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 
 		certPath, keyPath := generateTestCert(t, "products")
 
-		cfg := &config.SubgraphTLSConfiguration{
+		cfg := &config.ClientTLSConfiguration{
 			Subgraphs: map[string]config.TLSClientCertConfiguration{
 				"products": {
 					CertFile: certPath,
@@ -142,7 +142,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 		globalCert, globalKey := generateTestCert(t, "global")
 		productsCert, productsKey := generateTestCert(t, "products")
 
-		cfg := &config.SubgraphTLSConfiguration{
+		cfg := &config.ClientTLSConfiguration{
 			All: config.TLSClientCertConfiguration{
 				CertFile: globalCert,
 				KeyFile:  globalKey,
@@ -164,7 +164,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	t.Run("errors on invalid global cert", func(t *testing.T) {
 		t.Parallel()
 
-		cfg := &config.SubgraphTLSConfiguration{
+		cfg := &config.ClientTLSConfiguration{
 			All: config.TLSClientCertConfiguration{
 				CertFile: "/nonexistent/cert.pem",
 				KeyFile:  "/nonexistent/key.pem",
@@ -179,7 +179,7 @@ func TestBuildTLSClientConfig(t *testing.T) {
 	t.Run("errors on invalid per-subgraph cert", func(t *testing.T) {
 		t.Parallel()
 
-		cfg := &config.SubgraphTLSConfiguration{
+		cfg := &config.ClientTLSConfiguration{
 			Subgraphs: map[string]config.TLSClientCertConfiguration{
 				"products": {
 					CertFile: "/nonexistent/cert.pem",

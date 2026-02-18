@@ -145,7 +145,7 @@
         "Required": false
       }
     },
-    "Subgraph": {
+    "Client": {
       "All": {
         "CertFile": "/path/to/client.crt",
         "KeyFile": "/path/to/client.key",
