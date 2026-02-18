@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.283.0](https://github.com/wundergraph/cosmo/compare/router@0.282.0...router@0.283.0) (2026-02-18)
+
+### Features
+
+* **router:** add connectrpc handler for graphql-to-grpc bridge ([#2379](https://github.com/wundergraph/cosmo/issues/2379)) ([9cb6ad3](https://github.com/wundergraph/cosmo/commit/9cb6ad3351319744f196a83bcec1cb4a1ec109f6)) (@asoorm)
+
+# [0.282.0](https://github.com/wundergraph/cosmo/compare/router@0.281.0...router@0.282.0) (2026-02-18)
+
+### Bug Fixes
+
+* **router:** fix singleflight deduplication bugs and propagate response headers ([#2522](https://github.com/wundergraph/cosmo/issues/2522)) ([9fcf219](https://github.com/wundergraph/cosmo/commit/9fcf219246ba49acc748d9a9a42fc21ad96be909)) (@jensneuse)
+* **router:** lock response header propagation state ([#2518](https://github.com/wundergraph/cosmo/issues/2518)) ([b9508c1](https://github.com/wundergraph/cosmo/commit/b9508c1ad13ad9bf90ccf387f7ae2bc64149f111)) (@endigma)
+
+### Features
+
+* http status code not being correct for metrics ([#2516](https://github.com/wundergraph/cosmo/issues/2516)) ([0c98cd0](https://github.com/wundergraph/cosmo/commit/0c98cd05a304687fdad27e0052f062f377cecf1d)) (@SkArchon)
+* **router:** add relaxed nullability validation for field selection merging ([#2515](https://github.com/wundergraph/cosmo/issues/2515)) ([360bee4](https://github.com/wundergraph/cosmo/commit/360bee4f59fb269637f82e9bb0607a407545a4af)) (@jensneuse)
+
 # [0.281.0](https://github.com/wundergraph/cosmo/compare/router@0.280.1...router@0.281.0) (2026-02-16)
 
 ### Bug Fixes

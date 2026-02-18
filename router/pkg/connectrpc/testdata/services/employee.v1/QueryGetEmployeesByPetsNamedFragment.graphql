@@ -1,0 +1,20 @@
+fragment PetFields on Pet {
+    name
+}
+
+fragment EmployeeDetails on Details {
+    forename
+    surname
+    pets {
+        ...PetFields
+    }
+}
+
+query FindEmployeesByPetsNamedFragment($hasPets: Boolean!) {
+    findEmployees(criteria: {hasPets: $hasPets}) {
+        id
+        details {
+            ...EmployeeDetails
+        }
+    }
+}

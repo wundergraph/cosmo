@@ -1,0 +1,21 @@
+# yaml-language-server: $schema=./pkg/config/config.schema.json
+version: "1"
+
+# Standard router settings
+listen_addr: "localhost:3002"
+graphql_path: "/graphql"
+
+# ConnectRPC configuration
+connect_rpc:
+  enabled: true
+  server:
+    listen_addr: "localhost:5026"
+  storage:
+    provider_id: "fs-services"
+  graphql_endpoint: "http://localhost:3002/graphql"
+
+# Storage providers for services directory
+storage_providers:
+  file_system:
+    - id: "fs-services"
+      path: "./pkg/connectrpc/samples/services"

@@ -1,0 +1,143 @@
+{
+  "version": "1.0.0",
+  "messages": {
+    "UpdateEmployeeMoodRequest": {
+      "fields": {
+        "employee_id": 1,
+        "mood": 2
+      }
+    },
+    "UpdateEmployeeMoodResponse": {
+      "fields": {
+        "update_mood": 1
+      }
+    },
+    "UpdateMood": {
+      "fields": {
+        "id": 1,
+        "details": 2,
+        "current_mood": 3,
+        "derived_mood": 4
+      }
+    },
+    "Details": {
+      "fields": {
+        "forename": 11,
+        "surname": 12,
+        "pets": 14
+      },
+      "reservedNumbers": [
+        4,
+        1,
+        2,
+        3,
+        7,
+        8,
+        10,
+        5,
+        6,
+        9,
+        13
+      ]
+    },
+    "GetEmployeeByIdRequest": {
+      "fields": {
+        "employee_id": 1
+      }
+    },
+    "GetEmployeeByIdResponse": {
+      "fields": {
+        "employee": 1
+      }
+    },
+    "Employee": {
+      "fields": {
+        "id": 1,
+        "tag": 2,
+        "details": 3
+      }
+    },
+    "Pets": {
+      "fields": {
+        "name": 1
+      },
+      "reservedNumbers": [
+        2,
+        3
+      ]
+    },
+    "Location": {
+      "fields": {
+        "key": 1
+      }
+    },
+    "Key": {
+      "fields": {
+        "name": 1
+      }
+    },
+    "FindEmployeesByPetsRequest": {
+      "fields": {
+        "has_pets": 1
+      }
+    },
+    "FindEmployeesByPetsResponse": {
+      "fields": {
+        "find_employees": 1
+      }
+    },
+    "FindEmployees": {
+      "fields": {
+        "id": 1,
+        "details": 2
+      }
+    },
+    "GetEmployeesWithMoodRequest": {
+      "fields": {}
+    },
+    "GetEmployeesWithMoodResponse": {
+      "fields": {
+        "employees": 1
+      }
+    },
+    "Employees": {
+      "fields": {
+        "id": 1,
+        "details": 3
+      },
+      "reservedNumbers": [
+        2,
+        4
+      ]
+    },
+    "GetEmployeesRequest": {
+      "fields": {}
+    },
+    "GetEmployeesResponse": {
+      "fields": {
+        "employees": 1
+      }
+    },
+    "FindEmployeesByPetsInlineFragmentRequest": {
+      "fields": {
+        "has_pets": 1
+      }
+    },
+    "FindEmployeesByPetsInlineFragmentResponse": {
+      "fields": {
+        "find_employees": 1
+      }
+    },
+    "FindEmployeesByPetsNamedFragmentRequest": {
+      "fields": {
+        "has_pets": 1
+      }
+    },
+    "FindEmployeesByPetsNamedFragmentResponse": {
+      "fields": {
+        "find_employees": 1
+      }
+    }
+  },
+  "enums": {}
+}

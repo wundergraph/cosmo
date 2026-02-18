@@ -184,6 +184,28 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		if h.enableResponseHeaderPropagation {
 			resolveCtx = WithResponseHeaderPropagation(resolveCtx)
+			resolve.SetDeduplicationCallbacks(resolveCtx,
+				func(ctx context.Context) http.Header {
+					propagation := getResponseHeaderPropagation(ctx)
+					if propagation == nil {
+						return nil
+					}
+					propagation.m.Lock()
+					defer propagation.m.Unlock()
+					return propagation.header.Clone()
+				},
+				func(ctx context.Context, headers http.Header) {
+					propagation := getResponseHeaderPropagation(ctx)
+					if propagation == nil {
+						return
+					}
+					propagation.m.Lock()
+					defer propagation.m.Unlock()
+					for k, v := range headers {
+						propagation.header[k] = v
+					}
+				},
+			)
 		}
 
 		defer propagateSubgraphErrors(resolveCtx)
