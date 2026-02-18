@@ -69,6 +69,7 @@ export type HandleSemanticNonNullDirectiveParams = {
 };
 
 export type HandleCostDirectiveParams = {
+  data: NodeData | SchemaData;
   directiveCoords: string;
   directiveNode: ConstDirectiveNode;
   errorMessages: Array<string>;

@@ -3,6 +3,7 @@ import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   COMPOSITION_VERSION,
   ConfigurationData,
+  Costs,
   FieldConfiguration,
   ROOT_TYPE_NAMES,
   ROUTER_COMPATIBILITY_VERSIONS,
@@ -18,11 +19,14 @@ import { PartialMessage } from '@bufbuild/protobuf';
 import {
   ConfigurationVariable,
   ConfigurationVariableKind,
+  CostConfiguration,
   DataSourceConfiguration,
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
   DataSourceKind,
   EngineConfiguration,
+  FieldListSizeConfiguration,
+  FieldWeightConfiguration,
   GraphQLSubscriptionConfiguration,
   GRPCConfiguration,
   GRPCMapping,
@@ -35,6 +39,60 @@ import {
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
 import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
+
+function costsToCostConfiguration(costs: Costs): CostConfiguration | undefined {
+  const hasDirectiveArgWeights = costs.directiveArgumentWeights && costs.directiveArgumentWeights.size > 0;
+  if (costs.fieldWeights.size === 0 && costs.listSizes.size === 0 && costs.typeWeights.size === 0 && !hasDirectiveArgWeights) {
+    return undefined;
+  }
+  const fieldWeights: FieldWeightConfiguration[] = [];
+  for (const [coord, fw] of costs.fieldWeights) {
+    const dotIndex = coord.indexOf('.');
+    const typeName = dotIndex >= 0 ? coord.substring(0, dotIndex) : coord;
+    const fieldName = dotIndex >= 0 ? coord.substring(dotIndex + 1) : '';
+    const argumentWeights: { [key: string]: number } = {};
+    if (fw.argumentWeights) {
+      for (const [argName, argWeight] of fw.argumentWeights) {
+        argumentWeights[argName] = Number(argWeight);
+      }
+    }
+    fieldWeights.push(
+      new FieldWeightConfiguration({
+        typeName,
+        fieldName,
+        weight: fw.weight !== undefined ? Number(fw.weight) : undefined,
+        argumentWeights,
+      }),
+    );
+  }
+  const listSizes: FieldListSizeConfiguration[] = [];
+  for (const [coord, ls] of costs.listSizes) {
+    const dotIndex = coord.indexOf('.');
+    const typeName = dotIndex >= 0 ? coord.substring(0, dotIndex) : coord;
+    const fieldName = dotIndex >= 0 ? coord.substring(dotIndex + 1) : '';
+    listSizes.push(
+      new FieldListSizeConfiguration({
+        typeName,
+        fieldName,
+        assumedSize: ls.assumedSize,
+        slicingArguments: ls.slicingArguments ?? [],
+        sizedFields: ls.sizedFields ?? [],
+        requireOneSlicingArgument: ls.requireOneSlicingArgument,
+      }),
+    );
+  }
+  const typeWeights: { [key: string]: number } = {};
+  for (const [typeName, weight] of costs.typeWeights) {
+    typeWeights[typeName] = Number(weight);
+  }
+  const directiveArgumentWeights: { [key: string]: number } = {};
+  if (costs.directiveArgumentWeights) {
+    for (const [coord, weight] of costs.directiveArgumentWeights) {
+      directiveArgumentWeights[coord] = Number(weight);
+    }
+  }
+  return new CostConfiguration({ fieldWeights, listSizes, typeWeights, directiveArgumentWeights });
+}
 
 export interface Input {
   federatedClientSDL: string;
@@ -76,6 +134,7 @@ export interface ComposedSubgraph {
   configurationDataByTypeName?: Map<TypeName, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
+  costs?: Costs;
 }
 
 export interface ComposedSubgraphPlugin {
@@ -92,6 +151,7 @@ export interface ComposedSubgraphPlugin {
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
   imageReference?: ImageReference;
+  costs?: Costs;
 }
 
 export interface ComposedSubgraphGRPC {
@@ -106,6 +166,7 @@ export interface ComposedSubgraphGRPC {
   configurationDataByTypeName?: Map<TypeName, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
+  costs?: Costs;
 }
 
 export const internString = (config: EngineConfiguration, str: string): InternedString => {
@@ -276,6 +337,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       // https://github.com/wundergraph/cosmo/blob/main/router/core/router.go#L342
       id: subgraph.id,
       childNodes,
+      costConfiguration: subgraph.costs ? costsToCostConfiguration(subgraph.costs) : undefined,
       customEvents,
       customGraphql,
       directives: [],

@@ -303,29 +303,6 @@ describe('@cost directive tests', () => {
       );
     });
 
-    test('that @cost from multiple subgraphs on the same entity field is deduplicated to first instance', () => {
-      const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphACostEntity, subgraphBCostEntity],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
-      expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-        normalizeString(
-          SCHEMA_QUERY_DEFINITION +
-            COST_DIRECTIVE +
-            `
-            type Entity {
-              id: ID!
-              name: String! @cost(weight: "5")
-            }
-
-            type Query {
-              entity: Entity!
-            }
-          `,
-        ),
-      );
-    });
-
     test('that @cost on fields is not included in the client schema', () => {
       const { federatedGraphClientSchema } = federateSubgraphsSuccess(
         [subgraphWithCostOnField],
@@ -457,6 +434,38 @@ describe('@cost directive tests', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInputObject, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors.length).toBeGreaterThan(0);
       expect(errors.some(e => e.message.includes('invalid location') || e.message.includes('INPUT_OBJECT'))).toBe(true);
+    });
+  });
+
+  describe('directive argument cost tests', () => {
+    test('that @cost on a custom directive argument is extracted into costs.directiveArgumentWeights', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnDirectiveArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.directiveArgumentWeights).toBeDefined();
+      expect(costs.directiveArgumentWeights!.get('myDirective.arg1')).toBe('5');
+    });
+
+    test('that @cost on multiple directive arguments is extracted correctly', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithCostOnMultipleDirectiveArguments,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(costs.directiveArgumentWeights).toBeDefined();
+      expect(costs.directiveArgumentWeights!.get('myDirective.arg1')).toBe('3');
+      expect(costs.directiveArgumentWeights!.get('myDirective.arg2')).toBe('7');
+    });
+
+    test('that @cost with invalid weight on a directive argument produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithInvalidCostOnDirectiveArgument,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('not a valid numeric string');
+    });
+
+    test('that costs without directive argument weights has undefined directiveArgumentWeights', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnField, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.directiveArgumentWeights).toBeUndefined();
     });
   });
 
@@ -748,6 +757,42 @@ const subgraphWithCostWhitespaceWeight: Subgraph = {
   definitions: parse(`
     type Query {
       field: String! @cost(weight: "   ")
+    }
+  `),
+};
+
+const subgraphWithCostOnDirectiveArgument: Subgraph = {
+  name: 'subgraph-cost-directive-arg',
+  url: '',
+  definitions: parse(`
+    directive @myDirective(arg1: String @cost(weight: "5")) on FIELD_DEFINITION
+
+    type Query {
+      field: String! @myDirective(arg1: "hello")
+    }
+  `),
+};
+
+const subgraphWithCostOnMultipleDirectiveArguments: Subgraph = {
+  name: 'subgraph-cost-directive-multi-args',
+  url: '',
+  definitions: parse(`
+    directive @myDirective(arg1: String @cost(weight: "3"), arg2: Int @cost(weight: "7")) on FIELD_DEFINITION
+
+    type Query {
+      field: String! @myDirective(arg1: "hello", arg2: 42)
+    }
+  `),
+};
+
+const subgraphWithInvalidCostOnDirectiveArgument: Subgraph = {
+  name: 'subgraph-cost-directive-arg-invalid',
+  url: '',
+  definitions: parse(`
+    directive @myDirective(arg1: String @cost(weight: "abc")) on FIELD_DEFINITION
+
+    type Query {
+      field: String! @myDirective(arg1: "hello")
     }
   `),
 };
