@@ -92,7 +92,7 @@ func Main() {
 
 	baseLogger := logging.New(!result.Config.JSONLog, result.Config.DevelopmentMode, result.Config.AccessLogs.AddStacktrace, logLevelAtomic).
 		With(
-			zap.String("service", "@wundergraph/router"),
+			zap.String("service", result.Config.Telemetry.ServiceName),
 			zap.String("service_version", core.Version),
 		)
 
