@@ -925,6 +925,8 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 			o.parsedOperation.ID = entry.id
 			o.parsedOperation.Request.Variables = entry.variables
+			// Restore VariablesHash from cache — without this, all cache-hit requests get
+			// VariablesHash=0, causing inbound singleflight key collisions across different variables.
 			o.parsedOperation.VariablesHash = entry.variablesHash
 
 			if entry.reparse {

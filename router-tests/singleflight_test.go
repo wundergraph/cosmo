@@ -895,9 +895,8 @@ func TestSingleFlight(t *testing.T) {
 				v, err := astjson.Parse(res.Body)
 				require.NoError(t, err)
 				emp := v.Get("data", "employee")
-				if emp != nil && emp.Type() == astjson.TypeObject {
-					require.Equal(t, id, emp.GetInt("id"))
-				}
+				require.NotNil(t, emp, "expected employee object in response for id=%d", id)
+				require.Equal(t, id, emp.GetInt("id"))
 			}
 
 			// Phase 2: Send concurrent requests with different variables (cache is now warm)
@@ -943,11 +942,10 @@ func TestSingleFlight(t *testing.T) {
 				v, err := astjson.Parse(r.body)
 				require.NoError(t, err)
 				emp := v.Get("data", "employee")
-				if emp != nil && emp.Type() == astjson.TypeObject {
-					actualID := emp.GetInt("id")
-					require.Equal(t, r.requested, actualID,
-						"response for variable id=%d returned employee id=%d (cross-contamination)", r.requested, actualID)
-				}
+				require.NotNil(t, emp, "expected employee object in response for id=%d", r.requested)
+				actualID := emp.GetInt("id")
+				require.Equal(t, r.requested, actualID,
+					"response for variable id=%d returned employee id=%d (cross-contamination)", r.requested, actualID)
 			}
 		})
 	})
@@ -1039,7 +1037,7 @@ func TestSingleFlight(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employee(id: 1) { id } }`,
 			})
-			require.NotEmpty(t, res.Response.Header.Get("Cache-Control"), "single request should have Cache-Control")
+			require.Equal(t, "max-age=120", res.Response.Header.Get("Cache-Control"), "single request should have Cache-Control")
 
 			var (
 				numOfOperations = int64(5)
@@ -1068,8 +1066,8 @@ func TestSingleFlight(t *testing.T) {
 			done.Wait()
 
 			for i, res := range responses {
-				cc := res.Response.Header.Get("Cache-Control")
-				require.NotEmpty(t, cc, "response %d missing Cache-Control header", i)
+				require.Equal(t, "max-age=120", res.Response.Header.Get("Cache-Control"),
+					"response %d has wrong Cache-Control header", i)
 			}
 		})
 	})

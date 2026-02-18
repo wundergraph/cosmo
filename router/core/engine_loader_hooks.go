@@ -145,8 +145,13 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		responseInfo = &resolve.ResponseInfo{}
 	}
 
-	// Apply response header propagation rules for singleflight followers.
+	// Apply response header propagation rules for subgraph singleflight followers.
 	// OnOriginResponse only fires during the leader's HTTP call; followers need rules applied here.
+	// Note: this also fires for the leader (ResponseHeaders is always set when an HTTP response exists),
+	// which means rules are applied twice for the leader. This is safe for Set (idempotent),
+	// FirstWrite/LastWrite (same values), and MostRestrictiveCacheControl (deterministic).
+	// Append rules could theoretically double values for leaders; if Append support is needed,
+	// a deduplication flag should be added to ResponseInfo.
 	if f.headerPropagation != nil && responseInfo.ResponseHeaders != nil {
 		f.headerPropagation.ApplyResponseHeaderRules(ctx, responseInfo.ResponseHeaders, ds.Name)
 	}
