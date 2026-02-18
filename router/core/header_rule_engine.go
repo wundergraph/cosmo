@@ -76,6 +76,10 @@ type responseHeaderPropagation struct {
 	m                    *sync.Mutex
 	previousCacheControl *cachedirective.Object
 	setCacheControl      bool
+	// originResponseApplied tracks subgraph names for which OnOriginResponse
+	// already applied response header rules (i.e. the leader's HTTP call).
+	// ApplyResponseHeaderRules skips these to avoid double-application.
+	originResponseApplied map[string]struct{}
 }
 
 func WithResponseHeaderPropagation(ctx *resolve.Context) *resolve.Context {
@@ -420,16 +424,23 @@ func hashHeaderStable(hdr http.Header) uint64 {
 	return d.Sum64()
 }
 
-// ApplyResponseHeaderRules applies response header rules using the given headers and subgraph name.
-// This is used by the engine loader hooks to apply response header rules for singleflight followers
+// ApplyResponseHeaderRules applies response header rules for singleflight followers
 // whose subgraph fetches were deduplicated (OnOriginResponse only fires for the leader's HTTP call).
+// If OnOriginResponse already applied rules for this subgraph (leader path), this is a no-op.
 func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string) {
 	propagation := getResponseHeaderPropagation(ctx)
 	if propagation == nil {
 		return
 	}
 
-	// Create a synthetic response to pass to applyResponseRule, which expects *http.Response
+	// Skip if OnOriginResponse already applied rules for this subgraph (leader path).
+	propagation.m.Lock()
+	_, alreadyApplied := propagation.originResponseApplied[subgraphName]
+	propagation.m.Unlock()
+	if alreadyApplied {
+		return
+	}
+
 	resp := &http.Response{
 		Header: headers,
 	}
@@ -470,6 +481,12 @@ func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestCon
 				h.applyResponseRule(propagation, resp, rule)
 			}
 		}
+		propagation.m.Lock()
+		if propagation.originResponseApplied == nil {
+			propagation.originResponseApplied = make(map[string]struct{})
+		}
+		propagation.originResponseApplied[subgraph.Name] = struct{}{}
+		propagation.m.Unlock()
 	}
 
 	return resp
