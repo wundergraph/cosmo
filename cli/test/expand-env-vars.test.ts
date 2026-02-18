@@ -39,15 +39,14 @@ describe('expandEnvVars', () => {
     expect(expandEnvVars('no variables here')).toBe('no variables here');
   });
 
-  test('does not expand bare $VAR without braces', () => {
+  test('expands bare $VAR without braces', () => {
     process.env.FOO = 'bar';
-    expect(expandEnvVars('$FOO')).toBe('$FOO');
+    expect(expandEnvVars('$FOO')).toBe('bar');
   });
 
-  test('does not expand nested ${FOO${BAR}}', () => {
-    process.env.BAR = 'baz';
-    // Matches ${FOO${BAR} (up to first }), looks up "FOO${BAR" which is undefined
-    expect(expandEnvVars('${FOO${BAR}}')).toBe('}');
+  test('supports default value syntax ${VAR:-default}', () => {
+    delete process.env.MISSING;
+    expect(expandEnvVars('${MISSING:-fallback}')).toBe('fallback');
   });
 
   test('handles variable in Authorization header context', () => {

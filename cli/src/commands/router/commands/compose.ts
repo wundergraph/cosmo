@@ -25,20 +25,21 @@ import {
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import Table from 'cli-table3';
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
+import { expand } from 'dotenv-expand';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
 const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
 
 /**
- * Expands environment variables in a string using ${VAR_NAME} syntax.
- * Only the curly-brace form is supported; bare $VAR references are not expanded.
- * Undefined variables are replaced with an empty string.
+ * Expands environment variables in a string using dotenv-expand.
+ * Supports ${VAR_NAME}, $VAR_NAME, and ${VAR:-default} syntax.
+ * Undefined variables without defaults are replaced with an empty string.
  */
 export function expandEnvVars(content: string): string {
-  return content.replace(/\${([^}]+)}/g, (_, varName) => {
-    return process.env[varName] ?? '';
-  });
+  const key = '__YAML_CONTENT__';
+  const result = expand({ parsed: { [key]: content }, processEnv: process.env as Record<string, string> });
+  return result.parsed?.[key] ?? content;
 }
 
 type ConfigSubgraph = StandardSubgraphConfig | SubgraphPluginConfig | GRPCSubgraphConfig;
