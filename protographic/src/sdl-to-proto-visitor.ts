@@ -1901,20 +1901,18 @@ Example:
         this.protoText.push(...this.formatComment(value.description, 1)); // Field comment, indent 1 level
       }
 
-      if (deprecationInfo.deprecated && (deprecationInfo.reason?.length ?? 0) > 0) {
+      if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
         this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
       }
 
       // Get value number from lock data
-      const lockData = this.lockManager.getLockData();
       let valueNumber = 0;
 
       if (lockData.enums[type.name] && lockData.enums[type.name].fields[value.name]) {
         valueNumber = lockData.enums[type.name].fields[value.name];
       } else {
-        // This should never happen since we just reconciled, but just in case
-        console.warn(`Missing enum value number for ${type.name}.${value.name}`);
-        continue;
+        // This should never happen since we just reconciled
+        throw new Error(`Missing enum value number for ${type.name}.${value.name}`);
       }
 
       const fieldOptions = [];
