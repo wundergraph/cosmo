@@ -1,0 +1,14 @@
+query FindEmployeesByPetsInlineFragment($hasPets: Boolean!) {
+    findEmployees(criteria: {hasPets: $hasPets}) {
+        id
+        details {
+            ... on Details {
+                forename
+                surname
+                pets {
+                    name
+                }
+            }
+        }
+    }
+}

@@ -1042,6 +1042,22 @@ type MCPServer struct {
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
 }
 
+type ConnectRPCConfiguration struct {
+	Enabled         bool                    `yaml:"enabled" envDefault:"false" env:"CONNECT_RPC_ENABLED"`
+	Server          ConnectRPCServer        `yaml:"server,omitempty" envPrefix:"CONNECT_RPC_SERVER_"`
+	Storage         ConnectRPCStorageConfig `yaml:"storage,omitempty"`
+	GraphQLEndpoint string                  `yaml:"graphql_endpoint,omitempty" env:"CONNECT_RPC_GRAPHQL_ENDPOINT"`
+}
+
+type ConnectRPCStorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"CONNECT_RPC_STORAGE_PROVIDER_ID"`
+}
+
+type ConnectRPCServer struct {
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5026" env:"LISTEN_ADDR"`
+	BaseURL    string `yaml:"base_url,omitempty" env:"BASE_URL"`
+}
+
 type PluginsConfiguration struct {
 	Enabled  bool                        `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	Path     string                      `yaml:"path" envDefault:"plugins" env:"PATH"`
@@ -1060,17 +1076,18 @@ type IntrospectionConfiguration struct {
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
-	InstanceID     string             `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
-	Graph          Graph              `yaml:"graph,omitempty"`
-	Telemetry      Telemetry          `yaml:"telemetry,omitempty"`
-	GraphqlMetrics GraphqlMetrics     `yaml:"graphql_metrics,omitempty"`
-	CORS           CORS               `yaml:"cors,omitempty"`
-	Cluster        Cluster            `yaml:"cluster,omitempty"`
-	Compliance     ComplianceConfig   `yaml:"compliance,omitempty"`
-	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
-	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
-	MCP            MCPConfiguration   `yaml:"mcp,omitempty"`
-	DemoMode       bool               `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
+	InstanceID     string                  `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
+	Graph          Graph                   `yaml:"graph,omitempty"`
+	Telemetry      Telemetry               `yaml:"telemetry,omitempty"`
+	GraphqlMetrics GraphqlMetrics          `yaml:"graphql_metrics,omitempty"`
+	CORS           CORS                    `yaml:"cors,omitempty"`
+	Cluster        Cluster                 `yaml:"cluster,omitempty"`
+	Compliance     ComplianceConfig        `yaml:"compliance,omitempty"`
+	TLS            TLSConfiguration        `yaml:"tls,omitempty"`
+	CacheControl   CacheControlPolicy      `yaml:"cache_control_policy"`
+	MCP            MCPConfiguration        `yaml:"mcp,omitempty"`
+	ConnectRPC     ConnectRPCConfiguration `yaml:"connect_rpc,omitempty"`
+	DemoMode       bool                    `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`

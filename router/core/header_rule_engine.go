@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
-	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -15,16 +14,16 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
-
 	"github.com/expr-lang/expr/vm"
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -32,55 +31,21 @@ import (
 )
 
 var (
-	_              EnginePostOriginHandler = (*HeaderPropagation)(nil)
-	ignoredHeaders                         = []string{
-		"Alt-Svc",
-		"Connection",
-		"Proxy-Connection", // non-standard but still sent by libcurl and rejected by e.g. google
-
-		// Hop-by-hop headers
-		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection
-		"Keep-Alive",
-		"Proxy-Authenticate",
-		"Proxy-Authorization",
-		"Te",      // canonicalized version of "TE"
-		"Trailer", // not Trailers per URL above; https://www.rfc-editor.org/errata_search.php?eid=4522
-		"Transfer-Encoding",
-		"Upgrade",
-
-		// Content Negotiation. We must never propagate the client headers to the upstream
-		// The router has to decide on its own what to send to the upstream
-		"Content-Type",
-		"Content-Encoding",
-		"Content-Length",
-		"Accept-Encoding",
-		"Accept-Charset",
-		"Accept",
-
-		// Web Socket negotiation headers. We must never propagate the client headers to the upstream.
-		"Sec-Websocket-Extensions",
-		"Sec-Websocket-Key",
-		"Sec-Websocket-Protocol",
-		"Sec-Websocket-Version",
-	}
-	ignoredHeaderPrefixes = []string{
-		// reserved by the gRPC protocol spec
-		"Grpc-",
-	}
-	cacheControlKey       = "Cache-Control"
-	expiresKey            = "Expires"
-	noCache               = "no-cache"
-	caseInsensitiveRegexp = "(?i)"
+	_                     EnginePostOriginHandler = (*HeaderPropagation)(nil)
+	cacheControlKey                               = "Cache-Control"
+	expiresKey                                    = "Expires"
+	noCache                                       = "no-cache"
+	caseInsensitiveRegexp                         = "(?i)"
 )
 
 // isIgnoredHeader reports whether a header should never be propagated to subgraphs.
 // It checks both the exact ignoredHeaders list and any prefix in ignoredHeaderPrefixes.
 func isIgnoredHeader(name string) bool {
-	if slices.Contains(ignoredHeaders, name) {
+	if _, ok := headers.SkippedHeaders[name]; ok {
 		return true
 	}
 	canonicalName := http.CanonicalHeaderKey(name)
-	for _, prefix := range ignoredHeaderPrefixes {
+	for _, prefix := range headers.IgnoredHeaderPrefixes {
 		if strings.HasPrefix(canonicalName, prefix) {
 			return true
 		}
@@ -439,30 +404,41 @@ func hashHeaderStable(hdr http.Header) uint64 {
 	return d.Sum64()
 }
 
-func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
-	// In the case of an error response, it is possible that the response is nil
-	if resp == nil {
-		return nil
+// ApplyResponseHeaderRules applies response header rules for a subgraph fetch.
+// Called from OnFinished for every fetch (both singleflight leaders and followers).
+func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string, statusCode int, request *http.Request) {
+	propagation := getResponseHeaderPropagation(ctx)
+	if propagation == nil {
+		return
 	}
 
-	propagation := getResponseHeaderPropagation(resp.Request.Context())
-	if propagation == nil {
-		return resp
+	resp := &http.Response{
+		StatusCode: statusCode,
+		Header:     headers,
+	}
+	if request != nil {
+		resp.Request = request
+	} else {
+		resp.Request = (&http.Request{}).WithContext(ctx)
 	}
 
 	for _, rule := range h.rules.All.Response {
 		h.applyResponseRule(propagation, resp, rule)
 	}
 
-	subgraph := ctx.ActiveSubgraph(resp.Request)
-	if subgraph != nil {
-		if subgraphRules, ok := h.rules.Subgraphs[subgraph.Name]; ok {
+	if subgraphName != "" {
+		if subgraphRules, ok := h.rules.Subgraphs[subgraphName]; ok {
 			for _, rule := range subgraphRules.Response {
 				h.applyResponseRule(propagation, resp, rule)
 			}
 		}
 	}
+}
 
+func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
+	// Response header rules are now applied in the engine loader hooks (OnFinished)
+	// via ApplyResponseHeaderRules, not here. This ensures both singleflight leaders
+	// and followers are handled uniformly. This method is kept for module compatibility.
 	return resp
 }
 
