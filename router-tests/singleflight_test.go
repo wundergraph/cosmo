@@ -950,7 +950,6 @@ func TestSingleFlight(t *testing.T) {
 		})
 	})
 	t.Run("response header set rule with singleflight followers", func(t *testing.T) {
-
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -974,32 +973,7 @@ func TestSingleFlight(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			var (
-				numOfOperations = int64(5)
-				ready, done     sync.WaitGroup
-			)
-			ready.Add(int(numOfOperations))
-			done.Add(int(numOfOperations))
-			trigger := make(chan struct{})
-			responses := make([]*testenv.TestResponse, numOfOperations)
-
-			for i := int64(0); i < numOfOperations; i++ {
-				go func(idx int64) {
-					ready.Done()
-					defer done.Done()
-					<-trigger
-					resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-						Query: `{ employee(id: 1) { id } }`,
-					})
-					require.NoError(t, err)
-					require.Equal(t, http.StatusOK, resp.Response.StatusCode)
-					responses[idx] = resp
-				}(i)
-			}
-			ready.Wait()
-			close(trigger)
-			done.Wait()
-
+			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employee(id: 1) { id } }`, 5)
 			for i, res := range responses {
 				require.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
 				require.Equal(t, "test-value", res.Response.Header.Get("X-Custom-Header"),
@@ -1008,7 +982,6 @@ func TestSingleFlight(t *testing.T) {
 		})
 	})
 	t.Run("cache control propagation with singleflight followers", func(t *testing.T) {
-
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			CacheControlPolicy: config.CacheControlPolicy{
@@ -1039,32 +1012,7 @@ func TestSingleFlight(t *testing.T) {
 			})
 			require.Equal(t, "max-age=120", res.Response.Header.Get("Cache-Control"), "single request should have Cache-Control")
 
-			var (
-				numOfOperations = int64(5)
-				ready, done     sync.WaitGroup
-			)
-			ready.Add(int(numOfOperations))
-			done.Add(int(numOfOperations))
-			trigger := make(chan struct{})
-			responses := make([]*testenv.TestResponse, numOfOperations)
-
-			for i := int64(0); i < numOfOperations; i++ {
-				go func(idx int64) {
-					ready.Done()
-					defer done.Done()
-					<-trigger
-					resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-						Query: `{ employee(id: 1) { id } }`,
-					})
-					require.NoError(t, err)
-					require.Equal(t, http.StatusOK, resp.Response.StatusCode)
-					responses[idx] = resp
-				}(i)
-			}
-			ready.Wait()
-			close(trigger)
-			done.Wait()
-
+			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employee(id: 1) { id } }`, 5)
 			for i, res := range responses {
 				require.Equal(t, "max-age=120", res.Response.Header.Get("Cache-Control"),
 					"response %d has wrong Cache-Control header", i)
@@ -1072,7 +1020,6 @@ func TestSingleFlight(t *testing.T) {
 		})
 	})
 	t.Run("multiple response set rules with singleflight followers", func(t *testing.T) {
-
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -1108,32 +1055,7 @@ func TestSingleFlight(t *testing.T) {
 			require.Equal(t, "value-a", res.Response.Header.Get("X-Header-A"), "single request should have X-Header-A")
 			require.Equal(t, "value-b", res.Response.Header.Get("X-Header-B"), "single request should have X-Header-B")
 
-			var (
-				numOfOperations = int64(5)
-				ready, done     sync.WaitGroup
-			)
-			ready.Add(int(numOfOperations))
-			done.Add(int(numOfOperations))
-			trigger := make(chan struct{})
-			responses := make([]*testenv.TestResponse, numOfOperations)
-
-			for i := int64(0); i < numOfOperations; i++ {
-				go func(idx int64) {
-					ready.Done()
-					defer done.Done()
-					<-trigger
-					resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-						Query: `{ employee(id: 1) { id } }`,
-					})
-					require.NoError(t, err)
-					require.Equal(t, http.StatusOK, resp.Response.StatusCode)
-					responses[idx] = resp
-				}(i)
-			}
-			ready.Wait()
-			close(trigger)
-			done.Wait()
-
+			responses := runConcurrentSingleflightRequests(t, xEnv, `{ employee(id: 1) { id } }`, 5)
 			for i, res := range responses {
 				require.Equal(t, "value-a", res.Response.Header.Get("X-Header-A"),
 					"response %d missing X-Header-A", i)
@@ -1142,4 +1064,30 @@ func TestSingleFlight(t *testing.T) {
 			}
 		})
 	})
+}
+
+// runConcurrentSingleflightRequests sends n identical GraphQL requests concurrently,
+// using a barrier to maximize overlap and trigger singleflight deduplication.
+func runConcurrentSingleflightRequests(t *testing.T, xEnv *testenv.Environment, query string, n int) []*testenv.TestResponse {
+	t.Helper()
+	var ready, done sync.WaitGroup
+	ready.Add(n)
+	done.Add(n)
+	trigger := make(chan struct{})
+	responses := make([]*testenv.TestResponse, n)
+	for i := 0; i < n; i++ {
+		go func(idx int) {
+			ready.Done()
+			defer done.Done()
+			<-trigger
+			resp, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{Query: query})
+			require.NoError(t, err)
+			require.Equal(t, http.StatusOK, resp.Response.StatusCode)
+			responses[idx] = resp
+		}(i)
+	}
+	ready.Wait()
+	close(trigger)
+	done.Wait()
+	return responses
 }
