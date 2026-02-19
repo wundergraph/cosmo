@@ -1105,6 +1105,7 @@ type Config struct {
 	QueryPlansEnabled             bool                        `yaml:"query_plans_enabled" envDefault:"true" env:"QUERY_PLANS_ENABLED"`
 	LogLevel                      zapcore.Level               `yaml:"log_level" envDefault:"info" env:"LOG_LEVEL"`
 	JSONLog                       bool                        `yaml:"json_log" envDefault:"true" env:"JSON_LOG"`
+	LogServiceName                string                      `yaml:"log_service_name" envDefault:"@wundergraph/router" env:"LOG_SERVICE_NAME"`
 	ShutdownDelay                 time.Duration               `yaml:"shutdown_delay" envDefault:"60s" env:"SHUTDOWN_DELAY"`
 	GracePeriod                   time.Duration               `yaml:"grace_period" envDefault:"30s" env:"GRACE_PERIOD"`
 	PollInterval                  time.Duration               `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
