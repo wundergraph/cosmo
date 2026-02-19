@@ -44,9 +44,31 @@ describe('expandEnvVars', () => {
     expect(expandEnvVars('$FOO')).toBe('bar');
   });
 
-  test('supports default value syntax ${VAR:-default}', () => {
+  test('supports default value syntax ${VAR:-default} when unset', () => {
     delete process.env.MISSING;
     expect(expandEnvVars('${MISSING:-fallback}')).toBe('fallback');
+  });
+
+  test('ignores default when variable is set', () => {
+    process.env.EXISTING = 'real';
+    expect(expandEnvVars('${EXISTING:-fallback}')).toBe('real');
+  });
+
+  test('uses default when variable is empty string', () => {
+    process.env.EMPTY = '';
+    expect(expandEnvVars('${EMPTY:-fallback}')).toBe('fallback');
+  });
+
+  test('supports alternate value syntax ${VAR:+alt}', () => {
+    process.env.PRESENT = 'something';
+    expect(expandEnvVars('${PRESENT:+override}')).toBe('override');
+    delete process.env.ABSENT;
+    expect(expandEnvVars('${ABSENT:+override}')).toBe('');
+  });
+
+  test('escaped \\$ is not expanded', () => {
+    process.env.FOO = 'bar';
+    expect(expandEnvVars('\\$FOO')).toBe('$FOO');
   });
 
   test('handles variable in Authorization header context', () => {

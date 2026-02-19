@@ -38,7 +38,7 @@ const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
  */
 export function expandEnvVars(content: string): string {
   const key = '__YAML_CONTENT__';
-  const result = expand({ parsed: { [key]: content }, processEnv: process.env as Record<string, string> });
+  const result = expand({ parsed: { [key]: content }, processEnv: { ...process.env } as Record<string, string> });
   return result.parsed?.[key] ?? content;
 }
 
