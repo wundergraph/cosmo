@@ -42,6 +42,10 @@
         },
         "CircuitBreaker": false,
         "Streams": false,
+        "ExportDebugLogging": {
+          "Enabled": false,
+          "ExcludeMetrics": null
+        },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null

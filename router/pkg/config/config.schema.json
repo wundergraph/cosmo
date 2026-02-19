@@ -1163,6 +1163,25 @@
                   "default": false,
                   "description": "Enable the collection of circuit breaker stats. The default value is false."
                 },
+                "export_debug_logging": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Debug logging of OTLP metric export operations. When enabled, logs the metric names, values, attributes, and temporality for each export cycle. Useful for troubleshooting discrepancies between the router and external collectors.",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable debug logging of OTLP metric exports."
+                    },
+                    "exclude_metrics": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "List of regex patterns for metric names to exclude from debug log output."
+                    }
+                  }
+                },
                 "engine_stats": {
                   "type": "object",
                   "additionalProperties": false,

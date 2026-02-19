@@ -2364,6 +2364,10 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			Exporters:           openTelemetryExporters,
 			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
 			Streams:             cfg.Metrics.OTLP.Streams,
+			DebugExport: rmetric.DebugExportConfig{
+				Enabled:        cfg.Metrics.OTLP.ExportDebugLogging.Enabled,
+				ExcludeMetrics: cfg.Metrics.OTLP.ExportDebugLogging.ExcludeMetrics,
+			},
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
 		},

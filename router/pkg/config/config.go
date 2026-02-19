@@ -141,6 +141,11 @@ type Metrics struct {
 	CardinalityLimit int               `yaml:"experiment_cardinality_limit" envDefault:"2000" env:"METRICS_EXPERIMENT_CARDINALITY_LIMIT"`
 }
 
+type ExportDebugLogging struct {
+	Enabled        bool       `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	ExcludeMetrics RegExArray `yaml:"exclude_metrics,omitempty" env:"EXCLUDE_METRICS"`
+}
+
 type MetricsOTLP struct {
 	Enabled             bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
 	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
@@ -149,6 +154,7 @@ type MetricsOTLP struct {
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
 	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
 	Streams             bool                  `yaml:"streams" envDefault:"false" env:"METRICS_OTLP_STREAM"`
+	ExportDebugLogging  ExportDebugLogging    `yaml:"export_debug_logging" envPrefix:"METRICS_OTLP_EXPORT_DEBUG_LOGGING_"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`

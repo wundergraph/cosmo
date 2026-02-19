@@ -281,6 +281,10 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 			return nil, err
 		}
 
+		if c.OpenTelemetry.DebugExport.Enabled {
+			exporter = newDebugExporter(exporter, log, c.OpenTelemetry.DebugExport.ExcludeMetrics)
+		}
+
 		opts = append(opts, sdkmetric.WithReader(
 			sdkmetric.NewPeriodicReader(exporter,
 				sdkmetric.WithTimeout(defaultExportTimeout),
