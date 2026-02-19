@@ -25,6 +25,7 @@ import {
   TypeDefinitionNode,
   TypeExtensionNode,
   TypeNode,
+  ValueNode,
   visit,
 } from 'graphql';
 import {
@@ -129,12 +130,12 @@ import {
   invalidSubgraphNameErrorMessage,
   invalidSubgraphNamesError,
   invalidSubscriptionFilterLocationError,
+  invalidUnionMemberTypeError,
   listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage,
   listSizeInvalidSlicingArgumentErrorMessage,
   listSizeSizedFieldNotFoundErrorMessage,
   listSizeSizedFieldNotListErrorMessage,
   listSizeSlicingArgumentNotIntErrorMessage,
-  invalidUnionMemberTypeError,
   multipleNamedTypeDefinitionError,
   noBaseScalarDefinitionError,
   noDefinedEnumValuesError,
@@ -232,9 +233,9 @@ import {
   isFieldData,
   isInputNodeKind,
   isInputObjectDefinitionData,
-  isParentDataCompositeOutputType,
   isNodeExternalOrShareable,
   isOutputNodeKind,
+  isParentDataCompositeOutputType,
   isTypeNodeListType,
   isTypeRequired,
   isTypeValidImplementation,
@@ -272,8 +273,8 @@ import {
   CHANNELS,
   CONFIGURE_DESCRIPTION,
   CONSUMER_INACTIVE_THRESHOLD,
-  COST,
   CONSUMER_NAME,
+  COST,
   DEFAULT_EDFS_PROVIDER_ID,
   DESCRIPTION_OVERRIDE,
   EDFS_KAFKA_PUBLISH,
@@ -302,9 +303,9 @@ import {
   INTERFACE_OBJECT,
   KEY,
   LEVELS,
-  LIST_SIZE,
   LINK_IMPORT,
   LINK_PURPOSE,
+  LIST_SIZE,
   MUTATION,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
@@ -2455,11 +2456,19 @@ export class NormalizationFactory {
         listSizeConfig.requireOneSlicingArgument = argumentNode.value.value;
       }
 
-      if (argumentName === SLICING_ARGUMENTS && argumentNode.value.kind === Kind.LIST) {
+      if (argumentName === SLICING_ARGUMENTS) {
+        let stringValues: readonly ValueNode[];
+        if (argumentNode.value.kind === Kind.LIST) {
+          stringValues = (argumentNode.value as ListValueNode).values;
+        } else if (argumentNode.value.kind === Kind.STRING) {
+          stringValues = [argumentNode.value];
+        } else {
+          continue;
+        }
         if (!listSizeConfig.slicingArguments) {
           listSizeConfig.slicingArguments = [];
         }
-        for (const valueNode of (argumentNode.value as ListValueNode).values) {
+        for (const valueNode of stringValues) {
           if (valueNode.kind !== Kind.STRING) {
             continue;
           }
@@ -2485,7 +2494,15 @@ export class NormalizationFactory {
         }
       }
 
-      if (argumentName === SIZED_FIELDS && argumentNode.value.kind === Kind.LIST) {
+      if (argumentName === SIZED_FIELDS) {
+        let stringValues: readonly ValueNode[];
+        if (argumentNode.value.kind === Kind.LIST) {
+          stringValues = (argumentNode.value as ListValueNode).values;
+        } else if (argumentNode.value.kind === Kind.STRING) {
+          stringValues = [argumentNode.value];
+        } else {
+          continue;
+        }
         hasSizedFields = true;
         if (!listSizeConfig.sizedFields) {
           listSizeConfig.sizedFields = [];
@@ -2495,7 +2512,7 @@ export class NormalizationFactory {
         if (!returnTypeData || !isParentDataCompositeOutputType(returnTypeData)) {
           continue;
         }
-        for (const valueNode of (argumentNode.value as ListValueNode).values) {
+        for (const valueNode of stringValues) {
           if (valueNode.kind !== Kind.STRING) {
             continue;
           }

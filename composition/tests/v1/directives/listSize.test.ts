@@ -396,7 +396,19 @@ describe('@listSize directive tests', () => {
 
     test('that @listSize with single string slicingArguments succeeds due to list coercion', () => {
       // GraphQL allows list coercion: "first" is coerced to ["first"]
-      normalizeSubgraphSuccess(subgraphWithNonListSlicingArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { costs } = normalizeSubgraphSuccess(subgraphWithNonListSlicingArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const ls = costs.listSizes.get('Query.users');
+      expect(ls).toBeDefined();
+      expect(ls!.requireOneSlicingArgument).toBeUndefined();
+      expect(ls!.slicingArguments).toEqual(['first']);
+    });
+
+    test('that @listSize with single string sizedFields succeeds due to list coercion', () => {
+      // GraphQL allows list coercion: "edges" is coerced to ["edges"]
+      const { costs } = normalizeSubgraphSuccess(subgraphWithNonListSizedFields, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const ls = costs.listSizes.get('Query.usersConnection');
+      expect(ls).toBeDefined();
+      expect(ls!.sizedFields).toEqual(['edges']);
     });
 
     test('that @listSize with null in slicingArguments array produces an error', () => {
@@ -650,6 +662,19 @@ const subgraphWithNonListSlicingArguments: Subgraph = {
     type Query {
       users(first: Int): [User!]! @listSize(slicingArguments: "first")
     }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithNonListSizedFields: Subgraph = {
+  name: 'subgraph-listsize-nonlist-sizedfields',
+  url: '',
+  definitions: parse(`
+    type Query {
+      usersConnection(first: Int): Connection! @listSize(slicingArguments: ["first"], sizedFields: "edges")
+    }
+    type Connection { edges: [Edge!]! }
+    type Edge { node: User! }
     type User { id: ID! }
   `),
 };
