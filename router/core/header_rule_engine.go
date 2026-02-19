@@ -494,7 +494,15 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmAppend:
 		propagation.m.Lock()
-		propagation.header[key] = append(propagation.header[key], values...)
+		// Set-Cookie cannot be comma-combined per RFC 6265 — commas appear
+		// inside cookie values (e.g. Expires dates), so each cookie must
+		// remain a separate header line.
+		if key == "Set-Cookie" {
+			propagation.header[key] = append(propagation.header[key], values...)
+		} else {
+			all := append(propagation.header[key], values...)
+			propagation.header.Set(key, strings.Join(all, ","))
+		}
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl:
 		h.applyResponseRuleMostRestrictiveCacheControl(res, propagation, rule)
