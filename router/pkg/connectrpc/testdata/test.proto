@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package test;
+
+// Mood represents an employee's mood
+enum Mood {
+  MOOD_UNSPECIFIED = 0;
+  MOOD_HAPPY = 1;
+  MOOD_SAD = 2;
+  MOOD_NEUTRAL = 3;
+}
+
+// Status represents an employee's status
+enum Status {
+  STATUS_UNSPECIFIED = 0;
+  STATUS_ACTIVE = 1;
+  STATUS_INACTIVE = 2;
+}
+
+// GetEmployeeRequest is the request message for GetEmployee
+message GetEmployeeRequest {
+  string name = 1;
+  Mood mood = 2;
+  Status status = 3;
+  string employee_id = 4;
+}
+
+// GetEmployeeResponse is the response message for GetEmployee
+message GetEmployeeResponse {
+  string name = 1;
+  Mood mood = 2;
+}
+
+// EmployeeService provides employee operations
+service EmployeeService {
+  rpc GetEmployee(GetEmployeeRequest) returns (GetEmployeeResponse);
+}

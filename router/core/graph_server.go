@@ -1422,6 +1422,7 @@ func (s *graphServer) buildGraphMux(
 		telemetryAttExpressions,
 		metricAttExpressions,
 		exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
+		s.headerPropagation,
 	)
 
 	handlerOpts := HandlerOptions{

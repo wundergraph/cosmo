@@ -1,0 +1,12 @@
+query GetEmployeesWithMood {
+  employees {
+    id
+    currentMood
+    details {
+      pets {
+        gender
+        name
+      }
+    }
+  }
+}
