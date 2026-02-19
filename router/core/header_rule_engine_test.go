@@ -13,8 +13,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// --- Part 2: createMostRestrictivePolicy ---
-
 func TestCreateMostRestrictivePolicy(t *testing.T) {
 	t.Parallel()
 
@@ -82,20 +80,6 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 			},
 			expectedHeader: "no-cache, private",
 		},
-		{
-			name: "expires header - earlier wins",
-			policies: []*cachedirective.Object{
-				{
-					RespDirectives:    &cachedirective.ResponseCacheDirectives{},
-					RespExpiresHeader: time.Now().Add(10 * time.Minute),
-				},
-				{
-					RespDirectives:    &cachedirective.ResponseCacheDirectives{},
-					RespExpiresHeader: time.Now().Add(5 * time.Minute),
-				},
-			},
-			expectedHeader: "",
-		},
 	}
 
 	for _, tt := range tests {
@@ -104,18 +88,28 @@ func TestCreateMostRestrictivePolicy(t *testing.T) {
 			result, header := createMostRestrictivePolicy(tt.policies)
 			assert.Equal(t, tt.expectedHeader, header)
 			assert.NotNil(t, result)
-
-			// For expires test, verify the earlier time was selected
-			if tt.name == "expires header - earlier wins" {
-				assert.False(t, result.RespExpiresHeader.IsZero())
-				// The earlier one (5 min) should have won
-				assert.True(t, result.RespExpiresHeader.Before(time.Now().Add(6*time.Minute)))
-			}
 		})
 	}
-}
 
-// --- Part 3: AddCacheControlPolicyToRules ---
+	t.Run("expires header - earlier wins", func(t *testing.T) {
+		t.Parallel()
+		policies := []*cachedirective.Object{
+			{
+				RespDirectives:    &cachedirective.ResponseCacheDirectives{},
+				RespExpiresHeader: time.Now().Add(10 * time.Minute),
+			},
+			{
+				RespDirectives:    &cachedirective.ResponseCacheDirectives{},
+				RespExpiresHeader: time.Now().Add(5 * time.Minute),
+			},
+		}
+		result, header := createMostRestrictivePolicy(policies)
+		assert.Equal(t, "", header)
+		assert.NotNil(t, result)
+		assert.False(t, result.RespExpiresHeader.IsZero())
+		assert.True(t, result.RespExpiresHeader.Before(time.Now().Add(6*time.Minute)))
+	})
+}
 
 func TestAddCacheControlPolicyToRules(t *testing.T) {
 	t.Parallel()
@@ -160,7 +154,7 @@ func TestAddCacheControlPolicyToRules(t *testing.T) {
 		assert.Equal(t, config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, result.All.Response[1].Algorithm)
 	})
 
-	t.Run("subgraph-specific cache rules", func(t *testing.T) {
+	t.Run("subgraph-specific cache creates per-subgraph response rule", func(t *testing.T) {
 		t.Parallel()
 		result := AddCacheControlPolicyToRules(nil, config.CacheControlPolicy{
 			Subgraphs: []config.SubgraphCacheControlRule{
@@ -196,8 +190,6 @@ func TestAddCacheControlPolicyToRules(t *testing.T) {
 		assert.Equal(t, config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl, result.Subgraphs["sg1"].Response[1].Algorithm)
 	})
 }
-
-// --- Part 4: applyResponseRuleKeyValue ---
 
 func TestApplyResponseRuleKeyValue(t *testing.T) {
 	t.Parallel()
@@ -265,8 +257,6 @@ func TestApplyResponseRuleKeyValue(t *testing.T) {
 		assert.Equal(t, []string{"a=1; Path=/", "b=2; Path=/"}, prop.header.Values("Set-Cookie"))
 	})
 }
-
-// --- Part 5: PropagatedHeaders ---
 
 func TestPropagatedHeaders(t *testing.T) {
 	t.Parallel()
@@ -346,8 +336,6 @@ func TestPropagatedHeaders(t *testing.T) {
 	})
 }
 
-// --- Part 6: NewHeaderPropagation + accessor guards ---
-
 func TestNewHeaderPropagation(t *testing.T) {
 	t.Parallel()
 
@@ -388,10 +376,6 @@ func TestNewHeaderPropagation(t *testing.T) {
 		})
 		require.Error(t, err)
 	})
-}
-
-func TestHasRulesNilReceiver(t *testing.T) {
-	t.Parallel()
 
 	t.Run("HasRequestRules on nil receiver returns false", func(t *testing.T) {
 		t.Parallel()

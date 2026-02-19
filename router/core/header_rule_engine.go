@@ -500,13 +500,8 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 		if key == "Set-Cookie" {
 			propagation.header[key] = append(propagation.header[key], values...)
 		} else {
-			existing := propagation.header.Get(key)
-			newVal := strings.Join(values, ",")
-			if existing != "" {
-				propagation.header.Set(key, existing+","+newVal)
-			} else {
-				propagation.header.Set(key, newVal)
-			}
+			all := append(propagation.header[key], values...)
+			propagation.header.Set(key, strings.Join(all, ","))
 		}
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl:

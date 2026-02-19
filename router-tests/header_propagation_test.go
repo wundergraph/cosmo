@@ -596,7 +596,7 @@ func TestHeaderPropagation(t *testing.T) {
 					Query: queryEmployeeWithHobby,
 				})
 				values := res.Response.Header.Values(customHeader)
-				require.Equal(t, 1, len(values),
+				require.Len(t, values, 1,
 					"append algorithm should produce a single header with comma-separated values, got %d entries: %v", len(values), values)
 				require.Equal(t, "employee-value,hobby-value", values[0])
 			})
@@ -612,7 +612,7 @@ func TestHeaderPropagation(t *testing.T) {
 					Query: queryEmployeeWithHobby,
 				})
 				values := res.Response.Header.Values(customHeader)
-				require.Equal(t, 1, len(values),
+				require.Len(t, values, 1,
 					"append algorithm should produce a single header with comma-separated values, got %d entries: %v", len(values), values)
 				require.Equal(t, "employee-value,hobby-value", values[0])
 			})
@@ -628,7 +628,7 @@ func TestHeaderPropagation(t *testing.T) {
 					Query: queryEmployeeWithHobby,
 				})
 				values := res.Response.Header.Values(customHeader)
-				require.Equal(t, 1, len(values),
+				require.Len(t, values, 1,
 					"append algorithm should produce a single header with comma-separated values, got %d entries: %v", len(values), values)
 				require.Equal(t, "employee-value,employee-value-2,hobby-value,hobby-value-2", values[0])
 			})
@@ -654,7 +654,7 @@ func TestHeaderPropagation(t *testing.T) {
 					Query: queryEmployeeWithHobby,
 				})
 				values := res.Response.Header.Values(customHeader)
-				require.Equal(t, 1, len(values),
+				require.Len(t, values, 1,
 					"append algorithm should produce a single header with comma-separated values, got %d entries: %v", len(values), values)
 				require.Equal(t, "employee-value,default-val", values[0])
 			})
@@ -700,7 +700,7 @@ func TestHeaderPropagation(t *testing.T) {
 				})
 				values := res.Response.Header.Values("Set-Cookie")
 				// Set-Cookie must NOT be comma-joined (RFC 6265) — each cookie stays as a separate header
-				require.Equal(t, 2, len(values),
+				require.Len(t, values, 2,
 					"Set-Cookie should produce multiple separate headers, got %d entries: %v", len(values), values)
 				require.Contains(t, values, "session=abc; Path=/")
 				require.Contains(t, values, "lang=en; Path=/")
@@ -729,7 +729,7 @@ func TestHeaderPropagation(t *testing.T) {
 					Query: queryEmployeeWithHobby,
 				})
 				values := res.Response.Header.Values(customHeader)
-				require.Equal(t, 1, len(values),
+				require.Len(t, values, 1,
 					"append algorithm should produce a single header with comma-separated values, got %d entries: %v", len(values), values)
 				require.Equal(t, "employee-value,hobby-value", values[0])
 			})
@@ -752,6 +752,9 @@ func TestHeaderPropagation(t *testing.T) {
 			// Hobbies does NOT set the header
 		}
 
+		// When a subgraph does not return the header and a default is configured,
+		// the default is treated as if the subgraph returned that value. This means
+		// it counts as a "write" for last_write/first_write semantics.
 		t.Run("last write with default uses default from non-responding subgraph", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -779,6 +782,23 @@ func TestHeaderPropagation(t *testing.T) {
 				ch := res.Response.Header.Get(customHeader)
 				// Employees responds first with its actual value
 				require.Equal(t, employeeVal, ch)
+			})
+		})
+
+		t.Run("append with default from both subgraphs produces duplicated default", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmAppend, customHeader, "default-val"),
+				// Neither subgraph sets the header — both trigger the default
+				Subgraphs: testenv.SubgraphsConfig{},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				values := res.Response.Header.Values(customHeader)
+				require.Len(t, values, 1)
+				// Each subgraph applies the default, so it appears twice
+				require.Equal(t, "default-val,default-val", values[0])
 			})
 		})
 	})
