@@ -494,7 +494,13 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmAppend:
 		propagation.m.Lock()
-		propagation.header[key] = append(propagation.header[key], values...)
+		existing := propagation.header.Get(key)
+		newVal := strings.Join(values, ",")
+		if existing != "" {
+			propagation.header.Set(key, existing+","+newVal)
+		} else {
+			propagation.header.Set(key, newVal)
+		}
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl:
 		h.applyResponseRuleMostRestrictiveCacheControl(res, propagation, rule)
