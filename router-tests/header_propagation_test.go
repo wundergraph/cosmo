@@ -660,6 +660,53 @@ func TestHeaderPropagation(t *testing.T) {
 			})
 		})
 
+		t.Run("append with Set-Cookie produces multiple headers", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "Set-Cookie",
+									Algorithm: config.ResponseHeaderRuleAlgorithmAppend,
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Add("Set-Cookie", "session=abc; Path=/")
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+					Hobbies: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Add("Set-Cookie", "lang=en; Path=/")
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				values := res.Response.Header.Values("Set-Cookie")
+				// Set-Cookie must NOT be comma-joined (RFC 6265) — each cookie stays as a separate header
+				require.Equal(t, 2, len(values),
+					"Set-Cookie should produce multiple separate headers, got %d entries: %v", len(values), values)
+				require.Contains(t, values, "session=abc; Path=/")
+				require.Contains(t, values, "lang=en; Path=/")
+			})
+		})
+
 		t.Run("append with regex matching produces single comma-separated header", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{

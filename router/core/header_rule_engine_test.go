@@ -254,6 +254,16 @@ func TestApplyResponseRuleKeyValue(t *testing.T) {
 		hp.applyResponseRuleKeyValue(nil, prop, rule, "X-Test", []string{"only"})
 		assert.Equal(t, []string{"only"}, prop.header.Values("X-Test"))
 	})
+
+	t.Run("append with Set-Cookie preserves multiple header lines", func(t *testing.T) {
+		t.Parallel()
+		prop := newPropagation()
+		rule := &config.ResponseHeaderRule{Algorithm: config.ResponseHeaderRuleAlgorithmAppend}
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "Set-Cookie", []string{"a=1; Path=/"})
+		hp.applyResponseRuleKeyValue(nil, prop, rule, "Set-Cookie", []string{"b=2; Path=/"})
+		// Set-Cookie must NOT be comma-joined (RFC 6265)
+		assert.Equal(t, []string{"a=1; Path=/", "b=2; Path=/"}, prop.header.Values("Set-Cookie"))
+	})
 }
 
 // --- Part 5: PropagatedHeaders ---
