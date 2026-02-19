@@ -478,7 +478,7 @@ enum UserRole {
 }
 ```
 
-If a GraphQL enum explicitly declares an `UNSPECIFIED` value, it is deduplicated into the auto-generated zero-position entry rather than producing a duplicate:
+If a GraphQL enum explicitly declares an `UNSPECIFIED` value, it is deduplicated into the auto-generated zero-position entry rather than producing a duplicate, regardless of order:
 
 ```graphql
 enum State {
