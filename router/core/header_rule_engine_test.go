@@ -377,15 +377,10 @@ func TestNewHeaderPropagation(t *testing.T) {
 		require.Error(t, err)
 	})
 
-	t.Run("HasRequestRules on nil receiver returns false", func(t *testing.T) {
+	t.Run("nil receiver returns false for Has*Rules", func(t *testing.T) {
 		t.Parallel()
 		var hp *HeaderPropagation
 		assert.False(t, hp.HasRequestRules())
-	})
-
-	t.Run("HasResponseRules on nil receiver returns false", func(t *testing.T) {
-		t.Parallel()
-		var hp *HeaderPropagation
 		assert.False(t, hp.HasResponseRules())
 	})
 }

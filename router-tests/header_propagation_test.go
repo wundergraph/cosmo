@@ -700,10 +700,7 @@ func TestHeaderPropagation(t *testing.T) {
 				})
 				values := res.Response.Header.Values("Set-Cookie")
 				// Set-Cookie must NOT be comma-joined (RFC 6265) — each cookie stays as a separate header
-				require.Len(t, values, 2,
-					"Set-Cookie should produce multiple separate headers, got %d entries: %v", len(values), values)
-				require.Contains(t, values, "session=abc; Path=/")
-				require.Contains(t, values, "lang=en; Path=/")
+				require.ElementsMatch(t, []string{"session=abc; Path=/", "lang=en; Path=/"}, values)
 			})
 		})
 
