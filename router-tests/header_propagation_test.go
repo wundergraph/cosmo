@@ -583,6 +583,221 @@ func TestHeaderPropagation(t *testing.T) {
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
+
+		// Tests that verify the append algorithm produces a SINGLE header with
+		// comma-separated values, not multiple separate headers (issue #2531).
+		t.Run("global append produces single comma-separated header", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmAppend, customHeader, ""),
+				Subgraphs:     subgraphsPropagateCustomHeader,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				values := res.Response.Header.Values(customHeader)
+				require.Len(t, values, 1,
+					"append algorithm should produce a single header with comma-separated values, got %d entries: %v", len(values), values)
+				require.Equal(t, "employee-value,hobby-value", values[0])
+			})
+		})
+
+		t.Run("local append produces single comma-separated header", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: local(config.ResponseHeaderRuleAlgorithmAppend, customHeader, "", ""),
+				Subgraphs:     subgraphsPropagateCustomHeader,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				values := res.Response.Header.Values(customHeader)
+				require.Len(t, values, 1,
+					"append algorithm should produce a single header with comma-separated values, got %d entries: %v", len(values), values)
+				require.Equal(t, "employee-value,hobby-value", values[0])
+			})
+		})
+
+		t.Run("repeated header names append produces single comma-separated header", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmAppend, customHeader, ""),
+				Subgraphs:     subgraphsPropagateRepeatedCustomHeader,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				values := res.Response.Header.Values(customHeader)
+				require.Len(t, values, 1,
+					"append algorithm should produce a single header with comma-separated values, got %d entries: %v", len(values), values)
+				require.Equal(t, "employee-value,employee-value-2,hobby-value,hobby-value-2", values[0])
+			})
+		})
+
+		t.Run("append with default value produces single header", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmAppend, customHeader, "default-val"),
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header()[customHeader] = []string{employeeVal}
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+					// Hobbies does NOT set the header — the default should be used
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				values := res.Response.Header.Values(customHeader)
+				require.Len(t, values, 1,
+					"append algorithm should produce a single header with comma-separated values, got %d entries: %v", len(values), values)
+				require.Equal(t, "employee-value,default-val", values[0])
+			})
+		})
+
+		t.Run("append with Set-Cookie produces multiple headers", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Named:     "Set-Cookie",
+									Algorithm: config.ResponseHeaderRuleAlgorithmAppend,
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Add("Set-Cookie", "session=abc; Path=/")
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+					Hobbies: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.Header().Add("Set-Cookie", "lang=en; Path=/")
+								handler.ServeHTTP(w, r)
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				values := res.Response.Header.Values("Set-Cookie")
+				// Set-Cookie must NOT be comma-joined (RFC 6265) — each cookie stays as a separate header
+				require.ElementsMatch(t, []string{"session=abc; Path=/", "lang=en; Path=/"}, values)
+			})
+		})
+
+		t.Run("append with regex matching produces single comma-separated header", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						All: &config.GlobalHeaderRule{
+							Response: []*config.ResponseHeaderRule{
+								{
+									Operation: config.HeaderRuleOperationPropagate,
+									Matching:  "^X-Custom-Header$",
+									Algorithm: config.ResponseHeaderRuleAlgorithmAppend,
+								},
+							},
+						},
+					}),
+				},
+				Subgraphs: subgraphsPropagateCustomHeader,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				values := res.Response.Header.Values(customHeader)
+				require.Len(t, values, 1,
+					"append algorithm should produce a single header with comma-separated values, got %d entries: %v", len(values), values)
+				require.Equal(t, "employee-value,hobby-value", values[0])
+			})
+		})
+	})
+
+	// Tests for default value fallback when a subgraph does not return the header
+	t.Run("DefaultValue", func(t *testing.T) {
+		t.Parallel()
+
+		subgraphsOnlyEmployeeSetsHeader := testenv.SubgraphsConfig{
+			Employees: testenv.SubgraphConfig{
+				Middleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.Header()[customHeader] = []string{employeeVal}
+						handler.ServeHTTP(w, r)
+					})
+				},
+			},
+			// Hobbies does NOT set the header
+		}
+
+		// When a subgraph does not return the header and a default is configured,
+		// the default is treated as if the subgraph returned that value. This means
+		// it counts as a "write" for last_write/first_write semantics.
+		t.Run("last write with default uses default from non-responding subgraph", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmLastWrite, customHeader, "default-val"),
+				Subgraphs:     subgraphsOnlyEmployeeSetsHeader,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				ch := res.Response.Header.Get(customHeader)
+				// Hobbies responds last and uses the default value
+				require.Equal(t, "default-val", ch)
+			})
+		})
+
+		t.Run("first write with default keeps first value", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmFirstWrite, customHeader, "default-val"),
+				Subgraphs:     subgraphsOnlyEmployeeSetsHeader,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				ch := res.Response.Header.Get(customHeader)
+				// Employees responds first with its actual value
+				require.Equal(t, employeeVal, ch)
+			})
+		})
+
+		t.Run("append with default from both subgraphs produces duplicated default", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				RouterOptions: global(config.ResponseHeaderRuleAlgorithmAppend, customHeader, "default-val"),
+				// Neither subgraph sets the header — both trigger the default
+				Subgraphs: testenv.SubgraphsConfig{},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				values := res.Response.Header.Values(customHeader)
+				require.Len(t, values, 1)
+				// Each subgraph applies the default, so it appears twice
+				require.Equal(t, "default-val,default-val", values[0])
+			})
+		})
 	})
 
 	t.Run("Cache Control Propagation", func(t *testing.T) {
