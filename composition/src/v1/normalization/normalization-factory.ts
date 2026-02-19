@@ -2373,7 +2373,7 @@ export class NormalizationFactory {
   handleCostDirective({ data, directiveCoords, directiveNode, errorMessages }: HandleCostDirectiveParams) {
     const weightArg = directiveNode.arguments?.find((arg) => arg.name.value === WEIGHT);
     if (!weightArg || weightArg.value.kind !== Kind.INT) {
-      return;
+      return; // type validation handled upstream
     }
     const weightValue = parseInt((weightArg.value as IntValueNode).value, 10);
     switch (data.kind) {
@@ -2448,10 +2448,10 @@ export class NormalizationFactory {
     for (const argumentNode of args) {
       const argumentName = argumentNode.name.value;
 
+      // type validation handled upstream
       if (argumentName === ASSUMED_SIZE && argumentNode.value.kind === Kind.INT) {
         listSizeConfig.assumedSize = parseInt((argumentNode.value as IntValueNode).value, 10);
       }
-
       if (argumentName === REQUIRE_ONE_SLICING_ARGUMENT && argumentNode.value.kind === Kind.BOOLEAN) {
         listSizeConfig.requireOneSlicingArgument = argumentNode.value.value;
       }
