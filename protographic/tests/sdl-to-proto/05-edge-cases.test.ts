@@ -660,4 +660,105 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
       }"
     `);
   });
+
+  test('should not duplicate UNSPECIFIED when enum explicitly declares it', () => {
+    const sdl = `
+      enum State {
+        UNSPECIFIED
+        ACTIVE
+        INACTIVE
+      }
+
+      type Query {
+        state: State
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+    expectValidProto(protoText);
+
+    expect(protoText).toContain('STATE_UNSPECIFIED = 0;');
+    expect(protoText).toContain('STATE_ACTIVE = 1;');
+    expect(protoText).toContain('STATE_INACTIVE = 2;');
+    expect(protoText.match(/STATE_UNSPECIFIED/g)).toHaveLength(1);
+  });
+
+  test('should handle enum with UNSPECIFIED at non-first position', () => {
+    const sdl = `
+      enum Priority {
+        LOW
+        UNSPECIFIED
+        HIGH
+      }
+
+      type Query {
+        priority: Priority
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+    expectValidProto(protoText);
+
+    expect(protoText).toContain('PRIORITY_UNSPECIFIED = 0;');
+    expect(protoText).toContain('PRIORITY_LOW = 1;');
+    expect(protoText).toContain('PRIORITY_HIGH = 2;');
+    expect(protoText.match(/PRIORITY_UNSPECIFIED/g)).toHaveLength(1);
+  });
+
+  test('should handle enum with only UNSPECIFIED value', () => {
+    const sdl = `
+      enum OnlyUnspecified {
+        UNSPECIFIED
+      }
+
+      type Query {
+        value: OnlyUnspecified
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+    expectValidProto(protoText);
+
+    expect(protoText).toContain('ONLY_UNSPECIFIED_UNSPECIFIED = 0;');
+    expect(protoText.match(/ONLY_UNSPECIFIED_UNSPECIFIED/g)).toHaveLength(1);
+  });
+
+  test('should handle enum with explicit UNSPECIFIED across schema evolution with lock data', () => {
+    const sdl1 = `
+      enum Status {
+        UNSPECIFIED
+        ACTIVE
+      }
+
+      type Query {
+        status: Status
+      }
+    `;
+
+    const result1 = compileGraphQLToProto(sdl1);
+    expectValidProto(result1.proto);
+    expect(result1.proto).toContain('STATUS_UNSPECIFIED = 0;');
+    expect(result1.proto).toContain('STATUS_ACTIVE = 1;');
+
+    // Add a new value with existing lock data
+    const sdl2 = `
+      enum Status {
+        UNSPECIFIED
+        ACTIVE
+        INACTIVE
+      }
+
+      type Query {
+        status: Status
+      }
+    `;
+
+    const result2 = compileGraphQLToProto(sdl2, { lockData: result1.lockData! });
+    expectValidProto(result2.proto);
+
+    expect(result2.proto).toContain('STATUS_UNSPECIFIED = 0;');
+    expect(result2.proto).toContain('STATUS_ACTIVE = 1;');
+    expect(result2.proto).toContain('STATUS_INACTIVE = 2;');
+    expect(result2.proto.match(/STATUS_UNSPECIFIED/g)).toHaveLength(1);
+  });
 });

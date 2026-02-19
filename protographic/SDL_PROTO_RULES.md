@@ -478,6 +478,26 @@ enum UserRole {
 }
 ```
 
+If a GraphQL enum explicitly declares an `UNSPECIFIED` value, it is deduplicated into the auto-generated zero-position entry rather than producing a duplicate, regardless of order:
+
+```graphql
+enum State {
+  UNSPECIFIED
+  ACTIVE
+  INACTIVE
+}
+```
+
+Maps to:
+
+```protobuf
+enum State {
+  STATE_UNSPECIFIED = 0;
+  STATE_ACTIVE = 1;
+  STATE_INACTIVE = 2;
+}
+```
+
 ## List Types
 
 Protographic handles GraphQL list nullability by creating wrapper messages when needed, since Protocol Buffers doesn't natively support nullable lists or nested list structures.
