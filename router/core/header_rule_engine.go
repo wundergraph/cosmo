@@ -48,7 +48,7 @@ var ignoredHeaderPrefixes = []string{
 func isIgnoredHeader(name string) bool {
 	canonicalName := http.CanonicalHeaderKey(name)
 
-	if _, ok := headers.SkippedHeaders[name]; ok {
+	if _, ok := headers.SkippedHeaders[canonicalName]; ok {
 		return true
 	}
 	for _, prefix := range ignoredHeaderPrefixes {
