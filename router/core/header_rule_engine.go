@@ -31,12 +31,33 @@ import (
 )
 
 var (
-	_ EnginePostOriginHandler = (*HeaderPropagation)(nil)
-	cacheControlKey       = "Cache-Control"
-	expiresKey            = "Expires"
-	noCache               = "no-cache"
-	caseInsensitiveRegexp = "(?i)"
+	_                     EnginePostOriginHandler = (*HeaderPropagation)(nil)
+	cacheControlKey                               = "Cache-Control"
+	expiresKey                                    = "Expires"
+	noCache                                       = "no-cache"
+	caseInsensitiveRegexp                         = "(?i)"
 )
+
+// ignoredHeaderPrefixes are prefixes for headers that should not be forwarded to downstream services.
+var ignoredHeaderPrefixes = []string{
+	"Grpc-", // reserved in gRPC metadata
+}
+
+// isIgnoredHeader reports whether a header should never be propagated to subgraphs.
+// It checks both the exact SkippedHeaders list and any prefix in ignoredHeaderPrefixes.
+func isIgnoredHeader(name string) bool {
+	canonicalName := http.CanonicalHeaderKey(name)
+
+	if _, ok := headers.SkippedHeaders[canonicalName]; ok {
+		return true
+	}
+	for _, prefix := range ignoredHeaderPrefixes {
+		if strings.HasPrefix(canonicalName, prefix) {
+			return true
+		}
+	}
+	return false
+}
 
 type responseHeaderPropagationKey struct{}
 
@@ -55,6 +76,9 @@ func WithResponseHeaderPropagation(ctx *resolve.Context) *resolve.Context {
 }
 
 func getResponseHeaderPropagation(ctx context.Context) *responseHeaderPropagation {
+	if ctx == nil {
+		return nil
+	}
 	v := ctx.Value(responseHeaderPropagationKey{})
 	if v == nil {
 		return nil
@@ -444,7 +468,7 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 	}
 
 	if rule.Named != "" {
-		if _, ok := headers.SkippedHeaders[rule.Named]; ok {
+		if isIgnoredHeader(rule.Named) {
 			return
 		}
 
@@ -464,7 +488,7 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 					result = !result
 				}
 				if result {
-					if _, ok := headers.SkippedHeaders[name]; ok {
+					if isIgnoredHeader(name) {
 						continue
 					}
 					values := res.Header.Values(name)
@@ -536,7 +560,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 
 	if rule.Rename != "" && rule.Named != "" {
 		// Ignore the rule when the target header is in the ignored list
-		if _, ok := headers.SkippedHeaders[rule.Rename]; ok {
+		if isIgnoredHeader(rule.Rename) {
 			return
 		}
 
@@ -559,7 +583,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 	 */
 
 	if rule.Named != "" {
-		if _, ok := headers.SkippedHeaders[rule.Named]; ok {
+		if isIgnoredHeader(rule.Named) {
 			return
 		}
 
@@ -592,7 +616,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 				 */
 				if rule.Rename != "" && rule.Named == "" {
 
-					if _, ok := headers.SkippedHeaders[rule.Rename]; ok {
+					if isIgnoredHeader(rule.Rename) {
 						continue
 					}
 
@@ -611,7 +635,7 @@ func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header
 				/**
 				 *	Propagate the header as is
 				 */
-				if _, ok := headers.SkippedHeaders[name]; ok {
+				if isIgnoredHeader(name) {
 					continue
 				}
 				header.Set(name, ctx.Request().Header.Get(name))
