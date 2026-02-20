@@ -63,10 +63,6 @@
         },
         "CircuitBreaker": false,
         "Streams": false,
-        "ExportDebugLogging": {
-          "Enabled": false,
-          "ExcludeMetrics": null
-        },
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": [
@@ -78,7 +74,11 @@
             "Headers": {},
             "Temporality": ""
           }
-        ]
+        ],
+        "DebugExporter": {
+          "Enabled": false,
+          "ExcludeMetrics": null
+        }
       },
       "Prometheus": {
         "Enabled": true,

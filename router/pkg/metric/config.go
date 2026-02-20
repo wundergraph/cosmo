@@ -75,7 +75,7 @@ func (e *EngineStatsConfig) Enabled() bool {
 	return e.Subscription
 }
 
-type DebugExportConfig struct {
+type DebugMetricsExporterConfig struct {
 	Enabled        bool
 	ExcludeMetrics []*regexp.Regexp
 }
@@ -93,9 +93,9 @@ type OpenTelemetry struct {
 	// Metric labels to exclude from the OTLP exporter.
 	ExcludeMetricLabels []*regexp.Regexp
 	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
-	TestReader  sdkmetric.Reader
-	Streams     bool
-	DebugExport DebugExportConfig
+	TestReader    sdkmetric.Reader
+	Streams       bool
+	DebugExporter DebugMetricsExporterConfig
 }
 
 func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {
@@ -146,7 +146,7 @@ type Config struct {
 }
 
 func (c *Config) IsEnabled() bool {
-	return c != nil && (c.OpenTelemetry.Enabled || c.Prometheus.Enabled)
+	return c != nil && (c.OpenTelemetry.Enabled || c.Prometheus.Enabled || c.OpenTelemetry.DebugExporter.Enabled)
 }
 
 // DefaultConfig returns the default config.

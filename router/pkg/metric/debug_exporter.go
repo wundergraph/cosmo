@@ -3,83 +3,70 @@ package metric
 import (
 	"context"
 	"fmt"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"regexp"
 	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.uber.org/zap"
 )
 
-// debugExporter wraps an sdkmetric.Exporter and logs export details when enabled.
-type debugExporter struct {
-	wrapped        sdkmetric.Exporter
+// standaloneDebugExporter is a metric exporter that logs all collected metrics via zap.
+type standaloneDebugExporter struct {
 	logger         *zap.Logger
 	excludeMetrics []*regexp.Regexp
 }
 
-func newDebugExporter(wrapped sdkmetric.Exporter, logger *zap.Logger, excludeMetrics []*regexp.Regexp) sdkmetric.Exporter {
-	return &debugExporter{wrapped: wrapped, logger: logger.Named("otlp-debug"), excludeMetrics: excludeMetrics}
+func newStandaloneDebugExporter(logger *zap.Logger, excludeMetrics []*regexp.Regexp) sdkmetric.Exporter {
+	return &standaloneDebugExporter{
+		logger:         logger.Named("metrics-debug"),
+		excludeMetrics: excludeMetrics,
+	}
 }
 
-func (d *debugExporter) Temporality(kind sdkmetric.InstrumentKind) metricdata.Temporality {
-	return d.wrapped.Temporality(kind)
+func (s *standaloneDebugExporter) Temporality(_ sdkmetric.InstrumentKind) metricdata.Temporality {
+	return metricdata.CumulativeTemporality
 }
 
-func (d *debugExporter) Aggregation(kind sdkmetric.InstrumentKind) sdkmetric.Aggregation {
-	return d.wrapped.Aggregation(kind)
+func (s *standaloneDebugExporter) Aggregation(_ sdkmetric.InstrumentKind) sdkmetric.Aggregation {
+	return nil
 }
 
-func (d *debugExporter) ForceFlush(ctx context.Context) error {
-	return d.wrapped.ForceFlush(ctx)
+func (s *standaloneDebugExporter) ForceFlush(_ context.Context) error {
+	return nil
 }
 
-func (d *debugExporter) Shutdown(ctx context.Context) error {
-	return d.wrapped.Shutdown(ctx)
+func (s *standaloneDebugExporter) Shutdown(_ context.Context) error {
+	return nil
 }
 
-func (d *debugExporter) Export(ctx context.Context, rm *metricdata.ResourceMetrics) error {
-	start := time.Now()
-
+func (s *standaloneDebugExporter) Export(_ context.Context, rm *metricdata.ResourceMetrics) error {
 	totalMetrics := 0
 	for _, sm := range rm.ScopeMetrics {
 		totalMetrics += len(sm.Metrics)
 	}
 
-	d.logger.Info("Starting OTLP metric export",
+	s.logger.Info("Debug metric export",
 		zap.Int("scope_metrics", len(rm.ScopeMetrics)),
 		zap.Int("total_metrics", totalMetrics),
-		zap.String("resource", formatAttributes(*rm.Resource.Set())),
 	)
 
 	for _, sm := range rm.ScopeMetrics {
 		for _, m := range sm.Metrics {
-			d.logMetric(m)
+			if isMetricExcluded(m.Name, s.excludeMetrics) {
+				continue
+			}
+			logMetricData(s.logger, m)
 		}
 	}
 
-	err := d.wrapped.Export(ctx, rm)
-	duration := time.Since(start)
-
-	if err != nil {
-		d.logger.Error("OTLP metric export failed",
-			zap.Error(err),
-			zap.Duration("duration", duration),
-		)
-	} else {
-		d.logger.Info("OTLP metric export succeeded",
-			zap.Int("total_metrics", totalMetrics),
-			zap.Duration("duration", duration),
-		)
-	}
-
-	return err
+	return nil
 }
 
-func (d *debugExporter) isExcludedMetric(name string) bool {
-	for _, re := range d.excludeMetrics {
+func isMetricExcluded(name string, excludeMetrics []*regexp.Regexp) bool {
+	for _, re := range excludeMetrics {
 		if re.MatchString(name) {
 			return true
 		}
@@ -87,30 +74,26 @@ func (d *debugExporter) isExcludedMetric(name string) bool {
 	return false
 }
 
-func (d *debugExporter) logMetric(m metricdata.Metrics) {
-	if d.isExcludedMetric(m.Name) {
-		return
-	}
-
+func logMetricData(logger *zap.Logger, m metricdata.Metrics) {
 	switch data := m.Data.(type) {
 	case metricdata.Sum[int64]:
-		logSumMetric(d, m, "Sum[int64]", data)
+		logSumMetric(logger, m, "Sum[int64]", data)
 	case metricdata.Sum[float64]:
-		logSumMetric(d, m, "Sum[float64]", data)
+		logSumMetric(logger, m, "Sum[float64]", data)
 	case metricdata.Histogram[int64]:
-		logHistogramMetric(d, m, "Histogram[int64]", data)
+		logHistogramMetric(logger, m, "Histogram[int64]", data)
 	case metricdata.Histogram[float64]:
-		logHistogramMetric(d, m, "Histogram[float64]", data)
+		logHistogramMetric(logger, m, "Histogram[float64]", data)
 	case metricdata.ExponentialHistogram[int64]:
-		logExpHistogramMetric(d, m, "ExponentialHistogram[int64]", data)
+		logExpHistogramMetric(logger, m, "ExponentialHistogram[int64]", data)
 	case metricdata.ExponentialHistogram[float64]:
-		logExpHistogramMetric(d, m, "ExponentialHistogram[float64]", data)
+		logExpHistogramMetric(logger, m, "ExponentialHistogram[float64]", data)
 	case metricdata.Gauge[int64]:
-		logGaugeMetric(d, m, "Gauge[int64]", data)
+		logGaugeMetric(logger, m, "Gauge[int64]", data)
 	case metricdata.Gauge[float64]:
-		logGaugeMetric(d, m, "Gauge[float64]", data)
+		logGaugeMetric(logger, m, "Gauge[float64]", data)
 	default:
-		d.logger.Info("Metric",
+		logger.Info("Metric",
 			zap.String("name", m.Name),
 			zap.String("unit", m.Unit),
 			zap.String("type", fmt.Sprintf("%T", m.Data)),
@@ -118,12 +101,12 @@ func (d *debugExporter) logMetric(m metricdata.Metrics) {
 	}
 }
 
-func logSumMetric[N int64 | float64](d *debugExporter, m metricdata.Metrics, typeName string, data metricdata.Sum[N]) {
+func logSumMetric[N int64 | float64](logger *zap.Logger, m metricdata.Metrics, typeName string, data metricdata.Sum[N]) {
 	points := make([]string, len(data.DataPoints))
 	for i, dp := range data.DataPoints {
 		points[i] = formatAttributes(dp.Attributes, timeRange(dp.StartTime, dp.Time), fmt.Sprintf("value=%v", dp.Value))
 	}
-	d.logger.Info("Metric",
+	logger.Info("Metric",
 		zap.String("name", m.Name),
 		zap.String("unit", m.Unit),
 		zap.String("type", typeName),
@@ -133,12 +116,12 @@ func logSumMetric[N int64 | float64](d *debugExporter, m metricdata.Metrics, typ
 	)
 }
 
-func logHistogramMetric[N int64 | float64](d *debugExporter, m metricdata.Metrics, typeName string, data metricdata.Histogram[N]) {
+func logHistogramMetric[N int64 | float64](logger *zap.Logger, m metricdata.Metrics, typeName string, data metricdata.Histogram[N]) {
 	points := make([]string, len(data.DataPoints))
 	for i, dp := range data.DataPoints {
 		points[i] = formatAttributes(dp.Attributes, fmt.Sprintf("count=%d sum=%v", dp.Count, dp.Sum))
 	}
-	d.logger.Info("Metric",
+	logger.Info("Metric",
 		zap.String("name", m.Name),
 		zap.String("unit", m.Unit),
 		zap.String("type", typeName),
@@ -147,12 +130,12 @@ func logHistogramMetric[N int64 | float64](d *debugExporter, m metricdata.Metric
 	)
 }
 
-func logExpHistogramMetric[N int64 | float64](d *debugExporter, m metricdata.Metrics, typeName string, data metricdata.ExponentialHistogram[N]) {
+func logExpHistogramMetric[N int64 | float64](logger *zap.Logger, m metricdata.Metrics, typeName string, data metricdata.ExponentialHistogram[N]) {
 	points := make([]string, len(data.DataPoints))
 	for i, dp := range data.DataPoints {
 		points[i] = formatAttributes(dp.Attributes, timeRange(dp.StartTime, dp.Time), fmt.Sprintf("count=%d sum=%v scale=%d", dp.Count, dp.Sum, dp.Scale))
 	}
-	d.logger.Info("Metric",
+	logger.Info("Metric",
 		zap.String("name", m.Name),
 		zap.String("unit", m.Unit),
 		zap.String("type", typeName),
@@ -161,12 +144,12 @@ func logExpHistogramMetric[N int64 | float64](d *debugExporter, m metricdata.Met
 	)
 }
 
-func logGaugeMetric[N int64 | float64](d *debugExporter, m metricdata.Metrics, typeName string, data metricdata.Gauge[N]) {
+func logGaugeMetric[N int64 | float64](logger *zap.Logger, m metricdata.Metrics, typeName string, data metricdata.Gauge[N]) {
 	points := make([]string, len(data.DataPoints))
 	for i, dp := range data.DataPoints {
 		points[i] = formatAttributes(dp.Attributes, timeRange(dp.StartTime, dp.Time), fmt.Sprintf("value=%v", dp.Value))
 	}
-	d.logger.Info("Metric",
+	logger.Info("Metric",
 		zap.String("name", m.Name),
 		zap.String("unit", m.Unit),
 		zap.String("type", typeName),

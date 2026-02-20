@@ -126,11 +126,11 @@ type PrometheusSchemaFieldUsageExporter struct {
 }
 
 type MetricsOTLPExporter struct {
-	Disabled    bool                           `yaml:"disabled"`
-	Exporter    otelconfig.Exporter            `yaml:"exporter" envDefault:"http"`
-	Endpoint    string                         `yaml:"endpoint"`
-	HTTPPath    string                         `yaml:"path" envDefault:"/v1/metrics"`
-	Headers     map[string]string              `yaml:"headers"`
+	Disabled           bool                           `yaml:"disabled"`
+	Exporter           otelconfig.Exporter            `yaml:"exporter" envDefault:"http"`
+	Endpoint           string                         `yaml:"endpoint"`
+	HTTPPath           string                         `yaml:"path" envDefault:"/v1/metrics"`
+	Headers            map[string]string              `yaml:"headers"`
 	Temporality otelconfig.ExporterTemporality `yaml:"temporality"`
 }
 
@@ -141,9 +141,9 @@ type Metrics struct {
 	CardinalityLimit int               `yaml:"experiment_cardinality_limit" envDefault:"2000" env:"METRICS_EXPERIMENT_CARDINALITY_LIMIT"`
 }
 
-type ExportDebugLogging struct {
-	Enabled        bool       `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	ExcludeMetrics RegExArray `yaml:"exclude_metrics,omitempty" env:"EXCLUDE_METRICS"`
+type MetricsDebugExporter struct {
+	Enabled        bool       `yaml:"enabled" envDefault:"false"`
+	ExcludeMetrics RegExArray `yaml:"exclude_metrics,omitempty"`
 }
 
 type MetricsOTLP struct {
@@ -154,10 +154,10 @@ type MetricsOTLP struct {
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
 	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
 	Streams             bool                  `yaml:"streams" envDefault:"false" env:"METRICS_OTLP_STREAM"`
-	ExportDebugLogging  ExportDebugLogging    `yaml:"export_debug_logging" envPrefix:"METRICS_OTLP_EXPORT_DEBUG_LOGGING_"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
+	DebugExporter       MetricsDebugExporter  `yaml:"debug_exporter"`
 }
 
 type Telemetry struct {
