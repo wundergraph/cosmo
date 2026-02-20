@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime/debug"
 	"time"
 
 	"github.com/wundergraph/cosmo/router/pkg/metric"
@@ -201,7 +202,7 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *resolve.FetchTreeQueryPlanNode, opTimes OperationTimes, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("panic during plan generation: %v", r)
+			err = fmt.Errorf("panic during plan generation: %v, stack: %s", r, debug.Stack())
 		}
 	}()
 
