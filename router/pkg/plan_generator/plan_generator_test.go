@@ -407,3 +407,21 @@ func TestPlanGenerator(t *testing.T) {
 	})
 
 }
+
+func BenchmarkPlanGenerator(b *testing.B) {
+	tempDir := b.TempDir()
+	cfg := QueryPlanConfig{
+		SourceDir:       path.Join(getTestDataDir(), "queries", "bench"),
+		OutDir:          tempDir,
+		ExecutionConfig: path.Join(getTestDataDir(), "execution_config", "base.json"),
+		Timeout:         "30s",
+		Concurrency:     1,
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		err := PlanGenerator(context.Background(), cfg)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
