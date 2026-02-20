@@ -263,38 +263,38 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 	}
 
 	if c.OpenTelemetry.TestReader != nil {
-		mp := sdkmetric.NewMeterProvider(append(opts, sdkmetric.WithReader(c.OpenTelemetry.TestReader))...)
-		// Set the global MeterProvider to the SDK metric provider.
-		otel.SetMeterProvider(mp)
+		opts = append(opts, sdkmetric.WithReader(c.OpenTelemetry.TestReader))
+	} else {
+		for _, exp := range c.OpenTelemetry.Exporters {
+			if exp.Disabled {
+				continue
+			}
 
-		return mp, nil
-	}
+			exporter, err := createOTELExporter(log, exp)
+			if err != nil {
+				log.Error("creating OTEL metrics exporter", zap.Error(err))
+				return nil, err
+			}
 
-	for _, exp := range c.OpenTelemetry.Exporters {
-		if exp.Disabled {
-			continue
+			opts = append(opts, sdkmetric.WithReader(
+				sdkmetric.NewPeriodicReader(exporter,
+					sdkmetric.WithTimeout(defaultExportTimeout),
+					sdkmetric.WithInterval(defaultExportInterval),
+				),
+			))
 		}
-
-		exporter, err := createOTELExporter(log, exp)
-		if err != nil {
-			log.Error("creating OTEL metrics exporter", zap.Error(err))
-			return nil, err
-		}
-
-		opts = append(opts, sdkmetric.WithReader(
-			sdkmetric.NewPeriodicReader(exporter,
-				sdkmetric.WithTimeout(defaultExportTimeout),
-				sdkmetric.WithInterval(defaultExportInterval),
-			),
-		))
 	}
 
 	if c.OpenTelemetry.DebugExporter.Enabled {
-		debugExp := newStandaloneDebugExporter(log, c.OpenTelemetry.DebugExporter.ExcludeMetrics)
+		debugExporter := newStandaloneDebugExporter(log, c.OpenTelemetry.DebugExporter.ExcludeMetrics)
+		exportInterval := defaultExportInterval
+		if c.OpenTelemetry.DebugExporter.TestExportInterval > 0 {
+			exportInterval = c.OpenTelemetry.DebugExporter.TestExportInterval
+		}
 		opts = append(opts, sdkmetric.WithReader(
-			sdkmetric.NewPeriodicReader(debugExp,
+			sdkmetric.NewPeriodicReader(debugExporter,
 				sdkmetric.WithTimeout(defaultExportTimeout),
-				sdkmetric.WithInterval(defaultExportInterval),
+				sdkmetric.WithInterval(exportInterval),
 			),
 		))
 		log.Info("Debug metric exporter enabled")

@@ -78,6 +78,8 @@ func (e *EngineStatsConfig) Enabled() bool {
 type DebugMetricsExporterConfig struct {
 	Enabled        bool
 	ExcludeMetrics []*regexp.Regexp
+	// TestExportInterval overrides the export interval for testing. If zero, the default interval is used.
+	TestExportInterval time.Duration
 }
 
 type OpenTelemetry struct {

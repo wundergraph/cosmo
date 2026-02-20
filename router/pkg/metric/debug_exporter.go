@@ -3,12 +3,12 @@ package metric
 import (
 	"context"
 	"fmt"
-	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"regexp"
 	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.uber.org/zap"
 )
