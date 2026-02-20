@@ -55,6 +55,7 @@ func (s *standaloneDebugExporter) Export(_ context.Context, rm *metricdata.Resou
 
 	for _, sm := range rm.ScopeMetrics {
 		for _, m := range sm.Metrics {
+			// If metric is excluded by name, skip logging it
 			if isMetricExcluded(m.Name, s.excludeMetrics) {
 				continue
 			}
