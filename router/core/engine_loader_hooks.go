@@ -153,6 +153,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	}
 
 	latency := time.Since(hookCtx.startTime)
+	metricLatency := latency
 
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
@@ -174,10 +175,15 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	exprCtx.Subgraph.Name = ds.Name
 	exprCtx.Subgraph.Request.Error = WrapExprError(responseInfo.Err)
 
+	var fetchDuration time.Duration
 	if value := ctx.Value(rcontext.FetchTimingKey); value != nil {
 		if fetchTiming, ok := value.(*atomic.Int64); ok {
-			exprCtx.Subgraph.Request.ClientTrace.FetchDuration = time.Duration(fetchTiming.Load())
+			fetchDuration = time.Duration(fetchTiming.Load())
+			exprCtx.Subgraph.Request.ClientTrace.FetchDuration = fetchDuration
 		}
+	}
+	if fetchDuration > 0 {
+		metricLatency = fetchDuration
 	}
 
 	if f.storeSubgraphResponseBody {
@@ -300,10 +306,10 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 
 		attrOpt := otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 		f.metricStore.MeasureRequestCount(ctx, metricSliceAttrs, attrOpt)
-		f.metricStore.MeasureLatency(ctx, latency, metricSliceAttrs, attrOpt)
+		f.metricStore.MeasureLatency(ctx, metricLatency, metricSliceAttrs, attrOpt)
 	} else {
 		f.metricStore.MeasureRequestCount(ctx, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
-		f.metricStore.MeasureLatency(ctx, latency, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
+		f.metricStore.MeasureLatency(ctx, metricLatency, reqContext.telemetry.metricSliceAttrs, metricAddOpt)
 	}
 
 	span.SetAttributes(traceAttrs...)
