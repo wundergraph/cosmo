@@ -418,7 +418,6 @@ func BenchmarkPlanGenerator(b *testing.B) {
 		Concurrency:     1,
 	}
 	b.ReportAllocs()
-	b.ResetTimer()
 	for b.Loop() {
 		err := PlanGenerator(context.Background(), cfg)
 		if err != nil {
