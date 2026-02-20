@@ -148,7 +148,7 @@ type Config struct {
 }
 
 func (c *Config) IsEnabled() bool {
-	return c != nil && (c.OpenTelemetry.Enabled || c.Prometheus.Enabled || c.OpenTelemetry.DebugExporter.Enabled)
+	return c != nil && (c.OpenTelemetry.Enabled || c.Prometheus.Enabled)
 }
 
 // DefaultConfig returns the default config.
