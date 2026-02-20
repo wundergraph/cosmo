@@ -120,13 +120,6 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	for i := 0; i < cfg.Concurrency; i++ {
 		go func(i int) {
 			defer wg.Done()
-			planner, err := pg.GetPlanner()
-			if err != nil {
-				// if we fail to get the planner, we need to cancel the context to stop the other goroutines
-				// and return here to stop the current goroutine
-				cancelError(fmt.Errorf("failed to get planner: %v", err))
-				return
-			}
 			for {
 				select {
 				case <-ctxError.Done():
@@ -145,6 +138,15 @@ func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 					}
 
 					queryFilePath := filepath.Join(queriesPath, queryFile.Name())
+
+					// Planners should not be reused.
+					planner, err := pg.GetPlanner()
+					if err != nil {
+						// If we fail to get the planner, we have to cancel the context
+						// to stop this and the other goroutines via ctxError.
+						cancelError(fmt.Errorf("failed to get a planner: %v", err))
+						return
+					}
 
 					outContent, opTimes, err := planner.PlanOperation(queryFilePath, cfg.OutputFormat)
 					res := QueryPlanResult{
