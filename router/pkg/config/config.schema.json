@@ -1241,7 +1241,7 @@
                 },
                 "debug_exporter": {
                   "type": "object",
-                  "description": "Standalone debug metric exporter. When enabled, logs all collected metrics via the router's zap logger at each export interval.",
+                  "description": "Standalone debug metric exporter. When enabled, logs all collected metrics via the router's logger at each export interval.",
                   "additionalProperties": false,
                   "properties": {
                     "enabled": {

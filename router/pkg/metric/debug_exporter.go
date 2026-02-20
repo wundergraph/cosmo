@@ -13,36 +13,36 @@ import (
 	"go.uber.org/zap"
 )
 
-// standaloneDebugExporter is a metric exporter that logs all collected metrics via zap.
-type standaloneDebugExporter struct {
+// debugExporter is a metric exporter that logs all collected metrics via zap.
+type debugExporter struct {
 	logger         *zap.Logger
 	excludeMetrics []*regexp.Regexp
 }
 
 func newStandaloneDebugExporter(logger *zap.Logger, excludeMetrics []*regexp.Regexp) sdkmetric.Exporter {
-	return &standaloneDebugExporter{
+	return &debugExporter{
 		logger:         logger.Named("metrics-debug"),
 		excludeMetrics: excludeMetrics,
 	}
 }
 
-func (s *standaloneDebugExporter) Temporality(_ sdkmetric.InstrumentKind) metricdata.Temporality {
+func (s *debugExporter) Temporality(_ sdkmetric.InstrumentKind) metricdata.Temporality {
 	return metricdata.CumulativeTemporality
 }
 
-func (s *standaloneDebugExporter) Aggregation(_ sdkmetric.InstrumentKind) sdkmetric.Aggregation {
+func (s *debugExporter) Aggregation(_ sdkmetric.InstrumentKind) sdkmetric.Aggregation {
 	return nil
 }
 
-func (s *standaloneDebugExporter) ForceFlush(_ context.Context) error {
+func (s *debugExporter) ForceFlush(_ context.Context) error {
 	return nil
 }
 
-func (s *standaloneDebugExporter) Shutdown(_ context.Context) error {
+func (s *debugExporter) Shutdown(_ context.Context) error {
 	return nil
 }
 
-func (s *standaloneDebugExporter) Export(_ context.Context, rm *metricdata.ResourceMetrics) error {
+func (s *debugExporter) Export(_ context.Context, rm *metricdata.ResourceMetrics) error {
 	totalMetrics := 0
 	for _, sm := range rm.ScopeMetrics {
 		totalMetrics += len(sm.Metrics)
@@ -163,7 +163,8 @@ func timeRange(start, end time.Time) string {
 }
 
 func formatAttributes(attrs attribute.Set, extra ...string) string {
-	var parts []string
+	parts := make([]string, 0, attrs.Len()+len(extra))
+
 	iter := attrs.Iter()
 	for iter.Next() {
 		kv := iter.Attribute()

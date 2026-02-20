@@ -297,7 +297,7 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 				sdkmetric.WithInterval(exportInterval),
 			),
 		))
-		log.Info("Debug metric exporter enabled")
+		log.Warn("Debug metric exporter enabled")
 	}
 
 	mp := sdkmetric.NewMeterProvider(opts...)
