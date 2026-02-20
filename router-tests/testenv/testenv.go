@@ -395,9 +395,10 @@ type SubgraphsConfig struct {
 }
 
 type SubgraphConfig struct {
-	Middleware   func(http.Handler) http.Handler
-	Delay        time.Duration
-	CloseOnStart bool
+	Middleware      func(http.Handler) http.Handler
+	GRPCInterceptor grpc.UnaryServerInterceptor
+	Delay           time.Duration
+	CloseOnStart    bool
 }
 
 type LogObservationConfig struct {
@@ -604,7 +605,7 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
 	}
 
 	replacements := map[string]string{
@@ -1034,7 +1035,7 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
 	}
 
 	replacements := map[string]string{
@@ -1685,7 +1686,7 @@ func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server
 	return s
 }
 
-func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.Server, string) {
+func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any, interceptor grpc.UnaryServerInterceptor) (*grpc.Server, string) {
 	t.Helper()
 
 	// We could use freeport here, but it is easy to use ephemeral port and get the endpoint
@@ -1696,7 +1697,12 @@ func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.
 
 	require.NotNil(t, service)
 
-	s := grpc.NewServer()
+	var opts []grpc.ServerOption
+	if interceptor != nil {
+		opts = append(opts, grpc.ChainUnaryInterceptor(interceptor))
+	}
+
+	s := grpc.NewServer(opts...)
 	s.RegisterService(sd, service)
 
 	go func() {
