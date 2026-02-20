@@ -49,6 +49,9 @@ type QueryPlanResult struct {
 	Timings  core.OperationTimes `json:"timings,omitempty"`
 }
 
+// PlanGenerator reads GraphQL operation files from cfg.SourceDir,
+// generates query plans for each using the execution config,
+// and writes results to cfg.OutDir as individual files and/or a consolidated report.
 func PlanGenerator(ctx context.Context, cfg QueryPlanConfig) error {
 	if cfg.Concurrency == 0 {
 		cfg.Concurrency = runtime.GOMAXPROCS(0)
