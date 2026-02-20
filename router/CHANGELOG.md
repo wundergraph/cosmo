@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.284.1](https://github.com/wundergraph/cosmo/compare/router@0.284.0...router@0.284.1) (2026-02-20)
+
+### Bug Fixes
+
+* **router:** do not reuse planners in the plan generator ([#2537](https://github.com/wundergraph/cosmo/issues/2537)) ([480efa5](https://github.com/wundergraph/cosmo/commit/480efa5022ec910c4f14c7b0e93ec1c969f9080f)) (@ysmolski)
+
 # [0.284.0](https://github.com/wundergraph/cosmo/compare/router@0.283.0...router@0.284.0) (2026-02-20)
 
 ### Bug Fixes
