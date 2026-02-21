@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -332,6 +333,104 @@ func TestAllowedExtensions(t *testing.T) {
 				Query: `{ employees { id } }`,
 			})
 			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","notAllowed":"notAllowed","statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("filtering multiple disallowed extension fields does not crash / wrapped mode", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModeWrapped
+				cfg.AllowedExtensionFields = []string{"code"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, wErr := w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","foo":"bar","baz":"qux","extra1":"val1","extra2":"val2"}}]}`))
+							require.NoError(t, wErr)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("filtering multiple disallowed extension fields does not crash / passthrough mode", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.AllowedExtensionFields = []string{"code"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, wErr := w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","foo":"bar","baz":"qux","extra1":"val1","extra2":"val2"}}]}`))
+							require.NoError(t, wErr)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("concurrent requests with extension field filtering does not crash", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.AllowedExtensionFields = []string{"code"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, wErr := w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","foo":"bar","baz":"qux","extra1":"val1","extra2":"val2"}}]}`))
+							require.NoError(t, wErr)
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var (
+				numOfOperations = 10
+				ready, done     sync.WaitGroup
+			)
+			ready.Add(numOfOperations)
+			done.Add(numOfOperations)
+			trigger := make(chan struct{})
+			for i := 0; i < numOfOperations; i++ {
+				go func() {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `{ employees { id } }`,
+					})
+					require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":403}}],"data":{"employees":null}}`, res.Body)
+				}()
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
 		})
 	})
 
