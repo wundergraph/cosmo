@@ -336,6 +336,16 @@ func TestPropagatedHeaders(t *testing.T) {
 	})
 }
 
+func TestGetResponseHeaderPropagation_NilContext(t *testing.T) {
+	t.Parallel()
+
+	// Ensure nil context does not panic (regression test for #2530)
+	assert.NotPanics(t, func() {
+		result := getResponseHeaderPropagation(nil)
+		assert.Nil(t, result)
+	})
+}
+
 func TestNewHeaderPropagation(t *testing.T) {
 	t.Parallel()
 

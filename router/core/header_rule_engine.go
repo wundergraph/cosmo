@@ -76,6 +76,9 @@ func WithResponseHeaderPropagation(ctx *resolve.Context) *resolve.Context {
 }
 
 func getResponseHeaderPropagation(ctx context.Context) *responseHeaderPropagation {
+	if ctx == nil {
+		return nil
+	}
 	v := ctx.Value(responseHeaderPropagationKey{})
 	if v == nil {
 		return nil
