@@ -196,11 +196,11 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		assert.Contains(t, connectErr.Message(), "GraphQL partial success with errors")
 	})
 
-	t.Run("HTTP 404 maps to CodeNotFound", func(t *testing.T) {
+	t.Run("HTTP 404 maps to CodeUnimplemented", func(t *testing.T) {
 		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
 			GraphQLHandler: HTTPErrorHandler(http.StatusNotFound, "Not Found"),
 		})
-		
+
 		err := ts.Start()
 		require.NoError(t, err)
 
@@ -218,7 +218,7 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 
 		var connectErr *connect.Error
 		require.ErrorAs(t, err, &connectErr)
-		assert.Equal(t, connect.CodeNotFound, connectErr.Code())
+		assert.Equal(t, connect.CodeUnimplemented, connectErr.Code())
 	})
 
 	t.Run("HTTP 500 maps to CodeInternal", func(t *testing.T) {
