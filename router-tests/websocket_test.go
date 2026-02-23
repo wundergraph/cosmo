@@ -2584,10 +2584,10 @@ func expectConnectAndReadCurrentTime(t *testing.T, xEnv *testenv.Environment) {
 	}
 }
 
-func TestWebSocketPingIntervalForGraphQLTransportWS(t *testing.T) {
+func TestWebSocketPing(t *testing.T) {
 	t.Parallel()
 
-	t.Run("epoll", func(t *testing.T) {
+	t.Run("should send pings to graphql-transport-ws upstreams", func(t *testing.T) {
 		t.Parallel()
 
 		totalUpdates := 5
