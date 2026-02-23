@@ -720,7 +720,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
     expectValidProto(protoText);
 
     expect(protoText).toContain('ONLY_UNSPECIFIED_UNSPECIFIED = 0;');
-    expect(protoText.match(/ONLY_UNSPECIFIED_UNSPECIFIED/g)).toHaveLength(1);
+    expect(protoText.match(/ONLY(?:_UNSPECIFIED){2}/g)).toHaveLength(1);
   });
 
   test('should handle enum with explicit UNSPECIFIED across schema evolution with lock data', () => {
