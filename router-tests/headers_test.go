@@ -688,13 +688,13 @@ func TestForwardRenamedHeaders(t *testing.T) {
 			err := conn.WriteJSON(&testenv.WebSocketMessage{
 				ID:      "1",
 				Type:    "subscribe",
-				Payload: []byte(`{"query":"subscription { headerValue(name:\"light\", repeat:3) { value initialPayload }}","extensions":{"token":"123"}}`),
+				Payload: []byte(`{"query":"subscription { headerValue(name:\"light\", repeat:3) { value extensions }}","extensions":{"token":"123"}}`),
 			})
 			require.NoError(t, err)
 			var msg testenv.WebSocketMessage
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"headerValue":{"value":"","initialPayload":{"extensions":{"token":"123"}}}}}`, string(msg.Payload))
+			require.Equal(t, `{"data":{"headerValue":{"value":"","extensions":{"token":"123"}}}}`, string(msg.Payload))
 		})
 	})
 

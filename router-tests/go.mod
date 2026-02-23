@@ -210,5 +210,5 @@ replace (
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects => ../demo/pkg/subgraphs/projects
 	github.com/wundergraph/cosmo/router => ../router
 	github.com/wundergraph/cosmo/router-plugin => ../router-plugin
-// github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
 )
