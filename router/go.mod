@@ -198,4 +198,4 @@ replace (
 // Remember you can use Go workspaces to avoid using replace directives in multiple go.mod files
 // Use what is best for your personal workflow. See CONTRIBUTING.md for more information
 
-replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
+//replace github.com/wundergraph/graphql-go-tools/v2 => ../../graphql-go-tools/v2
