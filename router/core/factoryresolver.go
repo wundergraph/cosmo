@@ -28,13 +28,17 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 )
 
+// Loader translates the protobuf-based router engine configuration into a
+// plan.Configuration consumed by the GraphQL engine planner. It resolves
+// data source factories (HTTP, gRPC, pub/sub) for each subgraph through the
+// FactoryResolver and maps field configs, type configs, federation metadata,
+// and cost configs into the planner's internal representation.
 type Loader struct {
 	ctx               context.Context
 	resolver          FactoryResolver
 	subscriptionHooks subscriptionHooks
-	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
-	includeInfo bool
-	logger      *zap.Logger
+	includeInfo       bool
+	logger            *zap.Logger
 }
 
 type InstanceData struct {
@@ -53,6 +57,10 @@ type ApiTransportFactory interface {
 	DefaultHTTPProxyURL() *url.URL
 }
 
+// DefaultFactoryResolver is the production FactoryResolver. It creates
+// per-subgraph planner factories backed by HTTP, gRPC, or static transports depending on the
+// subgraph's configuration. When transport is nil (in the plan generator CLI),
+// it produces dummy factories that plan without making network calls.
 type DefaultFactoryResolver struct {
 	static *staticdatasource.Factory[staticdatasource.Configuration]
 	log    *zap.Logger
@@ -286,6 +294,11 @@ func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, outpu
 	return nil
 }
 
+// Load converts the protobuf engine configuration into a plan.Configuration.
+// For each data source it resolves the appropriate planner factory via the
+// FactoryResolver (GraphQL, static, or pub/sub) and assembles field configs,
+// type configs, and federation metadata. It returns the plan configuration
+// along with any pub/sub providers that need lifecycle management.
 func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineConfig *RouterEngineConfiguration, pluginsEnabled bool) (*plan.Configuration, []pubsub_datasource.Provider, error) {
 	var outConfig plan.Configuration
 	// attach field usage information to the plan
@@ -556,6 +569,7 @@ func (l *Loader) subgraphName(subgraphs []*nodev1.Subgraph, dataSourceID string)
 	return ""
 }
 
+// dataSourceMetaData converts a protobuf configuration into the planner's DataSourceMetadata.
 func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.DataSourceMetadata {
 	var d plan.DirectiveConfigurations = make([]plan.DirectiveConfiguration, 0, len(in.Directives))
 
@@ -651,7 +665,47 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 			ConcreteTypeNames: interfaceObjectConfiguration.ConcreteTypeNames,
 		})
 	}
-	// TODO: import CostConfigs from in (produced by composition) to be consumed by the router.
+
+	// Costs
+	costConfig := in.GetCostConfiguration()
+	if costConfig == nil {
+		return out
+	}
+	for _, fw := range costConfig.GetFieldWeights() {
+		w := &plan.FieldWeight{}
+		if fw.Weight != nil {
+			w.HasWeight = true
+			w.Weight = int(*fw.Weight)
+		}
+		if args := fw.GetArgumentWeights(); len(args) > 0 {
+			w.ArgumentWeights = make(map[string]int, len(args))
+			for k, v := range args {
+				w.ArgumentWeights[k] = int(v)
+			}
+		}
+		coordinate := plan.FieldCoordinate{TypeName: fw.GetTypeName(), FieldName: fw.GetFieldName()}
+		out.CostConfig.Weights[coordinate] = w
+	}
+	for _, ls := range costConfig.GetListSizes() {
+		listSizes := &plan.FieldListSize{
+			SlicingArguments: ls.GetSlicingArguments(),
+			SizedFields:      ls.GetSizedFields(),
+		}
+		if ls.AssumedSize != nil {
+			listSizes.AssumedSize = int(*ls.AssumedSize)
+		} else {
+			listSizes.AssumedSize = 0
+		}
+		if ls.RequireOneSlicingArgument != nil {
+			listSizes.RequireOneSlicingArgument = *ls.RequireOneSlicingArgument
+		}
+		coordinate := plan.FieldCoordinate{TypeName: ls.GetTypeName(), FieldName: ls.GetFieldName()}
+		out.CostConfig.ListSizes[coordinate] = listSizes
+	}
+	for k, v := range costConfig.GetTypeWeights() {
+		out.CostConfig.Types[k] = int(v)
+	}
+	// Directives with argument weights are TBD.
 
 	return out
 }

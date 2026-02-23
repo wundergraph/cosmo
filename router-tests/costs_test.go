@@ -21,8 +21,8 @@ func TestOperationCost(t *testing.T) {
 	t.Run("cost analysis", func(t *testing.T) {
 		t.Parallel()
 
-		// These tests verify that cost is calculated using default values
-		// when no @cost or @listSize directives are specified in the schema.
+		// These tests verify cost analysis behavior with @cost and @listSize
+		// directives loaded from the test config (config.json).
 
 		t.Run("enforce mode blocks queries exceeding estimated cost limit", func(t *testing.T) {
 			t.Parallel()
@@ -52,7 +52,7 @@ func TestOperationCost(t *testing.T) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
 						Enabled:           true,
 						Mode:              config.CostAnalysisModeEnforce,
-						MaxEstimatedLimit: 11,
+						MaxEstimatedLimit: 200,
 						EstimatedListSize: 5,
 					}
 				},
@@ -60,7 +60,7 @@ func TestOperationCost(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id details { forename surname } } }`,
 				})
-				// cost = 5 * (1 + 1)
+				// @listSize(assumedSize: 50) overrides EstimatedListSize; cost = 50 * 2 = 100
 				require.Equal(t, 200, res.Response.StatusCode)
 				require.Contains(t, res.Body, `"data":`)
 			})
@@ -73,7 +73,7 @@ func TestOperationCost(t *testing.T) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
 						Enabled:           true,
 						Mode:              config.CostAnalysisModeEnforce,
-						MaxEstimatedLimit: 2, // employee (1) + details (1) = 2
+						MaxEstimatedLimit: 50,
 						EstimatedListSize: 10,
 					}
 				},
@@ -81,7 +81,7 @@ func TestOperationCost(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employee(id:1) { id details { forename } } }`,
 				})
-				// Cost: 1 + 1
+				// @cost(weight: 5) on employee, argument id weight 2
 				require.Equal(t, 200, res.Response.StatusCode)
 				require.Contains(t, res.Body, `"data":`)
 			})
@@ -94,15 +94,15 @@ func TestOperationCost(t *testing.T) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
 						Enabled:           true,
 						Mode:              config.CostAnalysisModeEnforce,
-						MaxEstimatedLimit: 2,
-						EstimatedListSize: 2, // Small list size
+						MaxEstimatedLimit: 200,
+						EstimatedListSize: 2,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
 				})
-				// cost: 2 * 1
+				// @listSize(assumedSize: 50) overrides EstimatedListSize
 				require.Contains(t, res.Body, `"data":`)
 			})
 		})
@@ -188,7 +188,7 @@ func TestOperationCost(t *testing.T) {
 					securityConfiguration.CostAnalysis = &config.CostAnalysis{
 						Enabled:           true,
 						Mode:              config.CostAnalysisModeEnforce,
-						MaxEstimatedLimit: 10,
+						MaxEstimatedLimit: 200,
 						EstimatedListSize: 5,
 					}
 				},
@@ -196,7 +196,7 @@ func TestOperationCost(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id details { forename } } }`,
 				})
-				// cost = 5 * (1 + 1)
+				// @listSize(assumedSize: 50) overrides EstimatedListSize; cost = 50 * 2 = 100
 				require.Contains(t, res.Body, `"data":`)
 			})
 		})
@@ -273,9 +273,10 @@ func TestOperationCost(t *testing.T) {
 					deltaSum += dp.Sum
 				}
 
-				require.Equal(t, int64(30), estimatedSum)
+				// @listSize(assumedSize: 50) overrides EstimatedListSize(15); cost = 50 * 2 = 100
+				require.Equal(t, int64(100), estimatedSum)
 				require.Equal(t, int64(20), actualSum)
-				require.Equal(t, int64(10), deltaSum)
+				require.Equal(t, int64(80), deltaSum)
 
 				// Verify that cost metrics carry the correct operation attributes
 				for _, dp := range []metricdata.HistogramDataPoint[int64]{
