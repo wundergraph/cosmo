@@ -199,6 +199,15 @@ message SchemaChange{
   optional string subgraphName = 6;
 }
 
+message FederatedGraphSchemaChange {
+  string message = 1;
+  string changeType = 2;
+  optional string path = 3;
+  bool isBreaking = 4;
+  string federatedGraphName = 5;
+  optional bool hasOverride = 6;
+}
+
 message CompositionError {
   string message = 1;
   string federatedGraphName = 2;
@@ -286,6 +295,8 @@ message CheckSubgraphSchemaResponse {
   optional bool isCheckExtensionSkipped = 17;
   optional string checkExtensionErrorMessage = 18;
   optional SchemaCheckCounts counts = 19;
+  // Breaking changes detected in the composed federated graph schema (not subgraph level)
+  repeated FederatedGraphSchemaChange composedSchemaBreakingChanges = 20;
 }
 
 message SchemaCheckCounts{
@@ -297,6 +308,7 @@ message SchemaCheckCounts{
   int32 compositionWarnings = 6;
   int32 graphPruneErrors = 7;
   int32 graphPruneWarnings = 8;
+  int32 composedSchemaBreakingChanges = 9;
 }
 
 message FixSubgraphSchemaResponse {
@@ -617,6 +629,7 @@ message GetCheckSummaryResponse {
   optional string proposalName = 13;
   repeated ProposalSchemaMatch proposalMatches = 14;
   bool isProposalsEnabled = 15;
+  repeated FederatedGraphSchemaChange composedSchemaBreakingChanges = 16;
 }
 
 message GetCheckOperationsRequest {

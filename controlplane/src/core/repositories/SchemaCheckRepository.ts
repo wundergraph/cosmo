@@ -160,6 +160,56 @@ export class SchemaCheckRepository {
       .returning();
   }
 
+  public createFederatedGraphSchemaChanges(data: { schemaCheckFederatedGraphId: string; changes: SchemaDiff[] }) {
+    if (data.changes.length === 0) {
+      return [];
+    }
+    return this.db
+      .insert(schema.schemaCheckFederatedGraphSchemaChanges)
+      .values(
+        data.changes.map((change) => ({
+          schemaCheckFederatedGraphId: data.schemaCheckFederatedGraphId,
+          changeType: change.changeType,
+          changeMessage: change.message,
+          path: change.path,
+          isBreaking: change.isBreaking,
+        })),
+      )
+      .returning();
+  }
+
+  public async getFederatedGraphSchemaChanges(data: { schemaCheckId: string; federatedGraphId: string }): Promise<
+    Array<{
+      changeType: string;
+      changeMessage: string | null;
+      path: string | null;
+      isBreaking: boolean;
+    }>
+  > {
+    // First get the schemaCheckFederatedGraphId for this check and federated graph
+    const schemaCheckFedGraph = await this.db.query.schemaCheckFederatedGraphs.findFirst({
+      where: and(
+        eq(schema.schemaCheckFederatedGraphs.checkId, data.schemaCheckId),
+        eq(schema.schemaCheckFederatedGraphs.federatedGraphId, data.federatedGraphId),
+      ),
+    });
+
+    if (!schemaCheckFedGraph) {
+      return [];
+    }
+
+    const changes = await this.db.query.schemaCheckFederatedGraphSchemaChanges.findMany({
+      where: eq(schema.schemaCheckFederatedGraphSchemaChanges.schemaCheckFederatedGraphId, schemaCheckFedGraph.id),
+    });
+
+    return changes.map((change) => ({
+      changeType: change.changeType || '',
+      changeMessage: change.changeMessage,
+      path: change.path,
+      isBreaking: change.isBreaking || false,
+    }));
+  }
+
   public async createOperationUsage(
     schemaCheckActionOperations: Map<string, InspectorOperationResult[]>,
     federatedGraphId: string,

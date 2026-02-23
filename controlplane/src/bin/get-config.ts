@@ -7,7 +7,7 @@ const getConfig = () => {
     adminUser: process.env.KC_ADMIN_USER || 'admin',
     adminPassword: process.env.KC_ADMIN_PASSWORD || 'changeme',
     clientId: process.env.KC_CLIENT_ID || 'studio',
-    apiUrl: process.env.KC_API_URL || 'http://localhost:8080',
+    apiUrl: process.env.KC_API_URL || 'http://localhost:8090',
 
     apiKey: process.env.API_KEY || ApiKeyGenerator.generate(),
 

@@ -960,7 +960,7 @@ export const schemaCheckFederatedGraphs = pgTable(
   },
 );
 
-export const schemaCheckFederatedGraphsRelations = relations(schemaCheckFederatedGraphs, ({ one }) => ({
+export const schemaCheckFederatedGraphsRelations = relations(schemaCheckFederatedGraphs, ({ one, many }) => ({
   schemaCheck: one(schemaChecks, {
     fields: [schemaCheckFederatedGraphs.checkId],
     references: [schemaChecks.id],
@@ -969,7 +969,43 @@ export const schemaCheckFederatedGraphsRelations = relations(schemaCheckFederate
     fields: [schemaCheckFederatedGraphs.federatedGraphId],
     references: [federatedGraphs.id],
   }),
+  composedSchemaChanges: many(schemaCheckFederatedGraphSchemaChanges),
 }));
+
+// Stores schema changes detected from the composed federated graph schema diff
+export const schemaCheckFederatedGraphSchemaChanges = pgTable(
+  'schema_check_federated_graph_schema_changes', // scfgsc
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckFederatedGraphId: uuid('schema_check_federated_graph_id')
+      .notNull()
+      .references(() => schemaCheckFederatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    changeType: schemaChangeTypeEnum('change_type'),
+    changeMessage: text('change_message'),
+    isBreaking: boolean('is_breaking').default(false),
+    path: text('path'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      schemaCheckFederatedGraphIdIndex: index('scfgsc_schema_check_federated_graph_id_idx').on(
+        t.schemaCheckFederatedGraphId,
+      ),
+    };
+  },
+);
+
+export const schemaCheckFederatedGraphSchemaChangesRelations = relations(
+  schemaCheckFederatedGraphSchemaChanges,
+  ({ one }) => ({
+    schemaCheckFederatedGraph: one(schemaCheckFederatedGraphs, {
+      fields: [schemaCheckFederatedGraphSchemaChanges.schemaCheckFederatedGraphId],
+      references: [schemaCheckFederatedGraphs.id],
+    }),
+  }),
+);
 
 // a join table between schema check subgraphs and schema check fed graphs
 export const schemaCheckSubgraphsFederatedGraphs = pgTable(
