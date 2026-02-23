@@ -556,6 +556,20 @@ func TestNewArguments_EmptyMapping(t *testing.T) {
 	assert.Nil(t, result.Get("query.user.id"))
 }
 
+func TestArguments_Get_NonExistentPath(t *testing.T) {
+	vars, err := astjson.ParseBytes([]byte(`{"userId": "123"}`))
+	require.NoError(t, err)
+
+	mapping := astnormalization.FieldArgumentMapping{
+		"query.user.id": "userId",
+	}
+	args := NewArguments(mapping, vars)
+
+	assert.Nil(t, args.Get("query.user.nonexistent"))
+	assert.Nil(t, args.Get("mutation.createUser.id"))
+	assert.Nil(t, args.Get(""))
+}
+
 func assertFieldArgMap(t *testing.T, expected map[string]any, result Arguments) {
 	for path, expectedValue := range expected {
 		jsonValue := result.Get(path)
