@@ -237,8 +237,7 @@ func benchCombinedTransformers(redacted, total, invalidUTF8 int) func(*testing.B
 
 	return func(b *testing.B) {
 		b.ReportAllocs()
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			ac.OnStart(ctx, s)
 			ac.OnEnd(s)
 		}

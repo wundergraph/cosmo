@@ -166,8 +166,7 @@ func benchSanitizeUTF8OnEnd(invalidCount, total int) func(*testing.B) {
 
 	return func(b *testing.B) {
 		b.ReportAllocs()
-		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			ac.OnStart(ctx, s)
 			ac.OnEnd(s)
 		}
@@ -196,8 +195,7 @@ func BenchmarkSanitizeUTF8MixedTypes(b *testing.B) {
 	ctx := context.Background()
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		ac.OnStart(ctx, s)
 		ac.OnEnd(s)
 	}
