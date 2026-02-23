@@ -28,3 +28,9 @@
 /studio/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
 # Cosmo Streams / EDFS
 /router/pkg/pubsub @alepane21 @StarpTech @jensneuse @dkorittki
+
+# generated protobuf files, sourced from /proto/
+/router/gen/
+/connect-go/gen/
+/graphqlmetrics/gen/
+/connect/src/wg/
