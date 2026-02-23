@@ -95,7 +95,7 @@ func NewTestConnectRPCServer(t *testing.T, opts ConnectRPCServerOptions) *TestCo
 
 	// Set defaults
 	if opts.ServicesDir == "" {
-		opts.ServicesDir = "../../router/pkg/connectrpc/samples/services"
+		opts.ServicesDir = "../../router/pkg/connectrpc/testdata/services"
 	}
 	if opts.ListenAddr == "" {
 		opts.ListenAddr = "localhost:0"
