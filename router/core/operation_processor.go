@@ -35,7 +35,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astvalidation"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
@@ -112,24 +111,24 @@ type OperationProcessorOptions struct {
 	PersistedOperationClient            *persistedoperation.Client
 	AutomaticPersistedOperationCacheTtl int
 
-	EnablePersistedOperationsCache                   bool
-	PersistedOpsNormalizationCache                   *ristretto.Cache[uint64, NormalizationCacheEntry]
-	NormalizationCache                               *ristretto.Cache[uint64, NormalizationCacheEntry]
-	QueryDepthCache                                  *ristretto.Cache[uint64, ComplexityCacheEntry]
-	VariablesNormalizationCache                      *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
-	RemapVariablesCache                              *ristretto.Cache[uint64, RemapVariablesCacheEntry]
-	ValidationCache                                  *ristretto.Cache[uint64, bool]
-	OperationHashCache                               *ristretto.Cache[uint64, string]
-	ParseKitPoolSize                                 int
-	IntrospectionEnabled                             bool
-	ApolloCompatibilityFlags                         config.ApolloCompatibilityFlags
-	ApolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
-	DisableExposingVariablesContentOnValidationError          bool
-	RelaxSubgraphOperationFieldSelectionMergingNullability    bool
-	ComplexityLimits                                          *config.ComplexityLimits
-	CostAnalysis                                     *config.CostAnalysis
-	ParserTokenizerLimits                                     astparser.TokenizerLimits
-	OperationNameLengthLimit                                  int
+	EnablePersistedOperationsCache                         bool
+	PersistedOpsNormalizationCache                         *ristretto.Cache[uint64, NormalizationCacheEntry]
+	NormalizationCache                                     *ristretto.Cache[uint64, NormalizationCacheEntry]
+	QueryDepthCache                                        *ristretto.Cache[uint64, ComplexityCacheEntry]
+	VariablesNormalizationCache                            *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
+	RemapVariablesCache                                    *ristretto.Cache[uint64, RemapVariablesCacheEntry]
+	ValidationCache                                        *ristretto.Cache[uint64, bool]
+	OperationHashCache                                     *ristretto.Cache[uint64, string]
+	ParseKitPoolSize                                       int
+	IntrospectionEnabled                                   bool
+	ApolloCompatibilityFlags                               config.ApolloCompatibilityFlags
+	ApolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
+	DisableExposingVariablesContentOnValidationError       bool
+	RelaxSubgraphOperationFieldSelectionMergingNullability bool
+	ComplexityLimits                                       *config.ComplexityLimits
+	CostAnalysis                                           *config.CostAnalysis
+	ParserTokenizerLimits                                  astparser.TokenizerLimits
+	OperationNameLengthLimit                               int
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -1390,33 +1389,35 @@ func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.Co
 	return nil
 }
 
-// ValidateStaticCost validates that the estimated query cost is within the configured limit.
-// This should be called after planning, as the cost calculator is populated during the planning phase.
-func (o *OperationKit) ValidateStaticCost(preparedPlan plan.Plan, variables *fastjson.Value) error {
+// ValidateStaticCost computes and validates that the estimated cost is within the configured limit.
+func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
+	// Compute and cache estimated cost once after planning
+	if opCtx.preparedPlan != nil && opCtx.preparedPlan.preparedPlan != nil {
+		if costCalc := opCtx.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
+			opCtx.costEstimated = costCalc.EstimateCost(opCtx.planConfig, opCtx.variables)
+			opCtx.costEstimatedSet = true
+		}
+	}
+
 	costAnalysis := o.operationProcessor.costAnalysis
-	if preparedPlan == nil || costAnalysis == nil || !costAnalysis.Enabled {
+	if costAnalysis == nil || !costAnalysis.Enabled {
 		return nil
 	}
 
-	// Only enforce limits in enforce mode
 	if costAnalysis.Mode != config.CostAnalysisModeEnforce || costAnalysis.MaxEstimatedLimit <= 0 {
 		return nil
 	}
 
-	costCalc := preparedPlan.GetCostCalculator()
-	if costCalc == nil {
-		// If the engine fails to create a calculator, this check won't let to bypass the validation.
+	if !opCtx.costEstimatedSet {
 		return &httpGraphqlError{
 			message:    "cost analysis is enabled in enforce mode but the cost calculator is unavailable",
 			statusCode: http.StatusInternalServerError,
 		}
 	}
 
-	estimatedCost := costCalc.EstimateCost(o.operationProcessor.executor.PlanConfig, variables)
-
-	if estimatedCost > costAnalysis.MaxEstimatedLimit {
+	if opCtx.costEstimated > costAnalysis.MaxEstimatedLimit {
 		return &httpGraphqlError{
-			message:    fmt.Sprintf("The estimated query cost %d exceeds the maximum allowed limit %d", estimatedCost, costAnalysis.MaxEstimatedLimit),
+			message:    fmt.Sprintf("The estimated query cost %d exceeds the maximum allowed limit %d", opCtx.costEstimated, costAnalysis.MaxEstimatedLimit),
 			statusCode: http.StatusBadRequest,
 		}
 	}
@@ -1459,10 +1460,10 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 }
 
 type parseKitOptions struct {
-	apolloCompatibilityFlags                                  config.ApolloCompatibilityFlags
-	apolloRouterCompatibilityFlags                            config.ApolloRouterCompatibilityFlags
-	disableExposingVariablesContentOnValidationError          bool
-	relaxSubgraphOperationFieldSelectionMergingNullability    bool
+	apolloCompatibilityFlags                               config.ApolloCompatibilityFlags
+	apolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
+	disableExposingVariablesContentOnValidationError       bool
+	relaxSubgraphOperationFieldSelectionMergingNullability bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
@@ -1524,9 +1525,9 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		complexityLimits:         opts.ComplexityLimits,
 		costAnalysis:             opts.CostAnalysis,
 		parseKitOptions: &parseKitOptions{
-			apolloCompatibilityFlags:                              opts.ApolloCompatibilityFlags,
-			apolloRouterCompatibilityFlags:                        opts.ApolloRouterCompatibilityFlags,
-			disableExposingVariablesContentOnValidationError:      opts.DisableExposingVariablesContentOnValidationError,
+			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
+			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
+			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		},
 	}

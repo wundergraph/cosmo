@@ -8,20 +8,21 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
-
-	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
-	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
+	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 )
 
@@ -38,6 +39,8 @@ const (
 	NormalizationCacheHeader          = "X-WG-Normalization-Cache"
 	VariablesNormalizationCacheHeader = "X-WG-Variables-Normalization-Cache"
 	VariablesRemappingCacheHeader     = "X-WG-Variables-Remapping-Cache"
+	CostEstimatedHeader               = "X-WG-Cost-Estimated"
+	CostActualHeader                  = "X-WG-Cost-Actual"
 )
 
 type ReportError interface {
@@ -78,6 +81,7 @@ type HandlerOptions struct {
 
 	EnableCacheResponseHeaders      bool
 	EnableResponseHeaderPropagation bool
+	EnableCostResponseHeaders       bool
 
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
@@ -92,6 +96,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		executor:                                 opts.Executor,
 		enableCacheResponseHeaders:               opts.EnableCacheResponseHeaders,
 		enableResponseHeaderPropagation:          opts.EnableResponseHeaderPropagation,
+		enableCostResponseHeaders:                opts.EnableCostResponseHeaders,
 		engineStats:                              opts.EngineStats,
 		tracer:                                   tracer,
 		authorizer:                               opts.Authorizer,
@@ -130,6 +135,7 @@ type GraphQLHandler struct {
 
 	enableCacheResponseHeaders      bool
 	enableResponseHeaderPropagation bool
+	enableCostResponseHeaders       bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
 }
@@ -215,26 +221,44 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Attach router response header rules to the writer so they are applied
 		// at write time, after the resolve has completed (giving access to request.error etc.)
-		if h.headerPropagation != nil {
-			if pw, ok := hpw.(*headerPropagationWriter); ok {
+		if pw, ok := hpw.(*headerPropagationWriter); ok {
+			if h.headerPropagation != nil {
 				pw.routerHeaderPropagation = h.headerPropagation
 				pw.reqCtx = reqCtx
+			}
+			if h.enableCostResponseHeaders && reqCtx.operation.costEstimatedSet {
+				// actualListSizes is populated by the resolver after resolution completes,
+				// and we need to set headers before actual write happens in the same resolver.
+				pw.costHeaderSetter = func(actualListSizes map[string]int) {
+					w.Header().Set(CostEstimatedHeader, strconv.Itoa(reqCtx.operation.costEstimated))
+					if actualListSizes != nil {
+						if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
+							actual := costCalc.ActualCost(reqCtx.operation.planConfig, actualListSizes)
+							reqCtx.operation.costActual = actual
+							reqCtx.operation.costActualSet = true
+							w.Header().Set(CostActualHeader, strconv.Itoa(actual))
+						}
+					}
+				}
 			}
 		}
 
 		info, err := h.executor.Resolver.ArenaResolveGraphQLResponse(resolveCtx, p.Response, hpw)
 		reqCtx.dataSourceNames = getSubgraphNames(p.Response.DataSources)
-		
-		// Capture actual list sizes for actual cost calculation
-		if info != nil && info.ActualListSizes != nil {
-			reqCtx.operation.actualListSizes = info.ActualListSizes
-		}
-		
 		if err != nil {
 			trackFinalResponseError(resolveCtx.Context(), err)
 			h.WriteError(resolveCtx, err, p.Response, w)
 			return
 		}
+
+		// Compute actual cost for metrics/telemetry if not already set by the header callback
+		if !reqCtx.operation.costActualSet && resolveCtx.ActualListSizes != nil {
+			if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
+				reqCtx.operation.costActual = costCalc.ActualCost(reqCtx.operation.planConfig, resolveCtx.ActualListSizes)
+				reqCtx.operation.costActualSet = true
+			}
+		}
+
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
 	case *plan.SubscriptionResponsePlan:

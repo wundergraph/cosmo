@@ -958,8 +958,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 
 	opContext.planningTime = time.Since(startPlanning)
 
-	// Check static cost limits after planning
-	if err := operationKit.ValidateStaticCost(opContext.preparedPlan.preparedPlan, opContext.variables); err != nil {
+	if err := operationKit.ValidateStaticCost(opContext); err != nil {
 		return operationKit.parsedOperation, nil, err
 	}
 

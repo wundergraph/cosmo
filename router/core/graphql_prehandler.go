@@ -10,6 +10,7 @@ import (
 	"maps"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -420,6 +421,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.SetError(err)
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, err)
+
+			if h.operationProcessor.costAnalysis != nil && h.operationProcessor.costAnalysis.ExposeHeaders &&
+				requestContext.operation != nil && requestContext.operation.costEstimatedSet {
+				ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
+			}
 
 			writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
 			return
@@ -1089,8 +1095,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 	enginePlanSpan.End()
 
-	// Check static cost limits after planning
-	if err := operationKit.ValidateStaticCost(requestContext.operation.preparedPlan.preparedPlan, requestContext.operation.variables); err != nil {
+	if err := operationKit.ValidateStaticCost(requestContext.operation); err != nil {
 		return err
 	}
 

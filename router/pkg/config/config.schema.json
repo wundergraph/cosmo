@@ -2984,6 +2984,10 @@
               "type": "integer",
               "description": "Default assumed size for list fields when no @listSize directive is specified. Required for estimated cost calculation.",
               "minimum": 1
+            },
+            "expose_headers": {
+              "type": "boolean",
+              "description": "Enable costs reponse headers for estimated and actuals operation costs."
             }
           }
         },

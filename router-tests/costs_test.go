@@ -10,6 +10,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	otel "github.com/wundergraph/cosmo/router/pkg/otel"
@@ -24,7 +25,7 @@ func TestOperationCost(t *testing.T) {
 		// These tests verify cost analysis behavior with @cost and @listSize
 		// directives loaded from the test config (config.json).
 
-		t.Run("enforce mode blocks queries exceeding estimated cost limit", func(t *testing.T) {
+		t.Run("enforce mode blocks queries exceeding limit and exposes a header", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
@@ -33,15 +34,23 @@ func TestOperationCost(t *testing.T) {
 						Mode:              config.CostAnalysisModeEnforce,
 						MaxEstimatedLimit: 9,
 						EstimatedListSize: 5,
+						ExposeHeaders:     true,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query: `{ employees { id details { forename surname } } }`,
 				})
-				// cost = 5 * (1 + 1)
 				require.Equal(t, 400, res.Response.StatusCode)
 				require.Contains(t, res.Body, "exceeds the maximum allowed limit")
+
+				// @listSize(assumedSize: 50) overrides EstimatedListSize; cost = 50 * 2 = 100
+				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
+				require.NotEmpty(t, estimated, "estimated cost header should be present")
+				require.Equal(t, "100", estimated)
+
+				// actual cost should not be calculated nor exposed
+				require.Empty(t, res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
@@ -142,7 +151,7 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
-		t.Run("measure mode does not block queries", func(t *testing.T) {
+		t.Run("measure mode does not block and exposes all headers", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
@@ -151,6 +160,7 @@ func TestOperationCost(t *testing.T) {
 						Mode:              config.CostAnalysisModeMeasure,
 						MaxEstimatedLimit: 1, // Would block in enforce mode
 						EstimatedListSize: 10,
+						ExposeHeaders:     true,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -158,6 +168,14 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employees { id details { forename surname } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+
+				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
+				require.NotEmpty(t, estimated, "estimated cost header should be present")
+				require.Equal(t, "100", estimated)
+
+				actual := res.Response.Header.Get(core.CostActualHeader)
+				require.NotEmpty(t, actual, "actual cost header should be present")
+				require.Equal(t, "20", actual)
 			})
 		})
 
@@ -170,6 +188,7 @@ func TestOperationCost(t *testing.T) {
 						Mode:              config.CostAnalysisModeEnforce,
 						MaxEstimatedLimit: 0, // Zero limit means no enforcement
 						EstimatedListSize: 10,
+						ExposeHeaders:     true,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -177,6 +196,16 @@ func TestOperationCost(t *testing.T) {
 					Query: `{ employees { id details { forename surname } } }`,
 				})
 				require.Contains(t, res.Body, `"data":`)
+
+				// @listSize(assumedSize: 50) overrides EstimatedListSize; cost = 50 * 2 = 100
+				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
+				require.NotEmpty(t, estimated, "estimated cost header should be present")
+				require.Equal(t, "100", estimated)
+
+				actual := res.Response.Header.Get(core.CostActualHeader)
+				require.NotEmpty(t, actual, "actual cost header should be present")
+				require.Equal(t, "20", actual)
+
 			})
 		})
 
@@ -190,14 +219,23 @@ func TestOperationCost(t *testing.T) {
 						Mode:              config.CostAnalysisModeEnforce,
 						MaxEstimatedLimit: 200,
 						EstimatedListSize: 5,
+						ExposeHeaders:     true,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id details { forename } } }`,
 				})
-				// @listSize(assumedSize: 50) overrides EstimatedListSize; cost = 50 * 2 = 100
 				require.Contains(t, res.Body, `"data":`)
+
+				// @listSize(assumedSize: 50) overrides EstimatedListSize; cost = 50 * 2 = 100
+				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
+				require.NotEmpty(t, estimated, "estimated cost header should be present")
+				require.Equal(t, "100", estimated)
+
+				actual := res.Response.Header.Get(core.CostActualHeader)
+				require.NotEmpty(t, actual, "actual cost header should be present")
+				require.Equal(t, "20", actual)
 			})
 		})
 	})
@@ -474,6 +512,52 @@ func TestOperationCost(t *testing.T) {
 				require.False(t, foundEstimated)
 				require.False(t, foundActual)
 				require.False(t, foundDelta)
+			})
+		})
+	})
+
+	t.Run("response headers", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("Should not expose cost headers when expose_headers is disabled", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
+					cfg.CostAnalysis = &config.CostAnalysis{
+						Enabled:           true,
+						Mode:              config.CostAnalysisModeMeasure,
+						EstimatedListSize: 5,
+						ExposeHeaders:     false,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } } }`,
+				})
+				require.Contains(t, res.Body, `"employees"`)
+
+				require.Empty(t, res.Response.Header.Get(core.CostEstimatedHeader))
+				require.Empty(t, res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
+		t.Run("Should not expose cost headers when cost analysis is disabled", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
+					cfg.CostAnalysis = &config.CostAnalysis{
+						Enabled:       false,
+						ExposeHeaders: true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id } }`,
+				})
+				require.Contains(t, res.Body, `"employees"`)
+
+				require.Empty(t, res.Response.Header.Get(core.CostEstimatedHeader))
+				require.Empty(t, res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 	})

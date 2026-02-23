@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 
@@ -619,7 +618,7 @@ type operationContext struct {
 	variablesHash uint64
 	files         []*httpclient.FileUpload
 	clientInfo    *ClientInfo
-	planConfig plan.Configuration
+	planConfig    plan.Configuration
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
@@ -637,7 +636,13 @@ type operationContext struct {
 	variablesNormalizationCacheHit bool
 	variablesRemappingCacheHit     bool
 
-	actualListSizes map[string]int // Populated after execution for actual cost calculation
+	// Costs related fields used as a cache through the lifetime of operation.
+	// Do we want to store some kind of cost_result code here?
+	actualListSizes  map[string]int // populated after execution for actual cost calculation. TODO: remove it?
+	costEstimated    int            // populated after planning
+	costActual       int            // populated after execution
+	costEstimatedSet bool           // set to true when costEstimated is populated
+	costActualSet    bool           // set to true when costActual is populated
 
 	typeFieldUsageInfo        graphqlschemausage.TypeFieldMetrics
 	typeFieldUsageInfoMetrics []*graphqlmetrics.TypeFieldUsageInfo // Cached conversion result
@@ -714,9 +719,9 @@ func (o *operationContext) GetTypeFieldUsageInfoMetrics() []*graphqlmetrics.Type
 
 // OperationTimings contains timing information for various stages of operation processing
 type OperationTimings struct {
-	ParsingTime time.Duration
-	ValidationTime time.Duration
-	PlanningTime time.Duration
+	ParsingTime       time.Duration
+	ValidationTime    time.Duration
+	PlanningTime      time.Duration
 	NormalizationTime time.Duration
 }
 
@@ -831,18 +836,10 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 }
 
 func (o *operationContext) Cost() (OperationCost, error) {
-	if o == nil || o.preparedPlan == nil || o.preparedPlan.preparedPlan == nil {
-		return OperationCost{}, errors.New("operation context or prepared plan is nil")
+	if !o.costEstimatedSet {
+		return OperationCost{}, errors.New("cost analysis is not enabled or not yet computed")
 	}
-
-	costCalc := o.preparedPlan.preparedPlan.GetCostCalculator()
-	if costCalc == nil {
-		return OperationCost{}, errors.New("cost analysis is not enabled")
-	}
-
-	return OperationCost{
-		Estimated: costCalc.EstimateCost(o.planConfig, o.variables),
-	}, nil
+	return OperationCost{Estimated: o.costEstimated}, nil
 }
 
 type SubgraphResolver struct {
