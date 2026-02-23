@@ -190,7 +190,6 @@ func TestKafkaEvents(t *testing.T) {
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
 			}, "unable to close client before timeout")
-
 		})
 	})
 
@@ -362,7 +361,7 @@ func TestKafkaEvents(t *testing.T) {
 			EnableKafka:              true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableNetPoll = false
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.WebSocketServerReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			events.KafkaEnsureTopicExists(t, xEnv, KafkaWaitTimeout, topics...)
@@ -534,7 +533,8 @@ func TestKafkaEvents(t *testing.T) {
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(t *testing.T, response struct {
 				response *http.Response
 				err      error
-			}) {
+			},
+			) {
 				require.NoError(t, response.err)
 				require.Equal(t, http.StatusOK, response.response.StatusCode)
 				reader := bufio.NewReader(response.response.Body)
@@ -599,7 +599,8 @@ func TestKafkaEvents(t *testing.T) {
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(t *testing.T, resp struct {
 				response *http.Response
 				err      error
-			}) {
+			},
+			) {
 				require.NoError(t, resp.err)
 				require.Equal(t, http.StatusOK, resp.response.StatusCode)
 				defer resp.response.Body.Close()

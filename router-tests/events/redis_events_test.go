@@ -231,7 +231,6 @@ func TestRedisEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 			EnableRedis:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			var subscriptionOne struct {
 				employeeUpdates struct {
 					ID      float64 `graphql:"id"`
@@ -313,7 +312,6 @@ func TestRedisEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 			EnableRedis:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			var subscriptionOne struct {
 				employeeUpdates struct {
 					ID      float64 `graphql:"id"`
@@ -416,7 +414,7 @@ func TestRedisEvents(t *testing.T) {
 			EnableRedis:              true,
 			ModifyEngineExecutionConfiguration: func(engineExecutionConfiguration *config.EngineExecutionConfiguration) {
 				engineExecutionConfiguration.EnableNetPoll = false
-				engineExecutionConfiguration.WebSocketClientReadTimeout = time.Millisecond * 100
+				engineExecutionConfiguration.WebSocketServerReadTimeout = time.Millisecond * 100
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			var subscriptionOne struct {
@@ -557,7 +555,6 @@ func TestRedisEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 			EnableRedis:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdates { id details { forename surname } }}"}`)
 
 			client := http.Client{
@@ -631,7 +628,6 @@ func TestRedisEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 			EnableRedis:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdates { id details { forename surname } }}"}`)
 			client := http.Client{
 				Timeout: time.Second * 10,
@@ -748,7 +744,6 @@ func TestRedisEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 			EnableRedis:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			type subscriptionPayload struct {
 				Data struct {
 					FilteredEmployeeUpdatedMyRedis struct {
@@ -816,7 +811,6 @@ func TestRedisEvents(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
 			EnableRedis:              true,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			var subscriptionOne struct {
 				employeeUpdates struct {
 					ID      int `graphql:"id"`
@@ -1058,5 +1052,4 @@ func TestRedisClusterEvents(t *testing.T) {
 			}
 		})
 	})
-
 }

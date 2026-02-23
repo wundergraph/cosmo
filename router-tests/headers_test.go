@@ -60,7 +60,7 @@ func TestForwardHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(config.HeaderRules{
@@ -97,7 +97,7 @@ func TestForwardHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(config.HeaderRules{
@@ -135,7 +135,7 @@ func TestForwardHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(config.HeaderRules{
@@ -181,7 +181,7 @@ func TestForwardHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -263,7 +263,7 @@ func TestForwardHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -290,7 +290,7 @@ func TestForwardHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -322,7 +322,7 @@ func TestForwardHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -356,7 +356,7 @@ func TestForwardHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -589,7 +589,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -618,7 +618,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -645,7 +645,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -678,7 +678,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),
@@ -712,7 +712,7 @@ func TestForwardRenamedHeaders(t *testing.T) {
 		}
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.WebSocketClientReadTimeout = time.Millisecond * 10
+				cfg.WebSocketServerReadTimeout = time.Millisecond * 10
 			},
 			RouterOptions: []core.Option{
 				core.WithHeaderRules(headerRules),

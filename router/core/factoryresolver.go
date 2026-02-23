@@ -130,15 +130,18 @@ func NewDefaultFactoryResolver(
 		if subscriptionClientOptions.PingInterval > 0 {
 			options = append(options, graphql_datasource.WithPingInterval(subscriptionClientOptions.PingInterval))
 		}
-		// if subscriptionClientOptions.ReadTimeout > 0 {
-		// 	options = append(options, subscriptionclient.WithReadTimeout(subscriptionClientOptions.ReadTimeout))
-		// }
 		if subscriptionClientOptions.PingTimeout > 0 {
 			options = append(options, graphql_datasource.WithPingTimeout(subscriptionClientOptions.PingTimeout))
 		}
-		// if subscriptionClientOptions.FrameTimeout > 0 {
-		// 	options = append(options, subscriptionclient.With(subscriptionClientOptions.FrameTimeout))
-		// }
+		if subscriptionClientOptions.WriteTimeout > 0 {
+			options = append(options, graphql_datasource.WithWriteTimeout(subscriptionClientOptions.WriteTimeout))
+		}
+		if subscriptionClientOptions.AckTimeout > 0 {
+			options = append(options, graphql_datasource.WithAckTimeout(subscriptionClientOptions.AckTimeout))
+		}
+		if subscriptionClientOptions.ReadLimit > 0 {
+			options = append(options, graphql_datasource.WithReadLimit(subscriptionClientOptions.ReadLimit))
+		}
 	}
 
 	return &DefaultFactoryResolver{

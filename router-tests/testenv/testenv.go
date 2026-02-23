@@ -1335,9 +1335,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 			PrintQueryPlans:            false,
 			EnableCacheResponseHeaders: true,
 		},
-		WebSocketClientPollTimeout:    300 * time.Millisecond,
-		WebSocketClientConnBufferSize: 1,
-		WebSocketClientReadTimeout:    1 * time.Second,
+		WebSocketServerPollTimeout:    300 * time.Millisecond,
+		WebSocketServerConnBufferSize: 1,
+		WebSocketServerReadTimeout:    1 * time.Second,
+		WebSocketServerWriteTimeout:   2 * time.Second,
 		WebSocketClientWriteTimeout:   2 * time.Second,
 		// Avoid get in conflict with any test that doesn't expect to handle pings
 		WebSocketClientPingInterval:    30 * time.Second,
