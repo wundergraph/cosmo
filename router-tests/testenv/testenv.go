@@ -308,6 +308,8 @@ type Config struct {
 	DisableParentBasedSampler          bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
+	TracingSanitizeUTF8                *config.SanitizeUTF8Config
+	IPAnonymization                    *core.IPAnonymizationConfig
 	CustomMetricAttributes             []config.CustomAttribute
 	CustomTelemetryAttributes          []config.CustomAttribute
 	CustomTracingAttributes            []config.CustomAttribute
@@ -1483,19 +1485,25 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true
 
+		tracingConfig := config.Tracing{
+			Enabled:                    true,
+			SamplingRate:               1,
+			ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
+			OperationContentAttributes: testConfig.OperationContentAttributes,
+			Exporters:                  []config.TracingExporter{},
+			Propagation:                testConfig.PropagationConfig,
+			TracingGlobalFeatures:      config.TracingGlobalFeatures{},
+			ResponseTraceHeader:        testConfig.ResponseTraceHeader,
+		}
+
+		if testConfig.TracingSanitizeUTF8 != nil {
+			tracingConfig.SanitizeUTF8 = *testConfig.TracingSanitizeUTF8
+		}
+
 		c := core.TraceConfigFromTelemetry(&config.Telemetry{
 			ServiceName:        "cosmo-router",
 			ResourceAttributes: testConfig.CustomResourceAttributes,
-			Tracing: config.Tracing{
-				Enabled:                    true,
-				SamplingRate:               1,
-				ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
-				OperationContentAttributes: testConfig.OperationContentAttributes,
-				Exporters:                  []config.TracingExporter{},
-				Propagation:                testConfig.PropagationConfig,
-				TracingGlobalFeatures:      config.TracingGlobalFeatures{},
-				ResponseTraceHeader:        testConfig.ResponseTraceHeader,
-			},
+			Tracing:            tracingConfig,
 		})
 
 		c.TestMemoryExporter = testConfig.TraceExporter
@@ -1503,6 +1511,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts,
 			core.WithTracing(c),
 		)
+	}
+
+	if testConfig.IPAnonymization != nil {
+		routerOpts = append(routerOpts, core.WithAnonymization(testConfig.IPAnonymization))
 	}
 
 	if testConfig.CustomTelemetryAttributes != nil {

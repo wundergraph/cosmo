@@ -598,7 +598,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
 		if err != nil {
 			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
+			rtrace.SetSanitizedSpanStatus(span, codes.Error, err.Error())
 
 			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {

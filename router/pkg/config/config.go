@@ -70,6 +70,11 @@ type ResponseTraceHeader struct {
 	HeaderName string `yaml:"header_name" envDefault:"x-wg-trace-id"`
 }
 
+type SanitizeUTF8Config struct {
+	Enabled          bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	LogSanitizations bool `yaml:"log_sanitizations" envDefault:"false" env:"LOG_SANITIZATIONS"`
+}
+
 type Tracing struct {
 	Enabled             bool                `yaml:"enabled" envDefault:"true" env:"TRACING_ENABLED"`
 	SamplingRate        float64             `yaml:"sampling_rate" envDefault:"1" env:"TRACING_SAMPLING_RATE"`
@@ -82,6 +87,9 @@ type Tracing struct {
 	OperationContentAttributes bool `yaml:"operation_content_attributes" envDefault:"false" env:"TRACING_OPERATION_CONTENT_ATTRIBUTES"`
 
 	TracingGlobalFeatures `yaml:",inline"`
+
+	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values
+	SanitizeUTF8 SanitizeUTF8Config `yaml:"sanitize_utf8" envPrefix:"TRACING_SANITIZE_UTF8_"`
 }
 
 type PropagationConfig struct {

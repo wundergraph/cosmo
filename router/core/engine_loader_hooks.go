@@ -16,6 +16,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -247,7 +248,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	if responseInfo.Err != nil {
 		// Set error status. This is the fetch error from the engine
 		// Downstream errors are extracted from the subgraph response
-		span.SetStatus(codes.Error, responseInfo.Err.Error())
+		rtrace.SetSanitizedSpanStatus(span, codes.Error, responseInfo.Err.Error())
 		span.RecordError(responseInfo.Err)
 
 		var errorCodesAttr []string
