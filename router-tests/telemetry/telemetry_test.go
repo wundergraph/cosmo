@@ -7853,6 +7853,52 @@ func TestFlakyTelemetry(t *testing.T) {
 		})
 	})
 
+	t.Run("Authentication failure records correct HTTP status code in metrics", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+		authenticators, _ := integration.ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:         authenticators,
+			AuthenticationRequired: true,
+		})
+		require.NoError(t, err)
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make unauthenticated request - should get 401
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil,
+				strings.NewReader(`{"query":"{ employees { id } }"}`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+
+			rm := metricdata.ResourceMetrics{}
+			err = metricReader.Collect(context.Background(), &rm)
+			require.NoError(t, err)
+
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+
+			statusCode401 := semconv.HTTPStatusCode(http.StatusUnauthorized)
+
+			// Verify http_status_code=401 on router.http.requests
+			requestsMetric := integration.GetMetricByName(&scopeMetric, "router.http.requests")
+			require.NotNil(t, requestsMetric)
+			requestsData := requestsMetric.Data.(metricdata.Sum[int64])
+			require.True(t, integration.HasDataPointWithAttribute(requestsData.DataPoints, statusCode401))
+
+			// Verify http_status_code=401 on router.http.request.duration_milliseconds
+			durationMetric := integration.GetMetricByName(&scopeMetric, "router.http.request.duration_milliseconds")
+			require.NotNil(t, durationMetric)
+			durationData := durationMetric.Data.(metricdata.Histogram[float64])
+			require.True(t, integration.HasHistogramDataPointWithAttribute(durationData.DataPoints, statusCode401))
+		})
+	})
+
 	t.Run("Operation parsing errors are tracked", func(t *testing.T) {
 		t.Parallel()
 

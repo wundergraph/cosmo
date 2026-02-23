@@ -175,6 +175,17 @@
     "RouterURL": "https://cosmo-router.wundergraph.com",
     "OmitToolNamePrefix": false
   },
+  "ConnectRPC": {
+    "Enabled": false,
+    "Server": {
+      "ListenAddr": "localhost:5026",
+      "BaseURL": ""
+    },
+    "Storage": {
+      "ProviderID": ""
+    },
+    "GraphQLEndpoint": ""
+  },
   "DemoMode": true,
   "Modules": {
     "myModule": {
@@ -801,7 +812,8 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
-    "ValidateRequiredExternalFields": false
+    "ValidateRequiredExternalFields": false,
+    "RelaxSubgraphOperationFieldSelectionMergingNullability": false
   },
   "WebSocket": {
     "Enabled": true,

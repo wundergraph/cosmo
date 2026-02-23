@@ -527,7 +527,9 @@ func TestArgumentMapping(t *testing.T) {
 			require.False(t, rep.HasErrors(), "failed to normalize operation")
 
 			// Then normalize variables using VariablesNormalizer which returns the field argument mapping
-			varNorm := astnormalization.NewVariablesNormalizer(true)
+			varNorm := astnormalization.NewVariablesNormalizer(
+				astnormalization.VariablesNormalizerOptions{EnableFieldArgumentMapping: true},
+			)
 			result := varNorm.NormalizeOperation(&operation, &schema, rep)
 			require.False(t, rep.HasErrors(), "failed to normalize variables")
 

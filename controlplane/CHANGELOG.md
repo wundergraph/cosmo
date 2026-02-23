@@ -4,6 +4,33 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.191.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.191.1...controlplane@0.191.2) (2026-02-20)
+
+**Note:** Version bump only for package controlplane
+
+## [0.191.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.191.0...controlplane@0.191.1) (2026-02-18)
+
+### Bug Fixes
+
+* solves the `dist` restructuring issue ([#2519](https://github.com/wundergraph/cosmo/issues/2519)) ([5b3a1b1](https://github.com/wundergraph/cosmo/commit/5b3a1b17d1137c378344045e6d0ceae74b2ee0c8)) (@wilsonrivera)
+
+# [0.191.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.190.0...controlplane@0.191.0) (2026-02-16)
+
+### Features
+
+* add support to mark API keys as external ([#2507](https://github.com/wundergraph/cosmo/issues/2507)) ([483d5c8](https://github.com/wundergraph/cosmo/commit/483d5c8e7ffbc2f71fcafdb745d20fc68670bb0c)) (@wilsonrivera)
+
+# [0.190.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.189.1...controlplane@0.190.0) (2026-02-12)
+
+### Features
+
+* endpoint to list user organizations ([#2502](https://github.com/wundergraph/cosmo/issues/2502)) ([a9a0955](https://github.com/wundergraph/cosmo/commit/a9a0955a87276104f963e9d19fc23822a9aa8d33)) (@wilsonrivera)
+* implement endpoint to ensure user is initialized in Cosmo ([#2497](https://github.com/wundergraph/cosmo/issues/2497)) ([31b005f](https://github.com/wundergraph/cosmo/commit/31b005f4ac0845e9e54ff0c89b971ddde5589eaa)) (@wilsonrivera)
+
+## [0.189.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.189.0...controlplane@0.189.1) (2026-02-12)
+
+**Note:** Version bump only for package controlplane
+
 # [0.189.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.188.0...controlplane@0.189.0) (2026-02-09)
 
 ### Bug Fixes

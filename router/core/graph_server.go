@@ -1305,12 +1305,13 @@ func (s *graphServer) buildGraphMux(
 			MaxDepth:  s.securityConfiguration.ParserLimits.ApproximateDepthLimit,
 			MaxFields: s.securityConfiguration.ParserLimits.TotalFieldsLimit,
 		},
-		OperationNameLengthLimit:                         s.securityConfiguration.OperationNameLengthLimit,
-		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
-		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
-		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
-		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
-		EnableFieldArgumentMapping:                       s.subscriptionHooks.needFieldArgumentMapping(),
+		OperationNameLengthLimit:                               s.securityConfiguration.OperationNameLengthLimit,
+		ApolloCompatibilityFlags:                               s.apolloCompatibilityFlags,
+		ApolloRouterCompatibilityFlags:                         s.apolloRouterCompatibilityFlags,
+		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
+		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
+		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
+		EnableFieldArgumentMapping:                             s.subscriptionHooks.needFieldArgumentMapping(),
 	})
 
 	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled())
@@ -1417,6 +1418,7 @@ func (s *graphServer) buildGraphMux(
 		telemetryAttExpressions,
 		metricAttExpressions,
 		exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
+		s.headerPropagation,
 	)
 
 	handlerOpts := HandlerOptions{

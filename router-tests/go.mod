@@ -3,6 +3,7 @@ module github.com/wundergraph/cosmo/router-tests
 go 1.25
 
 require (
+	connectrpc.com/connect v1.19.1
 	github.com/MicahParks/jwkset v0.11.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
@@ -21,12 +22,12 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/astjson v1.0.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20260211105507-4b780feecf49
+	github.com/wundergraph/astjson v1.1.0
+	github.com/wundergraph/cosmo/demo v0.0.0-20260213130455-6e3277e7b850
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
-	github.com/wundergraph/cosmo/router v0.0.0-20260211105507-4b780feecf49
+	github.com/wundergraph/cosmo/router v0.0.0-20260213130455-6e3277e7b850
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.248.0.20260212103107-15dbb3f58dc9
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.255.0.20260223080430-55c1a82aa3bb
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/sdk v1.36.0
 	go.opentelemetry.io/otel/sdk/metric v1.36.0
@@ -42,7 +43,7 @@ require (
 )
 
 require (
-	connectrpc.com/connect v1.16.2 // indirect
+	connectrpc.com/vanguard v0.3.0 // indirect
 	github.com/99designs/gqlgen v0.17.76 // indirect
 	github.com/KimMachineGun/automemlimit v0.6.1 // indirect
 	github.com/MicahParks/keyfunc/v3 v3.6.2 // indirect

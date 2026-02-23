@@ -4,7 +4,7 @@ import nuid from 'nuid';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { pino } from 'pino';
-import { AuthContext, Label, OrganizationGroupDTO } from '../types/index.js';
+import { AuthContext, Label, OrganizationGroupDTO, UserInfoEndpointResponse } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { organizationRoleEnum } from '../db/schema.js';
 import { OrganizationRole } from '../db/models.js';
@@ -151,6 +151,7 @@ export async function seedTest(
         organizationID: org.id,
         userID: userTestData.userId,
         expiresAt: ExpiresAt.NEVER,
+        isExternal: false,
         groupId: orgGroup.groupId,
         permissions: createScimKey ? ['scim'] : [],
       });
@@ -242,7 +243,11 @@ export type TestAuthenticatorOptions = {
   -readonly [key in keyof typeof TestUser]?: UserTestData & AuthContext;
 } & DefaultTestAuthenticatorOptions;
 
-export function createTestAuthenticator(users: TestAuthenticatorOptions): TestAuthenticator {
+export function createTestAuthenticator(
+  users: TestAuthenticatorOptions,
+  keycloakBaseUrl: string,
+  realm: string,
+): TestAuthenticator {
   let activeContext: UserTestData & AuthContext = users.adminAliceCompanyA;
 
   return {
@@ -268,6 +273,26 @@ export function createTestAuthenticator(users: TestAuthenticatorOptions): TestAu
         throw new Error('No active context found');
       }
       return Promise.resolve(activeContext);
+    },
+    async getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined> {
+      if (!token || token.trim().length === 0) {
+        return undefined;
+      }
+
+      try {
+        const response = await fetch(`${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/userinfo`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        return response.ok ? ((await response.json()) as UserInfoEndpointResponse) : undefined;
+      } catch {
+        // ignore
+      }
+
+      return undefined;
     },
     changeUser(user: TestUser) {
       if (!(user in users)) {

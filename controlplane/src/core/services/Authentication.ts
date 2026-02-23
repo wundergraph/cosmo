@@ -1,6 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { lru } from 'tiny-lru';
-import { AuthContext } from '../../types/index.js';
+import { AuthContext, UserInfoEndpointResponse } from '../../types/index.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
@@ -15,6 +15,7 @@ const maxAuthCacheTtl = 30 * 1000; // 30 seconds
 export interface Authenticator {
   authenticate(headers: Headers): Promise<AuthContext>;
   authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext>;
+  getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined>;
 }
 
 export class Authentication implements Authenticator {
@@ -44,7 +45,7 @@ export class Authentication implements Authenticator {
       const authorization = headers.get('authorization');
       if (authorization) {
         const token = authorization.replace(/^bearer\s+/i, '');
-        if (token.startsWith('cosmo')) {
+        if (token.toLowerCase().startsWith('cosmo')) {
           return await this.keyAuth.authenticate(token);
         }
         const organizationSlug = headers.get('cosmo-org-slug');
@@ -119,5 +120,17 @@ export class Authentication implements Authenticator {
       }
     }
     throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Graph token is missing');
+  }
+
+  async getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined> {
+    if (!token || token.trim().length === 0) {
+      return undefined;
+    }
+
+    try {
+      return token.toLowerCase().startsWith('cosmo') ? undefined : await this.accessTokenAuth.getUserInfo(token);
+    } catch {
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
+    }
   }
 }
