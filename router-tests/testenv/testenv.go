@@ -602,15 +602,15 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	replacements := map[string]string{
-		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
-		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
-		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
-		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
-		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
-		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
-		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
-		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
-		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.EmployeesDefaultDemoURL:    GqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       GqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      GqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     GqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        GqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: GqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         GqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    GqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   GqlURL(productFgServer),
 		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
@@ -1032,15 +1032,15 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	}
 
 	replacements := map[string]string{
-		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
-		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
-		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
-		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
-		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
-		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
-		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
-		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
-		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.EmployeesDefaultDemoURL:    GqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       GqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      GqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     GqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        GqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: GqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         GqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    GqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   GqlURL(productFgServer),
 		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
@@ -1316,12 +1316,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableNetPoll:            true,
-		EnableSingleFlight:       true,
-		EnableInboundRequestDeduplication:      false,
-		EnableRequestTracing:     true,
-		EnableNormalizationCache: true,
-		NormalizationCacheSize:   1024,
+		EnableNetPoll:                     true,
+		EnableSingleFlight:                true,
+		EnableInboundRequestDeduplication: false,
+		EnableRequestTracing:              true,
+		EnableNormalizationCache:          true,
+		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
 			PrintQueryPlans:            false,
@@ -1735,7 +1735,7 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 	return cdnServer, port
 }
 
-func gqlURL(srv *httptest.Server) string {
+func GqlURL(srv *httptest.Server) string {
 	path, err := url.JoinPath(srv.URL, "/graphql")
 	if err != nil {
 		panic(err)
@@ -2143,8 +2143,12 @@ func (e *Environment) newGraphQLRequestOverGET(baseURL string, request GraphQLRe
 }
 
 func (e *Environment) MakeGraphQLRequestRaw(request *http.Request) (*TestResponse, error) {
+	return MakeGraphQLRequestRawFromClient(request, e.RouterClient)
+}
+
+func MakeGraphQLRequestRawFromClient(request *http.Request, routerClient *http.Client) (*TestResponse, error) {
 	request.Header.Set("Accept-Encoding", "identity")
-	resp, err := e.RouterClient.Do(request)
+	resp, err := routerClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
