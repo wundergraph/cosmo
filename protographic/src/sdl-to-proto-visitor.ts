@@ -1951,9 +1951,12 @@ Example:
     const unspecifiedValue = createEnumUnspecifiedValue(type.name);
     this.protoText.push(`  ${unspecifiedValue} = 0;`);
 
-    // Use lock manager to order enum values
+    // Use lock manager to order enum values, filtering out any value whose proto name
+    // collides with the auto-generated UNSPECIFIED value (already emitted at position 0)
     const values = type.getValues();
-    const valueNames = values.map((v) => v.name);
+    const valueNames = values
+      .filter((v) => graphqlEnumValueToProtoEnumValue(type.name, v.name) !== unspecifiedValue)
+      .map((v) => v.name);
     const orderedValueNames = this.lockManager.reconcileEnumValueOrder(type.name, valueNames);
 
     for (const valueName of orderedValueNames) {
@@ -1971,20 +1974,19 @@ Example:
         this.protoText.push(...this.formatComment(value.description, 1)); // Field comment, indent 1 level
       }
 
-      if (deprecationInfo.deprecated && (deprecationInfo.reason?.length ?? 0) > 0) {
+      if (deprecationInfo.deprecated && deprecationInfo.reason && deprecationInfo.reason.length > 0) {
         this.protoText.push(...this.formatComment(`Deprecation notice: ${deprecationInfo.reason}`, 1));
       }
 
       // Get value number from lock data
-      const lockData = this.lockManager.getLockData();
       let valueNumber = 0;
 
       if (lockData.enums[type.name] && lockData.enums[type.name].fields[value.name]) {
         valueNumber = lockData.enums[type.name].fields[value.name];
       } else {
-        // This should never happen since we just reconciled, but just in case
-        console.warn(`Missing enum value number for ${type.name}.${value.name}`);
-        continue;
+        // Indicates a bug in lock reconciliation; fail fast rather than silently
+        // producing a proto enum value with number 0, which would collide with UNSPECIFIED.
+        throw new Error(`Missing enum value number for ${type.name}.${value.name}`);
       }
 
       const fieldOptions = [];

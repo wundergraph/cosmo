@@ -1308,8 +1308,9 @@ func (s *graphServer) buildGraphMux(
 		OperationNameLengthLimit:                         s.securityConfiguration.OperationNameLengthLimit,
 		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
 		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
-		DisableExposingVariablesContentOnValidationError: s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
-		ComplexityLimits:                                 s.securityConfiguration.ComplexityLimits,
+		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
+		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
+		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
 	})
 
 	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled())
@@ -1416,6 +1417,7 @@ func (s *graphServer) buildGraphMux(
 		telemetryAttExpressions,
 		metricAttExpressions,
 		exprManager.VisitorManager.IsSubgraphResponseBodyUsedInExpressions(),
+		s.headerPropagation,
 	)
 
 	handlerOpts := HandlerOptions{
