@@ -146,7 +146,7 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 	}
 
 	// Build subgraph client TLS configs (mTLS for outbound subgraph connections)
-	defaultClientTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(&r.subgraphTLSConfiguration)
+	defaultClientTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(r.logger, &r.subgraphTLSConfiguration)
 	if err != nil {
 		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
 	}
@@ -1324,9 +1324,9 @@ func (s *graphServer) buildGraphMux(
 			MaxDepth:  s.securityConfiguration.ParserLimits.ApproximateDepthLimit,
 			MaxFields: s.securityConfiguration.ParserLimits.TotalFieldsLimit,
 		},
-		OperationNameLengthLimit:                         s.securityConfiguration.OperationNameLengthLimit,
-		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
-		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
+		OperationNameLengthLimit:                               s.securityConfiguration.OperationNameLengthLimit,
+		ApolloCompatibilityFlags:                               s.apolloCompatibilityFlags,
+		ApolloRouterCompatibilityFlags:                         s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,

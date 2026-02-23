@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"os"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -43,7 +44,7 @@ func buildTLSClientConfig(clientCfg *config.TLSClientCertConfiguration) (*tls.Co
 
 // buildSubgraphTLSConfigs builds the default and per-subgraph TLS configs from raw configuration.
 // Returns (defaultClientTLS, perSubgraphTLS, error).
-func buildSubgraphTLSConfigs(cfg *config.ClientTLSConfiguration) (*tls.Config, map[string]*tls.Config, error) {
+func buildSubgraphTLSConfigs(logger *zap.Logger, cfg *config.ClientTLSConfiguration) (*tls.Config, map[string]*tls.Config, error) {
 	hasAll := (cfg.All.CertFile != "" && cfg.All.KeyFile != "") || cfg.All.CaFile != "" || cfg.All.InsecureSkipCaVerification
 
 	// If no global TLS config is provided and there are no subgraph specific TLS configs
@@ -55,6 +56,10 @@ func buildSubgraphTLSConfigs(cfg *config.ClientTLSConfiguration) (*tls.Config, m
 	perSubgraphTLS := make(map[string]*tls.Config)
 
 	if hasAll {
+		if cfg.All.InsecureSkipCaVerification {
+			logger.Warn("Global TLS config has InsecureSkipCaVerification enabled. This is not recommended for production environments.")
+		}
+
 		defaultTLS, err := buildTLSClientConfig(&cfg.All)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build global subgraph TLS config: %w", err)
@@ -63,6 +68,11 @@ func buildSubgraphTLSConfigs(cfg *config.ClientTLSConfiguration) (*tls.Config, m
 	}
 
 	for name, sgCfg := range cfg.Subgraphs {
+		if sgCfg.InsecureSkipCaVerification {
+			logger.Warn("Subgraph TLS config inherits InsecureSkipCaVerification from global config. This is not recommended for production environments.",
+				zap.String("subgraph", name))
+		}
+
 		subgraphTLS, err := buildTLSClientConfig(&sgCfg)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to build TLS config for subgraph %q: %w", name, err)
