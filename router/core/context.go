@@ -638,11 +638,10 @@ type operationContext struct {
 
 	// Costs related fields used as a cache through the lifetime of operation.
 	// Do we want to store some kind of cost_result code here?
-	actualListSizes  map[string]int // populated after execution for actual cost calculation. TODO: remove it?
-	costEstimated    int            // populated after planning
-	costActual       int            // populated after execution
-	costEstimatedSet bool           // set to true when costEstimated is populated
-	costActualSet    bool           // set to true when costActual is populated
+	costEstimated    int  // populated after planning
+	costActual       int  // populated after execution
+	costEstimatedSet bool // set to true when costEstimated is populated
+	costActualSet    bool // set to true when costActual is populated
 
 	typeFieldUsageInfo        graphqlschemausage.TypeFieldMetrics
 	typeFieldUsageInfoMetrics []*graphqlmetrics.TypeFieldUsageInfo // Cached conversion result
