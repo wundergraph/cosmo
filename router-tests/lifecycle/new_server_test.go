@@ -96,10 +96,14 @@ func TestNewServer(t *testing.T) {
 		require.Equal(t, http.StatusOK, response1.Response.StatusCode)
 		require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, response1.Body)
 
-		// Shutdown
+		// Shutdown the router, then close the httptest server
+		shutdownCtx, shutdownCancel := context.WithTimeout(t.Context(), 5*time.Second)
+		defer shutdownCancel()
+		require.NoError(t, rr.Shutdown(shutdownCtx))
 		ts.Close()
 
-		ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+		// After shutdown, requests should fail
+		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 		defer cancel()
 		req, err = http.NewRequestWithContext(ctx, http.MethodPost, ts.URL+"/graphql", bytes.NewReader(data))
 		require.NoError(t, err)
