@@ -668,6 +668,128 @@ describe('buildProtoMessage', () => {
         "
       `);
     });
+
+    it('should allow same composite type name at different nesting levels without deduplicating', () => {
+      const message: ProtoMessage = {
+        messageName: 'Response',
+        fields: [
+          {
+            fieldName: 'animal',
+            typeName: 'Animal',
+            fieldNumber: 1,
+            compositeType: {
+              kind: CompositeMessageKind.UNION,
+              typeName: 'Animal',
+              memberTypes: ['Cat', 'Dog'],
+            },
+          },
+          { fieldName: 'wrapper', typeName: 'Wrapper', fieldNumber: 2 },
+        ],
+        nestedMessages: [
+          {
+            messageName: 'Cat',
+            fields: [
+              { fieldName: 'name', typeName: 'string', fieldNumber: 1 },
+              { fieldName: 'meow_volume', typeName: 'int32', fieldNumber: 2 },
+            ],
+          },
+          {
+            messageName: 'Dog',
+            fields: [
+              { fieldName: 'name', typeName: 'string', fieldNumber: 1 },
+              { fieldName: 'bark_loudness', typeName: 'int32', fieldNumber: 2 },
+            ],
+          },
+          {
+            messageName: 'Wrapper',
+            fields: [
+              {
+                fieldName: 'nested_animal',
+                typeName: 'Animal',
+                fieldNumber: 1,
+                compositeType: {
+                  kind: CompositeMessageKind.UNION,
+                  typeName: 'Animal',
+                  memberTypes: ['Cat', 'Dog'],
+                },
+              },
+            ],
+            nestedMessages: [
+              {
+                messageName: 'Cat',
+                fields: [
+                  { fieldName: 'breed', typeName: 'string', fieldNumber: 1 },
+                  { fieldName: 'whisker_count', typeName: 'int32', fieldNumber: 2 },
+                ],
+              },
+              {
+                messageName: 'Dog',
+                fields: [
+                  { fieldName: 'breed', typeName: 'string', fieldNumber: 1 },
+                  { fieldName: 'tail_wag_speed', typeName: 'double', fieldNumber: 2 },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+
+      const result = buildProtoMessage(false, message).join('\n');
+
+      // Count occurrences of "message Animal {" - should be exactly 2 (one at each level)
+      const animalDefinitions = result.match(/message Animal {/g);
+      expect(animalDefinitions).toHaveLength(2);
+
+      // Count occurrences of Cat and Dog - should be 2 each (one at each level)
+      const catDefinitions = result.match(/message Cat {/g);
+      const dogDefinitions = result.match(/message Dog {/g);
+      expect(catDefinitions).toHaveLength(2);
+      expect(dogDefinitions).toHaveLength(2);
+
+      expect(result).toMatchInlineSnapshot(`
+        "message Response {
+          message Cat {
+            string name = 1;
+            int32 meow_volume = 2;
+          }
+
+          message Dog {
+            string name = 1;
+            int32 bark_loudness = 2;
+          }
+
+          message Wrapper {
+            message Cat {
+              string breed = 1;
+              int32 whisker_count = 2;
+            }
+
+            message Dog {
+              string breed = 1;
+              double tail_wag_speed = 2;
+            }
+
+            message Animal {
+              oneof value {
+                Cat cat = 1;
+                Dog dog = 2;
+              }
+            }
+            Animal nested_animal = 1;
+          }
+
+          message Animal {
+            oneof value {
+              Cat cat = 1;
+              Dog dog = 2;
+            }
+          }
+          Animal animal = 1;
+          Wrapper wrapper = 2;
+        }
+        "
+      `);
+    });
   });
 
   describe('reserved field numbers', () => {
