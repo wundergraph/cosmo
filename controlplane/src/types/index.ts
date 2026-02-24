@@ -252,7 +252,6 @@ export interface SchemaCheckDetailsDTO {
     path?: string;
     isBreaking: boolean;
     federatedGraphName: string;
-    hasOverride: boolean;
   }[];
 }
 

@@ -15,7 +15,7 @@ import { validate as isValidUuid } from 'uuid';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema } from 'graphql';
-import { DBSubgraphType, WebsocketSubprotocol } from '../../db/models.js';
+import { DBSubgraphType, SchemaCheckChangeAction, WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
   featureSubgraphsToBaseSubgraphs,
@@ -2088,13 +2088,20 @@ export class SubgraphRepository {
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
-    let inspectorChanges: InspectorSchemaChange[] = [];
-
-    // For operations checks we only consider breaking changes
-    inspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
+    // For operations checks we only consider breaking changes from both subgraph and federated graph
+    const subgraphInspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
       schemaChanges.breakingChanges,
       storedBreakingChanges,
     );
+
+    // Detect breaking changes in federated graph schemas by comparing old vs new client schemas
+    // Only perform this diff if the subgraph schema changes involve field additions, modifications, or deletions
+    // on interfaces and objects, as these are the only changes that can affect the composed federated schema
+    const fieldChangeTypes = new Set(['FIELD_ADDED', 'FIELD_REMOVED', 'FIELD_TYPE_CHANGED']);
+    const allSubgraphChanges = [...schemaChanges.breakingChanges, ...schemaChanges.nonBreakingChanges];
+    const hasFieldChanges = allSubgraphChanges.some((change) => fieldChangeTypes.has(change.changeType));
+
+    const composedSchemaBreakingChanges: Array<SchemaDiff & { federatedGraphName: string }> = [];
 
     for (const composedGraph of composedGraphs) {
       for (const error of composedGraph.errors) {
@@ -2115,6 +2122,66 @@ export class SubgraphRepository {
         });
       }
 
+      // Compute federated graph schema changes and combine with subgraph changes for traffic inspection
+      let fedGraphInspectorChanges: InspectorSchemaChange[] = [];
+      let storedFedGraphBreakingChanges: SchemaCheckChangeAction[] = [];
+
+      if (hasFieldChanges && composedGraph.errors.length === 0 && composedGraph.federatedClientSchema) {
+        // Get the old client schema for this federated graph
+        const oldSchemaVersion = await fedGraphRepo.getLatestValidSchemaVersion({
+          targetId: composedGraph.targetID,
+        });
+
+        if (oldSchemaVersion?.clientSchema) {
+          // Diff the old vs new federated client schemas
+          const federatedSchemaDiff = await getDiffBetweenGraphs(
+            oldSchemaVersion.clientSchema,
+            composedGraph.federatedClientSchema,
+            routerCompatibilityVersion,
+          );
+
+          if (federatedSchemaDiff.kind === 'success' && federatedSchemaDiff.breakingChanges.length > 0) {
+            // Store federated graph breaking changes
+            const schemaCheckFederatedGraphId = fedGraphIdToCheckFedGraphId.get(composedGraph.id);
+            if (schemaCheckFederatedGraphId) {
+              const storedChanges = await schemaCheckRepo.createFederatedGraphSchemaChanges({
+                schemaCheckFederatedGraphId,
+                changes: federatedSchemaDiff.breakingChanges,
+              });
+
+              // Map federated graph changes to SchemaCheckChangeAction-compatible format for inspector
+              storedFedGraphBreakingChanges = storedChanges.map((c) => ({
+                id: c.id,
+                changeType: c.changeType,
+                path: c.path,
+                isBreaking: c.isBreaking,
+                changeMessage: c.changeMessage,
+                createdAt: new Date(),
+                schemaCheckId: schemaCheckID,
+                schemaCheckSubgraphId,
+              }));
+
+              // Convert federated graph changes to inspector changes
+              fedGraphInspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
+                federatedSchemaDiff.breakingChanges,
+                storedFedGraphBreakingChanges,
+              );
+            }
+
+            // Add each breaking change with the federated graph name
+            for (const change of federatedSchemaDiff.breakingChanges) {
+              composedSchemaBreakingChanges.push({
+                ...change,
+                federatedGraphName: composedGraph.name,
+              });
+            }
+          }
+        }
+      }
+
+      // Combine subgraph and federated graph inspector changes for traffic inspection
+      const combinedInspectorChanges = [...subgraphInspectorChanges, ...fedGraphInspectorChanges];
+
       /*
           We don't collect operation usage when
           1. we have composition errors
@@ -2122,11 +2189,11 @@ export class SubgraphRepository {
           3. When user wants to skip the traffic check altogether
           That means any breaking change is really breaking
           */
-      if (composedGraph.errors.length > 0 || inspectorChanges.length === 0 || skipTrafficCheck || !subgraph) {
+      if (composedGraph.errors.length > 0 || combinedInspectorChanges.length === 0 || skipTrafficCheck || !subgraph) {
         continue;
       }
 
-      const result = await trafficInspector.inspect(inspectorChanges, {
+      const result = await trafficInspector.inspect(combinedInspectorChanges, {
         daysToConsider: limit,
         federatedGraphId: composedGraph.id,
         organizationId: this.organizationId,
@@ -2137,8 +2204,11 @@ export class SubgraphRepository {
         continue;
       }
 
+      // Combine stored breaking changes for override check
+      const allStoredBreakingChanges = [...storedBreakingChanges, ...storedFedGraphBreakingChanges];
+
       const overrideCheck = await schemaCheckRepo.checkClientTrafficAgainstOverrides({
-        changes: storedBreakingChanges,
+        changes: allStoredBreakingChanges,
         inspectorResultsByChangeId: result,
         namespaceId: namespace.id,
       });
@@ -2151,71 +2221,6 @@ export class SubgraphRepository {
       // Collect all inspected operations for later aggregation
       for (const resultElement of overrideCheck.result.values()) {
         inspectedOperations.push(...resultElement);
-      }
-    }
-
-    // Detect breaking changes in federated graph schemas by comparing old vs new client schemas
-    // Only perform this diff if the subgraph schema changes involve field additions, modifications, or deletions
-    // on interfaces and objects, as these are the only changes that can affect the composed federated schema
-    const fieldChangeTypes = new Set(['FIELD_ADDED', 'FIELD_REMOVED', 'FIELD_TYPE_CHANGED']);
-    const allSubgraphChanges = [...schemaChanges.breakingChanges, ...schemaChanges.nonBreakingChanges];
-    const hasFieldChanges = allSubgraphChanges.some((change) => fieldChangeTypes.has(change.changeType));
-
-    const composedSchemaBreakingChanges: Array<SchemaDiff & { federatedGraphName: string; hasOverride: boolean }> = [];
-
-    if (hasFieldChanges) {
-      // Fetch all operation change overrides for the namespace
-      // If any operation has marked a specific change as safe, we consider it safe for federated graph changes too
-      const namespaceOverrides = await operationsRepo.getChangeOverrides({
-        namespaceId: namespace.id,
-      });
-
-      for (const composedGraph of composedGraphs) {
-        // Skip graphs with composition errors - they don't have a valid new schema
-        if (composedGraph.errors.length > 0 || !composedGraph.federatedClientSchema) {
-          continue;
-        }
-
-        // Get the old client schema for this federated graph
-        const oldSchemaVersion = await fedGraphRepo.getLatestValidSchemaVersion({
-          targetId: composedGraph.targetID,
-        });
-
-        if (!oldSchemaVersion?.clientSchema) {
-          // No previous schema exists, so no federated schema breaking changes possible
-          continue;
-        }
-
-        // Diff the old vs new federated client schemas
-        const federatedSchemaDiff = await getDiffBetweenGraphs(
-          oldSchemaVersion.clientSchema,
-          composedGraph.federatedClientSchema,
-          routerCompatibilityVersion,
-        );
-
-        if (federatedSchemaDiff.kind === 'success' && federatedSchemaDiff.breakingChanges.length > 0) {
-          // Add each breaking change with the federated graph name and override status
-          // Check if any operation in the namespace has an override for the same changeType and path
-          for (const change of federatedSchemaDiff.breakingChanges) {
-            const hasOverride = namespaceOverrides.some(
-              (o) => o.changeType === change.changeType && o.path === change.path,
-            );
-            composedSchemaBreakingChanges.push({
-              ...change,
-              federatedGraphName: composedGraph.name,
-              hasOverride,
-            });
-          }
-
-          // Use the schemaCheckFederatedGraphId from the map (already created earlier)
-          const schemaCheckFederatedGraphId = fedGraphIdToCheckFedGraphId.get(composedGraph.id);
-          if (schemaCheckFederatedGraphId) {
-            await schemaCheckRepo.createFederatedGraphSchemaChanges({
-              schemaCheckFederatedGraphId,
-              changes: federatedSchemaDiff.breakingChanges,
-            });
-          }
-        }
       }
     }
 

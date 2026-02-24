@@ -183,7 +183,9 @@ export function getCheckSummary(
         name: graph.name,
         isCheckSuccessful: isCheckSuccessful({
           isComposable: checkDetails.compositionErrors.length === 0,
-          isBreaking: checkDetails.changes.some((change) => change.isBreaking) || checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking),
+          isBreaking:
+            checkDetails.changes.some((change) => change.isBreaking) ||
+            checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking),
           hasClientTraffic: hasAffectedOperations,
           hasLintErrors,
           hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
@@ -232,7 +234,9 @@ export function getCheckSummary(
           name: fedGraph.name,
           isCheckSuccessful: isCheckSuccessful({
             isComposable: checkDetails.compositionErrors.length === 0,
-            isBreaking: checkDetails.changes.some((change) => change.isBreaking) || checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking),
+            isBreaking:
+              checkDetails.changes.some((change) => change.isBreaking) ||
+              checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking),
             hasClientTraffic: hasAffectedOperations,
             hasLintErrors,
             hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),

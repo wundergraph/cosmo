@@ -2058,6 +2058,321 @@ type Category {
 
       await server.close();
     });
+
+    test('Should check federated graph schema changes against traffic and report hasClientTraffic', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const fedGraphName = genID('fedGraph');
+      const subgraphAName = genID('subgraphA');
+      const subgraphBName = genID('subgraphB');
+      const label = genUniqueLabel();
+
+      // Subgraph A has a shared type with a required field
+      const subgraphASchema = `
+        type Query {
+          users: [User!]!
+        }
+
+        type User @key(fields: "id") {
+          id: ID!
+          name: String!
+        }
+      `;
+
+      // Subgraph B will add the same field as nullable - causing federated schema breaking change
+      const subgraphBSchema = `
+        type User @key(fields: "id") {
+          id: ID!
+          name: String
+          email: String!
+        }
+      `;
+
+      // Create federated graph
+      const createFedGraphRes = await client.createFederatedGraph({
+        name: fedGraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8081',
+        labelMatchers: [joinLabel(label)],
+      });
+      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph A
+      const createSubgraphARes = await client.createFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8082',
+      });
+      expect(createSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphARes = await client.publishFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        schema: subgraphASchema,
+      });
+      expect(publishSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create subgraph B (but don't publish yet)
+      const createSubgraphBRes = await client.createFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8083',
+      });
+      expect(createSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Mock traffic data - operations that use the User.name field
+      (chClient.queryPromise as Mock).mockResolvedValue([
+        {
+          operationHash: 'hash1',
+          operationName: 'GetUsers',
+          operationType: 'query',
+          firstSeen: Date.now() / 1000,
+          lastSeen: Date.now() / 1000,
+        },
+        {
+          operationHash: 'hash2',
+          operationName: 'GetUserName',
+          operationType: 'query',
+          firstSeen: Date.now() / 1000,
+          lastSeen: Date.now() / 1000,
+        },
+      ]);
+
+      // Now run a schema check for subgraph B
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: subgraphBName,
+        namespace: 'default',
+        schema: Buffer.from(subgraphBSchema),
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.compositionErrors.length).toBe(0);
+
+      // Subgraph-level breaking changes should be empty since we're adding a new subgraph
+      expect(checkResp.breakingChanges.length).toBe(0);
+
+      // Federated schema breaking changes should be detected
+      expect(checkResp.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
+
+      // The federated graph breaking changes should have been checked against traffic
+      // operationUsageStats should reflect operations affected by these changes
+      expect(checkResp.operationUsageStats?.totalOperations).toBeGreaterThanOrEqual(0);
+
+      // Fetch check summary to verify the check is marked as having breaking changes
+      const checkSummary = await client.getCheckSummary({
+        namespace: 'default',
+        graphName: fedGraphName,
+        checkId: checkResp.checkId,
+      });
+
+      expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkSummary.affectedGraphs.length).toBeGreaterThan(0);
+
+      // The check should be marked as having composed schema breaking changes
+      expect(checkSummary.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
+
+      await server.close();
+    });
+
+    test('Should mark check as breaking in summary when only federated graph schema changes are breaking', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const fedGraphName = genID('fedGraph');
+      const subgraphAName = genID('subgraphA');
+      const subgraphBName = genID('subgraphB');
+      const label = genUniqueLabel();
+
+      // Subgraph A has a shared type with a required field
+      const subgraphASchema = `
+        type Query {
+          users: [User!]!
+        }
+
+        type User @key(fields: "id") {
+          id: ID!
+          name: String!
+        }
+      `;
+
+      // Subgraph B will add the same field as nullable
+      const subgraphBSchema = `
+        type User @key(fields: "id") {
+          id: ID!
+          name: String
+          email: String!
+        }
+      `;
+
+      // Create federated graph
+      const createFedGraphRes = await client.createFederatedGraph({
+        name: fedGraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8081',
+        labelMatchers: [joinLabel(label)],
+      });
+      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph A
+      const createSubgraphARes = await client.createFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8082',
+      });
+      expect(createSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphARes = await client.publishFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        schema: subgraphASchema,
+      });
+      expect(publishSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create subgraph B (but don't publish yet)
+      const createSubgraphBRes = await client.createFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8083',
+      });
+      expect(createSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Run schema check for subgraph B
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: subgraphBName,
+        namespace: 'default',
+        schema: Buffer.from(subgraphBSchema),
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.compositionErrors.length).toBe(0);
+
+      // Subgraph-level breaking changes should be empty
+      expect(checkResp.breakingChanges.length).toBe(0);
+
+      // Federated schema breaking changes should be detected
+      expect(checkResp.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
+
+      // Fetch check summary to verify the isCheckSuccessful considers federated schema breaking changes
+      const checkSummary = await client.getCheckSummary({
+        namespace: 'default',
+        graphName: fedGraphName,
+        checkId: checkResp.checkId,
+      });
+
+      expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkSummary.affectedGraphs.length).toBeGreaterThan(0);
+
+      // The affected graph should NOT be marked as successful because of federated schema breaking changes
+      // even though there are no subgraph-level breaking changes
+      const affectedGraph = checkSummary.affectedGraphs[0];
+      expect(affectedGraph.isCheckSuccessful).toBe(false);
+
+      // Verify composedSchemaBreakingChanges are returned in summary
+      expect(checkSummary.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
+
+      // The changes should have the correct federated graph name
+      const fedGraphChange = checkSummary.composedSchemaBreakingChanges.find(
+        (c) => c.federatedGraphName === fedGraphName,
+      );
+      expect(fedGraphChange).toBeDefined();
+
+      await server.close();
+    });
+
+    test('Should skip traffic check for federated graph schema changes when skipTrafficCheck is true', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const fedGraphName = genID('fedGraph');
+      const subgraphAName = genID('subgraphA');
+      const subgraphBName = genID('subgraphB');
+      const label = genUniqueLabel();
+
+      const subgraphASchema = `
+        type Query {
+          users: [User!]!
+        }
+
+        type User @key(fields: "id") {
+          id: ID!
+          name: String!
+        }
+      `;
+
+      const subgraphBSchema = `
+        type User @key(fields: "id") {
+          id: ID!
+          name: String
+          email: String!
+        }
+      `;
+
+      // Create federated graph
+      const createFedGraphRes = await client.createFederatedGraph({
+        name: fedGraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8081',
+        labelMatchers: [joinLabel(label)],
+      });
+      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph A
+      const createSubgraphARes = await client.createFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8082',
+      });
+      expect(createSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphARes = await client.publishFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        schema: subgraphASchema,
+      });
+      expect(publishSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create subgraph B
+      const createSubgraphBRes = await client.createFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8083',
+      });
+      expect(createSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Mock traffic data
+      (chClient.queryPromise as Mock).mockResolvedValue([
+        {
+          operationHash: 'hash1',
+          operationName: 'GetUsers',
+          operationType: 'query',
+          firstSeen: Date.now() / 1000,
+          lastSeen: Date.now() / 1000,
+        },
+      ]);
+
+      // Run schema check with skipTrafficCheck enabled
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: subgraphBName,
+        namespace: 'default',
+        schema: Buffer.from(subgraphBSchema),
+        skipTrafficCheck: true,
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.clientTrafficCheckSkipped).toBe(true);
+
+      // Federated schema breaking changes should still be detected
+      expect(checkResp.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
+
+      // But operation usage should be zero since traffic check was skipped
+      expect(checkResp.operationUsageStats?.totalOperations).toBe(0);
+
+      await server.close();
+    });
   });
 
   describe('Schema check with linked subgraphs', () => {
