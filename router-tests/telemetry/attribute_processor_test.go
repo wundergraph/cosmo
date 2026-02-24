@@ -1,8 +1,11 @@
 package telemetry
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
@@ -10,6 +13,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.uber.org/zap/zapcore"
 )
@@ -184,6 +188,36 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 		})
 	})
 
+	t.Run("invalid UTF-8 export error logs config hint", func(t *testing.T) {
+		t.Parallel()
+
+		exporter := &invalidUTF8Exporter{}
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: exporter,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+
+			// The SimpleSpanProcessor calls otel.Handle(err) synchronously on span end,
+			// but give a small window for log propagation.
+			require.Eventually(t, func() bool {
+				logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
+				return len(logs) > 0
+			}, 5*time.Second, 100*time.Millisecond)
+
+			logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
+			require.NotEmpty(t, logs)
+			require.Contains(t, logs[0].Message, "telemetry.tracing.sanitize_utf8.enabled")
+		})
+	})
+
 	t.Run("IPAnonymization hashes IP attributes", func(t *testing.T) {
 		t.Parallel()
 
@@ -219,4 +253,23 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.Positive(t, hashedIPCount)
 		})
 	})
+}
+
+// errInvalidUTF8 mimics google.golang.org/protobuf/internal/impl.errInvalidUTF8
+// so that errors.As can match it via the invalidUTF8Error interface used in the router.
+type errInvalidUTF8 struct{}
+
+func (errInvalidUTF8) Error() string     { return "string field contains invalid UTF-8" }
+func (errInvalidUTF8) InvalidUTF8() bool { return true }
+
+// invalidUTF8Exporter is a SpanExporter that always returns an invalid UTF-8 error,
+// simulating what happens when protobuf marshaling encounters invalid UTF-8 in span attributes.
+type invalidUTF8Exporter struct{}
+
+func (e *invalidUTF8Exporter) ExportSpans(_ context.Context, _ []sdktrace.ReadOnlySpan) error {
+	return fmt.Errorf("traces export: %w", errInvalidUTF8{})
+}
+
+func (e *invalidUTF8Exporter) Shutdown(_ context.Context) error {
+	return nil
 }
