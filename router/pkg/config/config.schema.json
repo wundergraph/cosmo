@@ -616,6 +616,13 @@
               "minimum": 1,
               "maximum": 9,
               "description": "The compression level (1-9). Level 1 is fastest with least compression, level 9 provides best compression but is slowest. The default value is 6."
+            },
+            "client_max_window_bits": {
+              "type": "integer",
+              "default": 15,
+              "minimum": 8,
+              "maximum": 15,
+              "description": "Limits the LZ77 sliding window size (8-15) that clients may use when compressing messages. Smaller values reduce server memory for decompression at the cost of compression ratio. The parameter is only included in the negotiation response when the client offers it. The default value is 15 (32 KB window)."
             }
           }
         }

@@ -75,7 +75,7 @@ func (m *mockConn) getWrittenBytes() []byte {
 func TestWsConnectionWrapper_NoContextTakeover(t *testing.T) {
 	t.Run("write compressed message without context takeover", func(t *testing.T) {
 		conn := newMockConn()
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		// Write a test message
@@ -108,7 +108,7 @@ func TestWsConnectionWrapper_NoContextTakeover(t *testing.T) {
 
 	t.Run("read compressed message without context takeover", func(t *testing.T) {
 		conn := newMockConn()
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		// Prepare a compressed message
@@ -143,7 +143,7 @@ func TestWsConnectionWrapper_ContextTakeover(t *testing.T) {
 	t.Run("write multiple messages with server context takeover shows compression benefit", func(t *testing.T) {
 		conn := newMockConn()
 		// Enable server context takeover
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, serverContextTakeover: true})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, serverContextTakeover: true, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		// Write multiple similar messages - with context takeover,
@@ -181,7 +181,7 @@ func TestWsConnectionWrapper_ContextTakeover(t *testing.T) {
 	t.Run("write multiple messages without server context takeover for comparison", func(t *testing.T) {
 		conn := newMockConn()
 		// Disable server context takeover
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		messages := []map[string]string{
@@ -217,7 +217,7 @@ func TestWsConnectionWrapper_ContextTakeover(t *testing.T) {
 	t.Run("read compressed messages without context takeover", func(t *testing.T) {
 		conn := newMockConn()
 		// Disable client context takeover - each message compressed independently
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		// Prepare multiple independently compressed messages
@@ -258,7 +258,7 @@ func TestWsConnectionWrapper_ContextTakeover(t *testing.T) {
 func TestWsConnectionWrapper_FragmentedFrames(t *testing.T) {
 	t.Run("read fragmented uncompressed message", func(t *testing.T) {
 		conn := newMockConn()
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		// Prepare a message that will be sent in fragments
@@ -308,7 +308,7 @@ func TestWsConnectionWrapper_FragmentedFrames(t *testing.T) {
 
 	t.Run("read fragmented compressed message", func(t *testing.T) {
 		conn := newMockConn()
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		// Prepare and compress a message
@@ -356,7 +356,7 @@ func TestWsConnectionWrapper_ContextTakeoverDictionary(t *testing.T) {
 	t.Run("server context takeover compressor maintains state", func(t *testing.T) {
 		conn := newMockConn()
 		// Enable server context takeover
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, serverContextTakeover: true})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, serverContextTakeover: true, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		// Verify compressor is initialized
@@ -374,7 +374,7 @@ func TestWsConnectionWrapper_ContextTakeoverDictionary(t *testing.T) {
 	t.Run("client context takeover decompressor is initialized", func(t *testing.T) {
 		conn := newMockConn()
 		// Enable client context takeover
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientContextTakeover: true})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientContextTakeover: true, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		// Verify decompressor is initialized
@@ -385,7 +385,7 @@ func TestWsConnectionWrapper_ContextTakeoverDictionary(t *testing.T) {
 	t.Run("no context takeover does not initialize persistent state", func(t *testing.T) {
 		conn := newMockConn()
 		// Disable context takeover
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		// Verify persistent state is not initialized
@@ -397,7 +397,7 @@ func TestWsConnectionWrapper_ContextTakeoverDictionary(t *testing.T) {
 
 	t.Run("decompress with client context takeover handles wsflate read tail framing", func(t *testing.T) {
 		conn := newMockConn()
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientContextTakeover: true})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientContextTakeover: true, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		var compressBuf bytes.Buffer
@@ -441,7 +441,7 @@ func TestWsConnectionWrapper_ContextTakeoverDictionary(t *testing.T) {
 func TestWsConnectionWrapper_CompressionDisabled(t *testing.T) {
 	t.Run("write uncompressed when compression disabled", func(t *testing.T) {
 		conn := newMockConn()
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: false, level: 6})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: false, level: 6, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		testData := map[string]string{"message": "hello world"}
@@ -466,7 +466,7 @@ func TestWsConnectionWrapper_CompressionDisabled(t *testing.T) {
 func TestWsConnectionWrapper_WriteText(t *testing.T) {
 	t.Run("write text with compression", func(t *testing.T) {
 		conn := newMockConn()
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: true, level: 6, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		testText := `{"type":"connection_ack"}`
@@ -489,7 +489,7 @@ func TestWsConnectionWrapper_WriteText(t *testing.T) {
 
 	t.Run("write text without compression", func(t *testing.T) {
 		conn := newMockConn()
-		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: false, level: 6})
+		wrapper, err := newWSConnectionWrapper(conn, 0, 0, compressionMode{enabled: false, level: 6, clientWindowBits: 15})
 		require.NoError(t, err)
 
 		testText := `{"type":"connection_ack"}`
@@ -509,7 +509,7 @@ func TestWsConnectionWrapper_WriteText(t *testing.T) {
 
 // TestResolveNegotiatedCompression tests the resolveNegotiatedCompression function
 func TestResolveNegotiatedCompression(t *testing.T) {
-	base := compressionMode{enabled: true, level: 6}
+	base := compressionMode{enabled: true, level: 6, clientWindowBits: 15}
 
 	t.Run("returns disabled when ext is nil", func(t *testing.T) {
 		result := resolveNegotiatedCompression(base, nil, nil)
@@ -560,6 +560,7 @@ func TestResolveNegotiatedCompression(t *testing.T) {
 		assert.Equal(t, 6, result.level)
 		assert.True(t, result.serverContextTakeover)
 		assert.True(t, result.clientContextTakeover)
+		assert.Equal(t, 15, result.clientWindowBits)
 	})
 
 	t.Run("returns enabled without context takeover when no_context_takeover negotiated", func(t *testing.T) {
@@ -580,6 +581,69 @@ func TestResolveNegotiatedCompression(t *testing.T) {
 		assert.Equal(t, 6, result.level)
 		assert.False(t, result.serverContextTakeover)
 		assert.False(t, result.clientContextTakeover)
+		assert.Equal(t, 15, result.clientWindowBits)
+	})
+
+	t.Run("uses client_max_window_bits when client offers a concrete value", func(t *testing.T) {
+		ext := &wsflate.Extension{
+			Parameters: wsflate.Parameters{
+				ServerNoContextTakeover: true,
+				ClientNoContextTakeover: true,
+				ServerMaxWindowBits:     15,
+			},
+		}
+		offer := wsflate.Parameters{
+			ServerNoContextTakeover: true,
+			ClientNoContextTakeover: true,
+			ClientMaxWindowBits:     12,
+		}.Option()
+		_, _ = ext.Negotiate(offer)
+
+		result := resolveNegotiatedCompression(base, ext, nil)
+		assert.True(t, result.enabled)
+		assert.Equal(t, 12, result.clientWindowBits, "should use client's offered value when it is more restrictive")
+	})
+
+	t.Run("uses server config when client offers larger window bits", func(t *testing.T) {
+		configBase := compressionMode{enabled: true, level: 6, clientWindowBits: 10}
+		ext := &wsflate.Extension{
+			Parameters: wsflate.Parameters{
+				ServerNoContextTakeover: true,
+				ClientNoContextTakeover: true,
+				ServerMaxWindowBits:     15,
+			},
+		}
+		offer := wsflate.Parameters{
+			ServerNoContextTakeover: true,
+			ClientNoContextTakeover: true,
+			ClientMaxWindowBits:     14,
+		}.Option()
+		_, _ = ext.Negotiate(offer)
+
+		result := resolveNegotiatedCompression(configBase, ext, nil)
+		assert.True(t, result.enabled)
+		assert.Equal(t, 10, result.clientWindowBits, "should use server config when it is more restrictive")
+	})
+
+	t.Run("uses config default when client does not offer client_max_window_bits", func(t *testing.T) {
+		configBase := compressionMode{enabled: true, level: 6, clientWindowBits: 12}
+		ext := &wsflate.Extension{
+			Parameters: wsflate.Parameters{
+				ServerNoContextTakeover: true,
+				ClientNoContextTakeover: true,
+				ServerMaxWindowBits:     15,
+			},
+		}
+		// Offer without client_max_window_bits.
+		offer := wsflate.Parameters{
+			ServerNoContextTakeover: true,
+			ClientNoContextTakeover: true,
+		}.Option()
+		_, _ = ext.Negotiate(offer)
+
+		result := resolveNegotiatedCompression(configBase, ext, nil)
+		assert.True(t, result.enabled)
+		assert.Equal(t, 12, result.clientWindowBits, "should fall back to server config when client doesn't offer the param")
 	})
 }
 

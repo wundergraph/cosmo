@@ -468,7 +468,8 @@
     },
     "Compression": {
       "Enabled": false,
-      "Level": 6
+      "Level": 6,
+      "ClientMaxWindowBits": 15
     }
   },
   "SubgraphErrorPropagation": {

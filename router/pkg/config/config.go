@@ -762,6 +762,11 @@ type WebSocketCompressionConfiguration struct {
 	Enabled bool `yaml:"enabled" envDefault:"false" env:"WEBSOCKETS_COMPRESSION_ENABLED"`
 	// Level is the compression level (1-9, where 1 is fastest and 9 is best compression)
 	Level int `yaml:"level" envDefault:"6" env:"WEBSOCKETS_COMPRESSION_LEVEL"`
+	// ClientMaxWindowBits limits the LZ77 sliding window size (8-15) that the client
+	// may use when compressing messages. Smaller values reduce server memory for
+	// decompression at the cost of compression ratio. Default is 15 (32 KB).
+	// Only included in the negotiation response when the client offers the parameter.
+	ClientMaxWindowBits int `yaml:"client_max_window_bits" envDefault:"15" env:"WEBSOCKETS_COMPRESSION_CLIENT_MAX_WINDOW_BITS"`
 }
 
 type WebSocketClientInfoFromInitialPayloadConfiguration struct {

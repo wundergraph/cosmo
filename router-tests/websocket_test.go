@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -20,6 +21,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/buger/jsonparser"
+	coderws "github.com/coder/websocket"
 	"github.com/gorilla/websocket"
 	"github.com/hasura/go-graphql-client"
 	"github.com/hasura/go-graphql-client/pkg/jsonutil"
@@ -2404,9 +2406,13 @@ func TestWebSockets(t *testing.T) {
 			// Use the compression-enabled dialer
 			conn, resp := xEnv.InitGraphQLWebSocketConnectionWithCompression(nil, nil, nil)
 
-			// Check that compression was negotiated via the Sec-WebSocket-Extensions header
+			// Check that compression was negotiated via the Sec-WebSocket-Extensions header.
+			// gorilla always requests server_no_context_takeover and client_no_context_takeover,
+			// so the server must mirror both flags in the response.
 			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
 			require.Contains(t, extensions, "permessage-deflate", "Expected compression to be negotiated")
+			require.Contains(t, extensions, "server_no_context_takeover", "Expected server to mirror server_no_context_takeover")
+			require.Contains(t, extensions, "client_no_context_takeover", "Expected server to mirror client_no_context_takeover")
 
 			// Verify the connection works correctly with compression
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
@@ -2592,6 +2598,190 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, "complete", complete.Type)
 
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+
+	t.Run("compression negotiation includes window bits in response", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Compression.Enabled = true
+				cfg.Compression.Level = 6
+				cfg.Compression.ClientMaxWindowBits = 12
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			wsURL, err := url.Parse(xEnv.GraphQLWebSocketSubscriptionURL())
+			require.NoError(t, err)
+
+			switch wsURL.Scheme {
+			case "ws":
+				wsURL.Scheme = "http"
+			case "wss":
+				wsURL.Scheme = "https"
+			default:
+				t.Fatalf("unexpected websocket scheme: %s", wsURL.Scheme)
+			}
+
+			req, err := http.NewRequest(http.MethodGet, wsURL.String(), nil)
+			require.NoError(t, err)
+			req.Header.Set("Connection", "Upgrade")
+			req.Header.Set("Upgrade", "websocket")
+			req.Header.Set("Sec-WebSocket-Version", "13")
+			req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+			req.Header.Set("Sec-WebSocket-Protocol", "graphql-transport-ws")
+			req.Header.Set("Sec-WebSocket-Extensions", "permessage-deflate; client_max_window_bits=15")
+
+			client := &http.Client{Timeout: 5 * time.Second}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				_ = resp.Body.Close()
+			})
+			require.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+
+			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
+			require.Contains(t, extensions, "permessage-deflate", "Expected compression to be negotiated")
+			require.Contains(t, extensions, "server_max_window_bits=15", "Expected server_max_window_bits=15 in response")
+			require.Contains(t, extensions, "client_max_window_bits=12", "Expected client_max_window_bits=12 (server config is more restrictive)")
+		})
+	})
+
+	t.Run("compression negotiation respects client offering smaller window bits than server default", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Compression.Enabled = true
+				cfg.Compression.Level = 6
+				// Server allows up to 15, but the client will offer 10.
+				cfg.Compression.ClientMaxWindowBits = 15
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			wsURL, err := url.Parse(xEnv.GraphQLWebSocketSubscriptionURL())
+			require.NoError(t, err)
+
+			switch wsURL.Scheme {
+			case "ws":
+				wsURL.Scheme = "http"
+			case "wss":
+				wsURL.Scheme = "https"
+			default:
+				t.Fatalf("unexpected websocket scheme: %s", wsURL.Scheme)
+			}
+
+			req, err := http.NewRequest(http.MethodGet, wsURL.String(), nil)
+			require.NoError(t, err)
+			req.Header.Set("Connection", "Upgrade")
+			req.Header.Set("Upgrade", "websocket")
+			req.Header.Set("Sec-WebSocket-Version", "13")
+			req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+			req.Header.Set("Sec-WebSocket-Protocol", "graphql-transport-ws")
+			// Client offers a window smaller than the server's configured maximum.
+			req.Header.Set("Sec-WebSocket-Extensions", "permessage-deflate; client_max_window_bits=10")
+
+			client := &http.Client{Timeout: 5 * time.Second}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				_ = resp.Body.Close()
+			})
+			require.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+
+			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
+			require.Contains(t, extensions, "permessage-deflate", "Expected compression to be negotiated")
+			require.Contains(t, extensions, "server_max_window_bits=15", "Expected server_max_window_bits=15")
+			require.Contains(t, extensions, "client_max_window_bits=10", "Expected server to honour the client's smaller window bits")
+		})
+	})
+
+	t.Run("compression with small client_max_window_bits works end to end", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Compression.Enabled = true
+				cfg.Compression.Level = 6
+				cfg.Compression.ClientMaxWindowBits = 9
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// gorilla's Dialer with EnableCompression sends client_max_window_bits (no value),
+			// so the server responds with its configured value of 9.
+			conn, resp := xEnv.InitGraphQLWebSocketConnectionWithCompression(nil, nil, nil)
+
+			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
+			require.Contains(t, extensions, "permessage-deflate", "Expected compression to be negotiated")
+
+			// Run a query to verify data round-trips correctly with the smaller window.
+			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: []byte(`{"query":"{ employees { id } }"}`),
+			})
+			require.NoError(t, err)
+
+			var res testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &res)
+			require.NoError(t, err)
+			require.Equal(t, "next", res.Type)
+			require.Equal(t, "1", res.ID)
+			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(res.Payload))
+
+			var complete testenv.WebSocketMessage
+			err = testenv.WSReadJSON(t, conn, &complete)
+			require.NoError(t, err)
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+
+			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+		})
+	})
+
+	t.Run("compression negotiation omits client_max_window_bits when client does not offer it", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Compression.Enabled = true
+				cfg.Compression.Level = 6
+				cfg.Compression.ClientMaxWindowBits = 10
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			wsURL, err := url.Parse(xEnv.GraphQLWebSocketSubscriptionURL())
+			require.NoError(t, err)
+
+			switch wsURL.Scheme {
+			case "ws":
+				wsURL.Scheme = "http"
+			case "wss":
+				wsURL.Scheme = "https"
+			default:
+				t.Fatalf("unexpected websocket scheme: %s", wsURL.Scheme)
+			}
+
+			req, err := http.NewRequest(http.MethodGet, wsURL.String(), nil)
+			require.NoError(t, err)
+			req.Header.Set("Connection", "Upgrade")
+			req.Header.Set("Upgrade", "websocket")
+			req.Header.Set("Sec-WebSocket-Version", "13")
+			req.Header.Set("Sec-WebSocket-Key", "dGhlIHNhbXBsZSBub25jZQ==")
+			req.Header.Set("Sec-WebSocket-Protocol", "graphql-transport-ws")
+			// Offer permessage-deflate WITHOUT client_max_window_bits.
+			req.Header.Set("Sec-WebSocket-Extensions", "permessage-deflate")
+
+			client := &http.Client{Timeout: 5 * time.Second}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				_ = resp.Body.Close()
+			})
+			require.Equal(t, http.StatusSwitchingProtocols, resp.StatusCode)
+
+			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
+			require.Contains(t, extensions, "permessage-deflate", "Expected compression to be negotiated")
+			require.Contains(t, extensions, "server_max_window_bits=15", "Expected server_max_window_bits=15 in response")
+			// RFC 7692 §7.1.2.2: client_max_window_bits must NOT appear when the client didn't offer it.
+			require.NotContains(t, extensions, "client_max_window_bits", "Expected no client_max_window_bits when client didn't offer it")
 		})
 	})
 
@@ -3269,4 +3459,211 @@ func handleCountEmpSubscription(t *testing.T, wsWriteCh chan<- wsJSONMessage, ws
 			t.Log("Closed websocket connection")
 		}
 	}
+}
+
+// TestWebSocketsCoderClient validates the server's WebSocket handling using the
+// coder/websocket library (successor to nhooyr.io/websocket) as an alternative
+// to the gorilla/websocket client used in the rest of this file.
+func TestWebSocketsCoderClient(t *testing.T) {
+	t.Run("basic subscription", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			conn, _, err := coderws.Dial(ctx, xEnv.GraphQLWebSocketSubscriptionURL(), &coderws.DialOptions{
+				Subprotocols: []string{"graphql-transport-ws"},
+			})
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				_ = conn.CloseNow()
+			})
+
+			// connection_init
+			err = conn.Write(ctx, coderws.MessageText, []byte(`{"type":"connection_init"}`))
+			require.NoError(t, err)
+
+			// connection_ack
+			_, ackData, err := conn.Read(ctx)
+			require.NoError(t, err)
+			var ack testenv.WebSocketMessage
+			require.NoError(t, json.Unmarshal(ackData, &ack))
+			require.Equal(t, "connection_ack", ack.Type)
+
+			// subscribe
+			subscribePayload, err := json.Marshal(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: json.RawMessage(`{"query":"{ employees { id } }"}`),
+			})
+			require.NoError(t, err)
+			err = conn.Write(ctx, coderws.MessageText, subscribePayload)
+			require.NoError(t, err)
+
+			// next
+			_, nextData, err := conn.Read(ctx)
+			require.NoError(t, err)
+			var next testenv.WebSocketMessage
+			require.NoError(t, json.Unmarshal(nextData, &next))
+			require.Equal(t, "next", next.Type)
+			require.Equal(t, "1", next.ID)
+			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(next.Payload))
+
+			// complete
+			_, completeData, err := conn.Read(ctx)
+			require.NoError(t, err)
+			var complete testenv.WebSocketMessage
+			require.NoError(t, json.Unmarshal(completeData, &complete))
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+		})
+	})
+
+	t.Run("subscription with compression", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Compression.Enabled = true
+				cfg.Compression.Level = 6
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			conn, resp, err := coderws.Dial(ctx, xEnv.GraphQLWebSocketSubscriptionURL(), &coderws.DialOptions{
+				Subprotocols:    []string{"graphql-transport-ws"},
+				CompressionMode: coderws.CompressionContextTakeover,
+			})
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				_ = conn.CloseNow()
+			})
+
+			// Verify compression was negotiated.
+			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
+			require.Contains(t, extensions, "permessage-deflate", "Expected compression to be negotiated")
+
+			// connection_init
+			err = conn.Write(ctx, coderws.MessageText, []byte(`{"type":"connection_init"}`))
+			require.NoError(t, err)
+
+			// connection_ack
+			_, ackData, err := conn.Read(ctx)
+			require.NoError(t, err)
+			var ack testenv.WebSocketMessage
+			require.NoError(t, json.Unmarshal(ackData, &ack))
+			require.Equal(t, "connection_ack", ack.Type)
+
+			// subscribe
+			subscribePayload, err := json.Marshal(testenv.WebSocketMessage{
+				ID:      "1",
+				Type:    "subscribe",
+				Payload: json.RawMessage(`{"query":"{ employees { id } }"}`),
+			})
+			require.NoError(t, err)
+			err = conn.Write(ctx, coderws.MessageText, subscribePayload)
+			require.NoError(t, err)
+
+			// next
+			_, nextData, err := conn.Read(ctx)
+			require.NoError(t, err)
+			var next testenv.WebSocketMessage
+			require.NoError(t, json.Unmarshal(nextData, &next))
+			require.Equal(t, "next", next.Type)
+			require.Equal(t, "1", next.ID)
+			require.JSONEq(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, string(next.Payload))
+
+			// complete
+			_, completeData, err := conn.Read(ctx)
+			require.NoError(t, err)
+			var complete testenv.WebSocketMessage
+			require.NoError(t, json.Unmarshal(completeData, &complete))
+			require.Equal(t, "complete", complete.Type)
+			require.Equal(t, "1", complete.ID)
+		})
+	})
+
+	t.Run("multiple queries over single context takeover connection", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyWebsocketConfiguration: func(cfg *config.WebSocketConfiguration) {
+				cfg.Compression.Enabled = true
+				cfg.Compression.Level = 6
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
+			conn, resp, err := coderws.Dial(ctx, xEnv.GraphQLWebSocketSubscriptionURL(), &coderws.DialOptions{
+				Subprotocols:    []string{"graphql-transport-ws"},
+				CompressionMode: coderws.CompressionContextTakeover,
+			})
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				_ = conn.CloseNow()
+			})
+
+			// Verify context takeover was negotiated (no no_context_takeover flags).
+			extensions := resp.Header.Get("Sec-WebSocket-Extensions")
+			require.Contains(t, extensions, "permessage-deflate")
+			require.NotContains(t, extensions, "server_no_context_takeover")
+			require.NotContains(t, extensions, "client_no_context_takeover")
+
+			// connection_init / connection_ack
+			err = conn.Write(ctx, coderws.MessageText, []byte(`{"type":"connection_init"}`))
+			require.NoError(t, err)
+			_, ackData, err := conn.Read(ctx)
+			require.NoError(t, err)
+			var ack testenv.WebSocketMessage
+			require.NoError(t, json.Unmarshal(ackData, &ack))
+			require.Equal(t, "connection_ack", ack.Type)
+
+			// Helper: run a one-shot query and return the payload.
+			runQuery := func(id, query, expectedPayload string) {
+				t.Helper()
+				sub, err := json.Marshal(testenv.WebSocketMessage{
+					ID:      id,
+					Type:    "subscribe",
+					Payload: json.RawMessage(fmt.Sprintf(`{"query":"%s"}`, query)),
+				})
+				require.NoError(t, err)
+				err = conn.Write(ctx, coderws.MessageText, sub)
+				require.NoError(t, err)
+
+				// next
+				_, data, err := conn.Read(ctx)
+				require.NoError(t, err)
+				var msg testenv.WebSocketMessage
+				require.NoError(t, json.Unmarshal(data, &msg))
+				require.Equal(t, "next", msg.Type)
+				require.Equal(t, id, msg.ID)
+				require.JSONEq(t, expectedPayload, string(msg.Payload))
+
+				// complete
+				_, data, err = conn.Read(ctx)
+				require.NoError(t, err)
+				var comp testenv.WebSocketMessage
+				require.NoError(t, json.Unmarshal(data, &comp))
+				require.Equal(t, "complete", comp.Type)
+				require.Equal(t, id, comp.ID)
+			}
+
+			expectedEmployeeIDs := `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
+			expectedEmployeeDetails := `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]}}`
+
+			// Run three queries sequentially on the same connection.
+			// The server's writeCompressedWithContextTakeover and
+			// decompressWithContextTakeover paths maintain dictionary
+			// state across messages. If the dictionary gets corrupted,
+			// decompression will fail and the reads above will error.
+			runQuery("1", "{ employees { id } }", expectedEmployeeIDs)
+			runQuery("2", "{ employees { id details { forename surname } } }", expectedEmployeeDetails)
+			// Third query repeats the first — exercises dictionary reuse
+			// with identical content after intervening different content.
+			runQuery("3", "{ employees { id } }", expectedEmployeeIDs)
+		})
+	})
 }

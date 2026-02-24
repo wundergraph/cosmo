@@ -51,6 +51,10 @@ type compressionMode struct {
 	level                 int
 	serverContextTakeover bool
 	clientContextTakeover bool
+	// clientWindowBits is the negotiated LZ77 window size (8-15) used by the
+	// client for compression. The decompression dictionary is sized as
+	// 1 << clientWindowBits. Default is 15 (32 KB, the DEFLATE maximum).
+	clientWindowBits int
 }
 
 type WebsocketMiddlewareOptions struct {
@@ -103,6 +107,10 @@ func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions
 		handler.compression.level = opts.WebSocketConfiguration.Compression.Level
 		if handler.compression.level < 1 || handler.compression.level > 9 {
 			handler.compression.level = flate.DefaultCompression
+		}
+		handler.compression.clientWindowBits = opts.WebSocketConfiguration.Compression.ClientMaxWindowBits
+		if handler.compression.clientWindowBits < 8 || handler.compression.clientWindowBits > 15 {
+			handler.compression.clientWindowBits = 15
 		}
 	}
 	if opts.WebSocketConfiguration != nil && opts.WebSocketConfiguration.AbsintheProtocol.Enabled {
@@ -207,7 +215,7 @@ func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Durati
 
 	if compression.enabled && compression.clientContextTakeover {
 		w.decompressor = flate.NewReader(bytes.NewReader(nil))
-		w.decompressDict = make([]byte, 0, 32*1024)
+		w.decompressDict = make([]byte, 0, 1<<compression.clientWindowBits)
 	}
 
 	return w, nil
@@ -356,9 +364,9 @@ func (c *wsConnectionWrapper) decompressWithContextTakeover(compressed []byte) (
 }
 
 // updateDecompressDict updates the decompression dictionary with new data.
-// DEFLATE uses a 32KB sliding window, so we only keep the last 32KB.
+// The dictionary is capped to the negotiated client window size (1 << clientWindowBits).
 func (c *wsConnectionWrapper) updateDecompressDict(data []byte) {
-	const maxDictSize = 32 * 1024
+	maxDictSize := 1 << c.compression.clientWindowBits
 
 	if len(data) >= maxDictSize {
 		c.decompressDict = make([]byte, maxDictSize)
@@ -541,6 +549,8 @@ func (h *WebsocketHandler) configureCompressionNegotiation(upgrader *ws.HTTPUpgr
 		Parameters: wsflate.Parameters{
 			ServerNoContextTakeover: true,
 			ClientNoContextTakeover: true,
+			// Accept any client offer for server_max_window_bits (up to 15).
+			ServerMaxWindowBits: 15,
 		},
 	}
 	upgrader.Negotiate = func(opt httphead.Option) (accept httphead.Option, err error) {
@@ -554,11 +564,29 @@ func (h *WebsocketHandler) configureCompressionNegotiation(upgrader *ws.HTTPUpgr
 			return accept, nil
 		}
 
-		// Mirror no_context_takeover only when explicitly requested by the client.
-		return wsflate.Parameters{
+		response := wsflate.Parameters{
+			// Mirror no_context_takeover only when explicitly requested by the client.
 			ServerNoContextTakeover: params.ServerNoContextTakeover,
 			ClientNoContextTakeover: params.ClientNoContextTakeover,
-		}.Option(), nil
+			// Go's compress/flate always uses a 32 KB window (bits=15).
+			ServerMaxWindowBits: 15,
+		}
+
+		// RFC 7692 §7.1.2.2: only include client_max_window_bits in the
+		// response when the client included it in the offer.
+		if params.ClientMaxWindowBits.Defined() {
+			configBits := wsflate.WindowBits(h.compression.clientWindowBits)
+			// Use the more restrictive of the client's offer and server config.
+			// ClientMaxWindowBits == 1 means "parameter present, no value" —
+			// the client accepts any server-chosen value.
+			if params.ClientMaxWindowBits == 1 || configBits < params.ClientMaxWindowBits {
+				response.ClientMaxWindowBits = configBits
+			} else {
+				response.ClientMaxWindowBits = params.ClientMaxWindowBits
+			}
+		}
+
+		return response.Option(), nil
 	}
 
 	return ext
@@ -578,12 +606,23 @@ func resolveNegotiatedCompression(base compressionMode, ext *wsflate.Extension, 
 			level:   base.level,
 		}
 	}
+	// Derive the effective client window bits from the negotiation.
+	// If the client offered client_max_window_bits, use min(offer, config);
+	// otherwise fall back to the configured default.
+	clientWindowBits := base.clientWindowBits
+	if params.ClientMaxWindowBits.Defined() && params.ClientMaxWindowBits > 1 {
+		if int(params.ClientMaxWindowBits) < clientWindowBits {
+			clientWindowBits = int(params.ClientMaxWindowBits)
+		}
+	}
+
 	// Context takeover remains enabled when no_context_takeover is not requested.
 	return compressionMode{
 		enabled:               true,
 		level:                 base.level,
 		serverContextTakeover: !params.ServerNoContextTakeover,
 		clientContextTakeover: !params.ClientNoContextTakeover,
+		clientWindowBits:      clientWindowBits,
 	}
 }
 
