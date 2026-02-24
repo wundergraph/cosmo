@@ -1330,6 +1330,7 @@ func (s *graphServer) buildGraphMux(
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
+		EnableFieldArgumentMapping:                             s.subscriptionHooks.needFieldArgumentMapping(),
 	})
 
 	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled())
@@ -1535,6 +1536,7 @@ func (s *graphServer) buildGraphMux(
 		HasPreOriginHandlers:                   len(s.preOriginHandlers) != 0,
 		HeaderPropagation:                      s.headerPropagation,
 		OperationContentAttributes:             s.traceConfig.OperationContentAttributes,
+		MapFieldArguments:                      s.subscriptionHooks.needFieldArgumentMapping(),
 	})
 
 	if s.webSocketConfiguration != nil && s.webSocketConfiguration.Enabled {
@@ -1556,6 +1558,7 @@ func (s *graphServer) buildGraphMux(
 			WebSocketConfiguration:    s.webSocketConfiguration,
 			ClientHeader:              s.clientHeader,
 			DisableVariablesRemapping: s.engineExecutionConfiguration.DisableVariablesRemapping,
+			MapFieldArguments:         s.subscriptionHooks.needFieldArgumentMapping(),
 			ApolloCompatibilityFlags:  s.apolloCompatibilityFlags,
 		})
 

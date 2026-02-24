@@ -564,16 +564,16 @@ type OperationContext interface {
 	Hash() uint64
 	// Content is the content of the operation
 	Content() string
-	// Variables is the variables of the operation
+	// Arguments allow access to GraphQL operation field arguments.
+	Arguments() *Arguments
+	// Variables allow access to GraphQL operation variables.
 	Variables() *astjson.Value
 	// ClientInfo returns information about the client that initiated this operation
 	ClientInfo() ClientInfo
-
 	// Sha256Hash returns the SHA256 hash of the original operation
 	// It is important to note that this hash is not calculated just because this method has been called
 	// and is only calculated based on other existing logic (such as if sha256Hash is used in expressions)
 	Sha256Hash() string
-
 	// QueryPlanStats returns some statistics about the query plan for the operation
 	// if called too early in request chain, it may be inaccurate for modules, using
 	// in Middleware is recommended
@@ -611,11 +611,13 @@ type operationContext struct {
 	// RawContent is the raw content of the operation
 	rawContent string
 	// Content is the normalized content of the operation
-	content       string
-	variables     *astjson.Value
-	variablesHash uint64
-	files         []*httpclient.FileUpload
-	clientInfo    *ClientInfo
+	content string
+	// These are not mapped by default, only when certain custom modules require them.
+	fieldArguments Arguments
+	variables      *astjson.Value
+	variablesHash  uint64
+	files          []*httpclient.FileUpload
+	clientInfo     *ClientInfo
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
@@ -646,6 +648,10 @@ type operationContext struct {
 
 func (o *operationContext) Variables() *astjson.Value {
 	return o.variables
+}
+
+func (o *operationContext) Arguments() *Arguments {
+	return &o.fieldArguments
 }
 
 func (o *operationContext) Files() []*httpclient.FileUpload {

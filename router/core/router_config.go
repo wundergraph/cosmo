@@ -47,6 +47,10 @@ type onReceiveEventsHooks struct {
 	timeout               time.Duration
 }
 
+func (h *subscriptionHooks) needFieldArgumentMapping() bool {
+	return len(h.onStart.handlers) > 0 || len(h.onPublishEvents.handlers) > 0 || len(h.onReceiveEvents.handlers) > 0
+}
+
 type Config struct {
 	clusterName                     string
 	instanceID                      string

@@ -67,6 +67,7 @@ type PreHandlerOptions struct {
 	ComputeOperationSha256                 bool
 	ApolloCompatibilityFlags               *config.ApolloCompatibilityFlags
 	DisableVariablesRemapping              bool
+	MapFieldArguments                      bool
 	ExprManager                            *expr.Manager
 	OmitBatchExtensions                    bool
 	OperationContentAttributes             bool
@@ -107,6 +108,7 @@ type PreHandler struct {
 	computeOperationSha256                 bool
 	apolloCompatibilityFlags               *config.ApolloCompatibilityFlags
 	disableVariablesRemapping              bool
+	mapFieldArguments                      bool
 	exprManager                            *expr.Manager
 	omitBatchExtensions                    bool
 	operationContentAttributes             bool
@@ -169,6 +171,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		computeOperationSha256:                 opts.ComputeOperationSha256,
 		apolloCompatibilityFlags:               opts.ApolloCompatibilityFlags,
 		disableVariablesRemapping:              opts.DisableVariablesRemapping,
+		mapFieldArguments:                      opts.MapFieldArguments,
 		exprManager:                            opts.ExprManager,
 		omitBatchExtensions:                    opts.OmitBatchExtensions,
 		operationContentAttributes:             opts.OperationContentAttributes,
@@ -803,7 +806,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	* Normalize the variables
 	 */
 
-	cached, uploadsMapping, err := operationKit.NormalizeVariables()
+	cached, uploadsMapping, fieldArgMapping, err := operationKit.NormalizeVariables()
 	if err != nil {
 		rtrace.AttachErrToSpan(engineNormalizeSpan, err)
 
@@ -818,6 +821,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		engineNormalizeSpan.End()
 		return err
 	}
+	// Store the field argument mapping for later use when creating Arguments
 	engineNormalizeSpan.SetAttributes(otel.WgVariablesNormalizationCacheHit.Bool(cached))
 	requestContext.operation.variablesNormalizationCacheHit = cached
 
@@ -936,6 +940,14 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		engineNormalizeSpan.End()
 		return err
 	}
+
+	if h.mapFieldArguments {
+		requestContext.operation.fieldArguments = NewArguments(
+			fieldArgMapping,
+			requestContext.operation.variables,
+		)
+	}
+
 	requestContext.operation.normalizationTime = time.Since(startNormalization)
 	requestContext.expressionContext.Request.Operation.NormalizationTime = requestContext.operation.normalizationTime
 	setTelemetryAttributes(normalizeCtx, requestContext, expr.BucketNormalizationTime)
