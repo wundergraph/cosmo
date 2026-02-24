@@ -285,14 +285,14 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 		}
 	}
 
-	if c.OpenTelemetry.MetricsLogExporter.Enabled {
-		metricsLogExp := newMetricsLogExporter(log, c.OpenTelemetry.MetricsLogExporter.ExcludeMetrics)
+	if c.OpenTelemetry.LogExporter.Enabled {
+		logExp := newLogExporter(log, c.OpenTelemetry.LogExporter.ExcludeMetrics)
 		exportInterval := defaultExportInterval
-		if c.OpenTelemetry.MetricsLogExporter.ExportInterval > 0 {
-			exportInterval = c.OpenTelemetry.MetricsLogExporter.ExportInterval
+		if c.OpenTelemetry.LogExporter.ExportInterval > 0 {
+			exportInterval = c.OpenTelemetry.LogExporter.ExportInterval
 		}
 		opts = append(opts, sdkmetric.WithReader(
-			sdkmetric.NewPeriodicReader(metricsLogExp,
+			sdkmetric.NewPeriodicReader(logExp,
 				sdkmetric.WithTimeout(defaultExportTimeout),
 				sdkmetric.WithInterval(exportInterval),
 			),

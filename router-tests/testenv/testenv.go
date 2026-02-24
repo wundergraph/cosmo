@@ -280,7 +280,7 @@ type MetricOptions struct {
 	EnablePrometheusConnectionMetrics     bool
 	EnablePrometheusCircuitBreakerMetrics bool
 	EnablePrometheusStreamMetrics         bool
-	MetricsLogExporter                    MetricsLogExporterOptions
+	LogExporter                           MetricsLogExporterOptions
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -1323,12 +1323,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableNetPoll:            true,
-		EnableSingleFlight:       true,
-		EnableInboundRequestDeduplication:      false,
-		EnableRequestTracing:     true,
-		EnableNormalizationCache: true,
-		NormalizationCacheSize:   1024,
+		EnableNetPoll:                     true,
+		EnableSingleFlight:                true,
+		EnableInboundRequestDeduplication: false,
+		EnableRequestTracing:              true,
+		EnableNormalizationCache:          true,
+		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
 			PrintQueryPlans:            false,
@@ -1591,9 +1591,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
-					MetricsLogExporter: config.MetricsLogExporter{
-						Enabled:        testConfig.MetricOptions.MetricsLogExporter.Enabled,
-						ExcludeMetrics: testConfig.MetricOptions.MetricsLogExporter.ExcludeMetrics,
+					LogExporter: config.MetricsLogExporter{
+						Enabled:        testConfig.MetricOptions.LogExporter.Enabled,
+						ExcludeMetrics: testConfig.MetricOptions.LogExporter.ExcludeMetrics,
 					},
 				},
 			},
@@ -1601,7 +1601,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 		c.Prometheus = prometheusConfig
 		c.OpenTelemetry.TestReader = testConfig.MetricReader
-		c.OpenTelemetry.MetricsLogExporter.ExportInterval = testConfig.MetricOptions.MetricsLogExporter.ExportInterval
+		c.OpenTelemetry.LogExporter.ExportInterval = testConfig.MetricOptions.LogExporter.ExportInterval
 		c.IsUsingCloudExporter = !testConfig.DisableSimulateCloudExporter
 
 		routerOpts = append(routerOpts, core.WithMetrics(c))

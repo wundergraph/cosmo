@@ -31,8 +31,8 @@ func TestMetricsLogExporter(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 			MetricOptions: testenv.MetricOptions{
-				MetricsLogExporter: testenv.MetricsLogExporterOptions{
-					Enabled:            true,
+				LogExporter: testenv.MetricsLogExporterOptions{
+					Enabled:        true,
 					ExportInterval: 90 * time.Millisecond,
 				},
 			},
@@ -113,8 +113,8 @@ func TestMetricsLogExporter(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 			MetricOptions: testenv.MetricOptions{
-				MetricsLogExporter: testenv.MetricsLogExporterOptions{
-					Enabled:            true,
+				LogExporter: testenv.MetricsLogExporterOptions{
+					Enabled:        true,
 					ExportInterval: 100 * time.Millisecond,
 					ExcludeMetrics: []*regexp.Regexp{
 						regexp.MustCompile(`router\.http\.requests$`),
@@ -167,7 +167,7 @@ func TestMetricsLogExporter(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 			MetricOptions: testenv.MetricOptions{
-				MetricsLogExporter: testenv.MetricsLogExporterOptions{
+				LogExporter: testenv.MetricsLogExporterOptions{
 					Enabled: false,
 				},
 			},
@@ -184,7 +184,7 @@ func TestMetricsLogExporter(t *testing.T) {
 			require.NotEmpty(t, rm.ScopeMetrics)
 
 			// No debug logs
-			debugLogs := xEnv.Observer().FilterMessage("Metrics log export").All()
+			debugLogs := xEnv.Observer().FilterMessage("Log export").All()
 			require.Empty(t, debugLogs)
 
 			metricLogs := xEnv.Observer().FilterMessage("Metric").All()

@@ -13,36 +13,36 @@ import (
 	"go.uber.org/zap"
 )
 
-// metricsLogExporter is a metric exporter that logs all collected metrics via zap.
-type metricsLogExporter struct {
+// logExporter is a metric exporter that logs all collected metrics via zap.
+type logExporter struct {
 	logger         *zap.Logger
 	excludeMetrics []*regexp.Regexp
 }
 
-func newMetricsLogExporter(logger *zap.Logger, excludeMetrics []*regexp.Regexp) *metricsLogExporter {
-	return &metricsLogExporter{
+func newLogExporter(logger *zap.Logger, excludeMetrics []*regexp.Regexp) *logExporter {
+	return &logExporter{
 		logger:         logger,
 		excludeMetrics: excludeMetrics,
 	}
 }
 
-func (s *metricsLogExporter) Temporality(_ sdkmetric.InstrumentKind) metricdata.Temporality {
+func (s *logExporter) Temporality(_ sdkmetric.InstrumentKind) metricdata.Temporality {
 	return metricdata.CumulativeTemporality
 }
 
-func (s *metricsLogExporter) Aggregation(_ sdkmetric.InstrumentKind) sdkmetric.Aggregation {
+func (s *logExporter) Aggregation(_ sdkmetric.InstrumentKind) sdkmetric.Aggregation {
 	return nil
 }
 
-func (s *metricsLogExporter) ForceFlush(_ context.Context) error {
+func (s *logExporter) ForceFlush(_ context.Context) error {
 	return nil
 }
 
-func (s *metricsLogExporter) Shutdown(_ context.Context) error {
+func (s *logExporter) Shutdown(_ context.Context) error {
 	return nil
 }
 
-func (s *metricsLogExporter) Export(_ context.Context, rm *metricdata.ResourceMetrics) error {
+func (s *logExporter) Export(_ context.Context, rm *metricdata.ResourceMetrics) error {
 	totalMetrics := 0
 	for _, sm := range rm.ScopeMetrics {
 		totalMetrics += len(sm.Metrics)

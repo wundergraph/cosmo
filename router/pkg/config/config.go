@@ -155,7 +155,7 @@ type MetricsOTLP struct {
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
-	MetricsLogExporter  MetricsLogExporter    `yaml:"metrics_log_exporter"`
+	LogExporter         MetricsLogExporter    `yaml:"log_exporter"`
 }
 
 type Telemetry struct {

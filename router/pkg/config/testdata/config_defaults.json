@@ -45,7 +45,7 @@
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
         "Exporters": null,
-        "MetricsLogExporter": {
+        "LogExporter": {
           "Enabled": false,
           "ExcludeMetrics": null
         }

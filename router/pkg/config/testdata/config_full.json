@@ -75,7 +75,7 @@
             "Temporality": ""
           }
         ],
-        "MetricsLogExporter": {
+        "LogExporter": {
           "Enabled": true,
           "ExcludeMetrics": [
             "process\\.",
