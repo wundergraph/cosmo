@@ -436,7 +436,7 @@ func TestAllowedExtensions(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
-			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","reason":"expired","details":"token expired","statusCode":403}}],"data":{"employees":null}}`, res.Body)
+			require.JSONEq(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","reason":"expired","details":"token expired","statusCode":403}}],"data":{"employees":null}}`, res.Body)
 		})
 	})
 
