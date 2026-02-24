@@ -68,6 +68,11 @@ type ResponseTraceHeader struct {
 	HeaderName string `yaml:"header_name" envDefault:"x-wg-trace-id"`
 }
 
+type SanitizeUTF8Config struct {
+	Enabled          bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	LogSanitizations bool `yaml:"log_sanitizations" envDefault:"false" env:"LOG_SANITIZATIONS"`
+}
+
 type Tracing struct {
 	Enabled             bool                `yaml:"enabled" envDefault:"true" env:"TRACING_ENABLED"`
 	SamplingRate        float64             `yaml:"sampling_rate" envDefault:"1" env:"TRACING_SAMPLING_RATE"`
@@ -80,6 +85,9 @@ type Tracing struct {
 	OperationContentAttributes bool `yaml:"operation_content_attributes" envDefault:"false" env:"TRACING_OPERATION_CONTENT_ATTRIBUTES"`
 
 	TracingGlobalFeatures `yaml:",inline"`
+
+	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values
+	SanitizeUTF8 SanitizeUTF8Config `yaml:"sanitize_utf8" envPrefix:"TRACING_SANITIZE_UTF8_"`
 }
 
 type PropagationConfig struct {
@@ -798,8 +806,23 @@ type TLSServerConfiguration struct {
 	ClientAuth TLSClientAuthConfiguration `yaml:"client_auth,omitempty"`
 }
 
+type TLSClientCertConfiguration struct {
+	CertFile                   string `yaml:"cert_file,omitempty" env:"CERT_FILE"`
+	KeyFile                    string `yaml:"key_file,omitempty" env:"KEY_FILE"`
+	CaFile                     string `yaml:"ca_file,omitempty" env:"CA_FILE"`
+	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
+}
+
+type ClientTLSConfiguration struct {
+	// All applies to all subgraph connections.
+	All TLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
+	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
+	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+}
+
 type TLSConfiguration struct {
 	Server TLSServerConfiguration `yaml:"server"`
+	Client ClientTLSConfiguration `yaml:"client"`
 }
 
 type SubgraphErrorPropagationMode string
