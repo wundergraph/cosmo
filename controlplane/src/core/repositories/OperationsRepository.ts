@@ -95,18 +95,7 @@ export class OperationsRepository {
     const operations: PersistedOperationDTO[] = [];
 
     for (const row of operationsResult) {
-      operations.push({
-        id: row.id,
-        operationId: row.operationId,
-        hash: row.hash,
-        filePath: row.filePath,
-        createdAt: row.createdAt.toISOString(),
-        lastUpdatedAt: row?.updatedAt?.toISOString() || '',
-        createdBy: row.createdBy?.email,
-        lastUpdatedBy: row.updatedBy?.email ?? '',
-        contents: row.operationContent ?? '',
-        operationNames: row.operationNames ?? [],
-      });
+      operations.push(this.createPersistedOperationDTO(row));
     }
     return operations;
   }
@@ -160,6 +149,33 @@ export class OperationsRepository {
       contents: operationResult[0].operationContent ?? '',
       clientName: operationResult[0].clientName,
     };
+  }
+
+  public async removePersistedOperation({
+    operationId,
+  }: {
+    operationId: string;
+  }): Promise<PersistedOperationDTO | undefined> {
+      const operationResult = await this.db.query.federatedGraphPersistedOperations.findFirst({
+        where: and(
+          eq(federatedGraphPersistedOperations.id, operationId),
+          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+        ),
+        with: {
+          createdBy: true,
+          updatedBy: true,
+        },
+      });
+
+    if (!operationResult) {
+      return undefined;
+    }
+
+    await this.db.delete(federatedGraphPersistedOperations).where(
+      eq(federatedGraphPersistedOperations.id, operationId),
+    )
+
+    return this.createPersistedOperationDTO(operationResult)
   }
 
   public async registerClient(clientName: string, userId: string): Promise<string> {
@@ -459,5 +475,34 @@ export class OperationsRepository {
       .fullJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)))
       .leftJoin(changeCounts, and(eq(change.hash, changeCounts.hash), eq(change.namespaceId, changeCounts.namespaceId)))
       .orderBy(({ name, hash }) => [asc(name), asc(hash)]);
+  }
+
+  private createPersistedOperationDTO({
+    id,
+    operationId,
+    hash,
+    filePath,
+    createdAt,
+    updatedAt,
+    createdBy,
+    updatedBy,
+    operationContent,
+    operationNames,
+  }: typeof federatedGraphPersistedOperations.$inferSelect & {
+    createdBy: typeof users.$inferSelect | null;
+    updatedBy: typeof users.$inferSelect | null;
+  }): PersistedOperationDTO {
+    return {
+        id,
+        operationId,
+        hash,
+        filePath,
+        createdAt: createdAt.toISOString(),
+        lastUpdatedAt: updatedAt?.toISOString() || '',
+        createdBy: createdBy?.email,
+        lastUpdatedBy: updatedBy?.email ?? '',
+        contents: operationContent ?? '',
+        operationNames: operationNames ?? [],
+    }
   }
 }
