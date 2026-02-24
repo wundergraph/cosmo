@@ -24,351 +24,597 @@ import (
 func TestSubgraphMTLS(t *testing.T) {
 	t.Parallel()
 
-	t.Run("Router connects to TLS subgraph with InsecureSkipVerify", func(t *testing.T) {
+	t.Run("InsecureSkipVerify", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					TLSConfig: subgraphMTLSServerConfig(t, false),
-				},
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						InsecureSkipCaVerification: true,
+		t.Run("All", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("connects when enabled", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: subgraphMTLSServerConfig(t, false),
+						},
 					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								InsecureSkipCaVerification: true,
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+				})
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+
+			t.Run("fails when disabled", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: subgraphMTLSServerConfig(t, false),
+						},
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								InsecureSkipCaVerification: false,
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'."}],"data":{"employees":null}}`, res.Body)
+				})
+			})
+		})
+
+		t.Run("Per-subgraph", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("overrides global CaFile", func(t *testing.T) {
+				t.Parallel()
+
+				// Global config uses CaFile that does NOT match the httptest server cert,
+				// so it would fail. Per-subgraph overrides with InsecureSkipVerify to skip
+				// verification entirely, proving per-subgraph can be less secure than global.
+				certPath, _ := generateServerCert(t)
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: subgraphMTLSServerConfig(t, false),
+						},
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								CaFile: certPath,
+							},
+							Subgraphs: map[string]config.TLSClientCertConfiguration{
+								"employees": {
+									InsecureSkipCaVerification: true,
+								},
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+				})
+			})
 		})
 	})
 
-	t.Run("Router fails to connect to TLS subgraph with InsecureSkipVerify", func(t *testing.T) {
+	t.Run("Client certificate", func(t *testing.T) {
 		t.Parallel()
 
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					TLSConfig: subgraphMTLSServerConfig(t, false),
-				},
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						InsecureSkipCaVerification: false,
+		t.Run("All", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("presents correct cert to mTLS subgraph", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: subgraphMTLSServerConfig(t, true),
+						},
 					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								InsecureSkipCaVerification: true,
+								CertFile:                   "testdata/tls/cert.pem",
+								KeyFile:                    "testdata/tls/key.pem",
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+				})
 			})
-			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'."}],"data":{"employees":null}}`, res.Body)
+
+			t.Run("fails without client cert", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: subgraphMTLSServerConfig(t, true),
+						},
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								InsecureSkipCaVerification: true,
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.NoError(t, err)
+					require.Contains(t, res.Body, `Failed to fetch from Subgraph`)
+				})
+			})
+
+			t.Run("fails with wrong client cert", func(t *testing.T) {
+				t.Parallel()
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: subgraphMTLSServerConfig(t, true),
+						},
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								InsecureSkipCaVerification: true,
+								CertFile:                   "testdata/tls/cert-2.pem",
+								KeyFile:                    "testdata/tls/key-2.pem",
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.NoError(t, err)
+					require.Contains(t, res.Body, `Failed to fetch from Subgraph`)
+				})
+			})
+		})
+
+		t.Run("Per-subgraph", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("correct config without global", func(t *testing.T) {
+				t.Parallel()
+
+				// No global config — only per-subgraph with correct client cert
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: subgraphMTLSServerConfig(t, true),
+						},
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							Subgraphs: map[string]config.TLSClientCertConfiguration{
+								"employees": {
+									InsecureSkipCaVerification: true,
+									CertFile:                   "testdata/tls/cert.pem",
+									KeyFile:                    "testdata/tls/key.pem",
+								},
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+				})
+			})
+
+			t.Run("correct config overrides incorrect global", func(t *testing.T) {
+				t.Parallel()
+
+				// Global has wrong certs (cert-2), per-subgraph has correct ones (cert).
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: subgraphMTLSServerConfig(t, true),
+						},
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								InsecureSkipCaVerification: true,
+								CertFile:                   "testdata/tls/cert-2.pem",
+								KeyFile:                    "testdata/tls/key-2.pem",
+							},
+							Subgraphs: map[string]config.TLSClientCertConfiguration{
+								"employees": {
+									InsecureSkipCaVerification: true,
+									CertFile:                   "testdata/tls/cert.pem",
+									KeyFile:                    "testdata/tls/key.pem",
+								},
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+				})
+			})
+
+			t.Run("incorrect config overrides correct global", func(t *testing.T) {
+				t.Parallel()
+
+				// Global has correct certs (cert), per-subgraph overrides with wrong ones (cert-2).
+				// Per-subgraph always wins, even when it causes failure.
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: subgraphMTLSServerConfig(t, true),
+						},
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								InsecureSkipCaVerification: true,
+								CertFile:                   "testdata/tls/cert.pem",
+								KeyFile:                    "testdata/tls/key.pem",
+							},
+							Subgraphs: map[string]config.TLSClientCertConfiguration{
+								"employees": {
+									InsecureSkipCaVerification: true,
+									CertFile:                   "testdata/tls/cert-2.pem",
+									KeyFile:                    "testdata/tls/key-2.pem",
+								},
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.NoError(t, err)
+					require.Contains(t, res.Body, `Failed to fetch from Subgraph`)
+				})
+			})
+
+			t.Run("override without cert fails even when global has cert", func(t *testing.T) {
+				t.Parallel()
+
+				// Global has full working mTLS config (InsecureSkipVerify + client cert).
+				// Per-subgraph overrides with ONLY InsecureSkipVerify — no client cert.
+				// Because per-subgraph COMPLETELY REPLACES global (no field merging),
+				// the router will not present a client cert, causing mTLS failure.
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: subgraphMTLSServerConfig(t, true),
+						},
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								InsecureSkipCaVerification: true,
+								CertFile:                   "testdata/tls/cert.pem",
+								KeyFile:                    "testdata/tls/key.pem",
+							},
+							Subgraphs: map[string]config.TLSClientCertConfiguration{
+								"employees": {
+									InsecureSkipCaVerification: true,
+									// NO CertFile/KeyFile — proves fields are NOT inherited from All
+								},
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.NoError(t, err)
+					require.Contains(t, res.Body, `Failed to fetch from Subgraph`)
+				})
+			})
 		})
 	})
 
-	t.Run("Router presents client certificate to mTLS subgraph", func(t *testing.T) {
+	t.Run("CaFile", func(t *testing.T) {
 		t.Parallel()
 
-		// Subgraph requires client cert signed by testdata/tls/cert.pem CA
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					TLSConfig: subgraphMTLSServerConfig(t, true),
-				},
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						// InsecureSkipCaVerification for httptest's self-signed server cert
-						InsecureSkipCaVerification: true,
-						// Present client cert for mTLS
-						CertFile: "testdata/tls/cert.pem",
-						KeyFile:  "testdata/tls/key.pem",
+		t.Run("All", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("trusts subgraph server", func(t *testing.T) {
+				t.Parallel()
+
+				certPath, keyPath := generateServerCert(t)
+				serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+				require.NoError(t, err)
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: &tls.Config{
+								Certificates: []tls.Certificate{serverCert},
+							},
+						},
 					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								CaFile: certPath,
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+				})
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+		})
+
+		t.Run("Per-subgraph", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("trusts subgraph server without global config", func(t *testing.T) {
+				t.Parallel()
+
+				certPath, keyPath := generateServerCert(t)
+				serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+				require.NoError(t, err)
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: &tls.Config{
+								Certificates: []tls.Certificate{serverCert},
+							},
+						},
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							Subgraphs: map[string]config.TLSClientCertConfiguration{
+								"employees": {
+									CaFile: certPath,
+								},
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+				})
+			})
+
+			t.Run("overrides global InsecureSkipVerify with proper verification", func(t *testing.T) {
+				t.Parallel()
+
+				// Global uses InsecureSkipVerify (insecure), per-subgraph uses CaFile
+				// (proper verification). Proves per-subgraph can be more secure than global.
+				certPath, keyPath := generateServerCert(t)
+				serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+				require.NoError(t, err)
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: &tls.Config{
+								Certificates: []tls.Certificate{serverCert},
+							},
+						},
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								InsecureSkipCaVerification: true,
+							},
+							Subgraphs: map[string]config.TLSClientCertConfiguration{
+								"employees": {
+									CaFile: certPath,
+								},
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+				})
+			})
 		})
 	})
 
-	t.Run("Router fails to connect to mTLS subgraph without client certificate", func(t *testing.T) {
+	t.Run("Full mTLS", func(t *testing.T) {
 		t.Parallel()
 
-		// Subgraph requires client cert, but router does not provide one
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					TLSConfig: subgraphMTLSServerConfig(t, true),
-				},
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						InsecureSkipCaVerification: true,
-						// NO client certificate — should cause mTLS failure
+		t.Run("All", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("with CaFile and client certificate", func(t *testing.T) {
+				t.Parallel()
+
+				// Production-like: router verifies server cert via CaFile
+				// AND presents client cert for mTLS — no InsecureSkipCaVerification.
+				certPath, keyPath := generateServerCert(t)
+				serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+				require.NoError(t, err)
+
+				caPool := loadSubgraphMTLSCACertPool(t, "testdata/tls/cert.pem")
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: &tls.Config{
+								Certificates: []tls.Certificate{serverCert},
+								ClientCAs:    caPool,
+								ClientAuth:   tls.RequireAndVerifyClientCert,
+							},
+						},
 					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// The query should fail because the router has no client cert to present
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							All: config.TLSClientCertConfiguration{
+								CaFile:   certPath,
+								CertFile: "testdata/tls/cert.pem",
+								KeyFile:  "testdata/tls/key.pem",
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+				})
 			})
-			require.NoError(t, err)
-			// The router returns 200 with a GraphQL error about the subgraph fetch failure
-			require.Contains(t, res.Body, `Failed to fetch from Subgraph`)
+		})
+
+		t.Run("Per-subgraph", func(t *testing.T) {
+			t.Parallel()
+
+			t.Run("with CaFile and client certificate without global config", func(t *testing.T) {
+				t.Parallel()
+
+				// Production-like per-subgraph: CaFile for server verification
+				// + client cert for mTLS, no global config at all.
+				certPath, keyPath := generateServerCert(t)
+				serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+				require.NoError(t, err)
+
+				caPool := loadSubgraphMTLSCACertPool(t, "testdata/tls/cert.pem")
+
+				testenv.Run(t, &testenv.Config{
+					Subgraphs: testenv.SubgraphsConfig{
+						Employees: testenv.SubgraphConfig{
+							TLSConfig: &tls.Config{
+								Certificates: []tls.Certificate{serverCert},
+								ClientCAs:    caPool,
+								ClientAuth:   tls.RequireAndVerifyClientCert,
+							},
+						},
+					},
+					RouterOptions: []core.Option{
+						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+							Subgraphs: map[string]config.TLSClientCertConfiguration{
+								"employees": {
+									CaFile:   certPath,
+									CertFile: "testdata/tls/cert.pem",
+									KeyFile:  "testdata/tls/key.pem",
+								},
+							},
+						}),
+					},
+				}, func(t *testing.T, xEnv *testenv.Environment) {
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query { employees { id } }`,
+					})
+					require.JSONEq(t, employeesIDData, res.Body)
+				})
+			})
 		})
 	})
 
-	t.Run("Router fails to connect to mTLS subgraph with wrong client certificate", func(t *testing.T) {
+	t.Run("Traffic shaping integration", func(t *testing.T) {
 		t.Parallel()
 
-		// Subgraph requires client cert signed by cert.pem CA, but router presents cert-2
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					TLSConfig: subgraphMTLSServerConfig(t, true),
-				},
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						InsecureSkipCaVerification: true,
-						CertFile:                   "testdata/tls/cert-2.pem",
-						KeyFile:                    "testdata/tls/key-2.pem",
+		t.Run("TLS with per-subgraph transport", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						TLSConfig: subgraphMTLSServerConfig(t, false),
 					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.NoError(t, err)
-			require.Contains(t, res.Body, `Failed to fetch from Subgraph`)
-		})
-	})
-
-	t.Run("Per-subgraph TLS config overrides global", func(t *testing.T) {
-		t.Parallel()
-
-		// Subgraph requires client cert
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					TLSConfig: subgraphMTLSServerConfig(t, true),
 				},
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
-					// No global client TLS — would fail without per-subgraph override
-					Subgraphs: map[string]config.TLSClientCertConfiguration{
-						"employees": {
+				RouterOptions: []core.Option{
+					core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
+						All: config.GlobalSubgraphRequestRule{
+							RequestTimeout: ToPtr(30 * time.Second),
+						},
+						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
+							"employees": {
+								RequestTimeout: ToPtr(5 * time.Second),
+							},
+						},
+					})),
+					core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+						All: config.TLSClientCertConfiguration{
 							InsecureSkipCaVerification: true,
-							CertFile:                   "testdata/tls/cert.pem",
-							KeyFile:                    "testdata/tls/key.pem",
 						},
-					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
 		})
-	})
 
-	t.Run("Router trusts subgraph server via CaFile", func(t *testing.T) {
-		t.Parallel()
+		t.Run("mTLS with per-subgraph transport", func(t *testing.T) {
+			t.Parallel()
 
-		// Generate a self-signed cert valid for 127.0.0.1 to use as both
-		// the server cert and the router's trusted CA.
-		certPath, keyPath := generateServerCert(t)
-		serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
-		require.NoError(t, err)
-
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					TLSConfig: &tls.Config{
-						Certificates: []tls.Certificate{serverCert},
+			testenv.Run(t, &testenv.Config{
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						TLSConfig: subgraphMTLSServerConfig(t, true),
 					},
 				},
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						// Trust the server cert via CaFile instead of InsecureSkipCaVerification
-						CaFile: certPath,
-					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.JSONEq(t, employeesIDData, res.Body)
-		})
-	})
-
-	t.Run("Per-subgraph correct TLS config overrides the incorrect global config", func(t *testing.T) {
-		t.Parallel()
-
-		// Global config has wrong client certs (cert-2), but per-subgraph has correct ones.
-		// The subgraph requires client cert signed by cert.pem CA.
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					TLSConfig: subgraphMTLSServerConfig(t, true),
-				},
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						InsecureSkipCaVerification: true,
-						// Wrong client cert at global level
-						CertFile: "testdata/tls/cert-2.pem",
-						KeyFile:  "testdata/tls/key-2.pem",
-					},
-					Subgraphs: map[string]config.TLSClientCertConfiguration{
-						"employees": {
-							InsecureSkipCaVerification: true,
-							// Correct client cert at per-subgraph level
-							CertFile: "testdata/tls/cert.pem",
-							KeyFile:  "testdata/tls/key.pem",
+				RouterOptions: []core.Option{
+					core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
+						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
+							"employees": {
+								RequestTimeout: ToPtr(5 * time.Second),
+							},
 						},
-					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.JSONEq(t, employeesIDData, res.Body)
-		})
-	})
-
-	t.Run("Full mTLS with CaFile and client certificate", func(t *testing.T) {
-		t.Parallel()
-
-		// Production-like scenario: router verifies subgraph server cert via CaFile
-		// AND presents a client cert for mTLS — no InsecureSkipCaVerification.
-		certPath, keyPath := generateServerCert(t)
-		serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
-		require.NoError(t, err)
-
-		// Server requires client cert signed by testdata/tls/cert.pem CA
-		caPool := loadSubgraphMTLSCACertPool(t, "testdata/tls/cert.pem")
-
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					TLSConfig: &tls.Config{
-						Certificates: []tls.Certificate{serverCert},
-						ClientCAs:    caPool,
-						ClientAuth:   tls.RequireAndVerifyClientCert,
-					},
-				},
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						// Verify server cert via CaFile
-						CaFile: certPath,
-						// Present client cert for mTLS
-						CertFile: "testdata/tls/cert.pem",
-						KeyFile:  "testdata/tls/key.pem",
-					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.JSONEq(t, employeesIDData, res.Body)
-		})
-	})
-
-	t.Run("TLS works with per-subgraph traffic shaping transport", func(t *testing.T) {
-		t.Parallel()
-
-		// When a subgraph has per-subgraph traffic shaping options, it creates a dedicated
-		// transport via SubgraphMap. The TLS config must be merged into that transport.
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					TLSConfig: subgraphMTLSServerConfig(t, false),
-				},
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
-					All: config.GlobalSubgraphRequestRule{
-						RequestTimeout: ToPtr(30 * time.Second),
-					},
-					Subgraphs: map[string]config.GlobalSubgraphRequestRule{
-						"employees": {
-							RequestTimeout: ToPtr(5 * time.Second),
+					})),
+					core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
+						Subgraphs: map[string]config.TLSClientCertConfiguration{
+							"employees": {
+								InsecureSkipCaVerification: true,
+								CertFile:                   "testdata/tls/cert.pem",
+								KeyFile:                    "testdata/tls/key.pem",
+							},
 						},
-					},
-				})),
-				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
-					All: config.TLSClientCertConfiguration{
-						InsecureSkipCaVerification: true,
-					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.JSONEq(t, employeesIDData, res.Body)
-		})
-	})
-
-	t.Run("mTLS works with per-subgraph traffic shaping transport", func(t *testing.T) {
-		t.Parallel()
-
-		// Combines per-subgraph traffic shaping (creates transport via SubgraphMap)
-		// with per-subgraph TLS config (client cert for mTLS).
-		testenv.Run(t, &testenv.Config{
-			Subgraphs: testenv.SubgraphsConfig{
-				Employees: testenv.SubgraphConfig{
-					TLSConfig: subgraphMTLSServerConfig(t, true),
+					}),
 				},
-			},
-			RouterOptions: []core.Option{
-				core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
-					Subgraphs: map[string]config.GlobalSubgraphRequestRule{
-						"employees": {
-							RequestTimeout: ToPtr(5 * time.Second),
-						},
-					},
-				})),
-				core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
-					Subgraphs: map[string]config.TLSClientCertConfiguration{
-						"employees": {
-							InsecureSkipCaVerification: true,
-							CertFile:                   "testdata/tls/cert.pem",
-							KeyFile:                    "testdata/tls/key.pem",
-						},
-					},
-				}),
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				require.JSONEq(t, employeesIDData, res.Body)
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
 		})
 	})
 }
