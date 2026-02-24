@@ -802,8 +802,23 @@ type TLSServerConfiguration struct {
 	ClientAuth TLSClientAuthConfiguration `yaml:"client_auth,omitempty"`
 }
 
+type TLSClientCertConfiguration struct {
+	CertFile                   string `yaml:"cert_file,omitempty" env:"CERT_FILE"`
+	KeyFile                    string `yaml:"key_file,omitempty" env:"KEY_FILE"`
+	CaFile                     string `yaml:"ca_file,omitempty" env:"CA_FILE"`
+	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
+}
+
+type ClientTLSConfiguration struct {
+	// All applies to all subgraph connections.
+	All TLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
+	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
+	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+}
+
 type TLSConfiguration struct {
 	Server TLSServerConfiguration `yaml:"server"`
+	Client ClientTLSConfiguration `yaml:"client"`
 }
 
 type SubgraphErrorPropagationMode string
