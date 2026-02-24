@@ -148,6 +148,22 @@
         "CertFile": "",
         "Required": false
       }
+    },
+    "Client": {
+      "All": {
+        "CertFile": "/path/to/client.crt",
+        "KeyFile": "/path/to/client.key",
+        "CaFile": "/path/to/ca.crt",
+        "InsecureSkipCaVerification": false
+      },
+      "Subgraphs": {
+        "products": {
+          "CertFile": "/path/to/products-client.crt",
+          "KeyFile": "/path/to/products-client.key",
+          "CaFile": "/path/to/products-ca.crt",
+          "InsecureSkipCaVerification": false
+        }
+      }
     }
   },
   "CacheControl": {
