@@ -54,7 +54,7 @@ import { RequiredFieldsVisitor } from './required-fields-visitor.js';
  * The generated mappings are used to translate between GraphQL and Protocol Buffer
  * representations in a consistent manner.
  */
-export class GraphQLToProtoVisitor {
+export class GraphQLToMappingVisitor {
   private readonly mapping: GRPCMapping;
   private readonly schema: GraphQLSchema;
 
@@ -176,12 +176,16 @@ export class GraphQLToProtoVisitor {
           throw new Error(`Entity mapping not found for type ${type.name} and key ${key}`);
         }
 
+        if (!value.rpc) {
+          throw new Error(`RPC method not found for required field ${value.requiredFieldMapping?.original}`);
+        }
+
         em.requiredFieldMappings.push(
           new RequiredFieldMapping({
             fieldMapping: value.requiredFieldMapping,
-            request: value.rpc?.request ?? '',
-            response: value.rpc?.response ?? '',
-            rpc: value.rpc?.name ?? '',
+            request: value.rpc.request,
+            response: value.rpc.response,
+            rpc: value.rpc.name,
           }),
         );
       }
@@ -346,7 +350,7 @@ export class GraphQLToProtoVisitor {
 
     for (const fieldName in fields) {
       // Skip special federation fields
-      if (fieldName === '_entities') {
+      if (fieldName === '_entities' || fieldName === '_service') {
         continue;
       }
 

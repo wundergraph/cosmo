@@ -1187,4 +1187,209 @@ describe('GraphQL Federation to Proto Mapping', () => {
       }
     `);
   });
+
+  it('maps entity with multiple key directives and required fields', () => {
+    const sdl = `
+      directive @key(fields: String!) repeatable on OBJECT
+
+      type Product @key(fields: "id") @key(fields: "sku") {
+        id: ID!
+        sku: String!
+        price: Float! @external
+        itemCount: Int! @external
+        stockHealthScore: Float! @requires(fields: "itemCount price")
+      }
+
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'ProductService');
+
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id",
+            "kind": "entity",
+            "request": "LookupProductByIdRequest",
+            "requiredFieldMappings": [
+              {
+                "fieldMapping": {
+                  "mapped": "stock_health_score",
+                  "original": "stockHealthScore",
+                },
+                "request": "RequireProductStockHealthScoreByIdRequest",
+                "response": "RequireProductStockHealthScoreByIdResponse",
+                "rpc": "RequireProductStockHealthScoreById",
+              },
+            ],
+            "response": "LookupProductByIdResponse",
+            "rpc": "LookupProductById",
+            "typeName": "Product",
+          },
+          {
+            "key": "sku",
+            "kind": "entity",
+            "request": "LookupProductBySkuRequest",
+            "requiredFieldMappings": [
+              {
+                "fieldMapping": {
+                  "mapped": "stock_health_score",
+                  "original": "stockHealthScore",
+                },
+                "request": "RequireProductStockHealthScoreBySkuRequest",
+                "response": "RequireProductStockHealthScoreBySkuResponse",
+                "rpc": "RequireProductStockHealthScoreBySku",
+              },
+            ],
+            "response": "LookupProductBySkuResponse",
+            "rpc": "LookupProductBySku",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "sku",
+                "original": "sku",
+              },
+              {
+                "mapped": "price",
+                "original": "price",
+              },
+              {
+                "mapped": "item_count",
+                "original": "itemCount",
+              },
+              {
+                "mapped": "stock_health_score",
+                "original": "stockHealthScore",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
+
+  it('maps entity with compound key and required fields', () => {
+    const sdl = `
+      directive @key(fields: String!) on OBJECT
+
+      type Product @key(fields: "id sku") {
+        id: ID!
+        sku: String!
+        manufacturerId: ID! @external
+        categoryCode: String! @external
+        displayName: String! @requires(fields: "manufacturerId categoryCode")
+      }
+
+      type Query {
+        products: [Product!]!
+      }
+    `;
+
+    const mapping = compileGraphQLToMapping(sdl, 'ProductService');
+
+    expect(mapping.toJson()).toMatchInlineSnapshot(`
+      {
+        "entityMappings": [
+          {
+            "key": "id sku",
+            "kind": "entity",
+            "request": "LookupProductByIdAndSkuRequest",
+            "requiredFieldMappings": [
+              {
+                "fieldMapping": {
+                  "mapped": "display_name",
+                  "original": "displayName",
+                },
+                "request": "RequireProductDisplayNameByIdAndSkuRequest",
+                "response": "RequireProductDisplayNameByIdAndSkuResponse",
+                "rpc": "RequireProductDisplayNameByIdAndSku",
+              },
+            ],
+            "response": "LookupProductByIdAndSkuResponse",
+            "rpc": "LookupProductByIdAndSku",
+            "typeName": "Product",
+          },
+        ],
+        "operationMappings": [
+          {
+            "mapped": "QueryProducts",
+            "original": "products",
+            "request": "QueryProductsRequest",
+            "response": "QueryProductsResponse",
+            "type": "OPERATION_TYPE_QUERY",
+          },
+        ],
+        "service": "ProductService",
+        "typeFieldMappings": [
+          {
+            "fieldMappings": [
+              {
+                "mapped": "products",
+                "original": "products",
+              },
+            ],
+            "type": "Query",
+          },
+          {
+            "fieldMappings": [
+              {
+                "mapped": "id",
+                "original": "id",
+              },
+              {
+                "mapped": "sku",
+                "original": "sku",
+              },
+              {
+                "mapped": "manufacturer_id",
+                "original": "manufacturerId",
+              },
+              {
+                "mapped": "category_code",
+                "original": "categoryCode",
+              },
+              {
+                "mapped": "display_name",
+                "original": "displayName",
+              },
+            ],
+            "type": "Product",
+          },
+        ],
+        "version": 1,
+      }
+    `);
+  });
 });

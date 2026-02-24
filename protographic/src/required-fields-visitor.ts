@@ -120,7 +120,7 @@ export class RequiredFieldsVisitor {
   ) {
     this.resolveKeyDirectives();
     this.fieldSetDoc = parse(`{ ${fieldSet} }`);
-    this.normalizeOperation();
+    this.normalizeSelectionSet();
     this.visitor = this.createASTVisitor();
     this.mapping = {};
   }
@@ -156,7 +156,7 @@ export class RequiredFieldsVisitor {
    * Normalizes the parsed field set operation by rewriting abstract selections.
    * This ensures consistent handling of interface and union type selections.
    */
-  private normalizeOperation(): void {
+  private normalizeSelectionSet(): void {
     const visitor = new AbstractSelectionRewriter(this.fieldSetDoc, this.schema, this.objectType);
     visitor.normalize();
   }

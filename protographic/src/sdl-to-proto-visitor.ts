@@ -175,17 +175,8 @@ export class GraphQLToProtoTextVisitor {
       packageName = 'service.v1',
       lockData,
       includeComments = true,
-      goPackage,
-      javaPackage,
-      javaOuterClassname,
-      javaMultipleFiles,
-      csharpNamespace,
-      rubyPackage,
-      phpNamespace,
-      phpMetadataNamespace,
-      objcClassPrefix,
-      swiftPrefix,
       protoOptions,
+      ...languageOptions
     } = options;
 
     this.schema = schema;
@@ -202,16 +193,7 @@ export class GraphQLToProtoTextVisitor {
     // Process language-specific proto options using buildProtoOptions
     const protoOptionsFromLanguageProps = buildProtoOptions(
       {
-        goPackage,
-        javaPackage,
-        javaOuterClassname,
-        javaMultipleFiles,
-        csharpNamespace,
-        rubyPackage,
-        phpNamespace,
-        phpMetadataNamespace,
-        objcClassPrefix,
-        swiftPrefix,
+        ...languageOptions,
       },
       packageName,
     );
@@ -721,7 +703,7 @@ export class GraphQLToProtoTextVisitor {
 
     for (const fieldName of orderedFieldNames) {
       // Skip special fields like _entities
-      if (fieldName === '_entities') {
+      if (fieldName === '_entities' || fieldName === '_service') {
         continue;
       }
 

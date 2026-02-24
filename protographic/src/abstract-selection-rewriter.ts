@@ -2,7 +2,7 @@
  * @file abstract-selection-rewriter.ts
  *
  * This module provides functionality to normalize GraphQL field set selections
- * when dealing with abstract types (interfaces). It ensures that fields selected
+ * when dealing with abstract types (interfaces and unions). It ensures that fields selected
  * at the interface level are properly distributed into each inline fragment,
  * maintaining correct selection semantics for proto mapping generation.
  */
@@ -35,6 +35,7 @@ import {
 } from 'graphql';
 import { VisitContext } from './types.js';
 
+// TODO: Check if we need to add Union as well because we could select __typename from a Union inline fragment.
 type GraphQLTypeWithFields = GraphQLObjectType | GraphQLInterfaceType;
 
 /**
@@ -236,12 +237,14 @@ export class AbstractSelectionRewriter {
    *
    * This method processes inline fragments in two ways:
    *
-   * 1. For non-interface fragments:
+   * 1. For concrete type fragments (e.g., `... on Book`):
    *    - Validates if the fragment type implements the current interface
    *    - Removes invalid fragments (those targeting types that don't implement the interface)
+   *    - Tracks the fragment for nested union/abstract type resolution
    *
-   * 2. For interface fragments:
+   * 2. For interface type conditions (e.g., `... on Employee`):
    *    - Recursively processes nested interface selections
+   *    - Distributes interface-level fields into concrete type fragments
    *    - Unwraps the inline fragment by replacing it with its selections
    *    - Ensures nested interface fields are properly distributed
    *
@@ -659,6 +662,7 @@ export class AbstractSelectionRewriter {
       return false;
     }
 
+    // TODO: Check if we need to check for interface types as well because interfaces can also implement interfaces.
     if (!isObjectType(type)) {
       // Non-object types cannot implement interfaces
       return false;

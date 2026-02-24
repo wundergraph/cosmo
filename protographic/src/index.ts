@@ -1,6 +1,6 @@
 import { buildSchema, GraphQLSchema } from 'graphql';
 import { GRPCMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { GraphQLToProtoVisitor } from './sdl-to-mapping-visitor.js';
+import { GraphQLToMappingVisitor } from './sdl-to-mapping-visitor.js';
 import type { GraphQLToProtoTextVisitorOptions } from './sdl-to-proto-visitor.js';
 import { GraphQLToProtoTextVisitor } from './sdl-to-proto-visitor.js';
 import type { ProtoLock } from './proto-lock.js';
@@ -27,7 +27,7 @@ export function compileGraphQLToMapping(
       : schemaOrSDL;
 
   // Create and run the visitor
-  const visitor = new GraphQLToProtoVisitor(schema, serviceName);
+  const visitor = new GraphQLToMappingVisitor(schema, serviceName);
   return visitor.visit();
 }
 

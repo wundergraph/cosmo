@@ -17,7 +17,7 @@ import { RequiredFieldMapping } from '../../src/required-fields-visitor.js';
 /**
  * Options for creating a RequiredFieldsVisitor test setup.
  */
-interface CreateVisitorOptions {
+interface CreateRequiredFieldsVisitorOptions {
   /** The GraphQL SDL to build the schema from */
   sdl: string;
   /** The name of the entity type */
@@ -31,19 +31,19 @@ interface CreateVisitorOptions {
 /**
  * Result of creating a RequiredFieldsVisitor test setup.
  */
-interface VisitorTestSetup {
+interface RequiredFieldsVisitorTestSetup {
   schema: GraphQLSchema;
   entity: GraphQLObjectType;
   requiredField: GraphQLField<any, any, any>;
   visitor: RequiredFieldsVisitor;
   /** Calls visitor.visit() and returns the results */
-  execute: () => VisitorResult;
+  execute: () => RequiredFieldsVisitorResult;
 }
 
 /**
  * Result of executing the visitor.
  */
-interface VisitorResult {
+interface RequiredFieldsVisitorResult {
   rpcMethods: RPCMethod[];
   messageDefinitions: ProtoMessage[];
   mapping: Record<string, RequiredFieldMapping>;
@@ -56,7 +56,7 @@ interface VisitorResult {
  * @returns The test setup including the visitor and an execute function
  * @throws Error if the entity or required field is not found
  */
-function createVisitorSetup(options: CreateVisitorOptions): VisitorTestSetup {
+function createVisitorSetup(options: CreateRequiredFieldsVisitorOptions): RequiredFieldsVisitorTestSetup {
   const { sdl, entityName, requiredFieldName, fieldSet: explicitFieldSet } = options;
 
   const schema = buildSchema(sdl, {
@@ -336,7 +336,7 @@ describe('Field Set Visitor', () => {
     });
   });
 
-  it('should visit a field set for multiple field selections', () => {
+  it('should visit a field set with multiple field selections', () => {
     const { execute } = createVisitorSetup({
       sdl: `
         type User @key(fields: "id") {
@@ -771,7 +771,7 @@ describe('Field Set Visitor', () => {
     `);
   });
 
-  it('should visit a field set for an interface type with extracted interface field', () => {
+  it('should visit a field set for multiple types implementing an interface with a shared interface field', () => {
     const { execute } = createVisitorSetup({
       sdl: `
         type User @key(fields: "id") {
