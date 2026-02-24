@@ -133,15 +133,6 @@ export class SDLValidationVisitor {
       validationFunction: (ctx) => this.validateListTypeNullability(ctx),
     };
 
-    // Requires directive support will currently be added. This rule will be removed in the future.
-    const requiresRule: LintingRule<Kind.FIELD_DEFINITION> = {
-      name: 'use-of-requires',
-      description: 'Validates usage of @requires directive which is not yet supported',
-      enabled: false,
-      nodeKind: Kind.FIELD_DEFINITION,
-      validationFunction: (ctx) => this.validateRequiresDirective(ctx),
-    };
-
     const providesRule: LintingRule<Kind.FIELD_DEFINITION> = {
       name: 'use-of-provides',
       description: 'Validates usage of @provides directive which is not yet supported',
@@ -169,7 +160,6 @@ export class SDLValidationVisitor {
     this.lintingRules = [
       objectTypeRule,
       listTypeRule,
-      requiresRule,
       providesRule,
       resolverContextRule,
       disallowAbstractTypesForRequiresRule,

@@ -136,7 +136,6 @@ export class GraphQLToProtoVisitor {
           if (key) {
             // Create entity mapping for each key combination
             this.createEntityMapping(typeName, key);
-            // todo: add required fields mapping
           }
         }
 
