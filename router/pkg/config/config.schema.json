@@ -441,6 +441,78 @@
               "key_file"
             ]
           }
+        },
+        "client": {
+          "type": "object",
+          "description": "The TLS configuration for outbound connections from the router to subgraphs. Enables mTLS by presenting a client certificate when connecting to subgraphs.",
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "object",
+              "description": "TLS configuration applied to all subgraph connections.",
+              "additionalProperties": false,
+              "properties": {
+                "cert_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client certificate chain file. Used to authenticate the router to subgraphs. May include intermediate certificates."
+                },
+                "key_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client private key file."
+                },
+                "ca_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the CA certificate file. Used to verify subgraph server certificates. If not set, the system's root CAs are used."
+                },
+                "insecure_skip_ca_verification": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip verification of the subgraph server certificate. Only use for development or testing."
+                }
+              },
+              "dependencies": {
+                "cert_file": ["key_file"],
+                "key_file": ["cert_file"]
+              }
+            },
+            "subgraphs": {
+              "type": "object",
+              "description": "Per-subgraph TLS configuration overrides. Each key is a subgraph name. Fully overrides the 'all' config for that subgraph.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "cert_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client certificate chain file for this subgraph. May include intermediate certificates."
+                  },
+                  "key_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client private key file for this subgraph."
+                  },
+                  "ca_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the CA certificate file for verifying this subgraph's server certificate."
+                  },
+                  "insecure_skip_ca_verification": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip verification of this subgraph's server certificate. Only use for development or testing."
+                  }
+                },
+                "dependencies": {
+                  "cert_file": ["key_file"],
+                  "key_file": ["cert_file"]
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -1066,6 +1138,23 @@
                       }
                     ]
                   }
+                }
+              }
+            },
+            "sanitize_utf8": {
+              "type": "object",
+              "description": "Configuration for sanitizing invalid UTF-8 sequences in span attribute values.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the sanitization of invalid UTF-8 sequences in span attribute values. Invalid sequences are replaced with the Unicode replacement character (U+FFFD)."
+                },
+                "log_sanitizations": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Log a warning when invalid UTF-8 sequences are sanitized. The log includes the attribute key and original value."
                 }
               }
             }
