@@ -191,10 +191,8 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 	t.Run("invalid UTF-8 export error logs config hint", func(t *testing.T) {
 		t.Parallel()
 
-		exporter := &invalidUTF8Exporter{}
-
 		testenv.Run(t, &testenv.Config{
-			TraceExporter: exporter,
+			TraceExporter: &invalidUTF8Exporter{},
 			LogObservation: testenv.LogObservationConfig{
 				Enabled:  true,
 				LogLevel: zapcore.ErrorLevel,
@@ -205,8 +203,6 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			})
 			require.Equal(t, 200, res.Response.StatusCode)
 
-			// The SimpleSpanProcessor calls otel.Handle(err) synchronously on span end,
-			// but give a small window for log propagation.
 			require.Eventually(t, func() bool {
 				logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
 				return len(logs) > 0
@@ -214,7 +210,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 
 			logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
 			require.NotEmpty(t, logs)
-			require.Contains(t, logs[0].Message, "telemetry.tracing.sanitize_utf8.enabled")
+			require.Equal(t, logs[0].Message, "otel error: traces export: string field contains invalid UTF-8: Enable 'telemetry.tracing.sanitize_utf8.enabled' in your config to sanitize invalid UTF-8 attributes.")
 		})
 	})
 
@@ -262,8 +258,6 @@ type errInvalidUTF8 struct{}
 func (errInvalidUTF8) Error() string     { return "string field contains invalid UTF-8" }
 func (errInvalidUTF8) InvalidUTF8() bool { return true }
 
-// invalidUTF8Exporter is a SpanExporter that always returns an invalid UTF-8 error,
-// simulating what happens when protobuf marshaling encounters invalid UTF-8 in span attributes.
 type invalidUTF8Exporter struct{}
 
 func (e *invalidUTF8Exporter) ExportSpans(_ context.Context, _ []sdktrace.ReadOnlySpan) error {

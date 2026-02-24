@@ -25,7 +25,7 @@ func errHandler(config *ProviderConfig) func(err error) {
 	return func(err error) {
 		if hasInvalidUTF8Error(err) {
 			config.Logger.Error(
-				"otel error: Enable 'telemetry.tracing.sanitize_utf8.enabled' in your config to sanitize invalid UTF-8 attributes.",
+				"otel error: traces export: string field contains invalid UTF-8: Enable 'telemetry.tracing.sanitize_utf8.enabled' in your config to sanitize invalid UTF-8 attributes.",
 				zap.Error(err))
 			return
 		}
