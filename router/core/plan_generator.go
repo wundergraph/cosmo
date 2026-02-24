@@ -6,12 +6,19 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"runtime/debug"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/pkg/metric"
-
 	log "github.com/jensneuse/abstractlogger"
+	"go.uber.org/zap"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/execution_config"
+	"github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	"github.com/wundergraph/cosmo/router/pkg/pubsub/redis"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astnormalization"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
@@ -23,15 +30,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
-	"go.uber.org/zap"
-
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
-	"github.com/wundergraph/cosmo/router/pkg/pubsub/redis"
-
-	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 )
 
 type PlannerOperationValidationError struct {
@@ -202,7 +200,7 @@ func (pl *Planner) normalizeOperation(operation *ast.Document, operationName []b
 func (pl *Planner) PlanPreparedOperation(operation *ast.Document) (planNode *resolve.FetchTreeQueryPlanNode, opTimes OperationTimes, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("panic during plan generation: %v, stack: %s", r, debug.Stack())
+			err = fmt.Errorf("panic during plan generation: %v", r)
 		}
 	}()
 
@@ -343,7 +341,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 			if _, ok := redisSources[providerId]; !ok {
 				redisSources[providerId] = nil
 				routerEngineConfig.Events.Providers.Redis = append(routerEngineConfig.Events.Providers.Redis, config.RedisEventSource{
-					ID:   providerId,
+					ID: providerId,
 				})
 			}
 		}
