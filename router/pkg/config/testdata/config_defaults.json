@@ -28,7 +28,11 @@
       "Attributes": null,
       "OperationContentAttributes": false,
       "ExportGraphQLVariables": false,
-      "WithNewRoot": false
+      "WithNewRoot": false,
+      "SanitizeUTF8": {
+        "Enabled": false,
+        "LogSanitizations": false
+      }
     },
     "Metrics": {
       "Attributes": null,
@@ -148,6 +152,17 @@
     "ExposeSchema": false,
     "RouterURL": "",
     "OmitToolNamePrefix": false
+  },
+  "ConnectRPC": {
+    "Enabled": false,
+    "Server": {
+      "ListenAddr": "localhost:5026",
+      "BaseURL": ""
+    },
+    "Storage": {
+      "ProviderID": ""
+    },
+    "GraphQLEndpoint": ""
   },
   "DemoMode": false,
   "Modules": null,

@@ -308,6 +308,8 @@ type Config struct {
 	DisableParentBasedSampler          bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
+	TracingSanitizeUTF8                *config.SanitizeUTF8Config
+	IPAnonymization                    *core.IPAnonymizationConfig
 	CustomMetricAttributes             []config.CustomAttribute
 	CustomTelemetryAttributes          []config.CustomAttribute
 	CustomTracingAttributes            []config.CustomAttribute
@@ -388,9 +390,10 @@ type SubgraphsConfig struct {
 }
 
 type SubgraphConfig struct {
-	Middleware   func(http.Handler) http.Handler
-	Delay        time.Duration
-	CloseOnStart bool
+	Middleware      func(http.Handler) http.Handler
+	GRPCInterceptor grpc.UnaryServerInterceptor
+	Delay           time.Duration
+	CloseOnStart    bool
 
 	// TLSConfig enables TLS on this subgraph server. When set, the subgraph uses StartTLS()
 	// instead of Start(). This is useful for testing mTLS between the router and subgraphs.
@@ -601,19 +604,19 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
 	}
 
 	replacements := map[string]string{
-		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
-		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
-		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
-		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
-		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
-		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
-		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
-		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
-		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.EmployeesDefaultDemoURL:    GqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       GqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      GqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     GqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        GqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: GqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         GqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    GqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   GqlURL(productFgServer),
 		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
@@ -1031,19 +1034,19 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
 	}
 
 	replacements := map[string]string{
-		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
-		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
-		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
-		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
-		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
-		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
-		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
-		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
-		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.EmployeesDefaultDemoURL:    GqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       GqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      GqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     GqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        GqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: GqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         GqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    GqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   GqlURL(productFgServer),
 		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
@@ -1486,19 +1489,25 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true
 
+		tracingConfig := config.Tracing{
+			Enabled:                    true,
+			SamplingRate:               1,
+			ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
+			OperationContentAttributes: testConfig.OperationContentAttributes,
+			Exporters:                  []config.TracingExporter{},
+			Propagation:                testConfig.PropagationConfig,
+			TracingGlobalFeatures:      config.TracingGlobalFeatures{},
+			ResponseTraceHeader:        testConfig.ResponseTraceHeader,
+		}
+
+		if testConfig.TracingSanitizeUTF8 != nil {
+			tracingConfig.SanitizeUTF8 = *testConfig.TracingSanitizeUTF8
+		}
+
 		c := core.TraceConfigFromTelemetry(&config.Telemetry{
 			ServiceName:        "cosmo-router",
 			ResourceAttributes: testConfig.CustomResourceAttributes,
-			Tracing: config.Tracing{
-				Enabled:                    true,
-				SamplingRate:               1,
-				ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
-				OperationContentAttributes: testConfig.OperationContentAttributes,
-				Exporters:                  []config.TracingExporter{},
-				Propagation:                testConfig.PropagationConfig,
-				TracingGlobalFeatures:      config.TracingGlobalFeatures{},
-				ResponseTraceHeader:        testConfig.ResponseTraceHeader,
-			},
+			Tracing:            tracingConfig,
 		})
 
 		c.TestMemoryExporter = testConfig.TraceExporter
@@ -1506,6 +1515,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts,
 			core.WithTracing(c),
 		)
+	}
+
+	if testConfig.IPAnonymization != nil {
+		routerOpts = append(routerOpts, core.WithAnonymization(testConfig.IPAnonymization))
 	}
 
 	if testConfig.CustomTelemetryAttributes != nil {
@@ -1683,7 +1696,7 @@ func makeSubgraphTestServer(_ testing.TB, handler http.Handler, tlsConfig *tls.C
 	return s
 }
 
-func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.Server, string) {
+func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any, interceptor grpc.UnaryServerInterceptor) (*grpc.Server, string) {
 	t.Helper()
 
 	// We could use freeport here, but it is easy to use ephemeral port and get the endpoint
@@ -1694,7 +1707,12 @@ func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.
 
 	require.NotNil(t, service)
 
-	s := grpc.NewServer()
+	var opts []grpc.ServerOption
+	if interceptor != nil {
+		opts = append(opts, grpc.ChainUnaryInterceptor(interceptor))
+	}
+
+	s := grpc.NewServer(opts...)
 	s.RegisterService(sd, service)
 
 	go func() {
@@ -1739,7 +1757,7 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 	return cdnServer, port
 }
 
-func gqlURL(srv *httptest.Server) string {
+func GqlURL(srv *httptest.Server) string {
 	path, err := url.JoinPath(srv.URL, "/graphql")
 	if err != nil {
 		panic(err)
@@ -2147,8 +2165,12 @@ func (e *Environment) newGraphQLRequestOverGET(baseURL string, request GraphQLRe
 }
 
 func (e *Environment) MakeGraphQLRequestRaw(request *http.Request) (*TestResponse, error) {
+	return MakeGraphQLRequestRawFromClient(request, e.RouterClient)
+}
+
+func MakeGraphQLRequestRawFromClient(request *http.Request, routerClient *http.Client) (*TestResponse, error) {
 	request.Header.Set("Accept-Encoding", "identity")
-	resp, err := e.RouterClient.Do(request)
+	resp, err := routerClient.Do(request)
 	if err != nil {
 		return nil, err
 	}

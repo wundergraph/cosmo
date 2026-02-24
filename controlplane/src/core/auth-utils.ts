@@ -7,10 +7,10 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { addSeconds } from 'date-fns';
 import { JWTPayload } from 'jose';
 import { uid } from 'uid';
+import { PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { CustomAccessTokenClaims, PKCECodeChallenge, UserInfoEndpointResponse, UserSession } from '../types/index.js';
 import * as schema from '../db/schema.js';
 import { organizationsMembers, sessions, users } from '../db/schema.js';
-import { PlatformEventName } from '../../../connect/src/wg/cosmo/notifications/events_pb.js';
 import {
   calculatePKCECodeChallenge,
   cosmoIdpHintCookieName,
