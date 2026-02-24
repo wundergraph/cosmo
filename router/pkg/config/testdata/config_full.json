@@ -63,8 +63,7 @@
         },
         "CostStats": {
           "EstimatedEnabled": false,
-          "ActualEnabled": false,
-          "DeltaEnabled": false
+          "ActualEnabled": false
         },
         "CircuitBreaker": false,
         "Streams": false,
@@ -93,8 +92,7 @@
         },
         "CostStats": {
           "EstimatedEnabled": false,
-          "ActualEnabled": false,
-          "DeltaEnabled": false
+          "ActualEnabled": false
         },
         "CircuitBreaker": false,
         "ExcludeMetrics": null,

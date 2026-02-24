@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"errors"
+
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
@@ -152,12 +153,6 @@ func (h *OtlpMetricStore) MeasureOperationCostEstimated(ctx context.Context, cos
 func (h *OtlpMetricStore) MeasureOperationCostActual(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
 	if c, ok := h.measurements.int64Histograms[OperationCostActualHistogram]; ok {
 		c.Record(ctx, cost, opts...)
-	}
-}
-
-func (h *OtlpMetricStore) MeasureOperationCostDelta(ctx context.Context, delta int64, opts ...otelmetric.RecordOption) {
-	if c, ok := h.measurements.int64Histograms[OperationCostDeltaHistogram]; ok {
-		c.Record(ctx, delta, opts...)
 	}
 }
 

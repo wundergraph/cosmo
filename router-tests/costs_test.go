@@ -236,7 +236,7 @@ func TestOperationCost(t *testing.T) {
 	t.Run("metrics", func(t *testing.T) {
 		t.Parallel()
 
-		t.Run("Should record actual and delta cost metrics", func(t *testing.T) {
+		t.Run("Should record actual cost metrics", func(t *testing.T) {
 			t.Parallel()
 
 			metricReader := sdkmetric.NewManualReader()
@@ -247,7 +247,6 @@ func TestOperationCost(t *testing.T) {
 					OTLPCostStats: config.CostStats{
 						EstimatedEnabled: true,
 						ActualEnabled:    true,
-						DeltaEnabled:     true,
 					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
@@ -267,8 +266,8 @@ func TestOperationCost(t *testing.T) {
 				err := metricReader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
 
-				var foundEstimated, foundActual, foundDelta bool
-				var estimatedHistogram, actualHistogram, deltaHistogram metricdata.Histogram[int64]
+				var foundEstimated, foundActual bool
+				var estimatedHistogram, actualHistogram metricdata.Histogram[int64]
 
 				for _, scopeMetric := range rm.ScopeMetrics {
 					for _, m := range scopeMetric.Metrics {
@@ -277,42 +276,33 @@ func TestOperationCost(t *testing.T) {
 							estimatedHistogram, foundEstimated = m.Data.(metricdata.Histogram[int64])
 						case metric.OperationCostActualHistogram:
 							actualHistogram, foundActual = m.Data.(metricdata.Histogram[int64])
-						case metric.OperationCostDeltaHistogram:
-							deltaHistogram, foundDelta = m.Data.(metricdata.Histogram[int64])
 						}
 					}
 				}
 
 				require.True(t, foundEstimated, "estimated cost metric should be recorded")
 				require.True(t, foundActual, "actual cost metric should be recorded")
-				require.True(t, foundDelta, "delta cost metric should be recorded")
 
 				require.NotEmpty(t, estimatedHistogram.DataPoints)
 				require.NotEmpty(t, actualHistogram.DataPoints)
-				require.NotEmpty(t, deltaHistogram.DataPoints)
 
 				// Aggregate across all datapoints to avoid relying on ordering
-				var estimatedSum, actualSum, deltaSum int64
+				var estimatedSum, actualSum int64
 				for _, dp := range estimatedHistogram.DataPoints {
 					estimatedSum += dp.Sum
 				}
 				for _, dp := range actualHistogram.DataPoints {
 					actualSum += dp.Sum
 				}
-				for _, dp := range deltaHistogram.DataPoints {
-					deltaSum += dp.Sum
-				}
 
 				// @listSize(assumedSize: 50) overrides EstimatedListSize(15); cost = 50 * 2 = 100
 				require.Equal(t, int64(100), estimatedSum)
 				require.Equal(t, int64(20), actualSum)
-				require.Equal(t, int64(80), deltaSum)
 
 				// Verify that cost metrics carry the correct operation attributes
 				for _, dp := range []metricdata.HistogramDataPoint[int64]{
 					estimatedHistogram.DataPoints[0],
 					actualHistogram.DataPoints[0],
-					deltaHistogram.DataPoints[0],
 				} {
 					val, ok := dp.Attributes.Value(otel.WgOperationName)
 					require.True(t, ok, "cost metric should have wg.operation.name attribute")
@@ -351,7 +341,6 @@ func TestOperationCost(t *testing.T) {
 					OTLPCostStats: config.CostStats{
 						EstimatedEnabled: true,
 						ActualEnabled:    true,
-						DeltaEnabled:     true,
 					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
@@ -416,7 +405,6 @@ func TestOperationCost(t *testing.T) {
 					OTLPCostStats: config.CostStats{
 						EstimatedEnabled: true,
 						ActualEnabled:    true,
-						DeltaEnabled:     true,
 					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
@@ -440,7 +428,7 @@ func TestOperationCost(t *testing.T) {
 				require.NoError(t, err)
 
 				// Cost metrics should NOT be recorded for operations that fail to parse/plan
-				var foundEstimated, foundActual, foundDelta bool
+				var foundEstimated, foundActual bool
 				for _, scopeMetric := range rm.ScopeMetrics {
 					for _, m := range scopeMetric.Metrics {
 						if m.Name == metric.OperationCostEstimatedHistogram {
@@ -449,14 +437,10 @@ func TestOperationCost(t *testing.T) {
 						if m.Name == metric.OperationCostActualHistogram {
 							foundActual = true
 						}
-						if m.Name == metric.OperationCostDeltaHistogram {
-							foundDelta = true
-						}
 					}
 				}
 				require.False(t, foundEstimated)
 				require.False(t, foundActual)
-				require.False(t, foundDelta)
 			})
 		})
 
@@ -471,7 +455,6 @@ func TestOperationCost(t *testing.T) {
 					OTLPCostStats: config.CostStats{
 						EstimatedEnabled: true,
 						ActualEnabled:    true,
-						DeltaEnabled:     true,
 					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
@@ -489,7 +472,7 @@ func TestOperationCost(t *testing.T) {
 				err := metricReader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
 
-				var foundEstimated, foundActual, foundDelta bool
+				var foundEstimated, foundActual bool
 				for _, scopeMetric := range rm.ScopeMetrics {
 					for _, m := range scopeMetric.Metrics {
 						switch m.Name {
@@ -497,15 +480,12 @@ func TestOperationCost(t *testing.T) {
 							foundEstimated = true
 						case metric.OperationCostActualHistogram:
 							foundActual = true
-						case metric.OperationCostDeltaHistogram:
-							foundDelta = true
 						}
 					}
 				}
 
 				require.False(t, foundEstimated)
 				require.False(t, foundActual)
-				require.False(t, foundDelta)
 			})
 		})
 	})

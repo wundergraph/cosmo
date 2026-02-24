@@ -98,7 +98,6 @@ type EngineStats struct {
 type CostStats struct {
 	EstimatedEnabled bool `yaml:"estimated_enabled" envDefault:"false" env:"COST_STATS_ESTIMATED_ENABLED"`
 	ActualEnabled    bool `yaml:"actual_enabled" envDefault:"false" env:"COST_STATS_ACTUAL_ENABLED"`
-	DeltaEnabled     bool `yaml:"delta_enabled" envDefault:"false" env:"COST_STATS_DELTA_ENABLED"`
 }
 
 type Prometheus struct {

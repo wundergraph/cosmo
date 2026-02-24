@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"errors"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -159,12 +160,6 @@ func (h *PromMetricStore) MeasureOperationCostEstimated(ctx context.Context, cos
 func (h *PromMetricStore) MeasureOperationCostActual(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
 	if c, ok := h.measurements.int64Histograms[OperationCostActualHistogram]; ok {
 		c.Record(ctx, cost, opts...)
-	}
-}
-
-func (h *PromMetricStore) MeasureOperationCostDelta(ctx context.Context, delta int64, opts ...otelmetric.RecordOption) {
-	if c, ok := h.measurements.int64Histograms[OperationCostDeltaHistogram]; ok {
-		c.Record(ctx, delta, opts...)
 	}
 }
 

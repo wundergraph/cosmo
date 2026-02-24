@@ -34,7 +34,6 @@ const (
 
 	OperationCostEstimatedHistogram = "router.graphql.operation.cost.estimated" // Estimated operation cost
 	OperationCostActualHistogram    = "router.graphql.operation.cost.actual"    // Actual operation cost after execution
-	OperationCostDeltaHistogram     = "router.graphql.operation.cost.delta"     // Delta between actual and estimated cost
 
 	unitBytes        = "bytes"
 	unitMilliseconds = "ms"
@@ -87,11 +86,6 @@ var (
 	OperationCostActualHistogramDescription = "Actual operation cost after execution"
 	OperationCostActualHistogramOptions     = []otelmetric.Int64HistogramOption{
 		otelmetric.WithDescription(OperationCostActualHistogramDescription),
-	}
-
-	OperationCostDeltaHistogramDescription = "Delta between actual and estimated operation cost"
-	OperationCostDeltaHistogramOptions     = []otelmetric.Int64HistogramOption{
-		otelmetric.WithDescription(OperationCostDeltaHistogramDescription),
 	}
 
 	// Schema usage metrics
@@ -162,7 +156,6 @@ type (
 		MeasureCircuitBreakerShortCircuit(ctx context.Context, opts ...otelmetric.AddOption)
 		MeasureOperationCostEstimated(ctx context.Context, cost int64, opts ...otelmetric.RecordOption)
 		MeasureOperationCostActual(ctx context.Context, cost int64, opts ...otelmetric.RecordOption)
-		MeasureOperationCostDelta(ctx context.Context, delta int64, opts ...otelmetric.RecordOption)
 		Flush(ctx context.Context) error
 		Shutdown() error
 	}
@@ -182,7 +175,6 @@ type (
 		SetCircuitBreakerState(ctx context.Context, state bool, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureOperationCostEstimated(ctx context.Context, cost int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		MeasureOperationCostActual(ctx context.Context, cost int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
-		MeasureOperationCostDelta(ctx context.Context, delta int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption)
 		Flush(ctx context.Context) error
 		Shutdown(ctx context.Context) error
 	}
@@ -483,24 +475,6 @@ func (h *Metrics) MeasureOperationCostActual(ctx context.Context, cost int64, sl
 	// OTEL metrics
 	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
 	h.otlpRequestMetrics.MeasureOperationCostActual(ctx, cost, opts...)
-}
-
-func (h *Metrics) MeasureOperationCostDelta(ctx context.Context, delta int64, sliceAttr []attribute.KeyValue, opt otelmetric.RecordOption) {
-	opts := []otelmetric.RecordOption{h.baseAttributesOpt, opt}
-
-	// Explode for prometheus metrics
-	if len(sliceAttr) == 0 {
-		h.promRequestMetrics.MeasureOperationCostDelta(ctx, delta, opts...)
-	} else {
-		explodeRecordInstrument(ctx, sliceAttr, func(ctx context.Context, newOpts ...otelmetric.RecordOption) {
-			newOpts = append(newOpts, opts...)
-			h.promRequestMetrics.MeasureOperationCostDelta(ctx, delta, newOpts...)
-		})
-	}
-
-	// OTEL metrics
-	opts = append(opts, otelmetric.WithAttributes(sliceAttr...))
-	h.otlpRequestMetrics.MeasureOperationCostDelta(ctx, delta, opts...)
 }
 
 // Flush flushes the metrics to the backend synchronously.

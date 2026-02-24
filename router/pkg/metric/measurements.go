@@ -161,16 +161,5 @@ func createMeasures(meter otelmetric.Meter, opts MetricOpts) (*Measurements, err
 		h.int64Histograms[OperationCostActualHistogram] = operationCostActual
 	}
 
-	if opts.CostStats.DeltaEnabled {
-		operationCostDelta, err := meter.Int64Histogram(
-			OperationCostDeltaHistogram,
-			OperationCostDeltaHistogramOptions...,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create operation cost delta histogram: %w", err)
-		}
-		h.int64Histograms[OperationCostDeltaHistogram] = operationCostDelta
-	}
-
 	return h, nil
 }

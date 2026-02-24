@@ -77,7 +77,6 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 		rm.MeasureOperationCostEstimated(ctx, int64(reqContext.operation.costEstimated), sliceAttrs, o)
 		if reqContext.operation.costActualSet {
 			rm.MeasureOperationCostActual(ctx, int64(reqContext.operation.costActual), sliceAttrs, o)
-			rm.MeasureOperationCostDelta(ctx, int64(reqContext.operation.costEstimated-reqContext.operation.costActual), sliceAttrs, o)
 		}
 	}
 
