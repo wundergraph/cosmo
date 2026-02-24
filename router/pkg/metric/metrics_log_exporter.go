@@ -13,42 +13,42 @@ import (
 	"go.uber.org/zap"
 )
 
-// debugExporter is a metric exporter that logs all collected metrics via zap.
-type debugExporter struct {
+// metricsLogExporter is a metric exporter that logs all collected metrics via zap.
+type metricsLogExporter struct {
 	logger         *zap.Logger
 	excludeMetrics []*regexp.Regexp
 }
 
-func newStandaloneDebugExporter(logger *zap.Logger, excludeMetrics []*regexp.Regexp) sdkmetric.Exporter {
-	return &debugExporter{
-		logger:         logger.Named("metrics-debug"),
+func newMetricsLogExporter(logger *zap.Logger, excludeMetrics []*regexp.Regexp) *metricsLogExporter {
+	return &metricsLogExporter{
+		logger:         logger,
 		excludeMetrics: excludeMetrics,
 	}
 }
 
-func (s *debugExporter) Temporality(_ sdkmetric.InstrumentKind) metricdata.Temporality {
+func (s *metricsLogExporter) Temporality(_ sdkmetric.InstrumentKind) metricdata.Temporality {
 	return metricdata.CumulativeTemporality
 }
 
-func (s *debugExporter) Aggregation(_ sdkmetric.InstrumentKind) sdkmetric.Aggregation {
+func (s *metricsLogExporter) Aggregation(_ sdkmetric.InstrumentKind) sdkmetric.Aggregation {
 	return nil
 }
 
-func (s *debugExporter) ForceFlush(_ context.Context) error {
+func (s *metricsLogExporter) ForceFlush(_ context.Context) error {
 	return nil
 }
 
-func (s *debugExporter) Shutdown(_ context.Context) error {
+func (s *metricsLogExporter) Shutdown(_ context.Context) error {
 	return nil
 }
 
-func (s *debugExporter) Export(_ context.Context, rm *metricdata.ResourceMetrics) error {
+func (s *metricsLogExporter) Export(_ context.Context, rm *metricdata.ResourceMetrics) error {
 	totalMetrics := 0
 	for _, sm := range rm.ScopeMetrics {
 		totalMetrics += len(sm.Metrics)
 	}
 
-	s.logger.Info("Debug metric export",
+	s.logger.Info("Metrics log export",
 		zap.Int("scope_metrics", len(rm.ScopeMetrics)),
 		zap.Int("total_metrics", totalMetrics),
 	)
@@ -78,21 +78,21 @@ func isMetricExcluded(name string, excludeMetrics []*regexp.Regexp) bool {
 func logMetricData(logger *zap.Logger, m metricdata.Metrics) {
 	switch data := m.Data.(type) {
 	case metricdata.Sum[int64]:
-		logSumMetric(logger, m, "Sum[int64]", data)
+		logSumMetric(logger, m, "sum:int64", data)
 	case metricdata.Sum[float64]:
-		logSumMetric(logger, m, "Sum[float64]", data)
+		logSumMetric(logger, m, "sum:float64", data)
 	case metricdata.Histogram[int64]:
-		logHistogramMetric(logger, m, "Histogram[int64]", data)
+		logHistogramMetric(logger, m, "histogram:int64", data)
 	case metricdata.Histogram[float64]:
-		logHistogramMetric(logger, m, "Histogram[float64]", data)
+		logHistogramMetric(logger, m, "histogram:float64", data)
 	case metricdata.ExponentialHistogram[int64]:
-		logExpHistogramMetric(logger, m, "ExponentialHistogram[int64]", data)
+		logExpHistogramMetric(logger, m, "exponential_histogram:int64", data)
 	case metricdata.ExponentialHistogram[float64]:
-		logExpHistogramMetric(logger, m, "ExponentialHistogram[float64]", data)
+		logExpHistogramMetric(logger, m, "exponential_histogram:float64", data)
 	case metricdata.Gauge[int64]:
-		logGaugeMetric(logger, m, "Gauge[int64]", data)
+		logGaugeMetric(logger, m, "gauge:int64", data)
 	case metricdata.Gauge[float64]:
-		logGaugeMetric(logger, m, "Gauge[float64]", data)
+		logGaugeMetric(logger, m, "gauge:float64", data)
 	default:
 		logger.Info("Metric",
 			zap.String("name", m.Name),

@@ -16,7 +16,7 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 )
 
-func TestDebugMetricsExporter(t *testing.T) {
+func TestMetricsLogExporter(t *testing.T) {
 	t.Parallel()
 
 	t.Run("verify all metrics are logged when exported", func(t *testing.T) {
@@ -31,9 +31,9 @@ func TestDebugMetricsExporter(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 			MetricOptions: testenv.MetricOptions{
-				DebugExporter: testenv.DebugExporterOptions{
+				MetricsLogExporter: testenv.MetricsLogExporterOptions{
 					Enabled:            true,
-					TestExportInterval: 90 * time.Millisecond,
+					ExportInterval: 90 * time.Millisecond,
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -68,7 +68,7 @@ func TestDebugMetricsExporter(t *testing.T) {
 
 				switch data := actualMetric.Data.(type) {
 				case metricdata.Sum[int64]:
-					require.Equal(t, "Sum[int64]", cm["type"])
+					require.Equal(t, "sum:int64", cm["type"])
 					require.Equal(t, data.Temporality.String(), cm["temporality"])
 					require.Equal(t, data.IsMonotonic, cm["monotonic"])
 					requireAllDataPointsLogged(t, loggedDPs, data.DataPoints, func(dp metricdata.DataPoint[int64]) string {
@@ -76,20 +76,20 @@ func TestDebugMetricsExporter(t *testing.T) {
 					}, actualMetric.Name)
 
 				case metricdata.Histogram[float64]:
-					require.Equal(t, "Histogram[float64]", cm["type"])
+					require.Equal(t, "histogram:float64", cm["type"])
 					require.Equal(t, data.Temporality.String(), cm["temporality"])
 					requireAllDataPointsLogged(t, loggedDPs, data.DataPoints, func(dp metricdata.HistogramDataPoint[float64]) string {
 						return fmt.Sprintf("count=%d", dp.Count)
 					}, actualMetric.Name)
 
 				case metricdata.Gauge[int64]:
-					require.Equal(t, "Gauge[int64]", cm["type"])
+					require.Equal(t, "gauge:int64", cm["type"])
 					requireAllDataPointsLogged(t, loggedDPs, data.DataPoints, func(dp metricdata.DataPoint[int64]) string {
 						return fmt.Sprintf("value=%d", dp.Value)
 					}, actualMetric.Name)
 
 				case metricdata.Gauge[float64]:
-					require.Equal(t, "Gauge[float64]", cm["type"])
+					require.Equal(t, "gauge:float64", cm["type"])
 					requireAllDataPointsLogged(t, loggedDPs, data.DataPoints, func(dp metricdata.DataPoint[float64]) string {
 						return fmt.Sprintf("value=%v", dp.Value)
 					}, actualMetric.Name)
@@ -113,9 +113,9 @@ func TestDebugMetricsExporter(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 			MetricOptions: testenv.MetricOptions{
-				DebugExporter: testenv.DebugExporterOptions{
+				MetricsLogExporter: testenv.MetricsLogExporterOptions{
 					Enabled:            true,
-					TestExportInterval: 100 * time.Millisecond,
+					ExportInterval: 100 * time.Millisecond,
 					ExcludeMetrics: []*regexp.Regexp{
 						regexp.MustCompile(`router\.http\.requests$`),
 					},
@@ -167,7 +167,7 @@ func TestDebugMetricsExporter(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 			MetricOptions: testenv.MetricOptions{
-				DebugExporter: testenv.DebugExporterOptions{
+				MetricsLogExporter: testenv.MetricsLogExporterOptions{
 					Enabled: false,
 				},
 			},
@@ -184,7 +184,7 @@ func TestDebugMetricsExporter(t *testing.T) {
 			require.NotEmpty(t, rm.ScopeMetrics)
 
 			// No debug logs
-			debugLogs := xEnv.Observer().FilterMessage("Debug metric export").All()
+			debugLogs := xEnv.Observer().FilterMessage("Metrics log export").All()
 			require.Empty(t, debugLogs)
 
 			metricLogs := xEnv.Observer().FilterMessage("Metric").All()

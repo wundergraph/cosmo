@@ -260,10 +260,10 @@ type EngineStatOptions struct {
 	EnableSubscription bool
 }
 
-type DebugExporterOptions struct {
-	Enabled            bool
-	ExcludeMetrics     []*regexp.Regexp
-	TestExportInterval time.Duration
+type MetricsLogExporterOptions struct {
+	Enabled        bool
+	ExcludeMetrics []*regexp.Regexp
+	ExportInterval time.Duration
 }
 
 type MetricOptions struct {
@@ -280,7 +280,7 @@ type MetricOptions struct {
 	EnablePrometheusConnectionMetrics     bool
 	EnablePrometheusCircuitBreakerMetrics bool
 	EnablePrometheusStreamMetrics         bool
-	DebugExporter                         DebugExporterOptions
+	MetricsLogExporter                    MetricsLogExporterOptions
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -1591,9 +1591,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
-					DebugExporter: config.MetricsDebugExporter{
-						Enabled:        testConfig.MetricOptions.DebugExporter.Enabled,
-						ExcludeMetrics: testConfig.MetricOptions.DebugExporter.ExcludeMetrics,
+					MetricsLogExporter: config.MetricsLogExporter{
+						Enabled:        testConfig.MetricOptions.MetricsLogExporter.Enabled,
+						ExcludeMetrics: testConfig.MetricOptions.MetricsLogExporter.ExcludeMetrics,
 					},
 				},
 			},
@@ -1601,7 +1601,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 
 		c.Prometheus = prometheusConfig
 		c.OpenTelemetry.TestReader = testConfig.MetricReader
-		c.OpenTelemetry.DebugExporter.TestExportInterval = testConfig.MetricOptions.DebugExporter.TestExportInterval
+		c.OpenTelemetry.MetricsLogExporter.ExportInterval = testConfig.MetricOptions.MetricsLogExporter.ExportInterval
 		c.IsUsingCloudExporter = !testConfig.DisableSimulateCloudExporter
 
 		routerOpts = append(routerOpts, core.WithMetrics(c))

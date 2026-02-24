@@ -2366,9 +2366,9 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			Streams:             cfg.Metrics.OTLP.Streams,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
-			DebugExporter: rmetric.DebugMetricsExporterConfig{
-				Enabled:        cfg.Metrics.OTLP.DebugExporter.Enabled,
-				ExcludeMetrics: cfg.Metrics.OTLP.DebugExporter.ExcludeMetrics,
+			MetricsLogExporter: rmetric.MetricsLogExporterConfig{
+				Enabled:        cfg.Metrics.OTLP.MetricsLogExporter.Enabled,
+				ExcludeMetrics: cfg.Metrics.OTLP.MetricsLogExporter.ExcludeMetrics,
 			},
 		},
 		Prometheus: rmetric.PrometheusConfig{

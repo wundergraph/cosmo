@@ -75,11 +75,11 @@ func (e *EngineStatsConfig) Enabled() bool {
 	return e.Subscription
 }
 
-type DebugMetricsExporterConfig struct {
+type MetricsLogExporterConfig struct {
 	Enabled        bool
 	ExcludeMetrics []*regexp.Regexp
-	// TestExportInterval overrides the export interval for testing. If zero, the default interval is used.
-	TestExportInterval time.Duration
+	// ExportInterval overrides the default export interval. If zero, the default interval is used.
+	ExportInterval time.Duration
 }
 
 type OpenTelemetry struct {
@@ -97,7 +97,7 @@ type OpenTelemetry struct {
 	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
 	TestReader    sdkmetric.Reader
 	Streams       bool
-	DebugExporter DebugMetricsExporterConfig
+	MetricsLogExporter MetricsLogExporterConfig
 }
 
 func GetDefaultExporter(cfg *Config) *OpenTelemetryExporter {

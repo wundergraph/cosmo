@@ -139,7 +139,7 @@ type Metrics struct {
 	CardinalityLimit int               `yaml:"experiment_cardinality_limit" envDefault:"2000" env:"METRICS_EXPERIMENT_CARDINALITY_LIMIT"`
 }
 
-type MetricsDebugExporter struct {
+type MetricsLogExporter struct {
 	Enabled        bool       `yaml:"enabled" envDefault:"false"`
 	ExcludeMetrics RegExArray `yaml:"exclude_metrics,omitempty"`
 }
@@ -155,7 +155,7 @@ type MetricsOTLP struct {
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
-	DebugExporter       MetricsDebugExporter  `yaml:"debug_exporter"`
+	MetricsLogExporter  MetricsLogExporter    `yaml:"metrics_log_exporter"`
 }
 
 type Telemetry struct {

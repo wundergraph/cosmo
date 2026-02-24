@@ -75,9 +75,12 @@
             "Temporality": ""
           }
         ],
-        "DebugExporter": {
-          "Enabled": false,
-          "ExcludeMetrics": null
+        "MetricsLogExporter": {
+          "Enabled": true,
+          "ExcludeMetrics": [
+            "process\\.",
+            "server\\.uptime"
+          ]
         }
       },
       "Prometheus": {

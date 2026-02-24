@@ -1239,19 +1239,19 @@
                     "type": "string"
                   }
                 },
-                "debug_exporter": {
+                "metrics_log_exporter": {
                   "type": "object",
-                  "description": "Standalone debug metric exporter. When enabled, logs all collected metrics via the router's logger at each export interval.",
+                  "description": "Metrics log exporter. When enabled, logs all collected metrics via the router's logger at each export interval.",
                   "additionalProperties": false,
                   "properties": {
                     "enabled": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Enable the standalone debug metric exporter. The default value is false."
+                      "description": "Enable the metrics log exporter. The default value is false."
                     },
                     "exclude_metrics": {
                       "type": "array",
-                      "description": "List of regex patterns for metric names to exclude from debug output.",
+                      "description": "List of regex patterns for metric names to exclude from log output.",
                       "items": {
                         "type": "string"
                       }
