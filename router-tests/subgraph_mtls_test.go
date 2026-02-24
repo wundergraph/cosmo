@@ -373,6 +373,175 @@ func TestSubgraphMTLS(t *testing.T) {
 	})
 }
 
+func TestSubgraphMTLSEnvVarConfig(t *testing.T) {
+	t.Run("Verify envars being set", func(t *testing.T) {
+		t.Run("InsecureSkipCaVerification defaults to false via env var", func(t *testing.T) {
+			// Do not set TLS_CLIENT_ALL_INSECURE_SKIP_CA_VERIFICATION — should default to false
+			cfg := loadConfigFromEnv(t)
+			require.False(t, cfg.TLS.Client.All.InsecureSkipCaVerification)
+		})
+
+		t.Run("InsecureSkipCaVerification set via env var", func(t *testing.T) {
+			t.Setenv("TLS_CLIENT_ALL_INSECURE_SKIP_CA_VERIFICATION", "true")
+
+			cfg := loadConfigFromEnv(t)
+			require.True(t, cfg.TLS.Client.All.InsecureSkipCaVerification)
+		})
+
+		t.Run("CertFile and KeyFile set via env vars", func(t *testing.T) {
+			t.Setenv("TLS_CLIENT_ALL_CERT_FILE", "testdata/tls/cert.pem")
+			t.Setenv("TLS_CLIENT_ALL_KEY_FILE", "testdata/tls/key.pem")
+
+			cfg := loadConfigFromEnv(t)
+
+			require.Equal(t, "testdata/tls/cert.pem", cfg.TLS.Client.All.CertFile)
+			require.Equal(t, "testdata/tls/key.pem", cfg.TLS.Client.All.KeyFile)
+		})
+
+		t.Run("CaFile set via env var", func(t *testing.T) {
+			t.Setenv("TLS_CLIENT_ALL_CA_FILE", "testdata/tls/cert.pem")
+
+			cfg := loadConfigFromEnv(t)
+
+			require.Equal(t, "testdata/tls/cert.pem", cfg.TLS.Client.All.CaFile)
+		})
+	})
+
+	t.Run("InsecureSkipCaVerification set via env var", func(t *testing.T) {
+		t.Setenv("TLS_CLIENT_ALL_INSECURE_SKIP_CA_VERIFICATION", "true")
+
+		cfg := loadConfigFromEnv(t)
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					TLSConfig: subgraphMTLSServerConfig(t, false),
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithSubgraphTLSConfiguration(cfg.TLS.Client),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+		})
+	})
+
+	t.Run("Router presents client certificate to mTLS subgraph via env vars", func(t *testing.T) {
+		t.Setenv("TLS_CLIENT_ALL_INSECURE_SKIP_CA_VERIFICATION", "true")
+		t.Setenv("TLS_CLIENT_ALL_CERT_FILE", "testdata/tls/cert.pem")
+		t.Setenv("TLS_CLIENT_ALL_KEY_FILE", "testdata/tls/key.pem")
+
+		cfg := loadConfigFromEnv(t)
+
+		require.True(t, cfg.TLS.Client.All.InsecureSkipCaVerification)
+		require.Equal(t, "testdata/tls/cert.pem", cfg.TLS.Client.All.CertFile)
+		require.Equal(t, "testdata/tls/key.pem", cfg.TLS.Client.All.KeyFile)
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					TLSConfig: subgraphMTLSServerConfig(t, true),
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithSubgraphTLSConfiguration(cfg.TLS.Client),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+		})
+	})
+
+	t.Run("Router trusts subgraph server via CaFile env var", func(t *testing.T) {
+		certPath, keyPath := generateServerCert(t)
+		serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		require.NoError(t, err)
+
+		t.Setenv("TLS_CLIENT_ALL_CA_FILE", certPath)
+
+		cfg := loadConfigFromEnv(t)
+		require.Equal(t, certPath, cfg.TLS.Client.All.CaFile)
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					TLSConfig: &tls.Config{
+						Certificates: []tls.Certificate{serverCert},
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithSubgraphTLSConfiguration(cfg.TLS.Client),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+		})
+	})
+
+	t.Run("Full mTLS via env vars with CaFile and client certificate", func(t *testing.T) {
+		certPath, keyPath := generateServerCert(t)
+		serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
+		require.NoError(t, err)
+
+		caPool := loadSubgraphMTLSCACertPool(t, "testdata/tls/cert.pem")
+
+		t.Setenv("TLS_CLIENT_ALL_CA_FILE", certPath)
+		t.Setenv("TLS_CLIENT_ALL_CERT_FILE", "testdata/tls/cert.pem")
+		t.Setenv("TLS_CLIENT_ALL_KEY_FILE", "testdata/tls/key.pem")
+
+		cfg := loadConfigFromEnv(t)
+
+		require.Equal(t, certPath, cfg.TLS.Client.All.CaFile)
+		require.Equal(t, "testdata/tls/cert.pem", cfg.TLS.Client.All.CertFile)
+		require.Equal(t, "testdata/tls/key.pem", cfg.TLS.Client.All.KeyFile)
+		require.False(t, cfg.TLS.Client.All.InsecureSkipCaVerification)
+
+		testenv.Run(t, &testenv.Config{
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					TLSConfig: &tls.Config{
+						Certificates: []tls.Certificate{serverCert},
+						ClientCAs:    caPool,
+						ClientAuth:   tls.RequireAndVerifyClientCert,
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithSubgraphTLSConfiguration(cfg.TLS.Client),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.JSONEq(t, employeesIDData, res.Body)
+		})
+	})
+}
+
+// loadConfigFromEnv creates a minimal config file and loads config, allowing
+// environment variables to populate the TLS client configuration fields.
+func loadConfigFromEnv(t *testing.T) config.Config {
+	t.Helper()
+
+	f, err := os.CreateTemp(t.TempDir(), "config_test_*.yaml")
+	require.NoError(t, err)
+	_, err = f.WriteString(`version: "1"`)
+	require.NoError(t, err)
+	require.NoError(t, f.Close())
+
+	result, err := config.LoadConfig([]string{f.Name()})
+	require.NoError(t, err)
+	return result.Config
+}
+
 // loadSubgraphMTLSCACertPool loads a CA certificate pool from a PEM file.
 func loadSubgraphMTLSCACertPool(t *testing.T, caFile string) *x509.CertPool {
 	t.Helper()

@@ -795,15 +795,15 @@ type TLSServerConfiguration struct {
 }
 
 type TLSClientCertConfiguration struct {
-	CertFile                   string `yaml:"cert_file,omitempty" env:"TLS_CLIENT_CERT_FILE"`
-	KeyFile                    string `yaml:"key_file,omitempty" env:"TLS_CLIENT_KEY_FILE"`
-	CaFile                     string `yaml:"ca_file,omitempty" env:"TLS_CLIENT_CA_FILE"`
-	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"TLS_CLIENT_INSECURE_SKIP_CA_VERIFICATION"`
+	CertFile                   string `yaml:"cert_file,omitempty" env:"CERT_FILE"`
+	KeyFile                    string `yaml:"key_file,omitempty" env:"KEY_FILE"`
+	CaFile                     string `yaml:"ca_file,omitempty" env:"CA_FILE"`
+	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
 }
 
 type ClientTLSConfiguration struct {
 	// All applies to all subgraph connections.
-	All TLSClientCertConfiguration `yaml:"all"`
+	All TLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
 	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
 	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
 }
