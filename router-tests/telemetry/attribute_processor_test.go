@@ -210,7 +210,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 
 			logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
 			require.NotEmpty(t, logs)
-			require.Equal(t, logs[0].Message, "otel error: traces export: string field contains invalid UTF-8: Enable 'telemetry.tracing.sanitize_utf8.enabled' in your config to sanitize invalid UTF-8 attributes.")
+			require.Equal(t, "otel error: traces export: string field contains invalid UTF-8: Enable 'telemetry.tracing.sanitize_utf8.enabled' in your config to sanitize invalid UTF-8 attributes.", logs[0].Message)
 		})
 	})
 
