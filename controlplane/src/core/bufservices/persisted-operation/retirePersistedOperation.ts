@@ -25,13 +25,13 @@ export function retirePersistedOperation(
     }
 
     const fedRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const federatedGraph = await fedRepo.byName(req.federatedGraphName, req.namespace);
+    const federatedGraph = await fedRepo.byName(req.fedGraphName, req.namespace);
 
     if (!federatedGraph) {
       return {
         response: {
           code: EnumStatusCode.ERR_NOT_FOUND,
-          details: `Federated graph '${req.federatedGraphName}' does not exist`,
+          details: `Federated graph '${req.fedGraphName}' does not exist`,
         },
       };
     }
@@ -48,10 +48,7 @@ export function retirePersistedOperation(
       operation: operation
         ? {
             id: operation.id,
-            contents: operation.contents,
-            createdAt: operation.createdAt,
-            lastUpdatedAt: operation.lastUpdatedAt,
-            operationNames: operation.operationNames,
+            name: operation.operationNames.join(''),
           }
         : undefined,
     };

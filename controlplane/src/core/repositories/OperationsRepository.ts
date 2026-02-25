@@ -151,7 +151,7 @@ export class OperationsRepository {
     };
   }
 
-  public async removePersistedOperation({
+  public async retirePersistedOperation({
     operationId,
   }: {
     operationId: string;
