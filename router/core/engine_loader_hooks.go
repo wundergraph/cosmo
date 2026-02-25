@@ -261,10 +261,8 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 					for i, downstreamError := range subgraphError.DownstreamErrors {
 						var errorCode string
 						if downstreamError.Extensions != nil {
-							if ok := downstreamError.Extensions["code"]; ok != nil {
-								if code, ok := downstreamError.Extensions["code"].(string); ok {
-									errorCode = code
-								}
+							if value := downstreamError.Extensions.Get("code"); value != nil {
+								errorCode = value.String()
 							}
 						}
 
