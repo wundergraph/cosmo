@@ -383,6 +383,11 @@
       "default": false,
       "description": "Enable the development mode. The development mode is used to enable the development features like ART (Advanced Request Tracing) and pretty logs."
     },
+    "enable_art": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable Advanced Request Tracing (ART) and query plan headers without requiring dev_mode or a Cosmo Cloud JWT token."
+    },
     "tls": {
       "type": "object",
       "additionalProperties": false,

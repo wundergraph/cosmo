@@ -112,6 +112,7 @@ type Config struct {
 	connectRPCServer                *connectrpc.Server
 	processStartTime                time.Time
 	developmentMode                 bool
+	enableArt                       bool
 	healthcheck                     health.Checker
 	accessLogsConfig                *AccessLogsConfig
 	// If connecting to localhost inside Docker fails, fallback to the docker internal address for the host
@@ -251,6 +252,7 @@ func (c *Config) Usage() map[string]any {
 	usage["access_controller"] = c.accessController != nil
 	usage["retry_options"] = c.retryOptions.Enabled
 	usage["development_mode"] = c.developmentMode
+	usage["enable_art"] = c.enableArt
 	usage["access_logs"] = c.accessLogsConfig != nil
 	usage["localhost_fallback_inside_docker"] = c.localhostFallbackInsideDocker
 	usage["tls_server"] = c.tlsServerConfig != nil

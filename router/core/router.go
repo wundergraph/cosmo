@@ -2092,6 +2092,14 @@ func WithDevelopmentMode(enabled bool) Option {
 	}
 }
 
+// WithEnableArt enables Advanced Request Tracing (ART) and query plan headers
+// without requiring dev_mode or a Cosmo Cloud JWT token.
+func WithEnableArt(enabled bool) Option {
+	return func(r *Router) {
+		r.enableArt = enabled
+	}
+}
+
 func WithClusterName(name string) Option {
 	return func(r *Router) {
 		r.clusterName = name

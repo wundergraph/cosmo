@@ -1143,6 +1143,7 @@ type Config struct {
 	LocalhostFallbackInsideDocker bool                        `yaml:"localhost_fallback_inside_docker" envDefault:"true" env:"LOCALHOST_FALLBACK_INSIDE_DOCKER"`
 	CDN                           CDNConfiguration            `yaml:"cdn,omitempty"`
 	DevelopmentMode               bool                        `yaml:"dev_mode" envDefault:"false" env:"DEV_MODE"`
+	EnableArt                     bool                        `yaml:"enable_art" envDefault:"false" env:"ENABLE_ART"`
 	Events                        EventsConfiguration         `yaml:"events,omitempty"`
 	CacheWarmup                   CacheWarmupConfiguration    `yaml:"cache_warmup,omitempty"`
 
