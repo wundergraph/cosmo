@@ -61,28 +61,28 @@ const signupContentMap: Record<SignupVariant, SignupContent> = {
       "Escape the vendor lock. 100% open source GraphQL Federation with full control. A drop-in GraphOS replacement.",
     features: [
       {
-        icon: "magnifying-glass",
-        title: "Full observability with OTEL",
+        icon: "code-bracket",
+        title: "Schema design and governance as it should be",
         description:
-          "First-class OpenTelemetry support for traces and metrics out of the box. Export to multiple platforms simultaneously (e.g. Datadog, Prometheus) or your own collector. Trace every request end-to-end.",
-      },
-      {
-        icon: "bolt",
-        title: "Event-Driven Federated Subscriptions",
-        description:
-          "Combine GraphQL Federation with event-driven architecture. Scale subscriptions with Kafka, NATS, or SQS. Perfect for real-time, high-throughput systems.",
+          "Get linting, breaking-change detection, schema contracts, and PR-based checks from day one. Cosmo doesn't gate governance behind tiers.",
       },
       {
         icon: "rocket-launch",
-        title: "AI-Ready with MCP Gateway",
+        title: "Cosmo delivers value, not traffic bills",
         description:
-          "Transform your API into an AI-ready interface. LLMs like ChatGPT and Claude can discover, understand, and interact with your graph securely. Granular access control through persisted operations.",
+          "Enjoy predictable, transparent pricing for what drives value in your organization, as well as world-class support. ",
       },
       {
-        icon: "shield-check",
-        title: "100% Open Source (Apache 2.0)",
+        icon: "share",
+        title: "Connect legacy services without a proprietary lock-in",
         description:
-          "Cosmo is fully open-source with no usage restrictions. No vendor lock-in, full transparency.",
+          "Wrap REST, gRPC, SOAP and other existing APIs into your supergraph without rewriting backends. No schema changes required.",
+      },
+      {
+        icon: "bolt",
+        title: "Build real-time event-driven subscriptions that scale",
+        description:
+          "Turn Kafka, NATS, or Redis into GraphQL subscriptions. Subgraphs stay stateless. Scale to tens of thousands of clients effortlessly.",
       },
     ],
   },
@@ -103,7 +103,7 @@ export const getSignupContent = (variant: SignupVariant = "default"): SignupCont
  * @returns The signup variant or 'default' if not recognized
  */
 export const parseSignupVariant = (ucParam?: string): SignupVariant => {
-  if (ucParam === "apollo") {
+  if (ucParam?.toLowerCase() === "apollo") {
     return "apollo";
   }
   return "default";

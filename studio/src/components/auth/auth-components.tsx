@@ -160,7 +160,7 @@ export const MarketingHeader = ({
 };
 
 /**
- * Feature Item - Individual feature with icon box
+ * Feature Item - Individual feature with icon tile (glossy, border highlight)
  */
 const FeatureItem = ({
   icon,
@@ -171,9 +171,25 @@ const FeatureItem = ({
   title: string;
   description: string;
 }) => (
-  <div className="flex gap-4">
-    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-white/10">
-      {icon}
+  <div className="flex items-center gap-6">
+    <div
+      className="feature-icon-tile relative flex h-16 w-16 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-white/25 bg-black/50"
+      style={{
+        boxShadow:
+          "inset 0 0 0 1px rgba(255,255,255,0.08), inset 0 1px 0 rgba(255,255,255,0.06)",
+      }}
+    >
+      {/* Glossy highlight (top edge) */}
+      <div
+        className="pointer-events-none absolute inset-0 rounded-lg"
+        style={{
+          background:
+            "linear-gradient(165deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.04) 25%, transparent 50%)",
+        }}
+      />
+      {/* Border highlight (static tilt) */}
+      <div className="feature-icon-tile-border-highlight pointer-events-none absolute inset-0 rounded-lg" />
+      <span className="relative z-[1]">{icon}</span>
     </div>
     <div>
       <h4 className="text-lg font-semibold text-white">{title}</h4>
@@ -192,9 +208,9 @@ export const ProductCosmoStack = ({
   variant?: "login" | "signup";
   signupVariant?: "default" | "apollo";
 }) => {
-  // Icon mapping function
+  // Icon mapping function (larger icons for feature tiles)
   const getIcon = (iconName: string) => {
-    const iconClass = "h-6 w-6 text-purple-500";
+    const iconClass = "h-8 w-8 text-purple-400";
     switch (iconName) {
       case "bolt":
         return <BoltIcon className={iconClass} />;
@@ -215,19 +231,19 @@ export const ProductCosmoStack = ({
 
   const loginFeatures = [
     {
-      icon: <BoltIcon className="h-6 w-6 text-purple-500" />,
+      icon: <BoltIcon className="h-8 w-8 text-purple-400" />,
       title: "Real time subscriptions without new infrastructure",
       description:
         "Cosmo Streams turns existing event streams into GraphQL subscriptions by handling authorization, filtering, and fan out in the Cosmo Router, keeping subgraphs stateless and avoiding a separate service.",
     },
     {
-      icon: <CodeBracketIcon className="h-6 w-6 text-purple-500" />,
+      icon: <CodeBracketIcon className="h-8 w-8 text-purple-400" />,
       title: "Extend the router with TypeScript",
       description:
         "With TypeScript plugin support in Cosmo Connect, you can extend the Cosmo Router using TypeScript and run custom logic directly inside the router, without deploying separate services.",
     },
     {
-      icon: <ShieldCheckIcon className="h-6 w-6 text-purple-500" />,
+      icon: <ShieldCheckIcon className="h-8 w-8 text-purple-400" />,
       title: "Enforce custom schema rules before deploy",
       description:
         "With Subgraph Check Extensions, you can run your own validation logic as part of Cosmo's subgraph checks, enforcing custom schema rules before changes are deployed.",
@@ -252,25 +268,25 @@ export const ProductCosmoStack = ({
     // Default signup features
     signupFeatures = [
       {
-        icon: <ShareIcon className="h-6 w-6 text-purple-500" />,
+        icon: <ShareIcon className="h-8 w-8 text-purple-400" />,
         title: "Federate Any API, Not Just GraphQL",
         description:
           "Connect REST, gRPC, and GraphQL services without rewrites. Cosmo Connect wraps existing APIs into your graph without forcing migrations.",
       },
       {
-        icon: <MagnifyingGlassIcon className="h-6 w-6 text-purple-500" />,
+        icon: <MagnifyingGlassIcon className="h-8 w-8 text-purple-400" />,
         title: "Track Every Query Across Your Entire Graph",
         description:
           "Native OpenTelemetry tracing from gateway to subgraph. Find slow queries and failing services in seconds with zero instrumentation required.",
       },
       {
-        icon: <ShieldCheckIcon className="h-6 w-6 text-purple-500" />,
+        icon: <ShieldCheckIcon className="h-8 w-8 text-purple-400" />,
         title: "Catch Breaking Changes Before Deployment",
         description:
           "Schema checks run automatically in CI/CD. Service teams ship on their own schedule, while platform teams prevent breaking changes from reaching production.",
       },
       {
-        icon: <RocketLaunchIcon className="h-6 w-6 text-purple-500" />,
+        icon: <RocketLaunchIcon className="h-8 w-8 text-purple-400" />,
         title: "Built for Scale and Performance",
         description:
           "Go router with sub-millisecond overhead. Deploy with built-in caching, rate limiting, and security controls wherever your infrastructure lives.",

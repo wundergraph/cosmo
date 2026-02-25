@@ -39,12 +39,20 @@ const constructSignupURL = ({
   return signupUrl + (queryString.length ? "?" + queryString : "");
 };
 
+function getUcFromUrl(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  return new URLSearchParams(window.location.search).get("uc") ?? undefined;
+}
+
 const SignupPage: NextPageWithLayout = () => {
   const router = useRouter();
-
-  const { redirectURL, uc } = querySchema.parse(router.query);
+  // Parse query safely so invalid params (e.g. redirectURL from OAuth) don't crash the page
+  const parseResult = querySchema.safeParse(router.query);
+  const query = parseResult.success ? parseResult.data : { redirectURL: undefined, uc: undefined };
+  const uc = router.isReady ? query.uc : getUcFromUrl() ?? query.uc;
   const variant = parseSignupVariant(uc);
   const content = getSignupContent(variant);
+  const redirectURL = query.redirectURL;
 
   return (
     <div className="flex min-h-full flex-col">
