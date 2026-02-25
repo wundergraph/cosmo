@@ -70,7 +70,7 @@ const signupContentMap: Record<SignupVariant, SignupContent> = {
         icon: "rocket-launch",
         title: "Cosmo delivers value, not traffic bills",
         description:
-          "Enjoy predictable, transparent pricing for what drives value in your organization, as well as world-class support. ",
+          "Enjoy predictable, transparent pricing for what drives value in your organization, as well as world-class support.",
       },
       {
         icon: "share",
