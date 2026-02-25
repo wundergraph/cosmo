@@ -70,6 +70,11 @@ type ResponseTraceHeader struct {
 	HeaderName string `yaml:"header_name" envDefault:"x-wg-trace-id"`
 }
 
+type SanitizeUTF8Config struct {
+	Enabled          bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	LogSanitizations bool `yaml:"log_sanitizations" envDefault:"false" env:"LOG_SANITIZATIONS"`
+}
+
 type Tracing struct {
 	Enabled             bool                `yaml:"enabled" envDefault:"true" env:"TRACING_ENABLED"`
 	SamplingRate        float64             `yaml:"sampling_rate" envDefault:"1" env:"TRACING_SAMPLING_RATE"`
@@ -82,6 +87,9 @@ type Tracing struct {
 	OperationContentAttributes bool `yaml:"operation_content_attributes" envDefault:"false" env:"TRACING_OPERATION_CONTENT_ATTRIBUTES"`
 
 	TracingGlobalFeatures `yaml:",inline"`
+
+	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values
+	SanitizeUTF8 SanitizeUTF8Config `yaml:"sanitize_utf8" envPrefix:"TRACING_SANITIZE_UTF8_"`
 }
 
 type PropagationConfig struct {
@@ -431,7 +439,8 @@ type EngineExecutionConfiguration struct {
 	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
-	ValidateRequiredExternalFields                   bool          `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
+	ValidateRequiredExternalFields                         bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
+	RelaxSubgraphOperationFieldSelectionMergingNullability bool `envDefault:"false" env:"ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY" yaml:"relax_subgraph_operation_field_selection_merging_nullability"`
 }
 
 type BlockOperationConfiguration struct {
@@ -793,8 +802,23 @@ type TLSServerConfiguration struct {
 	ClientAuth TLSClientAuthConfiguration `yaml:"client_auth,omitempty"`
 }
 
+type TLSClientCertConfiguration struct {
+	CertFile                   string `yaml:"cert_file,omitempty" env:"CERT_FILE"`
+	KeyFile                    string `yaml:"key_file,omitempty" env:"KEY_FILE"`
+	CaFile                     string `yaml:"ca_file,omitempty" env:"CA_FILE"`
+	InsecureSkipCaVerification bool   `yaml:"insecure_skip_ca_verification" envDefault:"false" env:"INSECURE_SKIP_CA_VERIFICATION"`
+}
+
+type ClientTLSConfiguration struct {
+	// All applies to all subgraph connections.
+	All TLSClientCertConfiguration `yaml:"all" envPrefix:"TLS_CLIENT_ALL_"`
+	// Subgraphs overrides per-subgraph TLS config. Key is the subgraph name.
+	Subgraphs map[string]TLSClientCertConfiguration `yaml:"subgraphs,omitempty"`
+}
+
 type TLSConfiguration struct {
 	Server TLSServerConfiguration `yaml:"server"`
+	Client ClientTLSConfiguration `yaml:"client"`
 }
 
 type SubgraphErrorPropagationMode string
@@ -993,20 +1017,24 @@ type ClientHeader struct {
 
 type CacheWarmupSource struct {
 	Filesystem *CacheWarmupFileSystemSource `yaml:"filesystem,omitempty"`
+	CdnSource  CacheWarmupCDNSource         `yaml:"cdn,omitempty"`
 }
 
 type CacheWarmupFileSystemSource struct {
 	Path string `yaml:"path" env:"CACHE_WARMUP_SOURCE_FILESYSTEM_PATH"`
 }
 
-type CacheWarmupCDNSource struct{}
+type CacheWarmupCDNSource struct {
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"CACHE_WARMUP_SOURCE_CDN_ENABLED"`
+}
 
 type CacheWarmupConfiguration struct {
-	Enabled        bool              `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
-	Source         CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`
-	Workers        int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
-	ItemsPerSecond int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
-	Timeout        time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
+	Enabled          bool              `yaml:"enabled" envDefault:"false" env:"CACHE_WARMUP_ENABLED"`
+	Source           CacheWarmupSource `yaml:"source"  env:"CACHE_WARMUP_SOURCE"`
+	Workers          int               `yaml:"workers" envDefault:"8" env:"CACHE_WARMUP_WORKERS"`
+	ItemsPerSecond   int               `yaml:"items_per_second" envDefault:"50" env:"CACHE_WARMUP_ITEMS_PER_SECOND"`
+	Timeout          time.Duration     `yaml:"timeout" envDefault:"30s" env:"CACHE_WARMUP_TIMEOUT"`
+	InMemoryFallback bool              `yaml:"in_memory_fallback" envDefault:"true" env:"CACHE_WARMUP_IN_MEMORY_FALLBACK"`
 }
 
 type MCPConfiguration struct {
@@ -1037,6 +1065,22 @@ type MCPServer struct {
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
 }
 
+type ConnectRPCConfiguration struct {
+	Enabled         bool                    `yaml:"enabled" envDefault:"false" env:"CONNECT_RPC_ENABLED"`
+	Server          ConnectRPCServer        `yaml:"server,omitempty" envPrefix:"CONNECT_RPC_SERVER_"`
+	Storage         ConnectRPCStorageConfig `yaml:"storage,omitempty"`
+	GraphQLEndpoint string                  `yaml:"graphql_endpoint,omitempty" env:"CONNECT_RPC_GRAPHQL_ENDPOINT"`
+}
+
+type ConnectRPCStorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"CONNECT_RPC_STORAGE_PROVIDER_ID"`
+}
+
+type ConnectRPCServer struct {
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5026" env:"LISTEN_ADDR"`
+	BaseURL    string `yaml:"base_url,omitempty" env:"BASE_URL"`
+}
+
 type PluginsConfiguration struct {
 	Enabled  bool                        `yaml:"enabled" envDefault:"false" env:"ENABLED"`
 	Path     string                      `yaml:"path" envDefault:"plugins" env:"PATH"`
@@ -1055,17 +1099,18 @@ type IntrospectionConfiguration struct {
 type Config struct {
 	Version string `yaml:"version,omitempty" ignored:"true"`
 
-	InstanceID     string             `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
-	Graph          Graph              `yaml:"graph,omitempty"`
-	Telemetry      Telemetry          `yaml:"telemetry,omitempty"`
-	GraphqlMetrics GraphqlMetrics     `yaml:"graphql_metrics,omitempty"`
-	CORS           CORS               `yaml:"cors,omitempty"`
-	Cluster        Cluster            `yaml:"cluster,omitempty"`
-	Compliance     ComplianceConfig   `yaml:"compliance,omitempty"`
-	TLS            TLSConfiguration   `yaml:"tls,omitempty"`
-	CacheControl   CacheControlPolicy `yaml:"cache_control_policy"`
-	MCP            MCPConfiguration   `yaml:"mcp,omitempty"`
-	DemoMode       bool               `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
+	InstanceID     string                  `yaml:"instance_id,omitempty" env:"INSTANCE_ID"`
+	Graph          Graph                   `yaml:"graph,omitempty"`
+	Telemetry      Telemetry               `yaml:"telemetry,omitempty"`
+	GraphqlMetrics GraphqlMetrics          `yaml:"graphql_metrics,omitempty"`
+	CORS           CORS                    `yaml:"cors,omitempty"`
+	Cluster        Cluster                 `yaml:"cluster,omitempty"`
+	Compliance     ComplianceConfig        `yaml:"compliance,omitempty"`
+	TLS            TLSConfiguration        `yaml:"tls,omitempty"`
+	CacheControl   CacheControlPolicy      `yaml:"cache_control_policy"`
+	MCP            MCPConfiguration        `yaml:"mcp,omitempty"`
+	ConnectRPC     ConnectRPCConfiguration `yaml:"connect_rpc,omitempty"`
+	DemoMode       bool                    `yaml:"demo_mode,omitempty" envDefault:"false" env:"DEMO_MODE"`
 
 	Modules        map[string]interface{} `yaml:"modules,omitempty"`
 	Headers        HeaderRules            `yaml:"headers,omitempty"`

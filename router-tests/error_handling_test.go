@@ -3,15 +3,19 @@ package integration
 import (
 	"cmp"
 	"encoding/json"
+	"io"
 	"net/http"
 	"slices"
+	"strings"
+	"sync"
 	"testing"
 
-	"github.com/wundergraph/cosmo/router/core"
-
 	"github.com/stretchr/testify/require"
+	failing_writer "github.com/wundergraph/cosmo/router-tests/modules/failing-writer"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"go.uber.org/zap/zapcore"
 )
 
 func compareErrors(t *testing.T, expectedErrors []testenv.GraphQLError, actualErrors []testenv.GraphQLError) {
@@ -329,6 +333,185 @@ func TestAllowedExtensions(t *testing.T) {
 				Query: `{ employees { id } }`,
 			})
 			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"allowed":"allowed","notAllowed":"notAllowed","statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("filtering multiple disallowed extension fields / wrapped mode", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModeWrapped
+				cfg.AllowedExtensionFields = []string{"code"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","foo":"bar","baz":"qux","extra1":"val1","extra2":"val2"}}]}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("filtering multiple disallowed extension fields / passthrough mode", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.AllowedExtensionFields = []string{"code"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","foo":"bar","baz":"qux","extra1":"val1","extra2":"val2"}}]}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("allowing all three extension fields filters nothing / passthrough mode", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.AllowedExtensionFields = []string{"code", "reason", "details"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","reason":"expired","details":"token expired"}}]}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","reason":"expired","details":"token expired","statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("allowing three fields filters some when extras present / passthrough mode", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.AllowedExtensionFields = []string{"code", "reason", "details"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","reason":"expired","details":"token expired","internal":"secret","trace_id":"abc123"}}]}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","reason":"expired","details":"token expired","statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("allowing three fields filters all when none match / passthrough mode", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.AllowedExtensionFields = []string{"code", "reason", "details"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"internal":"secret","trace_id":"abc123","debug":"info"}}]}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employees { id } }`,
+			})
+			require.Equal(t, `{"errors":[{"message":"Unauthorized","extensions":{"statusCode":403}}],"data":{"employees":null}}`, res.Body)
+		})
+	})
+
+	t.Run("concurrent requests with extension field filtering", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+				cfg.AllowedExtensionFields = []string{"code"}
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusForbidden)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","foo":"bar","baz":"qux","extra1":"val1","extra2":"val2"}}]}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var (
+				numOfOperations = 10
+				ready, done     sync.WaitGroup
+			)
+			expected := `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":403}}],"data":{"employees":null}}`
+			results := make(chan string, numOfOperations)
+			ready.Add(numOfOperations)
+			done.Add(numOfOperations)
+			trigger := make(chan struct{})
+			for i := 0; i < numOfOperations; i++ {
+				go func() {
+					ready.Done()
+					defer done.Done()
+					<-trigger
+					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `{ employees { id } }`,
+					})
+					results <- res.Body
+				}()
+			}
+			ready.Wait()
+			close(trigger)
+			done.Wait()
+			close(results)
+			for body := range results {
+				require.Equal(t, expected, body)
+			}
 		})
 	})
 
@@ -1637,4 +1820,210 @@ func TestErrorLocations(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestSSEErrorResponseWriteFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should log warning when broken pipe error occurs writing SSE error response", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.WarnLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeBrokenPipe,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeBrokenPipe,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			require.Empty(t, body)
+
+			logs := xEnv.Observer().FilterMessage("Broken pipe, error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.WarnLevel, logs.All()[0].Level)
+		})
+	})
+
+	t.Run("should log error when generic write error occurs writing SSE error response", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeGeneric,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeGeneric,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			body, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+			require.Empty(t, body)
+
+			logs := xEnv.Observer().FilterMessage("Error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
+		})
+	})
+}
+
+func TestErrorResponseBodyWriteFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should log warning when broken pipe error occurs writing error response body", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.WarnLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeBrokenPipe,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeBrokenPipe,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: "",
+			})
+			require.NoError(t, err)
+			require.NotNil(t, res)
+
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Empty(t, res.Body)
+
+			logs := xEnv.Observer().FilterMessage("Broken pipe, error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.WarnLevel, logs.All()[0].Level)
+		})
+	})
+
+	t.Run("should log error when generic write error occurs writing error response body", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeGeneric,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeGeneric,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: "",
+			})
+			require.NoError(t, err)
+			require.NotNil(t, res)
+
+			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)
+			require.Empty(t, res.Body)
+
+			logs := xEnv.Observer().FilterMessage("Error writing response")
+			require.Equal(t, 1, logs.Len())
+			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
+		})
+	})
+}
+
+func TestMultipartErrorResponseWriteFailures(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should log error when error occurs while writing multipart error response", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+			RouterOptions: []core.Option{
+				core.WithModulesConfig(map[string]interface{}{
+					"failingWriterModule": failing_writer.FailingWriterModule{
+						ErrorType: failing_writer.ErrorTypeBrokenPipe,
+					},
+				}),
+				core.WithCustomModules(&failing_writer.FailingWriterModule{
+					ErrorType: failing_writer.ErrorTypeBrokenPipe,
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), strings.NewReader(`{"query":"subscription { nonExistentField }"}`))
+			require.NoError(t, err)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "multipart/mixed")
+
+			client := http.Client{}
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			_, err = io.ReadAll(resp.Body)
+			require.NoError(t, err)
+
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			logs := xEnv.Observer().FilterMessage("error writing multipart response")
+			require.Equal(t, 1, logs.Len(), "Expected error log for multipart write failure")
+			require.Equal(t, zapcore.ErrorLevel, logs.All()[0].Level)
+		})
+	})
+
 }

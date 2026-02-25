@@ -1,0 +1,12 @@
+query FindEmployeesByPets($hasPets: Boolean!) {
+    findEmployees(criteria: {hasPets: $hasPets}) {
+        id
+        details {
+            forename
+            surname
+            pets {
+                name
+            }
+        }
+    }
+}

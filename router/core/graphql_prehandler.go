@@ -75,6 +75,7 @@ type PreHandlerOptions struct {
 	HasPreOriginHandlers                   bool
 	EnableInboundRequestDeduplication      bool
 	ForceEnableInboundRequestDeduplication bool
+	HeaderPropagation                      *HeaderPropagation
 }
 
 type PreHandler struct {
@@ -85,6 +86,7 @@ type PreHandler struct {
 	planner                                *OperationPlanner
 	accessController                       *AccessController
 	operationBlocker                       *OperationBlocker
+	headerPropagation                      *HeaderPropagation
 	developmentMode                        bool
 	alwaysIncludeQueryPlan                 bool
 	alwaysSkipLoader                       bool
@@ -175,6 +177,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		hasPreOriginHandlers:                   opts.HasPreOriginHandlers,
 		enableInboundRequestDeduplication:      opts.EnableInboundRequestDeduplication,
 		forceEnableInboundRequestDeduplication: opts.ForceEnableInboundRequestDeduplication,
+		headerPropagation:                      opts.HeaderPropagation,
 	}
 }
 
@@ -201,12 +204,12 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		var (
-			// In GraphQL the statusCode does not always express the error state of the request
-			// we use this flag to determine if we have an error for the request metrics
-			writtenBytes int
-			statusCode   = http.StatusOK
 			traceTimings *art.TraceTimings
 		)
+
+		// Wrap the response w early so that all paths (including early returns
+		// for auth failures, bad requests, etc.) have the actual HTTP status code
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
 		requestContext := getRequestContext(r.Context())
 		requestLogger := requestContext.logger
@@ -246,6 +249,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldOperationServices, requestContext.dataSourceNames)
 			requestContext.telemetry.AddCustomMetricStringSliceAttr(ContextFieldGraphQLErrorCodes, requestContext.graphQLErrorCodes)
 
+			// Read the actual status code from the wrapped response w.
+			// This captures the correct status code for all paths, including early returns.
+			statusCode := ww.Status()
+			writtenBytes := ww.BytesWritten()
+
 			metrics.Finish(
 				requestContext,
 				statusCode,
@@ -261,7 +269,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		executionOptions, traceOptions, err := h.parseExecutionAndTraceOptions(r, clientInfo, requestLogger)
 		if err != nil {
 			requestContext.SetError(err)
-			writeRequestErrors(r, w, http.StatusBadRequest, graphqlerrors.RequestErrorsFromError(err), requestLogger)
+			writeRequestErrors(writeRequestErrorsParams{
+				request:           r,
+				writer:            ww,
+				statusCode:        http.StatusBadRequest,
+				requestErrors:     graphqlerrors.RequestErrorsFromError(err),
+				logger:            requestLogger,
+				headerPropagation: h.headerPropagation,
+			})
 			return
 		}
 
@@ -283,7 +298,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					message:    "file upload disabled",
 					statusCode: http.StatusOK,
 				})
-				writeOperationError(r, w, requestLogger, requestContext.error)
+				writeOperationError(r, ww, requestLogger, requestContext.error, h.headerPropagation)
 				return
 			}
 
@@ -302,7 +317,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			}
 			if err != nil {
 				requestContext.SetError(err)
-				writeOperationError(r, w, requestLogger, requestContext.error)
+				writeOperationError(r, ww, requestLogger, requestContext.error, h.headerPropagation)
 				readMultiPartSpan.End()
 				return
 			}
@@ -339,7 +354,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				// e.g. too large body, slow client, aborted connection etc.
 				// The error is logged as debug log in the writeOperationError function
 
-				writeOperationError(r, w, requestLogger, err)
+				writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
 				readOperationBodySpan.End()
 				return
 			}
@@ -355,7 +370,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 				trace.WithAttributes(requestContext.telemetry.traceAttrs...),
 			)
 
-			validatedReq, err := h.accessController.Access(w, r)
+			validatedReq, err := h.accessController.Access(ww, r)
 			if err != nil {
 				// Auth failed but introspection queries might be allowed to skip auth.
 				// At this early stage we don't know wether this query is an introspection query or not.
@@ -367,14 +382,14 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 					// Reject the request since auth has failed
 					// and skipping auth for introspection queries is not allowed,
 					// so it does not matter wether this is an introspection query or not.
-					h.handleAuthenticationFailure(requestContext, requestLogger, err, routerSpan, authenticateSpan, r, w)
+					h.handleAuthenticationFailure(requestContext, requestLogger, err, routerSpan, authenticateSpan, r, ww)
 					authenticateSpan.End()
 					return
 				}
 
 				if h.accessController.IntrospectionSecretConfigured() {
 					if !h.accessController.IntrospectionAccess(r, body) {
-						h.handleAuthenticationFailure(requestContext, requestLogger, err, routerSpan, authenticateSpan, r, w)
+						h.handleAuthenticationFailure(requestContext, requestLogger, err, routerSpan, authenticateSpan, r, ww)
 						authenticateSpan.End()
 						return
 					}
@@ -408,7 +423,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, err)
 
-			writeOperationError(r, w, requestLogger, err)
+			writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
 			return
 		}
 
@@ -428,8 +443,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			r = r.WithContext(resolve.SetRequest(r.Context(), reqData))
 		}
 
-		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
-
 		// The request context needs to be updated with the latest request to ensure that the context is up to date
 		requestContext.request = r
 		requestContext.responseWriter = ww
@@ -437,9 +450,6 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// Call the final handler that resolves the operation
 		// and enrich the context to make it available in the request context as well for metrics etc.
 		next.ServeHTTP(ww, r)
-
-		statusCode = ww.Status()
-		writtenBytes = ww.BytesWritten()
 
 		// Mark the root span of the router as failed, so we can easily identify failed requests
 		if requestContext.error != nil {
@@ -588,7 +598,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		span.SetAttributes(otel.WgEnginePersistedOperationCacheHit.Bool(operationKit.parsedOperation.PersistedOperationCacheHit))
 		if err != nil {
 			span.RecordError(err)
-			span.SetStatus(codes.Error, err.Error())
+			rtrace.SetSanitizedSpanStatus(span, codes.Error, err.Error())
 
 			var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
 			if h.operationBlocker.logUnknownOperationsEnabled && errors.As(err, &poNotFoundErr) {
@@ -1166,7 +1176,7 @@ func (h *PreHandler) handleAuthenticationFailure(requestContext *requestContext,
 	writeOperationError(r, w, requestLogger, &httpGraphqlError{
 		message:    graphqlErr.Error(),
 		statusCode: http.StatusUnauthorized,
-	})
+	}, h.headerPropagation)
 }
 
 func (h *PreHandler) flushMetrics(ctx context.Context, requestLogger *zap.Logger) {

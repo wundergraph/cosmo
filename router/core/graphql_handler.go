@@ -184,6 +184,28 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		if h.enableResponseHeaderPropagation {
 			resolveCtx = WithResponseHeaderPropagation(resolveCtx)
+			resolve.SetDeduplicationCallbacks(resolveCtx,
+				func(ctx context.Context) http.Header {
+					propagation := getResponseHeaderPropagation(ctx)
+					if propagation == nil {
+						return nil
+					}
+					propagation.m.Lock()
+					defer propagation.m.Unlock()
+					return propagation.header.Clone()
+				},
+				func(ctx context.Context, headers http.Header) {
+					propagation := getResponseHeaderPropagation(ctx)
+					if propagation == nil {
+						return
+					}
+					propagation.m.Lock()
+					defer propagation.m.Unlock()
+					for k, v := range headers {
+						propagation.header[k] = v
+					}
+				},
+			)
 		}
 
 		defer propagateSubgraphErrors(resolveCtx)
@@ -221,7 +243,14 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			reqCtx.logger.Error("unable to get subscription response writer", zap.Error(errCouldNotFlushResponse))
 			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)
-			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotFlushResponse), reqCtx.logger)
+			writeRequestErrors(writeRequestErrorsParams{
+				request:           r,
+				writer:            w,
+				statusCode:        http.StatusInternalServerError,
+				requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotFlushResponse),
+				logger:            reqCtx.logger,
+				headerPropagation: h.headerPropagation,
+			})
 			return
 		}
 
@@ -240,19 +269,40 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				return
 			} else if errors.Is(err, ErrUnauthorized) {
 				trackFinalResponseError(resolveCtx.Context(), err)
-				writeRequestErrors(r, w, http.StatusUnauthorized, graphqlerrors.RequestErrorsFromError(err), reqCtx.logger)
+				writeRequestErrors(writeRequestErrorsParams{
+					request:           r,
+					writer:            w,
+					statusCode:        http.StatusUnauthorized,
+					requestErrors:     graphqlerrors.RequestErrorsFromError(err),
+					logger:            reqCtx.logger,
+					headerPropagation: h.headerPropagation,
+				})
 				return
 			}
 
 			reqCtx.logger.Error("unable to resolve subscription response", zap.Error(err))
 			trackFinalResponseError(resolveCtx.Context(), err)
-			writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse), reqCtx.logger)
+			writeRequestErrors(writeRequestErrorsParams{
+				request:           r,
+				writer:            w,
+				statusCode:        http.StatusInternalServerError,
+				requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse),
+				logger:            reqCtx.logger,
+				headerPropagation: h.headerPropagation,
+			})
 			return
 		}
 	default:
 		reqCtx.logger.Error("unsupported plan kind")
 		trackFinalResponseError(resolveCtx.Context(), errOperationPlanUnsupported)
-		writeRequestErrors(r, w, http.StatusInternalServerError, graphqlerrors.RequestErrorsFromError(errOperationPlanUnsupported), reqCtx.logger)
+		writeRequestErrors(writeRequestErrorsParams{
+			request:           r,
+			writer:            w,
+			statusCode:        http.StatusInternalServerError,
+			requestErrors:     graphqlerrors.RequestErrorsFromError(errOperationPlanUnsupported),
+			logger:            reqCtx.logger,
+			headerPropagation: h.headerPropagation,
+		})
 	}
 }
 

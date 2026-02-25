@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"slices"
 	"sync/atomic"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/unique"
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -47,6 +49,7 @@ type engineLoaderHooks struct {
 	metricAttributeExpressions    *attributeExpressions
 
 	storeSubgraphResponseBody bool
+	headerPropagation         *HeaderPropagation
 }
 
 type engineLoaderHooksRequestContext struct {
@@ -61,6 +64,7 @@ func NewEngineRequestHooks(
 	telemetryAttributes *attributeExpressions,
 	metricAttributes *attributeExpressions,
 	storeSubgraphResponseBody bool,
+	headerPropagation *HeaderPropagation,
 ) resolve.LoaderHooks {
 	var tracer trace.Tracer
 	if tracerProvider != nil {
@@ -83,6 +87,7 @@ func NewEngineRequestHooks(
 		metricAttributeExpressions:    metricAttributes,
 		accessLogger:                  logger,
 		storeSubgraphResponseBody:     storeSubgraphResponseBody,
+		headerPropagation:             headerPropagation,
 	}
 }
 
@@ -122,6 +127,21 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 		return
 	}
 
+	if responseInfo == nil {
+		responseInfo = &resolve.ResponseInfo{}
+	}
+
+	// Apply response header rules for ALL fetches (primary, entity resolution,
+	// singleflight leaders and followers). Must run before the tracing/metrics
+	// early returns below, which may not pass for all fetch contexts.
+	if f.headerPropagation != nil {
+		headers := responseInfo.ResponseHeaders
+		if headers == nil {
+			headers = make(http.Header)
+		}
+		f.headerPropagation.ApplyResponseHeaderRules(ctx, headers, ds.Name, responseInfo.StatusCode, responseInfo.Request)
+	}
+
 	reqContext := getRequestContext(ctx)
 
 	if reqContext == nil {
@@ -137,10 +157,6 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 
 	span := trace.SpanFromContext(ctx)
 	defer span.End()
-
-	if responseInfo == nil {
-		responseInfo = &resolve.ResponseInfo{}
-	}
 
 	commonAttrs := []attribute.KeyValue{
 		semconv.HTTPStatusCode(responseInfo.StatusCode),
@@ -232,7 +248,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	if responseInfo.Err != nil {
 		// Set error status. This is the fetch error from the engine
 		// Downstream errors are extracted from the subgraph response
-		span.SetStatus(codes.Error, responseInfo.Err.Error())
+		rtrace.SetSanitizedSpanStatus(span, codes.Error, responseInfo.Err.Error())
 		span.RecordError(responseInfo.Err)
 
 		var errorCodesAttr []string

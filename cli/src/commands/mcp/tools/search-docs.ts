@@ -7,10 +7,14 @@ import { ToolContext } from './types.js';
 export const registerSearchDocsTool = ({ server, opts }: ToolContext) => {
   let trieve: TrieveSDK;
 
-  server.tool(
+  server.registerTool(
     'search_docs',
-    'Search the Cosmo docs for a given query, e.g. to understand the Router Configuration or how Cosmo works in detail.',
-    { query: z.string() },
+    {
+      title: 'Search Docs',
+      description:
+        'Search the Cosmo docs for a given query, e.g. to understand the Router Configuration or how Cosmo works in detail.',
+      inputSchema: { query: z.string() },
+    },
     async ({ query }) => {
       try {
         if (!trieve) {

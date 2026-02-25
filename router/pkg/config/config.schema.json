@@ -441,6 +441,78 @@
               "key_file"
             ]
           }
+        },
+        "client": {
+          "type": "object",
+          "description": "The TLS configuration for outbound connections from the router to subgraphs. Enables mTLS by presenting a client certificate when connecting to subgraphs.",
+          "additionalProperties": false,
+          "properties": {
+            "all": {
+              "type": "object",
+              "description": "TLS configuration applied to all subgraph connections.",
+              "additionalProperties": false,
+              "properties": {
+                "cert_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client certificate chain file. Used to authenticate the router to subgraphs. May include intermediate certificates."
+                },
+                "key_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the client private key file."
+                },
+                "ca_file": {
+                  "type": "string",
+                  "format": "file-path",
+                  "description": "The path to the CA certificate file. Used to verify subgraph server certificates. If not set, the system's root CAs are used."
+                },
+                "insecure_skip_ca_verification": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Skip verification of the subgraph server certificate. Only use for development or testing."
+                }
+              },
+              "dependencies": {
+                "cert_file": ["key_file"],
+                "key_file": ["cert_file"]
+              }
+            },
+            "subgraphs": {
+              "type": "object",
+              "description": "Per-subgraph TLS configuration overrides. Each key is a subgraph name. Fully overrides the 'all' config for that subgraph.",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "cert_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client certificate chain file for this subgraph. May include intermediate certificates."
+                  },
+                  "key_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the client private key file for this subgraph."
+                  },
+                  "ca_file": {
+                    "type": "string",
+                    "format": "file-path",
+                    "description": "The path to the CA certificate file for verifying this subgraph's server certificate."
+                  },
+                  "insecure_skip_ca_verification": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Skip verification of this subgraph's server certificate. Only use for development or testing."
+                  }
+                },
+                "dependencies": {
+                  "cert_file": ["key_file"],
+                  "key_file": ["cert_file"]
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -1068,6 +1140,23 @@
                   }
                 }
               }
+            },
+            "sanitize_utf8": {
+              "type": "object",
+              "description": "Configuration for sanitizing invalid UTF-8 sequences in span attribute values.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable the sanitization of invalid UTF-8 sequences in span attribute values. Invalid sequences are replaced with the Unicode replacement character (U+FFFD)."
+                },
+                "log_sanitizations": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Log a warning when invalid UTF-8 sequences are sanitized. The log includes the attribute key and original value."
+                }
+              }
             }
           }
         },
@@ -1470,7 +1559,8 @@
       "type": "string",
       "description": "The URL of the control plane. The URL is used to register the router on the control-plane. The URL is specified as a string with the format 'scheme://host:port'.",
       "default": "https://cosmo-cp.wundergraph.com",
-      "format": "http-url"
+      "format": "uri",
+      "pattern": "^https?://"
     },
     "playground": {
       "type": "object",
@@ -2318,6 +2408,66 @@
         }
       }
     },
+    "connect_rpc": {
+      "type": "object",
+      "description": "The configuration for the ConnectRPC server. ConnectRPC allows gRPC, Connect, and gRPC-Web clients to interact with your GraphQL APIs through protocol transcoding. Proto files define RPC services that map to GraphQL operations.",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable the ConnectRPC server. If the value is true, the ConnectRPC server will be started."
+        },
+        "server": {
+          "type": "object",
+          "description": "Server configuration for the ConnectRPC server.",
+          "additionalProperties": false,
+          "properties": {
+            "listen_addr": {
+              "type": "string",
+              "description": "The address on which the ConnectRPC server listens for incoming requests. The address is specified as a string with the format 'host:port'.",
+              "default": "localhost:5026",
+              "format": "hostname-port"
+            },
+            "base_url": {
+              "type": "string",
+              "description": "The base URL of the ConnectRPC server. This is used for service reflection and documentation. By default, the base URL is relative to the URL that the router is running on. The URL is specified as a string with the format 'scheme://host:port'.",
+              "format": "http-url"
+            }
+          }
+        },
+        "storage": {
+          "type": "object",
+          "description": "Storage provider configuration for the ConnectRPC server. This specifies where proto files and GraphQL operations for all services are loaded from.",
+          "additionalProperties": false,
+          "properties": {
+            "provider_id": {
+              "type": "string",
+              "description": "The ID of the storage provider to use for loading proto files and GraphQL operations for all services. Only storage provider of type 'file_system' are supported. The provider must be configured in the storage_providers section. This provider points to the root services directory, and the router will recursively discover all proto files and their associated operations within that directory structure."
+            }
+          }
+        },
+        "graphql_endpoint": {
+          "type": "string",
+          "description": "Custom URL to use for the router GraphQL endpoint in ConnectRPC. Use this when your router is behind a proxy. This URL is used to forward RPC requests as GraphQL operations.",
+          "format": "uri",
+          "pattern": "^https?://"
+        }
+      },
+      "if": {
+        "properties": {
+          "enabled": { "const": true }
+        }
+      },
+      "then": {
+        "required": ["storage"],
+        "properties": {
+          "storage": {
+            "required": ["provider_id"]
+          }
+        }
+      }
+    },
     "demo_mode": {
       "type": "boolean",
       "description": "Launch the router in demo mode. If no execution config is found, the router will start with a demo execution config and deploy a demo federated graph that can be used for testing purposes.",
@@ -2599,13 +2749,26 @@
                   "format": "file-path"
                 }
               }
+            },
+            "cdn": {
+              "type": "object",
+              "description": "The CDN source of the cache warmup items.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable or disable the CDN source for cache warmup.",
+                  "default": true
+                }
+              }
             }
           },
           "oneOf": [
             {
-              "required": [
-                "filesystem"
-              ]
+              "required": ["filesystem"]
+            },
+            {
+              "required": ["cdn"]
             }
           ]
         },
@@ -2626,6 +2789,11 @@
           "duration": {
             "minimum": "1s"
           }
+        },
+        "in_memory_fallback": {
+          "type": "boolean",
+          "description": "Enable in-memory fallback. When enabled, the router will reuse the cached query plans in memory and use it to rewarm the cache on schema changes and hot config reloads. The default value is true.",
+          "default": true
         }
       }
     },
@@ -3193,6 +3361,11 @@
           "type": "boolean",
           "default": false,
           "description": "Enables validation of resolved input field set specified as an argument for \"requires\" directive. If this field set 'points' to a nullable fields marked as external, and if router resolves such a field set with null values with errors pointing to those values, then it will not provide such entities to the resolver of the field on which directive was specified."
+        },
+        "relax_subgraph_operation_field_selection_merging_nullability": {
+          "type": "boolean",
+          "default": false,
+          "description": "Relaxes nullability validation for field selection merging when enclosing types are non-overlapping concrete object types. When enabled, fields with differing nullability (e.g. String! vs String) in inline fragments on different union member types will not cause validation errors."
         }
       }
     },
