@@ -364,13 +364,15 @@ engine:
   max_concurrent_resolvers: 32
   enable_net_poll: true
   enable_subgraph_fetch_operation_name: true
-  websocket_client_poll_timeout: 1s
-  websocket_client_conn_buffer_size: 128
-  websocket_client_read_timeout: 5s
   websocket_client_write_timeout: 10s
-  websocket_client_frame_timeout: 100ms
+  websocket_server_read_timeout: 5s
+  websocket_server_write_timeout: 10s
+  websocket_server_poll_timeout: 1s
+  websocket_server_conn_buffer_size: 128
+  websocket_client_read_limit: 1MB
   websocket_client_ping_interval: 10s
   websocket_client_ping_timeout: 30s
+  websocket_client_ack_timeout: 30s
   execution_plan_cache_size: 1024
   resolver_max_recyclable_parser_size: 4096
   debug:

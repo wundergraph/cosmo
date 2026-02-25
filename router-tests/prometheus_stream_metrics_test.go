@@ -263,7 +263,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				PrometheusRegistry:                 promRegistry,
 				RouterConfigJSONTemplate:           testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:                         true,
-				ModifyEngineExecutionConfiguration: func(ec *config.EngineExecutionConfiguration) { ec.WebSocketClientReadTimeout = time.Second },
+				ModifyEngineExecutionConfiguration: func(ec *config.EngineExecutionConfiguration) { ec.WebSocketServerReadTimeout = time.Second },
 				MetricOptions:                      testenv.MetricOptions{EnablePrometheusStreamMetrics: true},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				var subscriptionOne struct {

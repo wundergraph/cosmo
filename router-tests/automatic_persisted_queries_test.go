@@ -225,7 +225,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 								URLs: []string{redisUrl},
 								ID:   "redis",
 							},
-						}})},
+						},
+					}),
+				},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: true,
 					Storage: config.AutomaticPersistedQueriesStorageConfig{
@@ -258,7 +260,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 								URLs: []string{redisUrl},
 								ID:   "redis",
 							},
-						}})},
+						},
+					}),
+				},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: true,
 					Storage: config.AutomaticPersistedQueriesStorageConfig{
@@ -315,7 +319,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 								URLs: []string{redisUrl},
 								ID:   "redis",
 							},
-						}})},
+						},
+					}),
+				},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: true,
 					Cache: config.AutomaticPersistedQueriesCacheConfig{
@@ -364,7 +370,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 								URLs: []string{redisUrl},
 								ID:   "redis",
 							},
-						}})},
+						},
+					}),
+				},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: true,
 					Cache: config.AutomaticPersistedQueriesCacheConfig{
@@ -405,7 +413,6 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 		})
 
 		t.Run("works with cluster mode", func(t *testing.T) {
-
 			if _, set := os.LookupEnv("SKIP_REDIS_CLUSTER_TESTS"); set {
 				t.Skip("skipping redis cluster tests")
 			}
@@ -434,7 +441,9 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 								URLs:           clusterUrls,
 								ID:             "redis",
 							},
-						}})},
+						},
+					}),
+				},
 				ApqConfig: config.AutomaticPersistedQueriesConfig{
 					Enabled: true,
 					Storage: config.AutomaticPersistedQueriesStorageConfig{
@@ -480,7 +489,6 @@ func TestAPQNormalizationCacheWithMultiOperationDocument(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Should identify correct document after removing unused operations during normalization", func(t *testing.T) {
-
 		document := `query A {
   a: employee(id: 1) {
     id
@@ -557,7 +565,6 @@ query B ($id: Int!) {
 			require.Equal(t, `{"data":{"b":{"id":3,"details":{"pets":[{"name":"Snappy"}]}}}}`, res.Body)
 		})
 	})
-
 }
 
 func BenchmarkAutomaticPersistedQueriesCacheEnabled(b *testing.B) {
