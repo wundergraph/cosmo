@@ -8,11 +8,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/pkg/config"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 // Server HTTP metrics.
@@ -78,14 +79,24 @@ var (
 		otelmetric.WithDescription(OperationPlanningTimeHistogramDescription),
 	}
 
+	costBucketBounds = []float64{
+		0, 1, 5, 10,
+		25, 50, 100,
+		250, 500, 1000,
+		2500, 5000, 10000,
+		25000, 50000, 100000,
+	}
+
 	OperationCostEstimatedHistogramDescription = "Estimated operation cost before execution"
 	OperationCostEstimatedHistogramOptions     = []otelmetric.Int64HistogramOption{
 		otelmetric.WithDescription(OperationCostEstimatedHistogramDescription),
+		otelmetric.WithExplicitBucketBoundaries(costBucketBounds...),
 	}
 
 	OperationCostActualHistogramDescription = "Actual operation cost after execution"
 	OperationCostActualHistogramOptions     = []otelmetric.Int64HistogramOption{
 		otelmetric.WithDescription(OperationCostActualHistogramDescription),
+		otelmetric.WithExplicitBucketBoundaries(costBucketBounds...),
 	}
 
 	// Schema usage metrics
