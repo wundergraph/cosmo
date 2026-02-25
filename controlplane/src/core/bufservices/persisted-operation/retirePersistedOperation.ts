@@ -22,7 +22,6 @@ export function retirePersistedOperation(
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
-    // TODO: this is organization level permission, instead check if you have permission for subgraph
     if (authContext.organizationDeactivated || !authContext.rbac.isOrganizationAdminOrDeveloper) {
       throw new UnauthorizedError();
     }
@@ -43,6 +42,15 @@ export function retirePersistedOperation(
     const operation = await operationsRepo.retirePersistedOperation({
       operationId: req.operationId,
     });
+
+    if (!operation) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_NOT_FOUND,
+          details: `Persisted operation ${req.operationId} does not exist`,
+        },
+      };
+    }
 
     return {
       response: {
