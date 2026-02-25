@@ -262,7 +262,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 						var errorCode string
 						if downstreamError.Extensions != nil {
 							if value := downstreamError.Extensions.Get("code"); value != nil {
-								errorCode = value.String()
+								errorCode = string(value.GetStringBytes())
 							}
 						}
 
