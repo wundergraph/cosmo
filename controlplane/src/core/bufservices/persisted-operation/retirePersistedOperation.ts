@@ -62,11 +62,13 @@ export function retirePersistedOperation(
     }
 
     const metricsRepository = new MetricsRepository(opts.chClient);
-    const operationMetrics = await metricsRepository.getPersistedOperationMetrics({
-      organizationId: authContext.organizationId,
-      graphId: federatedGraph.id,
-      id: operation.hash,
-    });
+    const operationMetrics = req.force
+      ? null
+      : await metricsRepository.getPersistedOperationMetrics({
+          organizationId: authContext.organizationId,
+          graphId: federatedGraph.id,
+          id: operation.hash,
+        });
 
     if (operationMetrics && operationMetrics.totalRequests > 0) {
       return {

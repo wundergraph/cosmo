@@ -468,5 +468,34 @@ describe('Persisted operations', (ctx) => {
 
       expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.WARN_DESTRUCTIVE_OPERATION);
     });
+
+    test('Should be able to retire an operation if it has received traffic via force flag', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+        operations: [{ id: genID('hello'), contents: `query { hello }` }],
+      });
+
+      // Mock traffic data
+      (chClient.queryPromise as Mock).mockResolvedValue([{
+        TotalRequests: 1,
+      }]);
+
+      const retireOperationsResp = await client.retirePersistedOperation({
+        fedGraphName,
+        namespace: 'default',
+        operationId: publishOperationsResp.operations[0].id,
+        force: true,
+      });
+
+      expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+    });
   });
 });
