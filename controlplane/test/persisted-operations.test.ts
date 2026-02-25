@@ -466,7 +466,19 @@ describe('Persisted operations', (ctx) => {
         operationId: publishOperationsResp.operations[0].id,
       });
 
+      const clients = await client.getClients({
+        fedGraphName,
+        namespace: 'default',
+      });
+
+      const operations = await client.getPersistedOperations({
+        clientId: clients.clients[0].id,
+        federatedGraphName: fedGraphName,
+        namespace: 'default',
+      });
+
       expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.WARN_DESTRUCTIVE_OPERATION);
+      expect(operations.operations).toHaveLength(1);
     });
 
     test('Should be able to retire an operation if it has received traffic via force flag', async (testContext) => {
@@ -495,7 +507,19 @@ describe('Persisted operations', (ctx) => {
         force: true,
       });
 
+      const clients = await client.getClients({
+        fedGraphName,
+        namespace: 'default',
+      });
+
+      const operations = await client.getPersistedOperations({
+        clientId: clients.clients[0].id,
+        federatedGraphName: fedGraphName,
+        namespace: 'default',
+      });
+
       expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(operations.operations).toHaveLength(0);
     });
   });
 });
