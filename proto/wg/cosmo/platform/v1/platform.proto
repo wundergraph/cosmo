@@ -1282,6 +1282,21 @@ message PublishPersistedOperationsResponse {
   repeated PublishedOperation operations = 2;
 }
 
+message RetirePersistedOperationRequest {
+  string fedGraphName = 1;
+  string namespace = 2;
+  string id = 3;
+}
+
+message RetirePersistedOperationResponse {
+  message Operation {
+    string id = 1;
+    string name = 2;
+  }
+  Response response = 1;
+  Operation operation = 2;
+}
+
 message GetPersistedOperationsRequest {
   string federated_graph_name = 1;
   string client_id = 2;
@@ -3178,6 +3193,8 @@ service PlatformService {
   rpc DeleteRouterToken(DeleteRouterTokenRequest) returns (DeleteRouterTokenResponse) {}
   // Add persisted operations
   rpc PublishPersistedOperations(PublishPersistedOperationsRequest) returns (PublishPersistedOperationsResponse) {}
+  // Retire/remove a persisted operation
+  rpc RetirePersistedOperation(RetirePersistedOperationRequest) returns (RetirePersistedOperationResponse) {}
   // GetPersistedOperations returns operations for the registered client id
   rpc GetPersistedOperations(GetPersistedOperationsRequest) returns (GetPersistedOperationsResponse) {}
   // GetAuditLogs returns the audit logs of the organization
