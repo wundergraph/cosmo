@@ -55,7 +55,7 @@ const signupContentMap: Record<SignupVariant, SignupContent> = {
   },
   apollo: {
     heading: "Sign up for free",
-    description: "Try Cosmo managed and migrate from Apollo GraphOS in minutes. All you need is your API key.",
+    description: "Try Cosmo managed and migrate from Apollo GraphOS in minutes. No credit card required.",
     marketingTitle: "Migrate to Cosmo\nfrom Apollo GraphOS",
     marketingDescription:
       "Escape the vendor lock. 100% open source GraphQL Federation with full control. A drop-in GraphOS replacement.",
