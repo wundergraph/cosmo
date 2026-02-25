@@ -158,7 +158,7 @@ export class OperationsRepository {
   }): Promise<PersistedOperationDTO | undefined> {
       const operationResult = await this.db.query.federatedGraphPersistedOperations.findFirst({
         where: and(
-          eq(federatedGraphPersistedOperations.id, operationId),
+          eq(federatedGraphPersistedOperations.operationId, operationId),
           eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
         ),
         with: {
@@ -172,7 +172,7 @@ export class OperationsRepository {
     }
 
     await this.db.delete(federatedGraphPersistedOperations).where(
-      eq(federatedGraphPersistedOperations.id, operationId),
+      eq(federatedGraphPersistedOperations.operationId, operationId),
     )
 
     return this.createPersistedOperationDTO(operationResult)

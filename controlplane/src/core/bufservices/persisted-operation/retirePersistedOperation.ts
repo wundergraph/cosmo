@@ -47,7 +47,7 @@ export function retirePersistedOperation(
       },
       operation: operation
         ? {
-            id: operation.id,
+            id: operation.operationId,
             name: operation.operationNames.join(''),
           }
         : undefined,
