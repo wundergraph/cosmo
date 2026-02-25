@@ -250,49 +250,21 @@ export const ProductCosmoStack = ({
     },
   ];
 
-  // For signup variant, use content from configuration if signupVariant is provided
-  let signupFeatures;
+  // Signup content always from content map (single source of truth)
   let marketingTitle: string | undefined;
   let marketingDescription: string | undefined;
-
-  if (variant === "signup" && signupVariant) {
-    const content = getSignupContent(signupVariant);
-    marketingTitle = content.marketingTitle;
-    marketingDescription = content.marketingDescription;
-    signupFeatures = content.features.map((feature) => ({
+  const signupContent =
+    variant === "signup" ? getSignupContent(signupVariant ?? "default") : null;
+  if (signupContent) {
+    marketingTitle = signupContent.marketingTitle;
+    marketingDescription = signupContent.marketingDescription;
+  }
+  const signupFeatures =
+    signupContent?.features.map((feature) => ({
       icon: getIcon(feature.icon),
       title: feature.title,
       description: feature.description,
-    }));
-  } else {
-    // Default signup features
-    signupFeatures = [
-      {
-        icon: <ShareIcon className="h-8 w-8 text-purple-400" />,
-        title: "Federate Any API, Not Just GraphQL",
-        description:
-          "Connect REST, gRPC, and GraphQL services without rewrites. Cosmo Connect wraps existing APIs into your graph without forcing migrations.",
-      },
-      {
-        icon: <MagnifyingGlassIcon className="h-8 w-8 text-purple-400" />,
-        title: "Track Every Query Across Your Entire Graph",
-        description:
-          "Native OpenTelemetry tracing from gateway to subgraph. Find slow queries and failing services in seconds with zero instrumentation required.",
-      },
-      {
-        icon: <ShieldCheckIcon className="h-8 w-8 text-purple-400" />,
-        title: "Catch Breaking Changes Before Deployment",
-        description:
-          "Schema checks run automatically in CI/CD. Service teams ship on their own schedule, while platform teams prevent breaking changes from reaching production.",
-      },
-      {
-        icon: <RocketLaunchIcon className="h-8 w-8 text-purple-400" />,
-        title: "Built for Scale and Performance",
-        description:
-          "Go router with sub-millisecond overhead. Deploy with built-in caching, rate limiting, and security controls wherever your infrastructure lives.",
-      },
-    ];
-  }
+    })) ?? [];
 
   const features = variant === "login" ? loginFeatures : signupFeatures;
 
