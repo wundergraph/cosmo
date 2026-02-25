@@ -377,7 +377,7 @@ const ClientOperations = () => {
                               <TrashIcon height={20} onClick={() => {
                                 // TODO: display warning if mutation is used
                                 mutate({
-                                  id: op.id,
+                                  operationId: op.id,
                                   namespace,
                                   fedGraphName: slug,
                                 })

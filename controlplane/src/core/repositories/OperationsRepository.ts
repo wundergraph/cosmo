@@ -156,26 +156,26 @@ export class OperationsRepository {
   }: {
     operationId: string;
   }): Promise<PersistedOperationDTO | undefined> {
-      const operationResult = await this.db.query.federatedGraphPersistedOperations.findFirst({
-        where: and(
-          eq(federatedGraphPersistedOperations.operationId, operationId),
-          eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
-        ),
-        with: {
-          createdBy: true,
-          updatedBy: true,
-        },
-      });
+    const operationResult = await this.db.query.federatedGraphPersistedOperations.findFirst({
+      where: and(
+        eq(federatedGraphPersistedOperations.operationId, operationId),
+        eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+      ),
+      with: {
+        createdBy: true,
+        updatedBy: true,
+      },
+    });
 
     if (!operationResult) {
       return undefined;
     }
 
-    await this.db.delete(federatedGraphPersistedOperations).where(
-      eq(federatedGraphPersistedOperations.operationId, operationId),
-    )
+    await this.db
+      .delete(federatedGraphPersistedOperations)
+      .where(eq(federatedGraphPersistedOperations.operationId, operationId));
 
-    return this.createPersistedOperationDTO(operationResult)
+    return this.createPersistedOperationDTO(operationResult);
   }
 
   public async registerClient(clientName: string, userId: string): Promise<string> {
@@ -493,16 +493,16 @@ export class OperationsRepository {
     updatedBy: typeof users.$inferSelect | null;
   }): PersistedOperationDTO {
     return {
-        id,
-        operationId,
-        hash,
-        filePath,
-        createdAt: createdAt.toISOString(),
-        lastUpdatedAt: updatedAt?.toISOString() || '',
-        createdBy: createdBy?.email,
-        lastUpdatedBy: updatedBy?.email ?? '',
-        contents: operationContent ?? '',
-        operationNames: operationNames ?? [],
-    }
+      id,
+      operationId,
+      hash,
+      filePath,
+      createdAt: createdAt.toISOString(),
+      lastUpdatedAt: updatedAt?.toISOString() || '',
+      createdBy: createdBy?.email,
+      lastUpdatedBy: updatedBy?.email ?? '',
+      contents: operationContent ?? '',
+      operationNames: operationNames ?? [],
+    };
   }
 }

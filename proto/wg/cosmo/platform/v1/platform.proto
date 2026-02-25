@@ -1285,13 +1285,13 @@ message PublishPersistedOperationsResponse {
 message RetirePersistedOperationRequest {
   string fedGraphName = 1;
   string namespace = 2;
-  string id = 3;
+  string operationId = 3;
 }
 
 message RetirePersistedOperationResponse {
   message Operation {
     string id = 1;
-    string name = 2;
+    string operationId = 2;
   }
   Response response = 1;
   Operation operation = 2;

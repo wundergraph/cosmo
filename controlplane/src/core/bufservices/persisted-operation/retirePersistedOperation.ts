@@ -1,7 +1,10 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import type { RetirePersistedOperationRequest, RetirePersistedOperationResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb'
+import type {
+  RetirePersistedOperationRequest,
+  RetirePersistedOperationResponse,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
@@ -38,8 +41,8 @@ export function retirePersistedOperation(
 
     const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
     const operation = await operationsRepo.retirePersistedOperation({
-      operationId: req.id,
-    })
+      operationId: req.operationId,
+    });
 
     return {
       response: {
@@ -47,8 +50,8 @@ export function retirePersistedOperation(
       },
       operation: operation
         ? {
-            id: operation.operationId,
-            name: operation.operationNames.join(''),
+            id: operation.id,
+            operationId: operation.operationId,
           }
         : undefined,
     };

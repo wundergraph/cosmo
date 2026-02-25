@@ -9678,9 +9678,9 @@ export class RetirePersistedOperationRequest extends Message<RetirePersistedOper
   namespace = "";
 
   /**
-   * @generated from field: string id = 3;
+   * @generated from field: string operationId = 3;
    */
-  id = "";
+  operationId = "";
 
   constructor(data?: PartialMessage<RetirePersistedOperationRequest>) {
     super();
@@ -9692,7 +9692,7 @@ export class RetirePersistedOperationRequest extends Message<RetirePersistedOper
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RetirePersistedOperationRequest {
@@ -9765,9 +9765,9 @@ export class RetirePersistedOperationResponse_Operation extends Message<RetirePe
   id = "";
 
   /**
-   * @generated from field: string name = 2;
+   * @generated from field: string operationId = 2;
    */
-  name = "";
+  operationId = "";
 
   constructor(data?: PartialMessage<RetirePersistedOperationResponse_Operation>) {
     super();
@@ -9778,7 +9778,7 @@ export class RetirePersistedOperationResponse_Operation extends Message<RetirePe
   static readonly typeName = "wg.cosmo.platform.v1.RetirePersistedOperationResponse.Operation";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 2, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RetirePersistedOperationResponse_Operation {
