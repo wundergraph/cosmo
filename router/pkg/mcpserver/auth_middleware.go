@@ -147,17 +147,27 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 				Method string          `json:"method"`
 				Params json.RawMessage `json:"params"`
 			}
-			if err := json.Unmarshal(body, &jsonRPCReq); err == nil && jsonRPCReq.Method == "tools/call" {
-				// Extract tool name from params
-				var toolCallParams struct {
-					Name string `json:"name"`
+			if err := json.Unmarshal(body, &jsonRPCReq); err == nil && jsonRPCReq.Method != "" {
+				// Step 2a: Check method-level scopes (e.g., "tools/list", "initialize")
+				if methodScopes, exists := m.scopesRequired[jsonRPCReq.Method]; exists && len(methodScopes) > 0 {
+					if err := m.validateScopesForRequest(claims, methodScopes); err != nil {
+						m.sendInsufficientScopeResponse(w, methodScopes, err)
+						return
+					}
 				}
-				if err := json.Unmarshal(jsonRPCReq.Params, &toolCallParams); err == nil && toolCallParams.Name != "" {
-					// Check if this tool has specific scope requirements
-					if toolScopes, exists := m.scopesRequired[toolCallParams.Name]; exists && len(toolScopes) > 0 {
-						if err := m.validateScopesForRequest(claims, toolScopes); err != nil {
-							m.sendInsufficientScopeResponse(w, toolScopes, err)
-							return
+
+				// Step 2b: For tools/call, also check per-tool scopes using "tools/call/{toolName}" key
+				if jsonRPCReq.Method == "tools/call" {
+					var toolCallParams struct {
+						Name string `json:"name"`
+					}
+					if err := json.Unmarshal(jsonRPCReq.Params, &toolCallParams); err == nil && toolCallParams.Name != "" {
+						toolScopeKey := "tools/call/" + toolCallParams.Name
+						if toolScopes, exists := m.scopesRequired[toolScopeKey]; exists && len(toolScopes) > 0 {
+							if err := m.validateScopesForRequest(claims, toolScopes); err != nil {
+								m.sendInsufficientScopeResponse(w, toolScopes, err)
+								return
+							}
 						}
 					}
 				}
@@ -171,10 +181,18 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// sendUnauthorizedResponse sends a 401 Unauthorized response with proper headers
+// sendUnauthorizedResponse sends a 401 Unauthorized response with proper headers.
+// It includes the minimum required scopes (from "initialize") so that the MCP SDK
+// can request exactly the scopes needed to establish a connection.
 func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, err error) {
 	// Build WWW-Authenticate header per RFC 6750 and RFC 9728
 	authHeader := `Bearer realm="mcp"`
+
+	// Include minimum required scopes (initialize scopes) so the client knows
+	// what scopes to request for initial authentication
+	if initScopes := m.scopesRequired["initialize"]; len(initScopes) > 0 {
+		authHeader += fmt.Sprintf(`, scope="%s"`, strings.Join(initScopes, " "))
+	}
 
 	// Add resource_metadata per RFC 9728 for OAuth discovery
 	if m.resourceMetadataURL != "" {
@@ -193,13 +211,17 @@ func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, err 
 	// No JSON-RPC response body is returned
 }
 
-// sendInsufficientScopeResponse sends a 403 Forbidden response per RFC 6750
-// when the token is valid but lacks required scopes
-func (m *MCPAuthMiddleware) sendInsufficientScopeResponse(w http.ResponseWriter, requiredScopes []string, err error) {
+// sendInsufficientScopeResponse sends a 403 Forbidden response per RFC 6750 Section 3.1
+// when the token is valid but lacks required scopes.
+// Per RFC 6750: the scope attribute contains "the scope necessary to access the protected resource."
+// We return only the scopes required for the specific operation that failed — not init scopes,
+// not existing token scopes. It is the client's responsibility to accumulate scopes across
+// requests for progressive authorization (step-up auth).
+func (m *MCPAuthMiddleware) sendInsufficientScopeResponse(w http.ResponseWriter, operationScopes []string, err error) {
+	scopeList := strings.Join(operationScopes, " ")
+
 	// Build WWW-Authenticate header with error and scope information
 	// Per RFC 6750 Section 3.1 and MCP spec: error, scope, resource_metadata, error_description
-	scopeList := strings.Join(requiredScopes, " ")
-
 	authHeader := fmt.Sprintf(`Bearer error="insufficient_scope", scope="%s"`, scopeList)
 
 	// Add resource_metadata per MCP spec (should be included per spec line 513)

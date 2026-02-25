@@ -247,7 +247,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		// Build resource metadata URL for WWW-Authenticate header
 		resourceMetadataURL := ""
 		if options.ServerBaseURL != "" {
-			resourceMetadataURL = fmt.Sprintf("%s/.well-known/oauth-protected-resource", options.ServerBaseURL)
+			resourceMetadataURL = fmt.Sprintf("%s/.well-known/oauth-protected-resource/mcp", options.ServerBaseURL)
 		}
 
 		// Create authentication middleware with per-tool scope configuration
@@ -427,13 +427,16 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 
 	mux := http.NewServeMux()
 
-	// OAuth 2.0 Protected Resource Metadata endpoint (RFC 9728)
-	// This endpoint is required for MCP clients to discover the authorization server
-	// This endpoint is NOT protected by authentication (it's public discovery)
+	// OAuth 2.0 Protected Resource Metadata endpoint (RFC 9728 Section 3.1)
+	// This endpoint is required for MCP clients to discover the authorization server.
+	// This endpoint is NOT protected by authentication (it's public discovery).
+	//
+	// Per RFC 9728, when a resource is served at a path other than /, the well-known
+	// URI must include the path suffix: /.well-known/oauth-protected-resource/mcp
 	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
-		mux.Handle("/.well-known/oauth-protected-resource", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
-		s.logger.Info("OAuth 2.0 Protected Resource Metadata endpoint enabled",
-			zap.String("path", "/.well-known/oauth-protected-resource"),
+		mux.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
+		s.logger.Info("OAuth 2.0 Protected Resource Metadata endpoint enabled (RFC 9728 path-aware)",
+			zap.String("path", "/.well-known/oauth-protected-resource/mcp"),
 			zap.String("authorization_server", s.oauthConfig.AuthorizationServerURL))
 	}
 
@@ -1038,7 +1041,7 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 // GetResourceMetadataURL returns the URL for the OAuth 2.0 Protected Resource Metadata endpoint
 func (s *GraphQLSchemaServer) GetResourceMetadataURL() string {
 	if s.serverBaseURL != "" {
-		return fmt.Sprintf("%s/.well-known/oauth-protected-resource", s.serverBaseURL)
+		return fmt.Sprintf("%s/.well-known/oauth-protected-resource/mcp", s.serverBaseURL)
 	}
 	return ""
 }
