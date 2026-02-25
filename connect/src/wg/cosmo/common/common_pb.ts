@@ -103,6 +103,11 @@ export enum EnumStatusCode {
    * @generated from enum value: ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL = 18;
    */
   ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL = 18,
+
+  /**
+   * @generated from enum value: WARN_DESTRUCTIVE_OPERATION = 19;
+   */
+  WARN_DESTRUCTIVE_OPERATION = 19,
 }
 // Retrieve enum metadata with: proto3.getEnumType(EnumStatusCode)
 proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
@@ -125,6 +130,7 @@ proto3.util.setEnumType(EnumStatusCode, "wg.cosmo.common.EnumStatusCode", [
   { no: 16, name: "ERR_UPGRADE_PLAN" },
   { no: 17, name: "ERR_BAD_REQUEST" },
   { no: 18, name: "ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL" },
+  { no: 19, name: "WARN_DESTRUCTIVE_OPERATION" },
 ]);
 
 /**

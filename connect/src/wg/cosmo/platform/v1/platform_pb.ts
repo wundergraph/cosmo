@@ -9682,6 +9682,11 @@ export class RetirePersistedOperationRequest extends Message<RetirePersistedOper
    */
   operationId = "";
 
+  /**
+   * @generated from field: bool force = 4;
+   */
+  force = false;
+
   constructor(data?: PartialMessage<RetirePersistedOperationRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9693,6 +9698,7 @@ export class RetirePersistedOperationRequest extends Message<RetirePersistedOper
     { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "force", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RetirePersistedOperationRequest {

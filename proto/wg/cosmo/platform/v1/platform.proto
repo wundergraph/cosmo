@@ -1286,6 +1286,7 @@ message RetirePersistedOperationRequest {
   string fedGraphName = 1;
   string namespace = 2;
   string operationId = 3;
+  bool force = 4;
 }
 
 message RetirePersistedOperationResponse {

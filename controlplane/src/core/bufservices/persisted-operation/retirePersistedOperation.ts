@@ -8,6 +8,7 @@ import type {
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 
@@ -19,6 +20,14 @@ export function retirePersistedOperation(
   let logger = getLogger(ctx, opts.logger);
 
   return handleError<PlainMessage<RetirePersistedOperationResponse>>(ctx, logger, async () => {
+    if (!opts.chClient) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
+        },
+        filters: [],
+      };
+    }
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -39,7 +48,7 @@ export function retirePersistedOperation(
     }
 
     const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
-    const operation = await operationsRepo.retirePersistedOperation({
+    const operation = await operationsRepo.getPersistedOperation({
       operationId: req.operationId,
     });
 
@@ -52,14 +61,34 @@ export function retirePersistedOperation(
       };
     }
 
+    const metricsRepository = new MetricsRepository(opts.chClient);
+    const operationMetrics = await metricsRepository.getPersistedOperationMetrics({
+      organizationId: authContext.organizationId,
+      graphId: federatedGraph.id,
+      id: operation.hash,
+    });
+
+    if (operationMetrics && operationMetrics.totalRequests > 0) {
+      return {
+        response: {
+          code: EnumStatusCode.WARN_DESTRUCTIVE_OPERATION,
+          details: `Persisted operation ${req.operationId} still receives traffic`,
+        },
+      };
+    }
+
+    const retiredOperation = await operationsRepo.retirePersistedOperation({
+      operationId: req.operationId,
+    });
+
     return {
       response: {
         code: EnumStatusCode.OK,
       },
-      operation: operation
+      operation: retiredOperation
         ? {
-            id: operation.id,
-            operationId: operation.operationId,
+            id: retiredOperation.id,
+            operationId: retiredOperation.operationId,
           }
         : undefined,
     };

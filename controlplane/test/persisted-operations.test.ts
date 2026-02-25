@@ -1,6 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi, type Mock } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import {
   afterAllSetup,
@@ -62,6 +62,7 @@ describe('Persisted operations', (ctx) => {
 
   beforeEach(() => {
     chClient = new ClickHouseClient();
+    (chClient.queryPromise as Mock).mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -438,6 +439,34 @@ describe('Persisted operations', (ctx) => {
         operationId: publishOperationsResp.operations[0].id,
       });
       expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+    });
+
+    test('Should NOT be able to retire an operation if it has received traffic', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+        operations: [{ id: genID('hello'), contents: `query { hello }` }],
+      });
+
+      // Mock traffic data
+      (chClient.queryPromise as Mock).mockResolvedValue([{
+        TotalRequests: 1,
+      }]);
+
+      const retireOperationsResp = await client.retirePersistedOperation({
+        fedGraphName,
+        namespace: 'default',
+        operationId: publishOperationsResp.operations[0].id,
+      });
+
+      expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.WARN_DESTRUCTIVE_OPERATION);
     });
   });
 });
