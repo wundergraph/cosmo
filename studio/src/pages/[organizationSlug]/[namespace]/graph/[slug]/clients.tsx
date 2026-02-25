@@ -80,6 +80,7 @@ import {
   MagnifyingGlassIcon,
   PlayIcon,
   PlusIcon,
+  TrashIcon,
 } from "@radix-ui/react-icons";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -88,6 +89,7 @@ import {
   getFederatedGraphSDLByName,
   getPersistedOperations,
   publishPersistedOperations,
+  retirePersistedOperation,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import copy from "copy-to-clipboard";
 import { formatDistanceToNow } from "date-fns";
@@ -217,6 +219,23 @@ const ClientOperations = () => {
       enabled: !!clientId,
     },
   );
+
+  const { mutate, isPending } = useMutation(retirePersistedOperation, {
+    onSuccess(data) {
+      if (data.response?.code !== EnumStatusCode.OK) {
+        toast({
+          variant: "destructive",
+          title: "Could not retire the operation",
+          description: data.response?.details ?? "Please try again",
+        });
+        return;
+      }
+
+      toast({
+        title: "Operation retired successfully",
+      });
+    },
+  })
 
   let content: React.ReactNode;
 
@@ -351,6 +370,22 @@ const ClientOperations = () => {
                         </p>
                       )}
                       <div className="flex items-center gap-x-2">
+                        {/* TODO: only for authorized users with permission to drop the operation */}
+                        <Tooltip delayDuration={100}>
+                          <TooltipTrigger>
+                            <Button variant="outline" size="icon" asChild disabled={isPending}>
+                              <TrashIcon height={20} onClick={() => {
+                                // TODO: display warning if mutation is used
+                                mutate({
+                                  id: op.id,
+                                  namespace,
+                                  fedGraphName: slug,
+                                })
+                              }} />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Retire the operation</TooltipContent>
+                        </Tooltip>
                         <Tooltip delayDuration={100}>
                           <TooltipTrigger>
                             <Button variant="outline" size="icon" asChild>
