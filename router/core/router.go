@@ -1599,6 +1599,10 @@ func (r *Router) Start(ctx context.Context) error {
 		r.logger.Warn("Advanced Request Tracing (ART) is enabled in development mode but requires a graph token to work in production. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
 	}
 
+	if r.engineExecutionConfiguration.EnableRequestTracing && r.engineExecutionConfiguration.ForceUnauthenticatedRequestTracing {
+		r.logger.Warn("Advanced Request Tracing (ART) is enabled for unauthenticated requests. This exposes internal subgraph URLs, request and response payloads, propagated headers, and query plans to any client that can reach the router. For more information see https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art")
+	}
+
 	if r.redisClient != nil {
 		r.logger.Info("Rate limiting enabled",
 			zap.Int("rate", r.rateLimit.SimpleStrategy.Rate),
