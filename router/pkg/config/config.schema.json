@@ -381,7 +381,7 @@
     "dev_mode": {
       "type": "boolean",
       "default": false,
-      "description": "Enable the development mode. The development mode is used to enable the development features like ART (Advanced Request Tracing) and pretty logs."
+      "description": "Enable the development mode. Development mode enables developer-focused behavior (such as pretty logs) and allows ART request options without request-token authentication."
     },
     "tls": {
       "type": "object",
@@ -3213,7 +3213,12 @@
         "enable_request_tracing": {
           "type": "boolean",
           "default": true,
-          "description": "Enable the advanced request tracing. See https://cosmo-docs.wundergraph.com/router/advanced-request-tracing-art for more information."
+          "description": "Capability gate for Advanced Request Tracing (ART). When false, ART is disabled regardless of headers, query parameters, or authentication."
+        },
+        "require_request_tracing_auth": {
+          "type": "boolean",
+          "default": true,
+          "description": "Authorization gate for ART when dev_mode is false. If true, ART request options require a valid WG request token. If false, ART request options are allowed without request-token authentication."
         },
         "enable_execution_plan_cache_response_header": {
           "type": "boolean",
