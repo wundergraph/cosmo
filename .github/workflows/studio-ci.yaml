@@ -38,7 +38,13 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: |
+          for i in 1 2 3; do
+            pnpm install --frozen-lockfile && break
+            if [ $i -eq 3 ]; then exit 1; fi
+            echo "Install failed (attempt $i/3), retrying in 15s..."
+            sleep 15
+          done
 
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
