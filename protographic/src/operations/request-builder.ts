@@ -11,8 +11,6 @@ import {
   GraphQLEnumType,
   typeFromAST,
 } from 'graphql';
-import { mapGraphQLTypeToProto } from './type-mapper.js';
-import { assignFieldNumbersFromLockData, FieldNumberManager } from './field-numbering.js';
 import {
   graphqlFieldToProtoField,
   graphqlArgumentToProtoField,
@@ -20,6 +18,8 @@ import {
   graphqlEnumValueToProtoEnumValue,
   protoFieldToProtoJSON,
 } from '../naming-conventions.js';
+import { mapGraphQLTypeToProto } from './type-mapper.js';
+import { assignFieldNumbersFromLockData, FieldNumberManager } from './field-numbering.js';
 import { GRAPHQL_VARIABLE_NAME } from './proto-field-options.js';
 
 /**
@@ -79,7 +79,9 @@ export function buildRequestMessage(
   let fieldNumber = 1;
   for (const protoVariableName of orderedVariableNames) {
     const variable = variableMap.get(protoVariableName);
-    if (!variable) continue;
+    if (!variable) {
+      continue;
+    }
 
     const variableName = variable.variable.name.value;
     const field = buildVariableField(variableName, variable.type, schema, messageName, options, fieldNumber);
@@ -110,7 +112,7 @@ export function buildVariableField(
   schema: GraphQLSchema,
   messageName: string,
   options?: RequestBuilderOptions,
-  defaultFieldNumber: number = 1,
+  defaultFieldNumber = 1,
 ): protobuf.Field | null {
   const protoFieldName = graphqlArgumentToProtoField(variableName);
   const fieldNumberManager = options?.fieldNumberManager;
@@ -209,7 +211,9 @@ export function buildInputObjectMessage(
   // Process fields in reconciled order
   for (const protoFieldName of orderedFieldNames) {
     const inputField = fieldMap.get(protoFieldName);
-    if (!inputField) continue;
+    if (!inputField) {
+      continue;
+    }
 
     const typeInfo = mapGraphQLTypeToProto(inputField.type, {
       customScalarMappings: options?.customScalarMappings,
