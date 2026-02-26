@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { compileOperationsToProto } from '../../src';
+import { compileOperationsToProto } from '../../src/index.js';
 
 describe('GraphQL Operation Validation', () => {
   const schema = `
@@ -31,7 +31,7 @@ describe('GraphQL Operation Validation', () => {
       }
     `;
 
-    expect(() => compileOperationsToProto(operation, schema)).toThrow(/Cannot spread fragment.*within itself/i);
+    expect(() => compileOperationsToProto(operation, schema)).toThrow(/cannot spread fragment.*within itself/i);
   });
 
   test('should reject unknown types', () => {
