@@ -393,6 +393,74 @@ describe('Persisted operations', (ctx) => {
       expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     });
 
+    test('Should delete persisted operation from blob storage when retired', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({
+        dbname,
+        chClient,
+      });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const id = genID('hello');
+      const query = `query { hello }`;
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+        operations: [{ id, contents: query }],
+      });
+
+      const storageKeys = blobStorage.keys();
+
+      await client.retirePersistedOperation({
+        fedGraphName,
+        namespace: 'default',
+        operationId: publishOperationsResp.operations[0].id,
+      });
+
+      await expect(blobStorage.getObject({
+        key: storageKeys[1],
+      })).rejects.toThrow(/not found/)
+    });
+
+    test('Should fail when blob storage errs during retirement of a persisted operation', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({
+        dbname,
+        chClient,
+      });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const id = genID('hello');
+      const query = `query { hello }`;
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+        operations: [{ id, contents: query }],
+      });
+
+      const deleteObjectSpy = vi
+        .spyOn(blobStorage, 'deleteObject')
+        .mockRejectedValueOnce(new Error('delete failed'));
+
+      const retireOperationsResp = await client.retirePersistedOperation({
+        fedGraphName,
+        namespace: 'default',
+        operationId: publishOperationsResp.operations[0].id,
+      });
+
+      expect(deleteObjectSpy).toHaveBeenCalledTimes(1);
+      expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.ERR);
+      expect(retireOperationsResp.response?.details).toContain('Failed to retire operation');
+    });
+
     test('Should NOT be able to retire a persisted operation that does not exist', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());

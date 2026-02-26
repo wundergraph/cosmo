@@ -5,12 +5,15 @@ import type {
   RetirePersistedOperationRequest,
   RetirePersistedOperationResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { BlobStorage } from '../../blobstorage/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
+import type { PersistedOperationWithClientDTO } from '../../../types/index.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { createBlobStoragePath } from './utils.js';
 
 export function retirePersistedOperation(
   opts: RouterOptions,
@@ -79,6 +82,27 @@ export function retirePersistedOperation(
       };
     }
 
+    const removedFromBlobStorageResult = await removePersistedOperationFromBlobStorage({
+      operation,
+      organizationId: authContext.organizationId,
+      fedGraphId: federatedGraph.id,
+      blobStorage: opts.blobStorage,
+    });
+
+    if (removedFromBlobStorageResult.error) {
+      logger.error(
+        removedFromBlobStorageResult.error.error,
+        `Could not delete operation for ${removedFromBlobStorageResult.error.operationId} at ${removedFromBlobStorageResult.error.path}`,
+      );
+
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Failed to retire operation ${removedFromBlobStorageResult.error.operationId}`,
+        },
+      };
+    }
+
     const retiredOperation = await operationsRepo.retirePersistedOperation({
       operationId: req.operationId,
     });
@@ -96,3 +120,45 @@ export function retirePersistedOperation(
     };
   });
 }
+
+const removePersistedOperationFromBlobStorage = async ({
+  operation,
+  fedGraphId,
+  organizationId,
+  blobStorage,
+}: {
+  operation: PersistedOperationWithClientDTO;
+  fedGraphId: string;
+  organizationId: string;
+  blobStorage: BlobStorage;
+}): Promise<{
+  error: {
+    error: Error;
+    operationId: string;
+    path: string;
+  } | null;
+}> => {
+  const path = createBlobStoragePath({
+    organizationId,
+    fedGraphId,
+    clientName: operation.clientName,
+    operationId: operation.operationId,
+  });
+
+  try {
+    await blobStorage.deleteObject({
+      key: path,
+      abortSignal: AbortSignal.timeout(10_000),
+    });
+    return { error: null };
+  } catch (e) {
+    const error = e instanceof Error ? e : new Error('Unknown error');
+    return {
+      error: {
+        error,
+        operationId: operation.operationId,
+        path,
+      },
+    };
+  }
+};
