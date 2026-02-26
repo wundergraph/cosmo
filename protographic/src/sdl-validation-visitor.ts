@@ -13,8 +13,12 @@ import {
   NamedTypeNode,
   GraphQLID,
   ConstArgumentNode,
+  GraphQLObjectType,
+  GraphQLSchema,
+  buildSchema,
 } from 'graphql';
-import { CONNECT_FIELD_RESOLVER, CONTEXT } from './string-constants.js';
+import { CONNECT_FIELD_RESOLVER, CONTEXT, FIELDS, REQUIRES_DIRECTIVE_NAME } from './string-constants.js';
+import { SelectionSetValidationVisitor } from './selection-set-validation-visitor.js';
 
 /**
  * Type mapping from Kind enum values to their corresponding AST node types
@@ -86,6 +90,7 @@ interface MessageContext {
  */
 export class SDLValidationVisitor {
   private readonly schema: string;
+  private readonly schemaObject: GraphQLSchema;
   private readonly validationResult: ValidationResult;
   private lintingRules: LintingRule<any>[] = [];
   private visitor: ASTVisitor;
@@ -96,6 +101,7 @@ export class SDLValidationVisitor {
    */
   constructor(schema: string) {
     this.schema = schema;
+    this.schemaObject = buildSchema(schema, { assumeValid: true, assumeValidSDL: true });
     this.validationResult = {
       errors: [],
       warnings: [],
@@ -127,14 +133,6 @@ export class SDLValidationVisitor {
       validationFunction: (ctx) => this.validateListTypeNullability(ctx),
     };
 
-    const requiresRule: LintingRule<Kind.FIELD_DEFINITION> = {
-      name: 'use-of-requires',
-      description: 'Validates usage of @requires directive which is not yet supported',
-      enabled: true,
-      nodeKind: Kind.FIELD_DEFINITION,
-      validationFunction: (ctx) => this.validateRequiresDirective(ctx),
-    };
-
     const providesRule: LintingRule<Kind.FIELD_DEFINITION> = {
       name: 'use-of-provides',
       description: 'Validates usage of @provides directive which is not yet supported',
@@ -151,7 +149,21 @@ export class SDLValidationVisitor {
       validationFunction: (ctx) => this.validateInvalidResolverContext(ctx),
     };
 
-    this.lintingRules = [objectTypeRule, listTypeRule, requiresRule, providesRule, resolverContextRule];
+    const disallowAbstractTypesForRequiresRule: LintingRule<Kind.FIELD_DEFINITION> = {
+      name: 'disallow-abstract-types-for-requires',
+      description: 'Validates that abstract types are not used in requires directives',
+      enabled: true,
+      nodeKind: Kind.FIELD_DEFINITION,
+      validationFunction: (ctx) => this.validateDisallowAbstractTypesForRequires(ctx),
+    };
+
+    this.lintingRules = [
+      objectTypeRule,
+      listTypeRule,
+      providesRule,
+      resolverContextRule,
+      disallowAbstractTypesForRequiresRule,
+    ];
   }
 
   /**
@@ -171,7 +183,7 @@ export class SDLValidationVisitor {
       return this.validationResult;
     } catch (error) {
       if (error instanceof Error) {
-        throw new Error(`Failed to parse GraphQL schema: ${error.message}`);
+        throw new TypeError(`Failed to parse GraphQL schema: ${error.message}`);
       }
       throw new Error('Failed to parse GraphQL schema: Unknown error');
     }
@@ -201,7 +213,7 @@ export class SDLValidationVisitor {
        * Handle object type definition nodes - validate directives
        */
       ObjectTypeDefinition: (node, key, parent, path, ancestors) => {
-        this.executeValidationRules({ node: node, key, parent, path, ancestors });
+        this.executeValidationRules({ node, key, parent, path, ancestors });
         return node;
       },
 
@@ -242,15 +254,17 @@ export class SDLValidationVisitor {
       currentNode = currentNode.type;
 
       switch (currentNode.kind) {
-        case Kind.NON_NULL_TYPE:
+        case Kind.NON_NULL_TYPE: {
           // If we have a non-null type wrapping another list, return
           if (currentNode.type.kind === Kind.LIST_TYPE) {
             return;
           }
           break;
-        case Kind.LIST_TYPE:
+        }
+        case Kind.LIST_TYPE: {
           // Nested list found, return
           return;
+        }
       }
     }
 
@@ -304,7 +318,9 @@ export class SDLValidationVisitor {
    * @private
    */
   private validateRequiresDirective(ctx: VisitContext<FieldDefinitionNode>): void {
-    const hasRequiresDirective = ctx.node.directives?.some((directive) => directive.name.value === 'requires');
+    const hasRequiresDirective = ctx.node.directives?.some(
+      (directive) => directive.name.value === REQUIRES_DIRECTIVE_NAME,
+    );
 
     if (hasRequiresDirective) {
       this.addWarning('Use of requires is not supported yet', ctx.node.loc);
@@ -334,7 +350,10 @@ export class SDLValidationVisitor {
       return;
     }
 
-    const parent = ctx.ancestors[ctx.ancestors.length - 1];
+    const parent = ctx.ancestors.at(-1);
+    if (!parent) {
+      return;
+    }
     // If the parent is not an object type definition node, we don't need to continue with the validation
     if (!this.isASTObjectTypeNode(parent)) {
       return;
@@ -357,16 +376,64 @@ export class SDLValidationVisitor {
     const idFields =
       parent.fields?.filter((field) => this.getUnderlyingType(field.type).name.value === GraphQLID.name) ?? [];
     switch (idFields.length) {
-      case 1:
+      case 1: {
         return;
-      case 0:
+      }
+      case 0: {
         this.addError('Invalid context provided for resolver. No fields with type ID found', ctx.node.loc);
         return;
-      default:
+      }
+      default: {
         this.addError(
           `Invalid context provided for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @${CONNECT_FIELD_RESOLVER} directive`,
           ctx.node.loc,
         );
+      }
+    }
+  }
+
+  private validateDisallowAbstractTypesForRequires(ctx: VisitContext<FieldDefinitionNode>): void {
+    const requiredDirective = ctx.node.directives?.find(
+      (directive) => directive.name.value === REQUIRES_DIRECTIVE_NAME,
+    );
+    if (!requiredDirective) {
+      return;
+    }
+
+    const fieldSelections = requiredDirective.arguments?.find((arg) => arg.name.value === FIELDS)?.value;
+    if (!fieldSelections || fieldSelections.kind !== Kind.STRING) {
+      return;
+    }
+
+    const parentType = ctx.ancestors.at(-1);
+    if (!parentType) {
+      return;
+    }
+
+    if (!this.isASTObjectTypeNode(parentType)) {
+      return;
+    }
+
+    let operationDoc;
+    try {
+      operationDoc = parse(`{ ${fieldSelections.value} }`);
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      this.addError(`Invalid @${REQUIRES_DIRECTIVE_NAME} field selection syntax: ${errorMessage}`, ctx.node.loc);
+      return;
+    }
+
+    const selectionSetValidationVisitor = new SelectionSetValidationVisitor(
+      operationDoc,
+      this.schemaObject.getType(parentType.name.value) as GraphQLObjectType,
+    );
+    selectionSetValidationVisitor.visit();
+    for (const error of selectionSetValidationVisitor.getValidationResult().errors) {
+      this.addError(error, ctx.node.loc);
+    }
+
+    for (const warning of selectionSetValidationVisitor.getValidationResult().warnings) {
+      this.addWarning(warning, ctx.node.loc);
     }
   }
 
@@ -395,7 +462,9 @@ export class SDLValidationVisitor {
     }
 
     const fieldNames = this.getContextFields(node);
-    if (fieldNames.length === 0) return true;
+    if (fieldNames.length === 0) {
+      return true;
+    }
     const parentFields = this.getParentFields(parent);
 
     if (parentFields.error) {
@@ -437,15 +506,17 @@ export class SDLValidationVisitor {
    * @private
    */
   private getContextFields(node: ConstArgumentNode | undefined): string[] {
-    if (!node) return [];
+    if (!node) {
+      return [];
+    }
 
-    let value = node?.value.kind === Kind.STRING ? node.value.value.trim() : '';
+    const value = node?.value.kind === Kind.STRING ? node.value.value.trim() : '';
     if (value.length === 0) {
       return [];
     }
 
     return value
-      .split(/[,\s]+/)
+      .split(/[\s,]+/)
       .filter((field) => field.length > 0)
       .map((field) => field.trim());
   }
@@ -463,7 +534,7 @@ export class SDLValidationVisitor {
     contextFields: string[],
     typeFields: FieldDefinitionNode[],
   ): { hasCycle: boolean; path: string } {
-    let visited = new Set<string>();
+    const visited = new Set<string>();
     return this.checkFieldCycle(field, contextFields, typeFields, visited, []);
   }
 
@@ -482,13 +553,19 @@ export class SDLValidationVisitor {
     currentPath.push(fieldName);
     visited.add(fieldName);
     for (const contextField of contextFields) {
-      if (contextField === fieldName) continue;
+      if (contextField === fieldName) {
+        continue;
+      }
 
-      let typeField = typeFields.find((p) => p.name.value === contextField);
-      if (!typeField) continue;
+      const typeField = typeFields.find((p) => p.name.value === contextField);
+      if (!typeField) {
+        continue;
+      }
 
       const typeFieldContext = this.getResolverContext(typeField);
-      if (!typeFieldContext) continue;
+      if (!typeFieldContext) {
+        continue;
+      }
 
       const typeFieldContextFields = this.getContextFields(typeFieldContext);
       if (typeFieldContextFields.includes(fieldName)) {
@@ -546,7 +623,7 @@ export class SDLValidationVisitor {
       return result;
     }
 
-    result.fields = Array.from(parent.fields ?? []);
+    result.fields = [...(parent.fields ?? [])];
     return result;
   }
 
