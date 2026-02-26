@@ -176,7 +176,7 @@ fetch(url, {
 type RetirePersistedOperationState = {
   hasTraffic: boolean;
   id: string | null;
-  name: string | null;
+  names: string[];
   show: boolean;
 };
 
@@ -187,12 +187,12 @@ type RetirePersistedOperationAction =
   | {
       type: "retire-modal-show";
       id: string;
-      name: string;
+      names: string[];
     }
   | {
       type: "retire-modal-show-with-traffic-warning";
       id: string;
-      name: string;
+      names: string[];
     };
 
 const retirePersistedOperationReducer = (
@@ -201,12 +201,12 @@ const retirePersistedOperationReducer = (
 ): RetirePersistedOperationState => {
   switch (action.type) {
     case "retire-modal-show":
-      return { ...state, id: action.id, name: action.name, hasTraffic: false, show: true };
+      return { ...state, id: action.id, names: action.names, hasTraffic: false, show: true };
     case "retire-modal-show-with-traffic-warning":
-      return { ...state, id: action.id, name: action.name, hasTraffic: true, show: true };
+      return { ...state, id: action.id, names: action.names, hasTraffic: true, show: true };
     case "retire-modal-hidden":
     default:
-      return { ...state, id: null, name: null, hasTraffic: false, show: false };
+      return { ...state, id: null, names: [], hasTraffic: false, show: false };
   }
 };
 
@@ -230,7 +230,7 @@ const ClientOperations = ({
     retirePersistedOperationReducer,
     {
       id: null,
-      name: null,
+      names: [],
       hasTraffic: false,
       show: false,
     },
@@ -317,10 +317,10 @@ const ClientOperations = ({
         dispatch({
           type: "retire-modal-show-with-traffic-warning",
           id: data.operation.operationId,
-          name: data.operation.operationNames,
+          names: data.operation.operationNames,
         });
       } else {
-        dispatch({ type: "retire-modal-show", id: data.operation.operationId, name: data.operation.operationNames });
+        dispatch({ type: "retire-modal-show", id: data.operation.operationId, names: data.operation.operationNames });
       }
     },
   });
@@ -623,7 +623,7 @@ const ClientOperations = ({
       </Sheet>
       <RetirePersistedOperationDialog
         isOpen={persistedOperationRetireState.show}
-        operationName={persistedOperationRetireState.name ?? ""}
+        operationNames={persistedOperationRetireState.names ?? []}
         operationHasTraffic={Boolean(persistedOperationRetireState.hasTraffic)}
         onSubmitButtonClick={
           persistedOperationRetireState.id

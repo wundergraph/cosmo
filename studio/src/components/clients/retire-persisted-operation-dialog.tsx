@@ -12,20 +12,24 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Alert } from "@/components/ui/alert";
+import { cn } from "@/lib/utils";
 
 export const RetirePersistedOperationDialog = ({
   isOpen,
-  operationName,
+  operationNames,
   operationHasTraffic,
   onSubmitButtonClick,
   onClose,
 }: {
   isOpen: boolean;
-  operationName: string;
+  operationNames: string[];
   operationHasTraffic: boolean;
   onSubmitButtonClick?: (event: SyntheticEvent<HTMLButtonElement>) => void;
   onClose?: () => void;
 }) => {
+  const isPlural = operationNames.length > 1;
+  const pluralizedOperation = isPlural ? 'operations' : 'operation';
+
   return (
     <Dialog
       open={isOpen}
@@ -42,22 +46,23 @@ export const RetirePersistedOperationDialog = ({
 
         {!operationHasTraffic && (
           <Alert variant="warn">
-            If you are not sending us traffic data, we cannot guarantee that
+            If you are not sending us analytics, we <span className='font-semibold'>cannot guarantee</span> that
             this operation is not receiving traffic. If you are not sure, check
-            the metrics for this operation.
+            the metrics.
           </Alert>
         )}
 
         <div className="flex flex-col gap-y-2">
-          <span className="text-sm">
-            <br />
+          <p className="text-sm">
             {operationHasTraffic ? (
               <>
-                The operation <OperationLabel name={operationName} /> is
-                receiving traffic.
+                The {pluralizedOperation} <OperationLabel names={operationNames} /> {isPlural ? 'are' : 'is'} <span className='font-semibold'>receiving traffic</span>.<br />
+                Are you sure you want to <span className='font-semibold'>retire</span> the {pluralizedOperation}?
               </>
-            ) : <>Are you sure you want to persisted operation <OperationLabel name={operationName} />?</>}
-          </span>
+            ) : (<>
+              Are you sure you want to <span className='font-semibold'>retire the following {pluralizedOperation}</span>?<br /><span className='mt-1 inline-block'><OperationLabel names={operationNames} inline={false} /></span></>)
+            }
+          </p>
         </div>
         <Button
           className="mt-2"
@@ -72,13 +77,16 @@ export const RetirePersistedOperationDialog = ({
   );
 };
 
-const OperationLabel = ({ name }: { name: string }) => (
+const OperationLabel = ({ names, inline = true }: { names: string[]; inline?: boolean }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <code className="inline-block max-w-[120px] cursor-pointer overflow-hidden text-ellipsis align-middle">
-        {name}
+      <code className={cn('inline-block cursor-pointer overflow-hidden text-ellipsis align-middle', {
+        'max-w-[180px]': inline,
+        'max-w-2xl': !inline,
+      })}>
+        {names.length > 4 ? names.slice(0, 4).join(inline ? ',' : '\n') : names.join(inline ? ',' : '\n')}
       </code>
     </TooltipTrigger>
-    <TooltipContent>{name}</TooltipContent>
+    <TooltipContent>{names.join(',')}</TooltipContent>
   </Tooltip>
 );

@@ -96,7 +96,7 @@ export function retirePersistedOperation(
         ? {
             id: retiredOperation.id,
             operationId: retiredOperation.operationId,
-            operationNames: retiredOperation.operationNames.join(' '),
+            operationNames: retiredOperation.operationNames,
           }
         : undefined,
     };

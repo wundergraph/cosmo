@@ -1292,7 +1292,7 @@ message RetirePersistedOperationResponse {
   message Operation {
     string id = 1;
     string operationId = 2;
-    string operationNames = 3;
+    repeated string operationNames = 3;
   }
   Response response = 1;
   Operation operation = 2;
@@ -1308,7 +1308,7 @@ message CheckPersistedOperationTrafficResponse {
   message Operation {
     string id = 1;
     string operationId = 2;
-    string operationNames = 3;
+    repeated string operationNames = 3;
     bool hasTraffic = 4;
   }
   Response response = 1;

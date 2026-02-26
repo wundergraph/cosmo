@@ -9770,9 +9770,9 @@ export class RetirePersistedOperationResponse_Operation extends Message<RetirePe
   operationId = "";
 
   /**
-   * @generated from field: string operationNames = 3;
+   * @generated from field: repeated string operationNames = 3;
    */
-  operationNames = "";
+  operationNames: string[] = [];
 
   constructor(data?: PartialMessage<RetirePersistedOperationResponse_Operation>) {
     super();
@@ -9784,7 +9784,7 @@ export class RetirePersistedOperationResponse_Operation extends Message<RetirePe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "operationNames", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operationNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RetirePersistedOperationResponse_Operation {
@@ -9911,9 +9911,9 @@ export class CheckPersistedOperationTrafficResponse_Operation extends Message<Ch
   operationId = "";
 
   /**
-   * @generated from field: string operationNames = 3;
+   * @generated from field: repeated string operationNames = 3;
    */
-  operationNames = "";
+  operationNames: string[] = [];
 
   /**
    * @generated from field: bool hasTraffic = 4;
@@ -9930,7 +9930,7 @@ export class CheckPersistedOperationTrafficResponse_Operation extends Message<Ch
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "operationNames", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "operationNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
     { no: 4, name: "hasTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
