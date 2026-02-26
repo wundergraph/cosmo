@@ -77,6 +77,8 @@ func (a *CosmoAuthorizer) AuthorizeObjectField(ctx *resolve.Context, dataSourceI
 	return a.handleRejectUnauthorized(a.validateScopes(ctx, coordinate, required, isAuthenticated, actual))
 }
 
+type wildcardScopeKey struct{}
+
 func hasWildcardScope(ctx context.Context) bool {
 	v, ok := ctx.Value(wildcardScopeKey{}).(bool)
 	return ok && v

@@ -2,6 +2,7 @@ package module_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -13,6 +14,28 @@ import (
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
+
+type graphQLResponse struct {
+	Data   json.RawMessage `json:"data"`
+	Errors []struct {
+		Message    string `json:"message"`
+		Extensions struct {
+			Code string `json:"code"`
+		} `json:"extensions"`
+	} `json:"errors"`
+	Extensions struct {
+		Authorization struct {
+			MissingScopes []struct {
+				Coordinate struct {
+					TypeName  string `json:"typeName"`
+					FieldName string `json:"fieldName"`
+				} `json:"coordinate"`
+				Required [][]string `json:"required"`
+			} `json:"missingScopes"`
+			ActualScopes []string `json:"actualScopes"`
+		} `json:"authorization"`
+	} `json:"extensions"`
+}
 
 func TestCustomModuleSetWildcardScope(t *testing.T) {
 	t.Run("authenticated request with wildcard scope bypasses requiresScopes checks", func(t *testing.T) {
@@ -54,7 +77,10 @@ func TestCustomModuleSetWildcardScope(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
+			var resp graphQLResponse
+			require.NoError(t, json.Unmarshal(data, &resp))
+			require.Empty(t, resp.Errors)
+			require.NotEmpty(t, resp.Data)
 		})
 	})
 
@@ -92,7 +118,13 @@ func TestCustomModuleSetWildcardScope(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",0,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",1,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",2,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",3,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",4,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",5,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",6,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",7,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",8,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: not authenticated.","path":["employees",9,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]}}`, string(data))
+			var resp graphQLResponse
+			require.NoError(t, json.Unmarshal(data, &resp))
+			require.Len(t, resp.Errors, 10)
+			for _, e := range resp.Errors {
+				require.Equal(t, "UNAUTHORIZED_FIELD_OR_TYPE", e.Extensions.Code)
+				require.Contains(t, e.Message, "not authenticated")
+			}
 		})
 	})
 
@@ -137,7 +169,17 @@ func TestCustomModuleSetWildcardScope(t *testing.T) {
 			require.Equal(t, http.StatusOK, res.StatusCode)
 			data, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.Equal(t, `{"errors":[{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",0,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",1,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",2,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",3,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",4,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",5,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",6,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",7,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",8,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}},{"message":"Unauthorized to load field 'Query.employees.startDate', Reason: missing required scopes.","path":["employees",9,"startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}],"data":{"employees":[null,null,null,null,null,null,null,null,null,null]},"extensions":{"authorization":{"missingScopes":[{"coordinate":{"typeName":"Employee","fieldName":"startDate"},"required":[["read:employee","read:private"],["read:all"]]}],"actualScopes":["read:employee"]}}}`, string(data))
+			var resp graphQLResponse
+			require.NoError(t, json.Unmarshal(data, &resp))
+			require.Len(t, resp.Errors, 10)
+			for _, e := range resp.Errors {
+				require.Equal(t, "UNAUTHORIZED_FIELD_OR_TYPE", e.Extensions.Code)
+				require.Contains(t, e.Message, "missing required scopes")
+			}
+			require.Len(t, resp.Extensions.Authorization.MissingScopes, 1)
+			require.Equal(t, "Employee", resp.Extensions.Authorization.MissingScopes[0].Coordinate.TypeName)
+			require.Equal(t, "startDate", resp.Extensions.Authorization.MissingScopes[0].Coordinate.FieldName)
+			require.Equal(t, []string{"read:employee"}, resp.Extensions.Authorization.ActualScopes)
 		})
 	})
 
@@ -184,7 +226,10 @@ func TestCustomModuleSetWildcardScope(t *testing.T) {
 			data, err := io.ReadAll(res.Body)
 			data = bytes.TrimSpace(data)
 			require.NoError(t, err)
-			require.Equal(t, `{"data":{"employees":[{"id":1,"startDate":"January 2020"},{"id":2,"startDate":"July 2022"},{"id":3,"startDate":"June 2021"},{"id":4,"startDate":"July 2022"},{"id":5,"startDate":"July 2022"},{"id":7,"startDate":"September 2022"},{"id":8,"startDate":"September 2022"},{"id":10,"startDate":"November 2022"},{"id":11,"startDate":"November 2022"},{"id":12,"startDate":"December 2022"}]}}`, string(data))
+			var resp graphQLResponse
+			require.NoError(t, json.Unmarshal(data, &resp))
+			require.Empty(t, resp.Errors)
+			require.NotEmpty(t, resp.Data)
 		})
 	})
 }

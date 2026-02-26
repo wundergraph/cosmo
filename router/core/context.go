@@ -552,8 +552,6 @@ func (c *requestContext) SetAuthenticationScopes(scopes []string) {
 	auth.SetScopes(scopes)
 }
 
-type wildcardScopeKey struct{}
-
 func (c *requestContext) SetWildcardScope(wildcard bool) {
 	c.request = c.request.WithContext(context.WithValue(c.request.Context(), wildcardScopeKey{}, wildcard))
 }
