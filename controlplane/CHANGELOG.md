@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.192.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.192.0...controlplane@0.192.1) (2026-02-26)
+
+### Bug Fixes
+
+* return client error for payload size limit violations ([#2560](https://github.com/wundergraph/cosmo/issues/2560)) ([1393f43](https://github.com/wundergraph/cosmo/commit/1393f43480127a0e581215f6cf5ba0749be016f8)) (@alepane21)
+
 # [0.192.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.191.3...controlplane@0.192.0) (2026-02-26)
 
 ### Features
