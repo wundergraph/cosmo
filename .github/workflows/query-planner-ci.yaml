@@ -1,6 +1,13 @@
 name: Query Planner CI
 on:
   pull_request:
+    types: 
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+    
     paths:
       # This workflow should run every time router-ci and cli-ci runs
       - 'pnpm-lock.yaml'
