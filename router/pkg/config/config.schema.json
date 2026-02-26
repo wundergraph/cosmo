@@ -2347,15 +2347,33 @@
               "description": "The base URL of the OAuth 2.0 authorization server. This URL is advertised to MCP clients via the Protected Resource Metadata endpoint (RFC 9728) to enable automatic discovery of OAuth endpoints. Clients will append '/.well-known/oauth-authorization-server' to this URL to discover token, authorization, and registration endpoints. Example: 'https://auth.example.com'",
               "format": "http-url"
             },
-            "scopes_required": {
+            "scopes": {
               "type": "object",
-              "description": "Map of tool names or special keys to their required OAuth scopes. The special key 'initialize' specifies scopes required for HTTP-level access (all MCP requests). Tool names (e.g., 'get_schema', 'execute_operation_employees') specify per-tool scopes. All scopes from this map are automatically unioned into 'scopes_supported' for OAuth metadata. Example: {'initialize': ['mcp:init'], 'get_schema': ['mcp:tools:read'], 'execute_operation_create_employee': ['write:employees']}",
-              "additionalProperties": {
-                "type": "array",
-                "items": {
-                  "type": "string"
+              "description": "Configures which OAuth scopes are required for different MCP operations. All configured scopes are automatically unioned into 'scopes_supported' for OAuth metadata discovery.",
+              "additionalProperties": false,
+              "properties": {
+                "initialize": {
+                  "type": "array",
+                  "description": "Scopes required for ALL HTTP requests (checked before JSON-RPC parsing). This is the baseline scope needed to establish an MCP connection.",
+                  "items": { "type": "string" }
+                },
+                "tools_list": {
+                  "type": "array",
+                  "description": "Scopes required for the tools/list MCP method.",
+                  "items": { "type": "string" }
+                },
+                "tools_call": {
+                  "type": "array",
+                  "description": "Scopes required for the tools/call MCP method (any tool).",
+                  "items": { "type": "string" }
                 }
               }
+            },
+            "scope_challenge_mode": {
+              "type": "string",
+              "default": "required_and_existing",
+              "enum": ["required_only", "required_and_existing"],
+              "description": "Controls how the server builds the scope parameter in 403 insufficient_scope responses. 'required_only' returns only the scopes the operation needs (RFC 6750 strict). 'required_and_existing' returns the token's existing scopes plus required scopes (works around client SDK scope accumulation bugs). Default: 'required_and_existing'."
             },
             "jwks": {
               "type": "array",

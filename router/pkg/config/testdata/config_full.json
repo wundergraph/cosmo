@@ -182,7 +182,12 @@
       "Enabled": false,
       "JWKS": null,
       "AuthorizationServerURL": "",
-      "ScopesRequired": null
+      "Scopes": {
+        "Initialize": null,
+        "ToolsList": null,
+        "ToolsCall": null
+      },
+      "ScopeChallengeMode": "required_and_existing"
     }
   },
   "ConnectRPC": {

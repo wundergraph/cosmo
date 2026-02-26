@@ -1039,19 +1039,28 @@ type MCPConfiguration struct {
 }
 
 type MCPOAuthConfiguration struct {
-	Enabled                bool                   `yaml:"enabled" envDefault:"false" env:"ENABLED"`
-	JWKS                   []JWKSConfiguration    `yaml:"jwks"`
-	AuthorizationServerURL string                 `yaml:"authorization_server_url,omitempty" env:"AUTHORIZATION_SERVER_URL"`
-	// ScopesRequired maps tool names or special keys to their required scopes.
-	// Special key "initialize" specifies scopes required for HTTP-level access (all requests).
-	// Tool names (e.g., "get_schema", "execute_operation_employees") specify per-tool scopes.
-	// All scopes from this map are automatically unioned into scopes_supported for OAuth metadata.
-	// Example:
-	//   scopes_required:
-	//     initialize: ["mcp:init"]
-	//     get_schema: ["mcp:tools:read"]
-	//     execute_operation_create_employee: ["write:employees"]
-	ScopesRequired         map[string][]string    `yaml:"scopes_required,omitempty"`
+	Enabled                bool                `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	JWKS                   []JWKSConfiguration `yaml:"jwks"`
+	AuthorizationServerURL string              `yaml:"authorization_server_url,omitempty" env:"AUTHORIZATION_SERVER_URL"`
+	// Scopes configures which OAuth scopes are required for different MCP operations.
+	Scopes MCPOAuthScopesConfiguration `yaml:"scopes,omitempty"`
+	// ScopeChallenge controls how the server builds the scope parameter in 403 insufficient_scope responses.
+	//   "required_only"         - Only the scopes the operation needs (RFC 6750 strict)
+	//   "required_and_existing" - Token's existing scopes + required scopes (works around SDK scope accumulation bugs)
+	// Default: "required_and_existing"
+	ScopeChallengeMode string `yaml:"scope_challenge_mode,omitempty" envDefault:"required_and_existing" env:"SCOPE_CHALLENGE_MODE"`
+}
+
+// MCPOAuthScopesConfiguration defines which scopes are required for different MCP operations.
+// All configured scopes are automatically unioned into scopes_supported for OAuth metadata discovery.
+type MCPOAuthScopesConfiguration struct {
+	// Initialize specifies scopes required for ALL HTTP requests (checked before JSON-RPC parsing).
+	// This is the baseline scope needed to establish an MCP connection.
+	Initialize []string `yaml:"initialize,omitempty"`
+	// ToolsList specifies scopes required for the tools/list MCP method.
+	ToolsList []string `yaml:"tools_list,omitempty"`
+	// ToolsCall specifies scopes required for the tools/call MCP method (any tool).
+	ToolsCall []string `yaml:"tools_call,omitempty"`
 }
 
 type MCPSessionConfig struct {
