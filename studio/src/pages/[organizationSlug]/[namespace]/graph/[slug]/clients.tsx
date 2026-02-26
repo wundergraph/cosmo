@@ -289,7 +289,6 @@ const ClientOperations = ({
         return;
       }
 
-      dispatch({ type: "retire-modal-hidden" });
       refetch();
       toast({
         title: "Operation retired successfully",
@@ -634,6 +633,7 @@ const ClientOperations = ({
                   namespace,
                   fedGraphName: slug,
                 });
+                dispatch({ type: "retire-modal-hidden" });
               }
             : undefined
         }

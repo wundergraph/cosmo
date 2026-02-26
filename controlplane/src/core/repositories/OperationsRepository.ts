@@ -140,7 +140,7 @@ export class OperationsRepository {
     return {
       id: operationResult[0].id,
       operationId: operationResult[0].operationId,
-      operationNames: operationResult[0].operationNames,
+      operationNames: operationResult[0].operationNames ?? [],
       hash: operationResult[0].hash,
       filePath: operationResult[0].filePath,
       createdAt: operationResult[0].createdAt.toISOString(),
