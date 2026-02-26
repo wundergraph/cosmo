@@ -1162,10 +1162,6 @@ Example:
         field.astNode?.directives?.some((d) => d.name.value === REQUIRES_DIRECTIVE_NAME),
       );
 
-      if (requiredFields.length === 0) {
-        continue;
-      }
-
       for (const requiredField of requiredFields) {
         const fieldSet = this.getRequiredFieldSet(requiredField);
         const visitor = new RequiredFieldsVisitor(this.schema, entity, requiredField, fieldSet);

@@ -45,6 +45,13 @@ type GraphQLTypeWithFields = GraphQLObjectType | GraphQLInterfaceType;
  * interface level and within inline fragments for concrete types. This class
  * normalizes such selections by moving interface-level fields into each inline
  * fragment, ensuring consistent selection structure for downstream processing.
+ * This is required to generate the proper proto message definitions as in protobuf
+ * we define abstract types as oneof fields in in a message definition, which defines
+ * the possible concrete types that can be selected.
+ *
+ * As we can select on Interfaces and Unions directly, we need to normalize the selection set
+ * to determine the allowed concrete types that can be selected.
+ *
  *
  * @example
  * Input selection:
@@ -180,7 +187,7 @@ export class AbstractSelectionRewriter {
     this.currentCompositeRoot = fieldType;
     this.compositeTypeStack.push(this.currentCompositeRoot);
 
-    // Only process selection sets for interface types
+    // Only process selection sets for interface and union types
     if (isAbstractType(fieldType)) {
       this.appendValidInlineFragments(ctx.node);
       this.distributeFieldsIntoInlineFragments(ctx.node);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSchema, parse, print, GraphQLObjectType } from 'graphql';
+import { buildSchema, parse, print, GraphQLObjectType, GraphQLSchema } from 'graphql';
 import { AbstractSelectionRewriter } from '../../src/abstract-selection-rewriter.js';
 
 const schema = buildSchema(
@@ -38,22 +38,10 @@ const schema = buildSchema(
 );
 
 
-/**
- * Helper function to normalize a field set selection
- */
-function normalizeFieldSet(fieldSet: string, typeName: string): string {
+function normalizeFieldSet(fieldSet: string, typeName: string, s: GraphQLSchema = schema): string {
   const doc = parse(`{ ${fieldSet} }`);
-  const objectType = schema.getTypeMap()[typeName] as GraphQLObjectType;
-  const rewriter = new AbstractSelectionRewriter(doc, schema, objectType);
-  rewriter.normalize();
-  return print(doc);
-}
-
-
-function normalizeFieldSetWithComplexInterfaces(fieldSet: string, typeName: string): string {
-  const doc = parse(`{ ${fieldSet} }`);
-  const objectType = schemaWithComplexInterfaces.getTypeMap()[typeName] as GraphQLObjectType;
-  const rewriter = new AbstractSelectionRewriter(doc, schemaWithComplexInterfaces, objectType);
+  const objectType = s.getTypeMap()[typeName] as GraphQLObjectType;
+  const rewriter = new AbstractSelectionRewriter(doc, s, objectType);
   rewriter.normalize();
   return print(doc);
 }
@@ -451,7 +439,7 @@ describe('AbstractSelectionRewriter', () => {
     }
     `;
 
-    const result = normalizeFieldSetWithComplexInterfaces(input, 'Query');
+    const result = normalizeFieldSet(input, 'Query', schemaWithComplexInterfaces);
     expect(result).toMatchInlineSnapshot(`
       "{
         iface {
@@ -480,7 +468,7 @@ describe('AbstractSelectionRewriter', () => {
     }
     `;
 
-    const result = normalizeFieldSetWithComplexInterfaces(input, 'Query');
+    const result = normalizeFieldSet(input, 'Query', schemaWithComplexInterfaces);
     expect(result).toMatchInlineSnapshot(`
       "{
         iface {
