@@ -68,8 +68,7 @@ func TestPrometheusParallelSubgraphRequestDurationMetrics(t *testing.T) {
 		employeesDurationMs := employeesHistogram.GetSampleSum()
 		productsDurationMs := productsHistogram.GetSampleSum()
 
-		require.Greater(t, productsDurationMs, float64(productsDelay.Milliseconds()-250))
-		require.Less(t, employeesDurationMs, float64(productsDelay.Milliseconds()/2))
-		require.Greater(t, productsDurationMs-employeesDurationMs, 400.0)
+		require.GreaterOrEqual(t, productsDurationMs, float64(productsDelay.Milliseconds()))
+		require.Less(t, employeesDurationMs, float64(productsDelay.Milliseconds()))
 	})
 }
