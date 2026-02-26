@@ -9,7 +9,6 @@ import type { BlobStorage } from '../../blobstorage/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
-import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import type { PersistedOperationWithClientDTO } from '../../../types/index.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
@@ -64,24 +63,6 @@ export function retirePersistedOperation(
       };
     }
 
-    const metricsRepository = new MetricsRepository(opts.chClient);
-    const operationMetrics = req.force
-      ? null
-      : await metricsRepository.getPersistedOperationMetrics({
-          organizationId: authContext.organizationId,
-          graphId: federatedGraph.id,
-          id: operation.hash,
-        });
-
-    if (operationMetrics && operationMetrics.totalRequests > 0) {
-      return {
-        response: {
-          code: EnumStatusCode.WARN_DESTRUCTIVE_OPERATION,
-          details: `Persisted operation ${req.operationId} still receives traffic`,
-        },
-      };
-    }
-
     const removedFromBlobStorageResult = await removePersistedOperationFromBlobStorage({
       operation,
       organizationId: authContext.organizationId,
@@ -115,6 +96,7 @@ export function retirePersistedOperation(
         ? {
             id: retiredOperation.id,
             operationId: retiredOperation.operationId,
+            operationNames: retiredOperation.operationNames.join(' '),
           }
         : undefined,
     };

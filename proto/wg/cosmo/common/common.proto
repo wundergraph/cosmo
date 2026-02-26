@@ -22,7 +22,6 @@ enum EnumStatusCode {
   ERR_UPGRADE_PLAN = 16;
   ERR_BAD_REQUEST = 17;
   ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL = 18;
-  WARN_DESTRUCTIVE_OPERATION = 19;
 }
 
 enum GraphQLSubscriptionProtocol {

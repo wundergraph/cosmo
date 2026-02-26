@@ -508,86 +508,92 @@ describe('Persisted operations', (ctx) => {
       });
       expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     });
-
-    test('Should NOT be able to retire an operation if it has received traffic', async (testContext) => {
-      const { client, server } = await SetupTest({ dbname, chClient });
-      testContext.onTestFinished(() => server.close());
-
-      const fedGraphName = genID('fedGraph');
-      await setupFederatedGraph(fedGraphName, client);
-
-      const publishOperationsResp = await client.publishPersistedOperations({
-        fedGraphName,
-        namespace: 'default',
-        clientName: 'curl',
-        operations: [{ id: genID('hello'), contents: `query { hello }` }],
-      });
-
-      // Mock traffic data
-      (chClient.queryPromise as Mock).mockResolvedValue([{
-        TotalRequests: 1,
-      }]);
-
-      const retireOperationsResp = await client.retirePersistedOperation({
-        fedGraphName,
-        namespace: 'default',
-        operationId: publishOperationsResp.operations[0].id,
-      });
-
-      const clients = await client.getClients({
-        fedGraphName,
-        namespace: 'default',
-      });
-
-      const operations = await client.getPersistedOperations({
-        clientId: clients.clients[0].id,
-        federatedGraphName: fedGraphName,
-        namespace: 'default',
-      });
-
-      expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.WARN_DESTRUCTIVE_OPERATION);
-      expect(operations.operations).toHaveLength(1);
-    });
-
-    test('Should be able to retire an operation if it has received traffic via force flag', async (testContext) => {
-      const { client, server } = await SetupTest({ dbname, chClient });
-      testContext.onTestFinished(() => server.close());
-
-      const fedGraphName = genID('fedGraph');
-      await setupFederatedGraph(fedGraphName, client);
-
-      const publishOperationsResp = await client.publishPersistedOperations({
-        fedGraphName,
-        namespace: 'default',
-        clientName: 'curl',
-        operations: [{ id: genID('hello'), contents: `query { hello }` }],
-      });
-
-      // Mock traffic data
-      (chClient.queryPromise as Mock).mockResolvedValue([{
-        TotalRequests: 1,
-      }]);
-
-      const retireOperationsResp = await client.retirePersistedOperation({
-        fedGraphName,
-        namespace: 'default',
-        operationId: publishOperationsResp.operations[0].id,
-        force: true,
-      });
-
-      const clients = await client.getClients({
-        fedGraphName,
-        namespace: 'default',
-      });
-
-      const operations = await client.getPersistedOperations({
-        clientId: clients.clients[0].id,
-        federatedGraphName: fedGraphName,
-        namespace: 'default',
-      });
-
-      expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.OK);
-      expect(operations.operations).toHaveLength(0);
-    });
   });
+
+  describe('check', () => {
+    test('Should check the traffic of the operation', async (testContext) => {
+      const { client, server } = await SetupTest({
+        dbname,
+        chClient,
+      });
+
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+        operations: [{ id: genID('hello'), contents: `query { hello }` }],
+      });
+
+      const checkOperationsResp = await client.checkPersistedOperationTraffic({
+        fedGraphName,
+        namespace: 'default',
+        operationId: publishOperationsResp.operations[0].id,
+      });
+      expect(checkOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+    });
+
+    test('Should detect that the operation has traffic', async (testContext) => {
+      const { client, server } = await SetupTest({
+        dbname,
+        chClient,
+      });
+
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+        operations: [{ id: genID('hello'), contents: `query { hello }` }],
+      });
+
+      // Mock traffic data
+      (chClient.queryPromise as Mock).mockResolvedValue([{
+        TotalRequests: 1,
+      }]);
+
+      const checkOperationsResp = await client.checkPersistedOperationTraffic({
+        fedGraphName,
+        namespace: 'default',
+        operationId: publishOperationsResp.operations[0].id,
+      });
+
+      expect(checkOperationsResp.operation?.hasTraffic).toBe(true)
+    });
+
+    test('Should detect that the operation does NOT have traffic', async (testContext) => {
+      const { client, server } = await SetupTest({
+        dbname,
+        chClient,
+      });
+
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+        operations: [{ id: genID('hello'), contents: `query { hello }` }],
+      });
+
+      const checkOperationsResp = await client.checkPersistedOperationTraffic({
+        fedGraphName,
+        namespace: 'default',
+        operationId: publishOperationsResp.operations[0].id,
+      });
+
+      expect(checkOperationsResp.operation?.hasTraffic).toBe(false)
+    });
+  })
 });

@@ -1,3 +1,4 @@
+import { useReducer } from "react";
 import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
 import { CodeViewer } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
@@ -91,6 +92,7 @@ import {
   getPersistedOperations,
   publishPersistedOperations,
   retirePersistedOperation,
+  checkPersistedOperationTraffic,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import copy from "copy-to-clipboard";
 import { formatDistanceToNow } from "date-fns";
@@ -131,8 +133,10 @@ const getSnippets = ({
   const curl = `curl '${routingURL}' \\
     -H 'graphql-client-name: ${clientName}' \\
     -H 'Content-Type: application/json' \\
-    -d '{${operationNames.length > 1 ? `"operationName":"${operationNames[0]}",` : ""
-    }"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}${variablesString ? `,"variables": ${variablesString}` : ""
+    -d '{${
+      operationNames.length > 1 ? `"operationName":"${operationNames[0]}",` : ""
+    }"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}${
+      variablesString ? `,"variables": ${variablesString}` : ""
     }}'`;
 
   const js = `const url = '${routingURL}';
@@ -148,12 +152,13 @@ const body = {
       version: 1,
       sha256Hash: '${operationId}',
     },
-  }${variablesDeclaration.length > 0
+  }${
+    variablesDeclaration.length > 0
       ? `,
   variables: {
     ${variablesDeclaration}  },`
       : ""
-    }
+  }
 };
 
 fetch(url, {
@@ -166,6 +171,43 @@ fetch(url, {
   .catch(error => console.error('Error:', error));`;
 
   return { curl, js };
+};
+
+type RetirePersistedOperationState = {
+  hasTraffic: boolean;
+  id: string | null;
+  name: string | null;
+  show: boolean;
+};
+
+type RetirePersistedOperationAction =
+  | {
+      type: "retire-modal-hidden";
+    }
+  | {
+      type: "retire-modal-show";
+      id: string;
+      name: string;
+    }
+  | {
+      type: "retire-modal-show-with-traffic-warning";
+      id: string;
+      name: string;
+    };
+
+const retirePersistedOperationReducer = (
+  state: RetirePersistedOperationState,
+  action: RetirePersistedOperationAction,
+): RetirePersistedOperationState => {
+  switch (action.type) {
+    case "retire-modal-show":
+      return { ...state, id: action.id, name: action.name, hasTraffic: false, show: true };
+    case "retire-modal-show-with-traffic-warning":
+      return { ...state, id: action.id, name: action.name, hasTraffic: true, show: true };
+    case "retire-modal-hidden":
+    default:
+      return { ...state, id: null, name: null, hasTraffic: false, show: false };
+  }
 };
 
 const ClientOperations = ({
@@ -184,8 +226,15 @@ const ClientOperations = ({
   const clientId = searchParams.get("clientId");
   const clientName = searchParams.get("clientName");
   const graphContext = useContext(GraphContext);
-  const [persistedOperationIdToRetire, setPersistedOperationIdToRetire] =
-    useState<string | null>(null);
+  const [persistedOperationRetireState, dispatch] = useReducer(
+    retirePersistedOperationReducer,
+    {
+      id: null,
+      name: null,
+      hasTraffic: false,
+      show: false,
+    },
+  );
 
   const { data: sdlData } = useQuery(
     getFederatedGraphSDLByName,
@@ -226,7 +275,10 @@ const ClientOperations = ({
     },
   );
 
-  const { mutate, isPending } = useMutation(retirePersistedOperation, {
+  const {
+    mutate: mutateRetirePeristedOperation,
+    isPending: isRetirePersistedOperationPending,
+  } = useMutation(retirePersistedOperation, {
     onSuccess(data) {
       if (data.response?.code !== EnumStatusCode.OK) {
         toast({
@@ -237,9 +289,40 @@ const ClientOperations = ({
         return;
       }
 
+      dispatch({ type: "retire-modal-hidden" });
+      refetch();
       toast({
         title: "Operation retired successfully",
       });
+    },
+  });
+
+  const {
+    mutate: mutateCheckPersistedOperationTraffic,
+    isPending: isCheckPersistedOperationTrafficPending,
+  } = useMutation(checkPersistedOperationTraffic, {
+    onSuccess(data) {
+      if (
+        data.response?.code !== EnumStatusCode.OK ||
+        !data.operation?.operationId
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Could not retire the operation",
+          description: data.response?.details ?? "Please try again",
+        });
+        return;
+      }
+
+      if (data.operation?.hasTraffic) {
+        dispatch({
+          type: "retire-modal-show-with-traffic-warning",
+          id: data.operation.operationId,
+          name: data.operation.operationNames,
+        });
+      } else {
+        dispatch({ type: "retire-modal-show", id: data.operation.operationId, name: data.operation.operationNames });
+      }
     },
   });
 
@@ -385,36 +468,19 @@ const ClientOperations = ({
                                 variant="outline"
                                 size="icon"
                                 asChild
-                                disabled={isPending}
+                                disabled={
+                                  isCheckPersistedOperationTrafficPending ||
+                                  isRetirePersistedOperationPending
+                                }
                               >
                                 <TrashIcon
                                   height={20}
                                   onClick={() => {
-                                    mutate(
-                                      {
-                                        operationId: op.id,
-                                        namespace,
-                                        fedGraphName: slug,
-                                      },
-                                      {
-                                        onSuccess: (
-                                          { response },
-                                          variables,
-                                        ) => {
-                                          if (
-                                            response?.code ===
-                                            EnumStatusCode.WARN_DESTRUCTIVE_OPERATION
-                                          ) {
-                                            setPersistedOperationIdToRetire(
-                                              variables.operationId ?? null,
-                                            );
-                                            return;
-                                          } else {
-                                            refetch();
-                                          }
-                                        },
-                                      },
-                                    );
+                                    mutateCheckPersistedOperationTraffic({
+                                      operationId: op.id,
+                                      namespace,
+                                      fedGraphName: slug,
+                                    });
                                   }}
                                 />
                               </Button>
@@ -557,29 +623,21 @@ const ClientOperations = ({
         </SheetContent>
       </Sheet>
       <RetirePersistedOperationDialog
-        isOpen={Boolean(persistedOperationIdToRetire)}
-        operationId={persistedOperationIdToRetire ?? ""}
+        isOpen={persistedOperationRetireState.show}
+        operationName={persistedOperationRetireState.name ?? ""}
+        operationHasTraffic={Boolean(persistedOperationRetireState.hasTraffic)}
         onSubmitButtonClick={
-          persistedOperationIdToRetire
+          persistedOperationRetireState.id
             ? () => {
-              mutate(
-                {
-                  operationId: persistedOperationIdToRetire,
+                mutateRetirePeristedOperation({
+                  operationId: persistedOperationRetireState.id!,
                   namespace,
                   fedGraphName: slug,
-                  force: true,
-                },
-                {
-                  onSuccess: () => {
-                    setPersistedOperationIdToRetire(null);
-                    refetch();
-                  },
-                },
-              );
-            }
+                });
+              }
             : undefined
         }
-        onClose={() => setPersistedOperationIdToRetire(null)}
+        onClose={() => dispatch({ type: "retire-modal-hidden" })}
       />
     </>
   );

@@ -11,15 +11,18 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Alert } from "@/components/ui/alert";
 
 export const RetirePersistedOperationDialog = ({
   isOpen,
-  operationId,
+  operationName,
+  operationHasTraffic,
   onSubmitButtonClick,
   onClose,
 }: {
   isOpen: boolean;
-  operationId: string;
+  operationName: string;
+  operationHasTraffic: boolean;
   onSubmitButtonClick?: (event: SyntheticEvent<HTMLButtonElement>) => void;
   onClose?: () => void;
 }) => {
@@ -37,11 +40,23 @@ export const RetirePersistedOperationDialog = ({
           <DialogTitle>Retire persisted operation</DialogTitle>
         </DialogHeader>
 
+        {!operationHasTraffic && (
+          <Alert variant="warn">
+            If you are not sending us traffic data, we cannot guarantee that
+            this operation is not receiving traffic. If you are not sure, check
+            the metrics for this operation.
+          </Alert>
+        )}
+
         <div className="flex flex-col gap-y-2">
           <span className="text-sm">
-            Are you sure you want to delete this persisted operation? <br />
-            The operation <OperationLabel operationId={operationId} /> is
-            receiving traffic.
+            <br />
+            {operationHasTraffic ? (
+              <>
+                The operation <OperationLabel name={operationName} /> is
+                receiving traffic.
+              </>
+            ) : <>Are you sure you want to persisted operation <OperationLabel name={operationName} />?</>}
           </span>
         </div>
         <Button
@@ -57,13 +72,13 @@ export const RetirePersistedOperationDialog = ({
   );
 };
 
-const OperationLabel = ({ operationId }: { operationId: string }) => (
+const OperationLabel = ({ name }: { name: string }) => (
   <Tooltip>
     <TooltipTrigger asChild>
       <code className="inline-block max-w-[120px] cursor-pointer overflow-hidden text-ellipsis align-middle">
-        {operationId}
+        {name}
       </code>
     </TooltipTrigger>
-    <TooltipContent>{operationId}</TooltipContent>
+    <TooltipContent>{name}</TooltipContent>
   </Tooltip>
 );

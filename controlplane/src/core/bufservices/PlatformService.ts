@@ -118,6 +118,7 @@ import { getClients } from './persisted-operation/getClients.js';
 import { getPersistedOperations } from './persisted-operation/getPersistedOperations.js';
 import { publishPersistedOperations } from './persisted-operation/publishPersistedOperations.js';
 import { retirePersistedOperation } from './persisted-operation/retirePersistedOperation.js';
+import { checkPersistedOperationTraffic } from './persisted-operation/check-persisted-operation-traffic.js';
 import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
 import { getPlaygroundScripts } from './playground/getPlaygroundScripts.js';
@@ -426,6 +427,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     publishPersistedOperations: (req, ctx) => {
       return publishPersistedOperations(opts, req, ctx);
+    },
+
+    checkPersistedOperationTraffic: (req, ctx) => {
+      return checkPersistedOperationTraffic(opts, req, ctx);
     },
 
     retirePersistedOperation: (req, ctx) => {
