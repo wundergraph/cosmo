@@ -22,12 +22,12 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/astjson v1.0.0
+	github.com/wundergraph/astjson v1.1.0
 	github.com/wundergraph/cosmo/demo v0.0.0-20260213130455-6e3277e7b850
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
 	github.com/wundergraph/cosmo/router v0.0.0-20260213130455-6e3277e7b850
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.251
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.257
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/sdk v1.36.0
 	go.opentelemetry.io/otel/sdk/metric v1.36.0

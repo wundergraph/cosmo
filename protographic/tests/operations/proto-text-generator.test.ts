@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import * as protobuf from 'protobufjs';
-import { rootToProtoText, serviceToProtoText, messageToProtoText, enumToProtoText, formatField } from '../../src';
-import { expectValidProto } from '../util';
+import { rootToProtoText, serviceToProtoText, messageToProtoText, enumToProtoText, formatField } from '../../src/index.js';
+import { expectValidProto } from '../util.js';
 
 /**
  * Extended Method interface that includes custom properties
