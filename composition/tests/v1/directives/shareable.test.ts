@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
+  externalKeyFieldOnNonExtensionEntityError,
   FieldData,
   invalidFieldShareabilityError,
   ObjectDefinitionData,
@@ -12,6 +13,7 @@ import {
   federateSubgraphsFailure,
   federateSubgraphsSuccess,
   normalizeString,
+  normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
@@ -310,69 +312,11 @@ describe('@shareable directive tests', () => {
     );
   });
 
-  test('that an @external key field does not contribute to @shareable errors #1.1', () => {
-    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphG, subgraphH], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-      normalizeString(
-        SCHEMA_QUERY_DEFINITION +
-          `
-        type Entity {
-          field: String!
-          id: ID!
-          name: String!
-        }
-        
-        type Query {
-          entities: [Entity!]!
-        }
-        `,
-      ),
-    );
-  });
-
-  test('that an @external key field does not contribute to @shareable errors #1.2', () => {
-    const { federatedGraphSchema } = federateSubgraphsSuccess([subgraphH, subgraphG], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
-      normalizeString(
-        SCHEMA_QUERY_DEFINITION +
-          `
-        type Entity {
-          field: String!
-          id: ID!
-          name: String!
-        }
-        
-        type Query {
-          entities: [Entity!]!
-        }
-        `,
-      ),
-    );
-  });
-
-  test('that an @external key field does not contribute to @shareable errors #1.3', () => {
-    const result = federateSubgraphsFailure([subgraphG, subgraphH, subgraphI], ROUTER_COMPATIBILITY_VERSION_ONE);
-    expect(result.success).toBe(false);
-    expect(result.errors).toHaveLength(1);
-    expect(result.errors[0]).toStrictEqual(
-      invalidFieldShareabilityError(
-        {
-          name: 'Entity',
-          fieldDataByName: new Map<string, FieldData>([
-            [
-              'name',
-              {
-                isShareableBySubgraphName: new Map<string, boolean>([
-                  ['subgraph-g', false],
-                  ['subgraph-h', true],
-                  ['subgraph-i', false],
-                ]),
-              } as FieldData,
-            ],
-          ]),
-        } as ObjectDefinitionData,
-        new Set<string>(['id', 'name', 'field']),
-      ),
+  test('that V2 @external key fields on non-extension entities produce normalization errors', () => {
+    const { errors } = normalizeSubgraphFailure(subgraphH, ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toStrictEqual(
+      externalKeyFieldOnNonExtensionEntityError('Entity', ['Entity.name'], subgraphH.name),
     );
   });
 });
@@ -555,14 +499,3 @@ const subgraphH: Subgraph = {
   `),
 };
 
-const subgraphI: Subgraph = {
-  name: 'subgraph-i',
-  url: '',
-  definitions: parse(`
-    type Entity @key(fields: "id") {
-      id: ID!
-      name: String!
-      field: String! @shareable
-    }
-  `),
-};

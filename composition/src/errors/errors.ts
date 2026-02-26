@@ -1554,6 +1554,24 @@ export function invalidExternalDirectiveError(fieldCoords: string): Error {
   );
 }
 
+export function externalKeyFieldOnNonExtensionEntityError(
+  entityName: string,
+  fieldCoordinates: Array<string>,
+  subgraphName: string,
+): Error {
+  return new Error(
+    `The entity "${entityName}" defined in subgraph "${subgraphName}" has the following "@key" field` +
+      (fieldCoordinates.length > 1 ? 's' : '') +
+      ` that ` +
+      (fieldCoordinates.length > 1 ? 'are' : 'is') +
+      ` declared "@external":\n "` +
+      fieldCoordinates.join(QUOTATION_JOIN) +
+      `"\n` +
+      `In Federation V2, "@key" fields on non-extension entity types cannot be declared "@external"` +
+      ` because they must be resolvable by the subgraph in which the entity is defined.`,
+  );
+}
+
 export function configureDescriptionNoDescriptionError(typeString: string, typeName: string): Error {
   return new Error(
     `The "@openfed__configureDescription" directive defined on ${typeString} "${typeName}" is invalid` +

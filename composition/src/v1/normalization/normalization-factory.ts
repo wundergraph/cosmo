@@ -89,6 +89,7 @@ import {
   equivalentSourceAndTargetOverrideErrorMessage,
   expectedEntityError,
   externalInterfaceFieldsError,
+  externalKeyFieldOnNonExtensionEntityError,
   fieldAlreadyProvidedErrorMessage,
   incompatibleInputValueDefaultValueTypeError,
   incompatibleTypeWithProvidesErrorMessage,
@@ -3324,6 +3325,8 @@ export class NormalizationFactory {
         continue;
       }
       const nf = this;
+      // Collect external key field coordinates on non-extension V2 entities to produce errors.
+      const externalNonExtensionKeyFieldCoords = new Set<string>();
       for (const keyFieldSetData of keyFieldSetDataByFieldSet.values()) {
         const parentDatas: CompositeOutputData[] = [entityParentData];
         // Entity extension fields are effectively never @external, so propagate a warning.
@@ -3378,18 +3381,21 @@ export class NormalizationFactory {
                 externalFieldData.isDefinedExternal &&
                 !externalFieldData.isUnconditionallyProvided
               ) {
-                /*
-                 * The key field is unconditionally provided if all the following are true:
-                 * 1. The root entity is an extension type.
-                 * 2. The field is also a key field for the parent entity.
-                 */
                 if (entityParentData.extensionType !== ExtensionType.NONE) {
+                  /*
+                   * The key field is unconditionally provided if all the following are true:
+                   * 1. The root entity is an extension type.
+                   * 2. The field is also a key field for the parent entity.
+                   */
                   externalFieldData.isUnconditionallyProvided = true;
                   getValueOrDefault(
                     externalExtensionFieldCoordsByRawFieldSet,
                     keyFieldSetData.rawFieldSet,
                     () => new Set<string>(),
                   ).add(fieldCoords);
+                } else if (nf.isSubgraphVersionTwo && parentTypeName === entityParentData.name) {
+                  // In Federation V2, direct key fields on non-extension entities cannot be declared @external.
+                  externalNonExtensionKeyFieldCoords.add(fieldCoords);
                 }
               }
               getValueOrDefault(nf.keyFieldNamesByParentTypeName, parentTypeName, () => new Set<string>()).add(
@@ -3455,6 +3461,15 @@ export class NormalizationFactory {
             ),
           );
         }
+      }
+      if (externalNonExtensionKeyFieldCoords.size > 0) {
+        this.errors.push(
+          externalKeyFieldOnNonExtensionEntityError(
+            entityParentData.name,
+            [...externalNonExtensionKeyFieldCoords],
+            this.subgraphName,
+          ),
+        );
       }
     }
     for (const invalidTypeName of invalidTypeNames) {

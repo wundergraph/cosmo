@@ -6,6 +6,7 @@ import {
   externalEntityExtensionKeyFieldWarning,
   externalInterfaceFieldsError,
   externalInterfaceFieldsWarning,
+  externalKeyFieldOnNonExtensionEntityError,
   FIRST_ORDINAL,
   invalidDirectiveError,
   invalidExternalDirectiveError,
@@ -284,51 +285,20 @@ describe('@external directive tests', () => {
       );
     });
 
-    test('that entities with all @external key fields generate the correct configuration data', () => {
-      const result = normalizeSubgraphSuccess(subgraphAD, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
-        new Map<TypeName, ConfigurationData>([
-          [
-            'Entity',
-            {
-              externalFieldNames: new Set<string>(['id', 'object']),
-              fieldNames: new Set<string>(),
-              isRootNode: true,
-              keys: [
-                {
-                  fieldName: '',
-                  selectionSet: 'id object { id }',
-                },
-              ],
-              typeName: 'Entity',
-            },
-          ],
-          [
-            'Object',
-            {
-              externalFieldNames: new Set<string>(['id']),
-              fieldNames: new Set<string>(),
-              isRootNode: true,
-              keys: [
-                {
-                  fieldName: '',
-                  selectionSet: 'id',
-                },
-              ],
-              typeName: 'Object',
-            },
-          ],
-          [
-            'Query',
-            {
-              fieldNames: new Set<string>(['entities']),
-              isRootNode: true,
-              typeName: 'Query',
-            },
-          ],
-        ]),
+    test('that an error is returned if V2 non-extension entities have @external key fields', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphAD, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(2);
+      expect(errors[0]).toStrictEqual(
+        externalKeyFieldOnNonExtensionEntityError('Entity', ['Entity.id', 'Entity.object'], subgraphAD.name),
       );
+      expect(errors[1]).toStrictEqual(
+        externalKeyFieldOnNonExtensionEntityError('Object', ['Object.id'], subgraphAD.name),
+      );
+    });
+
+    test('that V1 non-extension entities with @external key fields pass normalization', () => {
+      const result = normalizeSubgraphSuccess(subgraphAE, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(result.success).toBe(true);
       expect(result.warnings).toHaveLength(0);
     });
   });
@@ -1145,17 +1115,11 @@ describe('@external directive tests', () => {
       );
     });
 
-    test('that errors are returned for unique direct @external key fields on V2 entities', () => {
-      const { errors } = federateSubgraphsFailure([subgraphAA], ROUTER_COMPATIBILITY_VERSION_ONE);
+    test('that errors are returned for direct @external key fields on V2 non-extension entities', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphAA, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
-        allExternalFieldInstancesError(
-          'Entity',
-          new Map<string, Array<string>>([
-            ['id', [subgraphAA.name]],
-            ['name', [subgraphAA.name]],
-          ]),
-        ),
+        externalKeyFieldOnNonExtensionEntityError('Entity', ['Entity.id', 'Entity.name'], subgraphAA.name),
       );
     });
 
@@ -2021,14 +1985,32 @@ const subgraphAD: Subgraph = {
     type Query @shareable {
       entities: [Entity!]!
     }
-    
+
     type Entity @key(fields: "id object { id }") {
       id: ID! @external
       object: Object! @external
     }
-    
+
     type Object @key(fields: "id") {
       id: ID! @external
+    }
+  `),
+};
+
+// V1 subgraph (no V2 directives) with a non-extension entity that has an @external key field.
+// In V1, @external rules are lenient, so this should normalize successfully.
+const subgraphAE: Subgraph = {
+  name: 'subgraph-ae',
+  url: '',
+  definitions: parse(`
+    type Query {
+      entity: Entity!
+    }
+
+    type Entity @key(fields: "id name") {
+      id: ID!
+      name: String! @external
+      field: String!
     }
   `),
 };
