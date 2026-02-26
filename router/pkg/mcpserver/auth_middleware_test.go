@@ -60,7 +60,7 @@ func TestNewMCPAuthMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(tt.decoder, tt.enabled, "http://localhost:5025/.well-known/oauth-protected-resource/mcp", map[string][]string{})
+			middleware, err := NewMCPAuthMiddleware(tt.decoder, tt.enabled, "http://localhost:5025/.well-known/oauth-protected-resource/mcp", MCPScopeConfig{}, "")
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, middleware)
@@ -165,15 +165,15 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 
 	tests := []struct {
 		name                      string
-		scopesRequired            map[string][]string
+		scopes                    MCPScopeConfig
 		setupDecoder              func() *mockTokenDecoder
 		setupRequest              func() *http.Request
 		wantStatusCode            int
 		wantWWWAuthenticatePrefix string
 	}{
 		{
-			name:           "valid token without scopes",
-			scopesRequired: map[string][]string{},
+			name:   "valid token without scopes",
+			scopes: MCPScopeConfig{},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
 					decodeFunc: func(token string) (authentication.Claims, error) {
@@ -192,8 +192,8 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 			wantStatusCode: 200,
 		},
 		{
-			name:           "missing auth header - 401 includes init scopes",
-			scopesRequired: map[string][]string{"initialize": {"mcp:connect"}},
+			name:   "missing auth header - 401 includes init scopes",
+			scopes: MCPScopeConfig{Initialize: []string{"mcp:connect"}},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
 					decodeFunc: func(token string) (authentication.Claims, error) {
@@ -209,8 +209,8 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 			wantWWWAuthenticatePrefix: `Bearer realm="mcp", scope="mcp:connect", resource_metadata="` + testMetadataURL + `"`,
 		},
 		{
-			name:           "missing auth header - 401 without scopes when none configured",
-			scopesRequired: map[string][]string{},
+			name:   "missing auth header - 401 without scopes when none configured",
+			scopes: MCPScopeConfig{},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
 					decodeFunc: func(token string) (authentication.Claims, error) {
@@ -226,8 +226,8 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 			wantWWWAuthenticatePrefix: `Bearer realm="mcp", resource_metadata="` + testMetadataURL + `"`,
 		},
 		{
-			name:           "invalid token - 401 includes init scopes",
-			scopesRequired: map[string][]string{"initialize": {"mcp:connect"}},
+			name:   "invalid token - 401 includes init scopes",
+			scopes: MCPScopeConfig{Initialize: []string{"mcp:connect"}},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
 					decodeFunc: func(token string) (authentication.Claims, error) {
@@ -244,10 +244,8 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 			wantWWWAuthenticatePrefix: `Bearer realm="mcp", scope="mcp:connect", resource_metadata="` + testMetadataURL + `"`,
 		},
 		{
-			name: "insufficient init scopes - 403 includes cumulative scopes",
-			scopesRequired: map[string][]string{
-				"initialize": {"mcp:connect"},
-			},
+			name:   "insufficient init scopes - 403 required_and_existing includes token scopes",
+			scopes: MCPScopeConfig{Initialize: []string{"mcp:connect"}},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
 					decodeFunc: func(token string) (authentication.Claims, error) {
@@ -267,12 +265,12 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 				return req
 			},
 			wantStatusCode:            403,
-			wantWWWAuthenticatePrefix: `Bearer error="insufficient_scope", scope="mcp:connect"`,
+			wantWWWAuthenticatePrefix: `Bearer error="insufficient_scope", scope="mcp:tools:read mcp:connect"`,
 		},
 		{
 			name: "valid token with all required scopes",
-			scopesRequired: map[string][]string{
-				"initialize": {"mcp:connect"},
+			scopes: MCPScopeConfig{
+				Initialize: []string{"mcp:connect"},
 			},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
@@ -299,7 +297,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			decoder := tt.setupDecoder()
-			middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, tt.scopesRequired)
+			middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, tt.scopes, "required_and_existing")
 			assert.NoError(t, err)
 
 			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -348,56 +346,78 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 		},
 	}
 
-	scopesRequired := map[string][]string{
-		"initialize":                  {"mcp:connect"},
-		"tools/list":                  {"mcp:tools:read"},
-		"tools/call/execute_graphql":  {"mcp:tools:write"},
+	scopes := MCPScopeConfig{
+		Initialize: []string{"mcp:connect"},
+		ToolsList:  []string{"mcp:tools:read"},
+		ToolsCall:  []string{"mcp:tools:write"},
 	}
 
 	tests := []struct {
 		name           string
 		token          string
 		body           string
+		challengeMode  string
 		wantStatusCode int
 		wantScope      string // expected scope value in WWW-Authenticate, empty if not checked
 	}{
 		{
-			name:           "tools/list with insufficient scopes returns 403 with operation scopes only",
+			name:           "tools/list with insufficient scopes - required_only returns operation scopes only",
 			token:          "connect-only",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
+			challengeMode:  "required_only",
 			wantStatusCode: 403,
 			wantScope:      `scope="mcp:tools:read"`,
+		},
+		{
+			name:           "tools/list with insufficient scopes - required_and_existing includes token scopes",
+			token:          "connect-only",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
+			challengeMode:  "required_and_existing",
+			wantStatusCode: 403,
+			wantScope:      `scope="mcp:connect mcp:tools:read"`,
 		},
 		{
 			name:           "tools/list with sufficient scopes succeeds",
 			token:          "connect-and-read",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
+			challengeMode:  "required_only",
 			wantStatusCode: 200,
 		},
 		{
-			name:           "tools/call with per-tool scope check returns 403 with operation scopes only",
+			name:           "tools/call with insufficient scopes - required_only returns operation scopes only",
 			token:          "connect-and-read",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
+			challengeMode:  "required_only",
 			wantStatusCode: 403,
 			wantScope:      `scope="mcp:tools:write"`,
+		},
+		{
+			name:           "tools/call with insufficient scopes - required_and_existing includes token scopes",
+			token:          "connect-and-read",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
+			challengeMode:  "required_and_existing",
+			wantStatusCode: 403,
+			wantScope:      `scope="mcp:connect mcp:tools:read mcp:tools:write"`,
 		},
 		{
 			name:           "tools/call with all scopes succeeds",
 			token:          "all-scopes",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
+			challengeMode:  "required_only",
 			wantStatusCode: 200,
 		},
 		{
 			name:           "unknown method with no scope requirements succeeds",
 			token:          "connect-only",
 			body:           `{"jsonrpc":"2.0","id":1,"method":"ping"}`,
+			challengeMode:  "required_only",
 			wantStatusCode: 200,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(validDecoder, true, testMetadataURL, scopesRequired)
+			middleware, err := NewMCPAuthMiddleware(validDecoder, true, testMetadataURL, scopes, tt.challengeMode)
 			assert.NoError(t, err)
 
 			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -418,4 +438,3 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 		})
 	}
 }
-
