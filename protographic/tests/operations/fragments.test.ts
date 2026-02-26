@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { compileOperationsToProto } from '../../src';
+import { compileOperationsToProto } from '../../src/index.js';
 import { expectValidProto } from '../util.js';
 
 describe('Fragment Support', () => {

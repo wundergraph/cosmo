@@ -12,29 +12,8 @@ import {
   getNamedType,
   GraphQLScalarType,
 } from 'graphql';
+import { SCALAR_TYPE_MAP, SCALAR_WRAPPER_TYPE_MAP } from '../types.js';
 import { unwrapNonNullType, isNestedListType, calculateNestingLevel } from './list-type-utils.js';
-
-/**
- * Maps GraphQL scalar types to Protocol Buffer types
- */
-const SCALAR_TYPE_MAP: Record<string, string> = {
-  ID: 'string',
-  String: 'string',
-  Int: 'int32',
-  Float: 'double',
-  Boolean: 'bool',
-};
-
-/**
- * Maps GraphQL scalar types to Protocol Buffer wrapper types for nullable fields
- */
-const SCALAR_WRAPPER_TYPE_MAP: Record<string, string> = {
-  ID: 'google.protobuf.StringValue',
-  String: 'google.protobuf.StringValue',
-  Int: 'google.protobuf.Int32Value',
-  Float: 'google.protobuf.DoubleValue',
-  Boolean: 'google.protobuf.BoolValue',
-};
 
 /**
  * Represents the proto type information for a GraphQL type
@@ -232,7 +211,7 @@ function handleListType(graphqlType: GraphQLType, options?: TypeMapperOptions): 
       isWrapper: false,
       isScalar: false,
       requiresNestedWrapper: true,
-      nestingLevel: nestingLevel,
+      nestingLevel,
     };
   }
 
@@ -305,5 +284,5 @@ export function getRequiredImports(types: GraphQLType[], options?: TypeMapperOpt
     }
   }
 
-  return Array.from(imports);
+  return [...imports];
 }

@@ -215,14 +215,20 @@ export function assignFieldNumbersFromLockData(
   fieldNumberManager?: FieldNumberManager,
 ): void {
   const lockData = fieldNumberManager?.getLockManager()?.getLockData();
-  if (!lockData || !fieldNumberManager) return;
+  if (!lockData || !fieldNumberManager) {
+    return;
+  }
 
   const messageData = lockData.messages[messageName];
-  if (!messageData) return;
+  if (!messageData) {
+    return;
+  }
 
   for (const protoFieldName of fieldNames) {
     const fieldNumber = messageData.fields[protoFieldName];
-    if (!fieldNumber) continue;
+    if (!fieldNumber) {
+      continue;
+    }
 
     fieldNumberManager.assignFieldNumber(messageName, protoFieldName, fieldNumber);
   }

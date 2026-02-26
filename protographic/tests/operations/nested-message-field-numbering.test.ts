@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { compileOperationsToProto } from '../../src';
-import { expectValidProto } from '../util';
+import { compileOperationsToProto } from '../../src/index.js';
+import { expectValidProto } from '../util.js';
 
 describe('Nested Message Field Numbering', () => {
   test('should assign field numbers starting from 1 in a simple nested message', () => {
