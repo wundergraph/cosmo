@@ -254,6 +254,11 @@ export function buildInputObjectMessage(
 /**
  * Builds an enum type from a GraphQL enum type
  *
+ * An auto-generated UNSPECIFIED value is added at position 0 (required by proto3).
+ * If the GraphQL enum contains a value that maps to the same proto name (e.g.
+ * `UNSPECIFIED` in enum `State` producing `STATE_UNSPECIFIED`), it is deduplicated
+ * into the auto-generated zero-position entry rather than being assigned a separate number.
+ *
  * @param enumType - The GraphQL enum type
  * @param options - Optional configuration
  * @returns A protobuf Enum object
@@ -271,6 +276,12 @@ export function buildEnumType(enumType: GraphQLEnumType, options?: RequestBuilde
   for (const enumValue of enumValues) {
     // Prefix enum values with the enum type name to avoid collisions
     const protoEnumValue = graphqlEnumValueToProtoEnumValue(enumType.name, enumValue.name);
+
+    // Skip if this collides with the auto-generated UNSPECIFIED value at position 0
+    if (protoEnumValue === unspecifiedValue) {
+      continue;
+    }
+
     protoEnum.add(protoEnumValue, enumNumber);
 
     // Note: protobufjs doesn't have direct comment support for enum values
