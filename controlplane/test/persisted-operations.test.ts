@@ -159,20 +159,16 @@ describe('Persisted operations', (ctx) => {
       contents: `query { hello }`,
     }));
 
-    let error: unknown;
-    try {
-      await client.publishPersistedOperations({
-        fedGraphName,
-        namespace: 'default',
-        clientName: 'test-client',
-        operations,
-      });
-    } catch (err) {
-      error = err;
-    }
+    const overLimitResp = await client.publishPersistedOperations({
+      fedGraphName,
+      namespace: 'default',
+      clientName: 'test-client',
+      operations,
+    });
 
-    expect(error).toBeInstanceOf(ConnectError);
-    expect(error).toMatchObject({ code: Code.ResourceExhausted });
+    expect(overLimitResp.response?.code).toBe(EnumStatusCode.ERR);
+    expect(overLimitResp.response?.details).toContain('Payload Too Large: max 100 operations per request');
+    expect(overLimitResp.operations).toEqual([]);
   });
 
   test('Should not publish persisted operations with an invalid federated graph name', async (testContext) => {
