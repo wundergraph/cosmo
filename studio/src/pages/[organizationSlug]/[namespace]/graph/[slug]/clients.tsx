@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { RetirePersistedOperationDialog } from "@/components/clients/retire-persisted-operation-dialog";
 import { CLI } from "@/components/ui/cli";
 import {
   Dialog,
@@ -130,10 +131,8 @@ const getSnippets = ({
   const curl = `curl '${routingURL}' \\
     -H 'graphql-client-name: ${clientName}' \\
     -H 'Content-Type: application/json' \\
-    -d '{${
-      operationNames.length > 1 ? `"operationName":"${operationNames[0]}",` : ""
-    }"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}${
-      variablesString ? `,"variables": ${variablesString}` : ""
+    -d '{${operationNames.length > 1 ? `"operationName":"${operationNames[0]}",` : ""
+    }"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}${variablesString ? `,"variables": ${variablesString}` : ""
     }}'`;
 
   const js = `const url = '${routingURL}';
@@ -149,13 +148,12 @@ const body = {
       version: 1,
       sha256Hash: '${operationId}',
     },
-  }${
-    variablesDeclaration.length > 0
+  }${variablesDeclaration.length > 0
       ? `,
   variables: {
     ${variablesDeclaration}  },`
       : ""
-  }
+    }
 };
 
 fetch(url, {
@@ -170,16 +168,24 @@ fetch(url, {
   return { curl, js };
 };
 
-const ClientOperations = () => {
+const ClientOperations = ({
+  isOrganizationAdminOrDeveloper,
+}: {
+  isOrganizationAdminOrDeveloper: boolean;
+}) => {
   const router = useRouter();
   const slug = router.query.slug as string;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = router.query.organizationSlug as string;
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const clientId = searchParams.get("clientId");
   const clientName = searchParams.get("clientName");
   const graphContext = useContext(GraphContext);
+  const [persistedOperationIdToRetire, setPersistedOperationIdToRetire] =
+    useState<string | null>(null);
 
   const { data: sdlData } = useQuery(
     getFederatedGraphSDLByName,
@@ -235,7 +241,7 @@ const ClientOperations = () => {
         title: "Operation retired successfully",
       });
     },
-  })
+  });
 
   let content: React.ReactNode;
 
@@ -266,7 +272,9 @@ const ClientOperations = () => {
               <a
                 target="_blank"
                 rel="noreferrer"
-                href={docsBaseURL + "/router/persisted-queries/persisted-operations"}
+                href={
+                  docsBaseURL + "/router/persisted-queries/persisted-operations"
+                }
                 className="text-primary"
               >
                 Learn more.
@@ -370,22 +378,52 @@ const ClientOperations = () => {
                         </p>
                       )}
                       <div className="flex items-center gap-x-2">
-                        {/* TODO: only for authorized users with permission to drop the operation */}
-                        <Tooltip delayDuration={100}>
-                          <TooltipTrigger>
-                            <Button variant="outline" size="icon" asChild disabled={isPending}>
-                              <TrashIcon height={20} onClick={() => {
-                                // TODO: display warning if mutation is used
-                                mutate({
-                                  operationId: op.id,
-                                  namespace,
-                                  fedGraphName: slug,
-                                })
-                              }} />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Retire the operation</TooltipContent>
-                        </Tooltip>
+                        {isOrganizationAdminOrDeveloper && (
+                          <Tooltip delayDuration={100}>
+                            <TooltipTrigger>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                asChild
+                                disabled={isPending}
+                              >
+                                <TrashIcon
+                                  height={20}
+                                  onClick={() => {
+                                    mutate(
+                                      {
+                                        operationId: op.id,
+                                        namespace,
+                                        fedGraphName: slug,
+                                      },
+                                      {
+                                        onSuccess: (
+                                          { response },
+                                          variables,
+                                        ) => {
+                                          if (
+                                            response?.code ===
+                                            EnumStatusCode.WARN_DESTRUCTIVE_OPERATION
+                                          ) {
+                                            setPersistedOperationIdToRetire(
+                                              variables.operationId ?? null,
+                                            );
+                                            return;
+                                          } else {
+                                            refetch();
+                                          }
+                                        },
+                                      },
+                                    );
+                                  }}
+                                />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Retire the operation
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip delayDuration={100}>
                           <TooltipTrigger>
                             <Button variant="outline" size="icon" asChild>
@@ -491,32 +529,59 @@ const ClientOperations = () => {
   }
 
   return (
-    <Sheet
-      modal
-      open={!!clientId}
-      onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          const newQuery = { ...router.query };
-          delete newQuery["clientId"];
-          delete newQuery["clientName"];
-          router.replace({
-            query: newQuery,
-          });
+    <>
+      <Sheet
+        modal
+        open={!!clientId}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            const newQuery = { ...router.query };
+            delete newQuery["clientId"];
+            delete newQuery["clientName"];
+            router.replace({
+              query: newQuery,
+            });
+          }
+        }}
+      >
+        <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
+          <SheetHeader className="mb-12">
+            <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
+              Persisted Operations in{" "}
+              <code className="break-all rounded bg-secondary px-1.5 text-left text-secondary-foreground">
+                {clientName}
+              </code>
+            </SheetTitle>
+          </SheetHeader>
+          {content}
+        </SheetContent>
+      </Sheet>
+      <RetirePersistedOperationDialog
+        isOpen={Boolean(persistedOperationIdToRetire)}
+        operationId={persistedOperationIdToRetire ?? ""}
+        onSubmitButtonClick={
+          persistedOperationIdToRetire
+            ? () => {
+              mutate(
+                {
+                  operationId: persistedOperationIdToRetire,
+                  namespace,
+                  fedGraphName: slug,
+                  force: true,
+                },
+                {
+                  onSuccess: () => {
+                    setPersistedOperationIdToRetire(null);
+                    refetch();
+                  },
+                },
+              );
+            }
+            : undefined
         }
-      }}
-    >
-      <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
-        <SheetHeader className="mb-12">
-          <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
-            Persisted Operations in{" "}
-            <code className="break-all rounded bg-secondary px-1.5 text-left text-secondary-foreground">
-              {clientName}
-            </code>
-          </SheetTitle>
-        </SheetHeader>
-        {content}
-      </SheetContent>
-    </Sheet>
+        onClose={() => setPersistedOperationIdToRetire(null)}
+      />
+    </>
   );
 };
 
@@ -529,7 +594,9 @@ type Input = z.infer<typeof FormSchema>;
 const CreateClient = ({ refresh }: { refresh: () => void }) => {
   const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.slug as string;
   const [isOpen, setIsOpen] = useState(false);
 
@@ -569,12 +636,14 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
     });
   };
 
+  const isOrganizationAdminOrDeveloper = checkUserAccess({
+    rolesToBe: ["organization-admin", "organization-developer"],
+  });
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button
-          disabled={!checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })}
-        >
+        <Button disabled={!isOrganizationAdminOrDeveloper}>
           <PlusIcon className="mr-2" />
           Create Client
         </Button>
@@ -622,7 +691,9 @@ const ClientsPage: NextPageWithLayout = () => {
   const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.slug as string;
 
   const constructLink = (name: string, mode: "metrics" | "traces") => {
@@ -655,6 +726,10 @@ const ClientsPage: NextPageWithLayout = () => {
     namespace,
   });
 
+  const isOrganizationAdminOrDeveloper = checkUserAccess({
+    rolesToBe: ["organization-admin", "organization-developer"],
+  });
+
   if (!data) return null;
 
   if (!data || error || data.response?.code !== EnumStatusCode.OK)
@@ -682,7 +757,9 @@ const ClientsPage: NextPageWithLayout = () => {
               <a
                 target="_blank"
                 rel="noreferrer"
-                href={docsBaseURL + "/router/persisted-queries/persisted-operations"}
+                href={
+                  docsBaseURL + "/router/persisted-queries/persisted-operations"
+                }
                 className="text-primary"
               >
                 Learn more.
@@ -698,7 +775,9 @@ const ClientsPage: NextPageWithLayout = () => {
               Create and view clients to which you can publish persisted
               operations.{" "}
               <Link
-                href={docsBaseURL + "/router/persisted-queries/persisted-operations"}
+                href={
+                  docsBaseURL + "/router/persisted-queries/persisted-operations"
+                }
                 className="text-primary"
                 target="_blank"
                 rel="noreferrer"
@@ -706,7 +785,7 @@ const ClientsPage: NextPageWithLayout = () => {
                 Learn more
               </Link>
             </p>
-            {checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) && (
+            {isOrganizationAdminOrDeveloper && (
               <CreateClient refresh={() => refetch()} />
             )}
           </div>
@@ -811,7 +890,9 @@ const ClientsPage: NextPageWithLayout = () => {
           </TableWrapper>
         </>
       )}
-      <ClientOperations />
+      <ClientOperations
+        isOrganizationAdminOrDeveloper={isOrganizationAdminOrDeveloper}
+      />
     </div>
   );
 };
