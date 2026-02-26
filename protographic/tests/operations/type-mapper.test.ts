@@ -17,7 +17,7 @@ import {
   isGraphQLScalarType,
   requiresWrapperType,
   getRequiredImports,
-} from '../../src';
+} from '../../src/index.js';
 
 describe('Type Mapper', () => {
   describe('mapGraphQLTypeToProto', () => {
@@ -410,7 +410,7 @@ describe('Type Mapper', () => {
     test('should return unique imports', () => {
       const imports = getRequiredImports([GraphQLString, GraphQLInt, GraphQLBoolean]);
 
-      const uniqueImports = Array.from(new Set(imports));
+      const uniqueImports = [...new Set(imports)];
       expect(imports.length).toBe(uniqueImports.length);
     });
   });

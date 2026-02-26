@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { compileOperationsToProto } from '../../src';
-import { expectValidProto } from '../util';
+import { compileOperationsToProto } from '../../src/index.js';
+import { expectValidProto } from '../util.js';
 
 describe('Enum Support', () => {
   describe('Enums in Query Variables', () => {
@@ -1021,7 +1021,7 @@ describe('Enum Support', () => {
       expectValidProto(proto);
 
       // Count occurrences of "enum UserStatus" - should only appear once
-      const enumDeclarations = proto.match(/enum UserStatus \{/g);
+      const enumDeclarations = proto.match(/enum UserStatus {/g);
       expect(enumDeclarations).toHaveLength(1);
 
       expect(proto).toMatchInlineSnapshot(`
@@ -1103,7 +1103,7 @@ describe('Enum Support', () => {
       expectValidProto(proto);
 
       // Count occurrences of "enum Visibility" - should only appear once
-      const enumDeclarations = proto.match(/enum Visibility \{/g);
+      const enumDeclarations = proto.match(/enum Visibility {/g);
       expect(enumDeclarations).toHaveLength(1);
 
       expect(proto).toMatchInlineSnapshot(`

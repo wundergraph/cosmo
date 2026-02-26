@@ -14,6 +14,6 @@ export interface ProtoFieldOption {
  * Field number 50001 is in the user-defined extension range.
  */
 export const GRAPHQL_VARIABLE_NAME: ProtoFieldOption = {
-  fieldNumber: 50001,
+  fieldNumber: 50_001,
   optionName: '(graphql_variable_name)',
 } as const;
