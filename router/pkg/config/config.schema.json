@@ -2526,6 +2526,25 @@
             }
           }
         }
+      },
+      "if": {
+        "properties": {
+          "oauth": {
+            "properties": {
+              "enabled": { "const": true }
+            },
+            "required": ["enabled"]
+          }
+        },
+        "required": ["oauth"]
+      },
+      "then": {
+        "properties": {
+          "server": {
+            "required": ["base_url"]
+          }
+        },
+        "required": ["server"]
       }
     },
     "connect_rpc": {

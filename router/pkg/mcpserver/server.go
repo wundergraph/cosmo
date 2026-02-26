@@ -217,6 +217,10 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 			cancel()
 			return nil, fmt.Errorf("MCP OAuth is enabled but no JWKS providers are configured; this would start an unprotected endpoint")
 		}
+		if options.ServerBaseURL == "" {
+			cancel()
+			return nil, fmt.Errorf("MCP OAuth is enabled but server base_url is not configured; it is required for OAuth 2.0 Protected Resource Metadata discovery (RFC 9728)")
+		}
 		// Convert config.JWKSConfiguration to authentication.JWKSConfig
 		authConfigs := make([]authentication.JWKSConfig, 0, len(options.OAuthConfig.JWKS))
 		for _, jwks := range options.OAuthConfig.JWKS {
