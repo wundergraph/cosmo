@@ -212,7 +212,11 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 
 	// Add authentication middleware if OAuth is configured
 	var authMiddleware *MCPAuthMiddleware
-	if options.OAuthConfig != nil && options.OAuthConfig.Enabled && len(options.OAuthConfig.JWKS) > 0 {
+	if options.OAuthConfig != nil && options.OAuthConfig.Enabled {
+		if len(options.OAuthConfig.JWKS) == 0 {
+			cancel()
+			return nil, fmt.Errorf("MCP OAuth is enabled but no JWKS providers are configured; this would start an unprotected endpoint")
+		}
 		// Convert config.JWKSConfiguration to authentication.JWKSConfig
 		authConfigs := make([]authentication.JWKSConfig, 0, len(options.OAuthConfig.JWKS))
 		for _, jwks := range options.OAuthConfig.JWKS {
@@ -250,11 +254,17 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 			resourceMetadataURL = fmt.Sprintf("%s/.well-known/oauth-protected-resource/mcp", options.ServerBaseURL)
 		}
 
-		// Create authentication middleware with per-tool scope configuration
-		// The middleware will check:
-		// - "initialize" key scopes for all HTTP requests (HTTP-level auth)
-		// - Per-tool scopes when tools are called (by parsing JSON-RPC request)
-		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, true, resourceMetadataURL, options.OAuthConfig.ScopesRequired)
+		// Create authentication middleware with scope configuration
+		// The middleware checks scopes at three levels:
+		// - initialize: scopes required for all HTTP requests
+		// - tools_list: scopes required for tools/list method
+		// - tools_call: scopes required for tools/call method (any tool)
+		scopeConfig := MCPScopeConfig{
+			Initialize: options.OAuthConfig.Scopes.Initialize,
+			ToolsList:  options.OAuthConfig.Scopes.ToolsList,
+			ToolsCall:  options.OAuthConfig.Scopes.ToolsCall,
+		}
+		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, true, resourceMetadataURL, scopeConfig, options.OAuthConfig.ScopeChallengeMode)
 		if err != nil {
 			cancel() // Clean up the context if initialization fails
 			return nil, fmt.Errorf("failed to create auth middleware: %w", err)
@@ -1000,10 +1010,14 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 		resourceURL = fmt.Sprintf("%s://%s", scheme, r.Host)
 	}
 
-	// Build scopes_supported from all required scopes (union of all scopes in the map)
+	// Build scopes_supported from all configured scopes (union across all levels)
 	scopesSet := make(map[string]bool)
-	for _, requiredScopes := range s.oauthConfig.ScopesRequired {
-		for _, scope := range requiredScopes {
+	for _, scopeList := range [][]string{
+		s.oauthConfig.Scopes.Initialize,
+		s.oauthConfig.Scopes.ToolsList,
+		s.oauthConfig.Scopes.ToolsCall,
+	} {
+		for _, scope := range scopeList {
 			scopesSet[scope] = true
 		}
 	}
