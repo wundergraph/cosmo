@@ -63,85 +63,45 @@ export function deletePersistedOperation(
       };
     }
 
-    const removedFromBlobStorageResult = await removePersistedOperationFromBlobStorage({
-      operation,
-      organizationId: authContext.organizationId,
-      fedGraphId: federatedGraph.id,
-      blobStorage: opts.blobStorage,
-    });
-
-    if (removedFromBlobStorageResult.error) {
-      logger.error(
-        removedFromBlobStorageResult.error.error,
-        `Could not delete operation for ${removedFromBlobStorageResult.error.operationId} at ${removedFromBlobStorageResult.error.path}`,
-      );
-
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: `Failed to delete operation ${removedFromBlobStorageResult.error.operationId}`,
-        },
-      };
-    }
-
     const deletedOperation = await operationsRepo.deletePersistedOperation({
       operationId: req.operationId,
       clientName: req.clientName,
     });
 
-    return {
-      response: {
-        code: EnumStatusCode.OK,
-      },
-      operation: deletedOperation
-        ? {
-            id: deletedOperation.id,
-            operationId: deletedOperation.operationId,
-            clientName: deletedOperation.clientName,
-            operationNames: deletedOperation.operationNames,
-          }
-        : undefined,
-    };
+    const path = createBlobStoragePath({
+      organizationId: authContext.organizationId,
+      fedGraphId: federatedGraph.id,
+      clientName: operation.clientName,
+      operationId: operation.operationId,
+    });
+
+    try {
+      await opts.blobStorage.deleteObject({
+        key: path,
+      });
+      return {
+        response: {
+          code: EnumStatusCode.OK,
+        },
+        operation: deletedOperation
+          ? {
+              id: deletedOperation.id,
+              operationId: deletedOperation.operationId,
+              clientName: deletedOperation.clientName,
+              operationNames: deletedOperation.operationNames,
+            }
+          : undefined,
+      };
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      logger.error(error, `Could not delete operation for ${operation.operationId} at ${path}`);
+
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Failed to delete operation ${operation.operationId}`,
+        },
+      };
+    }
   });
 }
-
-const removePersistedOperationFromBlobStorage = async ({
-  operation,
-  fedGraphId,
-  organizationId,
-  blobStorage,
-}: {
-  operation: PersistedOperationWithClientDTO;
-  fedGraphId: string;
-  organizationId: string;
-  blobStorage: BlobStorage;
-}): Promise<{
-  error: {
-    error: Error;
-    operationId: string;
-    path: string;
-  } | null;
-}> => {
-  const path = createBlobStoragePath({
-    organizationId,
-    fedGraphId,
-    clientName: operation.clientName,
-    operationId: operation.operationId,
-  });
-
-  try {
-    await blobStorage.deleteObject({
-      key: path,
-    });
-    return { error: null };
-  } catch (e) {
-    const error = e instanceof Error ? e : new Error('Unknown error');
-    return {
-      error: {
-        error,
-        operationId: operation.operationId,
-        path,
-      },
-    };
-  }
-};
