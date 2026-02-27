@@ -217,7 +217,6 @@ export class EntityWalker {
     }
   }
 
-  // TODO use *origin* subgraph
   addUnresolvablePaths({ selectionPath, subgraphName }: AddUnresolvablePathsParams) {
     if (!this.relativeOriginPaths) {
       if (this.resolvedPaths.has(selectionPath)) {

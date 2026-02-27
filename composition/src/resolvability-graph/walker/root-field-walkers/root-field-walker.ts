@@ -128,9 +128,9 @@ export class RootFieldWalker {
     if (edge.isEdgeInaccessible()) {
       return { visited: false, areDescendantsResolved: false };
     }
-    // if (edge.isExternal) {
-    //   return { visited: false, areDescendantsResolved: false, isExternal: true };
-    // }
+    if (edge.isExternal) {
+      return { visited: false, areDescendantsResolved: false, isExternal: true };
+    }
     if (edge.node.isLeaf) {
       return { visited: true, areDescendantsResolved: true };
     }

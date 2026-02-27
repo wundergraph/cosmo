@@ -1819,7 +1819,22 @@ describe('Field resolvability tests', () => {
   });
 
   test('that an @external key can still be a valid target', () => {
-    const { success } = federateSubgraphsSuccess([jaaa, jaab], ROUTER_COMPATIBILITY_VERSION_ONE);
+    const { federatedGraphSchema } = federateSubgraphsSuccess([jaaa, jaab], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+      type Entity {
+        id: ID!
+        name: String!
+      }
+      
+      type Query {
+        entities: [Entity!]!
+      }
+    `,
+      ),
+    );
   });
 });
 
