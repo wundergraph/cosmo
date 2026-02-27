@@ -1,7 +1,7 @@
 import { GraphFieldData } from '../../utils/types';
 import { unexpectedEdgeFatalError } from '../../errors/errors';
 import { FieldName } from '../types/types';
-import { NodeResolutionDataParams } from './types/params';
+import { AddExternalSubgraphNameParams, NodeResolutionDataParams } from './types/params';
 
 export class NodeResolutionData {
   #isResolved = false;
@@ -24,11 +24,11 @@ export class NodeResolutionData {
     this.typeName = typeName;
   }
 
-  addData(data: NodeResolutionData) {
-    for (const fieldName of data.resolvedFieldNames) {
+  addData({ resolvedDescendantNames, resolvedFieldNames }: NodeResolutionData) {
+    for (const fieldName of resolvedFieldNames) {
       this.addResolvedFieldName(fieldName);
     }
-    for (const fieldName of data.resolvedDescendantNames) {
+    for (const fieldName of resolvedDescendantNames) {
       this.resolvedDescendantNames.add(fieldName);
     }
   }
@@ -38,6 +38,14 @@ export class NodeResolutionData {
       throw unexpectedEdgeFatalError(this.typeName, [fieldName]);
     }
     this.resolvedFieldNames.add(fieldName);
+  }
+
+  addExternalSubgraphName({ fieldName, subgraphName }: AddExternalSubgraphNameParams) {
+    const fieldData = this.fieldDataByName.get(fieldName);
+    if (!fieldData) {
+      throw unexpectedEdgeFatalError(this.typeName, [fieldName]);
+    }
+    fieldData.externalSubgraphNames.add(subgraphName);
   }
 
   copy(): NodeResolutionData {
