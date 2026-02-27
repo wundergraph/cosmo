@@ -1399,12 +1399,12 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 		}
 	}
 
-	costAnalysis := o.operationProcessor.costControl
-	if costAnalysis == nil || !costAnalysis.Enabled {
+	costControl := o.operationProcessor.costControl
+	if costControl == nil || !costControl.Enabled {
 		return nil
 	}
 
-	if costAnalysis.Mode != config.CostControlModeEnforce || costAnalysis.MaxEstimatedLimit <= 0 {
+	if costControl.Mode != config.CostControlModeEnforce || costControl.MaxEstimatedLimit <= 0 {
 		return nil
 	}
 
@@ -1415,9 +1415,9 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 		}
 	}
 
-	if opCtx.costEstimated > costAnalysis.MaxEstimatedLimit {
+	if opCtx.costEstimated > costControl.MaxEstimatedLimit {
 		return &httpGraphqlError{
-			message:    fmt.Sprintf("The estimated query cost %d exceeds the maximum allowed limit %d", opCtx.costEstimated, costAnalysis.MaxEstimatedLimit),
+			message:    fmt.Sprintf("The estimated query cost %d exceeds the maximum allowed limit %d", opCtx.costEstimated, costControl.MaxEstimatedLimit),
 			statusCode: http.StatusBadRequest,
 		}
 	}
