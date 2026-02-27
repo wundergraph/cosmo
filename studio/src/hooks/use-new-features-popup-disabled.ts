@@ -4,7 +4,7 @@ import { useLocalStorage } from "./use-local-storage";
 export function useNewFeaturesPopupDisabled(): [boolean, Dispatch<SetStateAction<string>>] {
   const [isPopupDisabled, setIsPopupDisabled] = useState(true);
   const [isPopupDisabledOnClient, setDisablePopup] = useLocalStorage(
-    "dismissNewFeaturesPopup",
+    "dismissHubFeaturesPopup",
     "false",
   );
 
