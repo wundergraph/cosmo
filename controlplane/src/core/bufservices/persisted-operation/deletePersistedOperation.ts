@@ -132,7 +132,6 @@ const removePersistedOperationFromBlobStorage = async ({
   try {
     await blobStorage.deleteObject({
       key: path,
-      abortSignal: AbortSignal.timeout(10_000),
     });
     return { error: null };
   } catch (e) {
