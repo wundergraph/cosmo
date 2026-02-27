@@ -1218,7 +1218,7 @@ export class SchemaCheckRepository {
         }
       }
 
-    /*
+      /*
         We don't collect operation usage when
         1. we have composition errors
         2. when we don't have any inspectable changes.
