@@ -7,7 +7,7 @@ import { UserDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import Keycloak from '../services/Keycloak.js';
 import OidcProvider from '../services/OidcProvider.js';
-import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogsWorker.js';
+import { DeleteOrganizationAuditLogsQueue } from '../workers/DeleteOrganizationAuditLogs.js';
 import { BillingRepository } from './BillingRepository.js';
 import { OidcRepository } from './OidcRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';

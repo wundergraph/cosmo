@@ -1,7 +1,7 @@
 import process from 'node:process';
 import { pino } from 'pino';
 import { createRedisConnections } from '../core/plugins/redis.js';
-import { DeleteUserQueue } from '../core/workers/DeleteUserQueue.js';
+import { DeleteUserQueue } from '../core/workers/DeleteUser.js';
 import { getConfig } from './get-config.js';
 
 const { redis } = getConfig();

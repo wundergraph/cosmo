@@ -1,7 +1,7 @@
 import process from 'node:process';
 import { pino } from 'pino';
 import { createRedisConnections } from '../core/plugins/redis.js';
-import { ReactivateOrganizationQueue } from '../core/workers/ReactivateOrganizationWorker.js';
+import { ReactivateOrganizationQueue } from '../core/workers/ReactivateOrganization.js';
 import { getConfig } from './get-config.js';
 
 const { organizationSlug, redis } = getConfig();

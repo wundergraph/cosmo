@@ -1,11 +1,10 @@
-import { ConnectionOptions, Job, JobsOptions, Queue, Worker } from 'bullmq';
-import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { ConnectionOptions, Job, JobsOptions } from 'bullmq';
 import pino from 'pino';
-import * as schema from '../../db/schema.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import Keycloak from '../services/Keycloak.js';
-import { DeleteOrganizationQueue } from './DeleteOrganizationWorker.js';
-import { IQueue, IWorker } from './Worker.js';
+import { DB } from '../../db/index.js';
+import { DeleteOrganizationQueue } from './DeleteOrganization.js';
+import { BaseQueue, BaseWorker } from './base/index.js';
 
 const QueueName = 'organization.deactivate';
 const WorkerName = 'DeactivateOrganizationWorker';
@@ -16,32 +15,9 @@ export interface DeactivateOrganizationInput {
   deactivationReason?: string;
 }
 
-export class DeactivateOrganizationQueue implements IQueue<DeactivateOrganizationInput> {
-  private readonly queue: Queue<DeactivateOrganizationInput>;
-  private readonly logger: pino.Logger;
-
+export class DeactivateOrganizationQueue extends BaseQueue<DeactivateOrganizationInput> {
   constructor(log: pino.Logger, conn: ConnectionOptions) {
-    this.logger = log.child({ queue: QueueName });
-    this.queue = new Queue<DeactivateOrganizationInput>(QueueName, {
-      connection: conn,
-      defaultJobOptions: {
-        removeOnComplete: {
-          age: 90 * 86_400,
-        },
-        removeOnFail: {
-          age: 90 * 86_400,
-        },
-        attempts: 6,
-        backoff: {
-          type: 'exponential',
-          delay: 112_000,
-        },
-      },
-    });
-
-    this.queue.on('error', (err) => {
-      this.logger.error(err, 'Queue error');
-    });
+    super({ name: QueueName, conn, log });
   }
 
   public addJob(job: DeactivateOrganizationInput, opts?: Omit<JobsOptions, 'jobId'>) {
@@ -61,20 +37,21 @@ export class DeactivateOrganizationQueue implements IQueue<DeactivateOrganizatio
   }
 }
 
-class DeactivateOrganizationWorker implements IWorker {
+export class DeactivateOrganizationWorker extends BaseWorker<DeactivateOrganizationInput> {
   constructor(
     private input: {
-      db: PostgresJsDatabase<typeof schema>;
+      redisConnection: ConnectionOptions;
+      db: DB;
       logger: pino.Logger;
       keycloakClient: Keycloak;
       keycloakRealm: string;
       deleteOrganizationQueue: DeleteOrganizationQueue;
     },
   ) {
-    this.input.logger = input.logger.child({ worker: WorkerName });
+    super(WorkerName, QueueName, { connection: input.redisConnection, concurrency: 10 }, input.logger);
   }
 
-  public async handler(job: Job<DeactivateOrganizationInput>) {
+  protected async handler(job: Job<DeactivateOrganizationInput>) {
     try {
       this.input.logger.info('Processing deactivate job');
       const orgRepo = new OrganizationRepository(this.input.logger, this.input.db);
@@ -106,29 +83,3 @@ class DeactivateOrganizationWorker implements IWorker {
     }
   }
 }
-
-export const createDeactivateOrganizationWorker = (input: {
-  redisConnection: ConnectionOptions;
-  db: PostgresJsDatabase<typeof schema>;
-  logger: pino.Logger;
-  keycloakClient: Keycloak;
-  keycloakRealm: string;
-  deleteOrganizationQueue: DeleteOrganizationQueue;
-}) => {
-  const log = input.logger.child({ worker: WorkerName });
-  const worker = new Worker<DeactivateOrganizationInput>(
-    QueueName,
-    (job) => new DeactivateOrganizationWorker(input).handler(job),
-    {
-      connection: input.redisConnection,
-      concurrency: 10,
-    },
-  );
-  worker.on('stalled', (job) => {
-    log.warn({ joinId: job }, `Job stalled`);
-  });
-  worker.on('error', (err) => {
-    log.error(err, 'Worker error');
-  });
-  return worker;
-};
