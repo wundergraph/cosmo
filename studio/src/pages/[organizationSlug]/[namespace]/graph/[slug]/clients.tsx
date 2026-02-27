@@ -306,6 +306,13 @@ const ClientOperations = ({
         title: "Operation retired successfully",
       });
     },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Could not retire the operation",
+        description: error.details.toString() ?? "Please try again",
+      });
+    },
   });
 
   const {
@@ -338,6 +345,13 @@ const ClientOperations = ({
           names: data.operation.operationNames,
         });
       }
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Could not retire the operation",
+        description: error.details.toString() ?? "Please try again",
+      });
     },
   });
 
