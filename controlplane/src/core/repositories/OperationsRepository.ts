@@ -132,10 +132,10 @@ export class OperationsRepository {
         return undefined;
       }
 
-      const txRepo = new OperationsRepository(tx, this.federatedGraphId);
-      const operation = await txRepo.findPersistedOperationWithClient({
+      const operation = await this.findPersistedOperationWithClient({
         operationId,
         clientName,
+        db: tx as PostgresJsDatabase<typeof schema>,
       });
 
       if (!operation) {
@@ -158,14 +158,17 @@ export class OperationsRepository {
   private async findPersistedOperationWithClient({
     operationId,
     clientName,
+    db,
   }: {
     operationId: string;
     clientName?: string;
+    db?: PostgresJsDatabase<typeof schema>;
   }): Promise<PersistedOperationWithClientDTO | undefined> {
+    const database = db ?? this.db;
     const users1 = aliasedTable(users, 'users1');
     const users2 = aliasedTable(users, 'users2');
 
-    const operationResult = await this.db
+    const operationResult = await database
       .select({
         id: federatedGraphPersistedOperations.id,
         operationId: federatedGraphPersistedOperations.operationId,
