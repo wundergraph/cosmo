@@ -68,10 +68,11 @@ dependencies:
     version: '12.12.10'
     condition: global.postgresql.enabled
     repository: 'https://charts.bitnami.com/bitnami'
-  - name: keycloak
-    version: '22.0.0'
-    repository: 'https://charts.bitnami.com/bitnami'
+  - name: keycloakx
+    version: '7.1.8'
+    repository: 'https://codecentric.github.io/helm-charts'
     condition: global.keycloak.enabled
+    alias: keycloak
   - name: clickhouse
     version: '6.2.14'
     condition: global.clickhouse.enabled
