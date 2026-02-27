@@ -1607,127 +1607,30 @@ type Category {
 
       // The composed schema breaking changes should detect the nullability change
       // because the federated schema's User.name field would change from String! to String
-      expect(checkResp.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(1);
 
       // The breaking change should be about the field type changing from non-null to nullable
-      const fieldNullabilityChange = checkResp.composedSchemaBreakingChanges.find(
-        (change) => change.path?.includes('User.name') || change.message?.toLowerCase().includes('name'),
-      );
-      expect(fieldNullabilityChange).toBeDefined();
-      // Verify the federated graph name is included
-      expect(fieldNullabilityChange?.federatedGraphName).toBeDefined();
+      const fieldNullabilityChange = checkResp.composedSchemaBreakingChanges[0];
+      expect(fieldNullabilityChange.federatedGraphName).toBe(fedGraphName);
+      expect(fieldNullabilityChange.path).toBe('User.name');
+      expect(fieldNullabilityChange.isBreaking).toBe(true);
 
-      await server.close();
-    });
-
-    test('Should detect breaking change when updating subgraph B to make federated field nullable', async () => {
-      const { client, server } = await SetupTest({ dbname, chClient });
-
-      const fedGraphName = genID('fedGraph');
-      const subgraphAName = genID('subgraphA');
-      const subgraphBName = genID('subgraphB');
-      const label = genUniqueLabel();
-
-      // Subgraph A has a shared type with a required field
-      const subgraphASchema = `
-        type Query {
-          users: [User!]!
-        }
-
-        type User @key(fields: "id") {
-          id: ID!
-          name: String!
-        }
-      `;
-
-      // Subgraph B initially has the same field as required (matching subgraph A)
-      const subgraphBSchemaInitial = `
-        type User @key(fields: "id") {
-          id: ID!
-          name: String!
-          email: String!
-        }
-      `;
-
-      // Subgraph B will be updated to make the field nullable
-      // This should be detected as a breaking change for the federated graph
-      const subgraphBSchemaUpdated = `
-        type User @key(fields: "id") {
-          id: ID!
-          name: String
-          email: String!
-        }
-      `;
-
-      // Create federated graph
-      const createFedGraphRes = await client.createFederatedGraph({
-        name: fedGraphName,
+      // Verify the check summary also returns the federated graph breaking changes
+      const checkSummary = await client.getCheckSummary({
         namespace: 'default',
-        routingUrl: 'http://localhost:8081',
-        labelMatchers: [joinLabel(label)],
-      });
-      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
-
-      // Create and publish subgraph A
-      let resp = await client.createFederatedSubgraph({
-        name: subgraphAName,
-        namespace: 'default',
-        labels: [label],
-        routingUrl: 'http://localhost:8082',
-      });
-      expect(resp.response?.code).toBe(EnumStatusCode.OK);
-
-      resp = await client.publishFederatedSubgraph({
-        name: subgraphAName,
-        namespace: 'default',
-        schema: subgraphASchema,
-      });
-      expect(resp.response?.code).toBe(EnumStatusCode.OK);
-
-      // Create and publish subgraph B with required field initially
-      resp = await client.createFederatedSubgraph({
-        name: subgraphBName,
-        namespace: 'default',
-        labels: [label],
-        routingUrl: 'http://localhost:8083',
-      });
-      expect(resp.response?.code).toBe(EnumStatusCode.OK);
-
-      resp = await client.publishFederatedSubgraph({
-        name: subgraphBName,
-        namespace: 'default',
-        schema: subgraphBSchemaInitial,
-      });
-      expect(resp.response?.code).toBe(EnumStatusCode.OK);
-
-      // Verify the federated graph has the required field using SDL endpoint
-      const fedGraphSDLBefore = await client.getFederatedGraphSDLByName({
-        name: fedGraphName,
-        namespace: 'default',
-      });
-      expect(fedGraphSDLBefore.response?.code).toBe(EnumStatusCode.OK);
-      expect(fedGraphSDLBefore.sdl).toContain('name: String!');
-
-      // Now run a schema check for subgraph B with the updated schema (nullable name)
-      // The subgraph-level change (String! -> String) is a non-breaking change for the subgraph
-      // But the federated graph change (String! -> String) IS a breaking change
-      const checkResp = await client.checkSubgraphSchema({
-        subgraphName: subgraphBName,
-        namespace: 'default',
-        schema: Buffer.from(subgraphBSchemaUpdated),
+        graphName: fedGraphName,
+        checkId: checkResp.checkId,
       });
 
-      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
-      expect(checkResp.compositionErrors.length).toBe(0);
-
-      // The subgraph-level change (String! -> String) is a non-breaking change for the subgraph
-      // So breakingChanges should be empty (or only contain subgraph-level breaking changes)
-      // The federated schema change IS breaking and should be in composedSchemaBreakingChanges
-      expect(checkResp.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
-
-      // Verify the federated graph name is included
-      const fedSchemaChange = checkResp.composedSchemaBreakingChanges[0];
-      expect(fedSchemaChange.federatedGraphName).toBe(fedGraphName);
+      expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkSummary.affectedGraphs.length).toBe(1);
+      expect(checkSummary.composedSchemaBreakingChanges.length).toBe(1);
+      expect(checkSummary.affectedGraphs[0].isBreaking).toBe(true);
+      // it is true as there is no traffic
+      expect(checkSummary.affectedGraphs[0].isCheckSuccessful).toBe(true);
+      expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
+      expect(checkSummary.composedSchemaBreakingChanges[0].path).toBe('User.name');
+      expect(checkSummary.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
 
       await server.close();
     });
@@ -1970,17 +1873,17 @@ type Category {
       expect(checkResp.compositionErrors.length).toBe(0);
 
       // Should have breaking changes for BOTH federated graphs
-      expect(checkResp.composedSchemaBreakingChanges.length).toBeGreaterThanOrEqual(2);
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(2);
 
       // Verify both federated graphs are represented
       const fedGraphNames = new Set(checkResp.composedSchemaBreakingChanges.map((c) => c.federatedGraphName));
-      expect(fedGraphNames.has(fedGraphName1)).toBe(true);
-      expect(fedGraphNames.has(fedGraphName2)).toBe(true);
+      expect(fedGraphNames).toContain(fedGraphName1);
+      expect(fedGraphNames).toContain(fedGraphName2);
 
       await server.close();
     });
 
-    test('Should detect breaking change when removing a field that exists in federated schema', async () => {
+    test('Should not duplicate field removal in federated schema changes when already reported at subgraph level', async () => {
       const { client, server } = await SetupTest({ dbname, chClient });
 
       const fedGraphName = genID('fedGraph');
@@ -2046,15 +1949,9 @@ type Category {
 
       expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
       // Subgraph-level breaking change for field removal
-      expect(checkResp.breakingChanges.length).toBeGreaterThan(0);
-      // Federated schema breaking change for field removal
-      expect(checkResp.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
-
-      const fieldRemovalChange = checkResp.composedSchemaBreakingChanges.find(
-        (change) => change.path?.includes('User.email') || change.message?.toLowerCase().includes('email'),
-      );
-      expect(fieldRemovalChange).toBeDefined();
-      expect(fieldRemovalChange?.federatedGraphName).toBe(fedGraphName);
+      expect(checkResp.breakingChanges.length).toBe(1);
+      // Field removal is already reported at subgraph level, so it should not be duplicated at federated level
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(0);
 
       await server.close();
     });
@@ -2153,12 +2050,12 @@ type Category {
       // Subgraph-level breaking changes should be empty since we're adding a new subgraph
       expect(checkResp.breakingChanges.length).toBe(0);
 
-      // Federated schema breaking changes should be detected
-      expect(checkResp.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
+      // Federated schema breaking changes should be detected (one nullability change)
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(1);
 
       // The federated graph breaking changes should have been checked against traffic
-      // operationUsageStats should reflect operations affected by these changes
-      expect(checkResp.operationUsageStats?.totalOperations).toBeGreaterThanOrEqual(0);
+      // operationUsageStats should reflect the 2 mocked operations affected by these changes
+      expect(checkResp.operationUsageStats?.totalOperations).toBe(2);
 
       // Fetch check summary to verify the check is marked as having breaking changes
       const checkSummary = await client.getCheckSummary({
@@ -2168,116 +2065,17 @@ type Category {
       });
 
       expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
-      expect(checkSummary.affectedGraphs.length).toBeGreaterThan(0);
+      expect(checkSummary.affectedGraphs.length).toBe(1);
 
       // The check should be marked as having composed schema breaking changes
-      expect(checkSummary.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
+      expect(checkSummary.composedSchemaBreakingChanges.length).toBe(1);
 
-      await server.close();
-    });
-
-    test('Should mark check as breaking in summary when only federated graph schema changes are breaking', async () => {
-      const { client, server } = await SetupTest({ dbname, chClient });
-
-      const fedGraphName = genID('fedGraph');
-      const subgraphAName = genID('subgraphA');
-      const subgraphBName = genID('subgraphB');
-      const label = genUniqueLabel();
-
-      // Subgraph A has a shared type with a required field
-      const subgraphASchema = `
-        type Query {
-          users: [User!]!
-        }
-
-        type User @key(fields: "id") {
-          id: ID!
-          name: String!
-        }
-      `;
-
-      // Subgraph B will add the same field as nullable
-      const subgraphBSchema = `
-        type User @key(fields: "id") {
-          id: ID!
-          name: String
-          email: String!
-        }
-      `;
-
-      // Create federated graph
-      const createFedGraphRes = await client.createFederatedGraph({
-        name: fedGraphName,
-        namespace: 'default',
-        routingUrl: 'http://localhost:8081',
-        labelMatchers: [joinLabel(label)],
-      });
-      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
-
-      // Create and publish subgraph A
-      const createSubgraphARes = await client.createFederatedSubgraph({
-        name: subgraphAName,
-        namespace: 'default',
-        labels: [label],
-        routingUrl: 'http://localhost:8082',
-      });
-      expect(createSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
-
-      const publishSubgraphARes = await client.publishFederatedSubgraph({
-        name: subgraphAName,
-        namespace: 'default',
-        schema: subgraphASchema,
-      });
-      expect(publishSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
-
-      // Create subgraph B (but don't publish yet)
-      const createSubgraphBRes = await client.createFederatedSubgraph({
-        name: subgraphBName,
-        namespace: 'default',
-        labels: [label],
-        routingUrl: 'http://localhost:8083',
-      });
-      expect(createSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
-
-      // Run schema check for subgraph B
-      const checkResp = await client.checkSubgraphSchema({
-        subgraphName: subgraphBName,
-        namespace: 'default',
-        schema: Buffer.from(subgraphBSchema),
-      });
-
-      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
-      expect(checkResp.compositionErrors.length).toBe(0);
-
-      // Subgraph-level breaking changes should be empty
-      expect(checkResp.breakingChanges.length).toBe(0);
-
-      // Federated schema breaking changes should be detected
-      expect(checkResp.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
-
-      // Fetch check summary to verify the isCheckSuccessful considers federated schema breaking changes
-      const checkSummary = await client.getCheckSummary({
-        namespace: 'default',
-        graphName: fedGraphName,
-        checkId: checkResp.checkId,
-      });
-
-      expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
-      expect(checkSummary.affectedGraphs.length).toBeGreaterThan(0);
-
-      // The affected graph should NOT be marked as successful because of federated schema breaking changes
-      // even though there are no subgraph-level breaking changes
-      const affectedGraph = checkSummary.affectedGraphs[0];
-      expect(affectedGraph.isCheckSuccessful).toBe(false);
-
-      // Verify composedSchemaBreakingChanges are returned in summary
-      expect(checkSummary.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
-
-      // The changes should have the correct federated graph name
-      const fedGraphChange = checkSummary.composedSchemaBreakingChanges.find(
-        (c) => c.federatedGraphName === fedGraphName,
-      );
-      expect(fedGraphChange).toBeDefined();
+      // The changes should have the correct federated graph name and be marked as breaking
+      expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
+      expect(checkSummary.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
+      expect(checkSummary.affectedGraphs[0].isCheckSuccessful).toBe(false);
+      expect(checkSummary.affectedGraphs[0].isBreaking).toBe(true);
+      expect(checkSummary.affectedGraphs[0].hasClientTraffic).toBe(true);
 
       await server.close();
     });
@@ -2365,8 +2163,8 @@ type Category {
       expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
       expect(checkResp.clientTrafficCheckSkipped).toBe(true);
 
-      // Federated schema breaking changes should still be detected
-      expect(checkResp.composedSchemaBreakingChanges.length).toBeGreaterThan(0);
+      // Federated schema breaking changes should still be detected (one nullability change)
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(1);
 
       // But operation usage should be zero since traffic check was skipped
       expect(checkResp.operationUsageStats?.totalOperations).toBe(0);

@@ -1,5 +1,5 @@
 {
-  "id": "af2af278-1363-4807-95f8-2f06ea2ac1ed",
+  "id": "ea82d6d5-af34-443a-8162-384cc2cb0edb",
   "prevId": "b0294566-1d59-45dd-b20c-45a8f09f3da2",
   "version": "7",
   "dialect": "postgresql",
@@ -5799,6 +5799,13 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": false
+        },
+        "is_fed_graph_change": {
+          "name": "is_fed_graph_change",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
         }
       },
       "indexes": {
@@ -6101,8 +6108,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "public.schema_check_federated_graph_schema_changes": {
-      "name": "schema_check_federated_graph_schema_changes",
+    "public.schema_check_federated_graph_changes": {
+      "name": "schema_check_federated_graph_changes",
       "schema": "",
       "columns": {
         "id": {
@@ -6118,31 +6125,11 @@
           "primaryKey": false,
           "notNull": true
         },
-        "change_type": {
-          "name": "change_type",
-          "type": "schema_change_type",
-          "typeSchema": "public",
+        "schema_check_change_action_id": {
+          "name": "schema_check_change_action_id",
+          "type": "uuid",
           "primaryKey": false,
-          "notNull": false
-        },
-        "change_message": {
-          "name": "change_message",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "is_breaking": {
-          "name": "is_breaking",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": false,
-          "default": false
-        },
-        "path": {
-          "name": "path",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -6167,15 +6154,43 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "scfgsc_schema_check_change_action_id_idx": {
+          "name": "scfgsc_schema_check_change_action_id_idx",
+          "columns": [
+            {
+              "expression": "schema_check_change_action_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
-        "schema_check_federated_graph_schema_changes_schema_check_federated_graph_id_schema_check_federated_graphs_id_fk": {
-          "name": "schema_check_federated_graph_schema_changes_schema_check_federated_graph_id_schema_check_federated_graphs_id_fk",
-          "tableFrom": "schema_check_federated_graph_schema_changes",
+        "schema_check_federated_graph_changes_schema_check_federated_graph_id_schema_check_federated_graphs_id_fk": {
+          "name": "schema_check_federated_graph_changes_schema_check_federated_graph_id_schema_check_federated_graphs_id_fk",
+          "tableFrom": "schema_check_federated_graph_changes",
           "tableTo": "schema_check_federated_graphs",
           "columnsFrom": [
             "schema_check_federated_graph_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "schema_check_federated_graph_changes_schema_check_change_action_id_schema_check_change_action_id_fk": {
+          "name": "schema_check_federated_graph_changes_schema_check_change_action_id_schema_check_change_action_id_fk",
+          "tableFrom": "schema_check_federated_graph_changes",
+          "tableTo": "schema_check_change_action",
+          "columnsFrom": [
+            "schema_check_change_action_id"
           ],
           "columnsTo": [
             "id"

@@ -1343,7 +1343,10 @@ export class SubgraphRepository {
         path: true,
         isBreaking: true,
       },
-      where: eq(schema.schemaCheckChangeAction.schemaCheckId, id),
+      where: and(
+        eq(schema.schemaCheckChangeAction.schemaCheckId, id),
+        eq(schema.schemaCheckChangeAction.isFedGraphChange, false),
+      ),
       with: {
         checkSubgraph: {
           columns: {
@@ -1386,10 +1389,6 @@ export class SubgraphRepository {
         federatedGraphId: options.federatedGraphId,
       });
 
-      const namespaceOverrides = await options.operationsRepo.getChangeOverrides({
-        namespaceId: options.namespaceId,
-      });
-
       composedSchemaBreakingChanges = fedGraphSchemaChanges
         .filter((change) => change.isBreaking)
         .map((change) => ({
@@ -1398,7 +1397,6 @@ export class SubgraphRepository {
           path: change.path ?? undefined,
           isBreaking: change.isBreaking,
           federatedGraphName: options.federatedGraphName,
-          hasOverride: namespaceOverrides.some((o) => o.changeType === change.changeType && o.path === change.path),
         }));
     }
 
@@ -2099,7 +2097,17 @@ export class SubgraphRepository {
     // on interfaces and objects, as these are the only changes that can affect the composed federated schema
     const fieldChangeTypes = new Set(['FIELD_ADDED', 'FIELD_REMOVED', 'FIELD_TYPE_CHANGED']);
     const allSubgraphChanges = [...schemaChanges.breakingChanges, ...schemaChanges.nonBreakingChanges];
-    const hasFieldChanges = allSubgraphChanges.some((change) => fieldChangeTypes.has(change.changeType));
+    // For new subgraphs (no existing schema), always perform federated diff since any field could affect composed schema
+    const isNewSubgraph = !subgraph?.schemaSDL;
+    const hasFieldChanges =
+      isNewSubgraph || allSubgraphChanges.some((change) => fieldChangeTypes.has(change.changeType));
+
+    // Collect subgraph-level breaking changes (path + message) to avoid duplicating in federated graph changes
+    const subgraphBreakingChangeKeys = new Set<string>();
+    for (const change of schemaChanges.breakingChanges) {
+      const key = `${change.path ?? ''}::${change.message ?? ''}`;
+      subgraphBreakingChangeKeys.add(key);
+    }
 
     const composedSchemaBreakingChanges: Array<SchemaDiff & { federatedGraphName: string }> = [];
 
@@ -2141,39 +2149,37 @@ export class SubgraphRepository {
           );
 
           if (federatedSchemaDiff.kind === 'success' && federatedSchemaDiff.breakingChanges.length > 0) {
-            // Store federated graph breaking changes
-            const schemaCheckFederatedGraphId = fedGraphIdToCheckFedGraphId.get(composedGraph.id);
-            if (schemaCheckFederatedGraphId) {
-              const storedChanges = await schemaCheckRepo.createFederatedGraphSchemaChanges({
-                schemaCheckFederatedGraphId,
-                changes: federatedSchemaDiff.breakingChanges,
-              });
+            // Filter out changes that already exist at the subgraph level (avoid duplicates by path + message)
+            const uniqueFedGraphBreakingChanges = federatedSchemaDiff.breakingChanges.filter((change) => {
+              const changeKey = `${change.path ?? ''}::${change.message ?? ''}`;
+              return !subgraphBreakingChangeKeys.has(changeKey);
+            });
 
-              // Map federated graph changes to SchemaCheckChangeAction-compatible format for inspector
-              storedFedGraphBreakingChanges = storedChanges.map((c) => ({
-                id: c.id,
-                changeType: c.changeType,
-                path: c.path,
-                isBreaking: c.isBreaking,
-                changeMessage: c.changeMessage,
-                createdAt: new Date(),
-                schemaCheckId: schemaCheckID,
-                schemaCheckSubgraphId,
-              }));
+            // Only process if there are unique federated graph breaking changes
+            if (uniqueFedGraphBreakingChanges.length > 0) {
+              // Store federated graph breaking changes
+              const schemaCheckFederatedGraphId = fedGraphIdToCheckFedGraphId.get(composedGraph.id);
+              if (schemaCheckFederatedGraphId) {
+                storedFedGraphBreakingChanges = await schemaCheckRepo.createFederatedGraphSchemaChanges({
+                  schemaCheckId: schemaCheckID,
+                  schemaCheckFederatedGraphId,
+                  changes: uniqueFedGraphBreakingChanges,
+                });
 
-              // Convert federated graph changes to inspector changes
-              fedGraphInspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
-                federatedSchemaDiff.breakingChanges,
-                storedFedGraphBreakingChanges,
-              );
-            }
+                // Convert federated graph changes to inspector changes
+                fedGraphInspectorChanges = trafficInspector.schemaChangesToInspectorChanges(
+                  uniqueFedGraphBreakingChanges,
+                  storedFedGraphBreakingChanges,
+                );
+              }
 
-            // Add each breaking change with the federated graph name
-            for (const change of federatedSchemaDiff.breakingChanges) {
-              composedSchemaBreakingChanges.push({
-                ...change,
-                federatedGraphName: composedGraph.name,
-              });
+              // Add each breaking change with the federated graph name
+              for (const change of uniqueFedGraphBreakingChanges) {
+                composedSchemaBreakingChanges.push({
+                  ...change,
+                  federatedGraphName: composedGraph.name,
+                });
+              }
             }
           }
         }
@@ -2215,7 +2221,7 @@ export class SubgraphRepository {
 
       hasClientTraffic = hasClientTraffic || overrideCheck.hasUnsafeClientTraffic;
 
-      // Store operation usage
+      // Store operation usage for all changes (both subgraph and federated graph changes)
       await schemaCheckRepo.createOperationUsage(overrideCheck.result, composedGraph.id);
 
       // Collect all inspected operations for later aggregation

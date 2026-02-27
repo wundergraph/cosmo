@@ -177,15 +177,17 @@ export function getCheckSummary(
       (linkedCheck) => linkedCheck.hasGraphPruningErrors && !linkedCheck.isForcedSuccess,
     );
 
+    const isBreaking =
+      checkDetails.changes.some((change) => change.isBreaking) ||
+      checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking);
+
     affectedGraphs.push(
       new GetCheckSummaryResponse_AffectedGraph({
         ...currentAffectedGraph,
         name: graph.name,
         isCheckSuccessful: isCheckSuccessful({
           isComposable: checkDetails.compositionErrors.length === 0,
-          isBreaking:
-            checkDetails.changes.some((change) => change.isBreaking) ||
-            checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking),
+          isBreaking,
           hasClientTraffic: hasAffectedOperations,
           hasLintErrors,
           hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
@@ -195,7 +197,7 @@ export function getCheckSummary(
           isLinkedPruningCheckFailed,
         }),
         isComposable: checkDetails.compositionErrors.length === 0,
-        isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+        isBreaking,
         hasClientTraffic: hasAffectedOperations,
         hasLintErrors,
         hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
@@ -228,15 +230,18 @@ export function getCheckSummary(
         });
         hasAffectedOperations = affectedOperations.length > 0;
       }
+
+      const isBreaking =
+        checkDetails.changes.some((change) => change.isBreaking) ||
+        checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking);
+
       affectedGraphs.push(
         new GetCheckSummaryResponse_AffectedGraph({
           ...ag,
           name: fedGraph.name,
           isCheckSuccessful: isCheckSuccessful({
             isComposable: checkDetails.compositionErrors.length === 0,
-            isBreaking:
-              checkDetails.changes.some((change) => change.isBreaking) ||
-              checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking),
+            isBreaking,
             hasClientTraffic: hasAffectedOperations,
             hasLintErrors,
             hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
@@ -246,7 +251,7 @@ export function getCheckSummary(
             isLinkedPruningCheckFailed,
           }),
           isComposable: checkDetails.compositionErrors.length === 0,
-          isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+          isBreaking,
           hasClientTraffic: hasAffectedOperations,
           hasLintErrors,
           hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
