@@ -38,7 +38,7 @@ describe('CheckSubgraphSchema', (ctx) => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   beforeAll(async () => {

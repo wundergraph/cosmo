@@ -38,7 +38,7 @@ describe('Proposal federated graph schema breaking changes', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   beforeAll(async () => {
