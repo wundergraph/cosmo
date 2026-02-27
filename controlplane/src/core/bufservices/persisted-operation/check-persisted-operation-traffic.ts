@@ -8,9 +8,12 @@ import type {
 import { UnauthorizedError } from '../../errors/errors.js';
 import type { RouterOptions } from '../../routes.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { MetricsRepository } from '../../repositories/analytics/MetricsRepository.js';
+import { getDateRange } from '../../repositories/analytics/util.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { defaultRetentionLimitInDays } from '../../constants.js';
 
 export function checkPersistedOperationTraffic(
   opts: RouterOptions,
@@ -61,11 +64,24 @@ export function checkPersistedOperationTraffic(
       };
     }
 
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
+    const changeRetention = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'breaking-change-retention',
+    });
+    const limit = changeRetention?.limit ?? defaultRetentionLimitInDays;
+    const [start, end] = getDateRange({
+      start: Date.now() - limit * 24 * 60 * 60 * 1000,
+      end: Date.now(),
+    });
+
     const metricsRepository = new MetricsRepository(opts.chClient);
     const operationMetrics = await metricsRepository.getPersistedOperationMetrics({
       organizationId: authContext.organizationId,
       graphId: federatedGraph.id,
       id: operation.hash,
+      start,
+      end,
     });
 
     return {

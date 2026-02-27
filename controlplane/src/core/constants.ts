@@ -44,3 +44,5 @@ export const organizationSchema = z.object({
     .max(32, { message: 'Invalid name. It must be of 3-32 characters in length.' }),
   slug: organizationSlugSchema,
 });
+
+export const defaultRetentionLimitInDays = 7;

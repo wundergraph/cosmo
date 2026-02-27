@@ -1340,15 +1340,23 @@ export class MetricsRepository {
     id,
     organizationId,
     graphId,
+    start,
+    end,
   }: {
     id: string;
     organizationId: string;
     graphId: string;
+    start: number;
+    end: number;
   }) {
     const query = `
+    WITH
+      toDateTime({start:UInt32}) AS startDate,
+      toDateTime({end:UInt32}) AS endDate
     SELECT sum(TotalRequests) as TotalRequests
     FROM ${this.client.database}.operation_request_metrics_5_30
-    WHERE OrganizationID = {organizationId:String}
+    WHERE Timestamp >= startDate AND Timestamp <= endDate
+      AND OrganizationID = {organizationId:String}
       AND FederatedGraphID = {graphId:String}
       AND OperationPersistedID = {id:String}`;
 
@@ -1358,6 +1366,8 @@ export class MetricsRepository {
       id,
       organizationId,
       graphId,
+      start,
+      end,
     });
     const totalRequests = Number(results[0]?.TotalRequests || 0);
 
