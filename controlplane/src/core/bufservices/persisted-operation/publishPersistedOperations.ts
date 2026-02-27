@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
 import pLimit from 'p-limit';
-import { Code, ConnectError, HandlerContext } from '@connectrpc/connect';
+import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   PublishedOperation,
@@ -47,10 +47,13 @@ export function publishPersistedOperations(
     }
 
     if (req.operations.length > MAX_PERSISTED_OPERATIONS) {
-      throw new ConnectError(
-        `Payload Too Large: max ${MAX_PERSISTED_OPERATIONS} operations per request`,
-        Code.ResourceExhausted,
-      );
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Payload Too Large: max ${MAX_PERSISTED_OPERATIONS} operations per request`,
+        },
+        operations: [],
+      };
     }
 
     const userId = authContext.userId;
