@@ -73,8 +73,10 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	rm.MeasureResponseSize(ctx, int64(responseSize), sliceAttrs, o)
 
 	// Record operation cost metrics from cached values
-	if reqContext.operation != nil && reqContext.operation.costEstimatedSet {
-		rm.MeasureOperationCostEstimated(ctx, int64(reqContext.operation.costEstimated), sliceAttrs, o)
+	if reqContext.operation != nil {
+		if reqContext.operation.costEstimatedSet {
+			rm.MeasureOperationCostEstimated(ctx, int64(reqContext.operation.costEstimated), sliceAttrs, o)
+		}
 		if reqContext.operation.costActualSet {
 			rm.MeasureOperationCostActual(ctx, int64(reqContext.operation.costActual), sliceAttrs, o)
 		}
