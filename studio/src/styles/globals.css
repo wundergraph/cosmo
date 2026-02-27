@@ -165,6 +165,39 @@
   }
 }
 
+/* Static highlight: fixed tilt (no animation) */
+.feature-icon-tile-border-highlight {
+  width: 150%;
+  height: 150%;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(22deg);
+  /* Two ellipses: one end anchored at center (50% 50%), opposite directions, reach past corners */
+  background:
+    radial-gradient(
+      ellipse 47% 12% at 3% 50%,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 28%,
+      rgba(255, 255, 255, 0.12) 50%,
+      transparent 72%
+    ),
+    radial-gradient(
+      ellipse 47% 12% at 97% 50%,
+      transparent 0%,
+      rgba(255, 255, 255, 0.2) 28%,
+      rgba(255, 255, 255, 0.12) 50%,
+      transparent 72%
+    );
+}
+
+.feature-icon-tile-border-highlight::after {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 7px;
+  background: rgba(0, 0, 0, 0.5);
+}
+
 pre[class*="language-"] code {
   display: block;
 }

@@ -1,6 +1,6 @@
 import { bench, describe } from 'vitest';
-import { compileGraphQLToMapping } from '../../src';
 import { buildSchema } from 'graphql';
+import { compileGraphQLToMapping } from '../../src/index.js';
 
 // Simple schema for benchmarking
 const simpleSchema = `

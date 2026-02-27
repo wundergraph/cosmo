@@ -340,6 +340,19 @@ message EntityMapping {
   string request = 5;
   // gRPC response message type name
   string response = 6;
+  // Mappings for required fields
+  repeated RequiredFieldMapping required_field_mappings = 7;
+}
+
+// Defines mapping for required fields
+message RequiredFieldMapping {
+  FieldMapping field_mapping = 1;
+  // Mapped gRPC method name
+  string rpc = 2;
+  // gRPC request message type name
+  string request = 3;
+  // gRPC response message type name
+  string response = 4;
 }
 
 // Defines mapping between GraphQL type fields and gRPC message fields
