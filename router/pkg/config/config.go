@@ -584,12 +584,19 @@ type RedisConfiguration struct {
 }
 
 type RateLimitSimpleStrategy struct {
-	Rate                           int           `yaml:"rate" envDefault:"10" env:"RATE_LIMIT_SIMPLE_RATE"`
-	Burst                          int           `yaml:"burst" envDefault:"10" env:"RATE_LIMIT_SIMPLE_BURST"`
-	Period                         time.Duration `yaml:"period" envDefault:"1s" env:"RATE_LIMIT_SIMPLE_PERIOD"`
-	RejectExceedingRequests        bool          `yaml:"reject_exceeding_requests" envDefault:"false" env:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS"`
-	RejectStatusCode               int           `yaml:"reject_status_code" envDefault:"200" env:"RATE_LIMIT_SIMPLE_REJECT_STATUS_CODE"`
-	HideStatsFromResponseExtension bool          `yaml:"hide_stats_from_response_extension" envDefault:"false" env:"RATE_LIMIT_SIMPLE_HIDE_STATS_FROM_RESPONSE_EXTENSION"`
+	Rate                           int                                `yaml:"rate" envDefault:"10" env:"RATE_LIMIT_SIMPLE_RATE"`
+	Burst                          int                                `yaml:"burst" envDefault:"10" env:"RATE_LIMIT_SIMPLE_BURST"`
+	Period                         time.Duration                      `yaml:"period" envDefault:"1s" env:"RATE_LIMIT_SIMPLE_PERIOD"`
+	RejectExceedingRequests        bool                               `yaml:"reject_exceeding_requests" envDefault:"false" env:"RATE_LIMIT_SIMPLE_REJECT_EXCEEDING_REQUESTS"`
+	RejectStatusCode               int                                `yaml:"reject_status_code" envDefault:"200" env:"RATE_LIMIT_SIMPLE_REJECT_STATUS_CODE"`
+	HideStatsFromResponseExtension bool                               `yaml:"hide_stats_from_response_extension" envDefault:"false" env:"RATE_LIMIT_SIMPLE_HIDE_STATS_FROM_RESPONSE_EXTENSION"`
+	Overrides                      map[string]RateLimitSimpleOverride `yaml:"overrides,omitempty" json:"overrides,omitempty"`
+}
+
+type RateLimitSimpleOverride struct {
+	Rate   int           `yaml:"rate"`
+	Burst  int           `yaml:"burst"`
+	Period time.Duration `yaml:"period"`
 }
 
 type CDNConfiguration struct {

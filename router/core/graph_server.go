@@ -116,6 +116,21 @@ type BuildGraphMuxOptions struct {
 	ReloadPersistentState *ReloadPersistentState
 }
 
+func rateLimitOverridesFromConfig(source map[string]config.RateLimitSimpleOverride) map[string]RateLimitOverride {
+	if len(source) == 0 {
+		return nil
+	}
+	converted := make(map[string]RateLimitOverride, len(source))
+	for suffix, override := range source {
+		converted[suffix] = RateLimitOverride{
+			Rate:   override.Rate,
+			Burst:  override.Burst,
+			Period: override.Period,
+		}
+	}
+	return converted
+}
+
 func (b BuildGraphMuxOptions) IsBaseGraph() bool {
 	return b.FeatureFlagName == ""
 }
@@ -1460,6 +1475,7 @@ func (s *graphServer) buildGraphMux(
 			RejectStatusCode:    s.rateLimit.SimpleStrategy.RejectStatusCode,
 			KeySuffixExpression: s.rateLimit.KeySuffixExpression,
 			ExprManager:         exprManager,
+			Overrides:           rateLimitOverridesFromConfig(s.rateLimit.SimpleStrategy.Overrides),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create rate limiter: %w", err)
