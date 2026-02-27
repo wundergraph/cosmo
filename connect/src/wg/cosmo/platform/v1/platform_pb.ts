@@ -9664,9 +9664,9 @@ export class PublishPersistedOperationsResponse extends Message<PublishPersisted
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.RetirePersistedOperationRequest
+ * @generated from message wg.cosmo.platform.v1.DeletePersistedOperationRequest
  */
-export class RetirePersistedOperationRequest extends Message<RetirePersistedOperationRequest> {
+export class DeletePersistedOperationRequest extends Message<DeletePersistedOperationRequest> {
   /**
    * @generated from field: string fedGraphName = 1;
    */
@@ -9682,83 +9682,83 @@ export class RetirePersistedOperationRequest extends Message<RetirePersistedOper
    */
   operationId = "";
 
-  constructor(data?: PartialMessage<RetirePersistedOperationRequest>) {
+  constructor(data?: PartialMessage<DeletePersistedOperationRequest>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.RetirePersistedOperationRequest";
+  static readonly typeName = "wg.cosmo.platform.v1.DeletePersistedOperationRequest";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RetirePersistedOperationRequest {
-    return new RetirePersistedOperationRequest().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeletePersistedOperationRequest {
+    return new DeletePersistedOperationRequest().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RetirePersistedOperationRequest {
-    return new RetirePersistedOperationRequest().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeletePersistedOperationRequest {
+    return new DeletePersistedOperationRequest().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RetirePersistedOperationRequest {
-    return new RetirePersistedOperationRequest().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeletePersistedOperationRequest {
+    return new DeletePersistedOperationRequest().fromJsonString(jsonString, options);
   }
 
-  static equals(a: RetirePersistedOperationRequest | PlainMessage<RetirePersistedOperationRequest> | undefined, b: RetirePersistedOperationRequest | PlainMessage<RetirePersistedOperationRequest> | undefined): boolean {
-    return proto3.util.equals(RetirePersistedOperationRequest, a, b);
+  static equals(a: DeletePersistedOperationRequest | PlainMessage<DeletePersistedOperationRequest> | undefined, b: DeletePersistedOperationRequest | PlainMessage<DeletePersistedOperationRequest> | undefined): boolean {
+    return proto3.util.equals(DeletePersistedOperationRequest, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.RetirePersistedOperationResponse
+ * @generated from message wg.cosmo.platform.v1.DeletePersistedOperationResponse
  */
-export class RetirePersistedOperationResponse extends Message<RetirePersistedOperationResponse> {
+export class DeletePersistedOperationResponse extends Message<DeletePersistedOperationResponse> {
   /**
    * @generated from field: wg.cosmo.platform.v1.Response response = 1;
    */
   response?: Response;
 
   /**
-   * @generated from field: wg.cosmo.platform.v1.RetirePersistedOperationResponse.Operation operation = 2;
+   * @generated from field: wg.cosmo.platform.v1.DeletePersistedOperationResponse.Operation operation = 2;
    */
-  operation?: RetirePersistedOperationResponse_Operation;
+  operation?: DeletePersistedOperationResponse_Operation;
 
-  constructor(data?: PartialMessage<RetirePersistedOperationResponse>) {
+  constructor(data?: PartialMessage<DeletePersistedOperationResponse>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.RetirePersistedOperationResponse";
+  static readonly typeName = "wg.cosmo.platform.v1.DeletePersistedOperationResponse";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "response", kind: "message", T: Response },
-    { no: 2, name: "operation", kind: "message", T: RetirePersistedOperationResponse_Operation },
+    { no: 2, name: "operation", kind: "message", T: DeletePersistedOperationResponse_Operation },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RetirePersistedOperationResponse {
-    return new RetirePersistedOperationResponse().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeletePersistedOperationResponse {
+    return new DeletePersistedOperationResponse().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RetirePersistedOperationResponse {
-    return new RetirePersistedOperationResponse().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeletePersistedOperationResponse {
+    return new DeletePersistedOperationResponse().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RetirePersistedOperationResponse {
-    return new RetirePersistedOperationResponse().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeletePersistedOperationResponse {
+    return new DeletePersistedOperationResponse().fromJsonString(jsonString, options);
   }
 
-  static equals(a: RetirePersistedOperationResponse | PlainMessage<RetirePersistedOperationResponse> | undefined, b: RetirePersistedOperationResponse | PlainMessage<RetirePersistedOperationResponse> | undefined): boolean {
-    return proto3.util.equals(RetirePersistedOperationResponse, a, b);
+  static equals(a: DeletePersistedOperationResponse | PlainMessage<DeletePersistedOperationResponse> | undefined, b: DeletePersistedOperationResponse | PlainMessage<DeletePersistedOperationResponse> | undefined): boolean {
+    return proto3.util.equals(DeletePersistedOperationResponse, a, b);
   }
 }
 
 /**
- * @generated from message wg.cosmo.platform.v1.RetirePersistedOperationResponse.Operation
+ * @generated from message wg.cosmo.platform.v1.DeletePersistedOperationResponse.Operation
  */
-export class RetirePersistedOperationResponse_Operation extends Message<RetirePersistedOperationResponse_Operation> {
+export class DeletePersistedOperationResponse_Operation extends Message<DeletePersistedOperationResponse_Operation> {
   /**
    * @generated from field: string id = 1;
    */
@@ -9774,33 +9774,33 @@ export class RetirePersistedOperationResponse_Operation extends Message<RetirePe
    */
   operationNames: string[] = [];
 
-  constructor(data?: PartialMessage<RetirePersistedOperationResponse_Operation>) {
+  constructor(data?: PartialMessage<DeletePersistedOperationResponse_Operation>) {
     super();
     proto3.util.initPartial(data, this);
   }
 
   static readonly runtime: typeof proto3 = proto3;
-  static readonly typeName = "wg.cosmo.platform.v1.RetirePersistedOperationResponse.Operation";
+  static readonly typeName = "wg.cosmo.platform.v1.DeletePersistedOperationResponse.Operation";
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "operationNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
-  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RetirePersistedOperationResponse_Operation {
-    return new RetirePersistedOperationResponse_Operation().fromBinary(bytes, options);
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeletePersistedOperationResponse_Operation {
+    return new DeletePersistedOperationResponse_Operation().fromBinary(bytes, options);
   }
 
-  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RetirePersistedOperationResponse_Operation {
-    return new RetirePersistedOperationResponse_Operation().fromJson(jsonValue, options);
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): DeletePersistedOperationResponse_Operation {
+    return new DeletePersistedOperationResponse_Operation().fromJson(jsonValue, options);
   }
 
-  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RetirePersistedOperationResponse_Operation {
-    return new RetirePersistedOperationResponse_Operation().fromJsonString(jsonString, options);
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): DeletePersistedOperationResponse_Operation {
+    return new DeletePersistedOperationResponse_Operation().fromJsonString(jsonString, options);
   }
 
-  static equals(a: RetirePersistedOperationResponse_Operation | PlainMessage<RetirePersistedOperationResponse_Operation> | undefined, b: RetirePersistedOperationResponse_Operation | PlainMessage<RetirePersistedOperationResponse_Operation> | undefined): boolean {
-    return proto3.util.equals(RetirePersistedOperationResponse_Operation, a, b);
+  static equals(a: DeletePersistedOperationResponse_Operation | PlainMessage<DeletePersistedOperationResponse_Operation> | undefined, b: DeletePersistedOperationResponse_Operation | PlainMessage<DeletePersistedOperationResponse_Operation> | undefined): boolean {
+    return proto3.util.equals(DeletePersistedOperationResponse_Operation, a, b);
   }
 }
 

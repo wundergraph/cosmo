@@ -117,7 +117,7 @@ import { whoAmI } from './organization/whoAmI.js';
 import { getClients } from './persisted-operation/getClients.js';
 import { getPersistedOperations } from './persisted-operation/getPersistedOperations.js';
 import { publishPersistedOperations } from './persisted-operation/publishPersistedOperations.js';
-import { retirePersistedOperation } from './persisted-operation/retirePersistedOperation.js';
+import { deletePersistedOperation } from './persisted-operation/deletePersistedOperation.js';
 import { checkPersistedOperationTraffic } from './persisted-operation/check-persisted-operation-traffic.js';
 import { createPlaygroundScript } from './playground/createPlaygroundScript.js';
 import { deletePlaygroundScript } from './playground/deletePlaygroundScript.js';
@@ -433,8 +433,8 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
       return checkPersistedOperationTraffic(opts, req, ctx);
     },
 
-    retirePersistedOperation: (req, ctx) => {
-      return retirePersistedOperation(opts, req, ctx);
+    deletePersistedOperation: (req, ctx) => {
+      return deletePersistedOperation(opts, req, ctx);
     },
 
     acceptOrDeclineInvitation: (req, ctx) => {

@@ -11680,7 +11680,7 @@ func (x *PublishPersistedOperationsResponse) GetOperations() []*PublishedOperati
 	return nil
 }
 
-type RetirePersistedOperationRequest struct {
+type DeletePersistedOperationRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -11690,8 +11690,8 @@ type RetirePersistedOperationRequest struct {
 	OperationId  string `protobuf:"bytes,3,opt,name=operationId,proto3" json:"operationId,omitempty"`
 }
 
-func (x *RetirePersistedOperationRequest) Reset() {
-	*x = RetirePersistedOperationRequest{}
+func (x *DeletePersistedOperationRequest) Reset() {
+	*x = DeletePersistedOperationRequest{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[151]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -11699,13 +11699,13 @@ func (x *RetirePersistedOperationRequest) Reset() {
 	}
 }
 
-func (x *RetirePersistedOperationRequest) String() string {
+func (x *DeletePersistedOperationRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RetirePersistedOperationRequest) ProtoMessage() {}
+func (*DeletePersistedOperationRequest) ProtoMessage() {}
 
-func (x *RetirePersistedOperationRequest) ProtoReflect() protoreflect.Message {
+func (x *DeletePersistedOperationRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[151]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -11717,43 +11717,43 @@ func (x *RetirePersistedOperationRequest) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RetirePersistedOperationRequest.ProtoReflect.Descriptor instead.
-func (*RetirePersistedOperationRequest) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeletePersistedOperationRequest.ProtoReflect.Descriptor instead.
+func (*DeletePersistedOperationRequest) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{151}
 }
 
-func (x *RetirePersistedOperationRequest) GetFedGraphName() string {
+func (x *DeletePersistedOperationRequest) GetFedGraphName() string {
 	if x != nil {
 		return x.FedGraphName
 	}
 	return ""
 }
 
-func (x *RetirePersistedOperationRequest) GetNamespace() string {
+func (x *DeletePersistedOperationRequest) GetNamespace() string {
 	if x != nil {
 		return x.Namespace
 	}
 	return ""
 }
 
-func (x *RetirePersistedOperationRequest) GetOperationId() string {
+func (x *DeletePersistedOperationRequest) GetOperationId() string {
 	if x != nil {
 		return x.OperationId
 	}
 	return ""
 }
 
-type RetirePersistedOperationResponse struct {
+type DeletePersistedOperationResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
 	Response  *Response                                   `protobuf:"bytes,1,opt,name=response,proto3" json:"response,omitempty"`
-	Operation *RetirePersistedOperationResponse_Operation `protobuf:"bytes,2,opt,name=operation,proto3" json:"operation,omitempty"`
+	Operation *DeletePersistedOperationResponse_Operation `protobuf:"bytes,2,opt,name=operation,proto3" json:"operation,omitempty"`
 }
 
-func (x *RetirePersistedOperationResponse) Reset() {
-	*x = RetirePersistedOperationResponse{}
+func (x *DeletePersistedOperationResponse) Reset() {
+	*x = DeletePersistedOperationResponse{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[152]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -11761,13 +11761,13 @@ func (x *RetirePersistedOperationResponse) Reset() {
 	}
 }
 
-func (x *RetirePersistedOperationResponse) String() string {
+func (x *DeletePersistedOperationResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RetirePersistedOperationResponse) ProtoMessage() {}
+func (*DeletePersistedOperationResponse) ProtoMessage() {}
 
-func (x *RetirePersistedOperationResponse) ProtoReflect() protoreflect.Message {
+func (x *DeletePersistedOperationResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[152]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -11779,19 +11779,19 @@ func (x *RetirePersistedOperationResponse) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RetirePersistedOperationResponse.ProtoReflect.Descriptor instead.
-func (*RetirePersistedOperationResponse) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeletePersistedOperationResponse.ProtoReflect.Descriptor instead.
+func (*DeletePersistedOperationResponse) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{152}
 }
 
-func (x *RetirePersistedOperationResponse) GetResponse() *Response {
+func (x *DeletePersistedOperationResponse) GetResponse() *Response {
 	if x != nil {
 		return x.Response
 	}
 	return nil
 }
 
-func (x *RetirePersistedOperationResponse) GetOperation() *RetirePersistedOperationResponse_Operation {
+func (x *DeletePersistedOperationResponse) GetOperation() *DeletePersistedOperationResponse_Operation {
 	if x != nil {
 		return x.Operation
 	}
@@ -30584,7 +30584,7 @@ func (x *APIKey_Group) GetName() string {
 	return ""
 }
 
-type RetirePersistedOperationResponse_Operation struct {
+type DeletePersistedOperationResponse_Operation struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
@@ -30594,8 +30594,8 @@ type RetirePersistedOperationResponse_Operation struct {
 	OperationNames []string `protobuf:"bytes,3,rep,name=operationNames,proto3" json:"operationNames,omitempty"`
 }
 
-func (x *RetirePersistedOperationResponse_Operation) Reset() {
-	*x = RetirePersistedOperationResponse_Operation{}
+func (x *DeletePersistedOperationResponse_Operation) Reset() {
+	*x = DeletePersistedOperationResponse_Operation{}
 	if protoimpl.UnsafeEnabled {
 		mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[449]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -30603,13 +30603,13 @@ func (x *RetirePersistedOperationResponse_Operation) Reset() {
 	}
 }
 
-func (x *RetirePersistedOperationResponse_Operation) String() string {
+func (x *DeletePersistedOperationResponse_Operation) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*RetirePersistedOperationResponse_Operation) ProtoMessage() {}
+func (*DeletePersistedOperationResponse_Operation) ProtoMessage() {}
 
-func (x *RetirePersistedOperationResponse_Operation) ProtoReflect() protoreflect.Message {
+func (x *DeletePersistedOperationResponse_Operation) ProtoReflect() protoreflect.Message {
 	mi := &file_wg_cosmo_platform_v1_platform_proto_msgTypes[449]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -30621,26 +30621,26 @@ func (x *RetirePersistedOperationResponse_Operation) ProtoReflect() protoreflect
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use RetirePersistedOperationResponse_Operation.ProtoReflect.Descriptor instead.
-func (*RetirePersistedOperationResponse_Operation) Descriptor() ([]byte, []int) {
+// Deprecated: Use DeletePersistedOperationResponse_Operation.ProtoReflect.Descriptor instead.
+func (*DeletePersistedOperationResponse_Operation) Descriptor() ([]byte, []int) {
 	return file_wg_cosmo_platform_v1_platform_proto_rawDescGZIP(), []int{152, 0}
 }
 
-func (x *RetirePersistedOperationResponse_Operation) GetId() string {
+func (x *DeletePersistedOperationResponse_Operation) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *RetirePersistedOperationResponse_Operation) GetOperationId() string {
+func (x *DeletePersistedOperationResponse_Operation) GetOperationId() string {
 	if x != nil {
 		return x.OperationId
 	}
 	return ""
 }
 
-func (x *RetirePersistedOperationResponse_Operation) GetOperationNames() []string {
+func (x *DeletePersistedOperationResponse_Operation) GetOperationNames() []string {
 	if x != nil {
 		return x.OperationNames
 	}
@@ -34195,8 +34195,8 @@ var file_wg_cosmo_platform_v1_platform_proto_rawDesc = []byte{
 	0x20, 0x03, 0x28, 0x0b, 0x32, 0x28, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e,
 	0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x50, 0x75, 0x62, 0x6c,
 	0x69, 0x73, 0x68, 0x65, 0x64, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x0a,
-	0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x85, 0x01, 0x0a, 0x1f, 0x52,
-	0x65, 0x74, 0x69, 0x72, 0x65, 0x50, 0x65, 0x72, 0x73, 0x69, 0x73, 0x74, 0x65, 0x64, 0x4f, 0x70,
+	0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x73, 0x22, 0x85, 0x01, 0x0a, 0x1f, 0x44,
+	0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x65, 0x72, 0x73, 0x69, 0x73, 0x74, 0x65, 0x64, 0x4f, 0x70,
 	0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x22,
 	0x0a, 0x0c, 0x66, 0x65, 0x64, 0x47, 0x72, 0x61, 0x70, 0x68, 0x4e, 0x61, 0x6d, 0x65, 0x18, 0x01,
 	0x20, 0x01, 0x28, 0x09, 0x52, 0x0c, 0x66, 0x65, 0x64, 0x47, 0x72, 0x61, 0x70, 0x68, 0x4e, 0x61,
@@ -34204,7 +34204,7 @@ var file_wg_cosmo_platform_v1_platform_proto_rawDesc = []byte{
 	0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x09, 0x6e, 0x61, 0x6d, 0x65, 0x73, 0x70, 0x61, 0x63, 0x65,
 	0x12, 0x20, 0x0a, 0x0b, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x49, 0x64, 0x18,
 	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x0b, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e,
-	0x49, 0x64, 0x22, 0xa5, 0x02, 0x0a, 0x20, 0x52, 0x65, 0x74, 0x69, 0x72, 0x65, 0x50, 0x65, 0x72,
+	0x49, 0x64, 0x22, 0xa5, 0x02, 0x0a, 0x20, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x65, 0x72,
 	0x73, 0x69, 0x73, 0x74, 0x65, 0x64, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52,
 	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x3a, 0x0a, 0x08, 0x72, 0x65, 0x73, 0x70, 0x6f,
 	0x6e, 0x73, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1e, 0x2e, 0x77, 0x67, 0x2e, 0x63,
@@ -34212,8 +34212,8 @@ var file_wg_cosmo_platform_v1_platform_proto_rawDesc = []byte{
 	0x2e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x52, 0x08, 0x72, 0x65, 0x73, 0x70, 0x6f,
 	0x6e, 0x73, 0x65, 0x12, 0x5e, 0x0a, 0x09, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e,
 	0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x40, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d,
-	0x6f, 0x2e, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65,
-	0x74, 0x69, 0x72, 0x65, 0x50, 0x65, 0x72, 0x73, 0x69, 0x73, 0x74, 0x65, 0x64, 0x4f, 0x70, 0x65,
+	0x6f, 0x2e, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x44, 0x65,
+	0x6c, 0x65, 0x74, 0x65, 0x50, 0x65, 0x72, 0x73, 0x69, 0x73, 0x74, 0x65, 0x64, 0x4f, 0x70, 0x65,
 	0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x2e, 0x4f,
 	0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x09, 0x6f, 0x70, 0x65, 0x72, 0x61, 0x74,
 	0x69, 0x6f, 0x6e, 0x1a, 0x65, 0x0a, 0x09, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e,
@@ -37862,14 +37862,14 @@ var file_wg_cosmo_platform_v1_platform_proto_rawDesc = []byte{
 	0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x2e, 0x76,
 	0x31, 0x2e, 0x43, 0x68, 0x65, 0x63, 0x6b, 0x50, 0x65, 0x72, 0x73, 0x69, 0x73, 0x74, 0x65, 0x64,
 	0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x54, 0x72, 0x61, 0x66, 0x66, 0x69, 0x63,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x8b, 0x01, 0x0a, 0x18, 0x52,
-	0x65, 0x74, 0x69, 0x72, 0x65, 0x50, 0x65, 0x72, 0x73, 0x69, 0x73, 0x74, 0x65, 0x64, 0x4f, 0x70,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x8b, 0x01, 0x0a, 0x18, 0x44,
+	0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x65, 0x72, 0x73, 0x69, 0x73, 0x74, 0x65, 0x64, 0x4f, 0x70,
 	0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x35, 0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73,
-	0x6d, 0x6f, 0x2e, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x52,
-	0x65, 0x74, 0x69, 0x72, 0x65, 0x50, 0x65, 0x72, 0x73, 0x69, 0x73, 0x74, 0x65, 0x64, 0x4f, 0x70,
+	0x6d, 0x6f, 0x2e, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f, 0x72, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x44,
+	0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x65, 0x72, 0x73, 0x69, 0x73, 0x74, 0x65, 0x64, 0x4f, 0x70,
 	0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x36,
 	0x2e, 0x77, 0x67, 0x2e, 0x63, 0x6f, 0x73, 0x6d, 0x6f, 0x2e, 0x70, 0x6c, 0x61, 0x74, 0x66, 0x6f,
-	0x72, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x74, 0x69, 0x72, 0x65, 0x50, 0x65, 0x72, 0x73,
+	0x72, 0x6d, 0x2e, 0x76, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x50, 0x65, 0x72, 0x73,
 	0x69, 0x73, 0x74, 0x65, 0x64, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x52, 0x65,
 	0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x00, 0x12, 0x85, 0x01, 0x0a, 0x16, 0x47, 0x65, 0x74,
 	0x50, 0x65, 0x72, 0x73, 0x69, 0x73, 0x74, 0x65, 0x64, 0x4f, 0x70, 0x65, 0x72, 0x61, 0x74, 0x69,
@@ -39237,8 +39237,8 @@ var file_wg_cosmo_platform_v1_platform_proto_goTypes = []any{
 	(*PublishPersistedOperationsRequest)(nil),             // 163: wg.cosmo.platform.v1.PublishPersistedOperationsRequest
 	(*PublishedOperation)(nil),                            // 164: wg.cosmo.platform.v1.PublishedOperation
 	(*PublishPersistedOperationsResponse)(nil),            // 165: wg.cosmo.platform.v1.PublishPersistedOperationsResponse
-	(*RetirePersistedOperationRequest)(nil),               // 166: wg.cosmo.platform.v1.RetirePersistedOperationRequest
-	(*RetirePersistedOperationResponse)(nil),              // 167: wg.cosmo.platform.v1.RetirePersistedOperationResponse
+	(*DeletePersistedOperationRequest)(nil),               // 166: wg.cosmo.platform.v1.DeletePersistedOperationRequest
+	(*DeletePersistedOperationResponse)(nil),              // 167: wg.cosmo.platform.v1.DeletePersistedOperationResponse
 	(*CheckPersistedOperationTrafficRequest)(nil),         // 168: wg.cosmo.platform.v1.CheckPersistedOperationTrafficRequest
 	(*CheckPersistedOperationTrafficResponse)(nil),        // 169: wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse
 	(*GetPersistedOperationsRequest)(nil),                 // 170: wg.cosmo.platform.v1.GetPersistedOperationsRequest
@@ -39535,7 +39535,7 @@ var file_wg_cosmo_platform_v1_platform_proto_goTypes = []any{
 	(*OrgMember_Group)(nil),                                      // 461: wg.cosmo.platform.v1.OrgMember.Group
 	(*APIKey_Group)(nil),                                         // 462: wg.cosmo.platform.v1.APIKey.Group
 	nil,                                                          // 463: wg.cosmo.platform.v1.Span.AttributesEntry
-	(*RetirePersistedOperationResponse_Operation)(nil),           // 464: wg.cosmo.platform.v1.RetirePersistedOperationResponse.Operation
+	(*DeletePersistedOperationResponse_Operation)(nil),           // 464: wg.cosmo.platform.v1.DeletePersistedOperationResponse.Operation
 	(*CheckPersistedOperationTrafficResponse_Operation)(nil),     // 465: wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse.Operation
 	(*GetPersistedOperationsResponse_Operation)(nil),             // 466: wg.cosmo.platform.v1.GetPersistedOperationsResponse.Operation
 	(*GetOrganizationWebhookConfigsResponse_Config)(nil),         // 467: wg.cosmo.platform.v1.GetOrganizationWebhookConfigsResponse.Config
@@ -39741,8 +39741,8 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	7,   // 178: wg.cosmo.platform.v1.PublishedOperation.status:type_name -> wg.cosmo.platform.v1.PublishedOperationStatus
 	16,  // 179: wg.cosmo.platform.v1.PublishPersistedOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	164, // 180: wg.cosmo.platform.v1.PublishPersistedOperationsResponse.operations:type_name -> wg.cosmo.platform.v1.PublishedOperation
-	16,  // 181: wg.cosmo.platform.v1.RetirePersistedOperationResponse.response:type_name -> wg.cosmo.platform.v1.Response
-	464, // 182: wg.cosmo.platform.v1.RetirePersistedOperationResponse.operation:type_name -> wg.cosmo.platform.v1.RetirePersistedOperationResponse.Operation
+	16,  // 181: wg.cosmo.platform.v1.DeletePersistedOperationResponse.response:type_name -> wg.cosmo.platform.v1.Response
+	464, // 182: wg.cosmo.platform.v1.DeletePersistedOperationResponse.operation:type_name -> wg.cosmo.platform.v1.DeletePersistedOperationResponse.Operation
 	16,  // 183: wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse.response:type_name -> wg.cosmo.platform.v1.Response
 	465, // 184: wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse.operation:type_name -> wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse.Operation
 	16,  // 185: wg.cosmo.platform.v1.GetPersistedOperationsResponse.response:type_name -> wg.cosmo.platform.v1.Response
@@ -40078,7 +40078,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	160, // 515: wg.cosmo.platform.v1.PlatformService.DeleteRouterToken:input_type -> wg.cosmo.platform.v1.DeleteRouterTokenRequest
 	163, // 516: wg.cosmo.platform.v1.PlatformService.PublishPersistedOperations:input_type -> wg.cosmo.platform.v1.PublishPersistedOperationsRequest
 	168, // 517: wg.cosmo.platform.v1.PlatformService.CheckPersistedOperationTraffic:input_type -> wg.cosmo.platform.v1.CheckPersistedOperationTrafficRequest
-	166, // 518: wg.cosmo.platform.v1.PlatformService.RetirePersistedOperation:input_type -> wg.cosmo.platform.v1.RetirePersistedOperationRequest
+	166, // 518: wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation:input_type -> wg.cosmo.platform.v1.DeletePersistedOperationRequest
 	170, // 519: wg.cosmo.platform.v1.PlatformService.GetPersistedOperations:input_type -> wg.cosmo.platform.v1.GetPersistedOperationsRequest
 	263, // 520: wg.cosmo.platform.v1.PlatformService.GetAuditLogs:input_type -> wg.cosmo.platform.v1.GetAuditLogsRequest
 	445, // 521: wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser:input_type -> wg.cosmo.platform.v1.InitializeCosmoUserRequest
@@ -40255,7 +40255,7 @@ var file_wg_cosmo_platform_v1_platform_proto_depIdxs = []int32{
 	161, // 692: wg.cosmo.platform.v1.PlatformService.DeleteRouterToken:output_type -> wg.cosmo.platform.v1.DeleteRouterTokenResponse
 	165, // 693: wg.cosmo.platform.v1.PlatformService.PublishPersistedOperations:output_type -> wg.cosmo.platform.v1.PublishPersistedOperationsResponse
 	169, // 694: wg.cosmo.platform.v1.PlatformService.CheckPersistedOperationTraffic:output_type -> wg.cosmo.platform.v1.CheckPersistedOperationTrafficResponse
-	167, // 695: wg.cosmo.platform.v1.PlatformService.RetirePersistedOperation:output_type -> wg.cosmo.platform.v1.RetirePersistedOperationResponse
+	167, // 695: wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation:output_type -> wg.cosmo.platform.v1.DeletePersistedOperationResponse
 	171, // 696: wg.cosmo.platform.v1.PlatformService.GetPersistedOperations:output_type -> wg.cosmo.platform.v1.GetPersistedOperationsResponse
 	265, // 697: wg.cosmo.platform.v1.PlatformService.GetAuditLogs:output_type -> wg.cosmo.platform.v1.GetAuditLogsResponse
 	446, // 698: wg.cosmo.platform.v1.PlatformService.InitializeCosmoUser:output_type -> wg.cosmo.platform.v1.InitializeCosmoUserResponse
@@ -42221,7 +42221,7 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 			}
 		}
 		file_wg_cosmo_platform_v1_platform_proto_msgTypes[151].Exporter = func(v any, i int) any {
-			switch v := v.(*RetirePersistedOperationRequest); i {
+			switch v := v.(*DeletePersistedOperationRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -42233,7 +42233,7 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 			}
 		}
 		file_wg_cosmo_platform_v1_platform_proto_msgTypes[152].Exporter = func(v any, i int) any {
-			switch v := v.(*RetirePersistedOperationResponse); i {
+			switch v := v.(*DeletePersistedOperationResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -45773,7 +45773,7 @@ func file_wg_cosmo_platform_v1_platform_proto_init() {
 			}
 		}
 		file_wg_cosmo_platform_v1_platform_proto_msgTypes[449].Exporter = func(v any, i int) any {
-			switch v := v.(*RetirePersistedOperationResponse_Operation); i {
+			switch v := v.(*DeletePersistedOperationResponse_Operation); i {
 			case 0:
 				return &v.state
 			case 1:

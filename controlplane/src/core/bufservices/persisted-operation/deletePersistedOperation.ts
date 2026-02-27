@@ -2,8 +2,8 @@ import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import type {
-  RetirePersistedOperationRequest,
-  RetirePersistedOperationResponse,
+  DeletePersistedOperationRequest,
+  DeletePersistedOperationResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import type { BlobStorage } from '../../blobstorage/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -14,14 +14,14 @@ import type { PersistedOperationWithClientDTO } from '../../../types/index.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { createBlobStoragePath } from './utils.js';
 
-export function retirePersistedOperation(
+export function deletePersistedOperation(
   opts: RouterOptions,
-  req: RetirePersistedOperationRequest,
+  req: DeletePersistedOperationRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<RetirePersistedOperationResponse>> {
+): Promise<PlainMessage<DeletePersistedOperationResponse>> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<RetirePersistedOperationResponse>>(ctx, logger, async () => {
+  return handleError<PlainMessage<DeletePersistedOperationResponse>>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {
@@ -78,12 +78,12 @@ export function retirePersistedOperation(
       return {
         response: {
           code: EnumStatusCode.ERR,
-          details: `Failed to retire operation ${removedFromBlobStorageResult.error.operationId}`,
+          details: `Failed to delete operation ${removedFromBlobStorageResult.error.operationId}`,
         },
       };
     }
 
-    const retiredOperation = await operationsRepo.retirePersistedOperation({
+    const deletedOperation = await operationsRepo.deletePersistedOperation({
       operationId: req.operationId,
     });
 
@@ -91,11 +91,11 @@ export function retirePersistedOperation(
       response: {
         code: EnumStatusCode.OK,
       },
-      operation: retiredOperation
+      operation: deletedOperation
         ? {
-            id: retiredOperation.id,
-            operationId: retiredOperation.operationId,
-            operationNames: retiredOperation.operationNames,
+            id: deletedOperation.id,
+            operationId: deletedOperation.operationId,
+            operationNames: deletedOperation.operationNames,
           }
         : undefined,
     };

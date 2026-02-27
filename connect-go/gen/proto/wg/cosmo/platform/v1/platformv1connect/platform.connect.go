@@ -145,9 +145,9 @@ const (
 	// PlatformServiceCheckPersistedOperationTrafficProcedure is the fully-qualified name of the
 	// PlatformService's CheckPersistedOperationTraffic RPC.
 	PlatformServiceCheckPersistedOperationTrafficProcedure = "/wg.cosmo.platform.v1.PlatformService/CheckPersistedOperationTraffic"
-	// PlatformServiceRetirePersistedOperationProcedure is the fully-qualified name of the
-	// PlatformService's RetirePersistedOperation RPC.
-	PlatformServiceRetirePersistedOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/RetirePersistedOperation"
+	// PlatformServiceDeletePersistedOperationProcedure is the fully-qualified name of the
+	// PlatformService's DeletePersistedOperation RPC.
+	PlatformServiceDeletePersistedOperationProcedure = "/wg.cosmo.platform.v1.PlatformService/DeletePersistedOperation"
 	// PlatformServiceGetPersistedOperationsProcedure is the fully-qualified name of the
 	// PlatformService's GetPersistedOperations RPC.
 	PlatformServiceGetPersistedOperationsProcedure = "/wg.cosmo.platform.v1.PlatformService/GetPersistedOperations"
@@ -607,7 +607,7 @@ var (
 	platformServiceDeleteRouterTokenMethodDescriptor                     = platformServiceServiceDescriptor.Methods().ByName("DeleteRouterToken")
 	platformServicePublishPersistedOperationsMethodDescriptor            = platformServiceServiceDescriptor.Methods().ByName("PublishPersistedOperations")
 	platformServiceCheckPersistedOperationTrafficMethodDescriptor        = platformServiceServiceDescriptor.Methods().ByName("CheckPersistedOperationTraffic")
-	platformServiceRetirePersistedOperationMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("RetirePersistedOperation")
+	platformServiceDeletePersistedOperationMethodDescriptor              = platformServiceServiceDescriptor.Methods().ByName("DeletePersistedOperation")
 	platformServiceGetPersistedOperationsMethodDescriptor                = platformServiceServiceDescriptor.Methods().ByName("GetPersistedOperations")
 	platformServiceGetAuditLogsMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("GetAuditLogs")
 	platformServiceInitializeCosmoUserMethodDescriptor                   = platformServiceServiceDescriptor.Methods().ByName("InitializeCosmoUser")
@@ -812,8 +812,8 @@ type PlatformServiceClient interface {
 	PublishPersistedOperations(context.Context, *connect.Request[v1.PublishPersistedOperationsRequest]) (*connect.Response[v1.PublishPersistedOperationsResponse], error)
 	// Check if persisted operation has any traffic
 	CheckPersistedOperationTraffic(context.Context, *connect.Request[v1.CheckPersistedOperationTrafficRequest]) (*connect.Response[v1.CheckPersistedOperationTrafficResponse], error)
-	// Retire/remove a persisted operation
-	RetirePersistedOperation(context.Context, *connect.Request[v1.RetirePersistedOperationRequest]) (*connect.Response[v1.RetirePersistedOperationResponse], error)
+	// Delete/remove a persisted operation
+	DeletePersistedOperation(context.Context, *connect.Request[v1.DeletePersistedOperationRequest]) (*connect.Response[v1.DeletePersistedOperationResponse], error)
 	// GetPersistedOperations returns operations for the registered client id
 	GetPersistedOperations(context.Context, *connect.Request[v1.GetPersistedOperationsRequest]) (*connect.Response[v1.GetPersistedOperationsResponse], error)
 	// GetAuditLogs returns the audit logs of the organization
@@ -1319,10 +1319,10 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceCheckPersistedOperationTrafficMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		retirePersistedOperation: connect.NewClient[v1.RetirePersistedOperationRequest, v1.RetirePersistedOperationResponse](
+		deletePersistedOperation: connect.NewClient[v1.DeletePersistedOperationRequest, v1.DeletePersistedOperationResponse](
 			httpClient,
-			baseURL+PlatformServiceRetirePersistedOperationProcedure,
-			connect.WithSchema(platformServiceRetirePersistedOperationMethodDescriptor),
+			baseURL+PlatformServiceDeletePersistedOperationProcedure,
+			connect.WithSchema(platformServiceDeletePersistedOperationMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getPersistedOperations: connect.NewClient[v1.GetPersistedOperationsRequest, v1.GetPersistedOperationsResponse](
@@ -2208,7 +2208,7 @@ type platformServiceClient struct {
 	deleteRouterToken                     *connect.Client[v1.DeleteRouterTokenRequest, v1.DeleteRouterTokenResponse]
 	publishPersistedOperations            *connect.Client[v1.PublishPersistedOperationsRequest, v1.PublishPersistedOperationsResponse]
 	checkPersistedOperationTraffic        *connect.Client[v1.CheckPersistedOperationTrafficRequest, v1.CheckPersistedOperationTrafficResponse]
-	retirePersistedOperation              *connect.Client[v1.RetirePersistedOperationRequest, v1.RetirePersistedOperationResponse]
+	deletePersistedOperation              *connect.Client[v1.DeletePersistedOperationRequest, v1.DeletePersistedOperationResponse]
 	getPersistedOperations                *connect.Client[v1.GetPersistedOperationsRequest, v1.GetPersistedOperationsResponse]
 	getAuditLogs                          *connect.Client[v1.GetAuditLogsRequest, v1.GetAuditLogsResponse]
 	initializeCosmoUser                   *connect.Client[v1.InitializeCosmoUserRequest, v1.InitializeCosmoUserResponse]
@@ -2537,9 +2537,9 @@ func (c *platformServiceClient) CheckPersistedOperationTraffic(ctx context.Conte
 	return c.checkPersistedOperationTraffic.CallUnary(ctx, req)
 }
 
-// RetirePersistedOperation calls wg.cosmo.platform.v1.PlatformService.RetirePersistedOperation.
-func (c *platformServiceClient) RetirePersistedOperation(ctx context.Context, req *connect.Request[v1.RetirePersistedOperationRequest]) (*connect.Response[v1.RetirePersistedOperationResponse], error) {
-	return c.retirePersistedOperation.CallUnary(ctx, req)
+// DeletePersistedOperation calls wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation.
+func (c *platformServiceClient) DeletePersistedOperation(ctx context.Context, req *connect.Request[v1.DeletePersistedOperationRequest]) (*connect.Response[v1.DeletePersistedOperationResponse], error) {
+	return c.deletePersistedOperation.CallUnary(ctx, req)
 }
 
 // GetPersistedOperations calls wg.cosmo.platform.v1.PlatformService.GetPersistedOperations.
@@ -3335,8 +3335,8 @@ type PlatformServiceHandler interface {
 	PublishPersistedOperations(context.Context, *connect.Request[v1.PublishPersistedOperationsRequest]) (*connect.Response[v1.PublishPersistedOperationsResponse], error)
 	// Check if persisted operation has any traffic
 	CheckPersistedOperationTraffic(context.Context, *connect.Request[v1.CheckPersistedOperationTrafficRequest]) (*connect.Response[v1.CheckPersistedOperationTrafficResponse], error)
-	// Retire/remove a persisted operation
-	RetirePersistedOperation(context.Context, *connect.Request[v1.RetirePersistedOperationRequest]) (*connect.Response[v1.RetirePersistedOperationResponse], error)
+	// Delete/remove a persisted operation
+	DeletePersistedOperation(context.Context, *connect.Request[v1.DeletePersistedOperationRequest]) (*connect.Response[v1.DeletePersistedOperationResponse], error)
 	// GetPersistedOperations returns operations for the registered client id
 	GetPersistedOperations(context.Context, *connect.Request[v1.GetPersistedOperationsRequest]) (*connect.Response[v1.GetPersistedOperationsResponse], error)
 	// GetAuditLogs returns the audit logs of the organization
@@ -3838,10 +3838,10 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceCheckPersistedOperationTrafficMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	platformServiceRetirePersistedOperationHandler := connect.NewUnaryHandler(
-		PlatformServiceRetirePersistedOperationProcedure,
-		svc.RetirePersistedOperation,
-		connect.WithSchema(platformServiceRetirePersistedOperationMethodDescriptor),
+	platformServiceDeletePersistedOperationHandler := connect.NewUnaryHandler(
+		PlatformServiceDeletePersistedOperationProcedure,
+		svc.DeletePersistedOperation,
+		connect.WithSchema(platformServiceDeletePersistedOperationMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	platformServiceGetPersistedOperationsHandler := connect.NewUnaryHandler(
@@ -4761,8 +4761,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServicePublishPersistedOperationsHandler.ServeHTTP(w, r)
 		case PlatformServiceCheckPersistedOperationTrafficProcedure:
 			platformServiceCheckPersistedOperationTrafficHandler.ServeHTTP(w, r)
-		case PlatformServiceRetirePersistedOperationProcedure:
-			platformServiceRetirePersistedOperationHandler.ServeHTTP(w, r)
+		case PlatformServiceDeletePersistedOperationProcedure:
+			platformServiceDeletePersistedOperationHandler.ServeHTTP(w, r)
 		case PlatformServiceGetPersistedOperationsProcedure:
 			platformServiceGetPersistedOperationsHandler.ServeHTTP(w, r)
 		case PlatformServiceGetAuditLogsProcedure:
@@ -5198,8 +5198,8 @@ func (UnimplementedPlatformServiceHandler) CheckPersistedOperationTraffic(contex
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.CheckPersistedOperationTraffic is not implemented"))
 }
 
-func (UnimplementedPlatformServiceHandler) RetirePersistedOperation(context.Context, *connect.Request[v1.RetirePersistedOperationRequest]) (*connect.Response[v1.RetirePersistedOperationResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RetirePersistedOperation is not implemented"))
+func (UnimplementedPlatformServiceHandler) DeletePersistedOperation(context.Context, *connect.Request[v1.DeletePersistedOperationRequest]) (*connect.Response[v1.DeletePersistedOperationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.DeletePersistedOperation is not implemented"))
 }
 
 func (UnimplementedPlatformServiceHandler) GetPersistedOperations(context.Context, *connect.Request[v1.GetPersistedOperationsRequest]) (*connect.Response[v1.GetPersistedOperationsResponse], error) {

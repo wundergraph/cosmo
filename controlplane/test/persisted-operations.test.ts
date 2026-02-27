@@ -336,8 +336,8 @@ describe('Persisted operations', (ctx) => {
     });
   });
 
-  describe('retirement', () => {
-    test('Should be able to retire a persisted operation', async (testContext) => {
+  describe('deleting', () => {
+    test('Should be able to delete a persisted operation', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 
@@ -351,16 +351,16 @@ describe('Persisted operations', (ctx) => {
         operations: [{ id: genID('hello'), contents: `query { hello }` }],
       });
 
-      const retireOperationsResp = await client.retirePersistedOperation({
+      const deleteOperationsResp = await client.deletePersistedOperation({
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
       });
 
-      expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     });
 
-    test('Should be able to retire a persisted operation in dev role', async (testContext) => {
+    test('Should be able to delete a persisted operation in dev role', async (testContext) => {
       const { client, server, users, authenticator } = await SetupTest({
         dbname,
         chClient,
@@ -384,16 +384,16 @@ describe('Persisted operations', (ctx) => {
         operations: [{ id: genID('hello'), contents: `query { hello }` }],
       });
 
-      const retireOperationsResp = await client.retirePersistedOperation({
+      const deleteOperationsResp = await client.deletePersistedOperation({
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
       });
 
-      expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     });
 
-    test('Should delete persisted operation from blob storage when retired', async (testContext) => {
+    test('Should delete persisted operation from blob storage when deleted', async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({
         dbname,
         chClient,
@@ -415,7 +415,7 @@ describe('Persisted operations', (ctx) => {
 
       const storageKeys = blobStorage.keys();
 
-      await client.retirePersistedOperation({
+      await client.deletePersistedOperation({
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
@@ -428,7 +428,7 @@ describe('Persisted operations', (ctx) => {
       ).rejects.toThrow(/not found/);
     });
 
-    test('Should fail when blob storage errs during retirement of a persisted operation', async (testContext) => {
+    test('Should fail when blob storage errs during deletement of a persisted operation', async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({
         dbname,
         chClient,
@@ -450,34 +450,34 @@ describe('Persisted operations', (ctx) => {
 
       const deleteObjectSpy = vi.spyOn(blobStorage, 'deleteObject').mockRejectedValueOnce(new Error('delete failed'));
 
-      const retireOperationsResp = await client.retirePersistedOperation({
+      const deleteOperationsResp = await client.deletePersistedOperation({
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
       });
 
       expect(deleteObjectSpy).toHaveBeenCalledTimes(1);
-      expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.ERR);
-      expect(retireOperationsResp.response?.details).toContain('Failed to retire operation');
+      expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.ERR);
+      expect(deleteOperationsResp.response?.details).toContain('Failed to delete operation');
     });
 
-    test('Should NOT be able to retire a persisted operation that does not exist', async (testContext) => {
+    test('Should NOT be able to delete a persisted operation that does not exist', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
       testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       await setupFederatedGraph(fedGraphName, client);
 
-      const retireOperationsResp = await client.retirePersistedOperation({
+      const deleteOperationsResp = await client.deletePersistedOperation({
         fedGraphName,
         namespace: 'default',
         operationId: 'xxx',
       });
 
-      expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+      expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     });
 
-    test('Should NOT be able to retire a persisted operation in viewer role', async (testContext) => {
+    test('Should NOT be able to delete a persisted operation in viewer role', async (testContext) => {
       const { client, server, users, authenticator } = await SetupTest({
         dbname,
         chClient,
@@ -501,12 +501,12 @@ describe('Persisted operations', (ctx) => {
         rbac: createTestRBACEvaluator(createTestGroup({ role: 'namespace-viewer' })),
       });
 
-      const retireOperationsResp = await client.retirePersistedOperation({
+      const deleteOperationsResp = await client.deletePersistedOperation({
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
       });
-      expect(retireOperationsResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+      expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     });
   });
 

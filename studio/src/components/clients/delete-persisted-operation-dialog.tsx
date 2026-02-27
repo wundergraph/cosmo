@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Alert } from "@/components/ui/alert";
 
-export const RetirePersistedOperationDialog = ({
+export const DeletePersistedOperationDialog = ({
   isOpen,
   operationNames,
   operationHasTraffic,
@@ -43,7 +43,7 @@ export const RetirePersistedOperationDialog = ({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Retire persisted operation</DialogTitle>
+          <DialogTitle>Delete persisted operation</DialogTitle>
         </DialogHeader>
         {operationHasTraffic ? (
           <Alert variant="warn">
@@ -70,7 +70,7 @@ export const RetirePersistedOperationDialog = ({
           <p className="text-sm">
             Are you sure you want to{" "}
             <span className="font-semibold">
-              retire the following {pluralizedOperation}
+              delete the following {pluralizedOperation}
             </span>
             ?<br />
             <span className="mt-1 inline-block">
@@ -84,7 +84,7 @@ export const RetirePersistedOperationDialog = ({
           variant="destructive"
           onClick={onSubmitButtonClick}
         >
-          Retire
+          Delete
         </Button>
       </DialogContent>
     </Dialog>

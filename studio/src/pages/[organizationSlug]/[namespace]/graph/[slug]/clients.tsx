@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { RetirePersistedOperationDialog } from "@/components/clients/retire-persisted-operation-dialog";
+import { DeletePersistedOperationDialog } from "@/components/clients/delete-persisted-operation-dialog";
 import { CLI } from "@/components/ui/cli";
 import {
   Dialog,
@@ -91,7 +91,7 @@ import {
   getFederatedGraphSDLByName,
   getPersistedOperations,
   publishPersistedOperations,
-  retirePersistedOperation,
+  deletePersistedOperation,
   checkPersistedOperationTraffic,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import copy from "copy-to-clipboard";
@@ -173,34 +173,34 @@ fetch(url, {
   return { curl, js };
 };
 
-type RetirePersistedOperationState = {
+type DeletePersistedOperationState = {
   hasTraffic: boolean;
   id: string | null;
   names: string[];
   show: boolean;
 };
 
-type RetirePersistedOperationAction =
+type DeletePersistedOperationAction =
   | {
-      type: "retire-modal-hidden";
+      type: "delete-modal-hidden";
     }
   | {
-      type: "retire-modal-show";
+      type: "delete-modal-show";
       id: string;
       names: string[];
     }
   | {
-      type: "retire-modal-show-with-traffic-warning";
+      type: "delete-modal-show-with-traffic-warning";
       id: string;
       names: string[];
     };
 
-const retirePersistedOperationReducer = (
-  state: RetirePersistedOperationState,
-  action: RetirePersistedOperationAction,
-): RetirePersistedOperationState => {
+const deletePersistedOperationReducer = (
+  state: DeletePersistedOperationState,
+  action: DeletePersistedOperationAction,
+): DeletePersistedOperationState => {
   switch (action.type) {
-    case "retire-modal-show":
+    case "delete-modal-show":
       return {
         ...state,
         id: action.id,
@@ -208,7 +208,7 @@ const retirePersistedOperationReducer = (
         hasTraffic: false,
         show: true,
       };
-    case "retire-modal-show-with-traffic-warning":
+    case "delete-modal-show-with-traffic-warning":
       return {
         ...state,
         id: action.id,
@@ -216,7 +216,7 @@ const retirePersistedOperationReducer = (
         hasTraffic: true,
         show: true,
       };
-    case "retire-modal-hidden":
+    case "delete-modal-hidden":
     default:
       return { ...state, id: null, names: [], hasTraffic: false, show: false };
   }
@@ -238,8 +238,8 @@ const ClientOperations = ({
   const clientId = searchParams.get("clientId");
   const clientName = searchParams.get("clientName");
   const graphContext = useContext(GraphContext);
-  const [persistedOperationRetireState, dispatch] = useReducer(
-    retirePersistedOperationReducer,
+  const [persistedOperationDeleteState, dispatch] = useReducer(
+    deletePersistedOperationReducer,
     {
       id: null,
       names: [],
@@ -288,14 +288,14 @@ const ClientOperations = ({
   );
 
   const {
-    mutate: mutateRetirePeristedOperation,
-    isPending: isRetirePersistedOperationPending,
-  } = useMutation(retirePersistedOperation, {
+    mutate: mutateDeletePeristedOperation,
+    isPending: isDeletePersistedOperationPending,
+  } = useMutation(deletePersistedOperation, {
     onSuccess(data) {
       if (data.response?.code !== EnumStatusCode.OK) {
         toast({
           variant: "destructive",
-          title: "Could not retire the operation",
+          title: "Could not delete the operation",
           description: data.response?.details ?? "Please try again",
         });
         return;
@@ -303,13 +303,13 @@ const ClientOperations = ({
 
       refetch();
       toast({
-        title: "Operation retired successfully",
+        title: "Operation deleted successfully",
       });
     },
     onError: (error) => {
       toast({
         variant: "destructive",
-        title: "Could not retire the operation",
+        title: "Could not delete the operation",
         description: error.details.toString() ?? "Please try again",
       });
     },
@@ -326,7 +326,7 @@ const ClientOperations = ({
       ) {
         toast({
           variant: "destructive",
-          title: "Could not retire the operation",
+          title: "Could not delete the operation",
           description: data.response?.details ?? "Please try again",
         });
         return;
@@ -334,13 +334,13 @@ const ClientOperations = ({
 
       if (data.operation?.hasTraffic) {
         dispatch({
-          type: "retire-modal-show-with-traffic-warning",
+          type: "delete-modal-show-with-traffic-warning",
           id: data.operation.operationId,
           names: data.operation.operationNames,
         });
       } else {
         dispatch({
-          type: "retire-modal-show",
+          type: "delete-modal-show",
           id: data.operation.operationId,
           names: data.operation.operationNames,
         });
@@ -349,7 +349,7 @@ const ClientOperations = ({
     onError: (error) => {
       toast({
         variant: "destructive",
-        title: "Could not retire the operation",
+        title: "Could not delete the operation",
         description: error.details.toString() ?? "Please try again",
       });
     },
@@ -498,7 +498,7 @@ const ClientOperations = ({
                                 size="icon"
                                 disabled={
                                   isCheckPersistedOperationTrafficPending ||
-                                  isRetirePersistedOperationPending
+                                  isDeletePersistedOperationPending
                                 }
                                 onClick={() => {
                                   mutateCheckPersistedOperationTraffic({
@@ -512,7 +512,7 @@ const ClientOperations = ({
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                              Retire the operation
+                              Delete the operation
                             </TooltipContent>
                           </Tooltip>
                         )}
@@ -648,24 +648,24 @@ const ClientOperations = ({
           {content}
         </SheetContent>
       </Sheet>
-      <RetirePersistedOperationDialog
-        isOpen={persistedOperationRetireState.show}
-        operationNames={persistedOperationRetireState.names ?? []}
-        operationHasTraffic={Boolean(persistedOperationRetireState.hasTraffic)}
-        metricsLink={`/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${encodeURIComponent(createFilterState({ operationPersistedId: persistedOperationRetireState.id ?? undefined }))}`}
+      <DeletePersistedOperationDialog
+        isOpen={persistedOperationDeleteState.show}
+        operationNames={persistedOperationDeleteState.names ?? []}
+        operationHasTraffic={Boolean(persistedOperationDeleteState.hasTraffic)}
+        metricsLink={`/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${encodeURIComponent(createFilterState({ operationPersistedId: persistedOperationDeleteState.id ?? undefined }))}`}
         onSubmitButtonClick={
-          persistedOperationRetireState.id
+          persistedOperationDeleteState.id
             ? () => {
-                mutateRetirePeristedOperation({
-                  operationId: persistedOperationRetireState.id!,
+                mutateDeletePeristedOperation({
+                  operationId: persistedOperationDeleteState.id!,
                   namespace,
                   fedGraphName: slug,
                 });
-                dispatch({ type: "retire-modal-hidden" });
+                dispatch({ type: "delete-modal-hidden" });
               }
             : undefined
         }
-        onClose={() => dispatch({ type: "retire-modal-hidden" })}
+        onClose={() => dispatch({ type: "delete-modal-hidden" })}
       />
     </>
   );
