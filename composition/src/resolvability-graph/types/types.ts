@@ -1,6 +1,7 @@
 export type VisitNodeResult = {
   visited: boolean;
   areDescendantsResolved: boolean;
+  isExternal?: true;
   isRevisitedNode?: true;
 };
 
