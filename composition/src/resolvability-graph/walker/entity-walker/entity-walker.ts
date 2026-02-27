@@ -17,6 +17,7 @@ export class EntityWalker {
   index: number;
   resDataByNodeName: Map<NodeName, NodeResolutionData>;
   resDataByRelativeOriginPath: Map<SelectionPath, NodeResolutionData>;
+  resolvedPaths: Set<SelectionPath>;
   selectionPathByEntityNodeName = new Map<NodeName, SelectionPath>();
   // The subgraph name is so the propagated errors accurately reflect which subgraph cannot reach the node.
   subgraphNameByUnresolvablePath: Map<SelectionPath, SubgraphName>;
@@ -29,6 +30,7 @@ export class EntityWalker {
     relativeOriginPaths,
     resDataByNodeName,
     resDataByRelativeOriginPath,
+    resolvedPaths,
     subgraphNameByUnresolvablePath,
     visitedEntities,
   }: EntityWalkerParams) {
@@ -37,8 +39,9 @@ export class EntityWalker {
     this.relativeOriginPaths = relativeOriginPaths;
     this.resDataByNodeName = resDataByNodeName;
     this.resDataByRelativeOriginPath = resDataByRelativeOriginPath;
-    this.visitedEntities = visitedEntities;
+    this.resolvedPaths = resolvedPaths;
     this.subgraphNameByUnresolvablePath = subgraphNameByUnresolvablePath;
+    this.visitedEntities = visitedEntities;
   }
 
   getNodeResolutionData({
@@ -64,8 +67,11 @@ export class EntityWalker {
   }
 
   visitEntityDescendantEdge({ edge, selectionPath }: VisitEntityDescendantEdgeParams): VisitNodeResult {
-    if (edge.isInaccessible || edge.node.isInaccessible) {
+    if (edge.isEdgeInaccessible()) {
       return { visited: false, areDescendantsResolved: false };
+    }
+    if (edge.isExternal) {
+      return { visited: false, areDescendantsResolved: false, isExternal: true };
     }
     if (edge.node.isLeaf) {
       return { visited: true, areDescendantsResolved: true };
@@ -126,16 +132,17 @@ export class EntityWalker {
     }
     let removeDescendantPaths: true | undefined = undefined;
     for (const [fieldName, edge] of node.headToTailEdges) {
-      const { visited, areDescendantsResolved, isRevisitedNode } = this.visitEntityDescendantEdge({
+      const { areDescendantsResolved, isExternal, isRevisitedNode, visited } = this.visitEntityDescendantEdge({
         edge,
         selectionPath,
       });
       removeDescendantPaths ??= isRevisitedNode;
       this.propagateVisitedField({
         areDescendantsResolved,
-        fieldName,
         data,
-        nodeName: node.nodeName,
+        fieldName,
+        isExternal,
+        node,
         selectionPath,
         visited,
       });
@@ -169,14 +176,19 @@ export class EntityWalker {
     areDescendantsResolved,
     data,
     fieldName,
-    nodeName,
+    isExternal,
+    node,
     selectionPath,
     visited,
   }: PropagateVisitedFieldParams) {
+    if (isExternal) {
+      data.addExternalSubgraphName({ fieldName, subgraphName: node.subgraphName });
+      return;
+    }
     if (!visited) {
       return;
     }
-    const dataByNodeName = getValueOrDefault(this.resDataByNodeName, nodeName, () => data.copy());
+    const dataByNodeName = getValueOrDefault(this.resDataByNodeName, node.nodeName, () => data.copy());
     data.addResolvedFieldName(fieldName);
     dataByNodeName.addResolvedFieldName(fieldName);
     if (areDescendantsResolved) {
@@ -205,13 +217,21 @@ export class EntityWalker {
     }
   }
 
+  // TODO use *origin* subgraph
   addUnresolvablePaths({ selectionPath, subgraphName }: AddUnresolvablePathsParams) {
     if (!this.relativeOriginPaths) {
+      if (this.resolvedPaths.has(selectionPath)) {
+        return;
+      }
       getValueOrDefault(this.subgraphNameByUnresolvablePath, selectionPath, () => subgraphName);
       return;
     }
     for (const path of this.relativeOriginPaths) {
-      getValueOrDefault(this.subgraphNameByUnresolvablePath, `${path}${selectionPath}`, () => subgraphName);
+      const fullPath = `${path}${selectionPath}`;
+      if (this.resolvedPaths.has(fullPath)) {
+        continue;
+      }
+      getValueOrDefault(this.subgraphNameByUnresolvablePath, fullPath, () => subgraphName);
     }
   }
 
@@ -222,6 +242,7 @@ export class EntityWalker {
         for (const unresolvablePath of this.subgraphNameByUnresolvablePath.keys()) {
           if (unresolvablePath.startsWith(selectionPath)) {
             this.subgraphNameByUnresolvablePath.delete(unresolvablePath);
+            this.resolvedPaths.add(unresolvablePath);
           }
         }
       }
@@ -230,10 +251,12 @@ export class EntityWalker {
     for (const originPath of this.relativeOriginPaths) {
       const fullPath = `${originPath}${selectionPath}`;
       this.subgraphNameByUnresolvablePath.delete(fullPath);
+      this.resolvedPaths.add(fullPath);
       if (removeDescendantPaths) {
         for (const unresolvablePath of this.subgraphNameByUnresolvablePath.keys()) {
           if (unresolvablePath.startsWith(fullPath)) {
             this.subgraphNameByUnresolvablePath.delete(unresolvablePath);
+            this.resolvedPaths.add(unresolvablePath);
           }
         }
       }

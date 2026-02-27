@@ -61,6 +61,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.query.nest.nest.nest';
     const rootFieldData = newRootFieldData(QUERY, 'query', new Set<string>(['subgraph-b']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'name',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -83,6 +84,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.friend';
     const rootFieldData = newRootFieldData(QUERY, 'friend', new Set<string>(['subgraph-d']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -111,6 +113,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-w']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'nestedObject',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: false,
@@ -138,6 +141,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-w']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'nestedObject',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: false,
@@ -160,6 +164,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.friend';
     const rootFieldData = newRootFieldData(QUERY, 'friend', new Set<string>(['subgraph-d']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -182,6 +187,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.friend';
     const rootFieldData = newRootFieldData(QUERY, 'friend', new Set<string>(['subgraph-d']));
     const fieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -191,6 +197,7 @@ describe('Field resolvability tests', () => {
       typeName: 'Friend',
     };
     const fieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'hobbies',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -262,6 +269,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.humans.... on Friend';
     const rootFieldData = newRootFieldData(QUERY, 'humans', new Set<string>(['subgraph-i']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'name',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -284,6 +292,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.humans.... on Friend.pets.... on Cat';
     const rootFieldData = newRootFieldData(QUERY, 'humans', new Set<string>(['subgraph-k']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -330,6 +339,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.humans.... on Enemy';
     const rootFieldData = newRootFieldData(QUERY, 'humans', new Set<string>(['subgraph-o']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -501,6 +511,7 @@ describe('Field resolvability tests', () => {
       typeName: 'EntityOne',
     };
     const fieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'entityTwo',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: false,
@@ -510,6 +521,7 @@ describe('Field resolvability tests', () => {
       typeName: 'EntityOne',
     };
     const fieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'name',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -541,6 +553,7 @@ describe('Field resolvability tests', () => {
       typeName: 'EntityOne',
     };
     const fieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'name',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath + '.object.nestedObject'), {
         isLeaf: true,
@@ -550,6 +563,7 @@ describe('Field resolvability tests', () => {
       typeName: 'NestedObject',
     };
     const fieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'entityTwo',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: false,
@@ -581,6 +595,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData('Query', 'entity', new Set<string>(['subgraph-ae']));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'name',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -1123,6 +1138,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entity', new Set<string>([subgraphBH.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'isNew',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -1190,6 +1206,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entity', new Set<string>([subgraphBM.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -1218,6 +1235,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entity', new Set<string>([subgraphBM.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -1469,6 +1487,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<string>([eaaa.name, eaac.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'id',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -1524,6 +1543,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<string>([eaac.name, eaae.name]));
     const unresolvableFieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.object'), {
         isLeaf: true,
@@ -1533,6 +1553,7 @@ describe('Field resolvability tests', () => {
       typeName: OBJECT,
     };
     const unresolvableFieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.objectTwo'), {
         isLeaf: true,
@@ -1575,6 +1596,7 @@ describe('Field resolvability tests', () => {
     };
     const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<string>([eaac.name, eaae.name]));
     const unresolvableFieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.object'), {
         isLeaf: true,
@@ -1584,6 +1606,7 @@ describe('Field resolvability tests', () => {
       typeName: OBJECT,
     };
     const unresolvableFieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities.objectTwo'), {
         isLeaf: true,
@@ -1593,6 +1616,7 @@ describe('Field resolvability tests', () => {
       typeName: OBJECT,
     };
     const unresolvableFieldDataThree: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'age',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.entities'), {
         isLeaf: true,
@@ -1635,6 +1659,7 @@ describe('Field resolvability tests', () => {
     const fieldPath = 'query.object.nestedObjectTwo';
     const rootFieldData = newRootFieldData(QUERY, 'object', new Set<string>([faaa.name, faab.name]));
     const unresolvableFieldData: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'id',
       selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
         isLeaf: true,
@@ -1685,6 +1710,7 @@ describe('Field resolvability tests', () => {
     const rootFieldData = newRootFieldData(QUERY, 'a', new Set<string>([haaa.name, haab.name]));
 
     const unresolvableFieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'createdAt',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
         isLeaf: true,
@@ -1694,6 +1720,7 @@ describe('Field resolvability tests', () => {
       typeName: 'EntityA',
     };
     const unresolvableFieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'active',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
         isLeaf: true,
@@ -1703,6 +1730,7 @@ describe('Field resolvability tests', () => {
       typeName: 'EntityA',
     };
     const unresolvableFieldDataThree: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
       fieldName: 'b',
       selectionSet: renderSelectionSet(generateSelectionSetSegments('query.a.b.edges.node.c.a'), {
         isLeaf: false,
@@ -1738,6 +1766,60 @@ describe('Field resolvability tests', () => {
         }),
       ),
     ]);
+  });
+
+  test('that an error is returned if a field is unreachable due a true @external entity key field', () => {
+    const entityAncestors: EntityAncestorCollection = {
+      fieldSetsByTargetSubgraphName: new Map<string, Set<string>>([[iaab.name, new Set<string>(['id'])]]),
+      subgraphNames: [iaaa.name, iaab.name],
+      typeName: 'Entity',
+    };
+    const rootFieldData = newRootFieldData(QUERY, 'entities', new Set<string>([iaaa.name]));
+    const fieldPath = 'query.entities';
+    const unresolvableFieldDataOne: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>([iaaa.name]),
+      fieldName: 'id',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'id',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([iaab.name]),
+      typeName: 'Entity',
+    };
+    const unresolvableFieldDataTwo: UnresolvableFieldData = {
+      externalSubgraphNames: new Set<string>(),
+      fieldName: 'name',
+      selectionSet: renderSelectionSet(generateSelectionSetSegments(fieldPath), {
+        isLeaf: true,
+        name: 'name',
+      } as GraphFieldData),
+      subgraphNames: new Set<string>([iaab.name]),
+      typeName: 'Entity',
+    };
+    const { errors } = federateSubgraphsFailure([iaaa, iaab], ROUTER_COMPATIBILITY_VERSION_ONE);
+    expect(errors).toHaveLength(2);
+    expect(errors).toStrictEqual([
+      unresolvablePathError(
+        unresolvableFieldDataOne,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: unresolvableFieldDataOne,
+        }),
+      ),
+      unresolvablePathError(
+        unresolvableFieldDataTwo,
+        generateSharedResolvabilityErrorReasons({
+          entityAncestors,
+          rootFieldData,
+          unresolvableFieldData: unresolvableFieldDataTwo,
+        }),
+      ),
+    ]);
+  });
+
+  test('that an @external key can still be a valid target', () => {
+    const { success } = federateSubgraphsSuccess([jaaa, jaab], ROUTER_COMPATIBILITY_VERSION_ONE);
   });
 });
 
@@ -3494,6 +3576,56 @@ const haac: Subgraph = {
     type EntityC @shareable @key(fields: "id") {
       id: ID!
       a: EntityA
+    }
+  `),
+};
+
+const iaaa: Subgraph = {
+  name: 'iaaa',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID! @external
+    }
+    
+    type Query {
+      entities: [Entity!]!
+    }
+  `),
+};
+
+const iaab: Subgraph = {
+  name: 'iaab',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const jaaa: Subgraph = {
+  name: 'jaaa',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID! @external
+      name: String!
+    }
+  `),
+};
+
+const jaab: Subgraph = {
+  name: 'jaab',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+    }
+    
+    type Query {
+      entities: [Entity!]!
     }
   `),
 };
