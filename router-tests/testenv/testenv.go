@@ -308,6 +308,8 @@ type Config struct {
 	DisableParentBasedSampler          bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
+	TracingSanitizeUTF8                *config.SanitizeUTF8Config
+	IPAnonymization                    *core.IPAnonymizationConfig
 	CustomMetricAttributes             []config.CustomAttribute
 	CustomTelemetryAttributes          []config.CustomAttribute
 	CustomTracingAttributes            []config.CustomAttribute
@@ -392,6 +394,10 @@ type SubgraphConfig struct {
 	GRPCInterceptor grpc.UnaryServerInterceptor
 	Delay           time.Duration
 	CloseOnStart    bool
+
+	// TLSConfig enables TLS on this subgraph server. When set, the subgraph uses StartTLS()
+	// instead of Start(). This is useful for testing mTLS between the router and subgraphs.
+	TLSConfig *tls.Config
 }
 
 type LogObservationConfig struct {
@@ -582,15 +588,15 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localDelay:       cfg.Subgraphs.Countries.Delay,
 	}
 
-	employeesServer := makeSafeHttpTestServer(t, employees)
-	familyServer := makeSafeHttpTestServer(t, family)
-	hobbiesServer := makeSafeHttpTestServer(t, hobbies)
-	productsServer := makeSafeHttpTestServer(t, products)
-	test1Server := makeSafeHttpTestServer(t, test1)
-	availabilityServer := makeSafeHttpTestServer(t, availability)
-	moodServer := makeSafeHttpTestServer(t, mood)
-	countriesServer := makeSafeHttpTestServer(t, countries)
-	productFgServer := makeSafeHttpTestServer(t, productsFg)
+	employeesServer := makeSubgraphTestServer(t, employees, cfg.Subgraphs.Employees.TLSConfig)
+	familyServer := makeSubgraphTestServer(t, family, cfg.Subgraphs.Family.TLSConfig)
+	hobbiesServer := makeSubgraphTestServer(t, hobbies, cfg.Subgraphs.Hobbies.TLSConfig)
+	productsServer := makeSubgraphTestServer(t, products, cfg.Subgraphs.Products.TLSConfig)
+	test1Server := makeSubgraphTestServer(t, test1, cfg.Subgraphs.Test1.TLSConfig)
+	availabilityServer := makeSubgraphTestServer(t, availability, cfg.Subgraphs.Availability.TLSConfig)
+	moodServer := makeSubgraphTestServer(t, mood, cfg.Subgraphs.Mood.TLSConfig)
+	countriesServer := makeSubgraphTestServer(t, countries, cfg.Subgraphs.Countries.TLSConfig)
+	productFgServer := makeSubgraphTestServer(t, productsFg, cfg.Subgraphs.ProductsFg.TLSConfig)
 
 	var (
 		projectServer *grpc.Server
@@ -1012,15 +1018,15 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localDelay:       cfg.Subgraphs.Countries.Delay,
 	}
 
-	employeesServer := makeSafeHttpTestServer(t, employees)
-	familyServer := makeSafeHttpTestServer(t, family)
-	hobbiesServer := makeSafeHttpTestServer(t, hobbies)
-	productsServer := makeSafeHttpTestServer(t, products)
-	test1Server := makeSafeHttpTestServer(t, test1)
-	availabilityServer := makeSafeHttpTestServer(t, availability)
-	moodServer := makeSafeHttpTestServer(t, mood)
-	countriesServer := makeSafeHttpTestServer(t, countries)
-	productFgServer := makeSafeHttpTestServer(t, productsFg)
+	employeesServer := makeSubgraphTestServer(t, employees, cfg.Subgraphs.Employees.TLSConfig)
+	familyServer := makeSubgraphTestServer(t, family, cfg.Subgraphs.Family.TLSConfig)
+	hobbiesServer := makeSubgraphTestServer(t, hobbies, cfg.Subgraphs.Hobbies.TLSConfig)
+	productsServer := makeSubgraphTestServer(t, products, cfg.Subgraphs.Products.TLSConfig)
+	test1Server := makeSubgraphTestServer(t, test1, cfg.Subgraphs.Test1.TLSConfig)
+	availabilityServer := makeSubgraphTestServer(t, availability, cfg.Subgraphs.Availability.TLSConfig)
+	moodServer := makeSubgraphTestServer(t, mood, cfg.Subgraphs.Mood.TLSConfig)
+	countriesServer := makeSubgraphTestServer(t, countries, cfg.Subgraphs.Countries.TLSConfig)
+	productFgServer := makeSubgraphTestServer(t, productsFg, cfg.Subgraphs.ProductsFg.TLSConfig)
 
 	var (
 		projectServer *grpc.Server
@@ -1483,19 +1489,25 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true
 
+		tracingConfig := config.Tracing{
+			Enabled:                    true,
+			SamplingRate:               1,
+			ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
+			OperationContentAttributes: testConfig.OperationContentAttributes,
+			Exporters:                  []config.TracingExporter{},
+			Propagation:                testConfig.PropagationConfig,
+			TracingGlobalFeatures:      config.TracingGlobalFeatures{},
+			ResponseTraceHeader:        testConfig.ResponseTraceHeader,
+		}
+
+		if testConfig.TracingSanitizeUTF8 != nil {
+			tracingConfig.SanitizeUTF8 = *testConfig.TracingSanitizeUTF8
+		}
+
 		c := core.TraceConfigFromTelemetry(&config.Telemetry{
 			ServiceName:        "cosmo-router",
 			ResourceAttributes: testConfig.CustomResourceAttributes,
-			Tracing: config.Tracing{
-				Enabled:                    true,
-				SamplingRate:               1,
-				ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
-				OperationContentAttributes: testConfig.OperationContentAttributes,
-				Exporters:                  []config.TracingExporter{},
-				Propagation:                testConfig.PropagationConfig,
-				TracingGlobalFeatures:      config.TracingGlobalFeatures{},
-				ResponseTraceHeader:        testConfig.ResponseTraceHeader,
-			},
+			Tracing:            tracingConfig,
 		})
 
 		c.TestMemoryExporter = testConfig.TraceExporter
@@ -1503,6 +1515,10 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts,
 			core.WithTracing(c),
 		)
+	}
+
+	if testConfig.IPAnonymization != nil {
+		routerOpts = append(routerOpts, core.WithAnonymization(testConfig.IPAnonymization))
 	}
 
 	if testConfig.CustomTelemetryAttributes != nil {
@@ -1664,12 +1680,18 @@ func testVersionedTokenClaims() jwt.MapClaims {
 	}
 }
 
-func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
+func makeSubgraphTestServer(_ testing.TB, handler http.Handler, tlsConfig *tls.Config) *httptest.Server {
 	// NewUnstartedServer binds an ephemeral port.
 	// We want to avoid using freeport because it creates too much strain on the network stack:
 	// freeport checks if port is available by listening on it and then closing the listener.
 	// On Linux trying to listen on the just-closed port could lead to the "unable to bind" error.
 	s := httptest.NewUnstartedServer(handler)
+
+	if tlsConfig != nil {
+		s.TLS = tlsConfig
+		s.StartTLS()
+		return s
+	}
 	s.Start()
 	return s
 }

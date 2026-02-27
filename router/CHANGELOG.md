@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.286.0](https://github.com/wundergraph/cosmo/compare/router@0.285.0...router@0.286.0) (2026-02-26)
+
+### Bug Fixes
+
+* flaky router tests for error extensions ([#2554](https://github.com/wundergraph/cosmo/issues/2554)) ([cc360a6](https://github.com/wundergraph/cosmo/commit/cc360a6958283ad43cf21e94364602ce2a9e187c)) (@Noroth)
+
+### Features
+
+* add support for requires in protographic ([#2439](https://github.com/wundergraph/cosmo/issues/2439)) ([48a1613](https://github.com/wundergraph/cosmo/commit/48a1613285c978589b95a2c18d7618c9569b8f4f)) (@Noroth)
+
+# [0.285.0](https://github.com/wundergraph/cosmo/compare/router@0.284.2...router@0.285.0) (2026-02-24)
+
+### Bug Fixes
+
+* add back NewServer ([#2546](https://github.com/wundergraph/cosmo/issues/2546)) ([602e0ab](https://github.com/wundergraph/cosmo/commit/602e0abda280606bfaf4d43c15745e473882bb05)) (@SkArchon)
+* bump go-m1cpu to v0.1.7 to fix compiler warnings ([#2550](https://github.com/wundergraph/cosmo/issues/2550)) ([88e4878](https://github.com/wundergraph/cosmo/commit/88e48782c392c84e6e0bd2cd7e79072409712f82)) (@jensneuse)
+
+### Features
+
+* add mTLS support ([#2514](https://github.com/wundergraph/cosmo/issues/2514)) ([153432d](https://github.com/wundergraph/cosmo/commit/153432d04b201f231420f85dc03a07c525f60fd7)) (@SkArchon)
+* sanitize utf8 strings with binary in spans ([#2485](https://github.com/wundergraph/cosmo/issues/2485)) ([43aa77e](https://github.com/wundergraph/cosmo/commit/43aa77e6c2951a34c67afdadcf206c0933233cbc)) (@SkArchon)
+
 ## [0.284.2](https://github.com/wundergraph/cosmo/compare/router@0.284.1...router@0.284.2) (2026-02-21)
 
 **Note:** Version bump only for package router
