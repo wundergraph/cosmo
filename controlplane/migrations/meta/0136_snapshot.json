@@ -1,5 +1,5 @@
 {
-  "id": "ea82d6d5-af34-443a-8162-384cc2cb0edb",
+  "id": "d474eefb-2a0d-4a07-8887-3260aee174d4",
   "prevId": "b0294566-1d59-45dd-b20c-45a8f09f3da2",
   "version": "7",
   "dialect": "postgresql",
@@ -6166,6 +6166,27 @@
             }
           ],
           "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "scfgc_fed_graph_change_action_unique": {
+          "name": "scfgc_fed_graph_change_action_unique",
+          "columns": [
+            {
+              "expression": "schema_check_federated_graph_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "schema_check_change_action_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}

@@ -19,4 +19,5 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "scfgsc_schema_check_federated_graph_id_idx" ON "schema_check_federated_graph_changes" USING btree ("schema_check_federated_graph_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "scfgsc_schema_check_change_action_id_idx" ON "schema_check_federated_graph_changes" USING btree ("schema_check_change_action_id");
+CREATE INDEX IF NOT EXISTS "scfgsc_schema_check_change_action_id_idx" ON "schema_check_federated_graph_changes" USING btree ("schema_check_change_action_id");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "scfgc_fed_graph_change_action_unique" ON "schema_check_federated_graph_changes" USING btree ("schema_check_federated_graph_id","schema_check_change_action_id");

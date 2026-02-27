@@ -995,6 +995,10 @@ export const schemaCheckFederatedGraphChanges = pgTable(
         t.schemaCheckFederatedGraphId,
       ),
       schemaCheckChangeActionIdIndex: index('scfgsc_schema_check_change_action_id_idx').on(t.schemaCheckChangeActionId),
+      uniqueFedGraphChange: uniqueIndex('scfgc_fed_graph_change_action_unique').on(
+        t.schemaCheckFederatedGraphId,
+        t.schemaCheckChangeActionId,
+      ),
     };
   },
 );
