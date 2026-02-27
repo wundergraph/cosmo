@@ -1636,6 +1636,122 @@ type Category {
       await server.close();
     });
 
+    test('Should detect breaking change when published subgraph B adds nullable field that conflicts with required field from subgraph A', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const fedGraphName = genID('fedGraph');
+      const subgraphAName = genID('subgraphA');
+      const subgraphBName = genID('subgraphB');
+      const label = genUniqueLabel();
+
+      // Subgraph A has a shared type with a required field
+      const subgraphASchema = `
+        type Query {
+          users: [User!]!
+        }
+
+        type User @key(fields: "id") {
+          id: ID!
+          name: String!
+        }
+      `;
+
+      // Subgraph B initial schema - does NOT have the 'name' field
+      const subgraphBInitialSchema = `
+        type User @key(fields: "id") {
+          id: ID!
+          email: String!
+        }
+      `;
+
+      // Subgraph B will add the same field as nullable in the check
+      // When composed, the federated schema field will become nullable (String instead of String!)
+      // This is a breaking change in the federated graph
+      const subgraphBUpdatedSchema = `
+        type User @key(fields: "id") {
+          id: ID!
+          name: String
+          email: String!
+        }
+      `;
+
+      // Create federated graph
+      const createFedGraphRes = await client.createFederatedGraph({
+        name: fedGraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8081',
+        labelMatchers: [joinLabel(label)],
+      });
+      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph A
+      const createSubgraphARes = await client.createFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8082',
+      });
+      expect(createSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphARes = await client.publishFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        schema: subgraphASchema,
+      });
+      expect(publishSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and PUBLISH subgraph B with initial schema (no 'name' field)
+      const createSubgraphBRes = await client.createFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8083',
+      });
+      expect(createSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphBRes = await client.publishFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        schema: subgraphBInitialSchema,
+      });
+      expect(publishSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Verify the federated graph has the required field from subgraph A
+      const fedGraphSDLBefore = await client.getFederatedGraphSDLByName({
+        name: fedGraphName,
+        namespace: 'default',
+      });
+      expect(fedGraphSDLBefore.response?.code).toBe(EnumStatusCode.OK);
+      expect(fedGraphSDLBefore.sdl).toContain('name: String!');
+
+      // Now run a schema check for subgraph B to add the 'name' field as nullable
+      // This should detect that the federated graph schema will change from name: String! to name: String
+      // which is a breaking change
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: subgraphBName,
+        namespace: 'default',
+        schema: Buffer.from(subgraphBUpdatedSchema),
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.compositionErrors.length).toBe(0);
+
+      // Subgraph-level breaking changes should be empty since we're adding a new field to this subgraph
+      expect(checkResp.breakingChanges.length).toBe(0);
+
+      // The composed schema breaking changes should detect the nullability change
+      // because the federated schema's User.name field would change from String! to String
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(1);
+
+      // The breaking change should be about the field type changing from non-null to nullable
+      const fieldNullabilityChange = checkResp.composedSchemaBreakingChanges[0];
+      expect(fieldNullabilityChange.federatedGraphName).toBe(fedGraphName);
+      expect(fieldNullabilityChange.path).toBe('User.name');
+      expect(fieldNullabilityChange.isBreaking).toBe(true);
+
+      await server.close();
+    });
+
     test('Should not perform federated diff when subgraph changes do not involve field changes', async () => {
       const { client, server } = await SetupTest({ dbname, chClient });
 
