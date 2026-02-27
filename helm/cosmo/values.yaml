@@ -350,6 +350,7 @@ graphqlmetrics:
 
 # Keycloak for the Cosmo Controlplane & Studio
 # https://artifacthub.io/packages/helm/bitnami/keycloak
+# TODO(pepol): Move to 'codecentric/keycloakx' chart once new keycloak image is built and released
 keycloak:
   # Production requires TLS
   production: false

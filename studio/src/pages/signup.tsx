@@ -13,11 +13,13 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { FaGoogle } from "react-icons/fa";
 import { z } from "zod";
+import { getSignupContent, parseSignupVariant } from "@/lib/signup-content";
 
 const signupUrl = `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/signup`;
 
 const querySchema = z.object({
   redirectURL: z.string().url().optional(),
+  uc: z.string().optional(),
 });
 
 const constructSignupURL = ({
@@ -37,10 +39,20 @@ const constructSignupURL = ({
   return signupUrl + (queryString.length ? "?" + queryString : "");
 };
 
+function getUcFromUrl(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  return new URLSearchParams(window.location.search).get("uc") ?? undefined;
+}
+
 const SignupPage: NextPageWithLayout = () => {
   const router = useRouter();
-
-  const { redirectURL } = querySchema.parse(router.query);
+  // Parse query safely so invalid params (e.g. redirectURL from OAuth) don't crash the page
+  const parseResult = querySchema.safeParse(router.query);
+  const query = parseResult.success ? parseResult.data : { redirectURL: undefined, uc: undefined };
+  const uc = router.isReady ? query.uc : getUcFromUrl() ?? query.uc;
+  const variant = parseSignupVariant(uc);
+  const content = getSignupContent(variant);
+  const redirectURL = query.redirectURL;
 
   return (
     <div className="flex min-h-full flex-col">
@@ -50,7 +62,7 @@ const SignupPage: NextPageWithLayout = () => {
           {/* Left section - Marketing */}
           <div className="flex w-full flex-col items-center justify-center px-4 py-10 lg:min-h-screen lg:w-1/2 lg:items-start lg:px-14 lg:pb-40 lg:pt-2">
             <div className="lg:mt-8">
-              <ProductCosmoStack variant="signup" />
+              <ProductCosmoStack variant="signup" signupVariant={variant} />
             </div>
           </div>
 
@@ -64,10 +76,10 @@ const SignupPage: NextPageWithLayout = () => {
 
                 <div className="mt-8 lg:mt-12">
                   <h2 className="text-center text-2xl font-normal leading-[120%] text-white lg:text-[32px]">
-                    Sign up for free
+                    {content.heading}
                   </h2>
                   <p className="mt-2 text-center text-sm text-white/85 lg:text-base">
-                    Try Cosmo as Managed Service. No card required.
+                    {content.description}
                   </p>
 
                   <div className="mt-6 space-y-3 lg:mt-8 lg:space-y-4">

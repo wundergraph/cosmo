@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.156.0](https://github.com/wundergraph/cosmo/compare/studio@0.155.1...studio@0.156.0) (2026-02-26)
+
+### Features
+
+* cosmo signup page variants with alternate copy ([#2558](https://github.com/wundergraph/cosmo/issues/2558)) ([3585778](https://github.com/wundergraph/cosmo/commit/35857783c96b87c9694422202b00edbf0d99c20e)) (@wunderhawk)
+
+## [0.155.1](https://github.com/wundergraph/cosmo/compare/studio@0.155.0...studio@0.155.1) (2026-02-26)
+
+**Note:** Version bump only for package studio
+
 # [0.155.0](https://github.com/wundergraph/cosmo/compare/studio@0.154.3...studio@0.155.0) (2026-02-16)
 
 ### Features
