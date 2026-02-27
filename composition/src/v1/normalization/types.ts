@@ -68,6 +68,20 @@ export type HandleSemanticNonNullDirectiveParams = {
   errorMessages: Array<string>;
 };
 
+export type HandleCostDirectiveParams = {
+  data: NodeData | SchemaData;
+  directiveCoords: string;
+  directiveNode: ConstDirectiveNode;
+  errorMessages: Array<string>;
+};
+
+export type HandleListSizeDirectiveParams = {
+  data: FieldData;
+  directiveCoords: string;
+  directiveNode: ConstDirectiveNode;
+  errorMessages: Array<string>;
+};
+
 export type AddInputValueDataByNodeParams = {
   inputValueDataByName: Map<string, InputValueData>;
   isArgument: boolean;

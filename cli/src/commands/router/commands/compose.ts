@@ -112,6 +112,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
   const subgraphConfig = result.subgraphConfigBySubgraphName.get(s.name);
   const schema = subgraphConfig?.schema;
   const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
+  const costs = subgraphConfig?.costs;
 
   if (s.kind === SubgraphKind.Standard) {
     const composedSubgraph: ComposedSubgraph = {
@@ -125,6 +126,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
       websocketSubprotocol: s.websocketSubprotocol,
       schema,
       configurationDataByTypeName,
+      costs,
     };
     return composedSubgraph;
   }
@@ -141,6 +143,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
       version: s.version,
       schema,
       configurationDataByTypeName,
+      costs,
     };
     return composedSubgraphPlugin;
   }
@@ -155,6 +158,7 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
     mapping: s.mapping,
     schema,
     configurationDataByTypeName,
+    costs,
   };
   return composedSubgraphGRPC;
 }
@@ -641,6 +645,7 @@ async function buildFeatureFlagsConfig(
         const subgraphConfig = featureResult.subgraphConfigBySubgraphName.get(s.name);
         const schema = subgraphConfig?.schema;
         const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
+        const costs = subgraphConfig?.costs;
 
         const composedSubgraph: ComposedSubgraph = {
           kind: SubgraphKind.Standard,
@@ -653,6 +658,7 @@ async function buildFeatureFlagsConfig(
           websocketSubprotocol: s.websocketSubprotocol,
           schema,
           configurationDataByTypeName,
+          costs,
         };
         return composedSubgraph;
       }),

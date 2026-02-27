@@ -4,14 +4,12 @@ import (
 	"context"
 	"time"
 
-	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
+	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/zap"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-
-	"go.opentelemetry.io/otel/attribute"
+	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 )
 
 type OperationProtocol string
@@ -73,6 +71,16 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	rm.MeasureRequestSize(ctx, m.requestContentLength, sliceAttrs, o)
 	rm.MeasureResponseSize(ctx, int64(responseSize), sliceAttrs, o)
+
+	// Record operation cost metrics from cached values
+	if reqContext.operation != nil {
+		if reqContext.operation.costEstimatedSet {
+			rm.MeasureOperationCostEstimated(ctx, int64(reqContext.operation.costEstimated), sliceAttrs, o)
+		}
+		if reqContext.operation.costActualSet {
+			rm.MeasureOperationCostActual(ctx, int64(reqContext.operation.costActual), sliceAttrs, o)
+		}
+	}
 
 	// Export schema usage info to configured exporters
 	if reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {

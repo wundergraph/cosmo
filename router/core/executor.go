@@ -8,6 +8,11 @@ import (
 
 	"go.uber.org/zap"
 
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
+	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
@@ -15,11 +20,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
-
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/grpcconnector"
-	pubsub_datasource "github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 )
 
 type ExecutorConfigurationBuilder struct {
@@ -243,6 +243,12 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	planConfig.BuildFetchReasons = routerEngineCfg.Execution.EnableRequireFetchReasons || routerEngineCfg.Execution.ValidateRequiredExternalFields
 	planConfig.ValidateRequiredExternalFields = routerEngineCfg.Execution.ValidateRequiredExternalFields
 	planConfig.RelaxSubgraphOperationFieldSelectionMergingNullability = routerEngineCfg.Execution.RelaxSubgraphOperationFieldSelectionMergingNullability
+
+	// Enable cost computation when cost control is enabled
+	if routerEngineCfg.CostControl != nil && routerEngineCfg.CostControl.Enabled {
+		planConfig.ComputeCosts = true
+		planConfig.StaticCostDefaultListSize = routerEngineCfg.CostControl.EstimatedListSize
+	}
 
 	return planConfig, providers, nil
 }

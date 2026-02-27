@@ -1,4 +1,4 @@
-package module
+package module_test
 
 import (
 	"encoding/json"
@@ -8,6 +8,8 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
+
 	"github.com/wundergraph/cosmo/router-tests/events"
 	stream_publish "github.com/wundergraph/cosmo/router-tests/modules/stream-publish"
 	stream_receive "github.com/wundergraph/cosmo/router-tests/modules/stream-receive"
@@ -16,7 +18,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/kafka"
-	"go.uber.org/zap/zapcore"
 )
 
 func TestStreamsHooksCombined(t *testing.T) {

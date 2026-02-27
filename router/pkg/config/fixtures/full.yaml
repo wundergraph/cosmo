@@ -467,6 +467,12 @@ security:
       enabled: true
       limit: 4
       ignore_persisted_operations: true
+  cost_control:
+    enabled: true
+    mode: enforce
+    max_estimated_limit: 1000
+    estimated_list_size: 10
+    expose_headers: false
   operation_name_length_limit: 2000
 persisted_operations:
   safelist:

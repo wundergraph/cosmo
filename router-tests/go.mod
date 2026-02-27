@@ -23,7 +23,7 @@ require (
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
 	github.com/wundergraph/astjson v1.1.0
-	github.com/wundergraph/cosmo/demo v0.0.0-20260213130455-6e3277e7b850
+	github.com/wundergraph/cosmo/demo v0.0.0-00010101000000-000000000000
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
 	github.com/wundergraph/cosmo/router v0.0.0-20260213130455-6e3277e7b850
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e

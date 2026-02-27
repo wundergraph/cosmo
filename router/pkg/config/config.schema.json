@@ -3047,6 +3047,39 @@
             }
           }
         },
+        "cost_control": {
+          "type": "object",
+          "description": "Cost control based on @cost and @listSize directives.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, the router calculates costs for every operation."
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["measure", "enforce"],
+              "default": "measure",
+              "description": "Controls cost control behavior: 'measure' calculates costs without rejecting operations; 'enforce' rejects operations exceeding the estimated cost limit."
+            },
+            "max_estimated_limit": {
+              "type": "integer",
+              "description": "Maximum allowed estimated cost for a query. Only enforced when its value is positive and mode is 'enforce'.",
+              "default": 0,
+              "minimum": 0
+            },
+            "estimated_list_size": {
+              "type": "integer",
+              "description": "Default assumed size for list fields when no @listSize directive is specified. Required for estimated cost calculation.",
+              "minimum": 1
+            },
+            "expose_headers": {
+              "type": "boolean",
+              "description": "Enable costs reponse headers for estimated and actuals operation costs."
+            }
+          }
+        },
         "operation_name_length_limit": {
           "type": "integer",
           "description": "The maximum allowed length of the operation name, 0 allows any length.",

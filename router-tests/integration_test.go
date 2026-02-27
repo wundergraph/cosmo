@@ -1523,7 +1523,7 @@ const (
 	bigEmployeesResponse = `{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse","hasChildren":true},"role":{"title":["Founder","CEO"],"departments":["ENGINEERING","MARKETING"]},"hobbies":[{"category":"SPORT"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":20},{"name":"WunderGraph"},{"languages":["GO","TYPESCRIPT"]},{"countriesLived":[{"language": "English"},{"language": "German"}]}]},{"id":2,"details":{"forename":"Dustin","surname":"Deus","hasChildren":false},"role":{"title":["Co-founder","Tech Lead"],"departments":["ENGINEERING"]},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Counter Strike","genres":["FPS"],"yearsOfExperience":0.5},{"languages":["GO","RUST"]}]},{"id":3,"details":{"forename":"Stefan","surname":"Avram","hasChildren":false},"role":{"title":["Co-founder","Head of Growth"],"departments":["MARKETING"]},"hobbies":[{"category":"HIKING"},{"category":"SPORT"},{"name":"Reading"},{"countriesLived":[{"language": "English"},{"language": "Serbian"}]}]},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer","hasChildren":true},"role":{"title":["Co-founder","COO"],"departments":["OPERATIONS"]},"hobbies":[{"category":"HIKING"},{"planeModels":["Aquila AT01","Cessna C172","Cessna C206","Cirrus SR20","Cirrus SR22","Diamond DA40","Diamond HK36","Diamond DA20","Piper Cub","Pitts Special","Robin DR400"],"yearsOfExperience":20},{"countriesLived":[{"language": "English"},{"language": "German"}]}]},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin","hasChildren":false},"role":{"title":["Senior GO Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"name":"Building a house"},{"name":"Forumla 1"},{"name":"Raising cats"}]},{"id":7,"details":{"forename":"Suvij","surname":"Surya","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"name":"Chess","genres":["BOARD"],"yearsOfExperience":9.5},{"name":"Watching anime"}]},{"id":8,"details":{"forename":"Nithin","surname":"Kumar","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":17},{"name":"Watching anime"}]},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma","hasChildren":false},"role":{"title":["Senior Frontend Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"languages":["TYPESCRIPT"]},{"category":"CALISTHENICS"},{"category":"HIKING"},{"category":"STRENGTH_TRAINING"},{"name":"saas-ui"},{"countriesLived":[{"language": "German"},{"language": "Indonesian"},{"language": "Dutch"},{"language": "Portuguese"},{"language": "Spanish"},{"language": "Thai"}]}]},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse","hasChildren":true},"role":{"title":["Accounting \\u0026 Finance"],"departments":["OPERATIONS"]},"hobbies":[{"name":"Spending time with the family"}]},{"id":12,"details":{"forename":"David","surname":"Stutt","hasChildren":false},"role":{"title":["Software Engineer"],"departments":["ENGINEERING"]},"hobbies":[{"languages":["CSHARP","GO","RUST","TYPESCRIPT"]},{"category":"STRENGTH_TRAINING"},{"name":"Miscellaneous","genres":["ADVENTURE","BOARD","CARD","ROGUELITE","RPG","SIMULATION","STRATEGY"],"yearsOfExperience":25.5},{"countriesLived":["language": "English"},"language": "Korean"},"language": "Taiwanese"}]}]}]}}`
 )
 
-func BenchmarkPb(b *testing.B) {
+func BenchmarkParallelBig(b *testing.B) {
 	testenv.Bench(b, &testenv.Config{}, func(b *testing.B, xEnv *testenv.Environment) {
 		b.SetBytes(int64(len(bigEmployeesResponse)))
 		b.ReportAllocs()
@@ -1538,6 +1538,46 @@ func BenchmarkPb(b *testing.B) {
 				}
 			}
 		})
+	})
+}
+
+func BenchmarkSequentialBig(b *testing.B) {
+	testenv.Bench(b, &testenv.Config{}, func(b *testing.B, xEnv *testenv.Environment) {
+		b.SetBytes(int64(len(bigEmployeesResponse)))
+		b.ReportAllocs()
+		b.ResetTimer()
+		for ii := 0; ii < b.N; ii++ {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: bigEmployeesQuery,
+			})
+			if len(res.Body) < 3000 {
+				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
+			}
+		}
+	})
+}
+
+func BenchmarkSequentialBigCostControl(b *testing.B) {
+	testenv.Bench(b, &testenv.Config{
+		ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
+			cfg.CostControl = &config.CostControl{
+				Enabled:           true,
+				Mode:              config.CostControlModeMeasure,
+				EstimatedListSize: 15,
+			}
+		},
+	}, func(b *testing.B, xEnv *testenv.Environment) {
+		b.SetBytes(int64(len(bigEmployeesResponse)))
+		b.ReportAllocs()
+		b.ResetTimer()
+		for ii := 0; ii < b.N; ii++ {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: bigEmployeesQuery,
+			})
+			if len(res.Body) < 3000 {
+				b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
+			}
+		}
 	})
 }
 
