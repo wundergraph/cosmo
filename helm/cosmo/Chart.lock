@@ -20,9 +20,9 @@ dependencies:
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
   version: 12.12.10
-- name: keycloak
-  repository: https://charts.bitnami.com/bitnami
-  version: 22.0.0
+- name: keycloakx
+  repository: https://codecentric.github.io/helm-charts
+  version: 7.1.8
 - name: clickhouse
   repository: https://charts.bitnami.com/bitnami
   version: 6.2.14
@@ -32,5 +32,5 @@ dependencies:
 - name: redis
   repository: https://charts.bitnami.com/bitnami
   version: 19.3.3
-digest: sha256:ca5d96eb18eb17314f0ca5048a25b9050942c17c9bdae669134e7ebf11fb3ecf
-generated: "2024-09-23T15:19:35.81985+05:30"
+digest: sha256:c5d01848a4217b447e1e5c7501f8899188fbce7c80ad2698174f1d078c6de311
+generated: "2026-02-27T17:47:35.700464+01:00"
