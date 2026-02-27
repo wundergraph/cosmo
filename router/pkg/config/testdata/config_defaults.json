@@ -44,6 +44,10 @@
         "EngineStats": {
           "Subscriptions": false
         },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false
+        },
         "CircuitBreaker": false,
         "Streams": false,
         "ExcludeMetrics": null,
@@ -59,6 +63,10 @@
         "Streams": false,
         "EngineStats": {
           "Subscriptions": false
+        },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false
         },
         "CircuitBreaker": false,
         "ExcludeMetrics": null,
@@ -376,6 +384,7 @@
     },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
+    "CostAnalysis": null,
     "DepthLimit": null,
     "ParserLimits": {
       "ApproximateDepthLimit": 200,

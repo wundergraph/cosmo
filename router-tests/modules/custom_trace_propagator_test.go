@@ -1,4 +1,4 @@
-package module
+package module_test
 
 import (
 	"encoding/json"

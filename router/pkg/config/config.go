@@ -7,13 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
-
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
 	"go.uber.org/zap/zapcore"
 
 	"github.com/wundergraph/cosmo/router/internal/unique"
+	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 )
 
@@ -104,6 +103,11 @@ type EngineStats struct {
 	Subscriptions bool `yaml:"subscriptions" envDefault:"false" env:"ENGINE_STATS_SUBSCRIPTIONS"`
 }
 
+type CostStats struct {
+	EstimatedEnabled bool `yaml:"estimated_enabled" envDefault:"false" env:"COST_STATS_ESTIMATED_ENABLED"`
+	ActualEnabled    bool `yaml:"actual_enabled" envDefault:"false" env:"COST_STATS_ACTUAL_ENABLED"`
+}
+
 type Prometheus struct {
 	Enabled             bool        `yaml:"enabled" envDefault:"true" env:"PROMETHEUS_ENABLED"`
 	Path                string      `yaml:"path" envDefault:"/metrics" env:"PROMETHEUS_HTTP_PATH"`
@@ -112,6 +116,7 @@ type Prometheus struct {
 	ConnectionStats     bool        `yaml:"connection_stats" envDefault:"false" env:"PROMETHEUS_CONNECTION_STATS"`
 	Streams             bool        `yaml:"streams" envDefault:"false" env:"PROMETHEUS_STREAM"`
 	EngineStats         EngineStats `yaml:"engine_stats" envPrefix:"PROMETHEUS_"`
+	CostStats           CostStats   `yaml:"cost_stats" envPrefix:"PROMETHEUS_"`
 	CircuitBreaker      bool        `yaml:"circuit_breaker" envDefault:"false" env:"PROMETHEUS_CIRCUIT_BREAKER"`
 	ExcludeMetrics      RegExArray  `yaml:"exclude_metrics,omitempty" env:"PROMETHEUS_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray  `yaml:"exclude_metric_labels,omitempty" env:"PROMETHEUS_EXCLUDE_METRIC_LABELS"`
@@ -155,6 +160,7 @@ type MetricsOTLP struct {
 	GraphqlCache        bool                  `yaml:"graphql_cache" envDefault:"false" env:"METRICS_OTLP_GRAPHQL_CACHE"`
 	ConnectionStats     bool                  `yaml:"connection_stats" envDefault:"false" env:"METRICS_OTLP_CONNECTION_STATS"`
 	EngineStats         EngineStats           `yaml:"engine_stats" envPrefix:"METRICS_OTLP_"`
+	CostStats           CostStats             `yaml:"cost_stats" envPrefix:"METRICS_OTLP_"`
 	CircuitBreaker      bool                  `yaml:"circuit_breaker" envDefault:"false" env:"METRICS_OTLP_CIRCUIT_BREAKER"`
 	Streams             bool                  `yaml:"streams" envDefault:"false" env:"METRICS_OTLP_STREAM"`
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
@@ -413,8 +419,10 @@ type EngineExecutionConfiguration struct {
 	// ForceEnableInboundRequestDeduplication forces enable inbound request deduplication, even when PreOriginHandlers are configured
 	ForceEnableInboundRequestDeduplication bool `envDefault:"false" env:"ENGINE_FORCE_ENABLE_INBOUND_REQUEST_DEDUPLICATION" yaml:"force_enable_inbound_request_deduplication"`
 	EnableRequestTracing                   bool `envDefault:"true" env:"ENGINE_ENABLE_REQUEST_TRACING" yaml:"enable_request_tracing"`
+
 	// EnableExecutionPlanCacheResponseHeader is deprecated, use EngineDebugConfiguration.EnableCacheResponseHeaders instead.
-	EnableExecutionPlanCacheResponseHeader           bool          `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
+	EnableExecutionPlanCacheResponseHeader bool `envDefault:"false" env:"ENGINE_ENABLE_EXECUTION_PLAN_CACHE_RESPONSE_HEADER" yaml:"enable_execution_plan_cache_response_header"`
+
 	MaxConcurrentResolvers                           int           `envDefault:"1024" env:"ENGINE_MAX_CONCURRENT_RESOLVERS" yaml:"max_concurrent_resolvers,omitempty"`
 	EnableNetPoll                                    bool          `envDefault:"true" env:"ENGINE_ENABLE_NET_POLL" yaml:"enable_net_poll"`
 	WebSocketClientPollTimeout                       time.Duration `envDefault:"1s" env:"ENGINE_WEBSOCKET_CLIENT_POLL_TIMEOUT" yaml:"websocket_client_poll_timeout,omitempty"`
@@ -439,7 +447,9 @@ type EngineExecutionConfiguration struct {
 	DisableVariablesRemapping                        bool          `envDefault:"false" env:"ENGINE_DISABLE_VARIABLES_REMAPPING" yaml:"disable_variables_remapping"`
 	EnableRequireFetchReasons                        bool          `envDefault:"false" env:"ENGINE_ENABLE_REQUIRE_FETCH_REASONS" yaml:"enable_require_fetch_reasons"`
 	SubscriptionFetchTimeout                         time.Duration `envDefault:"30s" env:"ENGINE_SUBSCRIPTION_FETCH_TIMEOUT" yaml:"subscription_fetch_timeout,omitempty"`
-	ValidateRequiredExternalFields                         bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
+
+	ValidateRequiredExternalFields bool `envDefault:"false" env:"ENGINE_VALIDATE_REQUIRED_EXTERNAL_FIELDS" yaml:"validate_required_external_fields"`
+
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool `envDefault:"false" env:"ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY" yaml:"relax_subgraph_operation_field_selection_merging_nullability"`
 }
 
@@ -455,6 +465,7 @@ type SecurityConfiguration struct {
 	BlockPersistedOperations    BlockOperationConfiguration `yaml:"block_persisted_operations" envPrefix:"SECURITY_BLOCK_PERSISTED_OPERATIONS_"`
 	ComplexityCalculationCache  *ComplexityCalculationCache `yaml:"complexity_calculation_cache"`
 	ComplexityLimits            *ComplexityLimits           `yaml:"complexity_limits"`
+	CostAnalysis                *CostAnalysis               `yaml:"cost_analysis" envPrefix:"SECURITY_COST_ANALYSIS_"`
 	DepthLimit                  *QueryDepthConfiguration    `yaml:"depth_limit"`
 	ParserLimits                ParserLimitsConfiguration   `yaml:"parser_limits"`
 	OperationNameLengthLimit    int                         `yaml:"operation_name_length_limit" envDefault:"512" env:"SECURITY_OPERATION_NAME_LENGTH_LIMIT"` // 0 is disabled
@@ -485,6 +496,37 @@ type ComplexityLimits struct {
 
 	// When set to true, complexity validation is ignored for all introspection queries.
 	IgnoreIntrospection bool `yaml:"ignore_introspection" envDefault:"false" env:"SECURITY_COMPLEXITY_IGNORE_INTROSPECTION"`
+}
+
+// CostAnalysisMode defines how cost analysis behaves.
+type CostAnalysisMode string
+
+const (
+	CostAnalysisModeMeasure CostAnalysisMode = "measure"
+	CostAnalysisModeEnforce CostAnalysisMode = "enforce"
+)
+
+// CostAnalysis configures cost analysis based on @cost and @listSize directives.
+type CostAnalysis struct {
+	// Enabled controls whether cost analysis is active.
+	// When true, the router calculates costs for every operation.
+	Enabled bool `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+
+	// Mode controls cost analysis behavior:
+	// - "measure": calculates costs without rejecting operations (for monitoring)
+	// - "enforce": calculates costs and rejects operations exceeding the estimated limit
+	Mode CostAnalysisMode `yaml:"mode,omitempty" envDefault:"measure" env:"MODE"`
+
+	// MaxEstimatedLimit is the maximum allowed estimated cost for a query.
+	// Requires Mode set to "enforce". Operations exceeding this limit are rejected.
+	MaxEstimatedLimit int `yaml:"max_estimated_limit,omitempty" envDefault:"0" env:"MAX_ESTIMATED_LIMIT"`
+
+	// EstimatedListSize is the default assumed size for list fields when no @listSize directive
+	// nor slicing argument is provided. Used as a multiplier for estimated cost calculation.
+	EstimatedListSize int `yaml:"estimated_list_size,omitempty" envDefault:"0" env:"ESTIMATED_LIST_SIZE"`
+
+	// ExposeHeaders adds X-WG-Cost-* response headers.
+	ExposeHeaders bool `yaml:"expose_headers,omitempty" envDefault:"false" env:"EXPOSE_HEADERS"`
 }
 
 type ComplexityLimit struct {

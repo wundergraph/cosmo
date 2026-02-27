@@ -10,33 +10,32 @@ import (
 	"maps"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/codes"
-
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
-
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/pkg/art"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 )
 
 type PreHandlerOptions struct {
@@ -422,6 +421,11 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			requestContext.SetError(err)
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, err)
+
+			if h.operationProcessor.costAnalysis != nil && h.operationProcessor.costAnalysis.ExposeHeaders &&
+				requestContext.operation != nil && requestContext.operation.costEstimatedSet {
+				ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
+			}
 
 			writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
 			return
@@ -1090,6 +1094,10 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 	enginePlanSpan.End()
+
+	if err := operationKit.ValidateStaticCost(requestContext.operation); err != nil {
+		return err
+	}
 
 	planningAttrs := *requestContext.telemetry.AcquireAttributes()
 	planningAttrs = append(planningAttrs, otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))

@@ -22,7 +22,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -57,6 +56,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
 const (
@@ -902,9 +903,11 @@ func (s *graphServer) buildGraphMux(
 		// but in this case we use the same metric store
 		otlpOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.OpenTelemetry.Enabled,
+			CostStats:            s.metricConfig.OpenTelemetry.CostStats,
 		}
 		promOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.Prometheus.Enabled,
+			CostStats:            s.metricConfig.Prometheus.CostStats,
 		}
 
 		m, err := rmetric.NewStore(otlpOpts, promOpts,
@@ -1226,6 +1229,7 @@ func (s *graphServer) buildGraphMux(
 		Events:                   s.eventsConfig,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
 		StreamMetricStore:        gm.streamMetricStore,
+		CostAnalysis:             s.securityConfiguration.CostAnalysis,
 	}
 
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately
@@ -1330,6 +1334,7 @@ func (s *graphServer) buildGraphMux(
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
+		CostAnalysis:                                     s.securityConfiguration.CostAnalysis,
 	})
 
 	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled())
@@ -1444,6 +1449,7 @@ func (s *graphServer) buildGraphMux(
 		Log:                             s.logger,
 		EnableCacheResponseHeaders:      s.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders,
 		EnableResponseHeaderPropagation: s.headerRules != nil,
+		EnableCostResponseHeaders:       s.securityConfiguration.CostAnalysis != nil && s.securityConfiguration.CostAnalysis.ExposeHeaders,
 		EngineStats:                     s.engineStats,
 		TracerProvider:                  s.tracerProvider,
 		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),

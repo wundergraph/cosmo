@@ -13,23 +13,21 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-	rcontext "github.com/wundergraph/cosmo/router/internal/context"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-
 	graphqlmetrics "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	rcontext "github.com/wundergraph/cosmo/router/internal/context"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	ctrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 var _ RequestContext = (*requestContext)(nil)
@@ -583,6 +581,10 @@ type OperationContext interface {
 	// if called too early in request chain, it may be inaccurate for modules, using
 	// in Middleware is recommended
 	Timings() OperationTimings
+
+	// Cost returns cost analysis results for the operation.
+	// This should be called after planning is complete; using in Middleware is recommended.
+	Cost() (OperationCost, error)
 }
 
 var _ OperationContext = (*operationContext)(nil)
@@ -616,6 +618,7 @@ type operationContext struct {
 	variablesHash uint64
 	files         []*httpclient.FileUpload
 	clientInfo    *ClientInfo
+	planConfig    plan.Configuration
 	// preparedPlan is the prepared plan of the operation
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
@@ -632,6 +635,13 @@ type operationContext struct {
 	normalizationCacheHit          bool
 	variablesNormalizationCacheHit bool
 	variablesRemappingCacheHit     bool
+
+	// Costs related fields used as a cache through the lifetime of operation.
+	// Do we want to store some kind of cost_result code here?
+	costEstimated    int  // populated after planning
+	costActual       int  // populated after execution
+	costEstimatedSet bool // set to true when costEstimated is populated
+	costActualSet    bool // set to true when costActual is populated
 
 	typeFieldUsageInfo        graphqlschemausage.TypeFieldMetrics
 	typeFieldUsageInfoMetrics []*graphqlmetrics.TypeFieldUsageInfo // Cached conversion result
@@ -708,9 +718,9 @@ func (o *operationContext) GetTypeFieldUsageInfoMetrics() []*graphqlmetrics.Type
 
 // OperationTimings contains timing information for various stages of operation processing
 type OperationTimings struct {
-	ParsingTime time.Duration
-	ValidationTime time.Duration
-	PlanningTime time.Duration
+	ParsingTime       time.Duration
+	ValidationTime    time.Duration
+	PlanningTime      time.Duration
 	NormalizationTime time.Duration
 }
 
@@ -718,6 +728,12 @@ type QueryPlanStats struct {
 	TotalSubgraphFetches int
 	SubgraphFetches      map[string]int
 	SubgraphRootFields   []SubgraphRootField
+}
+
+// OperationCost holds cost analysis results for an operation.
+type OperationCost struct {
+	// Estimated is the static cost calculated before execution based on @cost and @listSize directives.
+	Estimated int
 }
 
 type SubgraphRootField struct {
@@ -816,6 +832,13 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 	}
 
 	return qps, nil
+}
+
+func (o *operationContext) Cost() (OperationCost, error) {
+	if !o.costEstimatedSet {
+		return OperationCost{}, errors.New("cost analysis is not enabled or not yet computed")
+	}
+	return OperationCost{Estimated: o.costEstimated}, nil
 }
 
 type SubgraphResolver struct {
