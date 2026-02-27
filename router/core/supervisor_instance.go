@@ -274,6 +274,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithDemoMode(config.DemoMode),
 		WithStreamsHandlerConfiguration(config.Events.Handlers),
 		WithReloadPersistentState(reloadPersistentState),
+		WithSubgraphTLSConfiguration(config.TLS.Client),
 	}
 
 	return options
