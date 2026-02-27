@@ -394,9 +394,9 @@ keycloak:
       subPath: realm.json
   extraEnv: |
     - name: KC_BOOTSTRAP_ADMIN_USERNAME
-      value: {{ .Values.global.keycloak.adminUser | quote }}
+      value: {{ .Values.global.keycloak.adminUser }}
     - name: KC_BOOTSTRAP_ADMIN_PASSWORD
-      value: {{ .Values.global.keycloak.adminPassword | quote }}
+      value: {{ .Values.global.keycloak.adminPassword }}
 
 # ClickHouse for the Cosmo Controlplane & Collectors
 # https://artifacthub.io/packages/helm/bitnami/clickhouse

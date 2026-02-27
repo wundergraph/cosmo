@@ -178,7 +178,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | keycloak.database.port | int | `5432` |  |
 | keycloak.database.username | string | `"postgres"` |  |
 | keycloak.database.vendor | string | `"postgres"` |  |
-| keycloak.extraEnv | string | `"- name: KC_BOOTSTRAP_ADMIN_USERNAME\n  value: {{ .Values.global.keycloak.adminUser | quote }}\n- name: KC_BOOTSTRAP_ADMIN_PASSWORD\n  value: {{ .Values.global.keycloak.adminPassword | quote }}\n"` |  |
+| keycloak.extraEnv | string | `"- name: KC_BOOTSTRAP_ADMIN_USERNAME\n  value: {{ .Values.global.keycloak.adminUser }}\n- name: KC_BOOTSTRAP_ADMIN_PASSWORD\n  value: {{ .Values.global.keycloak.adminPassword }}\n"` |  |
 | keycloak.extraVolumeMounts | string | `"- mountPath: /opt/keycloak/data/import/realm.json\n  name: realm-config-volume\n  readOnly: true\n  subPath: realm.json\n"` |  |
 | keycloak.extraVolumes | string | `"- name: realm-config-volume\n  configMap:\n    name: keycloak-realm\n"` |  |
 | keycloak.health.enabled | bool | `true` |  |
