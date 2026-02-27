@@ -1327,6 +1327,25 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "log_exporter": {
+                  "type": "object",
+                  "description": "Log exporter. When enabled, logs all collected metrics via the router's logger at each export interval.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the log exporter, which will ensure exported metrics are logged. The default value is false."
+                    },
+                    "exclude_metrics": {
+                      "type": "array",
+                      "description": "List of regex patterns for metric names to exclude from log output.",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
                 }
               }
             },

@@ -263,30 +263,41 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 	}
 
 	if c.OpenTelemetry.TestReader != nil {
-		mp := sdkmetric.NewMeterProvider(append(opts, sdkmetric.WithReader(c.OpenTelemetry.TestReader))...)
-		// Set the global MeterProvider to the SDK metric provider.
-		otel.SetMeterProvider(mp)
+		opts = append(opts, sdkmetric.WithReader(c.OpenTelemetry.TestReader))
+	} else {
+		for _, exp := range c.OpenTelemetry.Exporters {
+			if exp.Disabled {
+				continue
+			}
 
-		return mp, nil
+			exporter, err := createOTELExporter(log, exp)
+			if err != nil {
+				log.Error("creating OTEL metrics exporter", zap.Error(err))
+				return nil, err
+			}
+
+			opts = append(opts, sdkmetric.WithReader(
+				sdkmetric.NewPeriodicReader(exporter,
+					sdkmetric.WithTimeout(defaultExportTimeout),
+					sdkmetric.WithInterval(defaultExportInterval),
+				),
+			))
+		}
 	}
 
-	for _, exp := range c.OpenTelemetry.Exporters {
-		if exp.Disabled {
-			continue
+	if c.OpenTelemetry.LogExporter.Enabled {
+		logExp := newLogExporter(log, c.OpenTelemetry.LogExporter.ExcludeMetrics)
+		exportInterval := defaultExportInterval
+		if c.OpenTelemetry.LogExporter.ExportInterval > 0 {
+			exportInterval = c.OpenTelemetry.LogExporter.ExportInterval
 		}
-
-		exporter, err := createOTELExporter(log, exp)
-		if err != nil {
-			log.Error("creating OTEL metrics exporter", zap.Error(err))
-			return nil, err
-		}
-
 		opts = append(opts, sdkmetric.WithReader(
-			sdkmetric.NewPeriodicReader(exporter,
+			sdkmetric.NewPeriodicReader(logExp,
 				sdkmetric.WithTimeout(defaultExportTimeout),
-				sdkmetric.WithInterval(defaultExportInterval),
+				sdkmetric.WithInterval(exportInterval),
 			),
 		))
+		log.Warn("Metrics log exporter enabled")
 	}
 
 	mp := sdkmetric.NewMeterProvider(opts...)

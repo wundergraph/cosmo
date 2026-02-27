@@ -260,6 +260,12 @@ type EngineStatOptions struct {
 	EnableSubscription bool
 }
 
+type MetricsLogExporterOptions struct {
+	Enabled        bool
+	ExcludeMetrics []*regexp.Regexp
+	ExportInterval time.Duration
+}
+
 type MetricOptions struct {
 	MetricExclusions                      MetricExclusions
 	EnableRuntimeMetrics                  bool
@@ -274,6 +280,7 @@ type MetricOptions struct {
 	EnablePrometheusConnectionMetrics     bool
 	EnablePrometheusCircuitBreakerMetrics bool
 	EnablePrometheusStreamMetrics         bool
+	LogExporter                           MetricsLogExporterOptions
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -1600,12 +1607,17 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
+					LogExporter: config.MetricsLogExporter{
+						Enabled:        testConfig.MetricOptions.LogExporter.Enabled,
+						ExcludeMetrics: testConfig.MetricOptions.LogExporter.ExcludeMetrics,
+					},
 				},
 			},
 		})
 
 		c.Prometheus = prometheusConfig
 		c.OpenTelemetry.TestReader = testConfig.MetricReader
+		c.OpenTelemetry.LogExporter.ExportInterval = testConfig.MetricOptions.LogExporter.ExportInterval
 		c.IsUsingCloudExporter = !testConfig.DisableSimulateCloudExporter
 
 		routerOpts = append(routerOpts, core.WithMetrics(c))
