@@ -16,7 +16,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
-	"github.com/wundergraph/cosmo/router/internal/track"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -40,6 +39,7 @@ import (
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
+	"github.com/wundergraph/cosmo/router/internal/track"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -54,6 +54,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
@@ -525,9 +526,9 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
 	}
 
-	if ca := r.securityConfiguration.CostAnalysis; ca != nil && ca.Enabled {
+	if ca := r.securityConfiguration.CostControl; ca != nil && ca.Enabled {
 		if ca.EstimatedListSize <= 0 {
-			return nil, errors.New("cost analysis is enabled but 'estimated_list_size' is not set. Please provide a positive value for 'security.cost_analysis.estimated_list_size'")
+			return nil, errors.New("cost control is enabled but 'estimated_list_size' is not set. Please provide a positive value for 'security.cost_control.estimated_list_size'")
 		}
 	}
 

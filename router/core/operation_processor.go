@@ -126,7 +126,7 @@ type OperationProcessorOptions struct {
 	DisableExposingVariablesContentOnValidationError       bool
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool
 	ComplexityLimits                                       *config.ComplexityLimits
-	CostAnalysis                                           *config.CostAnalysis
+	CostControl                                            *config.CostControl
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
 	OperationNameLengthLimit                               int
 }
@@ -143,7 +143,7 @@ type OperationProcessor struct {
 	introspectionEnabled     bool
 	parseKitOptions          *parseKitOptions
 	complexityLimits         *config.ComplexityLimits
-	costAnalysis             *config.CostAnalysis
+	costAnalysis             *config.CostControl
 	parserTokenizerLimits    astparser.TokenizerLimits
 	operationNameLengthLimit int
 }
@@ -1404,13 +1404,13 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 		return nil
 	}
 
-	if costAnalysis.Mode != config.CostAnalysisModeEnforce || costAnalysis.MaxEstimatedLimit <= 0 {
+	if costAnalysis.Mode != config.CostControlModeEnforce || costAnalysis.MaxEstimatedLimit <= 0 {
 		return nil
 	}
 
 	if !opCtx.costEstimatedSet {
 		return &httpGraphqlError{
-			message:    "cost analysis is enabled in enforce mode but the cost calculator is unavailable",
+			message:    "cost control is enabled in enforce mode but the cost calculator is unavailable",
 			statusCode: http.StatusInternalServerError,
 		}
 	}
@@ -1523,7 +1523,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parserTokenizerLimits:    opts.ParserTokenizerLimits,
 		operationNameLengthLimit: opts.OperationNameLengthLimit,
 		complexityLimits:         opts.ComplexityLimits,
-		costAnalysis:             opts.CostAnalysis,
+		costAnalysis:             opts.CostControl,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,

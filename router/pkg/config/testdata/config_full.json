@@ -783,7 +783,7 @@
       },
       "IgnoreIntrospection": false
     },
-    "CostAnalysis": {
+    "CostControl": {
       "Enabled": true,
       "Mode": "enforce",
       "MaxEstimatedLimit": 1000,

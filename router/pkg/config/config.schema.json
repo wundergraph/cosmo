@@ -3047,9 +3047,9 @@
             }
           }
         },
-        "cost_analysis": {
+        "cost_control": {
           "type": "object",
-          "description": "Cost analysis based on @cost and @listSize directives.",
+          "description": "Cost control based on @cost and @listSize directives.",
           "additionalProperties": false,
           "properties": {
             "enabled": {
@@ -3061,7 +3061,7 @@
               "type": "string",
               "enum": ["measure", "enforce"],
               "default": "measure",
-              "description": "Controls cost analysis behavior: 'measure' calculates costs without rejecting operations; 'enforce' rejects operations exceeding the estimated cost limit."
+              "description": "Controls cost control behavior: 'measure' calculates costs without rejecting operations; 'enforce' rejects operations exceeding the estimated cost limit."
             },
             "max_estimated_limit": {
               "type": "integer",

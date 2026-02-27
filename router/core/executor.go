@@ -244,10 +244,10 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	planConfig.ValidateRequiredExternalFields = routerEngineCfg.Execution.ValidateRequiredExternalFields
 	planConfig.RelaxSubgraphOperationFieldSelectionMergingNullability = routerEngineCfg.Execution.RelaxSubgraphOperationFieldSelectionMergingNullability
 
-	// Enable static cost computation when cost analysis is enabled
-	if routerEngineCfg.CostAnalysis != nil && routerEngineCfg.CostAnalysis.Enabled {
+	// Enable cost computation when cost control is enabled
+	if routerEngineCfg.CostControl != nil && routerEngineCfg.CostControl.Enabled {
 		planConfig.ComputeCosts = true
-		planConfig.StaticCostDefaultListSize = routerEngineCfg.CostAnalysis.EstimatedListSize
+		planConfig.StaticCostDefaultListSize = routerEngineCfg.CostControl.EstimatedListSize
 	}
 
 	return planConfig, providers, nil

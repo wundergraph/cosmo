@@ -16,7 +16,7 @@ import (
 func TestCostModuleExposition(t *testing.T) {
 	t.Parallel()
 
-	t.Run("module can access cost when cost analysis is enabled", func(t *testing.T) {
+	t.Run("module can access cost when cost control is enabled", func(t *testing.T) {
 		t.Parallel()
 
 		resultsChan := make(chan verifyModule.CapturedCost, 1)
@@ -36,9 +36,9 @@ func TestCostModuleExposition(t *testing.T) {
 				core.WithCustomModules(&verifyModule.VerifyCostModule{}),
 			},
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.CostAnalysis = &config.CostAnalysis{
+				securityConfiguration.CostControl = &config.CostControl{
 					Enabled:           true,
-					Mode:              config.CostAnalysisModeMeasure,
+					Mode:              config.CostControlModeMeasure,
 					EstimatedListSize: 10,
 				}
 			},
@@ -50,7 +50,7 @@ func TestCostModuleExposition(t *testing.T) {
 			assert.Equal(t, 200, res.Response.StatusCode)
 
 			testenv.AwaitChannelWithT(t, 10*time.Second, resultsChan, func(t *testing.T, captured verifyModule.CapturedCost) {
-				assert.NoError(t, captured.Error, "Cost() should not return an error when cost analysis is enabled")
+				assert.NoError(t, captured.Error, "Cost() should not return an error when cost control is enabled")
 				assert.Greater(t, captured.Cost.Estimated, 0, "Estimated cost should be greater than 0 for a query with object fields")
 
 				// Log the cost for demonstration purposes
@@ -65,7 +65,7 @@ func TestCostModuleExposition(t *testing.T) {
 		})
 	})
 
-	t.Run("module receives error when cost analysis is disabled", func(t *testing.T) {
+	t.Run("module receives error when cost control is disabled", func(t *testing.T) {
 		t.Parallel()
 
 		resultsChan := make(chan verifyModule.CapturedCost, 1)
@@ -85,7 +85,7 @@ func TestCostModuleExposition(t *testing.T) {
 				core.WithCustomModules(&verifyModule.VerifyCostModule{}),
 			},
 			ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-				securityConfiguration.CostAnalysis = nil
+				securityConfiguration.CostControl = nil
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -95,8 +95,8 @@ func TestCostModuleExposition(t *testing.T) {
 			assert.Equal(t, 200, res.Response.StatusCode)
 
 			testenv.AwaitChannelWithT(t, 10*time.Second, resultsChan, func(t *testing.T, captured verifyModule.CapturedCost) {
-				assert.Error(t, captured.Error, "Cost() should return an error when cost analysis is disabled")
-				assert.Equal(t, 0, captured.Cost.Estimated, "Estimated cost should be 0 when cost analysis is disabled")
+				assert.Error(t, captured.Error, "Cost() should return an error when cost control is disabled")
+				assert.Equal(t, 0, captured.Cost.Estimated, "Estimated cost should be 0 when cost control is disabled")
 			})
 		})
 	})

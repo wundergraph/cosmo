@@ -467,7 +467,7 @@ security:
       enabled: true
       limit: 4
       ignore_persisted_operations: true
-  cost_analysis:
+  cost_control:
     enabled: true
     mode: enforce
     max_estimated_limit: 1000

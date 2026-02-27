@@ -836,7 +836,7 @@ func (o *operationContext) QueryPlanStats() (QueryPlanStats, error) {
 
 func (o *operationContext) Cost() (OperationCost, error) {
 	if !o.costEstimatedSet {
-		return OperationCost{}, errors.New("cost analysis is not enabled or not yet computed")
+		return OperationCost{}, errors.New("cost control is not enabled or not yet computed")
 	}
 	return OperationCost{Estimated: o.costEstimated}, nil
 }

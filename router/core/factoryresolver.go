@@ -250,7 +250,7 @@ type RouterEngineConfiguration struct {
 	Events                   config.EventsConfiguration
 	SubgraphErrorPropagation config.SubgraphErrorPropagationConfiguration
 	StreamMetricStore        rmetric.StreamMetricStore
-	CostAnalysis             *config.CostAnalysis
+	CostControl              *config.CostControl
 }
 
 func mapProtoFilterToPlanFilter(input *nodev1.SubscriptionFilterCondition, output *plan.SubscriptionFilterCondition) *plan.SubscriptionFilterCondition {

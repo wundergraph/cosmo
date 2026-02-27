@@ -19,10 +19,10 @@ import (
 func TestOperationCost(t *testing.T) {
 	t.Parallel()
 
-	t.Run("cost analysis", func(t *testing.T) {
+	t.Run("cost control", func(t *testing.T) {
 		t.Parallel()
 
-		// These tests verify cost analysis behavior with @cost and @listSize
+		// These tests verify cost control behavior with @cost and @listSize
 		// directives loaded from the test config (config.json).
 		// Each test uses a different query to cover distinct directive features.
 
@@ -30,9 +30,9 @@ func TestOperationCost(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+					securityConfiguration.CostControl = &config.CostControl{
 						Enabled:           true,
-						Mode:              config.CostAnalysisModeEnforce,
+						Mode:              config.CostControlModeEnforce,
 						MaxEstimatedLimit: 9,
 						EstimatedListSize: 5,
 						ExposeHeaders:     true,
@@ -60,9 +60,9 @@ func TestOperationCost(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+					securityConfiguration.CostControl = &config.CostControl{
 						Enabled:           true,
-						Mode:              config.CostAnalysisModeEnforce,
+						Mode:              config.CostControlModeEnforce,
 						MaxEstimatedLimit: 50,
 						EstimatedListSize: 10,
 						ExposeHeaders:     true,
@@ -84,9 +84,9 @@ func TestOperationCost(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+					securityConfiguration.CostControl = &config.CostControl{
 						Enabled:           true,
-						Mode:              config.CostAnalysisModeEnforce,
+						Mode:              config.CostControlModeEnforce,
 						MaxEstimatedLimit: 50,
 						EstimatedListSize: 3,
 						ExposeHeaders:     true,
@@ -108,9 +108,9 @@ func TestOperationCost(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+					securityConfiguration.CostControl = &config.CostControl{
 						Enabled:           true,
-						Mode:              config.CostAnalysisModeEnforce,
+						Mode:              config.CostControlModeEnforce,
 						MaxEstimatedLimit: 200,
 						EstimatedListSize: 200, // Very high, but @listSize(assumedSize: 50) overrides it
 						ExposeHeaders:     true,
@@ -129,28 +129,28 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
-		t.Run("Should fail on startup when cost analysis is enabled without estimated_list_size", func(t *testing.T) {
+		t.Run("Should fail on startup when cost control is enabled without estimated_list_size", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.FailsOnStartup(t, &testenv.Config{
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
-					cfg.CostAnalysis = &config.CostAnalysis{
+					cfg.CostControl = &config.CostControl{
 						Enabled: true,
-						Mode:    config.CostAnalysisModeMeasure,
+						Mode:    config.CostControlModeMeasure,
 					}
 				},
 			}, func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "cost analysis is enabled but 'estimated_list_size' is not set")
+				require.ErrorContains(t, err, "cost control is enabled but 'estimated_list_size' is not set")
 			})
 		})
 
-		t.Run("disabled cost analysis does not block queries", func(t *testing.T) {
+		t.Run("disabled cost control does not block queries", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+					securityConfiguration.CostControl = &config.CostControl{
 						Enabled: false,
-						Mode:    config.CostAnalysisModeEnforce,
+						Mode:    config.CostControlModeEnforce,
 					}
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -165,9 +165,9 @@ func TestOperationCost(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+					securityConfiguration.CostControl = &config.CostControl{
 						Enabled:           true,
-						Mode:              config.CostAnalysisModeMeasure,
+						Mode:              config.CostControlModeMeasure,
 						MaxEstimatedLimit: 1, // Would block in the enforce mode
 						EstimatedListSize: 10,
 						ExposeHeaders:     true,
@@ -189,9 +189,9 @@ func TestOperationCost(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+					securityConfiguration.CostControl = &config.CostControl{
 						Enabled:           true,
-						Mode:              config.CostAnalysisModeEnforce,
+						Mode:              config.CostControlModeEnforce,
 						MaxEstimatedLimit: 0, // Zero limit means no enforcement
 						EstimatedListSize: 10,
 						ExposeHeaders:     true,
@@ -213,9 +213,9 @@ func TestOperationCost(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.CostAnalysis = &config.CostAnalysis{
+					securityConfiguration.CostControl = &config.CostControl{
 						Enabled:           true,
-						Mode:              config.CostAnalysisModeEnforce,
+						Mode:              config.CostControlModeEnforce,
 						MaxEstimatedLimit: 10000,
 						EstimatedListSize: 5,
 						ExposeHeaders:     true,
@@ -250,9 +250,9 @@ func TestOperationCost(t *testing.T) {
 					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
-					cfg.CostAnalysis = &config.CostAnalysis{
+					cfg.CostControl = &config.CostControl{
 						Enabled:           true,
-						Mode:              config.CostAnalysisModeMeasure,
+						Mode:              config.CostControlModeMeasure,
 						EstimatedListSize: 15,
 					}
 				},
@@ -344,9 +344,9 @@ func TestOperationCost(t *testing.T) {
 					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
-					cfg.CostAnalysis = &config.CostAnalysis{
+					cfg.CostControl = &config.CostControl{
 						Enabled:           true,
-						Mode:              config.CostAnalysisModeMeasure,
+						Mode:              config.CostControlModeMeasure,
 						EstimatedListSize: 10,
 					}
 				},
@@ -408,7 +408,7 @@ func TestOperationCost(t *testing.T) {
 					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
-					cfg.CostAnalysis = &config.CostAnalysis{
+					cfg.CostControl = &config.CostControl{
 						Enabled:           true,
 						EstimatedListSize: 10,
 					}
@@ -444,7 +444,7 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
-		t.Run("Should not record cost metrics when cost analysis is disabled", func(t *testing.T) {
+		t.Run("Should not record cost metrics when cost control is disabled", func(t *testing.T) {
 			t.Parallel()
 
 			metricReader := sdkmetric.NewManualReader()
@@ -458,7 +458,7 @@ func TestOperationCost(t *testing.T) {
 					},
 				},
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
-					cfg.CostAnalysis = &config.CostAnalysis{
+					cfg.CostControl = &config.CostControl{
 						Enabled: false,
 					}
 				},
@@ -497,9 +497,9 @@ func TestOperationCost(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
-					cfg.CostAnalysis = &config.CostAnalysis{
+					cfg.CostControl = &config.CostControl{
 						Enabled:           true,
-						Mode:              config.CostAnalysisModeMeasure,
+						Mode:              config.CostControlModeMeasure,
 						EstimatedListSize: 5,
 						ExposeHeaders:     false,
 					}
@@ -515,11 +515,11 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
-		t.Run("Should not expose cost headers when cost analysis is disabled", func(t *testing.T) {
+		t.Run("Should not expose cost headers when cost control is disabled", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
-					cfg.CostAnalysis = &config.CostAnalysis{
+					cfg.CostControl = &config.CostControl{
 						Enabled:       false,
 						ExposeHeaders: true,
 					}

@@ -1557,12 +1557,12 @@ func BenchmarkSequentialBig(b *testing.B) {
 	})
 }
 
-func BenchmarkSequentialBigCostAnalysis(b *testing.B) {
+func BenchmarkSequentialBigCostControl(b *testing.B) {
 	testenv.Bench(b, &testenv.Config{
 		ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
-			cfg.CostAnalysis = &config.CostAnalysis{
+			cfg.CostControl = &config.CostControl{
 				Enabled:           true,
-				Mode:              config.CostAnalysisModeMeasure,
+				Mode:              config.CostControlModeMeasure,
 				EstimatedListSize: 15,
 			}
 		},

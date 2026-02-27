@@ -384,7 +384,7 @@
     },
     "ComplexityCalculationCache": null,
     "ComplexityLimits": null,
-    "CostAnalysis": null,
+    "CostControl": null,
     "DepthLimit": null,
     "ParserLimits": {
       "ApproximateDepthLimit": 200,
