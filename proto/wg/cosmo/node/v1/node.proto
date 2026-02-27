@@ -90,7 +90,7 @@ message DataSourceConfiguration {
   DataSourceCustomEvents custom_events = 13;
   repeated EntityInterfaceConfiguration entity_interfaces = 14;
   repeated EntityInterfaceConfiguration interface_objects = 15;
-  optional CostConfiguration cost_configuration = 16;
+  CostConfiguration cost_configuration = 16;
 }
 
 message CostConfiguration {

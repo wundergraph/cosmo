@@ -839,7 +839,7 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
   interfaceObjects: EntityInterfaceConfiguration[] = [];
 
   /**
-   * @generated from field: optional wg.cosmo.node.v1.CostConfiguration cost_configuration = 16;
+   * @generated from field: wg.cosmo.node.v1.CostConfiguration cost_configuration = 16;
    */
   costConfiguration?: CostConfiguration;
 
@@ -866,7 +866,7 @@ export class DataSourceConfiguration extends Message<DataSourceConfiguration> {
     { no: 13, name: "custom_events", kind: "message", T: DataSourceCustomEvents },
     { no: 14, name: "entity_interfaces", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
     { no: 15, name: "interface_objects", kind: "message", T: EntityInterfaceConfiguration, repeated: true },
-    { no: 16, name: "cost_configuration", kind: "message", T: CostConfiguration, opt: true },
+    { no: 16, name: "cost_configuration", kind: "message", T: CostConfiguration },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DataSourceConfiguration {
