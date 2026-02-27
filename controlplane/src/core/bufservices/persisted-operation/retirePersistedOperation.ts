@@ -27,7 +27,6 @@ export function retirePersistedOperation(
         response: {
           code: EnumStatusCode.ERR_ANALYTICS_DISABLED,
         },
-        filters: [],
       };
     }
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);

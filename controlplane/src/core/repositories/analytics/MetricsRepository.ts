@@ -1346,7 +1346,7 @@ export class MetricsRepository {
     graphId: string;
   }) {
     const query = `
-    SELECT TotalRequests
+    SELECT sum(TotalRequests) as TotalRequests
     FROM ${this.client.database}.operation_request_metrics_5_30
     WHERE OrganizationID = {organizationId:String}
       AND FederatedGraphID = {graphId:String}
@@ -1359,11 +1359,10 @@ export class MetricsRepository {
       organizationId,
       graphId,
     });
+    const totalRequests = Number(results[0]?.TotalRequests || 0);
 
-    return results.length > 0
-      ? {
-          totalRequests: Number(results[0].TotalRequests),
-        }
-      : null;
+    return {
+      totalRequests,
+    };
   }
 }

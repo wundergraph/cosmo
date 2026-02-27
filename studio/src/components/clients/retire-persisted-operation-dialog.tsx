@@ -47,6 +47,15 @@ export const RetirePersistedOperationDialog = ({
         </DialogHeader>
         {operationHasTraffic ? (
           <Alert variant="warn">
+            The {pluralizedOperation} {isPlural ? "are" : "is"}{" "}
+            <span className="font-semibold">receiving traffic</span>. Visit{" "}
+            <Link href={metricsLink} className="underline">
+              metrics
+            </Link>{" "}
+            to learn more.
+          </Alert>
+        ) : (
+          <Alert variant="warn">
             If you are not sending us analytics, we{" "}
             <span className="font-semibold">cannot guarantee</span> that this
             operation is not receiving traffic. If you are not sure, check the{" "}
@@ -55,40 +64,18 @@ export const RetirePersistedOperationDialog = ({
             </Link>
             .
           </Alert>
-        ) : (
-          <Alert variant="warn">
-            The {pluralizedOperation} {isPlural ? "are" : "is"}{" "}
-            <span className="font-semibold">receiving traffic</span>. Visit{" "}
-            <Link href={metricsLink} className="underline">
-              metrics
-            </Link>{" "}
-            to learn more.
-          </Alert>
         )}
 
         <div className="flex flex-col gap-y-2">
           <p className="text-sm">
-            {operationHasTraffic ? (
-              <>
-                Are you sure you want to{" "}
-                <span className="font-semibold">retire</span> the{" "}
-                {pluralizedOperation}?
-                <div className="mt-1">
-                  <OperationLabel names={operationNames} />
-                </div>
-              </>
-            ) : (
-              <>
-                Are you sure you want to{" "}
-                <span className="font-semibold">
-                  retire the following {pluralizedOperation}
-                </span>
-                ?<br />
-                <span className="mt-1 inline-block">
-                  <OperationLabel names={operationNames} />
-                </span>
-              </>
-            )}
+            Are you sure you want to{" "}
+            <span className="font-semibold">
+              retire the following {pluralizedOperation}
+            </span>
+            ?<br />
+            <span className="mt-1 inline-block">
+              <OperationLabel names={operationNames} />
+            </span>
           </p>
         </div>
         <Button

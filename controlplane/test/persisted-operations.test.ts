@@ -254,7 +254,7 @@ describe('Persisted operations', (ctx) => {
       expect(JSON.parse(text)).toEqual({ version: 1, body: query });
     });
 
-    test('Should escape persistent operation client name before storing to blog storage', async (testContext) => {
+    test('Should escape persistent operation client name before storing to blob storage', async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({
         dbname,
         chClient,
@@ -421,9 +421,11 @@ describe('Persisted operations', (ctx) => {
         operationId: publishOperationsResp.operations[0].id,
       });
 
-      await expect(blobStorage.getObject({
-        key: storageKeys[1],
-      })).rejects.toThrow(/not found/)
+      await expect(
+        blobStorage.getObject({
+          key: storageKeys[1],
+        }),
+      ).rejects.toThrow(/not found/);
     });
 
     test('Should fail when blob storage errs during retirement of a persisted operation', async (testContext) => {
@@ -446,9 +448,7 @@ describe('Persisted operations', (ctx) => {
         operations: [{ id, contents: query }],
       });
 
-      const deleteObjectSpy = vi
-        .spyOn(blobStorage, 'deleteObject')
-        .mockRejectedValueOnce(new Error('delete failed'));
+      const deleteObjectSpy = vi.spyOn(blobStorage, 'deleteObject').mockRejectedValueOnce(new Error('delete failed'));
 
       const retireOperationsResp = await client.retirePersistedOperation({
         fedGraphName,
@@ -556,9 +556,11 @@ describe('Persisted operations', (ctx) => {
       });
 
       // Mock traffic data
-      (chClient.queryPromise as Mock).mockResolvedValue([{
-        TotalRequests: 1,
-      }]);
+      (chClient.queryPromise as Mock).mockResolvedValue([
+        {
+          TotalRequests: 1,
+        },
+      ]);
 
       const checkOperationsResp = await client.checkPersistedOperationTraffic({
         fedGraphName,
@@ -566,7 +568,7 @@ describe('Persisted operations', (ctx) => {
         operationId: publishOperationsResp.operations[0].id,
       });
 
-      expect(checkOperationsResp.operation?.hasTraffic).toBe(true)
+      expect(checkOperationsResp.operation?.hasTraffic).toBe(true);
     });
 
     test('Should detect that the operation does NOT have traffic', async (testContext) => {
@@ -593,7 +595,7 @@ describe('Persisted operations', (ctx) => {
         operationId: publishOperationsResp.operations[0].id,
       });
 
-      expect(checkOperationsResp.operation?.hasTraffic).toBe(false)
+      expect(checkOperationsResp.operation?.hasTraffic).toBe(false);
     });
-  })
+  });
 });
