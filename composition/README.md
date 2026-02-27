@@ -5,6 +5,12 @@
 The WunderGraph composition library facilitates the federation of multiple subgraph schemas into a 
 single federated GraphQL schema.
 
+## Architecture and onboarding
+
+For an implementation-level walkthrough of the composition pipeline and extension points (including shipping custom directives), see:
+
+- [ARCHITECTURE.md](./ARCHITECTURE.md)
+
 ### Prerequisites
 
 - [Node.js 16 LTS or higher](https://nodejs.dev/en/about/releases/)

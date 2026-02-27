@@ -6,7 +6,7 @@ import {
   SchemaDefinitionNode,
   SchemaExtensionNode,
 } from 'graphql';
-import { ConfigurationData } from '../router-configuration/types';
+import { ConfigurationData, Costs } from '../router-configuration/types';
 import {
   ConditionalFieldData,
   EntityInterfaceSubgraphData,
@@ -28,6 +28,7 @@ export type SubgraphConfig = {
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   schema: GraphQLSchema;
   schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
+  costs?: Costs;
 };
 
 export type InternalSubgraph = {
@@ -45,5 +46,6 @@ export type InternalSubgraph = {
   persistedDirectiveDefinitionDataByDirectiveName: Map<DirectiveName, PersistedDirectiveDefinitionData>;
   schema: GraphQLSchema;
   schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
+  costs?: Costs;
   url: string;
 };
