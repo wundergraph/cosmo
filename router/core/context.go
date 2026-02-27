@@ -582,7 +582,7 @@ type OperationContext interface {
 	// in Middleware is recommended
 	Timings() OperationTimings
 
-	// Cost returns cost analysis results for the operation.
+	// Cost returns cost results for the operation.
 	// This should be called after planning is complete; using in Middleware is recommended.
 	Cost() (OperationCost, error)
 }
@@ -730,7 +730,7 @@ type QueryPlanStats struct {
 	SubgraphRootFields   []SubgraphRootField
 }
 
-// OperationCost holds cost analysis results for an operation.
+// OperationCost holds cost results for an operation.
 type OperationCost struct {
 	// Estimated is the static cost calculated before execution based on @cost and @listSize directives.
 	Estimated int

@@ -422,7 +422,7 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, err)
 
-			if h.operationProcessor.costAnalysis != nil && h.operationProcessor.costAnalysis.ExposeHeaders &&
+			if h.operationProcessor.costControl != nil && h.operationProcessor.costControl.ExposeHeaders &&
 				requestContext.operation != nil && requestContext.operation.costEstimatedSet {
 				ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
 			}

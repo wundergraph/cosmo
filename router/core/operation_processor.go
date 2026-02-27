@@ -143,7 +143,7 @@ type OperationProcessor struct {
 	introspectionEnabled     bool
 	parseKitOptions          *parseKitOptions
 	complexityLimits         *config.ComplexityLimits
-	costAnalysis             *config.CostControl
+	costControl              *config.CostControl
 	parserTokenizerLimits    astparser.TokenizerLimits
 	operationNameLengthLimit int
 }
@@ -1399,7 +1399,7 @@ func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
 		}
 	}
 
-	costAnalysis := o.operationProcessor.costAnalysis
+	costAnalysis := o.operationProcessor.costControl
 	if costAnalysis == nil || !costAnalysis.Enabled {
 		return nil
 	}
@@ -1523,7 +1523,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parserTokenizerLimits:    opts.ParserTokenizerLimits,
 		operationNameLengthLimit: opts.OperationNameLengthLimit,
 		complexityLimits:         opts.ComplexityLimits,
-		costAnalysis:             opts.CostControl,
+		costControl:              opts.CostControl,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,

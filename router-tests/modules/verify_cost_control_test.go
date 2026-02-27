@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	verifyModule "github.com/wundergraph/cosmo/router-tests/modules/verify-cost-analysis"
+	verifyModule "github.com/wundergraph/cosmo/router-tests/modules/verify-cost-control"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
