@@ -57,8 +57,8 @@ export const DeletePersistedOperationDialog = ({
         ) : (
           <Alert variant="warn">
             If you are not sending us analytics, we{" "}
-            <span className="font-semibold">cannot guarantee</span> that this
-            operation is not receiving traffic. If you are not sure, check the{" "}
+            <span className="font-semibold">cannot guarantee</span> that that
+            existing clients won&#39;t break. If you are not sure, check the{" "}
             <Link href={metricsLink} className="underline">
               metrics
             </Link>
