@@ -1,4 +1,5 @@
 import type { SyntheticEvent } from "react";
+import { Link } from "@/components/ui/link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -12,23 +13,24 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Alert } from "@/components/ui/alert";
-import { cn } from "@/lib/utils";
 
 export const RetirePersistedOperationDialog = ({
   isOpen,
   operationNames,
   operationHasTraffic,
+  metricsLink,
   onSubmitButtonClick,
   onClose,
 }: {
   isOpen: boolean;
   operationNames: string[];
   operationHasTraffic: boolean;
+  metricsLink: string;
   onSubmitButtonClick?: (event: SyntheticEvent<HTMLButtonElement>) => void;
   onClose?: () => void;
 }) => {
   const isPlural = operationNames.length > 1;
-  const pluralizedOperation = isPlural ? 'operations' : 'operation';
+  const pluralizedOperation = isPlural ? "operations" : "operation";
 
   return (
     <Dialog
@@ -43,12 +45,24 @@ export const RetirePersistedOperationDialog = ({
         <DialogHeader>
           <DialogTitle>Retire persisted operation</DialogTitle>
         </DialogHeader>
-
-        {!operationHasTraffic && (
+        {operationHasTraffic ? (
           <Alert variant="warn">
-            If you are not sending us analytics, we <span className='font-semibold'>cannot guarantee</span> that
-            this operation is not receiving traffic. If you are not sure, check
-            the metrics.
+            If you are not sending us analytics, we{" "}
+            <span className="font-semibold">cannot guarantee</span> that this
+            operation is not receiving traffic. If you are not sure, check the{" "}
+            <Link href={metricsLink} className="underline">
+              metrics
+            </Link>
+            .
+          </Alert>
+        ) : (
+          <Alert variant="warn">
+            The {pluralizedOperation} {isPlural ? "are" : "is"}{" "}
+            <span className="font-semibold">receiving traffic</span>. Visit{" "}
+            <Link href={metricsLink} className="underline">
+              metrics
+            </Link>{" "}
+            to learn more.
           </Alert>
         )}
 
@@ -56,12 +70,25 @@ export const RetirePersistedOperationDialog = ({
           <p className="text-sm">
             {operationHasTraffic ? (
               <>
-                The {pluralizedOperation} <OperationLabel names={operationNames} /> {isPlural ? 'are' : 'is'} <span className='font-semibold'>receiving traffic</span>.<br />
-                Are you sure you want to <span className='font-semibold'>retire</span> the {pluralizedOperation}?
+                Are you sure you want to{" "}
+                <span className="font-semibold">retire</span> the{" "}
+                {pluralizedOperation}?
+                <div className="mt-1">
+                  <OperationLabel names={operationNames} />
+                </div>
               </>
-            ) : (<>
-              Are you sure you want to <span className='font-semibold'>retire the following {pluralizedOperation}</span>?<br /><span className='mt-1 inline-block'><OperationLabel names={operationNames} inline={false} /></span></>)
-            }
+            ) : (
+              <>
+                Are you sure you want to{" "}
+                <span className="font-semibold">
+                  retire the following {pluralizedOperation}
+                </span>
+                ?<br />
+                <span className="mt-1 inline-block">
+                  <OperationLabel names={operationNames} />
+                </span>
+              </>
+            )}
           </p>
         </div>
         <Button
@@ -77,16 +104,17 @@ export const RetirePersistedOperationDialog = ({
   );
 };
 
-const OperationLabel = ({ names, inline = true }: { names: string[]; inline?: boolean }) => (
+const OperationLabel = ({ names }: { names: string[] }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <code className={cn('inline-block cursor-pointer overflow-hidden text-ellipsis align-middle', {
-        'max-w-[180px]': inline,
-        'max-w-2xl': !inline,
-      })}>
-        {names.length > 4 ? names.slice(0, 4).join(inline ? ',' : '\n') : names.join(inline ? ',' : '\n')}
+      <code
+        className={
+          "inline-block max-w-2xl cursor-pointer overflow-hidden text-ellipsis align-middle"
+        }
+      >
+        {names.length > 4 ? names.slice(0, 4).join("\n") : names.join("\n")}
       </code>
     </TooltipTrigger>
-    <TooltipContent>{names.join(',')}</TooltipContent>
+    <TooltipContent>{names.join(",")}</TooltipContent>
   </Tooltip>
 );

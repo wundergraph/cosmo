@@ -201,9 +201,21 @@ const retirePersistedOperationReducer = (
 ): RetirePersistedOperationState => {
   switch (action.type) {
     case "retire-modal-show":
-      return { ...state, id: action.id, names: action.names, hasTraffic: false, show: true };
+      return {
+        ...state,
+        id: action.id,
+        names: action.names,
+        hasTraffic: false,
+        show: true,
+      };
     case "retire-modal-show-with-traffic-warning":
-      return { ...state, id: action.id, names: action.names, hasTraffic: true, show: true };
+      return {
+        ...state,
+        id: action.id,
+        names: action.names,
+        hasTraffic: true,
+        show: true,
+      };
     case "retire-modal-hidden":
     default:
       return { ...state, id: null, names: [], hasTraffic: false, show: false };
@@ -320,7 +332,11 @@ const ClientOperations = ({
           names: data.operation.operationNames,
         });
       } else {
-        dispatch({ type: "retire-modal-show", id: data.operation.operationId, names: data.operation.operationNames });
+        dispatch({
+          type: "retire-modal-show",
+          id: data.operation.operationId,
+          names: data.operation.operationNames,
+        });
       }
     },
   });
@@ -622,6 +638,7 @@ const ClientOperations = ({
         isOpen={persistedOperationRetireState.show}
         operationNames={persistedOperationRetireState.names ?? []}
         operationHasTraffic={Boolean(persistedOperationRetireState.hasTraffic)}
+        metricsLink={`/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${encodeURIComponent(createFilterState({ operationPersistedId: persistedOperationRetireState.id ?? undefined }))}`}
         onSubmitButtonClick={
           persistedOperationRetireState.id
             ? () => {
