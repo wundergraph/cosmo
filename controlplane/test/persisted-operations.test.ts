@@ -355,6 +355,7 @@ describe('Persisted operations', (ctx) => {
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
+        clientName: 'curl',
       });
 
       expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.OK);
@@ -388,6 +389,7 @@ describe('Persisted operations', (ctx) => {
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
+        clientName: 'curl',
       });
 
       expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.OK);
@@ -419,6 +421,7 @@ describe('Persisted operations', (ctx) => {
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
+        clientName: 'curl',
       });
 
       await expect(
@@ -454,6 +457,7 @@ describe('Persisted operations', (ctx) => {
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
+        clientName: 'curl',
       });
 
       expect(deleteObjectSpy).toHaveBeenCalledTimes(1);
@@ -472,6 +476,7 @@ describe('Persisted operations', (ctx) => {
         fedGraphName,
         namespace: 'default',
         operationId: 'xxx',
+        clientName: 'curl',
       });
 
       expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
@@ -505,6 +510,7 @@ describe('Persisted operations', (ctx) => {
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
+        clientName: 'curl',
       });
       expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     });
@@ -533,6 +539,7 @@ describe('Persisted operations', (ctx) => {
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
+        clientName: 'curl',
       });
       expect(checkOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     });
@@ -566,6 +573,7 @@ describe('Persisted operations', (ctx) => {
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
+        clientName: 'curl',
       });
 
       expect(checkOperationsResp.operation?.hasTraffic).toBe(true);
@@ -593,6 +601,7 @@ describe('Persisted operations', (ctx) => {
         fedGraphName,
         namespace: 'default',
         operationId: publishOperationsResp.operations[0].id,
+        clientName: 'curl',
       });
 
       expect(checkOperationsResp.operation?.hasTraffic).toBe(false);

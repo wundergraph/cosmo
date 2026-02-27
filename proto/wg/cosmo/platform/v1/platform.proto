@@ -1285,14 +1285,16 @@ message PublishPersistedOperationsResponse {
 message DeletePersistedOperationRequest {
   string fedGraphName = 1;
   string namespace = 2;
-  string operationId = 3;
+  string clientName = 3;
+  string operationId = 4;
 }
 
 message DeletePersistedOperationResponse {
   message Operation {
     string id = 1;
     string operationId = 2;
-    repeated string operationNames = 3;
+    string clientName = 3;
+    repeated string operationNames = 4;
   }
   Response response = 1;
   Operation operation = 2;
@@ -1302,14 +1304,16 @@ message CheckPersistedOperationTrafficRequest {
   string fedGraphName = 1;
   string namespace = 2;
   string operationId = 3;
+  string clientName = 4;
 }
 
 message CheckPersistedOperationTrafficResponse {
   message Operation {
     string id = 1;
     string operationId = 2;
-    repeated string operationNames = 3;
-    bool hasTraffic = 4;
+    string clientName = 3;
+    repeated string operationNames = 4;
+    bool hasTraffic = 5;
   }
   Response response = 1;
   Operation operation = 2;

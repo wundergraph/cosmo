@@ -9678,7 +9678,12 @@ export class DeletePersistedOperationRequest extends Message<DeletePersistedOper
   namespace = "";
 
   /**
-   * @generated from field: string operationId = 3;
+   * @generated from field: string clientName = 3;
+   */
+  clientName = "";
+
+  /**
+   * @generated from field: string operationId = 4;
    */
   operationId = "";
 
@@ -9692,7 +9697,8 @@ export class DeletePersistedOperationRequest extends Message<DeletePersistedOper
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeletePersistedOperationRequest {
@@ -9770,7 +9776,12 @@ export class DeletePersistedOperationResponse_Operation extends Message<DeletePe
   operationId = "";
 
   /**
-   * @generated from field: repeated string operationNames = 3;
+   * @generated from field: string clientName = 3;
+   */
+  clientName = "";
+
+  /**
+   * @generated from field: repeated string operationNames = 4;
    */
   operationNames: string[] = [];
 
@@ -9784,7 +9795,8 @@ export class DeletePersistedOperationResponse_Operation extends Message<DeletePe
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "operationNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 3, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "operationNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): DeletePersistedOperationResponse_Operation {
@@ -9823,6 +9835,11 @@ export class CheckPersistedOperationTrafficRequest extends Message<CheckPersiste
    */
   operationId = "";
 
+  /**
+   * @generated from field: string clientName = 4;
+   */
+  clientName = "";
+
   constructor(data?: PartialMessage<CheckPersistedOperationTrafficRequest>) {
     super();
     proto3.util.initPartial(data, this);
@@ -9834,6 +9851,7 @@ export class CheckPersistedOperationTrafficRequest extends Message<CheckPersiste
     { no: 1, name: "fedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 3, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckPersistedOperationTrafficRequest {
@@ -9911,12 +9929,17 @@ export class CheckPersistedOperationTrafficResponse_Operation extends Message<Ch
   operationId = "";
 
   /**
-   * @generated from field: repeated string operationNames = 3;
+   * @generated from field: string clientName = 3;
+   */
+  clientName = "";
+
+  /**
+   * @generated from field: repeated string operationNames = 4;
    */
   operationNames: string[] = [];
 
   /**
-   * @generated from field: bool hasTraffic = 4;
+   * @generated from field: bool hasTraffic = 5;
    */
   hasTraffic = false;
 
@@ -9930,8 +9953,9 @@ export class CheckPersistedOperationTrafficResponse_Operation extends Message<Ch
   static readonly fields: FieldList = proto3.util.newFieldList(() => [
     { no: 1, name: "id", kind: "scalar", T: 9 /* ScalarType.STRING */ },
     { no: 2, name: "operationId", kind: "scalar", T: 9 /* ScalarType.STRING */ },
-    { no: 3, name: "operationNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
-    { no: 4, name: "hasTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 3, name: "clientName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 4, name: "operationNames", kind: "scalar", T: 9 /* ScalarType.STRING */, repeated: true },
+    { no: 5, name: "hasTraffic", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckPersistedOperationTrafficResponse_Operation {

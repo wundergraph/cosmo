@@ -154,29 +154,38 @@ export class OperationsRepository {
 
   public async deletePersistedOperation({
     operationId,
+    clientName,
   }: {
     operationId: string;
-  }): Promise<PersistedOperationDTO | undefined> {
-    const operationResult = await this.db.query.federatedGraphPersistedOperations.findFirst({
+    clientName: string;
+  }): Promise<PersistedOperationWithClientDTO | undefined> {
+    const clientResult = await this.db.query.federatedGraphClients.findFirst({
       where: and(
-        eq(federatedGraphPersistedOperations.operationId, operationId),
-        eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
+        eq(federatedGraphClients.name, clientName),
+        eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
       ),
-      with: {
-        createdBy: true,
-        updatedBy: true,
-      },
     });
 
-    if (!operationResult) {
+    if (!clientResult) {
+      return undefined;
+    }
+
+    const operation = await this.getPersistedOperation({ operationId });
+
+    if (!operation) {
       return undefined;
     }
 
     await this.db
       .delete(federatedGraphPersistedOperations)
-      .where(eq(federatedGraphPersistedOperations.operationId, operationId));
+      .where(
+        and(
+          eq(federatedGraphPersistedOperations.operationId, operationId),
+          eq(federatedGraphPersistedOperations.clientId, clientResult.id),
+        ),
+      );
 
-    return this.createPersistedOperationDTO(operationResult);
+    return operation;
   }
 
   public async registerClient(clientName: string, userId: string): Promise<string> {

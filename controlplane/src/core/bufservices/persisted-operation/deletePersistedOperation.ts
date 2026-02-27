@@ -85,6 +85,7 @@ export function deletePersistedOperation(
 
     const deletedOperation = await operationsRepo.deletePersistedOperation({
       operationId: req.operationId,
+      clientName: req.clientName,
     });
 
     return {
@@ -95,6 +96,7 @@ export function deletePersistedOperation(
         ? {
             id: deletedOperation.id,
             operationId: deletedOperation.operationId,
+            clientName: deletedOperation.clientName,
             operationNames: deletedOperation.operationNames,
           }
         : undefined,

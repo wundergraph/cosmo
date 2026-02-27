@@ -74,6 +74,7 @@ export function checkPersistedOperationTraffic(
       operation: {
         id: operation.id,
         operationId: operation.operationId,
+        clientName: operation.clientName,
         operationNames: operation.operationNames,
         hasTraffic: operationMetrics.totalRequests > 0,
       },
