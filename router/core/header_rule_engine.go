@@ -105,6 +105,7 @@ type headerPropagationWriter struct {
 	reqCtx                    *requestContext
 	didApplyRouterRespHeaders bool
 	costHeaderSetter          func(actualListSizes map[string]int)
+	didSetCostHeaders         bool
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
@@ -135,7 +136,8 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 			}
 		}
 	}
-	if h.costHeaderSetter != nil {
+	if h.costHeaderSetter != nil && !h.didSetCostHeaders {
+		h.didSetCostHeaders = true
 		h.costHeaderSetter(h.resolveCtx.ActualListSizes)
 	}
 	return h.writer.Write(p)

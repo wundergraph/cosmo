@@ -1391,17 +1391,17 @@ func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.Co
 
 // ValidateStaticCost computes and validates that the estimated cost is within the configured limit.
 func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
+	costControl := o.operationProcessor.costControl
+	if costControl == nil || !costControl.Enabled {
+		return nil
+	}
+
 	// Compute and cache estimated cost once after planning
 	if opCtx.preparedPlan != nil && opCtx.preparedPlan.preparedPlan != nil {
 		if costCalc := opCtx.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
 			opCtx.costEstimated = costCalc.EstimateCost(opCtx.planConfig, opCtx.variables)
 			opCtx.costEstimatedSet = true
 		}
-	}
-
-	costControl := o.operationProcessor.costControl
-	if costControl == nil || !costControl.Enabled {
-		return nil
 	}
 
 	if costControl.Mode != config.CostControlModeEnforce || costControl.MaxEstimatedLimit <= 0 {
