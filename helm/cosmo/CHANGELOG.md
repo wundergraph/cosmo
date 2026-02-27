@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.16.0...helm-cosmo@0.17.0) (2026-02-27)
+
+
+### Features
+
+* **keycloak:** move to official images ([#2561](https://github.com/wundergraph/cosmo/issues/2561)) ([8e81d6b](https://github.com/wundergraph/cosmo/commit/8e81d6b0159d62f1e85a369165036c8a4c14fbd7))
+
 ## [0.16.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.15.0...helm-cosmo@0.16.0) (2025-12-10)
 
 
