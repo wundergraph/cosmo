@@ -2288,6 +2288,738 @@ type Category {
 
       await server.close();
     });
+
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Union', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const fedGraphName = genID('fedGraph');
+      const subgraphAName = genID('subgraphA');
+      const subgraphBName = genID('subgraphB');
+      const label = genUniqueLabel();
+
+      // Subgraph A has Object type and Query.a returning Object
+      const subgraphASchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          a: Object!
+          b: String
+        }
+      `;
+
+      // Subgraph B initial schema - same Object type, same Query.a returning Object, plus Union definition
+      const subgraphBInitialSchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          b: String
+        }
+      `;
+
+      // Subgraph B updated schema - Query.a now returns Union instead of Object
+      // This changes the federated schema's Query.a field type from Object to Union
+      // which is a breaking change
+      const subgraphBUpdatedSchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          a: Union
+          b: String
+        }
+
+        union Union = Object
+      `;
+
+      // Create federated graph
+      const createFedGraphRes = await client.createFederatedGraph({
+        name: fedGraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8081',
+        labelMatchers: [joinLabel(label)],
+      });
+      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph A
+      const createSubgraphARes = await client.createFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8082',
+      });
+      expect(createSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphARes = await client.publishFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        schema: subgraphASchema,
+      });
+      expect(publishSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph B with initial schema
+      const createSubgraphBRes = await client.createFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8083',
+      });
+      expect(createSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphBRes = await client.publishFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        schema: subgraphBInitialSchema,
+      });
+      expect(publishSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Verify the federated graph has Query.a returning Object
+      const fedGraphSDLBefore = await client.getFederatedGraphSDLByName({
+        name: fedGraphName,
+        namespace: 'default',
+      });
+      expect(fedGraphSDLBefore.response?.code).toBe(EnumStatusCode.OK);
+      expect(fedGraphSDLBefore.sdl).toContain('a: Object');
+
+      // Run schema check for subgraph B with updated schema
+      // This should detect that Query.a field type changes from Object to Union
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: subgraphBName,
+        namespace: 'default',
+        schema: Buffer.from(subgraphBUpdatedSchema),
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.compositionErrors.length).toBe(0);
+
+      // Subgraph-level breaking change: Query.a type changed from Object to Union
+      // expect(checkResp.breakingChanges.length).toBe(0);
+      // expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_TYPE_CHANGED);
+      // expect(checkResp.breakingChanges[0].path).toBe('Query.a');
+
+      // The composed schema breaking changes should also detect the field type change
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(1);
+      expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
+      expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
+      expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
+
+      await server.close();
+    });
+
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Union 2', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const fedGraphName = genID('fedGraph');
+      const subgraphAName = genID('subgraphA');
+      const subgraphBName = genID('subgraphB');
+      const label = genUniqueLabel();
+
+      // Subgraph A has Object type and Query.a returning Object
+      const subgraphASchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          a: Object!
+          b: String
+        }
+      `;
+
+      // Subgraph B initial schema - same Object type, same Query.a returning Object, plus Union definition
+      const subgraphBInitialSchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          b: String
+        }
+      `;
+
+      // Subgraph B updated schema - Query.a now returns Union instead of Object
+      // This changes the federated schema's Query.a field type from Object to Union
+      // which is a breaking change
+      const subgraphBUpdatedSchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          a: Union!
+          b: String
+        }
+
+        union Union = Object
+      `;
+
+      // Create federated graph
+      const createFedGraphRes = await client.createFederatedGraph({
+        name: fedGraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8081',
+        labelMatchers: [joinLabel(label)],
+      });
+      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph A
+      const createSubgraphARes = await client.createFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8082',
+      });
+      expect(createSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphARes = await client.publishFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        schema: subgraphASchema,
+      });
+      expect(publishSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph B with initial schema
+      const createSubgraphBRes = await client.createFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8083',
+      });
+      expect(createSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphBRes = await client.publishFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        schema: subgraphBInitialSchema,
+      });
+      expect(publishSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Verify the federated graph has Query.a returning Object
+      const fedGraphSDLBefore = await client.getFederatedGraphSDLByName({
+        name: fedGraphName,
+        namespace: 'default',
+      });
+      expect(fedGraphSDLBefore.response?.code).toBe(EnumStatusCode.OK);
+      expect(fedGraphSDLBefore.sdl).toContain('a: Object');
+
+      // Run schema check for subgraph B with updated schema
+      // This should detect that Query.a field type changes from Object to Union
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: subgraphBName,
+        namespace: 'default',
+        schema: Buffer.from(subgraphBUpdatedSchema),
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.compositionErrors.length).toBe(0);
+
+      // Subgraph-level breaking change: Query.a type changed from Object to Union
+      // expect(checkResp.breakingChanges.length).toBe(0);
+      // expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_TYPE_CHANGED);
+      // expect(checkResp.breakingChanges[0].path).toBe('Query.a');
+
+      // The composed schema breaking changes should also detect the field type change
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(1);
+      expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
+      expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
+      expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
+
+      await server.close();
+    });
+
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Union 3', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const fedGraphName = genID('fedGraph');
+      const subgraphAName = genID('subgraphA');
+      const subgraphBName = genID('subgraphB');
+      const label = genUniqueLabel();
+
+      // Subgraph A has Object type and Query.a returning Object
+      const subgraphASchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          a: Object
+          b: String
+        }
+      `;
+
+      // Subgraph B initial schema - same Object type, same Query.a returning Object, plus Union definition
+      const subgraphBInitialSchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          b: String
+        }
+      `;
+
+      // Subgraph B updated schema - Query.a now returns Union instead of Object
+      // This changes the federated schema's Query.a field type from Object to Union
+      // which is a breaking change
+      const subgraphBUpdatedSchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          a: Union!
+          b: String
+        }
+
+        union Union = Object
+      `;
+
+      // Create federated graph
+      const createFedGraphRes = await client.createFederatedGraph({
+        name: fedGraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8081',
+        labelMatchers: [joinLabel(label)],
+      });
+      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph A
+      const createSubgraphARes = await client.createFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8082',
+      });
+      expect(createSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphARes = await client.publishFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        schema: subgraphASchema,
+      });
+      expect(publishSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph B with initial schema
+      const createSubgraphBRes = await client.createFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8083',
+      });
+      expect(createSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphBRes = await client.publishFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        schema: subgraphBInitialSchema,
+      });
+      expect(publishSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Verify the federated graph has Query.a returning Object
+      const fedGraphSDLBefore = await client.getFederatedGraphSDLByName({
+        name: fedGraphName,
+        namespace: 'default',
+      });
+      expect(fedGraphSDLBefore.response?.code).toBe(EnumStatusCode.OK);
+      expect(fedGraphSDLBefore.sdl).toContain('a: Object');
+
+      // Run schema check for subgraph B with updated schema
+      // This should detect that Query.a field type changes from Object to Union
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: subgraphBName,
+        namespace: 'default',
+        schema: Buffer.from(subgraphBUpdatedSchema),
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.compositionErrors.length).toBe(0);
+
+      // Subgraph-level breaking change: Query.a type changed from Object to Union
+      // expect(checkResp.breakingChanges.length).toBe(0);
+      // expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_TYPE_CHANGED);
+      // expect(checkResp.breakingChanges[0].path).toBe('Query.a');
+
+      // The composed schema breaking changes should also detect the field type change
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(1);
+      expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
+      expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
+      expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
+
+      await server.close();
+    });
+
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Interface', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const fedGraphName = genID('fedGraph');
+      const subgraphAName = genID('subgraphA');
+      const subgraphBName = genID('subgraphB');
+      const label = genUniqueLabel();
+
+      // Subgraph A has Object type and Query.a returning Object
+      const subgraphASchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          a: Object!
+          b: String
+        }
+      `;
+
+      // Subgraph B initial schema - same Object type, same Query.a returning Object, plus Union definition
+      const subgraphBInitialSchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          b: String
+        }
+      `;
+
+      // Subgraph B updated schema - Query.a now returns Union instead of Object
+      // This changes the federated schema's Query.a field type from Object to Union
+      // which is a breaking change
+      const subgraphBUpdatedSchema = `
+        type Object implements I {
+          a: ID
+        }
+
+        type Query {
+          a: I
+          b: String
+        }
+
+        interface I {
+          a: ID
+        }
+      `;
+
+      // Create federated graph
+      const createFedGraphRes = await client.createFederatedGraph({
+        name: fedGraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8081',
+        labelMatchers: [joinLabel(label)],
+      });
+      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph A
+      const createSubgraphARes = await client.createFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8082',
+      });
+      expect(createSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphARes = await client.publishFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        schema: subgraphASchema,
+      });
+      expect(publishSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph B with initial schema
+      const createSubgraphBRes = await client.createFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8083',
+      });
+      expect(createSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphBRes = await client.publishFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        schema: subgraphBInitialSchema,
+      });
+      expect(publishSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Verify the federated graph has Query.a returning Object
+      const fedGraphSDLBefore = await client.getFederatedGraphSDLByName({
+        name: fedGraphName,
+        namespace: 'default',
+      });
+      expect(fedGraphSDLBefore.response?.code).toBe(EnumStatusCode.OK);
+      expect(fedGraphSDLBefore.sdl).toContain('a: Object');
+
+      // Run schema check for subgraph B with updated schema
+      // This should detect that Query.a field type changes from Object to Union
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: subgraphBName,
+        namespace: 'default',
+        schema: Buffer.from(subgraphBUpdatedSchema),
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.compositionErrors.length).toBe(0);
+
+      // Subgraph-level breaking change: Query.a type changed from Object to Union
+      // expect(checkResp.breakingChanges.length).toBe(0);
+      // expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_TYPE_CHANGED);
+      // expect(checkResp.breakingChanges[0].path).toBe('Query.a');
+
+      // The composed schema breaking changes should also detect the field type change
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(1);
+      expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
+      expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
+      expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
+
+      await server.close();
+    });
+
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Interface 2', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const fedGraphName = genID('fedGraph');
+      const subgraphAName = genID('subgraphA');
+      const subgraphBName = genID('subgraphB');
+      const label = genUniqueLabel();
+
+      // Subgraph A has Object type and Query.a returning Object
+      const subgraphASchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          a: Object!
+          b: String
+        }
+      `;
+
+      // Subgraph B initial schema - same Object type, same Query.a returning Object, plus Union definition
+      const subgraphBInitialSchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          b: String
+        }
+      `;
+
+      // Subgraph B updated schema - Query.a now returns Union instead of Object
+      // This changes the federated schema's Query.a field type from Object to Union
+      // which is a breaking change
+      const subgraphBUpdatedSchema = `
+        type Object implements I {
+          a: ID
+        }
+
+        type Query {
+          a: I!
+          b: String
+        }
+
+        interface I {
+          a: ID
+        }
+      `;
+
+      // Create federated graph
+      const createFedGraphRes = await client.createFederatedGraph({
+        name: fedGraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8081',
+        labelMatchers: [joinLabel(label)],
+      });
+      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph A
+      const createSubgraphARes = await client.createFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8082',
+      });
+      expect(createSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphARes = await client.publishFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        schema: subgraphASchema,
+      });
+      expect(publishSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph B with initial schema
+      const createSubgraphBRes = await client.createFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8083',
+      });
+      expect(createSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphBRes = await client.publishFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        schema: subgraphBInitialSchema,
+      });
+      expect(publishSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Verify the federated graph has Query.a returning Object
+      const fedGraphSDLBefore = await client.getFederatedGraphSDLByName({
+        name: fedGraphName,
+        namespace: 'default',
+      });
+      expect(fedGraphSDLBefore.response?.code).toBe(EnumStatusCode.OK);
+      expect(fedGraphSDLBefore.sdl).toContain('a: Object');
+
+      // Run schema check for subgraph B with updated schema
+      // This should detect that Query.a field type changes from Object to Union
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: subgraphBName,
+        namespace: 'default',
+        schema: Buffer.from(subgraphBUpdatedSchema),
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.compositionErrors.length).toBe(0);
+
+      // Subgraph-level breaking change: Query.a type changed from Object to Union
+      // expect(checkResp.breakingChanges.length).toBe(0);
+      // expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_TYPE_CHANGED);
+      // expect(checkResp.breakingChanges[0].path).toBe('Query.a');
+
+      // The composed schema breaking changes should also detect the field type change
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(1);
+      expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
+      expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
+      expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
+
+      await server.close();
+    });
+
+    test('Should detect breaking change when subgraph B changes Query field return type from Object to Interface 3', async () => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+
+      const fedGraphName = genID('fedGraph');
+      const subgraphAName = genID('subgraphA');
+      const subgraphBName = genID('subgraphB');
+      const label = genUniqueLabel();
+
+      // Subgraph A has Object type and Query.a returning Object
+      const subgraphASchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          a: Object
+          b: String
+        }
+      `;
+
+      // Subgraph B initial schema - same Object type, same Query.a returning Object, plus Union definition
+      const subgraphBInitialSchema = `
+        type Object {
+          a: ID
+        }
+
+        type Query {
+          b: String
+        }
+      `;
+
+      // Subgraph B updated schema - Query.a now returns Union instead of Object
+      // This changes the federated schema's Query.a field type from Object to Union
+      // which is a breaking change
+      const subgraphBUpdatedSchema = `
+        type Object implements I {
+          a: ID
+        }
+
+        type Query {
+          a: I!
+          b: String
+        }
+
+        interface I {
+          a: ID
+        }
+      `;
+
+      // Create federated graph
+      const createFedGraphRes = await client.createFederatedGraph({
+        name: fedGraphName,
+        namespace: 'default',
+        routingUrl: 'http://localhost:8081',
+        labelMatchers: [joinLabel(label)],
+      });
+      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph A
+      const createSubgraphARes = await client.createFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8082',
+      });
+      expect(createSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphARes = await client.publishFederatedSubgraph({
+        name: subgraphAName,
+        namespace: 'default',
+        schema: subgraphASchema,
+      });
+      expect(publishSubgraphARes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Create and publish subgraph B with initial schema
+      const createSubgraphBRes = await client.createFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:8083',
+      });
+      expect(createSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishSubgraphBRes = await client.publishFederatedSubgraph({
+        name: subgraphBName,
+        namespace: 'default',
+        schema: subgraphBInitialSchema,
+      });
+      expect(publishSubgraphBRes.response?.code).toBe(EnumStatusCode.OK);
+
+      // Verify the federated graph has Query.a returning Object
+      const fedGraphSDLBefore = await client.getFederatedGraphSDLByName({
+        name: fedGraphName,
+        namespace: 'default',
+      });
+      expect(fedGraphSDLBefore.response?.code).toBe(EnumStatusCode.OK);
+      expect(fedGraphSDLBefore.sdl).toContain('a: Object');
+
+      // Run schema check for subgraph B with updated schema
+      // This should detect that Query.a field type changes from Object to Union
+      const checkResp = await client.checkSubgraphSchema({
+        subgraphName: subgraphBName,
+        namespace: 'default',
+        schema: Buffer.from(subgraphBUpdatedSchema),
+      });
+
+      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkResp.compositionErrors.length).toBe(0);
+
+      // Subgraph-level breaking change: Query.a type changed from Object to Union
+      // expect(checkResp.breakingChanges.length).toBe(0);
+      // expect(checkResp.breakingChanges[0].changeType).toBe(SchemaChangeType.FIELD_TYPE_CHANGED);
+      // expect(checkResp.breakingChanges[0].path).toBe('Query.a');
+
+      // The composed schema breaking changes should also detect the field type change
+      expect(checkResp.composedSchemaBreakingChanges.length).toBe(1);
+      expect(checkResp.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
+      expect(checkResp.composedSchemaBreakingChanges[0].path).toBe('Query.a');
+      expect(checkResp.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
+
+      await server.close();
+    });
   });
 
   describe('Schema check with linked subgraphs', () => {
