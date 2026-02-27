@@ -162,7 +162,7 @@ export class SchemaCheckRepository {
       .returning();
   }
 
-  public async createFederatedGraphSchemaChanges(data: {
+  public createFederatedGraphSchemaChanges(data: {
     schemaCheckId: string;
     schemaCheckFederatedGraphId: string;
     changes: SchemaDiff[];
@@ -171,22 +171,32 @@ export class SchemaCheckRepository {
       return [];
     }
 
-    // Insert changes into schemaCheckChangeAction with isFedGraphChange: true
-    const insertedChanges = await this.createSchemaCheckChanges({
-      schemaCheckID: data.schemaCheckId,
-      changes: data.changes,
-      isFedGraphChange: true,
+    return this.db.transaction(async (tx) => {
+      // Insert changes into schemaCheckChangeAction with isFedGraphChange: true
+      const insertedChanges = await tx
+        .insert(schemaCheckChangeAction)
+        .values(
+          data.changes.map((change) => ({
+            schemaCheckId: data.schemaCheckId,
+            changeType: change.changeType,
+            changeMessage: change.message,
+            path: change.path,
+            isBreaking: change.isBreaking,
+            isFedGraphChange: true,
+          })),
+        )
+        .returning();
+
+      // Create mappings to link changes to the federated graph
+      await tx.insert(schema.schemaCheckFederatedGraphChanges).values(
+        insertedChanges.map((change) => ({
+          schemaCheckFederatedGraphId: data.schemaCheckFederatedGraphId,
+          schemaCheckChangeActionId: change.id,
+        })),
+      );
+
+      return insertedChanges;
     });
-
-    // Create mappings to link changes to the federated graph
-    await this.db.insert(schema.schemaCheckFederatedGraphChanges).values(
-      insertedChanges.map((change) => ({
-        schemaCheckFederatedGraphId: data.schemaCheckFederatedGraphId,
-        schemaCheckChangeActionId: change.id,
-      })),
-    );
-
-    return insertedChanges;
   }
 
   public async getFederatedGraphSchemaChanges(data: { schemaCheckId: string; federatedGraphId: string }): Promise<

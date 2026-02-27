@@ -34,7 +34,6 @@ export const ComposedSchemaChangesTable = ({
             <TableHead className="w-[200px]">Change</TableHead>
             <TableHead>Description</TableHead>
             <TableHead>Federated Graph</TableHead>
-            <TableHead>Override</TableHead>
             <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -47,7 +46,6 @@ export const ComposedSchemaChangesTable = ({
               isBreaking={c.isBreaking}
               path={c.path}
               federatedGraphName={c.federatedGraphName}
-              hasOverride={c.hasOverride}
             />
           ))}
         </TableBody>
@@ -63,14 +61,12 @@ const Row = ({
   isBreaking,
   path,
   federatedGraphName,
-  hasOverride,
 }: {
   changeType: string;
   message: string;
   isBreaking: boolean;
   path?: string;
   federatedGraphName: string;
-  hasOverride?: boolean;
 }) => {
   const router = useRouter();
   const {
@@ -95,22 +91,6 @@ const Row = ({
       <TableCell>{message}</TableCell>
       <TableCell>
         <Badge variant="secondary">{federatedGraphName}</Badge>
-      </TableCell>
-      <TableCell>
-        {hasOverride ? (
-          <Tooltip delayDuration={100}>
-            <TooltipTrigger>
-              <Badge variant="outline" className="text-success">
-                Overridden
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent>
-              This change has been marked as safe by an operation override.
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <span className="text-muted-foreground">-</span>
-        )}
       </TableCell>
       <TableCell>
         <div className="flex items-center gap-x-2">

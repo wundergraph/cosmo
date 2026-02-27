@@ -1634,44 +1634,50 @@ const CheckDetails = ({
                       </Alert>
                     ) : null}
 
-                    {data.changes.length ? (
+                    {data.changes.length > 0 ||
+                    data.composedSchemaBreakingChanges.length > 0 ? (
                       <>
-                        <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-                          Subgraph Schema Changes
-                        </h3>
-                        <ChangesTable
-                          changes={data.changes}
-                          caption={`${data.changes.length} subgraph changes found`}
-                          trafficCheckDays={data.trafficCheckDays}
-                          createdAt={data.check.timestamp}
-                        />
+                        {data.changes.length > 0 && (
+                          <>
+                            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                              Subgraph Schema Changes
+                            </h3>
+                            <ChangesTable
+                              changes={data.changes}
+                              caption={`${data.changes.length} subgraph changes found`}
+                              trafficCheckDays={data.trafficCheckDays}
+                              createdAt={data.check.timestamp}
+                            />
+                          </>
+                        )}
+
+                        {data.composedSchemaBreakingChanges.length > 0 ? (
+                          <div
+                            className={data.changes.length > 0 ? "mt-6" : ""}
+                          >
+                            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                              Federated Graph Schema Breaking Changes
+                            </h3>
+                            <p className="mb-4 text-sm text-muted-foreground">
+                              These breaking changes were detected in the
+                              composed federated graph schema. They may occur
+                              when multiple subgraphs define the same field with
+                              different nullability.
+                            </p>
+                            <ComposedSchemaChangesTable
+                              changes={data.composedSchemaBreakingChanges}
+                              caption={`${data.composedSchemaBreakingChanges.length} federated graph breaking changes found`}
+                            />
+                          </div>
+                        ) : null}
                       </>
                     ) : (
                       <EmptyState
                         icon={<CheckCircleIcon className="text-success" />}
-                        title="No subgraph changes found."
-                        description="There are no changes in the proposed subgraph schema."
+                        title="No schema changes found."
+                        description="There are no changes in the proposed schema."
                       />
                     )}
-
-                    {data.composedSchemaBreakingChanges &&
-                    data.composedSchemaBreakingChanges.length > 0 ? (
-                      <div className="mt-6">
-                        <h3 className="mb-2 text-sm font-medium text-muted-foreground">
-                          Federated Graph Schema Breaking Changes
-                        </h3>
-                        <p className="mb-4 text-sm text-muted-foreground">
-                          These breaking changes were detected in the composed
-                          federated graph schema. They may occur when multiple
-                          subgraphs define the same field with different
-                          nullability.
-                        </p>
-                        <ComposedSchemaChangesTable
-                          changes={data.composedSchemaBreakingChanges}
-                          caption={`${data.composedSchemaBreakingChanges.length} federated graph breaking changes found`}
-                        />
-                      </div>
-                    ) : null}
 
                     <FieldUsageSheet />
                   </>
