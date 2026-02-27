@@ -96,31 +96,39 @@ const Row = ({
         <div className="flex items-center gap-x-2">
           <Tooltip delayDuration={100}>
             <TooltipTrigger asChild>
-              <Button
-                disabled={!path}
-                variant="ghost"
-                size="icon-sm"
-                asChild
-                className="table-action"
-              >
-                <Link
-                  href={
-                    path
-                      ? {
-                          pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
-                          query: {
-                            organizationSlug,
-                            namespace,
-                            slug: router.query.slug,
-                            typename: path?.split(".")?.[0],
-                          },
-                        }
-                      : "#"
-                  }
+              {path ? (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  asChild
+                  className="table-action"
+                >
+                  <Link
+                    href={{
+                      pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
+                      query: {
+                        organizationSlug,
+                        namespace,
+                        slug: router.query.slug,
+                        typename: path.split(".")[0],
+                      },
+                    }}
+                  >
+                    <GlobeIcon />
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled
+                  aria-disabled="true"
+                  tabIndex={-1}
+                  className="table-action"
                 >
                   <GlobeIcon />
-                </Link>
-              </Button>
+                </Button>
+              )}
             </TooltipTrigger>
             <TooltipContent>
               {path
