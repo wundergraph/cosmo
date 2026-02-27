@@ -999,16 +999,19 @@ export const schemaCheckFederatedGraphChanges = pgTable(
   },
 );
 
-export const schemaCheckFederatedGraphSchemaChangesRelations = relations(schemaCheckFederatedGraphChanges, ({ one }) => ({
-  schemaCheckFederatedGraph: one(schemaCheckFederatedGraphs, {
-    fields: [schemaCheckFederatedGraphChanges.schemaCheckFederatedGraphId],
-    references: [schemaCheckFederatedGraphs.id],
+export const schemaCheckFederatedGraphSchemaChangesRelations = relations(
+  schemaCheckFederatedGraphChanges,
+  ({ one }) => ({
+    schemaCheckFederatedGraph: one(schemaCheckFederatedGraphs, {
+      fields: [schemaCheckFederatedGraphChanges.schemaCheckFederatedGraphId],
+      references: [schemaCheckFederatedGraphs.id],
+    }),
+    changeAction: one(schemaCheckChangeAction, {
+      fields: [schemaCheckFederatedGraphChanges.schemaCheckChangeActionId],
+      references: [schemaCheckChangeAction.id],
+    }),
   }),
-  changeAction: one(schemaCheckChangeAction, {
-    fields: [schemaCheckFederatedGraphChanges.schemaCheckChangeActionId],
-    references: [schemaCheckChangeAction.id],
-  }),
-}));
+);
 
 // a join table between schema check subgraphs and schema check fed graphs
 export const schemaCheckSubgraphsFederatedGraphs = pgTable(

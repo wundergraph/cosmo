@@ -118,11 +118,15 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
             resp.graphPruneErrors.length === 0 &&
             resp.composedSchemaBreakingChanges.length === 0;
 
-          const { breakingChanges, operationUsageStats, clientTrafficCheckSkipped, composedSchemaBreakingChanges } = resp;
+          const { breakingChanges, operationUsageStats, clientTrafficCheckSkipped, composedSchemaBreakingChanges } =
+            resp;
           const { totalOperations, safeOperations, firstSeenAt, lastSeenAt } = operationUsageStats;
 
           if (breakingChanges.length > 0 || composedSchemaBreakingChanges.length > 0) {
-            const warningMessage = [logSymbols.warning, ` Found ${pc.bold(breakingChanges.length + composedSchemaBreakingChanges.length)} breaking changes.`];
+            const warningMessage = [
+              logSymbols.warning,
+              ` Found ${pc.bold(breakingChanges.length + composedSchemaBreakingChanges.length)} breaking changes.`,
+            ];
 
             if (totalOperations > 0) {
               warningMessage.push(`${pc.bold(totalOperations - safeOperations)} operations impacted.`);
