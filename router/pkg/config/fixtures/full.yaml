@@ -426,6 +426,10 @@ websocket:
       export_token:
         enabled: true
         header_key: 'Authorization'
+  compression:
+    enabled: true
+    level: 6
+    client_max_window_bits: 15
 
 storage_providers:
   file_system:

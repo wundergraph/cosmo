@@ -873,6 +873,11 @@
         "NameTargetHeader": "graphql-client-name",
         "VersionTargetHeader": "graphql-client-version"
       }
+    },
+    "Compression": {
+      "Enabled": true,
+      "Level": 6,
+      "ClientMaxWindowBits": 15
     }
   },
   "SubgraphErrorPropagation": {

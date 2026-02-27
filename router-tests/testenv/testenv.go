@@ -2367,11 +2367,7 @@ type GraphQLError struct {
 
 const maxSocketRetries = 5
 
-func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query url.Values) (*websocket.Conn, *http.Response, error) {
-	dialer := websocket.Dialer{
-		Subprotocols: []string{"graphql-transport-ws"},
-	}
-
+func (e *Environment) graphQLWebsocketDialWithRetry(dialer websocket.Dialer, header http.Header, query url.Values) (*websocket.Conn, *http.Response, error) {
 	waitBetweenRetriesInMs := rand.Intn(10)
 	timeToSleep := time.Duration(waitBetweenRetriesInMs) * time.Millisecond
 
@@ -2402,6 +2398,21 @@ func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query ur
 	return nil, nil, err
 }
 
+func (e *Environment) GraphQLWebsocketDialWithRetry(header http.Header, query url.Values) (*websocket.Conn, *http.Response, error) {
+	return e.graphQLWebsocketDialWithRetry(websocket.Dialer{
+		Subprotocols: []string{"graphql-transport-ws"},
+	}, header, query)
+}
+
+// GraphQLWebsocketDialWithCompressionRetry is like GraphQLWebsocketDialWithRetry but enables
+// permessage-deflate compression negotiation on the client side.
+func (e *Environment) GraphQLWebsocketDialWithCompressionRetry(header http.Header, query url.Values) (*websocket.Conn, *http.Response, error) {
+	return e.graphQLWebsocketDialWithRetry(websocket.Dialer{
+		Subprotocols:      []string{"graphql-transport-ws"},
+		EnableCompression: true,
+	}, header, query)
+}
+
 func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query url.Values, initialPayload json.RawMessage) *websocket.Conn {
 	conn, _, err := e.GraphQLWebsocketDialWithRetry(header, query)
 	require.NoError(e.t, err)
@@ -2417,6 +2428,25 @@ func (e *Environment) InitGraphQLWebSocketConnection(header http.Header, query u
 	require.NoError(e.t, ReadAndCheckJSON(e.t, conn, &ack))
 	require.Equal(e.t, "connection_ack", ack.Type)
 	return conn
+}
+
+// InitGraphQLWebSocketConnectionWithCompression initializes a WebSocket connection with
+// permessage-deflate compression negotiation enabled on the client side.
+func (e *Environment) InitGraphQLWebSocketConnectionWithCompression(header http.Header, query url.Values, initialPayload json.RawMessage) (*websocket.Conn, *http.Response) {
+	conn, resp, err := e.GraphQLWebsocketDialWithCompressionRetry(header, query)
+	require.NoError(e.t, err)
+	e.t.Cleanup(func() {
+		_ = conn.Close()
+	})
+	err = conn.WriteJSON(WebSocketMessage{
+		Type:    "connection_init",
+		Payload: initialPayload,
+	})
+	require.NoError(e.t, err)
+	var ack WebSocketMessage
+	require.NoError(e.t, ReadAndCheckJSON(e.t, conn, &ack))
+	require.Equal(e.t, "connection_ack", ack.Type)
+	return conn, resp
 }
 
 func (e *Environment) GraphQLSubscriptionOverSSE(ctx context.Context, request GraphQLRequest, handler func(data string)) {

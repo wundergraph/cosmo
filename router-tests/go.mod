@@ -7,6 +7,7 @@ require (
 	github.com/MicahParks/jwkset v0.11.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
+	github.com/coder/websocket v1.8.13
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
@@ -58,7 +59,6 @@ require (
 	github.com/cep21/circuit/v4 v4.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cilium/ebpf v0.16.0 // indirect
-	github.com/coder/websocket v1.8.13 // indirect
 	github.com/containerd/cgroups/v3 v3.0.2 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.16.3 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
