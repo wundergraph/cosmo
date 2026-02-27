@@ -183,7 +183,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
         console.log(pc.red('\nDetected the following federated graph schema breaking changes:'));
         console.log(
           pc.dim(
-            'These breaking changes occur in the composed federated graph schema due to field definition conflicts between subgraphs.',
+            'These breaking changes were detected in the composed federated graph schema after composition. They are not reported above because they only become visible when all subgraphs are composed together (e.g., field type or nullability conflicts between subgraphs).',
           ),
         );
 
