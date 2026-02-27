@@ -710,6 +710,9 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		}
 		if ls.RequireOneSlicingArgument != nil {
 			listSizes.RequireOneSlicingArgument = *ls.RequireOneSlicingArgument
+		} else {
+			// By default, it is enabled and it should be explicitly disabled.
+			listSizes.RequireOneSlicingArgument = true
 		}
 		coordinate := plan.FieldCoordinate{TypeName: ls.GetTypeName(), FieldName: ls.GetFieldName()}
 		out.CostConfig.ListSizes[coordinate] = listSizes
