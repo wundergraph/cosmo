@@ -51,6 +51,7 @@ export function deletePersistedOperation(
     const operationsRepo = new OperationsRepository(opts.db, federatedGraph.id);
     const operation = await operationsRepo.getPersistedOperation({
       operationId: req.operationId,
+      clientName: req.clientName,
     });
 
     if (!operation) {

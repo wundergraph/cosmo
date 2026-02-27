@@ -102,8 +102,10 @@ export class OperationsRepository {
 
   public async getPersistedOperation({
     operationId,
+    clientName,
   }: {
     operationId: string;
+    clientName?: string;
   }): Promise<PersistedOperationWithClientDTO | undefined> {
     const users1 = aliasedTable(users, 'users1');
     const users2 = aliasedTable(users, 'users2');
@@ -130,6 +132,7 @@ export class OperationsRepository {
         and(
           eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId),
           eq(federatedGraphPersistedOperations.operationId, operationId),
+          clientName ? eq(federatedGraphClients.name, clientName) : undefined,
         ),
       );
 

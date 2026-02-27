@@ -482,6 +482,30 @@ describe('Persisted operations', (ctx) => {
       expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     });
 
+    test('Should NOT be able to delete a persisted operation when clientName does not match', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+        operations: [{ id: genID('hello'), contents: `query { hello }` }],
+      });
+
+      const deleteOperationsResp = await client.deletePersistedOperation({
+        fedGraphName,
+        namespace: 'default',
+        operationId: publishOperationsResp.operations[0].id,
+        clientName: 'not-curl',
+      });
+
+      expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    });
+
     test('Should NOT be able to delete a persisted operation in viewer role', async (testContext) => {
       const { client, server, users, authenticator } = await SetupTest({
         dbname,
@@ -577,6 +601,30 @@ describe('Persisted operations', (ctx) => {
       });
 
       expect(checkOperationsResp.operation?.hasTraffic).toBe(true);
+    });
+
+    test('Should fail when clientName does not match operation client', async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'curl',
+        operations: [{ id: genID('hello'), contents: `query { hello }` }],
+      });
+
+      const checkOperationsResp = await client.checkPersistedOperationTraffic({
+        fedGraphName,
+        namespace: 'default',
+        operationId: publishOperationsResp.operations[0].id,
+        clientName: 'not-curl',
+      });
+
+      expect(checkOperationsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     });
 
     test('Should detect that the operation does NOT have traffic', async (testContext) => {
