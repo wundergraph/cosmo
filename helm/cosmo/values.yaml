@@ -349,59 +349,54 @@ graphqlmetrics:
 # It is highly recommended to use a managed service in production environments or use our cloud offering https://cosmo.wundergraph.com
 
 # Keycloak for the Cosmo Controlplane & Studio
-# https://artifacthub.io/packages/helm/bitnami/keycloak
-# TODO(pepol): Move to 'codecentric/keycloakx' chart once new keycloak image is built and released
+# https://artifacthub.io/packages/helm/codecentric/keycloakx
 keycloak:
-  # Production requires TLS
-  production: false
+  replicas: 1
   image:
-    repository: wundergraph/cosmo/keycloak
-    registry: ghcr.io
+    repository: ghcr.io/wundergraph/cosmo/keycloak
+    tag: '0.12.0'
     pullPolicy: IfNotPresent
-    tag: '0.10.4'
+  args:
+    - 'start-dev' # Production requires TLS
+    - '--import-realm'
+    - '--optimized'
   service:
-    ports:
-      http: 8080
-  replicaCount: 1
+    httpPort: 8080
   podAnnotations:
     # -- Support for k14s.io. This annotation will form a group to coordinate deployments with kapp.
     kapp.k14s.io/change-group: 'cosmo.apps.keycloak.wundergraph.com/deployment'
     # -- Support for k14s.io. This annotation will wait for the postgresql deployments to be ready before deploying.
     kapp.k14s.io/change-rule.postgresql: 'upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment'
-  auth:
-    adminUser: 'admin'
-    adminPassword: 'changeme'
-  startupProbe:
-    enabled: true
   cache:
-    enabled: false
-  # -- Is set to 'small' by default which is too small and runs in OOMKilled
-  resourcesPreset: none
+    stack: custom  # Disables automatic cache configuration.
+  health:
+    enabled: true
   metrics:
     enabled: true
-  postgresql:
-    enabled: false
-  extraEnvVars:
-    - name: KEYCLOAK_EXTRA_ARGS
-      value: '--import-realm --optimized'
-    - name: KEYCLOAK_ENABLE_HEALTH_ENDPOINTS
-      value: 'true'
-    - name: KEYCLOAK_DATABASE_PASSWORD
-      value: 'changeme'
-  extraVolumeMounts:
-    - mountPath: /opt/bitnami/keycloak/data/import/realm.json
-      name: realm-config-volume
-      readOnly: true
-      subPath: realm.json
-  extraVolumes:
+  database:
+    vendor: postgres
+    hostname: cosmo-postgresql
+    port: 5432
+    database: keycloak
+    username: postgres
+    password: changeme
+  http:
+    relativePath: "/"
+  # NOTE: The following 3 values are expected by the subchart to be STRINGs, not arrays, which is why the multiline string escape (`|`) is here.
+  extraVolumes: |
     - name: realm-config-volume
       configMap:
         name: keycloak-realm
-  externalDatabase:
-    host: 'cosmo-postgresql'
-    port: 5432
-    user: 'postgres'
-    database: keycloak
+  extraVolumeMounts: |
+    - mountPath: /opt/keycloak/data/import/realm.json
+      name: realm-config-volume
+      readOnly: true
+      subPath: realm.json
+  extraEnv: |
+    - name: KC_BOOTSTRAP_ADMIN_USERNAME
+      value: {{ .Values.global.keycloak.adminUser }}
+    - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+      value: {{ .Values.global.keycloak.adminPassword }}
 
 # ClickHouse for the Cosmo Controlplane & Collectors
 # https://artifacthub.io/packages/helm/bitnami/clickhouse
