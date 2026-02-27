@@ -1639,7 +1639,7 @@ const CheckDetails = ({
                       <>
                         {data.changes.length > 0 && (
                           <>
-                            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                            <h3 className="mb-2 text-md font-medium">
                               Subgraph Schema Changes
                             </h3>
                             <ChangesTable
@@ -1655,18 +1655,22 @@ const CheckDetails = ({
                           <div
                             className={data.changes.length > 0 ? "mt-6" : ""}
                           >
-                            <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                            <h3 className="mb-2 text-md font-medium">
                               Federated Graph Schema Breaking Changes
                             </h3>
                             <p className="mb-4 text-sm text-muted-foreground">
                               These breaking changes were detected in the
-                              composed federated graph schema. They may occur
-                              when multiple subgraphs define the same field with
-                              different nullability.
+                              composed federated graph schema after composition.
+                              They are not reported above because they only
+                              become visible when all subgraphs are composed
+                              together (e.g., field type or nullability
+                              conflicts between subgraphs).
                             </p>
                             <ComposedSchemaChangesTable
                               changes={data.composedSchemaBreakingChanges}
                               caption={`${data.composedSchemaBreakingChanges.length} federated graph breaking changes found`}
+                              trafficCheckDays={data.trafficCheckDays}
+                              createdAt={data.check.timestamp}
                             />
                           </div>
                         ) : null}

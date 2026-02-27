@@ -1,5 +1,10 @@
 import { cn } from "@/lib/utils";
-import { CheckIcon, Cross1Icon, GlobeIcon } from "@radix-ui/react-icons";
+import {
+  BarChartIcon,
+  CheckIcon,
+  Cross1Icon,
+  GlobeIcon,
+} from "@radix-ui/react-icons";
 import { FederatedGraphSchemaChange } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -18,14 +23,21 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { useOpenUsage } from "./use-open-usage";
 
 export const ComposedSchemaChangesTable = ({
   changes,
   caption,
+  trafficCheckDays,
+  createdAt,
 }: {
   changes: FederatedGraphSchemaChange[];
   caption?: React.ReactNode;
+  trafficCheckDays?: number;
+  createdAt?: string;
 }) => {
+  const openUsage = useOpenUsage({ trafficCheckDays, createdAt });
+
   return (
     <TableWrapper>
       <Table>
@@ -46,6 +58,7 @@ export const ComposedSchemaChangesTable = ({
               isBreaking={c.isBreaking}
               path={c.path}
               federatedGraphName={c.federatedGraphName}
+              openUsage={openUsage}
             />
           ))}
         </TableBody>
@@ -61,12 +74,14 @@ const Row = ({
   isBreaking,
   path,
   federatedGraphName,
+  openUsage,
 }: {
   changeType: string;
   message: string;
   isBreaking: boolean;
   path?: string;
   federatedGraphName: string;
+  openUsage: (changeType: string, path?: string) => void;
 }) => {
   const router = useRouter();
   const {
@@ -89,9 +104,7 @@ const Row = ({
         </div>
       </TableCell>
       <TableCell>{message}</TableCell>
-      <TableCell>
-        <Badge variant="secondary">{federatedGraphName}</Badge>
-      </TableCell>
+      <TableCell>{federatedGraphName}</TableCell>
       <TableCell>
         <div className="flex items-center gap-x-2">
           <Tooltip delayDuration={100}>
@@ -135,6 +148,19 @@ const Row = ({
                 ? "Open in Explorer"
                 : "Cannot open in explorer. Path to type unavailable"}
             </TooltipContent>
+          </Tooltip>
+          <Tooltip delayDuration={100}>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => openUsage(changeType, path)}
+                variant="ghost"
+                size="icon-sm"
+                className="table-action"
+              >
+                <BarChartIcon />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>View Usage</TooltipContent>
           </Tooltip>
         </div>
       </TableCell>
