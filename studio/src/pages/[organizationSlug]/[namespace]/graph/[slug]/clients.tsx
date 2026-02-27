@@ -73,6 +73,7 @@ import {
 } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
 import {
+  ArchiveBoxXMarkIcon,
   CommandLineIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
@@ -82,7 +83,6 @@ import {
   MagnifyingGlassIcon,
   PlayIcon,
   PlusIcon,
-  TrashIcon,
 } from "@radix-ui/react-icons";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -466,22 +466,19 @@ const ClientOperations = ({
                               <Button
                                 variant="outline"
                                 size="icon"
-                                asChild
                                 disabled={
                                   isCheckPersistedOperationTrafficPending ||
                                   isRetirePersistedOperationPending
                                 }
+                                onClick={() => {
+                                  mutateCheckPersistedOperationTraffic({
+                                    operationId: op.id,
+                                    namespace,
+                                    fedGraphName: slug,
+                                  });
+                                }}
                               >
-                                <TrashIcon
-                                  height={20}
-                                  onClick={() => {
-                                    mutateCheckPersistedOperationTraffic({
-                                      operationId: op.id,
-                                      namespace,
-                                      fedGraphName: slug,
-                                    });
-                                  }}
-                                />
+                                <ArchiveBoxXMarkIcon className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent>
