@@ -40,9 +40,10 @@ func TestOperationCost(t *testing.T) {
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				// employees has @listSize(assumedSize: 50) which overrides EstimatedListSize(5)
-				res, _ := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 					Query: `{ employees { id details { forename surname } } }`,
 				})
+				require.NoError(t, err)
 				require.Equal(t, 400, res.Response.StatusCode)
 				require.Contains(t, res.Body, "exceeds the maximum allowed limit")
 
