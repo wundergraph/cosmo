@@ -1626,6 +1626,7 @@ type Category {
       expect(checkSummary.affectedGraphs.length).toBe(1);
       expect(checkSummary.composedSchemaBreakingChanges.length).toBe(1);
       expect(checkSummary.affectedGraphs[0].isBreaking).toBe(true);
+      expect(checkSummary.affectedGraphs[0].hasClientTraffic).toBe(false);
       // it is true as there is no traffic
       expect(checkSummary.affectedGraphs[0].isCheckSuccessful).toBe(true);
       expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
