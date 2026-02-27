@@ -95,12 +95,67 @@ export class OperationsRepository {
     const operations: PersistedOperationDTO[] = [];
 
     for (const row of operationsResult) {
-      operations.push(this.createPersistedOperationDTO(row));
+      operations.push(OperationsRepository.createPersistedOperationDTO(row));
     }
     return operations;
   }
 
-  public async getPersistedOperation({
+  public getPersistedOperation({
+    operationId,
+    clientName,
+  }: {
+    operationId: string;
+    clientName?: string;
+  }): Promise<PersistedOperationWithClientDTO | undefined> {
+    return this.findPersistedOperationWithClient({
+      operationId,
+      clientName,
+    });
+  }
+
+  public deletePersistedOperation({
+    operationId,
+    clientName,
+  }: {
+    operationId: string;
+    clientName: string;
+  }): Promise<PersistedOperationWithClientDTO | undefined> {
+    return this.db.transaction(async (tx) => {
+      const clientResult = await tx.query.federatedGraphClients.findFirst({
+        where: and(
+          eq(federatedGraphClients.name, clientName),
+          eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
+        ),
+      });
+
+      if (!clientResult) {
+        return undefined;
+      }
+
+      const txRepo = new OperationsRepository(tx, this.federatedGraphId);
+      const operation = await txRepo.findPersistedOperationWithClient({
+        operationId,
+        clientName,
+      });
+
+      if (!operation) {
+        return undefined;
+      }
+
+      await tx
+        .delete(federatedGraphPersistedOperations)
+        .where(
+          and(
+            eq(federatedGraphPersistedOperations.operationId, operationId),
+            eq(federatedGraphPersistedOperations.clientId, clientResult.id),
+          ),
+        );
+
+      return operation;
+    });
+  }
+
+  private async findPersistedOperationWithClient({
     operationId,
     clientName,
   }: {
@@ -140,55 +195,7 @@ export class OperationsRepository {
       return undefined;
     }
 
-    return {
-      id: operationResult[0].id,
-      operationId: operationResult[0].operationId,
-      operationNames: operationResult[0].operationNames ?? [],
-      hash: operationResult[0].hash,
-      filePath: operationResult[0].filePath,
-      createdAt: operationResult[0].createdAt.toISOString(),
-      lastUpdatedAt: operationResult[0]?.updatedAt?.toISOString() || '',
-      createdBy: operationResult[0].createdBy ?? '',
-      lastUpdatedBy: operationResult[0].updatedBy ?? '',
-      contents: operationResult[0].operationContent ?? '',
-      clientName: operationResult[0].clientName,
-    };
-  }
-
-  public async deletePersistedOperation({
-    operationId,
-    clientName,
-  }: {
-    operationId: string;
-    clientName: string;
-  }): Promise<PersistedOperationWithClientDTO | undefined> {
-    const clientResult = await this.db.query.federatedGraphClients.findFirst({
-      where: and(
-        eq(federatedGraphClients.name, clientName),
-        eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),
-      ),
-    });
-
-    if (!clientResult) {
-      return undefined;
-    }
-
-    const operation = await this.getPersistedOperation({ operationId });
-
-    if (!operation) {
-      return undefined;
-    }
-
-    await this.db
-      .delete(federatedGraphPersistedOperations)
-      .where(
-        and(
-          eq(federatedGraphPersistedOperations.operationId, operationId),
-          eq(federatedGraphPersistedOperations.clientId, clientResult.id),
-        ),
-      );
-
-    return operation;
+    return OperationsRepository.createPersistedOperationWithClientDTO(operationResult[0]);
   }
 
   public async registerClient(clientName: string, userId: string): Promise<string> {
@@ -490,7 +497,7 @@ export class OperationsRepository {
       .orderBy(({ name, hash }) => [asc(name), asc(hash)]);
   }
 
-  private createPersistedOperationDTO({
+  private static createPersistedOperationDTO({
     id,
     operationId,
     hash,
@@ -516,6 +523,46 @@ export class OperationsRepository {
       lastUpdatedBy: updatedBy?.email ?? '',
       contents: operationContent ?? '',
       operationNames: operationNames ?? [],
+    };
+  }
+
+  private static createPersistedOperationWithClientDTO({
+    id,
+    operationId,
+    hash,
+    filePath,
+    createdAt,
+    updatedAt,
+    operationContent,
+    operationNames,
+    clientName,
+    createdBy,
+    updatedBy,
+  }: {
+    id: string;
+    operationId: string;
+    hash: string;
+    filePath: string;
+    createdAt: Date;
+    updatedAt: Date | null;
+    operationContent: string | null;
+    operationNames: string[] | null;
+    clientName: string;
+    createdBy: string | null;
+    updatedBy: string | null;
+  }): PersistedOperationWithClientDTO {
+    return {
+      id,
+      operationId,
+      operationNames: operationNames ?? [],
+      hash,
+      filePath,
+      createdAt: createdAt.toISOString(),
+      lastUpdatedAt: updatedAt?.toISOString() || '',
+      createdBy: createdBy ?? '',
+      lastUpdatedBy: updatedBy ?? '',
+      contents: operationContent ?? '',
+      clientName,
     };
   }
 }
