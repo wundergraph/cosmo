@@ -1218,57 +1218,74 @@ export class SchemaCheckRepository {
         }
       }
 
-      /*
-          We don't collect operation usage when
-          1. we have composition errors
-          2. when we don't have any inspectable changes.
-          3. When user wants to skip the traffic check altogether
-          That means any breaking change is really breaking
-          */
-      for (const [subgraphName, checkSubgraph] of checkSubgraphs.entries()) {
-        // Combine subgraph and federated graph inspector changes for traffic inspection
-        const combinedInspectorChanges = [...checkSubgraph.inspectorChanges, ...fedGraphInspectorChanges];
+    /*
+        We don't collect operation usage when
+        1. we have composition errors
+        2. when we don't have any inspectable changes.
+        3. When user wants to skip the traffic check altogether
+        That means any breaking change is really breaking
+        */
 
-        if (composition.errors.length > 0 || combinedInspectorChanges.length === 0) {
+      // First, handle federated graph-level changes ONCE per composition (not per subgraph)
+      if (composition.errors.length === 0 && fedGraphInspectorChanges.length > 0) {
+        const fedResult = await trafficInspector.inspect(fedGraphInspectorChanges, {
+          daysToConsider: limit,
+          federatedGraphId: composition.id,
+          organizationId,
+        });
+
+        if (fedResult.size > 0) {
+          const fedOverrideCheck = await this.checkClientTrafficAgainstOverrides({
+            changes: storedFedGraphBreakingChanges,
+            inspectorResultsByChangeId: fedResult,
+            namespaceId: namespace.id,
+          });
+
+          hasClientTraffic = hasClientTraffic || fedOverrideCheck.hasUnsafeClientTraffic;
+
+          // Store operation usage for federated graph-level changes once
+          await this.createOperationUsage(fedOverrideCheck.result, composition.id);
+
+          // Collect inspected operations for later aggregation
+          for (const resultElement of fedOverrideCheck.result.values()) {
+            inspectedOperations.push(...resultElement);
+          }
+        }
+      }
+
+      // Then, handle subgraph-specific changes
+      for (const [, checkSubgraph] of checkSubgraphs.entries()) {
+        // Only process subgraph-specific inspector changes
+        if (composition.errors.length > 0 || checkSubgraph.inspectorChanges.length === 0) {
           continue;
         }
 
-        // For existing subgraphs, inspect with subgraph filter
-        // For new subgraphs, still inspect federated graph changes without subgraph filter
-        let result: Map<string, InspectorOperationResult[]> = new Map();
-        if (checkSubgraph.subgraph) {
-          // Existing subgraph - inspect all changes with subgraph filter
-          result = await trafficInspector.inspect(combinedInspectorChanges, {
-            daysToConsider: limit,
-            federatedGraphId: composition.id,
-            organizationId,
-            subgraphId: checkSubgraph.subgraph.id,
-          });
-        } else if (fedGraphInspectorChanges.length > 0) {
-          // New subgraph - still inspect federated graph changes at federated graph level
-          result = await trafficInspector.inspect(fedGraphInspectorChanges, {
-            daysToConsider: limit,
-            federatedGraphId: composition.id,
-            organizationId,
-          });
+        // Skip if subgraph doesn't exist (new subgraphs have no subgraph-specific traffic to inspect)
+        if (!checkSubgraph.subgraph) {
+          continue;
         }
+
+        // Inspect subgraph-specific changes with subgraph filter
+        const result = await trafficInspector.inspect(checkSubgraph.inspectorChanges, {
+          daysToConsider: limit,
+          federatedGraphId: composition.id,
+          organizationId,
+          subgraphId: checkSubgraph.subgraph.id,
+        });
 
         if (result.size === 0) {
           continue;
         }
 
-        // Combine stored breaking changes for override check
-        const allStoredBreakingChanges = [...checkSubgraph.storedBreakingChanges, ...storedFedGraphBreakingChanges];
-
         const overrideCheck = await this.checkClientTrafficAgainstOverrides({
-          changes: allStoredBreakingChanges,
+          changes: checkSubgraph.storedBreakingChanges,
           inspectorResultsByChangeId: result,
           namespaceId: namespace.id,
         });
 
         hasClientTraffic = hasClientTraffic || overrideCheck.hasUnsafeClientTraffic;
 
-        // Store operation usage for all changes (both subgraph and federated graph changes)
+        // Store operation usage for subgraph-level changes
         await this.createOperationUsage(overrideCheck.result, composition.id);
 
         // Collect all inspected operations for later aggregation
