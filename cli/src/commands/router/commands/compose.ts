@@ -25,10 +25,22 @@ import {
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import Table from 'cli-table3';
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
+import { expand } from 'dotenv-expand';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
 
 const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
+
+/**
+ * Expands environment variables in a string using dotenv-expand.
+ * Supports ${VAR_NAME}, $VAR_NAME, and ${VAR:-default} syntax.
+ * Undefined variables without defaults are replaced with an empty string.
+ */
+export function expandEnvVars(content: string): string {
+  const key = '__YAML_CONTENT__';
+  const result = expand({ parsed: { [key]: content }, processEnv: { ...process.env } as Record<string, string> });
+  return result.parsed?.[key] ?? content;
+}
 
 type ConfigSubgraph = StandardSubgraphConfig | SubgraphPluginConfig | GRPCSubgraphConfig;
 
@@ -162,7 +174,8 @@ function constructRouterSubgraph(result: FederationSuccess, s: SubgraphMetadata,
 export default (opts: BaseCommandOptions) => {
   const command = new Command('compose');
   command.description(
-    'Generates a router config from a local composition file. This makes it easy to test your router without a control-plane connection. For production, please use the "router fetch" command',
+    // eslint-disable-next-line no-template-curly-in-string
+    'Generates a router config from a local composition file. Environment variables can be referenced in the input YAML using ${VAR_NAME} syntax. This makes it easy to test your router without a control-plane connection. For production, please use the "router fetch" command',
   );
   command.requiredOption('-i, --input <path-to-input>', 'The yaml file with data about graph and subgraphs.');
   command.option('-o, --out [string]', 'Destination file for the router config.');
@@ -183,7 +196,8 @@ export default (opts: BaseCommandOptions) => {
     }
 
     const fileContent = (await readFile(inputFile)).toString();
-    const config = yaml.load(fileContent) as Config;
+    const expandedContent = expandEnvVars(fileContent);
+    const config = yaml.load(expandedContent) as Config;
 
     const subgraphs: SubgraphMetadata[] = [];
 
