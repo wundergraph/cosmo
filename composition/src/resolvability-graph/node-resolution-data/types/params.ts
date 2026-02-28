@@ -1,4 +1,4 @@
-import { FieldName, TypeName } from '../../types/types';
+import { FieldName, SubgraphName, TypeName } from '../../types/types';
 import { GraphFieldData } from '../../../utils/types';
 
 export type NodeResolutionDataParams = {
@@ -7,4 +7,9 @@ export type NodeResolutionDataParams = {
   isResolved?: boolean;
   resolvedDescendantNames?: Set<FieldName>;
   resolvedFieldNames?: Set<FieldName>;
+};
+
+export type AddExternalSubgraphNameParams = {
+  fieldName: FieldName;
+  subgraphName: SubgraphName;
 };

@@ -24,6 +24,7 @@ export type PropagateVisitedFieldParams = {
   node: GraphNode;
   selectionPath: SelectionPath;
   visited: boolean;
+  isExternal?: true;
 };
 
 export type PropagateVisitedSharedFieldParams = {
