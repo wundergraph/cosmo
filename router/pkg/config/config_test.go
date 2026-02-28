@@ -110,6 +110,59 @@ poll_interval: 11s
 	require.Equal(t, time.Second*11, cfg.Config.PollInterval)
 }
 
+func TestRequireRequestTracingAuthConfigLoading(t *testing.T) {
+	t.Run("defaults to true", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.True(t, cfg.Config.EngineExecutionConfiguration.RequireRequestTracingAuth)
+	})
+
+	t.Run("can be disabled from yaml", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+engine:
+  require_request_tracing_auth: false
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.EngineExecutionConfiguration.RequireRequestTracingAuth)
+	})
+
+	t.Run("yaml value takes precedence over env", func(t *testing.T) {
+		t.Setenv("ENGINE_REQUIRE_REQUEST_TRACING_AUTH", "true")
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+engine:
+  require_request_tracing_auth: false
+`)
+
+		cfg, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+		require.False(t, cfg.Config.EngineExecutionConfiguration.RequireRequestTracingAuth)
+	})
+}
+
 // Confirms https://github.com/caarlos0/env/issues/354 is fixed
 func TestConfigSlicesHaveDefaults(t *testing.T) {
 	t.Parallel()

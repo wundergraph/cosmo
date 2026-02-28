@@ -1509,6 +1509,7 @@ func (s *graphServer) buildGraphMux(
 		OperationBlocker:                       operationBlocker,
 		RouterPublicKey:                        s.publicKey,
 		EnableRequestTracing:                   s.engineExecutionConfiguration.EnableRequestTracing,
+		RequireRequestTracingAuth:              s.engineExecutionConfiguration.RequireRequestTracingAuth,
 		DevelopmentMode:                        s.developmentMode,
 		TracerProvider:                         s.tracerProvider,
 		FlushTelemetryAfterResponse:            s.awsLambda,
