@@ -10,6 +10,7 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
 import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPruningRepository.js';
@@ -37,6 +38,7 @@ export function getCheckSummary(
     const schemaGraphPruningRepo = new SchemaGraphPruningRepository(opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
+    const operationsRepo = new OperationsRepository(opts.db, authContext.organizationId);
 
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {
@@ -57,6 +59,7 @@ export function getCheckSummary(
         checkedSubgraphs: [],
         proposalMatches: [],
         isProposalsEnabled: false,
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -79,6 +82,7 @@ export function getCheckSummary(
         isLintingEnabled: false,
         checkedSubgraphs: [],
         proposalMatches: [],
+        composedSchemaBreakingChanges: [],
         isProposalsEnabled: false,
       };
     }
@@ -92,7 +96,13 @@ export function getCheckSummary(
       federatedGraphTargetId: graph.targetId,
       federatedGraphId: graph.id,
     });
-    const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+    const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId, {
+      federatedGraphId: graph.id,
+      federatedGraphName: graph.name,
+      namespaceId: namespace.id,
+      schemaCheckRepo,
+      operationsRepo,
+    });
 
     if (!check || !checkDetails) {
       return {
@@ -112,6 +122,7 @@ export function getCheckSummary(
         checkedSubgraphs: [],
         proposalMatches: [],
         isProposalsEnabled: false,
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -142,6 +153,7 @@ export function getCheckSummary(
         checkedSubgraphs: [],
         proposalMatches: [],
         isProposalsEnabled: false,
+        composedSchemaBreakingChanges: [],
       };
     }
 
@@ -165,13 +177,17 @@ export function getCheckSummary(
       (linkedCheck) => linkedCheck.hasGraphPruningErrors && !linkedCheck.isForcedSuccess,
     );
 
+    const isBreaking =
+      checkDetails.changes.some((change) => change.isBreaking) ||
+      checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking);
+
     affectedGraphs.push(
       new GetCheckSummaryResponse_AffectedGraph({
         ...currentAffectedGraph,
         name: graph.name,
         isCheckSuccessful: isCheckSuccessful({
           isComposable: checkDetails.compositionErrors.length === 0,
-          isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+          isBreaking,
           hasClientTraffic: hasAffectedOperations,
           hasLintErrors,
           hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
@@ -181,7 +197,7 @@ export function getCheckSummary(
           isLinkedPruningCheckFailed,
         }),
         isComposable: checkDetails.compositionErrors.length === 0,
-        isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+        isBreaking,
         hasClientTraffic: hasAffectedOperations,
         hasLintErrors,
         hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
@@ -214,13 +230,18 @@ export function getCheckSummary(
         });
         hasAffectedOperations = affectedOperations.length > 0;
       }
+
+      const isBreaking =
+        checkDetails.changes.some((change) => change.isBreaking) ||
+        checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking);
+
       affectedGraphs.push(
         new GetCheckSummaryResponse_AffectedGraph({
           ...ag,
           name: fedGraph.name,
           isCheckSuccessful: isCheckSuccessful({
             isComposable: checkDetails.compositionErrors.length === 0,
-            isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+            isBreaking,
             hasClientTraffic: hasAffectedOperations,
             hasLintErrors,
             hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
@@ -230,7 +251,7 @@ export function getCheckSummary(
             isLinkedPruningCheckFailed,
           }),
           isComposable: checkDetails.compositionErrors.length === 0,
-          isBreaking: checkDetails.changes.some((change) => change.isBreaking),
+          isBreaking,
           hasClientTraffic: hasAffectedOperations,
           hasLintErrors,
           hasGraphPruningErrors: graphPruningIssues.some((issue) => issue.severity === LintSeverity.error),
@@ -261,6 +282,7 @@ export function getCheckSummary(
       proposalName: proposal?.proposalName,
       proposalMatches: proposalSchemaMatches,
       isProposalsEnabled: namespace.enableProposals,
+      composedSchemaBreakingChanges: checkDetails.composedSchemaBreakingChanges,
     };
   });
 }

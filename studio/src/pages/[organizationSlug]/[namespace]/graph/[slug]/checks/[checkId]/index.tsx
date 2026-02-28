@@ -5,6 +5,7 @@ import {
   isCheckSuccessful,
 } from "@/components/check-badge-icon";
 import { ChangesTable } from "@/components/checks/changes-table";
+import { ComposedSchemaChangesTable } from "@/components/checks/composed-schema-changes-table";
 import { GraphPruningIssuesTable } from "@/components/checks/graph-pruning-issues-table";
 import { LintIssuesTable } from "@/components/checks/lint-issues-table";
 import { CheckOperations } from "@/components/checks/operations";
@@ -262,7 +263,9 @@ const CheckOverviewPage: NextPageWithLayout = () => {
   const router = useRouter();
 
   const organizationSlug = useCurrentOrganization()?.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
 
@@ -407,9 +410,13 @@ const CheckDetails = ({
   const router = useRouter();
   const { toast } = useToast();
   const proposalsFeature = useFeature("proposals");
-  const subgraphCheckExtensionsFeature = useFeature("subgraph-check-extensions");
+  const subgraphCheckExtensionsFeature = useFeature(
+    "subgraph-check-extensions",
+  );
   const organizationSlug = useCurrentOrganization()?.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.checkId as string;
   const tab = router.query.tab as string;
@@ -492,26 +499,26 @@ const CheckDetails = ({
   const reason = data.check.errorMessage
     ? data.check.errorMessage
     : !!data.check.checkExtensionErrorMessage
-    ? "Subgraph check extension failed"
-    : data.check.proposalMatch === "error"
-    ? "Proposal match check failed"
-    : !data.check.isComposable
-    ? "Composition errors were found"
-    : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
-    ? "Breaking changes were detected"
-    : data.check.isBreaking && data.check.hasClientTraffic
-    ? "Operations were affected by breaking changes"
-    : data.check.isBreaking && !data.check.hasClientTraffic
-    ? "No operations were affected by breaking changes"
-    : "All tasks were successful";
+      ? "Subgraph check extension failed"
+      : data.check.proposalMatch === "error"
+        ? "Proposal match check failed"
+        : !data.check.isComposable
+          ? "Composition errors were found"
+          : data.check.isBreaking && data.check?.clientTrafficCheckSkipped
+            ? "Breaking changes were detected"
+            : data.check.isBreaking && data.check.hasClientTraffic
+              ? "Operations were affected by breaking changes"
+              : data.check.isBreaking && !data.check.hasClientTraffic
+                ? "No operations were affected by breaking changes"
+                : "All tasks were successful";
 
   const subgraphName =
     data.check.subgraphName ||
     (data.check.checkedSubgraphs.length > 1
       ? "Multiple Subgraphs"
       : data.check.checkedSubgraphs.length > 0
-      ? data.check.checkedSubgraphs[0].subgraphName
-      : "Subgraph");
+        ? data.check.checkedSubgraphs[0].subgraphName
+        : "Subgraph");
 
   const setTab = (tab: string) => {
     const query: Record<string, any> = {
@@ -544,13 +551,13 @@ const CheckDetails = ({
               {data.check.checkedSubgraphs.length > 1
                 ? "Multiple subgraphs updated"
                 : data.check.isDeleted ||
-                  (data.check.checkedSubgraphs.length === 1 &&
-                    data.check.checkedSubgraphs[0].isDeleted)
-                ? "Delete subgraph"
-                : data.check.checkedSubgraphs.length === 1 &&
-                  data.check.checkedSubgraphs[0].isNew
-                ? "New subgraph"
-                : "Update schema"}
+                    (data.check.checkedSubgraphs.length === 1 &&
+                      data.check.checkedSubgraphs[0].isDeleted)
+                  ? "Delete subgraph"
+                  : data.check.checkedSubgraphs.length === 1 &&
+                      data.check.checkedSubgraphs[0].isNew
+                    ? "New subgraph"
+                    : "Update schema"}
             </dd>
           </div>
 
@@ -765,7 +772,8 @@ const CheckDetails = ({
                 <Badge
                   variant="outline"
                   className={cn("flex items-center space-x-1.5 py-2", {
-                    "text-muted-foreground": !data.check?.checkExtensionDeliveryId,
+                    "text-muted-foreground":
+                      !data.check?.checkExtensionDeliveryId,
                   })}
                 >
                   {!data.check?.checkExtensionDeliveryId ? (
@@ -773,8 +781,9 @@ const CheckDetails = ({
                       <NoSymbolIcon className="h-4 w-4" />
                       <span className="flex-1 truncate">Extension</span>
                       <InfoTooltip>
-                        Indicates whether the subgraph check extension completed successfully.
-                        Enable subgraph check extensions to see the results.
+                        Indicates whether the subgraph check extension completed
+                        successfully. Enable subgraph check extensions to see
+                        the results.
                       </InfoTooltip>
                     </>
                   ) : (
@@ -782,7 +791,8 @@ const CheckDetails = ({
                       {getCheckIcon(!data.check.checkExtensionErrorMessage)}
                       <span className="flex-1 truncate">Extension</span>
                       <InfoTooltip>
-                        Indicates whether the subgraph check extension completed successfully.
+                        Indicates whether the subgraph check extension completed
+                        successfully.
                       </InfoTooltip>
                     </>
                   )}
@@ -992,12 +1002,14 @@ const CheckDetails = ({
                   <Link href={{ query: { ...router.query, tab: "changes" } }}>
                     <UpdateIcon />
                     Changes{" "}
-                    {data.changes.length ? (
+                    {data.changes.length ||
+                    data.composedSchemaBreakingChanges?.length ? (
                       <Badge
                         variant="muted"
                         className="bg-white px-1.5 text-current dark:bg-gray-900/60"
                       >
-                        {data.changes.length}
+                        {data.changes.length +
+                          (data.composedSchemaBreakingChanges?.length || 0)}
                       </Badge>
                     ) : null}
                   </Link>
@@ -1406,8 +1418,8 @@ const CheckDetails = ({
                                     {linkedCheck.subgraphNames.length > 1
                                       ? "Multiple Subgraphs"
                                       : linkedCheck.subgraphNames.length > 0
-                                      ? linkedCheck.subgraphNames[0]
-                                      : "Subgraph"}
+                                        ? linkedCheck.subgraphNames[0]
+                                        : "Subgraph"}
                                   </TableCell>
                                   <TableCell>
                                     <Badge
@@ -1622,17 +1634,51 @@ const CheckDetails = ({
                       </Alert>
                     ) : null}
 
-                    {data.changes.length ? (
-                      <ChangesTable
-                        changes={data.changes}
-                        caption={`${data.changes.length} changes found`}
-                        trafficCheckDays={data.trafficCheckDays}
-                        createdAt={data.check.timestamp}
-                      />
+                    {data.changes.length > 0 ||
+                    data.composedSchemaBreakingChanges.length > 0 ? (
+                      <>
+                        {data.changes.length > 0 && (
+                          <>
+                            <h3 className="mb-2 text-md font-medium">
+                              Subgraph Schema Changes
+                            </h3>
+                            <ChangesTable
+                              changes={data.changes}
+                              caption={`${data.changes.length} subgraph changes found`}
+                              trafficCheckDays={data.trafficCheckDays}
+                              createdAt={data.check.timestamp}
+                            />
+                          </>
+                        )}
+
+                        {data.composedSchemaBreakingChanges.length > 0 ? (
+                          <div
+                            className={data.changes.length > 0 ? "mt-6" : ""}
+                          >
+                            <h3 className="mb-2 text-md font-medium">
+                              Federated Graph Schema Breaking Changes
+                            </h3>
+                            <p className="mb-4 text-sm text-muted-foreground">
+                              These breaking changes were detected in the
+                              composed federated graph schema after composition.
+                              They are not reported above because they only
+                              become visible when all subgraphs are composed
+                              together (e.g., field type or nullability
+                              conflicts between subgraphs).
+                            </p>
+                            <ComposedSchemaChangesTable
+                              changes={data.composedSchemaBreakingChanges}
+                              caption={`${data.composedSchemaBreakingChanges.length} federated graph breaking changes found`}
+                              trafficCheckDays={data.trafficCheckDays}
+                              createdAt={data.check.timestamp}
+                            />
+                          </div>
+                        ) : null}
+                      </>
                     ) : (
                       <EmptyState
                         icon={<CheckCircleIcon className="text-success" />}
-                        title="No changes found."
+                        title="No schema changes found."
                         description="There are no changes in the proposed schema."
                       />
                     )}

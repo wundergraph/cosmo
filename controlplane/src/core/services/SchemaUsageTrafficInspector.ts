@@ -153,7 +153,7 @@ export interface InspectorFilter {
   federatedGraphId: string;
   organizationId: string;
   daysToConsider: number;
-  subgraphId: string;
+  subgraphId?: string;
 }
 
 export interface InspectorOperationResult {
@@ -185,9 +185,11 @@ export class SchemaUsageTrafficInspector {
       const params: Record<string, string | number | boolean> = {
         daysToConsider: filter.daysToConsider,
         federatedGraphId: filter.federatedGraphId,
-        subgraphId: filter.subgraphId,
         organizationId: filter.organizationId,
       };
+      if (filter.subgraphId) {
+        params.subgraphId = filter.subgraphId;
+      }
 
       // Used for arguments usage check
       if (change.path) {
@@ -226,6 +228,7 @@ export class SchemaUsageTrafficInspector {
       }
       where.push(`IsIndirectFieldUsage = false`);
 
+      const subgraphFilter = filter.subgraphId ? `hasAny(SubgraphIDs, [{subgraphId:String}]) AND` : '';
       const query = `
         SELECT OperationHash as operationHash,
                last_value(OperationType) as operationType,
@@ -237,7 +240,7 @@ export class SchemaUsageTrafficInspector {
           -- Filter first on date and customer to reduce the amount of data
           Timestamp >= toStartOfDay(now()) - interval {daysToConsider:UInt32} day AND
           FederatedGraphID = {federatedGraphId:String} AND
-          hasAny(SubgraphIDs, [{subgraphId:String}]) AND
+          ${subgraphFilter}
           OrganizationID = {organizationId:String} AND
           ${where.join(' AND ')}
         GROUP BY OperationHash
