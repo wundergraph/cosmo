@@ -10,6 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { defaultRetentionLimitInDays } from '../../constants.js';
 
 export function getNamespaceChecksConfig(
   opts: RouterOptions,
@@ -46,7 +47,7 @@ export function getNamespaceChecksConfig(
       featureId: 'breaking-change-retention',
     });
 
-    const timeframeLimitInDays = changeRetention?.limit ?? 7;
+    const timeframeLimitInDays = changeRetention?.limit ?? defaultRetentionLimitInDays;
     return {
       response: {
         code: EnumStatusCode.OK,

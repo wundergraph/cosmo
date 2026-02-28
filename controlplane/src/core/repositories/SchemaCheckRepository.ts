@@ -52,6 +52,7 @@ import {
 } from '../util.js';
 import { OrganizationWebhookService } from '../webhooks/OrganizationWebhookService.js';
 import { BlobStorage } from '../blobstorage/index.js';
+import { defaultRetentionLimitInDays } from '../constants.js';
 import { FederatedGraphConfig, FederatedGraphRepository } from './FederatedGraphRepository.js';
 import { OrganizationRepository } from './OrganizationRepository.js';
 import { ProposalRepository } from './ProposalRepository.js';
@@ -669,7 +670,7 @@ export class SchemaCheckRepository {
       featureId: 'breaking-change-retention',
     });
 
-    const limit = changeRetention?.limit ?? 7;
+    const limit = changeRetention?.limit ?? defaultRetentionLimitInDays;
 
     const schemaCheckID = await this.create({
       proposedSubgraphSchemaSDL: '',
@@ -1123,7 +1124,7 @@ export class SchemaCheckRepository {
         continue;
       }
 
-      let targetLimit = changeRetention?.limit ?? 7;
+      let targetLimit = changeRetention?.limit ?? defaultRetentionLimitInDays;
       targetLimit = clamp(targetNamespace?.checksTimeframeInDays ?? targetLimit, 1, targetLimit);
 
       const baseCheckSubgraph = checkSubgraphs.get(linkedSubgraph.baseSubgraphName);

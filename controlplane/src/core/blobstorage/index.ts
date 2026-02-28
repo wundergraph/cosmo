@@ -7,6 +7,13 @@ export class BlobNotFoundError extends Error {
   }
 }
 
+export class BlobNotDeletedError extends Error {
+  constructor(message: string, cause?: Error) {
+    super(message, cause);
+    Object.setPrototypeOf(this, BlobNotDeletedError.prototype);
+  }
+}
+
 export interface BlobObject {
   metadata?: Record<string, string>;
   stream: ReadableStream;

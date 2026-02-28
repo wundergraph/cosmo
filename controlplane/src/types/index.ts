@@ -537,6 +537,7 @@ export interface ClientDTO {
 export interface PersistedOperationWithClientDTO {
   id: string;
   operationId: string;
+  operationNames: string[];
   hash: string;
   filePath: string;
   createdAt: string;
