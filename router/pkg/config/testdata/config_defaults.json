@@ -151,7 +151,18 @@
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
     "RouterURL": "",
-    "OmitToolNamePrefix": false
+    "OmitToolNamePrefix": false,
+    "OAuth": {
+      "Enabled": false,
+      "JWKS": null,
+      "AuthorizationServerURL": "",
+      "Scopes": {
+        "Initialize": null,
+        "ToolsList": null,
+        "ToolsCall": null
+      },
+      "ScopeChallengeMode": "required_and_existing"
+    }
   },
   "ConnectRPC": {
     "Enabled": false,

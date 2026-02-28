@@ -31,6 +31,7 @@ import (
 
 	"github.com/cloudflare/backoff"
 	mcpclient "github.com/mark3labs/mcp-go/client"
+	"github.com/mark3labs/mcp-go/client/transport"
 	"github.com/mark3labs/mcp-go/mcp"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -344,6 +345,7 @@ type Config struct {
 	NoShutdownTestServer               bool
 	MCP                                config.MCPConfiguration
 	MCPOperationsPath                  string
+	MCPAuthToken                       string // Optional Bearer token for MCP authentication
 	EnableRedis                        bool
 	EnableRedisCluster                 bool
 	Plugins                            PluginConfig
@@ -829,7 +831,17 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
 		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
-		client, err := mcpclient.NewStreamableHttpClient(mcpAddr)
+
+		// Add authentication headers if token is provided
+		var clientOpts []transport.StreamableHTTPCOption
+		if cfg.MCPAuthToken != "" {
+			headers := map[string]string{
+				"Authorization": fmt.Sprintf("Bearer %s", cfg.MCPAuthToken),
+			}
+			clientOpts = append(clientOpts, transport.WithHTTPHeaders(headers))
+		}
+
+		client, err := mcpclient.NewStreamableHttpClient(mcpAddr, clientOpts...)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}
@@ -1257,7 +1269,17 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	if cfg.MCP.Enabled {
 		// Create MCP client connecting to the MCP server
 		mcpAddr := fmt.Sprintf("http://%s/mcp", cfg.MCP.Server.ListenAddr)
-		client, err := mcpclient.NewStreamableHttpClient(mcpAddr)
+
+		// Add authentication headers if token is provided
+		var clientOpts []transport.StreamableHTTPCOption
+		if cfg.MCPAuthToken != "" {
+			headers := map[string]string{
+				"Authorization": fmt.Sprintf("Bearer %s", cfg.MCPAuthToken),
+			}
+			clientOpts = append(clientOpts, transport.WithHTTPHeaders(headers))
+		}
+
+		client, err := mcpclient.NewStreamableHttpClient(mcpAddr, clientOpts...)
 		if err != nil {
 			t.Fatalf("Failed to create MCP client: %v", err)
 		}

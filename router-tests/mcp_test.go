@@ -473,7 +473,7 @@ func TestMCP(t *testing.T) {
 				// Make the request
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				// Verify response status
 				assert.Equal(t, http.StatusNoContent, resp.StatusCode)
@@ -530,7 +530,7 @@ func TestMCP(t *testing.T) {
 				// Make the request
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				// Verify CORS headers are present in the response
 				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
@@ -564,7 +564,7 @@ func TestMCP(t *testing.T) {
 				// Make the request
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				// Verify CORS headers are present in the response
 				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
@@ -602,7 +602,7 @@ func TestMCP(t *testing.T) {
 						// Make the request
 						resp, err := xEnv.RouterClient.Do(req)
 						require.NoError(t, err)
-						defer resp.Body.Close()
+						defer resp.Body.Close() //nolint:errcheck
 
 						// Verify CORS headers are present
 						assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
@@ -643,7 +643,7 @@ func TestMCP(t *testing.T) {
 				// Make the request
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				// Verify CORS headers are present in the response
 				assert.Equal(t, "*", resp.Header.Get("Access-Control-Allow-Origin"))
@@ -947,7 +947,7 @@ input UserInput {
 				// Make the request
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				// With stateless mode, the request should succeed
 				t.Logf("Response Status: %d", resp.StatusCode)
@@ -1053,7 +1053,7 @@ input UserInput {
 
 				resp, err := xEnv.RouterClient.Do(req)
 				require.NoError(t, err)
-				defer resp.Body.Close()
+				defer resp.Body.Close() //nolint:errcheck
 
 				if resp.StatusCode != http.StatusOK {
 					t.Logf("Response Status: %d", resp.StatusCode)
