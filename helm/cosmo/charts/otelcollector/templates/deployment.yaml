@@ -32,6 +32,9 @@ spec:
       {{- end }}
       labels:
         {{- include "otelcollector.selectorLabels" . | nindent 8 }}
+        {{- range $key, $value := .Values.commonLabels }}
+        {{ $key }}: {{ quote $value }}
+        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
