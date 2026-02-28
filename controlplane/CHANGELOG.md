@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.192.2](https://github.com/wundergraph/cosmo/compare/controlplane@0.192.1...controlplane@0.192.2) (2026-02-28)
+
+### Bug Fixes
+
+* histogram clickhouse calculation ([#2567](https://github.com/wundergraph/cosmo/issues/2567)) ([9b69e59](https://github.com/wundergraph/cosmo/commit/9b69e590ebca7b3489873d8f2c919dbf293f24ba)) (@StarpTech)
+
 ## [0.192.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.192.0...controlplane@0.192.1) (2026-02-26)
 
 ### Bug Fixes
