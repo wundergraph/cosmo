@@ -71,6 +71,20 @@ poll_interval: "${TEST_POLL_INTERVAL}"
 	require.Equal(t, time.Second*20, cfg.Config.PollInterval)
 }
 
+func TestLoadLogServiceNameFromEnv(t *testing.T) {
+	t.Setenv("LOG_SERVICE_NAME", "my-custom-service")
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+`)
+
+	cfg, err := LoadConfig([]string{f})
+
+	require.NoError(t, err)
+
+	require.Equal(t, "my-custom-service", cfg.Config.LogServiceName)
+}
+
 func TestLoadWatchCfgFromEnvars(t *testing.T) {
 	t.Setenv("WATCH_CONFIG_ENABLED", "true")
 	t.Setenv("WATCH_CONFIG_INTERVAL", "30s")

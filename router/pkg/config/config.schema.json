@@ -1640,6 +1640,11 @@
       "description": "Enable the JSON log format. The JSON log format is used to log the logs in JSON format. The default value is true. If the value is false, the logs are logged a human friendly text format.",
       "default": true
     },
+    "log_service_name": {
+      "type": "string",
+      "description": "The service name used in the 'service' field of log entries. The default value is '@wundergraph/router'.",
+      "default": "@wundergraph/router"
+    },
     "shutdown_delay": {
       "type": "string",
       "duration": {
