@@ -219,9 +219,7 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 		otel.SetTracerProvider(tp)
 	}
 
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-		config.Logger.Error("otel error", zap.Error(err))
-	}))
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(errHandler(config)))
 
 	return tp, nil
 }
