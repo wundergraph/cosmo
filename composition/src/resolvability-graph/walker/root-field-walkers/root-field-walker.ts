@@ -27,8 +27,11 @@ export class RootFieldWalker {
   }
 
   visitEdge({ edge, selectionPath }: VisitEdgeParams): VisitNodeResult {
-    if (edge.isInaccessible || edge.node.isInaccessible) {
-      return { visited: false, areDescendantsResolved: true };
+    if (edge.isEdgeInaccessible()) {
+      return { visited: false, areDescendantsResolved: false };
+    }
+    if (edge.isExternal) {
+      return { visited: false, areDescendantsResolved: false, isExternal: true };
     }
     if (edge.node.isLeaf) {
       return { visited: true, areDescendantsResolved: true };
@@ -99,11 +102,12 @@ export class RootFieldWalker {
       };
     }
     for (const [fieldName, edge] of node.headToTailEdges) {
-      const { visited, areDescendantsResolved } = this.visitEdge({ edge, selectionPath });
+      const { areDescendantsResolved, isExternal, visited } = this.visitEdge({ edge, selectionPath });
       this.propagateVisitedField({
         areDescendantsResolved,
-        fieldName,
         data,
+        fieldName,
+        isExternal,
         node,
         selectionPath,
         visited,
@@ -121,8 +125,11 @@ export class RootFieldWalker {
   }
 
   visitSharedEdge({ edge, selectionPath }: VisitEdgeParams): VisitNodeResult {
-    if (edge.isInaccessible || edge.node.isInaccessible) {
-      return { visited: false, areDescendantsResolved: true };
+    if (edge.isEdgeInaccessible()) {
+      return { visited: false, areDescendantsResolved: false };
+    }
+    if (edge.isExternal) {
+      return { visited: false, areDescendantsResolved: false, isExternal: true };
     }
     if (edge.node.isLeaf) {
       return { visited: true, areDescendantsResolved: true };
@@ -233,10 +240,15 @@ export class RootFieldWalker {
     areDescendantsResolved,
     data,
     fieldName,
+    isExternal,
     node,
     selectionPath,
     visited,
   }: PropagateVisitedFieldParams) {
+    if (isExternal) {
+      data.addExternalSubgraphName({ fieldName, subgraphName: node.subgraphName });
+      return;
+    }
     if (!visited) {
       return;
     }

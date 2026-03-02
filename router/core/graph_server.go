@@ -145,14 +145,33 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		traceDialer = NewTraceDialer()
 	}
 
+	// Build subgraph client TLS configs (mTLS for outbound subgraph connections)
+	defaultClientTLS, perSubgraphTLS, err := buildSubgraphTLSConfigs(r.logger, &r.subgraphTLSConfiguration)
+	if err != nil {
+		return nil, fmt.Errorf("could not build subgraph client TLS config: %w", err)
+	}
+
 	// Base transport
-	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "")
+	baseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, "", defaultClientTLS)
 
 	// Subgraph transports
 	subgraphTransports := map[string]*http.Transport{}
 	for subgraph, subgraphOpts := range r.subgraphTransportOptions.SubgraphMap {
-		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy, traceDialer, subgraph)
+		clientTLS := defaultClientTLS
+		if sgTLS, ok := perSubgraphTLS[subgraph]; ok {
+			clientTLS = sgTLS
+		}
+		subgraphBaseTransport := newHTTPTransport(subgraphOpts, proxy, traceDialer, subgraph, clientTLS)
 		subgraphTransports[subgraph] = subgraphBaseTransport
+	}
+
+	// Create transports for subgraphs with per-subgraph TLS configs that don't have
+	// per-subgraph transport options (they inherit the base transport options).
+	for subgraph, sgTLS := range perSubgraphTLS {
+		if _, exists := subgraphTransports[subgraph]; !exists {
+			subgraphBaseTransport := newHTTPTransport(r.subgraphTransportOptions.TransportRequestOptions, proxy, traceDialer, subgraph, sgTLS)
+			subgraphTransports[subgraph] = subgraphBaseTransport
+		}
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -1305,9 +1324,9 @@ func (s *graphServer) buildGraphMux(
 			MaxDepth:  s.securityConfiguration.ParserLimits.ApproximateDepthLimit,
 			MaxFields: s.securityConfiguration.ParserLimits.TotalFieldsLimit,
 		},
-		OperationNameLengthLimit:                         s.securityConfiguration.OperationNameLengthLimit,
-		ApolloCompatibilityFlags:                         s.apolloCompatibilityFlags,
-		ApolloRouterCompatibilityFlags:                   s.apolloRouterCompatibilityFlags,
+		OperationNameLengthLimit:                               s.securityConfiguration.OperationNameLengthLimit,
+		ApolloCompatibilityFlags:                               s.apolloCompatibilityFlags,
+		ApolloRouterCompatibilityFlags:                         s.apolloRouterCompatibilityFlags,
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,

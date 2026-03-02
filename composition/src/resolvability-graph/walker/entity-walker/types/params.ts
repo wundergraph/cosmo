@@ -7,9 +7,10 @@ export type EntityWalkerParams = {
   index: number;
   resDataByNodeName: Map<NodeName, NodeResolutionData>;
   resDataByRelativeOriginPath: Map<SelectionPath, NodeResolutionData>;
-  relativeOriginPaths?: Set<SelectionPath>;
+  resolvedPaths: Set<SelectionPath>;
   subgraphNameByUnresolvablePath: Map<SelectionPath, SubgraphName>;
   visitedEntities: Set<NodeName>;
+  relativeOriginPaths?: Set<SelectionPath>;
 };
 
 export type VisitEntityDescendantEdgeParams = {
@@ -26,9 +27,10 @@ export type PropagateVisitedFieldParams = {
   areDescendantsResolved: boolean;
   data: NodeResolutionData;
   fieldName: FieldName;
-  nodeName: NodeName;
+  node: GraphNode;
   selectionPath: SelectionPath;
   visited: boolean;
+  isExternal?: true;
 };
 
 export type GetNodeResolutionDataParams = {

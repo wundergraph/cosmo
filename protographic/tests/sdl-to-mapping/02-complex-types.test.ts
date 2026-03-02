@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compileGraphQLToMapping } from '../../src';
+import { compileGraphQLToMapping } from '../../src/index.js';
 
 describe('Complex GraphQL Types to Proto Mapping', () => {
   it('maps enum types correctly', () => {

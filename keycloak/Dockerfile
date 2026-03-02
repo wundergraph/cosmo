@@ -1,4 +1,6 @@
-FROM --platform=${BUILDPLATFORM} timbru31/java-node:17-jdk-18
+ARG KEYCLOAK_VERSION=26.2.5
+
+FROM --platform=${BUILDPLATFORM} timbru31/java-node:17-jdk-22 AS themebuilder
 
 WORKDIR /app
 
@@ -12,14 +14,32 @@ COPY ./theme .
 
 RUN ./build.sh
 
-FROM --platform=${TARGETPLATFORM} bitnamilegacy/keycloak:26.2.5
+FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION} AS builder
 
-COPY --from=0 /app/target/*.jar /opt/bitnami/keycloak/providers/
+ENV KC_DB=postgres
+ENV KC_METRICS_ENABLED=true
+ENV KC_HEALTH_ENABLED=true
+ENV KC_HTTP_RELATIVE_PATH="/"
+
+WORKDIR /opt/keycloak
+
+COPY --from=themebuilder /app/target/*.jar /opt/keycloak/providers/
 
 # Prebuild keycloak for using with postgres for faster startup
 # The features needs to be kept in sync with the keycloak features in helm chart and docker compose
 # Needs to be done after copying the providers
-RUN /opt/bitnami/keycloak/bin/kc.sh build --db=postgres --metrics-enabled true --health-enabled true --http-relative-path "/"
+RUN /opt/keycloak/bin/kc.sh build
+
+FROM quay.io/keycloak/keycloak:${KEYCLOAK_VERSION}
+
+COPY --from=builder /opt/keycloak/ /opt/keycloak/
 
 EXPOSE 8080
 EXPOSE 8443
+
+ENV KC_DB=postgres
+ENV KC_METRICS_ENABLED=true
+ENV KC_HEALTH_ENABLED=true
+ENV KC_HTTP_RELATIVE_PATH="/"
+
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
