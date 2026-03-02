@@ -24,9 +24,10 @@ const executeToolName = "execute"
 const executeToolDescription = `Execute GraphQL operations against the supergraph. Returns any JSON-serializable value.
 Write a single async arrow function (ES2020, no imports). Write compact code.
 
-This tool runs your code in a sandbox with one global function: graphql(options).
+This tool runs your code in a sandbox with one global function: graphql().
   await graphql({ hash: "abc123" })                           // by hash (preferred)
-  await graphql({ query: "{ users { id } }", variables: {} }) // by query string
+  await graphql("{ users { id } }")                           // by query string (shorthand)
+  await graphql({ query: "{ users { id } }", variables: {} }) // by query string with variables
 There is no execute() function — graphql() is the only way to run operations.
 Response data is in result.data. Prefer hash (from search) over query to save tokens.
 
@@ -77,10 +78,12 @@ const executeTypeDefs = `// Execute sandbox — write a single async arrow funct
 //
 // The sandbox provides one global function:
 
+declare function graphql(query: string): Promise<GraphQLResponse>;
 declare function graphql(options: GraphQLOptions): Promise<GraphQLResponse>;
 
-// Call with hash:  await graphql({ hash: "abc123" })
-// Call with query: await graphql({ query: "{ ... }", variables: { ... } })
+// Call with hash:    await graphql({ hash: "abc123" })
+// Call with string:  await graphql("{ users { id } }")
+// Call with options: await graphql({ query: "{ ... }", variables: { ... } })
 // Response data is in result.data. Prefer hash over query to save tokens.
 // There is no execute() function — graphql() is the only way to run operations.
 
