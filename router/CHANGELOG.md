@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.286.0](https://github.com/wundergraph/cosmo/compare/router@0.285.0...router@0.286.0) (2026-02-26)
+
+### Bug Fixes
+
+* flaky router tests for error extensions ([#2554](https://github.com/wundergraph/cosmo/issues/2554)) ([cc360a6](https://github.com/wundergraph/cosmo/commit/cc360a6958283ad43cf21e94364602ce2a9e187c)) (@Noroth)
+
+### Features
+
+* add support for requires in protographic ([#2439](https://github.com/wundergraph/cosmo/issues/2439)) ([48a1613](https://github.com/wundergraph/cosmo/commit/48a1613285c978589b95a2c18d7618c9569b8f4f)) (@Noroth)
+
 # [0.285.0](https://github.com/wundergraph/cosmo/compare/router@0.284.2...router@0.285.0) (2026-02-24)
 
 ### Bug Fixes

@@ -7,6 +7,7 @@ export type VisitEntityParams = {
   encounteredEntityNodeNames: Set<NodeName>;
   entityNodeName: NodeName;
   resDataByRelativeOriginPath: Map<SelectionPath, NodeResolutionData>;
+  resolvedPaths: Set<SelectionPath>;
   subgraphNameByUnresolvablePath: Map<SelectionPath, SubgraphName>;
   visitedEntities: Set<NodeName>;
   relativeOriginPaths?: Set<SelectionPath>;
