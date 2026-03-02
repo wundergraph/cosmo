@@ -9,10 +9,6 @@ inputs:
     description: 'GitHub Token'
     required: true
 
-  skip_dirs:
-    description: 'A comma separated list of folders to ignore'
-    required: false
-
   image_ref:
     description: "The name of the container"
     required: true
@@ -33,7 +29,7 @@ runs:
         exit-code: 1
         severity: 'CRITICAL,HIGH'
         format: 'sarif'
-        trivyignores: '.trivyignore.yaml'
+        trivy-config: 'trivy.yaml'
         limit-severities-for-sarif: true
         output: 'trivy-results.sarif'
 
