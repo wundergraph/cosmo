@@ -71,13 +71,9 @@ func TestMetricsLogExporter(t *testing.T) {
 					require.Equal(t, "sum:int64", cm["type"])
 					require.Equal(t, data.Temporality.String(), cm["temporality"])
 					require.Equal(t, data.IsMonotonic, cm["monotonic"])
-					if data.IsMonotonic {
-						requireAllDataPointsLogged(t, loggedDPs, data.DataPoints, func(dp metricdata.DataPoint[int64]) string {
-							return fmt.Sprintf("value=%d", dp.Value)
-						}, actualMetric.Name)
-					} else {
-						require.NotEmpty(t, loggedDPs)
-					}
+					requireAllDataPointsLogged(t, loggedDPs, data.DataPoints, func(dp metricdata.DataPoint[int64]) string {
+						return fmt.Sprintf("value=%d", dp.Value)
+					}, actualMetric.Name)
 
 				case metricdata.Histogram[float64]:
 					require.Equal(t, "histogram:float64", cm["type"])
@@ -197,14 +193,15 @@ func TestMetricsLogExporter(t *testing.T) {
 	})
 }
 
-// findMetricLog finds the first "Metric" log entry with the given metric name.
+// findMetricLog finds the last "Metric" log entry with the given metric name.
 func findMetricLog(entries []observer.LoggedEntry, metricName string) *observer.LoggedEntry {
+	var result *observer.LoggedEntry
 	for i, entry := range entries {
 		if name, ok := entry.ContextMap()["name"].(string); ok && name == metricName {
-			return &entries[i]
+			result = &entries[i]
 		}
 	}
-	return nil
+	return result
 }
 
 // getDataPointStrings extracts the data_points string slice from a log entry's context map.
