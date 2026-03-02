@@ -479,38 +479,6 @@ func TestExecute_MultipleGraphQLCalls(t *testing.T) {
 	assert.Equal(t, int32(2), callCount.Load(), "expected 2 GraphQL calls")
 }
 
-func TestExecute_GraphQLStringShorthand(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
-		assert.Equal(t, "{ users { id } }", body["query"])
-		_, _ = w.Write([]byte(`{"data":{"users":[{"id":"1"}]}}`))
-	}))
-	defer mockServer.Close()
-
-	cfg := CodeModeServerConfig{
-		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        5 * time.Second,
-			MaxMemoryMB:    16,
-			MaxOutputBytes: 1024 * 1024,
-		},
-		Logger:                zap.NewNop(),
-		RouterGraphQLEndpoint: mockServer.URL,
-	}
-	srv, err := newCodeModeServerWithSchema(t, cfg)
-	require.NoError(t, err)
-
-	result := callExecuteTool(t, srv, `async () => {
-		const r = await graphql("{ users { id } }");
-		return r.data;
-	}`)
-	require.False(t, result.IsError, "unexpected error: %+v", result.Content)
-
-	text := result.Content[0].(mcp.TextContent).Text
-	assert.Contains(t, text, "users")
-}
-
 func TestExecute_PromiseAll(t *testing.T) {
 	var callCount atomic.Int32
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -603,7 +571,15 @@ func TestContract_ExecuteGlobalsMatchDescription(t *testing.T) {
 		// graphql must be a function
 		if (typeof graphql !== 'function') errors.push("graphql is not a function");
 
-		// graphql accepts both string and object arguments (string shorthand tested separately with mock server)
+		// graphql must reject string arguments
+		try {
+			await graphql("{ hello }");
+			errors.push("graphql accepted a string argument, should require an object");
+		} catch(e) {
+			if (!e.message.includes("object argument")) {
+				errors.push("graphql string rejection message unclear: " + e.message);
+			}
+		}
 
 		// graphql must reject calls with neither query nor hash
 		try {

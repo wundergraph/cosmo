@@ -232,7 +232,7 @@ func (s *CodeModeServer) registerTools() {
 			mcp.WithDescription(executeToolDescription),
 			mcp.WithString("code",
 				mcp.Required(),
-				mcp.Description("An async arrow function. Example: async () => { const { data } = await graphql('{ users { id } }'); return data; }. graphql() accepts a query string or an object { query, variables, operationName, hash }."),
+				mcp.Description("An async arrow function. Example: async () => { const { data } = await graphql({ query: '{ users { id } }' }); return data; }"),
 			),
 			),
 		s.handleExecute(),
@@ -379,15 +379,9 @@ func (s *CodeModeServer) graphqlFunc(ctx context.Context) func(args []any) (any,
 			return nil, fmt.Errorf("graphql requires an options argument")
 		}
 
-		// Accept a plain string as shorthand for { query: "..." }
-		var optsMap map[string]any
-		switch v := args[0].(type) {
-		case string:
-			optsMap = map[string]any{"query": v}
-		case map[string]any:
-			optsMap = v
-		default:
-			return nil, fmt.Errorf("graphql requires a query string or an object with 'query' or 'hash' field")
+		optsMap, ok := args[0].(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("graphql requires an object argument with 'query' or 'hash' field")
 		}
 
 		queryStr, _ := optsMap["query"].(string)
