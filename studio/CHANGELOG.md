@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.157.0](https://github.com/wundergraph/cosmo/compare/studio@0.156.1...studio@0.157.0) (2026-03-02)
+
+### Features
+
+* **studio:** delete persisted operations ([#2553](https://github.com/wundergraph/cosmo/issues/2553)) ([1adf02c](https://github.com/wundergraph/cosmo/commit/1adf02c0a84bb3ae63b1d900d1075ae2c8f8c069)) (@comatory)
+
 ## [0.156.1](https://github.com/wundergraph/cosmo/compare/studio@0.156.0...studio@0.156.1) (2026-02-28)
 
 **Note:** Version bump only for package studio

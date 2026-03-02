@@ -18,6 +18,8 @@ Run the controlplane in watch mode:
 pnpm dev
 ```
 
+If you need to attach a debugger, run `pnpm dev:debug`.
+
 # ESM
 
 We use Node.js in ESM mode. This means that we can use `import` instead of `require` at runtime. However, it also means that we have to use `.js` as file extension to import files.
