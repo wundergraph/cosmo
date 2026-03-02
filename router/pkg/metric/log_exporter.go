@@ -36,7 +36,7 @@ func (s *logExporter) Aggregation(_ sdkmetric.InstrumentKind) sdkmetric.Aggregat
 
 func (s *logExporter) ForceFlush(_ context.Context) error {
 	if err := s.logger.Sync(); err != nil {
-		s.logger.Warn("unable to flush log export")
+		s.logger.Warn("unable to flush metric log export")
 	}
 	return nil
 }
