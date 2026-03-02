@@ -24,7 +24,7 @@ runs:
       uses: actions/checkout@v4
 
     - name: Run Trivy and Report SARIF to GitHub Security tab
-      uses: aquasecurity/trivy-action@0.29.0
+      uses: aquasecurity/trivy-action@0.34.1
       id: scan
       with:
         version: v0.58.0
