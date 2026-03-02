@@ -486,7 +486,7 @@ interface A{
           InputObjectTypeDefinition: {
             requiredSuffixes: ['Input'],
             ignorePattern:
-              "^(edfs__NatsStreamConfiguration|openfed__SubscriptionFieldCondition|openfed__SubscriptionFilterCondition)$",
+              '^(edfs__NatsStreamConfiguration|openfed__SubscriptionFieldCondition|openfed__SubscriptionFilterCondition)$',
           },
           allowLeadingUnderscore: true,
         },
@@ -494,7 +494,7 @@ interface A{
     });
   });
 
-  test('Should ignore casing of \'edfs__PublishResult\' on type definitions', () => {
+  test("Should ignore casing of 'edfs__PublishResult' on type definitions", () => {
     const schema = `type Query {
   sdl: String
 }
@@ -516,10 +516,10 @@ type edfs__PublishResult {
       rulesInput: lintRules,
     });
 
-    expect(lintIssues.errors).toHaveLength(0)
-  })
+    expect(lintIssues.errors).toHaveLength(0);
+  });
 
-  test('Should ignore prefixing of \'edfs__\' and \'openfed__\' inputs', () => {
+  test("Should ignore prefixing of 'edfs__' and 'openfed__' inputs", () => {
     const schema = `directive @edfs__natsSubscribe(
 subjects: [String!]!,
 providerId: String! = "default",
@@ -557,6 +557,6 @@ input openfed__SubscriptionFilterCondition {
       rulesInput: lintRules,
     });
 
-    expect(lintIssues.errors).toHaveLength(0)
-  })
+    expect(lintIssues.errors).toHaveLength(0);
+  });
 });
