@@ -1,0 +1,3 @@
+vulnerabilities:
+  # TODO ENG-9057
+  - CVE-2026-24051
