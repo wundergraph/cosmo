@@ -17,21 +17,19 @@ var ErrPoolClosed = errors.New("sandbox pool is closed")
 // It is not a pre-warmed pool — each Execute call creates a fresh runtime.
 // The semaphore limits how many sandbox executions can run concurrently.
 type Pool struct {
-	config      ExecutionConfig
-	runtimeType RuntimeType
-	sem         chan struct{} // semaphore for concurrency control
-	closed      atomic.Bool
+	config ExecutionConfig
+	sem    chan struct{} // semaphore for concurrency control
+	closed atomic.Bool
 }
 
-// NewPool creates a pool with the given concurrency limit, runtime type, and config.
-func NewPool(size int, runtimeType RuntimeType, config ExecutionConfig) *Pool {
+// NewPool creates a pool with the given concurrency limit and config.
+func NewPool(size int, config ExecutionConfig) *Pool {
 	if size <= 0 {
 		size = defaultPoolSize
 	}
 	return &Pool{
-		config:      config,
-		runtimeType: runtimeType,
-		sem:         make(chan struct{}, size),
+		config: config,
+		sem:    make(chan struct{}, size),
 	}
 }
 
@@ -54,7 +52,7 @@ func (p *Pool) Execute(ctx context.Context, jsCode string, syncFuncs []SyncFunc,
 		return nil, fmt.Errorf("input size %d exceeds limit %d", len(jsCode), p.config.MaxInputBytes)
 	}
 
-	rt := NewRuntime(p.runtimeType, p.config)
+	rt := NewRuntime(p.config)
 	return rt.Execute(ctx, jsCode, syncFuncs, asyncFuncs, objects)
 }
 

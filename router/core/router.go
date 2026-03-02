@@ -1003,7 +1003,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			GraphName:               r.mcp.GraphName,
 			ListenAddr:              r.mcp.CodeMode.Server.ListenAddr,
 			RequireMutationApproval: r.mcp.CodeMode.RequireMutationApproval,
-			RuntimeType:             sandbox.RuntimeType(r.mcp.CodeMode.Sandbox.RuntimeType),
 			SandboxConfig: sandbox.ExecutionConfig{
 				Timeout:        r.mcp.CodeMode.Sandbox.Timeout,
 				MaxMemoryMB:    r.mcp.CodeMode.Sandbox.MaxMemoryMB,

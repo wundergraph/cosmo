@@ -1066,7 +1066,6 @@ type CodeModeServer struct {
 }
 
 type SandboxConfiguration struct {
-	RuntimeType        string        `yaml:"runtime_type" envDefault:"qjs" env:"MCP_CODE_MODE_SANDBOX_RUNTIME_TYPE"`
 	Timeout            time.Duration `yaml:"timeout" envDefault:"5s" env:"MCP_CODE_MODE_SANDBOX_TIMEOUT"`
 	MaxMemoryMB        int           `yaml:"max_memory_mb" envDefault:"16" env:"MCP_CODE_MODE_SANDBOX_MAX_MEMORY_MB"`
 	MaxFuel            uint64        `yaml:"max_fuel" envDefault:"10000000" env:"MCP_CODE_MODE_SANDBOX_MAX_FUEL"`
@@ -1082,10 +1081,10 @@ type QueryGenerationConfiguration struct {
 }
 
 type QueryGenerationAuth struct {
-	Type          string `yaml:"type" envDefault:"static"`
-	TokenEndpoint string `yaml:"token_endpoint"`
-	ClientID      string `yaml:"client_id"`
-	ClientSecret  string `yaml:"client_secret"`
+	Type          string `yaml:"type" envDefault:"static" env:"MCP_CODE_MODE_QUERY_GENERATION_AUTH_TYPE"`
+	TokenEndpoint string `yaml:"token_endpoint" env:"MCP_CODE_MODE_QUERY_GENERATION_AUTH_TOKEN_ENDPOINT"`
+	ClientID      string `yaml:"client_id" env:"MCP_CODE_MODE_QUERY_GENERATION_AUTH_CLIENT_ID"`
+	ClientSecret  string `yaml:"client_secret" env:"MCP_CODE_MODE_QUERY_GENERATION_AUTH_CLIENT_SECRET"`
 	StaticToken   string `yaml:"static_token" env:"YOKO_TOKEN"`
 }
 

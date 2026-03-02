@@ -9,7 +9,7 @@ import (
 )
 
 func TestTranspiler_ValidTypeScript(t *testing.T) {
-	tr := NewTranspiler(true)
+	tr := NewTranspiler()
 
 	js, err := tr.Transpile(`async () => { return 42; }`)
 	require.NoError(t, err)
@@ -19,7 +19,7 @@ func TestTranspiler_ValidTypeScript(t *testing.T) {
 }
 
 func TestTranspiler_WithTypeAnnotations(t *testing.T) {
-	tr := NewTranspiler(true)
+	tr := NewTranspiler()
 
 	js, err := tr.Transpile(`async () => {
 		const x: number = 42;
@@ -35,7 +35,7 @@ func TestTranspiler_WithTypeAnnotations(t *testing.T) {
 }
 
 func TestTranspiler_WithInterfaces(t *testing.T) {
-	tr := NewTranspiler(true)
+	tr := NewTranspiler()
 
 	// Interfaces should be stripped (type-only constructs)
 	js, err := tr.Transpile(`async () => {
@@ -49,7 +49,7 @@ func TestTranspiler_WithInterfaces(t *testing.T) {
 }
 
 func TestTranspiler_SyntaxError(t *testing.T) {
-	tr := NewTranspiler(true)
+	tr := NewTranspiler()
 
 	_, err := tr.Transpile(`async () => { const x = `)
 	require.Error(t, err)
@@ -57,7 +57,7 @@ func TestTranspiler_SyntaxError(t *testing.T) {
 }
 
 func TestTranspiler_EmptyInput(t *testing.T) {
-	tr := NewTranspiler(true)
+	tr := NewTranspiler()
 
 	_, err := tr.Transpile("")
 	require.Error(t, err)
@@ -65,7 +65,7 @@ func TestTranspiler_EmptyInput(t *testing.T) {
 }
 
 func TestTranspiler_WhitespaceOnlyInput(t *testing.T) {
-	tr := NewTranspiler(true)
+	tr := NewTranspiler()
 
 	_, err := tr.Transpile("   \n\t  ")
 	require.Error(t, err)
@@ -73,7 +73,7 @@ func TestTranspiler_WhitespaceOnlyInput(t *testing.T) {
 }
 
 func TestTranspiler_WrappingPattern(t *testing.T) {
-	tr := NewTranspiler(true)
+	tr := NewTranspiler()
 
 	js, err := tr.Transpile(`async () => { return 1; }`)
 	require.NoError(t, err)
@@ -83,7 +83,7 @@ func TestTranspiler_WrappingPattern(t *testing.T) {
 }
 
 func TestTranspiler_LargeInput(t *testing.T) {
-	tr := NewTranspiler(true)
+	tr := NewTranspiler()
 
 	// Generate a large but valid TS input
 	var builder strings.Builder
@@ -100,7 +100,7 @@ func TestTranspiler_LargeInput(t *testing.T) {
 }
 
 func TestTranspiler_ES2020Features(t *testing.T) {
-	tr := NewTranspiler(true)
+	tr := NewTranspiler()
 
 	// Optional chaining and nullish coalescing are ES2020
 	js, err := tr.Transpile(`async () => {
@@ -111,22 +111,21 @@ func TestTranspiler_ES2020Features(t *testing.T) {
 	assert.NotEmpty(t, js)
 }
 
-func TestTranspiler_AwaitExpression(t *testing.T) {
-	tr := NewTranspiler(true)
+func TestTranspiler_PreservesAsyncAwait(t *testing.T) {
+	tr := NewTranspiler()
 
 	js, err := tr.Transpile(`async () => {
 		const result = await Promise.resolve(42);
 		return result;
 	}`)
 	require.NoError(t, err)
-	// async/await are stripped since goja doesn't support them natively
-	assert.NotContains(t, js, "async")
-	assert.NotContains(t, js, "await")
+	assert.Contains(t, js, "async")
+	assert.Contains(t, js, "await")
 	assert.Contains(t, js, "Promise.resolve(42)")
 }
 
 func TestTranspiler_DebuggerStatementStripped(t *testing.T) {
-	tr := NewTranspiler(false)
+	tr := NewTranspiler()
 
 	js, err := tr.Transpile(`async () => { debugger; return 42; }`)
 	require.NoError(t, err)
@@ -135,7 +134,7 @@ func TestTranspiler_DebuggerStatementStripped(t *testing.T) {
 }
 
 func TestTranspiler_MinifiesWhitespace(t *testing.T) {
-	tr := NewTranspiler(false)
+	tr := NewTranspiler()
 
 	js, err := tr.Transpile(`async () => {
 		const x = 1;
@@ -146,18 +145,4 @@ func TestTranspiler_MinifiesWhitespace(t *testing.T) {
 	// Minified output should not contain newlines (except trailing)
 	trimmed := strings.TrimSpace(js)
 	assert.NotContains(t, trimmed, "\n")
-}
-
-func TestTranspiler_PreservesAsyncAwait(t *testing.T) {
-	// With stripAsyncAwait=false (qjs mode), async/await should be preserved
-	tr := NewTranspiler(false)
-
-	js, err := tr.Transpile(`async () => {
-		const result = await Promise.resolve(42);
-		return result;
-	}`)
-	require.NoError(t, err)
-	assert.Contains(t, js, "async")
-	assert.Contains(t, js, "await")
-	assert.Contains(t, js, "Promise.resolve(42)")
 }

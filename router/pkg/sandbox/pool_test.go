@@ -13,7 +13,7 @@ import (
 )
 
 func TestPool_BasicExecution(t *testing.T) {
-	pool := NewPool(4, RuntimeTypeGoja, defaultConfig())
+	pool := NewPool(4, defaultConfig())
 	defer pool.Close()
 
 	result, err := pool.Execute(context.Background(), `(function() { return 42; })()`, nil, nil, nil)
@@ -22,7 +22,7 @@ func TestPool_BasicExecution(t *testing.T) {
 }
 
 func TestPool_ConcurrentExecution(t *testing.T) {
-	pool := NewPool(4, RuntimeTypeGoja, defaultConfig())
+	pool := NewPool(4, defaultConfig())
 	defer pool.Close()
 
 	var wg sync.WaitGroup
@@ -62,7 +62,7 @@ func TestPool_ConcurrentExecution(t *testing.T) {
 
 func TestPool_ConcurrencyLimit(t *testing.T) {
 	// Pool size 2, submit 4 tasks that take 100ms each
-	pool := NewPool(2, RuntimeTypeGoja, ExecutionConfig{
+	pool := NewPool(2, ExecutionConfig{
 		Timeout:        5 * time.Second,
 		MaxMemoryMB:    16,
 		MaxOutputBytes: 1024 * 1024,
@@ -107,7 +107,7 @@ func TestPool_ConcurrencyLimit(t *testing.T) {
 }
 
 func TestPool_ContextCancellation(t *testing.T) {
-	pool := NewPool(1, RuntimeTypeGoja, ExecutionConfig{
+	pool := NewPool(1, ExecutionConfig{
 		Timeout:        5 * time.Second,
 		MaxMemoryMB:    16,
 		MaxOutputBytes: 1024 * 1024,
@@ -137,7 +137,7 @@ func TestPool_ContextCancellation(t *testing.T) {
 }
 
 func TestPool_CloseRejectsNewExecutions(t *testing.T) {
-	pool := NewPool(4, RuntimeTypeGoja, defaultConfig())
+	pool := NewPool(4, defaultConfig())
 	pool.Close()
 
 	_, err := pool.Execute(context.Background(), `(function() { return 1; })()`, nil, nil, nil)
@@ -146,7 +146,7 @@ func TestPool_CloseRejectsNewExecutions(t *testing.T) {
 }
 
 func TestPool_DefaultSize(t *testing.T) {
-	pool := NewPool(0, RuntimeTypeGoja, defaultConfig())
+	pool := NewPool(0, defaultConfig())
 	defer pool.Close()
 
 	result, err := pool.Execute(context.Background(), `(function() { return "ok"; })()`, nil, nil, nil)
@@ -156,6 +156,6 @@ func TestPool_DefaultSize(t *testing.T) {
 
 func TestPool_Config(t *testing.T) {
 	cfg := defaultConfig()
-	pool := NewPool(4, RuntimeTypeGoja, cfg)
+	pool := NewPool(4, cfg)
 	assert.Equal(t, cfg, pool.Config())
 }

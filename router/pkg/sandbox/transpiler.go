@@ -8,16 +8,11 @@ import (
 )
 
 // Transpiler wraps esbuild for TypeScript to JavaScript transpilation.
-type Transpiler struct {
-	stripAsyncAwait bool
-}
+type Transpiler struct{}
 
 // NewTranspiler creates a new transpiler.
-// When stripAsyncAwait is true, async/await keywords are removed after transpilation
-// (required for goja which has no native Promise support).
-// When false, async/await are preserved (for qjs with native Promise support).
-func NewTranspiler(stripAsyncAwait bool) *Transpiler {
-	return &Transpiler{stripAsyncAwait: stripAsyncAwait}
+func NewTranspiler() *Transpiler {
+	return &Transpiler{}
 }
 
 // Transpile converts TypeScript code to JavaScript.
@@ -54,22 +49,5 @@ func (t *Transpiler) Transpile(tsCode string) (string, error) {
 		return "", fmt.Errorf("TypeScript compilation error: %s", strings.Join(msgs, "; "))
 	}
 
-	js := string(result.Code)
-	if t.stripAsyncAwait {
-		js = stripAsyncAwait(js)
-	}
-
-	return js, nil
-}
-
-// stripAsyncAwait removes async and await keywords from JS code.
-// This is safe because in the goja sandbox, all "async" functions are
-// actually synchronous-blocking Go host functions.
-// Handles both spaced ("async ") and minified ("async(") forms.
-func stripAsyncAwait(js string) string {
-	js = strings.ReplaceAll(js, "async ", "")
-	js = strings.ReplaceAll(js, "async(", "(")
-	js = strings.ReplaceAll(js, "await ", "")
-	js = strings.ReplaceAll(js, "await(", "(")
-	return js
+	return string(result.Code), nil
 }

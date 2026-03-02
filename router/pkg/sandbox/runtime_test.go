@@ -20,548 +20,428 @@ func defaultConfig() ExecutionConfig {
 	}
 }
 
-// wrap simulates what the transpiler does: wraps an IIFE
+// wrap simulates what the transpiler does: wraps an async IIFE
 func wrap(code string) string {
-	return fmt.Sprintf("(function() { %s })()", code)
-}
-
-// wrapAsync wraps code for async-aware execution.
-// In qjs, all injected functions return Promises (even "sync" ones), so code must use await.
-// In goja, there are no Promises, so async/await is stripped.
-// Test bodies should use "await" for function calls; this helper handles the per-runtime difference.
-func wrapAsync(rt RuntimeType, code string) string {
-	if rt == RuntimeTypeQJS {
-		return fmt.Sprintf("(async function() { %s })()", code)
-	}
-	// For goja, strip await and use sync IIFE
-	code = strings.ReplaceAll(code, "await ", "")
-	return fmt.Sprintf("(function() { %s })()", code)
-}
-
-var allRuntimes = []RuntimeType{RuntimeTypeGoja, RuntimeTypeQJS}
-
-func forEachRuntime(t *testing.T, fn func(t *testing.T, rt RuntimeType)) {
-	for _, rt := range allRuntimes {
-		t.Run(string(rt), func(t *testing.T) {
-			fn(t, rt)
-		})
-	}
+	return fmt.Sprintf("(async function() { %s })()", code)
 }
 
 func TestRuntime_BasicExecution(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return 42; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage("42"), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return 42; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage("42"), result.Value)
 }
 
 func TestRuntime_ReturnObject(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return { name: "test", value: 123 }; })()`, nil, nil, nil)
-		require.NoError(t, err)
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return { name: "test", value: 123 }; })()`, nil, nil, nil)
+	require.NoError(t, err)
 
-		var obj map[string]any
-		require.NoError(t, json.Unmarshal(result.Value, &obj))
-		assert.Equal(t, "test", obj["name"])
-		assert.Equal(t, float64(123), obj["value"])
-	})
+	var obj map[string]any
+	require.NoError(t, json.Unmarshal(result.Value, &obj))
+	assert.Equal(t, "test", obj["name"])
+	assert.Equal(t, float64(123), obj["value"])
 }
 
 func TestRuntime_ReturnArray(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return [1, 2, 3]; })()`, nil, nil, nil)
-		require.NoError(t, err)
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return [1, 2, 3]; })()`, nil, nil, nil)
+	require.NoError(t, err)
 
-		var arr []any
-		require.NoError(t, json.Unmarshal(result.Value, &arr))
-		assert.Len(t, arr, 3)
-	})
+	var arr []any
+	require.NoError(t, json.Unmarshal(result.Value, &arr))
+	assert.Len(t, arr, 3)
 }
 
 func TestRuntime_ReturnNull(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return null; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage("null"), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return null; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage("null"), result.Value)
 }
 
 func TestRuntime_ReturnUndefined(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return undefined; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage("null"), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return undefined; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage("null"), result.Value)
 }
 
 func TestRuntime_SyncFunctionInjection(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		funcs := []SyncFunc{
-			{
-				Name: "add",
-				Fn: func(args []any) (any, error) {
-					a, _ := args[0].(int64)
-					b, _ := args[1].(int64)
-					return a + b, nil
-				},
-			},
-		}
-		result, err := r.Execute(context.Background(), `(function() { return add(10, 20); })()`, funcs, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage("30"), result.Value)
-	})
-}
-
-func TestRuntime_SyncFunctionReturnsObject(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		funcs := []SyncFunc{
-			{
-				Name: "getData",
-				Fn: func(args []any) (any, error) {
-					return map[string]any{"key": "value", "count": 42}, nil
-				},
-			},
-		}
-		result, err := r.Execute(context.Background(), `(function() { return getData(); })()`, funcs, nil, nil)
-		require.NoError(t, err)
-
-		var obj map[string]any
-		require.NoError(t, json.Unmarshal(result.Value, &obj))
-		assert.Equal(t, "value", obj["key"])
-		assert.Equal(t, float64(42), obj["count"])
-	})
-}
-
-func TestRuntime_AsyncFunctionInjection_Goja(t *testing.T) {
-	// In goja, "async" functions are just synchronous blocking calls
-	r := NewRuntime(RuntimeTypeGoja, defaultConfig())
-	asyncFuncs := []AsyncFunc{
+	r := NewRuntime(defaultConfig())
+	funcs := []SyncFunc{
 		{
-			Name: "fetchValue",
+			Name: "add",
 			Fn: func(args []any) (any, error) {
-				return "async_result", nil
+				a, _ := args[0].(int64)
+				b, _ := args[1].(int64)
+				return a + b, nil
 			},
 		},
 	}
-	result, err := r.Execute(context.Background(), `(function() { var v = fetchValue(); return v; })()`, nil, asyncFuncs, nil)
+	result, err := r.Execute(context.Background(), `(function() { return add(10, 20); })()`, funcs, nil, nil)
 	require.NoError(t, err)
-	assert.Equal(t, json.RawMessage(`"async_result"`), result.Value)
+	assert.Equal(t, json.RawMessage("30"), result.Value)
+}
+
+func TestRuntime_SyncFunctionReturnsObject(t *testing.T) {
+	r := NewRuntime(defaultConfig())
+	funcs := []SyncFunc{
+		{
+			Name: "getData",
+			Fn: func(args []any) (any, error) {
+				return map[string]any{"key": "value", "count": 42}, nil
+			},
+		},
+	}
+	result, err := r.Execute(context.Background(), `(function() { return getData(); })()`, funcs, nil, nil)
+	require.NoError(t, err)
+
+	var obj map[string]any
+	require.NoError(t, json.Unmarshal(result.Value, &obj))
+	assert.Equal(t, "value", obj["key"])
+	assert.Equal(t, float64(42), obj["count"])
 }
 
 func TestRuntime_ObjectInjection(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		objects := []ObjectDef{
-			{
-				Name: "schema",
-				Methods: map[string]func(args []any) (any, error){
-					"queries": func(args []any) (any, error) {
-						return []map[string]any{
-							{"name": "users", "description": "Get all users"},
-						}, nil
-					},
-					"type": func(args []any) (any, error) {
-						name, _ := args[0].(string)
-						if name == "User" {
-							return map[string]any{"name": "User", "kind": "OBJECT"}, nil
-						}
-						return nil, nil
-					},
+	r := NewRuntime(defaultConfig())
+	objects := []ObjectDef{
+		{
+			Name: "schema",
+			Methods: map[string]func(args []any) (any, error){
+				"queries": func(args []any) (any, error) {
+					return []map[string]any{
+						{"name": "users", "description": "Get all users"},
+					}, nil
+				},
+				"type": func(args []any) (any, error) {
+					name, _ := args[0].(string)
+					if name == "User" {
+						return map[string]any{"name": "User", "kind": "OBJECT"}, nil
+					}
+					return nil, nil
 				},
 			},
-		}
-		result, err := r.Execute(context.Background(), wrap(`
-			var q = schema.queries();
-			var t = schema.type("User");
-			return { queries: q, userType: t };
-		`), nil, nil, objects)
-		require.NoError(t, err)
+		},
+	}
+	result, err := r.Execute(context.Background(), wrap(`
+		var q = schema.queries();
+		var t = schema.type("User");
+		return { queries: q, userType: t };
+	`), nil, nil, objects)
+	require.NoError(t, err)
 
-		var obj map[string]any
-		require.NoError(t, json.Unmarshal(result.Value, &obj))
-		queries := obj["queries"].([]any)
-		assert.Len(t, queries, 1)
-		typeInfo := obj["userType"].(map[string]any)
-		assert.Equal(t, "User", typeInfo["name"])
-	})
+	var obj map[string]any
+	require.NoError(t, json.Unmarshal(result.Value, &obj))
+	queries := obj["queries"].([]any)
+	assert.Len(t, queries, 1)
+	typeInfo := obj["userType"].(map[string]any)
+	assert.Equal(t, "User", typeInfo["name"])
 }
 
 func TestRuntime_ObjectMethodReturnsNull(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		objects := []ObjectDef{
-			{
-				Name: "schema",
-				Methods: map[string]func(args []any) (any, error){
-					"type": func(args []any) (any, error) {
-						return nil, nil
-					},
+	r := NewRuntime(defaultConfig())
+	objects := []ObjectDef{
+		{
+			Name: "schema",
+			Methods: map[string]func(args []any) (any, error){
+				"type": func(args []any) (any, error) {
+					return nil, nil
 				},
 			},
-		}
-		result, err := r.Execute(context.Background(), `(function() { return schema.type("Missing"); })()`, nil, nil, objects)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage("null"), result.Value)
-	})
+		},
+	}
+	result, err := r.Execute(context.Background(), `(function() { return schema.type("Missing"); })()`, nil, nil, objects)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage("null"), result.Value)
 }
 
 // --- Security tests (100% coverage required) ---
 
 func TestRuntime_TimeoutKillsInfiniteLoop(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, ExecutionConfig{
-			Timeout:        500 * time.Millisecond,
-			MaxMemoryMB:    16,
-			MaxOutputBytes: 1024,
-		})
-		_, err := r.Execute(context.Background(), `(function() { while(true) {} })()`, nil, nil, nil)
-		require.Error(t, err)
+	r := NewRuntime(ExecutionConfig{
+		Timeout:        500 * time.Millisecond,
+		MaxMemoryMB:    16,
+		MaxOutputBytes: 1024,
 	})
+	_, err := r.Execute(context.Background(), `(function() { while(true) {} })()`, nil, nil, nil)
+	require.Error(t, err)
 }
 
 func TestRuntime_ContextCancellationStopsExecution(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, ExecutionConfig{
-			Timeout:        10 * time.Second,
-			MaxMemoryMB:    16,
-			MaxOutputBytes: 1024,
-		})
-		ctx, cancel := context.WithCancel(context.Background())
-		go func() {
-			time.Sleep(200 * time.Millisecond)
-			cancel()
-		}()
-		_, err := r.Execute(ctx, `(function() { while(true) {} })()`, nil, nil, nil)
-		require.Error(t, err)
+	r := NewRuntime(ExecutionConfig{
+		Timeout:        10 * time.Second,
+		MaxMemoryMB:    16,
+		MaxOutputBytes: 1024,
 	})
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(200 * time.Millisecond)
+		cancel()
+	}()
+	_, err := r.Execute(ctx, `(function() { while(true) {} })()`, nil, nil, nil)
+	require.Error(t, err)
 }
 
 func TestRuntime_NoSetTimeout(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return typeof setTimeout; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return typeof setTimeout; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
 }
 
 func TestRuntime_NoSetInterval(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return typeof setInterval; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return typeof setInterval; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
 }
 
 func TestRuntime_NoFetch(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return typeof fetch; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return typeof fetch; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
 }
 
 func TestRuntime_NoRequire(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return typeof require; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return typeof require; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
 }
 
 func TestRuntime_NoProcess(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return typeof process; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return typeof process; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
 }
 
 func TestRuntime_NoEval(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return typeof eval; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return typeof eval; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
 }
 
 func TestRuntime_MathRandomDeterministic(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return Math.random(); })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage(`0`), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return Math.random(); })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage(`0`), result.Value)
 }
 
 func TestRuntime_DateNowDeterministic(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return Date.now(); })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage(`0`), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return Date.now(); })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage(`0`), result.Value)
 }
 
 func TestRuntime_NoGlobalsLeakBetweenExecutions(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
+	r := NewRuntime(defaultConfig())
 
-		// First execution sets a global
-		_, err := r.Execute(context.Background(), `(function() { globalThis.leaked = 42; return 1; })()`, nil, nil, nil)
-		require.NoError(t, err)
+	// First execution sets a global
+	_, err := r.Execute(context.Background(), `(function() { globalThis.leaked = 42; return 1; })()`, nil, nil, nil)
+	require.NoError(t, err)
 
-		// Second execution should not see it (fresh VM each time)
-		result, err := r.Execute(context.Background(), `(function() { return typeof globalThis.leaked; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
-	})
+	// Second execution should not see it (fresh VM each time)
+	result, err := r.Execute(context.Background(), `(function() { return typeof globalThis.leaked; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
 }
 
 func TestRuntime_JSErrorReturnsStructuredError(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		_, err := r.Execute(context.Background(), `(function() { throw new Error("test error"); })()`, nil, nil, nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "test error")
-	})
+	r := NewRuntime(defaultConfig())
+	_, err := r.Execute(context.Background(), `(function() { throw new Error("test error"); })()`, nil, nil, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "test error")
 }
 
 func TestRuntime_SyntaxErrorReturnsError(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		_, err := r.Execute(context.Background(), `(function() { invalid syntax here })()`, nil, nil, nil)
-		require.Error(t, err)
-	})
+	r := NewRuntime(defaultConfig())
+	_, err := r.Execute(context.Background(), `(function() { invalid syntax here })()`, nil, nil, nil)
+	require.Error(t, err)
 }
 
 func TestRuntime_OutputSizeLimitEnforced(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, ExecutionConfig{
-			Timeout:        5 * time.Second,
-			MaxMemoryMB:    16,
-			MaxOutputBytes: 100,
-		})
-		// Return a large string that exceeds the limit
-		_, err := r.Execute(context.Background(), `(function() { var s = ""; for(var i=0;i<200;i++) s+="x"; return s; })()`, nil, nil, nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "output size")
+	r := NewRuntime(ExecutionConfig{
+		Timeout:        5 * time.Second,
+		MaxMemoryMB:    16,
+		MaxOutputBytes: 100,
 	})
+	// Return a large string that exceeds the limit
+	_, err := r.Execute(context.Background(), `(function() { var s = ""; for(var i=0;i<200;i++) s+="x"; return s; })()`, nil, nil, nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "output size")
 }
 
 func TestRuntime_MemoryLimitViaTimeout(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, ExecutionConfig{
-			Timeout:        1 * time.Second,
-			MaxMemoryMB:    1,
-			MaxOutputBytes: 1024 * 1024,
-		})
-		_, err := r.Execute(context.Background(), `(function() {
-			var arr = [];
-			for (var i = 0; i < 100000000; i++) { arr.push("x".repeat(1000)); }
-			return arr.length;
-		})()`, nil, nil, nil)
-		require.Error(t, err)
+	r := NewRuntime(ExecutionConfig{
+		Timeout:        1 * time.Second,
+		MaxMemoryMB:    1,
+		MaxOutputBytes: 1024 * 1024,
 	})
+	_, err := r.Execute(context.Background(), `(function() {
+		var arr = [];
+		for (var i = 0; i < 100000000; i++) { arr.push("x".repeat(1000)); }
+		return arr.length;
+	})()`, nil, nil, nil)
+	require.Error(t, err)
 }
 
 // --- Multiple calls / chaining ---
 
 func TestRuntime_MultipleCallsSyncFuncs(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		syncFuncs := []SyncFunc{
-			{
-				Name: "getValue",
-				Fn: func(args []any) (any, error) {
-					key, _ := args[0].(string)
-					return "value_" + key, nil
-				},
+	r := NewRuntime(defaultConfig())
+	syncFuncs := []SyncFunc{
+		{
+			Name: "getValue",
+			Fn: func(args []any) (any, error) {
+				key, _ := args[0].(string)
+				return "value_" + key, nil
 			},
-		}
-		result, err := r.Execute(context.Background(), wrapAsync(rt, `
-			var a = await getValue("a");
-			var b = await getValue("b");
-			return [a, b];
-		`), syncFuncs, nil, nil)
-		require.NoError(t, err)
+		},
+	}
+	result, err := r.Execute(context.Background(), wrap(`
+		var a = await getValue("a");
+		var b = await getValue("b");
+		return [a, b];
+	`), syncFuncs, nil, nil)
+	require.NoError(t, err)
 
-		var arr []string
-		require.NoError(t, json.Unmarshal(result.Value, &arr))
-		assert.Equal(t, []string{"value_a", "value_b"}, arr)
-	})
+	var arr []string
+	require.NoError(t, json.Unmarshal(result.Value, &arr))
+	assert.Equal(t, []string{"value_a", "value_b"}, arr)
 }
 
 func TestRuntime_ChainedSyncCalls(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		callCount := 0
-		syncFuncs := []SyncFunc{
-			{
-				Name: "getUser",
-				Fn: func(args []any) (any, error) {
-					callCount++
-					return map[string]any{"id": "u1", "name": "Alice"}, nil
-				},
+	r := NewRuntime(defaultConfig())
+	callCount := 0
+	syncFuncs := []SyncFunc{
+		{
+			Name: "getUser",
+			Fn: func(args []any) (any, error) {
+				callCount++
+				return map[string]any{"id": "u1", "name": "Alice"}, nil
 			},
-			{
-				Name: "getOrders",
-				Fn: func(args []any) (any, error) {
-					callCount++
-					userId, _ := args[0].(string)
-					return []map[string]any{{"id": "o1", "userId": userId, "total": 100}}, nil
-				},
+		},
+		{
+			Name: "getOrders",
+			Fn: func(args []any) (any, error) {
+				callCount++
+				userId, _ := args[0].(string)
+				return []map[string]any{{"id": "o1", "userId": userId, "total": 100}}, nil
 			},
-		}
-		result, err := r.Execute(context.Background(), wrapAsync(rt, `
-			var user = await getUser();
-			var orders = await getOrders(user.id);
-			return { user: user, orders: orders };
-		`), syncFuncs, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, 2, callCount)
+		},
+	}
+	result, err := r.Execute(context.Background(), wrap(`
+		var user = await getUser();
+		var orders = await getOrders(user.id);
+		return { user: user, orders: orders };
+	`), syncFuncs, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, 2, callCount)
 
-		var obj map[string]any
-		require.NoError(t, json.Unmarshal(result.Value, &obj))
-		require.NotNil(t, obj["user"])
-		user := obj["user"].(map[string]any)
-		assert.Equal(t, "Alice", user["name"])
-		require.NotNil(t, obj["orders"])
-		orders := obj["orders"].([]any)
-		assert.Len(t, orders, 1)
-	})
+	var obj map[string]any
+	require.NoError(t, json.Unmarshal(result.Value, &obj))
+	require.NotNil(t, obj["user"])
+	user := obj["user"].(map[string]any)
+	assert.Equal(t, "Alice", user["name"])
+	require.NotNil(t, obj["orders"])
+	orders := obj["orders"].([]any)
+	assert.Len(t, orders, 1)
 }
 
 // --- Edge cases ---
 
 func TestRuntime_ReturnString(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return "hello world"; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage(`"hello world"`), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return "hello world"; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage(`"hello world"`), result.Value)
 }
 
 func TestRuntime_ReturnBoolean(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return true; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage("true"), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return true; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage("true"), result.Value)
 }
 
 func TestRuntime_SyncFunctionError(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		funcs := []SyncFunc{
-			{
-				Name: "failingFunc",
-				Fn: func(args []any) (any, error) {
-					return nil, fmt.Errorf("intentional error")
-				},
-			},
-		}
-		_, err := r.Execute(context.Background(), `(function() { return failingFunc(); })()`, funcs, nil, nil)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "intentional error")
-	})
-}
-
-func TestRuntime_AsyncFunctionError_Goja(t *testing.T) {
-	r := NewRuntime(RuntimeTypeGoja, defaultConfig())
-	asyncFuncs := []AsyncFunc{
+	r := NewRuntime(defaultConfig())
+	funcs := []SyncFunc{
 		{
-			Name: "failingAsync",
+			Name: "failingFunc",
 			Fn: func(args []any) (any, error) {
-				return nil, fmt.Errorf("async error")
+				return nil, fmt.Errorf("intentional error")
 			},
 		},
 	}
-	_, err := r.Execute(context.Background(), `(function() { return failingAsync(); })()`, nil, asyncFuncs, nil)
+	_, err := r.Execute(context.Background(), `(function() { return failingFunc(); })()`, funcs, nil, nil)
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "async error")
+	assert.Contains(t, err.Error(), "intentional error")
 }
 
 func TestRuntime_StringPassthrough(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
+	r := NewRuntime(defaultConfig())
 
-		funcs := []SyncFunc{
-			{
-				Name: "validate",
-				Fn: func(args []any) (any, error) {
-					query, _ := args[0].(string)
-					if strings.Contains(query, "invalid") {
-						return []map[string]any{{"message": "syntax error"}}, nil
-					}
-					return []map[string]any{}, nil
-				},
+	funcs := []SyncFunc{
+		{
+			Name: "validate",
+			Fn: func(args []any) (any, error) {
+				query, _ := args[0].(string)
+				if strings.Contains(query, "invalid") {
+					return []map[string]any{{"message": "syntax error"}}, nil
+				}
+				return []map[string]any{}, nil
 			},
-		}
+		},
+	}
 
-		result, err := r.Execute(context.Background(), `(function() { return validate("query { invalid }"); })()`, funcs, nil, nil)
-		require.NoError(t, err)
+	result, err := r.Execute(context.Background(), `(function() { return validate("query { invalid }"); })()`, funcs, nil, nil)
+	require.NoError(t, err)
 
-		var errors []map[string]any
-		require.NoError(t, json.Unmarshal(result.Value, &errors))
-		assert.Len(t, errors, 1)
-		assert.Equal(t, "syntax error", errors[0]["message"])
-	})
+	var errors []map[string]any
+	require.NoError(t, json.Unmarshal(result.Value, &errors))
+	assert.Len(t, errors, 1)
+	assert.Equal(t, "syntax error", errors[0]["message"])
 }
 
 func TestRuntime_EmptyObjectReturn(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return {}; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage("{}"), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return {}; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage("{}"), result.Value)
 }
 
 func TestRuntime_NestedObjectReturn(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return { a: { b: { c: 42 } } }; })()`, nil, nil, nil)
-		require.NoError(t, err)
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return { a: { b: { c: 42 } } }; })()`, nil, nil, nil)
+	require.NoError(t, err)
 
-		var obj map[string]any
-		require.NoError(t, json.Unmarshal(result.Value, &obj))
-		a := obj["a"].(map[string]any)
-		b := a["b"].(map[string]any)
-		assert.Equal(t, float64(42), b["c"])
-	})
+	var obj map[string]any
+	require.NoError(t, json.Unmarshal(result.Value, &obj))
+	a := obj["a"].(map[string]any)
+	b := a["b"].(map[string]any)
+	assert.Equal(t, float64(42), b["c"])
 }
 
 // --- Security hardening tests ---
 
 func TestRuntime_NoFunctionConstructor(t *testing.T) {
-	forEachRuntime(t, func(t *testing.T, rt RuntimeType) {
-		r := NewRuntime(rt, defaultConfig())
-		result, err := r.Execute(context.Background(), `(function() { return typeof Function; })()`, nil, nil, nil)
-		require.NoError(t, err)
-		assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
-	})
+	r := NewRuntime(defaultConfig())
+	result, err := r.Execute(context.Background(), `(function() { return typeof Function; })()`, nil, nil, nil)
+	require.NoError(t, err)
+	assert.Equal(t, json.RawMessage(`"undefined"`), result.Value)
 }
 
 func TestRuntime_SrManipulationDoesNotShortCircuit(t *testing.T) {
-	// QJS-only: __sr is the internal result holder for async code.
+	// __sr is the internal result holder for async code.
 	// User code must not be able to set __sr.d=true to short-circuit the polling loop.
-	r := NewRuntime(RuntimeTypeQJS, defaultConfig())
+	r := NewRuntime(defaultConfig())
 
 	called := false
 	asyncFuncs := []AsyncFunc{
@@ -590,7 +470,7 @@ func TestRuntime_SrManipulationDoesNotShortCircuit(t *testing.T) {
 }
 
 func TestPool_InputSizeLimitEnforced(t *testing.T) {
-	pool := NewPool(1, RuntimeTypeGoja, ExecutionConfig{
+	pool := NewPool(1, ExecutionConfig{
 		Timeout:        5 * time.Second,
 		MaxMemoryMB:    16,
 		MaxInputBytes:  100,

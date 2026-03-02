@@ -159,7 +159,6 @@
       },
       "RequireMutationApproval": true,
       "Sandbox": {
-        "RuntimeType": "qjs",
         "Timeout": 5000000000,
         "MaxMemoryMB": 16,
         "MaxFuel": 10000000,

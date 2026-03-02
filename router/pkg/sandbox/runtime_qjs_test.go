@@ -17,7 +17,7 @@ import (
 func TestQJS_AsyncFunctionWithAwait(t *testing.T) {
 	// Use a longer timeout than defaultConfig because this is typically the first
 	// QJS test to run, incurring the WASM module cold-start cost on CI.
-	r := NewRuntime(RuntimeTypeQJS, ExecutionConfig{
+	r := NewRuntime(ExecutionConfig{
 		Timeout:        30 * time.Second,
 		MaxMemoryMB:    16,
 		MaxOutputBytes: 1024 * 1024,
@@ -37,7 +37,7 @@ func TestQJS_AsyncFunctionWithAwait(t *testing.T) {
 }
 
 func TestQJS_AsyncFunctionReturnsObject(t *testing.T) {
-	r := NewRuntime(RuntimeTypeQJS, defaultConfig())
+	r := NewRuntime(defaultConfig())
 	asyncFuncs := []AsyncFunc{
 		{
 			Name: "fetchData",
@@ -55,7 +55,7 @@ func TestQJS_AsyncFunctionReturnsObject(t *testing.T) {
 }
 
 func TestQJS_AsyncFunctionError(t *testing.T) {
-	r := NewRuntime(RuntimeTypeQJS, defaultConfig())
+	r := NewRuntime(defaultConfig())
 	asyncFuncs := []AsyncFunc{
 		{
 			Name: "failingAsync",
@@ -70,7 +70,7 @@ func TestQJS_AsyncFunctionError(t *testing.T) {
 }
 
 func TestQJS_ChainedAsyncCalls(t *testing.T) {
-	r := NewRuntime(RuntimeTypeQJS, defaultConfig())
+	r := NewRuntime(defaultConfig())
 	callCount := int32(0)
 	asyncFuncs := []AsyncFunc{
 		{
@@ -106,7 +106,7 @@ func TestQJS_ChainedAsyncCalls(t *testing.T) {
 }
 
 func TestQJS_PromiseAll(t *testing.T) {
-	r := NewRuntime(RuntimeTypeQJS, defaultConfig())
+	r := NewRuntime(defaultConfig())
 	var callCount int32
 	asyncFuncs := []AsyncFunc{
 		{
@@ -136,7 +136,7 @@ func TestQJS_PromiseAll(t *testing.T) {
 }
 
 func TestQJS_MultipleAsyncCallsWithAwait(t *testing.T) {
-	r := NewRuntime(RuntimeTypeQJS, defaultConfig())
+	r := NewRuntime(defaultConfig())
 	asyncFuncs := []AsyncFunc{
 		{
 			Name: "getValue",
@@ -160,7 +160,7 @@ func TestQJS_MultipleAsyncCallsWithAwait(t *testing.T) {
 }
 
 func TestQJS_MemoryLimit(t *testing.T) {
-	r := NewRuntime(RuntimeTypeQJS, ExecutionConfig{
+	r := NewRuntime(ExecutionConfig{
 		Timeout:        5 * time.Second,
 		MaxMemoryMB:    1,
 		MaxOutputBytes: 1024 * 1024,
@@ -175,7 +175,7 @@ func TestQJS_MemoryLimit(t *testing.T) {
 }
 
 func TestQJS_MaxExecutionTime(t *testing.T) {
-	r := NewRuntime(RuntimeTypeQJS, ExecutionConfig{
+	r := NewRuntime(ExecutionConfig{
 		Timeout:        500 * time.Millisecond,
 		MaxMemoryMB:    16,
 		MaxOutputBytes: 1024,
@@ -189,7 +189,7 @@ func TestQJS_MaxExecutionTime(t *testing.T) {
 }
 
 func TestQJS_MixedSyncAndAsyncFunctions(t *testing.T) {
-	r := NewRuntime(RuntimeTypeQJS, defaultConfig())
+	r := NewRuntime(defaultConfig())
 	syncFuncs := []SyncFunc{
 		{
 			Name: "validate",
@@ -225,7 +225,7 @@ func TestQJS_MixedSyncAndAsyncFunctions(t *testing.T) {
 }
 
 func TestQJS_AsyncFunctionPanicRecovery(t *testing.T) {
-	r := NewRuntime(RuntimeTypeQJS, defaultConfig())
+	r := NewRuntime(defaultConfig())
 	asyncFuncs := []AsyncFunc{
 		{
 			Name: "panicFunc",

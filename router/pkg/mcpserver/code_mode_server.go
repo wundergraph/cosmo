@@ -38,7 +38,6 @@ type CodeModeServerConfig struct {
 	GraphName               string
 	ListenAddr              string
 	RequireMutationApproval bool
-	RuntimeType             sandbox.RuntimeType
 	SandboxConfig           sandbox.ExecutionConfig
 	QueryGeneration         config.QueryGenerationConfiguration
 	Logger                  *zap.Logger
@@ -110,17 +109,12 @@ func NewCodeModeServer(cfg CodeModeServerConfig) (*CodeModeServer, error) {
 		otelmetric.WithUnit("ms"),
 	)
 
-	runtimeType := cfg.RuntimeType
-	if runtimeType == "" {
-		runtimeType = sandbox.RuntimeTypeQJS
-	}
-
 	s := &CodeModeServer{
 		mcpServer:    mcpSrv,
 		config:       cfg,
 		logger:       cfg.Logger,
-		transpiler:   sandbox.NewTranspiler(runtimeType == sandbox.RuntimeTypeGoja),
-		sandboxPool:  sandbox.NewPool(4, runtimeType, cfg.SandboxConfig),
+		transpiler:   sandbox.NewTranspiler(),
+		sandboxPool:  sandbox.NewPool(4, cfg.SandboxConfig),
 		httpClient:   httpClient,
 		tracer:       otel.Tracer("wundergraph.cosmo.router.mcp.code_mode"),
 		execCounter:  execCounter,

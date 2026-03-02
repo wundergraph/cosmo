@@ -2439,12 +2439,6 @@
               "description": "Configuration for the JavaScript sandbox used by the execute tool.",
               "additionalProperties": false,
               "properties": {
-                "runtime_type": {
-                  "type": "string",
-                  "enum": ["qjs", "goja"],
-                  "default": "qjs",
-                  "description": "JavaScript runtime to use. 'qjs' (QuickJS via WASM) provides native Promise support and memory isolation. 'goja' is a pure-Go fallback."
-                },
                 "timeout": {
                   "type": "string",
                   "default": "5s",
