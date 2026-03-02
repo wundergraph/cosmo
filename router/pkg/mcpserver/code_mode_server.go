@@ -193,19 +193,20 @@ func (s *CodeModeServer) Start() error {
 
 // Stop gracefully shuts down the server.
 func (s *CodeModeServer) Stop(ctx context.Context) error {
+	var shutdownErr error
 	if s.rawHTTPServer != nil {
 		// Attempt graceful shutdown which waits for active connections to drain.
 		// If the context deadline is exceeded (e.g. long-lived SSE connections),
 		// force-close the server to avoid hanging the router shutdown.
 		if err := s.rawHTTPServer.Shutdown(ctx); err != nil {
 			s.logger.Warn("Graceful Code Mode server shutdown failed, forcing close", zap.Error(err))
-			_ = s.rawHTTPServer.Close()
+			shutdownErr = s.rawHTTPServer.Close()
 		}
 	}
 
 	s.sandboxPool.Close()
 
-	return nil
+	return shutdownErr
 }
 
 func (s *CodeModeServer) registerTools() {
@@ -302,14 +303,16 @@ func (s *CodeModeServer) handleSearch() server.ToolHandlerFunc {
 		}
 
 		var asyncFuncs []sandbox.AsyncFunc
+		var preamble string
 		if s.yokoClient != nil {
 			asyncFuncs = append(asyncFuncs, sandbox.AsyncFunc{
 				Name: "__generate_queries",
 				Fn:   s.generateQueriesFunc(ctx),
 			})
+			preamble = searchPreamble
 		}
 
-		jsCode = "(async function(){" + searchPreamble + "return " +
+		jsCode = "(async function(){" + preamble + "return " +
 			strings.TrimRight(jsCode, "; \t\n\r") + ";})()"
 
 		result, err := s.sandboxPool.Execute(ctx, jsCode, nil, asyncFuncs, nil)
@@ -397,7 +400,8 @@ func (s *CodeModeServer) graphqlFunc(ctx context.Context) func(args []any) (any,
 		}
 
 		// Check for mutation and require approval via MCP elicitation
-		if s.config.RequireMutationApproval && isMutation(queryStr) {
+		opName, _ := optsMap["operationName"].(string)
+		if s.config.RequireMutationApproval && isMutation(queryStr, opName) {
 			approved, reason, err := s.requestMutationApproval(ctx, queryStr, optsMap["variables"])
 			if err != nil {
 				// Elicitation not supported by client — decline with reason
@@ -540,12 +544,16 @@ func (s *CodeModeServer) requestMutationApproval(ctx context.Context, queryStr s
 }
 
 // isMutation checks if a GraphQL query string contains a mutation operation.
-func isMutation(queryStr string) bool {
+// If operationName is non-empty, only that operation is checked.
+func isMutation(queryStr string, operationName string) bool {
 	doc, report := astparser.ParseGraphqlDocumentString(queryStr)
 	if report.HasErrors() {
 		return false
 	}
-	for _, op := range doc.OperationDefinitions {
+	for i, op := range doc.OperationDefinitions {
+		if operationName != "" && doc.OperationDefinitionNameString(i) != operationName {
+			continue
+		}
 		if op.OperationType == ast.OperationTypeMutation {
 			return true
 		}

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -790,7 +791,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 
 // bootstrap initializes the Router. It is called by Start() and NewServer().
 // It should only be called once for a Router instance.
-func (r *Router) bootstrap(ctx context.Context) error {
+func (r *Router) bootstrap(ctx context.Context) (bootstrapErr error) {
 	if !r.bootstrapped.CompareAndSwap(false, true) {
 		return fmt.Errorf("router is already bootstrapped")
 	}
@@ -993,9 +994,17 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		var corsConfig *cors.Config
 		if r.corsOptions != nil && r.corsOptions.Enabled {
 			cfg := *r.corsOptions
-			cfg.AllowOrigins = []string{"*"}
-			cfg.AllowMethods = []string{"GET", "PUT", "POST", "DELETE", "OPTIONS"}
-			cfg.AllowHeaders = append(cfg.AllowHeaders, "Content-Type", "Accept", "Authorization", "Last-Event-ID", "Mcp-Protocol-Version", "Mcp-Session-Id")
+			// Keep user-configured origins; only ensure MCP-required methods and headers are present
+			for _, m := range []string{"GET", "POST", "DELETE", "OPTIONS"} {
+				if !slices.Contains(cfg.AllowMethods, m) {
+					cfg.AllowMethods = append(cfg.AllowMethods, m)
+				}
+			}
+			for _, h := range []string{"Content-Type", "Accept", "Authorization", "Last-Event-ID", "Mcp-Protocol-Version", "Mcp-Session-Id"} {
+				if !slices.Contains(cfg.AllowHeaders, h) {
+					cfg.AllowHeaders = append(cfg.AllowHeaders, h)
+				}
+			}
 			corsConfig = &cfg
 		}
 
@@ -1030,6 +1039,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 
 		r.codeModeServer = codeModeSrv
+
+		// Clean up the code mode server if a later bootstrap step fails
+		defer func() {
+			if bootstrapErr != nil && r.codeModeServer != nil {
+				if stopErr := r.codeModeServer.Stop(context.Background()); stopErr != nil {
+					r.logger.Warn("Failed to stop Code Mode MCP server during bootstrap cleanup", zap.Error(stopErr))
+				}
+				r.codeModeServer = nil
+			}
+		}()
 	}
 
 	if r.connectRPC.Enabled {

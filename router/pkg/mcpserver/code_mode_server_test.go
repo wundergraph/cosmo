@@ -228,18 +228,28 @@ func TestExecute_MutationAllowed(t *testing.T) {
 // --- isMutation tests ---
 
 func TestIsMutation_Query(t *testing.T) {
-	assert.False(t, isMutation("{ users { id } }"))
-	assert.False(t, isMutation("query { users { id } }"))
-	assert.False(t, isMutation("query GetUsers { users { id } }"))
+	assert.False(t, isMutation("{ users { id } }", ""))
+	assert.False(t, isMutation("query { users { id } }", ""))
+	assert.False(t, isMutation("query GetUsers { users { id } }", ""))
 }
 
 func TestIsMutation_Mutation(t *testing.T) {
-	assert.True(t, isMutation("mutation { createUser(input: {}) { id } }"))
-	assert.True(t, isMutation("mutation CreateUser { createUser(input: {}) { id } }"))
+	assert.True(t, isMutation("mutation { createUser(input: {}) { id } }", ""))
+	assert.True(t, isMutation("mutation CreateUser { createUser(input: {}) { id } }", ""))
 }
 
 func TestIsMutation_Invalid(t *testing.T) {
-	assert.False(t, isMutation("not a valid query"))
+	assert.False(t, isMutation("not a valid query", ""))
+}
+
+func TestIsMutation_OperationName(t *testing.T) {
+	multiOp := "query GetUsers { users { id } } mutation CreateUser { createUser(input: {}) { id } }"
+	// Without operationName, detects mutation in any operation
+	assert.True(t, isMutation(multiOp, ""))
+	// With query operationName, skips the mutation
+	assert.False(t, isMutation(multiOp, "GetUsers"))
+	// With mutation operationName, detects it
+	assert.True(t, isMutation(multiOp, "CreateUser"))
 }
 
 // --- Header forwarding test ---

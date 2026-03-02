@@ -419,7 +419,7 @@ func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
 	// force-close the server to avoid hanging the router shutdown.
 	if err := s.rawHTTPServer.Shutdown(ctx); err != nil {
 		s.logger.Warn("Graceful MCP server shutdown failed, forcing close", zap.Error(err))
-		_ = s.rawHTTPServer.Close()
+		return s.rawHTTPServer.Close()
 	}
 
 	return nil
