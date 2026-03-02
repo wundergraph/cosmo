@@ -10,6 +10,7 @@ import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, clamp } from '../../util.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { defaultRetentionLimitInDays } from '../../constants.js';
 
 export function updateNamespaceChecksConfig(
   opts: RouterOptions,
@@ -44,7 +45,7 @@ export function updateNamespaceChecksConfig(
       featureId: 'breaking-change-retention',
     });
 
-    const timeframeLimitInDays = changeRetention?.limit ?? 7;
+    const timeframeLimitInDays = changeRetention?.limit ?? defaultRetentionLimitInDays;
     await namespaceRepo.updateConfiguration({
       id: namespace.id,
       checksTimeframeInDays: clamp(req.timeframeInDays, 1, timeframeLimitInDays),

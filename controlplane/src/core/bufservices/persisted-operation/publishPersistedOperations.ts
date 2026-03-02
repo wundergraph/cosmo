@@ -18,6 +18,7 @@ import { OperationsRepository } from '../../repositories/OperationsRepository.js
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { createBlobStoragePath } from './utils.js';
 
 const MAX_PERSISTED_OPERATIONS = 100;
 const PARALLEL_PERSISTED_OPERATIONS_LIMIT = 25;
@@ -182,7 +183,12 @@ export function publishPersistedOperations(
       }
       const operationNames = extractOperationNames(operation.contents);
       const clientName = encodeURIComponent(req.clientName);
-      const path = `${organizationId}/${federatedGraph.id}/operations/${clientName}/${operationId}.json`;
+      const path = createBlobStoragePath({
+        organizationId,
+        fedGraphId: federatedGraph.id,
+        clientName,
+        operationId,
+      });
       const updatedOp: UpdatedPersistedOperation = {
         operationId,
         hash: operationHash,

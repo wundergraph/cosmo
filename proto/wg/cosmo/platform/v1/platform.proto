@@ -1282,6 +1282,43 @@ message PublishPersistedOperationsResponse {
   repeated PublishedOperation operations = 2;
 }
 
+message DeletePersistedOperationRequest {
+  string fedGraphName = 1;
+  string namespace = 2;
+  string clientName = 3;
+  string operationId = 4;
+}
+
+message DeletePersistedOperationResponse {
+  message Operation {
+    string id = 1;
+    string operationId = 2;
+    string clientName = 3;
+    repeated string operationNames = 4;
+  }
+  Response response = 1;
+  Operation operation = 2;
+}
+
+message CheckPersistedOperationTrafficRequest {
+  string fedGraphName = 1;
+  string namespace = 2;
+  string operationId = 3;
+  string clientName = 4;
+}
+
+message CheckPersistedOperationTrafficResponse {
+  message Operation {
+    string id = 1;
+    string operationId = 2;
+    string clientName = 3;
+    repeated string operationNames = 4;
+    bool hasTraffic = 5;
+  }
+  Response response = 1;
+  Operation operation = 2;
+}
+
 message GetPersistedOperationsRequest {
   string federated_graph_name = 1;
   string client_id = 2;
@@ -3178,6 +3215,10 @@ service PlatformService {
   rpc DeleteRouterToken(DeleteRouterTokenRequest) returns (DeleteRouterTokenResponse) {}
   // Add persisted operations
   rpc PublishPersistedOperations(PublishPersistedOperationsRequest) returns (PublishPersistedOperationsResponse) {}
+  // Check if persisted operation has any traffic
+  rpc CheckPersistedOperationTraffic(CheckPersistedOperationTrafficRequest) returns (CheckPersistedOperationTrafficResponse) {}
+  // Delete/remove a persisted operation
+  rpc DeletePersistedOperation(DeletePersistedOperationRequest) returns (DeletePersistedOperationResponse) {}
   // GetPersistedOperations returns operations for the registered client id
   rpc GetPersistedOperations(GetPersistedOperationsRequest) returns (GetPersistedOperationsResponse) {}
   // GetAuditLogs returns the audit logs of the organization
