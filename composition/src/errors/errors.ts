@@ -1781,8 +1781,8 @@ export function listSizeAssumedSizeSlicingArgDefaultErrorMessage(
 
 export function costOnInterfaceFieldErrorMessage(directiveCoords: string): string {
   return (
-    ` The "@cost" directive at "${directiveCoords}" is not permitted on fields or arguments of an interface type` +
-    ` (see spec 9.1.1). The cost of an interface field is derived from the costs of the corresponding fields` +
+    ` The "@cost" directive at "${directiveCoords}" is not permitted on fields or arguments of an interface type.` +
+    ` The cost of an interface field is derived from the costs of the corresponding fields` +
     ` on the concrete types that implement the interface.`
   );
 }

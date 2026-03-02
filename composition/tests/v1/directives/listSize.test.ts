@@ -486,6 +486,7 @@ describe('@listSize directive tests', () => {
           ROUTER_COMPATIBILITY_VERSION_ONE,
         );
         expect(errors).toHaveLength(1);
+        expect(errors[0].message).toContain('"requireOneSlicingArgument" must be set to false');
       },
     );
 
@@ -497,6 +498,7 @@ describe('@listSize directive tests', () => {
           ROUTER_COMPATIBILITY_VERSION_ONE,
         );
         expect(errors).toHaveLength(1);
+        expect(errors[0].message).toContain('"requireOneSlicingArgument" must be set to false');
       },
     );
 
@@ -523,6 +525,7 @@ describe('@listSize directive tests', () => {
           ROUTER_COMPATIBILITY_VERSION_ONE,
         );
         expect(errors).toHaveLength(1);
+        expect(errors[0].message).toContain('has a default value');
       },
     );
   });

@@ -362,30 +362,28 @@ describe('@cost directive tests', () => {
 
     test('that @cost on interface type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInterface, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some((e) => e.message.includes('invalid location') || e.message.includes('INTERFACE'))).toBe(true);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('does not define "INTERFACE" as a valid location');
     });
 
     test('that @cost on union type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnUnion, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some((e) => e.message.includes('invalid location') || e.message.includes('UNION'))).toBe(true);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('does not define "UNION" as a valid location');
     });
 
     test('that @cost on input object type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInputObject, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some((e) => e.message.includes('invalid location') || e.message.includes('INPUT_OBJECT'))).toBe(
-        true,
-      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('does not define "INPUT_OBJECT" as a valid location');
     });
   });
 
   describe('spec 9.1.1: no cost on interface fields', () => {
     test('that @cost on a field within an interface type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInterfaceField, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some((e) => e.message.includes('interface'))).toBe(true);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('is not permitted on fields or arguments of an interface type');
     });
 
     test('that @cost on an argument of an interface field produces an error', () => {
@@ -393,8 +391,8 @@ describe('@cost directive tests', () => {
         subgraphWithCostOnInterfaceFieldArgument,
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(errors.length).toBeGreaterThan(0);
-      expect(errors.some((e) => e.message.includes('interface'))).toBe(true);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('is not permitted on fields or arguments of an interface type');
     });
 
     test('that @cost on a field of a type implementing an interface succeeds', () => {
