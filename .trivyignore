@@ -1,1 +1,4 @@
-# Example https://github.com/aquasecurity/trivy/blob/main/docs/docs/configuration/filtering.md#by-finding-ids
+vulnerabilities:
+  - id: CVE-2026-24051
+    statement: Intended to be fixed in `ENG-9057`. The vulnerability happens on macOS/Darwin, as most images are used on Linux machines, we're ok with making this compromise. This was discussed with the team and OK'ed.
+
