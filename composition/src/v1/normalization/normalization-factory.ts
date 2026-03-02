@@ -2500,16 +2500,11 @@ export class NormalizationFactory {
           }
 
           const unwrappedType = argData.type.kind === Kind.NON_NULL_TYPE ? argData.type.type : argData.type;
-          if (unwrappedType.kind === Kind.LIST_TYPE) {
+          if (unwrappedType.kind === Kind.LIST_TYPE || argData.namedTypeName !== INT_SCALAR) {
             errorMessages.push(
               listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgName, printTypeNode(argData.type)),
             );
             continue;
-          }
-          if (argData.namedTypeName !== INT_SCALAR) {
-            errorMessages.push(
-              listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgName, printTypeNode(argData.type)),
-            );
           }
 
           listSizeConfig.slicingArguments.push(slicingArgName);
@@ -2557,6 +2552,7 @@ export class NormalizationFactory {
                 printTypeNode(fieldData.type),
               ),
             );
+            continue;
           }
           listSizeConfig.sizedFields.push(sizedFieldName);
         }
