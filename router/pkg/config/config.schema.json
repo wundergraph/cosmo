@@ -1336,7 +1336,7 @@
                     "enabled": {
                       "type": "boolean",
                       "default": false,
-                      "description": "Enable the log exporter, which will ensure exported metrics are logged. The default value is false."
+                      "description": "Enables the log exporter. The default value is false."
                     },
                     "exclude_metrics": {
                       "type": "array",

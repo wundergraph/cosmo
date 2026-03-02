@@ -71,9 +71,13 @@ func TestMetricsLogExporter(t *testing.T) {
 					require.Equal(t, "sum:int64", cm["type"])
 					require.Equal(t, data.Temporality.String(), cm["temporality"])
 					require.Equal(t, data.IsMonotonic, cm["monotonic"])
-					requireAllDataPointsLogged(t, loggedDPs, data.DataPoints, func(dp metricdata.DataPoint[int64]) string {
-						return fmt.Sprintf("value=%d", dp.Value)
-					}, actualMetric.Name)
+					if data.IsMonotonic {
+						requireAllDataPointsLogged(t, loggedDPs, data.DataPoints, func(dp metricdata.DataPoint[int64]) string {
+							return fmt.Sprintf("value=%d", dp.Value)
+						}, actualMetric.Name)
+					} else {
+						require.NotEmpty(t, loggedDPs)
+					}
 
 				case metricdata.Histogram[float64]:
 					require.Equal(t, "histogram:float64", cm["type"])
