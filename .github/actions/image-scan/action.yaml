@@ -33,7 +33,7 @@ runs:
         exit-code: 1
         severity: 'CRITICAL,HIGH'
         format: 'sarif'
-        trivyignores: '.trivyignore'
+        trivyignores: '.trivyignore.yaml'
         limit-severities-for-sarif: true
         output: 'trivy-results.sarif'
 
