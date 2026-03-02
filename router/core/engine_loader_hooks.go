@@ -52,9 +52,7 @@ type engineLoaderHooks struct {
 	headerPropagation         *HeaderPropagation
 }
 
-type engineLoaderHooksRequestContext struct {
-	startTime time.Time
-}
+type engineLoaderHooksRequestContext struct {}
 
 func NewEngineRequestHooks(
 	metricStore metric.Store,
