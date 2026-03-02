@@ -347,9 +347,9 @@ func TestSearch_NoGlobalLeak(t *testing.T) {
 	srv := newTestCodeModeServer(t)
 
 	// Execute should not have search functions available
-	result := callExecuteTool(t, srv, fmt.Sprintf(`async () => {
+	result := callExecuteTool(t, srv, `async () => {
 		try { schema.queries; return "LEAKED"; } catch(e) { return "OK"; }
-	}`))
+	}`)
 	require.False(t, result.IsError)
 	text := result.Content[0].(mcp.TextContent).Text
 	assert.Contains(t, text, "OK")
