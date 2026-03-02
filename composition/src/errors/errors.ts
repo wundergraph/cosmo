@@ -40,17 +40,8 @@ import {
   VALUES,
 } from '../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
-import {
-  getEntriesNotInHashSet,
-  getOrThrowError,
-  kindToNodeType,
-  numberToOrdinal
-} from '../utils/utils';
-import {
-  ImplementationErrors,
-  InvalidEntityInterface,
-  InvalidRequiredInputValueData
-} from '../utils/types';
+import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdinal } from '../utils/utils';
+import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
 import { isFieldData } from '../schema-building/utils';
 import { printTypeNode } from '@graphql-tools/merge';
 import { NodeType, TypeName } from '../types/types';
@@ -1759,9 +1750,7 @@ export function listSizeSizedFieldsInvalidReturnTypeErrorMessage(
   );
 }
 
-export function listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(
-  directiveCoords: string,
-): string {
+export function listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords: string): string {
   return (
     ` The "@listSize" directive on "${directiveCoords}" defines both "assumedSize" and "slicingArguments".` +
     ` When both are used, "requireOneSlicingArgument" must be set to false.`

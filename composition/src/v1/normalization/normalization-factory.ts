@@ -2535,9 +2535,7 @@ export class NormalizationFactory {
         const returnTypeName = data.namedTypeName;
         const returnTypeData = this.parentDefinitionDataByTypeName.get(returnTypeName);
         if (!returnTypeData || !isParentDataCompositeOutputType(returnTypeData)) {
-          errorMessages.push(
-            listSizeSizedFieldsInvalidReturnTypeErrorMessage(directiveCoords, returnTypeName),
-          );
+          errorMessages.push(listSizeSizedFieldsInvalidReturnTypeErrorMessage(directiveCoords, returnTypeName));
           continue;
         }
         for (const valueNode of stringValues) {
@@ -2572,21 +2570,17 @@ export class NormalizationFactory {
     }
 
     if (
-      listSizeConfig.assumedSize !== undefined
-      && listSizeConfig.slicingArguments
-      && listSizeConfig.slicingArguments.length > 0
+      listSizeConfig.assumedSize !== undefined &&
+      listSizeConfig.slicingArguments &&
+      listSizeConfig.slicingArguments.length > 0
     ) {
       if (listSizeConfig.requireOneSlicingArgument !== false) {
-        errorMessages.push(
-          listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords),
-        );
+        errorMessages.push(listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords));
       } else {
         for (const slicingArgName of listSizeConfig.slicingArguments) {
           const argData = data.argumentDataByName.get(slicingArgName);
           if (argData?.defaultValue) {
-            errorMessages.push(
-              listSizeAssumedSizeSlicingArgDefaultErrorMessage(directiveCoords, slicingArgName),
-            );
+            errorMessages.push(listSizeAssumedSizeSlicingArgDefaultErrorMessage(directiveCoords, slicingArgName));
           }
         }
       }

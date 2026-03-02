@@ -327,7 +327,10 @@ describe('@listSize directive tests', () => {
     });
 
     test('that bare @listSize (no arguments) on non-list field produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(subgraphWithBareListSizeOnNonListField, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithBareListSizeOnNonListField,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('not a list type');
     });
@@ -441,10 +444,7 @@ describe('@listSize directive tests', () => {
 
   describe('spec 9.2.2 - Valid Sized Fields Target', () => {
     test('that @listSize with empty sizedFields on non-list field produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(
-        subgraphWithEmptySizedFields,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      );
+      const { errors } = normalizeSubgraphFailure(subgraphWithEmptySizedFields, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('is not a list type, and no "sizedFields" argument is provided.');
     });
@@ -478,56 +478,44 @@ describe('@listSize directive tests', () => {
   });
 
   describe('spec 9.2.4 - Valid Assumed Size', () => {
-    test(
-      'that @listSize with assumedSize and slicingArguments with requireOneSlicingArgument true produces an error',
-      () => {
-        const { errors } = normalizeSubgraphFailure(
-          subgraphWithAssumedSizeAndSlicingRequireOne,
-          ROUTER_COMPATIBILITY_VERSION_ONE,
-        );
-        expect(errors).toHaveLength(1);
-        expect(errors[0].message).toContain('"requireOneSlicingArgument" must be set to false');
-      },
-    );
+    test('that @listSize with assumedSize and slicingArguments with requireOneSlicingArgument true produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithAssumedSizeAndSlicingRequireOne,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('"requireOneSlicingArgument" must be set to false');
+    });
 
-    test(
-      'that @listSize with assumedSize and slicingArguments with implicit requireOneSlicingArgument produces an error',
-      () => {
-        const { errors } = normalizeSubgraphFailure(
-          subgraphWithAssumedSizeAndSlicingImplicitRequireOne,
-          ROUTER_COMPATIBILITY_VERSION_ONE,
-        );
-        expect(errors).toHaveLength(1);
-        expect(errors[0].message).toContain('"requireOneSlicingArgument" must be set to false');
-      },
-    );
+    test('that @listSize with assumedSize and slicingArguments with implicit requireOneSlicingArgument produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithAssumedSizeAndSlicingImplicitRequireOne,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('"requireOneSlicingArgument" must be set to false');
+    });
 
-    test(
-      'that @listSize with assumedSize and slicingArguments with requireOneSlicingArgument false and no defaults succeeds',
-      () => {
-        const { costs } = normalizeSubgraphSuccess(
-          subgraphWithAssumedSizeAndSlicingNoRequireOne,
-          ROUTER_COMPATIBILITY_VERSION_ONE,
-        );
-        const ls = costs.listSizes.get('Query.users');
-        expect(ls).toBeDefined();
-        expect(ls!.assumedSize).toBe(50);
-        expect(ls!.slicingArguments).toEqual(['first']);
-        expect(ls!.requireOneSlicingArgument).toBe(false);
-      },
-    );
+    test('that @listSize with assumedSize and slicingArguments with requireOneSlicingArgument false and no defaults succeeds', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithAssumedSizeAndSlicingNoRequireOne,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      const ls = costs.listSizes.get('Query.users');
+      expect(ls).toBeDefined();
+      expect(ls!.assumedSize).toBe(50);
+      expect(ls!.slicingArguments).toEqual(['first']);
+      expect(ls!.requireOneSlicingArgument).toBe(false);
+    });
 
-    test(
-      'that @listSize with assumedSize and slicingArguments with requireOneSlicingArgument false but slicing arg has default produces an error',
-      () => {
-        const { errors } = normalizeSubgraphFailure(
-          subgraphWithAssumedSizeAndSlicingArgDefault,
-          ROUTER_COMPATIBILITY_VERSION_ONE,
-        );
-        expect(errors).toHaveLength(1);
-        expect(errors[0].message).toContain('has a default value');
-      },
-    );
+    test('that @listSize with assumedSize and slicingArguments with requireOneSlicingArgument false but slicing arg has default produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithAssumedSizeAndSlicingArgDefault,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('has a default value');
+    });
   });
 });
 
