@@ -15,13 +15,7 @@ import (
 // --- QJS-specific tests: native Promise support, WASM isolation ---
 
 func TestQJS_AsyncFunctionWithAwait(t *testing.T) {
-	// Use a longer timeout than defaultConfig because this is typically the first
-	// QJS test to run, incurring the WASM module cold-start cost on CI.
-	r := NewRuntime(ExecutionConfig{
-		Timeout:        30 * time.Second,
-		MaxMemoryMB:    16,
-		MaxOutputBytes: 1024 * 1024,
-	})
+	r := NewRuntime(defaultConfig())
 	asyncFuncs := []AsyncFunc{
 		{
 			Name: "fetchValue",

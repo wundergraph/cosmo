@@ -14,7 +14,7 @@ import (
 
 func defaultConfig() ExecutionConfig {
 	return ExecutionConfig{
-		Timeout:        5 * time.Second,
+		Timeout:        30 * time.Second, // 30s to accommodate WASM cold start on CI
 		MaxMemoryMB:    16,
 		MaxOutputBytes: 1024 * 1024,
 	}
