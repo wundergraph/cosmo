@@ -325,6 +325,12 @@ describe('@listSize directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('not a list type');
     });
+
+    test('that bare @listSize (no arguments) on non-list field produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithBareListSizeOnNonListField, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('not a list type');
+    });
   });
 
   describe('costs.listSizes internal structure tests', () => {
@@ -692,6 +698,17 @@ const subgraphWithListSizeOnNonListField: Subgraph = {
   definitions: parse(`
     type Query {
       user: User! @listSize(assumedSize: 1)
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithBareListSizeOnNonListField: Subgraph = {
+  name: 'subgraph-bare-listsize-nonlist',
+  url: '',
+  definitions: parse(`
+    type Query {
+      user: User! @listSize
     }
     type User { id: ID! }
   `),

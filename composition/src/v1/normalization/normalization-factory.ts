@@ -687,6 +687,11 @@ export class NormalizationFactory {
           data.nullLevelsBySubgraphName.set(this.subgraphName, new Set<number>([0]));
         }
       }
+      if (isListSize && isField && !isTypeNodeListType(data.type)) {
+        errorMessages.push(
+          listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(directiveCoords, printTypeNode(data.type)),
+        );
+      }
       return errorMessages;
     }
     const definedArgumentNames = new Set<string>();
