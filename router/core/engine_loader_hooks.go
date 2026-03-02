@@ -52,8 +52,6 @@ type engineLoaderHooks struct {
 	headerPropagation         *HeaderPropagation
 }
 
-type engineLoaderHooksRequestContext struct {}
-
 func NewEngineRequestHooks(
 	metricStore metric.Store,
 	logger *requestlogger.SubgraphAccessLogger,
@@ -112,7 +110,7 @@ func (f *engineLoaderHooks) OnLoad(ctx context.Context, ds resolve.DataSourceInf
 		}...),
 	)
 
-	return context.WithValue(ctx, rcontext.EngineLoaderHooksContextKey, &engineLoaderHooksRequestContext{})
+	return ctx
 }
 
 func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourceInfo, responseInfo *resolve.ResponseInfo) {
