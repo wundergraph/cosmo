@@ -16,7 +16,6 @@ mcp:
       listen_addr: "localhost:5027"
     require_mutation_approval: false
     sandbox:
-      runtime_type: "qjs"
       timeout: "30s"
       max_memory_mb: 32
       max_output_size_bytes: 1048576
