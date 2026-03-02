@@ -147,7 +147,6 @@ export function validateKeyFieldSets(
   const entityInterfaceData = nf.entityInterfaceDataByTypeName.get(entityParentData.name);
   const entityTypeName = entityParentData.name;
   const configurations: Array<RequiredFieldConfiguration> = [];
-  const allKeyFieldSetPaths: Array<Set<string>> = [];
   // If the key is on an entity interface/interface object, an entity data node should not be propagated
   const entityDataNode = entityInterfaceData ? undefined : nf.internalGraph.addEntityDataNode(entityParentData.name);
   const graphNode = nf.internalGraph.addOrUpdateNode(entityParentData.name);
@@ -165,6 +164,7 @@ export function validateKeyFieldSets(
     let currentDepth = -1;
     let shouldDefineSelectionSet = true;
     let lastFieldName = '';
+    let isUnconditionallyExternalKey = false;
     visit(documentNode, {
       Argument: {
         enter(node) {
@@ -226,6 +226,21 @@ export function validateKeyFieldSets(
           if (definedFields[currentDepth].has(fieldName)) {
             errorMessages.push(duplicateFieldInFieldSetErrorMessage(rawFieldSet, fieldCoords));
             return BREAK;
+          }
+          const externalFieldData = fieldData.externalFieldDataBySubgraphName.get(nf.subgraphName);
+          if (
+            !nf.isSubgraphEventDrivenGraph &&
+            externalFieldData?.isDefinedExternal &&
+            !externalFieldData.isUnconditionallyProvided
+          ) {
+            const conditionalData = nf.conditionalFieldDataByCoords.get(fieldCoords);
+            if (!conditionalData) {
+              isUnconditionallyExternalKey = true;
+              const edge = graphNode.headToTailEdges.get(fieldName);
+              if (edge) {
+                edge.isExternal = true;
+              }
+            }
           }
           // Add the field set for which the field coordinates contribute a key field
           getValueOrDefault(
@@ -355,20 +370,21 @@ export function validateKeyFieldSets(
       nf.errors.push(invalidDirectiveError(KEY, entityTypeName, numberToOrdinal(keyNumber), errorMessages));
       continue;
     }
+
     configurations.push({
       fieldName: '',
       selectionSet: fieldSet,
       ...(isUnresolvable ? { disableEntityResolver: true } : {}),
     });
     graphNode.satisfiedFieldSets.add(fieldSet);
+    if (isUnconditionallyExternalKey) {
+      graphNode.externalFieldSets.add(fieldSet);
+    }
     if (isUnresolvable) {
       continue;
     }
     entityDataNode?.addTargetSubgraphByFieldSet(fieldSet, nf.subgraphName);
-    allKeyFieldSetPaths.push(keyFieldSetPaths);
   }
-  // todo
-  // nf.internalGraph.addEntityNode(entityTypeName, allKeyFieldSetPaths);
   if (configurations.length > 0) {
     return configurations;
   }
