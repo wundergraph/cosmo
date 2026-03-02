@@ -232,6 +232,57 @@ func TestOperationCost(t *testing.T) {
 				require.Equal(t, "280", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
+
+		t.Run("type weight on enum affects cost calculation", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 1000,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { role { departments } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+
+				// Department enum has @cost(weight: 1), overriding the default enum weight of 0.
+				// Without the Department type weight, estimated would be 8.
+				require.Equal(t, "18", res.Response.Header.Get(core.CostEstimatedHeader))
+
+				require.Equal(t, "10", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
+		t.Run("slicingArguments controls list size estimation", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 100,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ sharedThings(numOfA: 3, numOfB: 10) { a } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+
+				// numOfA=3 overrides EstimatedListSize(100) as the list multiplier.
+				require.Equal(t, "3", res.Response.Header.Get(core.CostEstimatedHeader))
+
+				require.Equal(t, "3", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
 	})
 
 	t.Run("metrics", func(t *testing.T) {
