@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { buildSchema, parse, GraphQLInputObjectType, GraphQLEnumType } from 'graphql';
-import { buildRequestMessage, buildInputObjectMessage, buildEnumType, createFieldNumberManager } from '../../src';
+import { buildRequestMessage, buildInputObjectMessage, buildEnumType, createFieldNumberManager } from '../../src/index.js';
 
 describe('Request Builder', () => {
   describe('buildRequestMessage', () => {

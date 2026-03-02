@@ -1,3 +1,4 @@
+import { getNormalizedFieldSet, safeParse } from '@wundergraph/composition';
 import { camelCase, snakeCase, upperFirst } from 'lodash-es';
 
 /**
@@ -62,15 +63,95 @@ export function createResponseMessageName(methodName: string): string {
 /**
  * Creates an entity lookup method name for an entity type
  */
-export function createEntityLookupMethodName(typeName: string, keyString: string = 'id'): string {
-  const normalizedKey = keyString
-    .split(/[,\s]+/)
-    .filter((field) => field.length > 0)
-    .map((field) => upperFirst(camelCase(field)))
-    .sort()
-    .join('And');
+export function createEntityLookupMethodName(typeName: string, keyString = 'id'): string {
+  const normalizedKey = createMethodSuffixFromEntityKey(keyString);
+  return `Lookup${typeName}${normalizedKey}`;
+}
 
-  return `Lookup${typeName}By${normalizedKey}`;
+/**
+ * Creates a key message name for an entity lookup request
+ * @param typeName - The name of the entity type
+ * @param keyString - The key string
+ * @returns The name of the key message
+ */
+export function createEntityLookupRequestKeyMessageName(typeName: string, keyString = 'id'): string {
+  const requestName = createRequestMessageName(createEntityLookupMethodName(typeName, keyString));
+  return `${requestName}Key`;
+}
+
+/**
+ * Creates a required fields method name for an entity type.
+ * The fields are sorted alphabetically.
+ * @param typeName - The name of the entity type
+ * @param fieldName - The name of the field that is required
+ * @param keyString - The key string
+ * @returns The name of the required fields method
+ * @example
+ * createRequiredFieldsMethodName('User', 'post', 'id') // => 'RequireUserPostById'
+ * createRequiredFieldsMethodName('User', 'post', 'id name') // => 'RequireUserPostByIdAndName'
+ * createRequiredFieldsMethodName('User', 'post', 'name,id') // => 'RequireUserPostByIdAndName'
+ */
+export function createRequiredFieldsMethodName(typeName: string, fieldName: string, keyString = 'id'): string {
+  const normalizedKey = createMethodSuffixFromEntityKey(keyString);
+  return `Require${typeName}${upperFirst(camelCase(fieldName))}${normalizedKey}`;
+}
+
+/**
+ * Creates a method suffix from an entity key string
+ * @param keyString - The key string
+ * @returns The method suffix
+ */
+export function createMethodSuffixFromEntityKey(keyString = 'id'): string {
+  const normalizedKey = formatKeyElements(keyString).join('And');
+
+  return `By${normalizedKey}`;
+}
+
+/**
+ * Normalizes a key string into a canonical field set representation.
+ *
+ * Parses the key string as a GraphQL selection set and applies normalization
+ * logic from the composition package to produce a consistent string representation.
+ * @remarks We currently don't support nested keys, so we apply a simple deduplication logic.
+ *
+ * @param keyString - The key string from a @key directive (e.g., "id name", "id,name")
+ * @returns The normalized field set string
+ * @throws Error if the key string cannot be parsed as a valid GraphQL selection
+ *
+ * @example
+ * normalizeKeyString('id name')     // => 'id name'
+ * normalizeKeyString('name id')     // => 'id name' (sorted)
+ * normalizeKeyString('id,name')     // => 'id name'
+ */
+export function normalizeKeyString(keyString: string): string {
+  const { error, documentNode } = safeParse('{' + keyString + '}');
+  if (error || !documentNode) {
+    throw new Error(`Invalid field set for key directive: ${keyString} - error: ${error?.message}`);
+  }
+
+  const normalizedFieldSet = getNormalizedFieldSet(documentNode);
+  return [...new Set(normalizedFieldSet.split(/[\s,]+/))].join(' ');
+}
+
+/**
+ * Formats key elements into PascalCase.
+ *
+ * This function normalizes a key string, splits it into individual field names,
+ * converts each to PascalCase. Used primarily for generating consistent method name suffixes from entity keys.
+ *
+ * @param keyString - The key string from a @key directive (e.g., "id name", "user_id,name")
+ * @returns Array of PascalCase field names
+ *
+ * @example
+ * formatKeyElements('id,name')       // => ['Id', 'Name']
+ * formatKeyElements('name,id')       // => ['Id', 'Name']
+ * formatKeyElements('name id name')  // => ['Id', 'Name']
+ * formatKeyElements('user_id')       // => ['UserId']
+ */
+export function formatKeyElements(keyString: string): string[] {
+  return normalizeKeyString(keyString)
+    .split(/[\s,]+/)
+    .map((field) => upperFirst(camelCase(field)));
 }
 
 /**

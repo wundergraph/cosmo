@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { compileGraphQLToProto } from '../../src';
-import { expectValidProto } from '../util';
+import { compileGraphQLToProto } from '../../src/index.js';
+import { expectValidProto } from '../util.js';
 
 describe('SDL to Proto - Edge Cases and Error Handling', () => {
   test('should handle schema with only scalar fields correctly', () => {
@@ -720,7 +720,7 @@ describe('SDL to Proto - Edge Cases and Error Handling', () => {
     expectValidProto(protoText);
 
     expect(protoText).toContain('ONLY_UNSPECIFIED_UNSPECIFIED = 0;');
-    expect(protoText.match(/ONLY_UNSPECIFIED_UNSPECIFIED/g)).toHaveLength(1);
+    expect(protoText.match(/ONLY(?:_UNSPECIFIED){2}/g)).toHaveLength(1);
   });
 
   test('should handle enum with explicit UNSPECIFIED across schema evolution with lock data', () => {

@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.39.2](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.39.1...aws-lambda-router@0.39.2) (2026-02-24)
+
+### Bug Fixes
+
+* bump go-m1cpu to v0.1.7 to fix compiler warnings ([#2550](https://github.com/wundergraph/cosmo/issues/2550)) ([88e4878](https://github.com/wundergraph/cosmo/commit/88e48782c392c84e6e0bd2cd7e79072409712f82)) (@jensneuse)
+
 ## [0.39.1](https://github.com/wundergraph/cosmo/compare/aws-lambda-router@0.39.0...aws-lambda-router@0.39.1) (2025-12-04)
 
 ### Bug Fixes

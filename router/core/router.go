@@ -52,6 +52,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
@@ -728,6 +729,64 @@ func (r *Router) BaseURL() string {
 	return r.baseURL
 }
 
+// NewServer prepares a new server instance but does not start it. The method should only be used when you want to bootstrap
+// the server manually otherwise you can use Router.Start(). You're responsible for setting health checks status to ready with Server.HealthChecks().
+// The server can be shutdown with Router.Shutdown(). Use core.WithExecutionConfig to pass the initial config otherwise the Router will
+// try to fetch the config from the control plane. You can swap the router config by using Router.newGraphServer().
+func (r *Router) NewServer(ctx context.Context) (Server, error) {
+	if r.shutdown.Load() {
+		return nil, errors.New("router is shutdown. Create a new instance with router.NewRouter()")
+	}
+
+	if err := r.bootstrap(ctx); err != nil {
+		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
+	}
+
+	r.httpServer = newServer(&httpServerOptions{
+		addr:               r.listenAddr,
+		logger:             r.logger,
+		tlsConfig:          r.tlsConfig,
+		tlsServerConfig:    r.tlsServerConfig,
+		healthcheck:        r.healthcheck,
+		baseURL:            r.baseURL,
+		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		livenessCheckPath:  r.livenessCheckPath,
+		readinessCheckPath: r.readinessCheckPath,
+		healthCheckPath:    r.healthCheckPath,
+	})
+
+	r.configureUsageTracking(ctx)
+
+	if r.reloadPersistentState == nil {
+		r.reloadPersistentState = NewReloadPersistentState(r.logger)
+	}
+
+	r.reloadPersistentState.UpdateReloadPersistentState(&r.Config)
+
+	// Start the server with the static config without polling
+	if r.staticExecutionConfig != nil {
+		r.logger.Info("Static execution config provided. Polling is disabled. Updating execution config is only possible by providing a config.")
+		return r.httpServer, r.newServer(ctx, r.staticExecutionConfig)
+	}
+
+	// when no static config is provided and no poller is configured, we can't start the server
+	if r.configPoller == nil {
+		return nil, errors.New("config fetcher not provided. Please provide a static execution config instead")
+	}
+
+	cfg, err := r.configPoller.GetRouterConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get initial execution config: %w", err)
+	}
+
+	if err := r.newServer(ctx, cfg.Config); err != nil {
+		r.logger.Error("Failed to start server with initial config", zap.Error(err))
+		return nil, err
+	}
+
+	return r.httpServer, nil
+}
+
 // bootstrap initializes the Router. It is called by Start() and NewServer().
 // It should only be called once for a Router instance.
 func (r *Router) bootstrap(ctx context.Context) error {
@@ -767,10 +826,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			Logger:            r.logger,
 			Config:            r.traceConfig,
 			ServiceInstanceID: r.instanceID,
-			IPAnonymization: &rtrace.IPAnonymizationConfig{
+			IPAnonymization: &attributeprocessor.IPAnonymizationConfig{
 				Enabled: r.ipAnonymization.Enabled,
-				Method:  rtrace.IPAnonymizationMethod(r.ipAnonymization.Method),
+				Method:  attributeprocessor.IPAnonymizationMethod(r.ipAnonymization.Method),
 			},
+			SanitizeUTF8:   r.traceConfig.SanitizeUTF8,
 			MemoryExporter: r.traceConfig.TestMemoryExporter,
 		})
 		if err != nil {
@@ -2080,6 +2140,12 @@ func WithTLSConfig(cfg *TlsConfig) Option {
 	}
 }
 
+func WithSubgraphTLSConfiguration(cfg config.ClientTLSConfiguration) Option {
+	return func(r *Router) {
+		r.subgraphTLSConfiguration = cfg
+	}
+}
+
 func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
 	return func(r *Router) {
 		r.telemetryAttributes = attributes
@@ -2194,7 +2260,7 @@ func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Opt
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string) *http.Transport {
+func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string, clientTLS *tls.Config) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
@@ -2223,6 +2289,11 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 		// Will return nil when HTTP(S)_PROXY does not exist or is empty.
 		// This will prevent the transport from handling the proxy when it is not needed.
 		Proxy: proxy,
+		// TLSClientConfig configures client TLS for outbound subgraph connections (mTLS).
+	}
+
+	if clientTLS != nil {
+		transport.TLSClientConfig = clientTLS
 	}
 
 	if traceDialer != nil {
@@ -2281,6 +2352,10 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 		Propagators:                propagators,
 		ResponseTraceHeader:        cfg.Tracing.ResponseTraceHeader,
 		OperationContentAttributes: cfg.Tracing.OperationContentAttributes,
+		SanitizeUTF8: &attributeprocessor.SanitizeUTF8Config{
+			Enabled:          cfg.Tracing.SanitizeUTF8.Enabled,
+			LogSanitizations: cfg.Tracing.SanitizeUTF8.LogSanitizations,
+		},
 	}
 }
 

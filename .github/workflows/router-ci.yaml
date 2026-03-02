@@ -200,6 +200,7 @@ jobs:
             './. ./fuzzquery ./lifecycle ./modules',
             './telemetry',
             './events',
+            './connectrpc',
           ]
     services:
       nats:

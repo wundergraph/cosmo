@@ -1,5 +1,6 @@
 // See https://github.com/keycloak/keycloak/tree/main/js/libs/keycloak-admin-client
 
+import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
 import * as process from 'node:process';
 import postgres from 'postgres';
@@ -76,18 +77,33 @@ try {
     exact: true,
   });
 
+  let keycloakUserID: string;
   if (users.length > 0) {
-    console.log('User already exists');
+    keycloakUserID = users[0].id!;
+
+    console.log(`User already exists with id ${keycloakUserID}, email "${user.email}"`);
+  } else {
+    keycloakUserID = await keycloakClient.addKeycloakUser({
+      realm,
+      email: user.email,
+      password: user.password,
+      isPasswordTemp: false,
+    });
+
+    console.log(`User created with id ${keycloakUserID}, email "${user.email}"`);
+  }
+
+  const o = await keycloakClient.client.groups.find({
+    realm,
+    search: user.organization.slug,
+    exact: true,
+  });
+
+  if (o.length > 0) {
+    console.log(`Organization with slug "${user.organization.slug}" already exists`);
     // eslint-disable-next-line unicorn/no-process-exit
     process.exit(0);
   }
-
-  const keycloakUserID = await keycloakClient.addKeycloakUser({
-    realm,
-    email: user.email,
-    password: user.password,
-    isPasswordTemp: false,
-  });
 
   const [kcRootGroupId, kcCreatedGroups] = await keycloakClient.seedGroup({
     realm,
@@ -115,9 +131,7 @@ try {
     timeout: 1,
   });
 
-  console.log(`User created with id ${keycloakUserID}, email "${user.email}"`);
   console.log(`API Key: ${apiKey}`);
-
   console.log('Done');
 
   // eslint-disable-next-line unicorn/no-process-exit

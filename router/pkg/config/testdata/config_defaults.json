@@ -28,7 +28,11 @@
       "Attributes": null,
       "OperationContentAttributes": false,
       "ExportGraphQLVariables": false,
-      "WithNewRoot": false
+      "WithNewRoot": false,
+      "SanitizeUTF8": {
+        "Enabled": false,
+        "LogSanitizations": false
+      }
     },
     "Metrics": {
       "Attributes": null,
@@ -114,6 +118,15 @@
         "CertFile": "",
         "Required": false
       }
+    },
+    "Client": {
+      "All": {
+        "CertFile": "",
+        "KeyFile": "",
+        "CaFile": "",
+        "InsecureSkipCaVerification": false
+      },
+      "Subgraphs": null
     }
   },
   "CacheControl": {

@@ -1,6 +1,6 @@
 {
   "name": "controlplane",
-  "version": "0.191.1",
+  "version": "0.193.0",
   "private": true,
   "description": "WunderGraph Cosmo Controlplane",
   "type": "module",
@@ -11,6 +11,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:debug": "tsx watch --inspect-brk src/index.ts",
     "build": "rm -rf dist && tsc",
     "seed": "API_KEY=cosmo_669b576aaadc10ee1ae81d9193425705 tsx src/bin/seed.ts",
     "delete-user": "tsx src/bin/delete-user.ts",
@@ -41,7 +42,7 @@
   ],
   "license": "Apache-2.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.529.1",
+    "@aws-sdk/client-s3": "^3.996.0",
     "@bufbuild/buf": "^1.32.2",
     "@connectrpc/connect": "^1.4.0",
     "@connectrpc/connect-fastify": "^1.4.0",
