@@ -515,6 +515,22 @@ describe('@cost directive tests', () => {
       expect(costs.directiveArgumentWeights).toBeUndefined();
     });
   });
+
+  describe('extension type tests', () => {
+    test('that @cost on a field in an extend type populates fieldWeights', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnExtensionField, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.fieldWeights.get('User.name')).toEqual({
+        typeName: 'User',
+        fieldName: 'name',
+        weight: 5,
+      });
+    });
+
+    test('that @cost on an extend type populates typeWeights', () => {
+      const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnExtensionType, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(costs.typeWeights['User']).toBe(50);
+    });
+  });
 });
 
 const subgraphWithCostOnField: Subgraph = {
@@ -808,6 +824,42 @@ const subgraphWithCostOnImplementingTypeField: Subgraph = {
 
     type User implements Node {
       id: ID! @cost(weight: 5)
+      name: String!
+    }
+  `),
+};
+
+const subgraphWithCostOnExtensionField: Subgraph = {
+  name: 'subgraph-cost-extension-field',
+  url: '',
+  definitions: parse(`
+    type Query {
+      user: User!
+    }
+
+    type User @key(fields: "id") {
+      id: ID!
+    }
+
+    extend type User {
+      name: String! @cost(weight: 5)
+    }
+  `),
+};
+
+const subgraphWithCostOnExtensionType: Subgraph = {
+  name: 'subgraph-cost-extension-type',
+  url: '',
+  definitions: parse(`
+    type Query {
+      user: User!
+    }
+
+    type User @key(fields: "id") {
+      id: ID!
+    }
+
+    extend type User @cost(weight: 50) {
       name: String!
     }
   `),
