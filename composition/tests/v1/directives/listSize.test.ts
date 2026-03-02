@@ -106,7 +106,7 @@ describe('@listSize directive tests', () => {
     });
 
     test('that @listSize with all arguments is correctly normalized', () => {
-      const { schema } = normalizeSubgraphSuccess(subgraphWithAllArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { schema } = normalizeSubgraphSuccess(subgraphWithAllArgumentsValid, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           NORMALIZATION_SCHEMA_QUERY +
@@ -122,7 +122,7 @@ describe('@listSize directive tests', () => {
             }
 
             type Query {
-              usersConnection(first: Int, last: Int): Connection! @listSize(assumedSize: 50, slicingArguments: ["first", "last"], sizedFields: ["edges", "nodes"], requireOneSlicingArgument: true)
+              usersConnection(first: Int, last: Int): Connection! @listSize(assumedSize: 50, slicingArguments: ["first", "last"], sizedFields: ["edges", "nodes"], requireOneSlicingArgument: false)
             }
 
             type User {
@@ -182,7 +182,7 @@ describe('@listSize directive tests', () => {
 
     test('that @listSize with all arguments is stripped from federated schema', () => {
       const { federatedGraphSchema } = federateSubgraphsSuccess(
-        [subgraphWithAllArguments],
+        [subgraphWithAllArgumentsValid],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
@@ -233,7 +233,7 @@ describe('@listSize directive tests', () => {
 
     test('that @listSize with all arguments is not included in the client schema', () => {
       const { federatedGraphClientSchema } = federateSubgraphsSuccess(
-        [subgraphWithAllArguments],
+        [subgraphWithAllArgumentsValid],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(schemaToSortedNormalizedString(federatedGraphClientSchema)).toBe(
@@ -368,14 +368,14 @@ describe('@listSize directive tests', () => {
     });
 
     test('that @listSize with all arguments populates listSizes with all fields', () => {
-      const { costs } = normalizeSubgraphSuccess(subgraphWithAllArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { costs } = normalizeSubgraphSuccess(subgraphWithAllArgumentsValid, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.listSizes.get('Query.usersConnection')).toEqual({
         typeName: 'Query',
         fieldName: 'usersConnection',
         assumedSize: 50,
         slicingArguments: ['first', 'last'],
         sizedFields: ['edges', 'nodes'],
-        requireOneSlicingArgument: true,
+        requireOneSlicingArgument: false,
       });
     });
 
@@ -431,6 +431,82 @@ describe('@listSize directive tests', () => {
       expect(errors).toHaveLength(1);
       expect(errors[0].message).toContain('not a valid "Boolean" type');
     });
+  });
+
+  describe('spec 9.2.2 - Valid Sized Fields Target', () => {
+    test('that @listSize with sizedFields on a scalar return type produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithSizedFieldsOnScalarReturn,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+    });
+
+    test('that @listSize with sizedFields on an enum return type produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithSizedFieldsOnEnumReturn,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+    });
+
+    test('that @listSize with sizedFields on a union return type produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithSizedFieldsOnUnionReturn,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+    });
+  });
+
+  describe('spec 9.2.4 - Valid Assumed Size', () => {
+    test(
+      'that @listSize with assumedSize and slicingArguments with requireOneSlicingArgument true produces an error',
+      () => {
+        const { errors } = normalizeSubgraphFailure(
+          subgraphWithAssumedSizeAndSlicingRequireOne,
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(errors).toHaveLength(1);
+      },
+    );
+
+    test(
+      'that @listSize with assumedSize and slicingArguments with implicit requireOneSlicingArgument produces an error',
+      () => {
+        const { errors } = normalizeSubgraphFailure(
+          subgraphWithAssumedSizeAndSlicingImplicitRequireOne,
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(errors).toHaveLength(1);
+      },
+    );
+
+    test(
+      'that @listSize with assumedSize and slicingArguments with requireOneSlicingArgument false and no defaults succeeds',
+      () => {
+        const { costs } = normalizeSubgraphSuccess(
+          subgraphWithAssumedSizeAndSlicingNoRequireOne,
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        const ls = costs.listSizes.get('Query.users');
+        expect(ls).toBeDefined();
+        expect(ls!.assumedSize).toBe(50);
+        expect(ls!.slicingArguments).toEqual(['first']);
+        expect(ls!.requireOneSlicingArgument).toBe(false);
+      },
+    );
+
+    test(
+      'that @listSize with assumedSize and slicingArguments with requireOneSlicingArgument false but slicing arg has default produces an error',
+      () => {
+        const { errors } = normalizeSubgraphFailure(
+          subgraphWithAssumedSizeAndSlicingArgDefault,
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+        expect(errors).toHaveLength(1);
+      },
+    );
   });
 });
 
@@ -491,29 +567,6 @@ const subgraphWithRequireOneSlicingArgument: Subgraph = {
   definitions: parse(`
     type Query {
       users(first: Int, after: String): [User!]! @listSize(slicingArguments: ["first"], requireOneSlicingArgument: false)
-    }
-
-    type User {
-      id: ID!
-    }
-  `),
-};
-
-const subgraphWithAllArguments: Subgraph = {
-  name: 'subgraph-listsize-all',
-  url: '',
-  definitions: parse(`
-    type Query {
-      usersConnection(first: Int, last: Int): Connection! @listSize(assumedSize: 50, slicingArguments: ["first", "last"], sizedFields: ["edges", "nodes"], requireOneSlicingArgument: true)
-    }
-
-    type Connection {
-      edges: [Edge!]!
-      nodes: [User!]!
-    }
-
-    type Edge {
-      node: User!
     }
 
     type User {
@@ -711,5 +764,111 @@ const subgraphWithInvalidRequireOneSlicingArgument: Subgraph = {
       users(first: Int): [User!]! @listSize(slicingArguments: ["first"], requireOneSlicingArgument: 123)
     }
     type User { id: ID! }
+  `),
+};
+
+// --- 9.2.2 fixtures: sizedFields on non-composite return types ---
+
+const subgraphWithSizedFieldsOnScalarReturn: Subgraph = {
+  name: 'subgraph-listsize-sizedfields-scalar',
+  url: '',
+  definitions: parse(`
+    type Query {
+      name: String @listSize(sizedFields: ["foo"])
+    }
+  `),
+};
+
+const subgraphWithSizedFieldsOnEnumReturn: Subgraph = {
+  name: 'subgraph-listsize-sizedfields-enum',
+  url: '',
+  definitions: parse(`
+    enum Status { ACTIVE INACTIVE }
+    type Query {
+      status: Status @listSize(sizedFields: ["foo"])
+    }
+  `),
+};
+
+const subgraphWithSizedFieldsOnUnionReturn: Subgraph = {
+  name: 'subgraph-listsize-sizedfields-union',
+  url: '',
+  definitions: parse(`
+    type Dog { name: String }
+    type Cat { name: String }
+    union Animal = Dog | Cat
+    type Query {
+      animal: Animal @listSize(sizedFields: ["edges"])
+    }
+  `),
+};
+
+// --- 9.2.4 fixtures: assumedSize + slicingArguments combinations ---
+
+const subgraphWithAssumedSizeAndSlicingRequireOne: Subgraph = {
+  name: 'subgraph-listsize-assumed-slicing-requireone',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: Int): [User!]! @listSize(assumedSize: 50, slicingArguments: ["first"], requireOneSlicingArgument: true)
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithAssumedSizeAndSlicingImplicitRequireOne: Subgraph = {
+  name: 'subgraph-listsize-assumed-slicing-implicit-requireone',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: Int): [User!]! @listSize(assumedSize: 50, slicingArguments: ["first"])
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithAssumedSizeAndSlicingNoRequireOne: Subgraph = {
+  name: 'subgraph-listsize-assumed-slicing-no-requireone',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: Int): [User!]! @listSize(assumedSize: 50, slicingArguments: ["first"], requireOneSlicingArgument: false)
+    }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithAssumedSizeAndSlicingArgDefault: Subgraph = {
+  name: 'subgraph-listsize-assumed-slicing-arg-default',
+  url: '',
+  definitions: parse(`
+    type Query {
+      users(first: Int = 10): [User!]! @listSize(assumedSize: 50, slicingArguments: ["first"], requireOneSlicingArgument: false)
+    }
+    type User { id: ID! }
+  `),
+};
+
+// 9.2.4: valid version of "all arguments" -- requireOneSlicingArgument: false, no defaults on slicing args
+const subgraphWithAllArgumentsValid: Subgraph = {
+  name: 'subgraph-listsize-all-valid',
+  url: '',
+  definitions: parse(`
+    type Query {
+      usersConnection(first: Int, last: Int): Connection! @listSize(assumedSize: 50, slicingArguments: ["first", "last"], sizedFields: ["edges", "nodes"], requireOneSlicingArgument: false)
+    }
+
+    type Connection {
+      edges: [Edge!]!
+      nodes: [User!]!
+    }
+
+    type Edge {
+      node: User!
+    }
+
+    type User {
+      id: ID!
+    }
   `),
 };

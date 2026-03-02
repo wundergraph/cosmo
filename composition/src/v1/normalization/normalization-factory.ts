@@ -131,10 +131,13 @@ import {
   invalidSubgraphNamesError,
   invalidSubscriptionFilterLocationError,
   invalidUnionMemberTypeError,
+  listSizeAssumedSizeSlicingArgDefaultErrorMessage,
+  listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage,
   listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage,
   listSizeInvalidSlicingArgumentErrorMessage,
   listSizeSizedFieldNotFoundErrorMessage,
   listSizeSizedFieldNotListErrorMessage,
+  listSizeSizedFieldsInvalidReturnTypeErrorMessage,
   listSizeSlicingArgumentNotIntErrorMessage,
   multipleNamedTypeDefinitionError,
   noBaseScalarDefinitionError,
@@ -2472,13 +2475,15 @@ export class NormalizationFactory {
           if (valueNode.kind !== Kind.STRING) {
             continue;
           }
+
           const slicingArgName = (valueNode as StringValueNode).value;
-          listSizeConfig.slicingArguments.push(slicingArgName);
           const argData = data.argumentDataByName.get(slicingArgName);
           if (!argData) {
             errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, slicingArgName));
             continue;
           }
+          listSizeConfig.slicingArguments.push(slicingArgName);
+
           const unwrappedType = argData.type.kind === Kind.NON_NULL_TYPE ? argData.type.type : argData.type;
           if (unwrappedType.kind === Kind.LIST_TYPE) {
             errorMessages.push(
@@ -2510,6 +2515,9 @@ export class NormalizationFactory {
         const returnTypeName = data.namedTypeName;
         const returnTypeData = this.parentDefinitionDataByTypeName.get(returnTypeName);
         if (!returnTypeData || !isParentDataCompositeOutputType(returnTypeData)) {
+          errorMessages.push(
+            listSizeSizedFieldsInvalidReturnTypeErrorMessage(directiveCoords, returnTypeName),
+          );
           continue;
         }
         for (const valueNode of stringValues) {
@@ -2543,6 +2551,26 @@ export class NormalizationFactory {
       );
     }
 
+    if (
+      listSizeConfig.assumedSize !== undefined
+      && listSizeConfig.slicingArguments
+      && listSizeConfig.slicingArguments.length > 0
+    ) {
+      if (listSizeConfig.requireOneSlicingArgument !== false) {
+        errorMessages.push(
+          listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords),
+        );
+      } else {
+        for (const slicingArgName of listSizeConfig.slicingArguments) {
+          const argData = data.argumentDataByName.get(slicingArgName);
+          if (argData?.defaultValue) {
+            errorMessages.push(
+              listSizeAssumedSizeSlicingArgDefaultErrorMessage(directiveCoords, slicingArgName),
+            );
+          }
+        }
+      }
+    }
     const fieldCoord = `${typeName}.${data.name}`;
     this.costs.listSizes.set(fieldCoord, listSizeConfig);
   }

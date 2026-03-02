@@ -40,8 +40,17 @@ import {
   VALUES,
 } from '../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
-import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdinal } from '../utils/utils';
-import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
+import {
+  getEntriesNotInHashSet,
+  getOrThrowError,
+  kindToNodeType,
+  numberToOrdinal
+} from '../utils/utils';
+import {
+  ImplementationErrors,
+  InvalidEntityInterface,
+  InvalidRequiredInputValueData
+} from '../utils/types';
 import { isFieldData } from '../schema-building/utils';
 import { printTypeNode } from '@graphql-tools/merge';
 import { NodeType, TypeName } from '../types/types';
@@ -1737,5 +1746,35 @@ export function listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(
   return (
     ` The "@listSize" directive on "${directiveCoords}" is invalid because the field returns type "${returnType}",` +
     ` which is not a list type, and no "sizedFields" argument is provided.`
+  );
+}
+
+export function listSizeSizedFieldsInvalidReturnTypeErrorMessage(
+  directiveCoords: string,
+  returnTypeName: string,
+): string {
+  return (
+    ` The "sizedFields" argument on "${directiveCoords}" is invalid because` +
+    ` the return type "${returnTypeName}" is not an object or interface type.`
+  );
+}
+
+export function listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(
+  directiveCoords: string,
+): string {
+  return (
+    ` The "@listSize" directive on "${directiveCoords}" defines both "assumedSize" and "slicingArguments".` +
+    ` When both are used, "requireOneSlicingArgument" must be set to false.`
+  );
+}
+
+export function listSizeAssumedSizeSlicingArgDefaultErrorMessage(
+  directiveCoords: string,
+  slicingArgName: string,
+): string {
+  return (
+    ` The "@listSize" directive on "${directiveCoords}" defines both "assumedSize" and "slicingArguments",` +
+    ` but slicing argument "${slicingArgName}" has a default value. When "assumedSize" is used as a fallback` +
+    ` for missing slicing arguments, none of the slicing arguments may have default values.`
   );
 }
