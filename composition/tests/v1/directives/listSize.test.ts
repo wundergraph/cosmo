@@ -440,12 +440,22 @@ describe('@listSize directive tests', () => {
   });
 
   describe('spec 9.2.2 - Valid Sized Fields Target', () => {
+    test('that @listSize with empty sizedFields on non-list field produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithEmptySizedFields,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('is not a list type, and no "sizedFields" argument is provided.');
+    });
+
     test('that @listSize with sizedFields on a scalar return type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraphWithSizedFieldsOnScalarReturn,
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('return type "String" is not an object or interface type');
     });
 
     test('that @listSize with sizedFields on an enum return type produces an error', () => {
@@ -454,6 +464,7 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('return type "Status" is not an object or interface type');
     });
 
     test('that @listSize with sizedFields on a union return type produces an error', () => {
@@ -462,6 +473,7 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
+      expect(errors[0].message).toContain('return type "Animal" is not an object or interface type');
     });
   });
 
@@ -785,6 +797,16 @@ const subgraphWithInvalidRequireOneSlicingArgument: Subgraph = {
 };
 
 // --- 9.2.2 fixtures: sizedFields on non-composite return types ---
+
+const subgraphWithEmptySizedFields: Subgraph = {
+  name: 'subgraph-listsize-empty-sizedfields',
+  url: '',
+  definitions: parse(`
+    type Query {
+      name: String @listSize(sizedFields: [])
+    }
+  `),
+};
 
 const subgraphWithSizedFieldsOnScalarReturn: Subgraph = {
   name: 'subgraph-listsize-sizedfields-scalar',

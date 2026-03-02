@@ -2498,7 +2498,6 @@ export class NormalizationFactory {
             errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, slicingArgName));
             continue;
           }
-          listSizeConfig.slicingArguments.push(slicingArgName);
 
           const unwrappedType = argData.type.kind === Kind.NON_NULL_TYPE ? argData.type.type : argData.type;
           if (unwrappedType.kind === Kind.LIST_TYPE) {
@@ -2512,6 +2511,8 @@ export class NormalizationFactory {
               listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgName, printTypeNode(argData.type)),
             );
           }
+
+          listSizeConfig.slicingArguments.push(slicingArgName);
         }
       }
 
@@ -2522,6 +2523,9 @@ export class NormalizationFactory {
         } else if (argumentNode.value.kind === Kind.STRING) {
           stringValues = [argumentNode.value];
         } else {
+          continue;
+        }
+        if (stringValues.length < 1) {
           continue;
         }
         hasSizedFields = true;
@@ -2541,7 +2545,6 @@ export class NormalizationFactory {
             continue;
           }
           const sizedFieldName = (valueNode as StringValueNode).value;
-          listSizeConfig.sizedFields.push(sizedFieldName);
           const fieldData = returnTypeData.fieldDataByName.get(sizedFieldName);
           if (!fieldData) {
             errorMessages.push(listSizeSizedFieldNotFoundErrorMessage(directiveCoords, sizedFieldName, returnTypeName));
@@ -2557,6 +2560,7 @@ export class NormalizationFactory {
               ),
             );
           }
+          listSizeConfig.sizedFields.push(sizedFieldName);
         }
       }
     }
