@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { compileOperationsToProto } from '../../src';
-import { expectValidProto } from '../util';
+import { compileOperationsToProto } from '../../src/index.js';
+import { expectValidProto } from '../util.js';
 
 describe('Recursion Protection', () => {
   describe('Maximum Depth Protection', () => {
@@ -286,7 +286,7 @@ describe('Recursion Protection', () => {
       `;
 
       // Should be rejected by GraphQL validation as circular fragment reference
-      expect(() => compileOperationsToProto(operation, schema)).toThrow(/Cannot spread fragment.*within itself/i);
+      expect(() => compileOperationsToProto(operation, schema)).toThrow(/cannot spread fragment.*within itself/i);
     });
   });
 

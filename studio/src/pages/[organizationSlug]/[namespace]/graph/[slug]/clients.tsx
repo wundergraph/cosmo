@@ -1,3 +1,4 @@
+import { useReducer } from "react";
 import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
 import { CodeViewer } from "@/components/code-viewer";
 import { EmptyState } from "@/components/empty-state";
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DeletePersistedOperationDialog } from "@/components/clients/delete-persisted-operation-dialog";
 import { CLI } from "@/components/ui/cli";
 import {
   Dialog,
@@ -71,6 +73,7 @@ import {
 } from "@/lib/schema-helpers";
 import { cn } from "@/lib/utils";
 import {
+  ArchiveBoxXMarkIcon,
   CommandLineIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
@@ -88,6 +91,8 @@ import {
   getFederatedGraphSDLByName,
   getPersistedOperations,
   publishPersistedOperations,
+  deletePersistedOperation,
+  checkPersistedOperationTraffic,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import copy from "copy-to-clipboard";
 import { formatDistanceToNow } from "date-fns";
@@ -168,16 +173,80 @@ fetch(url, {
   return { curl, js };
 };
 
-const ClientOperations = () => {
+type DeletePersistedOperationState = {
+  hasTraffic: boolean;
+  id: string | null;
+  names: string[];
+  show: boolean;
+};
+
+type DeletePersistedOperationAction =
+  | {
+      type: "delete-modal-hidden";
+    }
+  | {
+      type: "delete-modal-show";
+      id: string;
+      names: string[];
+    }
+  | {
+      type: "delete-modal-show-with-traffic-warning";
+      id: string;
+      names: string[];
+    };
+
+const deletePersistedOperationReducer = (
+  state: DeletePersistedOperationState,
+  action: DeletePersistedOperationAction,
+): DeletePersistedOperationState => {
+  switch (action.type) {
+    case "delete-modal-show":
+      return {
+        ...state,
+        id: action.id,
+        names: action.names,
+        hasTraffic: false,
+        show: true,
+      };
+    case "delete-modal-show-with-traffic-warning":
+      return {
+        ...state,
+        id: action.id,
+        names: action.names,
+        hasTraffic: true,
+        show: true,
+      };
+    case "delete-modal-hidden":
+    default:
+      return { ...state, id: null, names: [], hasTraffic: false, show: false };
+  }
+};
+
+const ClientOperations = ({
+  isOrganizationAdminOrDeveloper,
+}: {
+  isOrganizationAdminOrDeveloper: boolean;
+}) => {
   const router = useRouter();
   const slug = router.query.slug as string;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = router.query.organizationSlug as string;
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const clientId = searchParams.get("clientId");
   const clientName = searchParams.get("clientName");
   const graphContext = useContext(GraphContext);
+  const [persistedOperationDeleteState, dispatch] = useReducer(
+    deletePersistedOperationReducer,
+    {
+      id: null,
+      names: [],
+      hasTraffic: false,
+      show: false,
+    },
+  );
 
   const { data: sdlData } = useQuery(
     getFederatedGraphSDLByName,
@@ -218,6 +287,74 @@ const ClientOperations = () => {
     },
   );
 
+  const {
+    mutate: mutateDeletePeristedOperation,
+    isPending: isDeletePersistedOperationPending,
+  } = useMutation(deletePersistedOperation, {
+    onSuccess(data) {
+      if (data.response?.code !== EnumStatusCode.OK) {
+        toast({
+          variant: "destructive",
+          title: "Could not delete the operation",
+          description: data.response?.details ?? "Please try again",
+        });
+        return;
+      }
+
+      refetch();
+      toast({
+        title: "Operation deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Could not delete the operation",
+        description: error.details.toString() ?? "Please try again",
+      });
+    },
+  });
+
+  const {
+    mutate: mutateCheckPersistedOperationTraffic,
+    isPending: isCheckPersistedOperationTrafficPending,
+  } = useMutation(checkPersistedOperationTraffic, {
+    onSuccess(data) {
+      if (
+        data.response?.code !== EnumStatusCode.OK ||
+        !data.operation?.operationId
+      ) {
+        toast({
+          variant: "destructive",
+          title: "Could not delete the operation",
+          description: data.response?.details ?? "Please try again",
+        });
+        return;
+      }
+
+      if (data.operation?.hasTraffic) {
+        dispatch({
+          type: "delete-modal-show-with-traffic-warning",
+          id: data.operation.operationId,
+          names: data.operation.operationNames,
+        });
+      } else {
+        dispatch({
+          type: "delete-modal-show",
+          id: data.operation.operationId,
+          names: data.operation.operationNames,
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Could not delete the operation",
+        description: error.details.toString() ?? "Please try again",
+      });
+    },
+  });
+
   let content: React.ReactNode;
 
   if (isLoading) {
@@ -247,7 +384,9 @@ const ClientOperations = () => {
               <a
                 target="_blank"
                 rel="noreferrer"
-                href={docsBaseURL + "/router/persisted-queries/persisted-operations"}
+                href={
+                  docsBaseURL + "/router/persisted-queries/persisted-operations"
+                }
                 className="text-primary"
               >
                 Learn more.
@@ -351,6 +490,33 @@ const ClientOperations = () => {
                         </p>
                       )}
                       <div className="flex items-center gap-x-2">
+                        {isOrganizationAdminOrDeveloper && (
+                          <Tooltip delayDuration={100}>
+                            <TooltipTrigger>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                disabled={
+                                  isCheckPersistedOperationTrafficPending ||
+                                  isDeletePersistedOperationPending
+                                }
+                                onClick={clientName ? () => {
+                                  mutateCheckPersistedOperationTraffic({
+                                    operationId: op.id,
+                                    namespace,
+                                    fedGraphName: slug,
+                                    clientName,
+                                  });
+                                } : undefined}
+                              >
+                                <ArchiveBoxXMarkIcon className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              Delete the operation
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip delayDuration={100}>
                           <TooltipTrigger>
                             <Button variant="outline" size="icon" asChild>
@@ -456,32 +622,54 @@ const ClientOperations = () => {
   }
 
   return (
-    <Sheet
-      modal
-      open={!!clientId}
-      onOpenChange={(isOpen) => {
-        if (!isOpen) {
-          const newQuery = { ...router.query };
-          delete newQuery["clientId"];
-          delete newQuery["clientName"];
-          router.replace({
-            query: newQuery,
-          });
+    <>
+      <Sheet
+        modal
+        open={!!clientId}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            const newQuery = { ...router.query };
+            delete newQuery["clientId"];
+            delete newQuery["clientName"];
+            router.replace({
+              query: newQuery,
+            });
+          }
+        }}
+      >
+        <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
+          <SheetHeader className="mb-12">
+            <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
+              Persisted Operations in{" "}
+              <code className="break-all rounded bg-secondary px-1.5 text-left text-secondary-foreground">
+                {clientName}
+              </code>
+            </SheetTitle>
+          </SheetHeader>
+          {content}
+        </SheetContent>
+      </Sheet>
+      <DeletePersistedOperationDialog
+        isOpen={persistedOperationDeleteState.show}
+        operationNames={persistedOperationDeleteState.names ?? []}
+        operationHasTraffic={Boolean(persistedOperationDeleteState.hasTraffic)}
+        metricsLink={`/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${encodeURIComponent(createFilterState({ operationPersistedId: persistedOperationDeleteState.id ?? undefined }))}`}
+        onSubmitButtonClick={
+          (persistedOperationDeleteState.id && clientName)
+            ? () => {
+                mutateDeletePeristedOperation({
+                  operationId: persistedOperationDeleteState.id!,
+                  namespace,
+                  fedGraphName: slug,
+                  clientName,
+                });
+                dispatch({ type: "delete-modal-hidden" });
+              }
+            : undefined
         }
-      }}
-    >
-      <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
-        <SheetHeader className="mb-12">
-          <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
-            Persisted Operations in{" "}
-            <code className="break-all rounded bg-secondary px-1.5 text-left text-secondary-foreground">
-              {clientName}
-            </code>
-          </SheetTitle>
-        </SheetHeader>
-        {content}
-      </SheetContent>
-    </Sheet>
+        onClose={() => dispatch({ type: "delete-modal-hidden" })}
+      />
+    </>
   );
 };
 
@@ -494,7 +682,9 @@ type Input = z.infer<typeof FormSchema>;
 const CreateClient = ({ refresh }: { refresh: () => void }) => {
   const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.slug as string;
   const [isOpen, setIsOpen] = useState(false);
 
@@ -534,12 +724,14 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
     });
   };
 
+  const isOrganizationAdminOrDeveloper = checkUserAccess({
+    rolesToBe: ["organization-admin", "organization-developer"],
+  });
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button
-          disabled={!checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })}
-        >
+        <Button disabled={!isOrganizationAdminOrDeveloper}>
           <PlusIcon className="mr-2" />
           Create Client
         </Button>
@@ -587,7 +779,9 @@ const ClientsPage: NextPageWithLayout = () => {
   const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.slug as string;
 
   const constructLink = (name: string, mode: "metrics" | "traces") => {
@@ -620,6 +814,10 @@ const ClientsPage: NextPageWithLayout = () => {
     namespace,
   });
 
+  const isOrganizationAdminOrDeveloper = checkUserAccess({
+    rolesToBe: ["organization-admin", "organization-developer"],
+  });
+
   if (!data) return null;
 
   if (!data || error || data.response?.code !== EnumStatusCode.OK)
@@ -647,7 +845,9 @@ const ClientsPage: NextPageWithLayout = () => {
               <a
                 target="_blank"
                 rel="noreferrer"
-                href={docsBaseURL + "/router/persisted-queries/persisted-operations"}
+                href={
+                  docsBaseURL + "/router/persisted-queries/persisted-operations"
+                }
                 className="text-primary"
               >
                 Learn more.
@@ -663,7 +863,9 @@ const ClientsPage: NextPageWithLayout = () => {
               Create and view clients to which you can publish persisted
               operations.{" "}
               <Link
-                href={docsBaseURL + "/router/persisted-queries/persisted-operations"}
+                href={
+                  docsBaseURL + "/router/persisted-queries/persisted-operations"
+                }
                 className="text-primary"
                 target="_blank"
                 rel="noreferrer"
@@ -671,7 +873,7 @@ const ClientsPage: NextPageWithLayout = () => {
                 Learn more
               </Link>
             </p>
-            {checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) && (
+            {isOrganizationAdminOrDeveloper && (
               <CreateClient refresh={() => refetch()} />
             )}
           </div>
@@ -776,7 +978,9 @@ const ClientsPage: NextPageWithLayout = () => {
           </TableWrapper>
         </>
       )}
-      <ClientOperations />
+      <ClientOperations
+        isOrganizationAdminOrDeveloper={isOrganizationAdminOrDeveloper}
+      />
     </div>
   );
 };

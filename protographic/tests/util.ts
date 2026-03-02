@@ -59,7 +59,7 @@ export function getFieldNumbersFromMessage(root: protobufjs.Root, messagePath: s
     }
 
     return fieldNumbers;
-  } catch (error) {
+  } catch {
     // Provide helpful error message with available types
     const availableTypes = getAllNestedTypeNames(root);
     throw new Error(`Could not find message "${messagePath}". ` + `Available types: ${availableTypes.join(', ')}`);
@@ -72,7 +72,7 @@ export function getFieldNumbersFromMessage(root: protobufjs.Root, messagePath: s
 function getAllNestedTypeNames(root: protobufjs.Root): string[] {
   const names: string[] = [];
 
-  function collectNames(obj: protobufjs.ReflectionObject, prefix: string = '') {
+  function collectNames(obj: protobufjs.ReflectionObject, prefix = '') {
     if ('nested' in obj && obj.nested) {
       for (const [name, nested] of Object.entries(obj.nested)) {
         const fullName = prefix ? `${prefix}.${name}` : name;
