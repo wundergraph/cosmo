@@ -26,6 +26,25 @@ export default function NewFeaturesPopup() {
       rel="noreferrer"
       className="group relative block w-[195px] overflow-hidden rounded-lg p-[1px] before:absolute before:inset-0 before:z-[-1] before:rounded-lg before:bg-gradient-to-r before:from-[hsla(271,91%,65%,1)] before:to-[hsla(330,81%,60%,1)] before:content-['']"
     >
+      <style>{`
+        @keyframes popup-shine {
+          0% { transform: translateX(-100%); }
+          40% { transform: translateX(200%); }
+          100% { transform: translateX(200%); }
+        }
+      `}</style>
+      <div
+        className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg"
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 35%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.03) 65%, transparent 100%)",
+            animation: "popup-shine 3s ease-in-out 2 forwards",
+          }}
+        />
+      </div>
       <div className="relative z-10 flex h-full w-full flex-col items-start justify-center gap-6 rounded-lg bg-card p-3">
         <div className="flex w-full flex-col gap-3">
           <div className="flex w-full items-start justify-between">
