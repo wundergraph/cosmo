@@ -21,10 +21,10 @@ export default function NewFeaturesPopup() {
 
   return (
     <Link
-      href="https://hub.wundergraph.com/"
+      href="https://hub.wundergraph.com/?utm_source=cosmo&utm_content=popup&utm_medium=internal"
       target="_blank"
       rel="noreferrer"
-      className="group relative block w-[195px] overflow-hidden rounded-lg p-[1px] before:absolute before:inset-0 before:z-[-1] before:rounded-lg before:bg-gradient-to-r before:from-[hsla(271,91%,65%,1)] before:to-[hsla(330,81%,60%,1)] before:content-['']"
+      className="group relative block w-[195px] overflow-hidden rounded-lg p-[1px] transition-all duration-300 ease-out before:absolute before:inset-0 before:z-[-1] before:rounded-lg before:bg-gradient-to-r before:from-[hsla(271,91%,65%,1)] before:to-[hsla(330,81%,60%,1)] before:opacity-80 before:transition-opacity before:duration-300 before:content-[''] hover:scale-[1.02] hover:shadow-[0_0_24px_-4px_hsla(271,91%,65%,0.4)] hover:before:opacity-100"
     >
       <style>{`
         @keyframes popup-shine {
@@ -33,9 +33,7 @@ export default function NewFeaturesPopup() {
           100% { transform: translateX(200%); }
         }
       `}</style>
-      <div
-        className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg"
-      >
+      <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg">
         <div
           className="absolute inset-0"
           style={{
@@ -61,7 +59,8 @@ export default function NewFeaturesPopup() {
             </Button>
           </div>
           <p className="text-sm leading-snug text-muted-foreground">
-            A smarter way to design schemas, collaborate, and govern changes — all in one place.
+            A smarter way to design schemas, collaborate, and govern changes —
+            all in one place.
           </p>
         </div>
         <span className="flex items-center gap-x-1 text-sm font-medium text-card-foreground group-hover:underline">
