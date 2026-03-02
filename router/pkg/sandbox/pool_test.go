@@ -78,6 +78,7 @@ func TestPool_ConcurrencyLimit(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			_, _ = pool.Execute(context.Background(), `(function() {
+				trackConcurrency();
 				var s = 0;
 				for (var i = 0; i < 100000; i++) s += i;
 				return s;

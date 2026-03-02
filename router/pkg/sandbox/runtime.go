@@ -70,7 +70,11 @@ func NewRuntime(runtimeType RuntimeType, config ExecutionConfig) Runtime {
 	switch runtimeType {
 	case RuntimeTypeQJS:
 		return newQJSRuntime(config)
-	default:
+	case RuntimeTypeGoja:
 		return newGojaRuntime(config)
+	default:
+		// Default to qjs for unknown runtime types to avoid silently
+		// downgrading to a less-isolated runtime.
+		return newQJSRuntime(config)
 	}
 }

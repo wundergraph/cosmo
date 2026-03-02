@@ -161,7 +161,9 @@ func (r *qjsRuntime) Execute(ctx context.Context, jsCode string, syncFuncs []Syn
 
 	// Remove eval and Function constructor to prevent dynamic code generation (RFC security rule #4).
 	qctx.Global().DeleteProperty("eval")
-	qctx.Eval("lockdown.js", qjs.Code("Function = undefined; Math.random = function() { return 0; }; Date.now = function() { return 0; };"))
+	if _, err := qctx.Eval("lockdown.js", qjs.Code("Function = undefined; Math.random = function() { return 0; }; Date.now = function() { return 0; };")); err != nil {
+		return nil, fmt.Errorf("sandbox lockdown failed: %w", err)
+	}
 
 	var val *qjs.Value
 

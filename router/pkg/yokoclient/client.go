@@ -146,7 +146,7 @@ func (c *Client) getToken(ctx context.Context) (string, error) {
 	switch c.auth.Type {
 	case "static", "":
 		return c.auth.StaticToken, nil
-	case "jwt":
+	case "jwt", "cosmo":
 		return c.getJWTToken(ctx)
 	default:
 		return "", fmt.Errorf("unsupported auth type: %s", c.auth.Type)
@@ -204,6 +204,10 @@ func (c *Client) getJWTToken(ctx context.Context) (string, error) {
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, maxResponseBytes)).Decode(&tokenResp); err != nil {
 		return "", fmt.Errorf("failed to parse token response: %w", err)
+	}
+
+	if tokenResp.AccessToken == "" {
+		return "", fmt.Errorf("token endpoint returned empty access_token")
 	}
 
 	c.cachedToken = tokenResp.AccessToken
