@@ -76,6 +76,7 @@ import {
 } from '../utils/utils';
 import {
   configureDescriptionNoDescriptionError,
+  costOnInterfaceFieldErrorMessage,
   duplicateArgumentsError,
   duplicateDirectiveArgumentDefinitionsErrorMessage,
   duplicateDirectiveDefinitionArgumentErrorMessage,
@@ -2392,6 +2393,11 @@ export class NormalizationFactory {
         break;
       case Kind.FIELD_DEFINITION: {
         const typeName = data.renamedParentTypeName || data.originalParentTypeName;
+        const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
+        if (parentTypeData?.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+          errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
+          break;
+        }
         const fieldCoord = `${typeName}.${data.name}`;
         const fieldWeight = getValueOrDefault(
           this.costs.fieldWeights,
@@ -2409,6 +2415,11 @@ export class NormalizationFactory {
         const ivData = data as InputValueData;
         if (ivData.isArgument && ivData.fieldName) {
           const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
+          const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
+          if (parentTypeData?.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+            errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
+            break;
+          }
           const parentFieldCoord = `${typeName}.${ivData.fieldName}`;
           const fieldWeight = getValueOrDefault(
             this.costs.fieldWeights,

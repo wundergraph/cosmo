@@ -381,6 +381,35 @@ describe('@cost directive tests', () => {
     });
   });
 
+  describe('spec 9.1.1: no cost on interface fields', () => {
+    test('that @cost on a field within an interface type produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInterfaceField, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('interface'))).toBe(true);
+    });
+
+    test('that @cost on an argument of an interface field produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithCostOnInterfaceFieldArgument,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors.some((e) => e.message.includes('interface'))).toBe(true);
+    });
+
+    test('that @cost on a field of a type implementing an interface succeeds', () => {
+      const { costs } = normalizeSubgraphSuccess(
+        subgraphWithCostOnImplementingTypeField,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(costs.fieldWeights.get('User.id')).toEqual({
+        typeName: 'User',
+        fieldName: 'id',
+        weight: 5,
+      });
+    });
+  });
+
   describe('directive argument cost tests', () => {
     test('that @cost on a custom directive argument is extracted into costs.directiveArgumentWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnDirectiveArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
@@ -725,6 +754,63 @@ const subgraphWithNoCostDirectives: Subgraph = {
   definitions: parse(`
     type Query {
       hello: String!
+    }
+  `),
+};
+
+const subgraphWithCostOnInterfaceField: Subgraph = {
+  name: 'subgraph-cost-interface-field',
+  url: '',
+  definitions: parse(`
+    type Query {
+      node: Node!
+    }
+
+    interface Node {
+      id: ID! @cost(weight: 5)
+    }
+
+    type User implements Node {
+      id: ID!
+      name: String!
+    }
+  `),
+};
+
+const subgraphWithCostOnInterfaceFieldArgument: Subgraph = {
+  name: 'subgraph-cost-interface-field-arg',
+  url: '',
+  definitions: parse(`
+    type Query {
+      node: Searchable!
+    }
+
+    interface Searchable {
+      search(query: String! @cost(weight: 3)): [String!]!
+    }
+
+    type Product implements Searchable {
+      search(query: String!): [String!]!
+      name: String!
+    }
+  `),
+};
+
+const subgraphWithCostOnImplementingTypeField: Subgraph = {
+  name: 'subgraph-cost-implementing-type-field',
+  url: '',
+  definitions: parse(`
+    type Query {
+      node: Node!
+    }
+
+    interface Node {
+      id: ID!
+    }
+
+    type User implements Node {
+      id: ID! @cost(weight: 5)
+      name: String!
     }
   `),
 };
