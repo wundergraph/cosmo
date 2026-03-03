@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { PlainMessage } from '@bufbuild/protobuf';
 import pLimit from 'p-limit';
-import { Code, ConnectError, HandlerContext } from '@connectrpc/connect';
+import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   PublishedOperation,
@@ -18,6 +18,7 @@ import { OperationsRepository } from '../../repositories/OperationsRepository.js
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { createBlobStoragePath } from './utils.js';
 
 const MAX_PERSISTED_OPERATIONS = 100;
 const PARALLEL_PERSISTED_OPERATIONS_LIMIT = 25;
@@ -47,10 +48,13 @@ export function publishPersistedOperations(
     }
 
     if (req.operations.length > MAX_PERSISTED_OPERATIONS) {
-      throw new ConnectError(
-        `Payload Too Large: max ${MAX_PERSISTED_OPERATIONS} operations per request`,
-        Code.ResourceExhausted,
-      );
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Payload Too Large: max ${MAX_PERSISTED_OPERATIONS} operations per request`,
+        },
+        operations: [],
+      };
     }
 
     const userId = authContext.userId;
@@ -179,7 +183,12 @@ export function publishPersistedOperations(
       }
       const operationNames = extractOperationNames(operation.contents);
       const clientName = encodeURIComponent(req.clientName);
-      const path = `${organizationId}/${federatedGraph.id}/operations/${clientName}/${operationId}.json`;
+      const path = createBlobStoragePath({
+        organizationId,
+        fedGraphId: federatedGraph.id,
+        clientName,
+        operationId,
+      });
       const updatedOp: UpdatedPersistedOperation = {
         operationId,
         hash: operationHash,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { compileGraphQLToMapping } from '../../src';
+import { compileGraphQLToMapping } from '../../src/index.js';
 
 describe('SDL to Mapping Field Resolvers', () => {
   it('should correctly handle field resolvers', () => {

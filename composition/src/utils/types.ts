@@ -1,4 +1,5 @@
 import { Kind } from 'graphql';
+import { SubgraphName } from '../types/types';
 
 export type RootTypeName = 'Mutation' | 'Query' | 'Subscription';
 
@@ -23,17 +24,18 @@ export type ImplementationErrors = {
 };
 
 export type GraphFieldData = {
+  externalSubgraphNames: Set<SubgraphName>;
   name: string;
   namedTypeName: string;
   isLeaf: boolean;
-  subgraphNames: Set<string>;
+  subgraphNames: Set<SubgraphName>;
 };
 
 // The accumulation of all EntityInterfaceSubgraphData for the type name
 export type InvalidRequiredInputValueData = {
   inputValueName: string;
-  missingSubgraphs: string[];
-  requiredSubgraphs: string[];
+  missingSubgraphs: Array<SubgraphName>;
+  requiredSubgraphs: Array<SubgraphName>;
 };
 
 export type InvalidEntityInterface = {
