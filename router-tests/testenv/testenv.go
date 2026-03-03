@@ -63,6 +63,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 )
@@ -2577,22 +2578,13 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Subscriptions == desiredCount {
-		return
-	}
+	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.Subscriptions == desiredCount
+	})
 
-	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
-			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.Subscriptions == desiredCount {
-				return
-			}
-		}
+	report := e.Router.EngineStats.GetReport()
+	if report.Subscriptions != desiredCount {
+		e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
 	}
 }
 
@@ -2602,22 +2594,13 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Connections == desiredCount {
-		return
-	}
+	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.Connections == desiredCount
+	})
 
-	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
-			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.Connections == desiredCount {
-				return
-			}
-		}
+	report := e.Router.EngineStats.GetReport()
+	if report.Connections != desiredCount {
+		e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
 	}
 }
 
@@ -2673,22 +2656,13 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.MessagesSent == desiredCount {
-		return
-	}
+	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.MessagesSent == desiredCount
+	})
 
-	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
-			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.MessagesSent == desiredCount {
-				return
-			}
-		}
+	report := e.Router.EngineStats.GetReport()
+	if report.MessagesSent != desiredCount {
+		e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
 	}
 }
 
@@ -2698,22 +2672,13 @@ func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Durat
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.MessagesSent >= minCount {
-		return
-	}
+	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.MessagesSent >= minCount
+	})
 
-	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, minCount)
-			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.MessagesSent >= minCount {
-				return
-			}
-		}
+	report := e.Router.EngineStats.GetReport()
+	if report.MessagesSent < minCount {
+		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, minCount)
 	}
 }
 
@@ -2723,22 +2688,13 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Triggers == desiredCount {
-		return
-	}
+	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.Triggers == desiredCount
+	})
 
-	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
-			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.Triggers == desiredCount {
-				return
-			}
-		}
+	report := e.Router.EngineStats.GetReport()
+	if report.Triggers != desiredCount {
+		e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
 	}
 }
 

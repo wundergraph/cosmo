@@ -1591,6 +1591,10 @@ func TestNatsEvents(t *testing.T) {
 			require.Equal(t, float64(99), payload.Data.EmployeeUpdatedMyNats.ID)
 		})
 	})
+}
+
+func TestFlakyNatsEvents(t *testing.T) {
+	t.Parallel()
 
 	t.Run("start multiple subscriptions and hot reload should stop all the subscriptions and after restart they should work", func(t *testing.T) {
 		pm := ConfigPollerMock{
@@ -1766,10 +1770,6 @@ func TestNatsEvents(t *testing.T) {
 			})
 		})
 	})
-}
-
-func TestFlakyNatsEvents(t *testing.T) {
-	t.Parallel()
 
 	t.Run("subscribe sse with filter", func(t *testing.T) {
 		t.Parallel()

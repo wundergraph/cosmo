@@ -18,10 +18,12 @@ type EngineStatistics interface {
 	SubscriptionCountDec(count int)
 	TriggerCountInc(count int)
 	TriggerCountDec(count int)
+	Wait(ctx context.Context, predicate func(*UsageReport) bool)
 }
 
 type EngineStats struct {
 	mu            sync.Mutex
+	cond          *sync.Cond
 	ctx           context.Context
 	logger        *zap.Logger
 	reportStats   bool
@@ -46,6 +48,7 @@ func NewEngineStats(ctx context.Context, logger *zap.Logger, reportStats bool) *
 		mu:          sync.Mutex{},
 		reportStats: reportStats,
 	}
+	stats.cond = sync.NewCond(&stats.mu)
 	if reportStats {
 		go stats.runReporter(ctx)
 	}
@@ -60,6 +63,30 @@ func (s *EngineStats) GetReport() *UsageReport {
 		Triggers:      s.triggers.Load(),
 	}
 	return report
+}
+
+// Wait blocks until predicate returns true for the current stats or ctx is cancelled.
+func (s *EngineStats) Wait(ctx context.Context, predicate func(*UsageReport) bool) {
+	if predicate(s.GetReport()) {
+		return
+	}
+
+	done := make(chan struct{})
+	go func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		for !predicate(s.GetReport()) {
+			s.cond.Wait()
+		}
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-ctx.Done():
+		// Unblock the goroutine waiting on cond.Wait()
+		s.cond.Broadcast()
+	}
 }
 
 func (s *EngineStats) runReporter(ctx context.Context) {
@@ -86,30 +113,37 @@ func (s *EngineStats) reportConnections() {
 
 func (s *EngineStats) SubscriptionUpdateSent() {
 	s.messagesSent.Inc()
+	s.cond.Broadcast()
 }
 
 func (s *EngineStats) ConnectionsInc() {
 	s.connections.Inc()
+	s.cond.Broadcast()
 }
 
 func (s *EngineStats) ConnectionsDec() {
 	s.connections.Dec()
+	s.cond.Broadcast()
 }
 
 func (s *EngineStats) SubscriptionCountInc(count int) {
 	s.subscriptions.Add(uint64(count))
+	s.cond.Broadcast()
 }
 
 func (s *EngineStats) SubscriptionCountDec(count int) {
 	s.subscriptions.Sub(uint64(count))
+	s.cond.Broadcast()
 }
 
 func (s *EngineStats) TriggerCountInc(count int) {
 	s.triggers.Add(uint64(count))
+	s.cond.Broadcast()
 }
 
 func (s *EngineStats) TriggerCountDec(count int) {
 	s.triggers.Sub(uint64(count))
+	s.cond.Broadcast()
 }
 
 type NoopEngineStats struct{}
@@ -124,6 +158,10 @@ func (s *NoopEngineStats) Subscribe(_ context.Context) chan *UsageReport {
 
 func (s *NoopEngineStats) GetReport() *UsageReport {
 	return nil
+}
+
+func (s *NoopEngineStats) Wait(ctx context.Context, _ func(*UsageReport) bool) {
+	<-ctx.Done()
 }
 
 func (s *NoopEngineStats) SubscriptionUpdateSent() {}
