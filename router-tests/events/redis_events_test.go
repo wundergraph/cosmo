@@ -548,80 +548,6 @@ func TestRedisEvents(t *testing.T) {
 		})
 	})
 
-	t.Run("subscribe sync sse legacy method works", func(t *testing.T) {
-		t.Parallel()
-
-		topics := []string{"employeeUpdatedMyRedis"}
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
-			EnableRedis:              true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-
-			subscribePayload := []byte(`{"query":"subscription { employeeUpdates { id details { forename surname } }}"}`)
-
-			client := http.Client{
-				Timeout: time.Second * 10,
-			}
-			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
-			require.NoError(t, gErr)
-
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("Accept", "text/event-stream")
-			req.Header.Set("Connection", "keep-alive")
-			req.Header.Set("Cache-Control", "no-cache")
-
-			// start the subscription
-			clientRetCh := make(chan struct {
-				resp *http.Response
-				err  error
-			})
-			go func() {
-				resp, err := client.Do(req)
-				clientRetCh <- struct {
-					resp *http.Response
-					err  error
-				}{resp, err}
-			}()
-
-			// Wait for the subscription to be started
-			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
-
-			// produce a message so that the subscription is triggered
-			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-
-			// get the client response
-			var clientRet struct {
-				resp *http.Response
-				err  error
-			}
-			select {
-			case clientRet = <-clientRetCh:
-			case <-time.After(RedisWaitTimeout):
-				t.Fatal("timeout waiting for client response")
-			}
-			defer func() {
-				if clientRet.resp != nil {
-					clientRet.resp.Body.Close()
-				}
-			}()
-			require.NoError(t, clientRet.err)
-			require.Equal(t, http.StatusOK, clientRet.resp.StatusCode)
-
-			// read the message from the subscription
-			reader := bufio.NewReader(clientRet.resp.Body)
-			eventNext, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Equal(t, "event: next", string(eventNext))
-			data, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
-			line, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Empty(t, string(line))
-		})
-	})
-
 	t.Run("subscribe sync sse", func(t *testing.T) {
 		t.Parallel()
 
@@ -807,6 +733,134 @@ func TestRedisEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("mutate", func(t *testing.T) {
+		t.Parallel()
+
+		channels := []string{"employeeUpdatedMyRedis"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
+			EnableRedis:              true,
+			NoRetryClient:            true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// start reading the messages from the channel
+			msgCh, err := events.ReadRedisMessages(t, xEnv, channels[0])
+			require.NoError(t, err)
+
+			// send a mutation to trigger the first subscription
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "name test"}) { success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyRedis":{"success":true}}}`, resOne.Body)
+
+			// read the message
+			select {
+			case m := <-msgCh:
+				require.JSONEq(t, `{"id":3,"update":{"name":"name test"}}`, m.Payload)
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
+		})
+	})
+
+	t.Run("mutate returns correct typename", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
+			EnableRedis:              true,
+			NoRetryClient:            true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// send a mutation to trigger the first subscription
+			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "name test"}) { __typename success } }`,
+			})
+			require.JSONEq(t, `{"data":{"updateEmployeeMyRedis":{"__typename":"edfs__PublishResult","success":true}}}`, resOne.Body)
+		})
+	})
+}
+
+func TestFlakyRedisEvents(t *testing.T) {
+	t.Parallel()
+
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
+
+	t.Run("subscribe sync sse legacy method works", func(t *testing.T) {
+		t.Parallel()
+
+		topics := []string{"employeeUpdatedMyRedis"}
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
+			EnableRedis:              true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+
+			subscribePayload := []byte(`{"query":"subscription { employeeUpdates { id details { forename surname } }}"}`)
+
+			client := http.Client{
+				Timeout: time.Second * 10,
+			}
+			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
+			require.NoError(t, gErr)
+
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("Accept", "text/event-stream")
+			req.Header.Set("Connection", "keep-alive")
+			req.Header.Set("Cache-Control", "no-cache")
+
+			// start the subscription
+			clientRetCh := make(chan struct {
+				resp *http.Response
+				err  error
+			})
+			go func() {
+				resp, err := client.Do(req)
+				clientRetCh <- struct {
+					resp *http.Response
+					err  error
+				}{resp, err}
+			}()
+
+			// Wait for the subscription to be started
+			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
+
+			// produce a message so that the subscription is triggered
+			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+
+			// get the client response
+			var clientRet struct {
+				resp *http.Response
+				err  error
+			}
+			select {
+			case clientRet = <-clientRetCh:
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for client response")
+			}
+			defer func() {
+				if clientRet.resp != nil {
+					clientRet.resp.Body.Close()
+				}
+			}()
+			require.NoError(t, clientRet.err)
+			require.Equal(t, http.StatusOK, clientRet.resp.StatusCode)
+
+			// read the message from the subscription
+			reader := bufio.NewReader(clientRet.resp.Body)
+			eventNext, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Equal(t, "event: next", string(eventNext))
+			data, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
+			line, _, gErr := reader.ReadLine()
+			require.NoError(t, gErr)
+			require.Empty(t, string(line))
+		})
+	})
+
 	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
 		t.Parallel()
 
@@ -904,52 +958,6 @@ func TestRedisEvents(t *testing.T) {
 			case <-time.After(RedisWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
-		})
-	})
-
-	t.Run("mutate", func(t *testing.T) {
-		t.Parallel()
-
-		channels := []string{"employeeUpdatedMyRedis"}
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
-			EnableRedis:              true,
-			NoRetryClient:            true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// start reading the messages from the channel
-			msgCh, err := events.ReadRedisMessages(t, xEnv, channels[0])
-			require.NoError(t, err)
-
-			// send a mutation to trigger the first subscription
-			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "name test"}) { success } }`,
-			})
-			require.JSONEq(t, `{"data":{"updateEmployeeMyRedis":{"success":true}}}`, resOne.Body)
-
-			// read the message
-			select {
-			case m := <-msgCh:
-				require.JSONEq(t, `{"id":3,"update":{"name":"name test"}}`, m.Payload)
-			case <-time.After(RedisWaitTimeout):
-				t.Fatal("timeout waiting for client response")
-			}
-		})
-	})
-
-	t.Run("mutate returns correct typename", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsRedisJSONTemplate,
-			EnableRedis:              true,
-			NoRetryClient:            true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// send a mutation to trigger the first subscription
-			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `mutation { updateEmployeeMyRedis(id: 3, update: {name: "name test"}) { __typename success } }`,
-			})
-			require.JSONEq(t, `{"data":{"updateEmployeeMyRedis":{"__typename":"edfs__PublishResult","success":true}}}`, resOne.Body)
 		})
 	})
 }
