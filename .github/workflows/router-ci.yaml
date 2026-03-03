@@ -198,7 +198,8 @@ jobs:
       matrix:
         test_target:
           [
-            './. ./fuzzquery ./lifecycle ./modules',
+            './.',
+            './fuzzquery ./lifecycle ./modules',
             './telemetry',
             './events',
             './connectrpc',
@@ -270,10 +271,10 @@ jobs:
       kafka:
         image: bitnamilegacy/kafka:3.7.0
         options: >-
-          --health-cmd "kafka-broker-api-versions.sh --version"
+          --health-cmd "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 | grep ApiVersion"
           --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-timeout 10s
+          --health-retries 10
         env:
           KAFKA_ENABLE_KRAFT: yes
           KAFKA_CFG_PROCESS_ROLES: controller,broker
@@ -370,7 +371,9 @@ jobs:
 
       - name: Run Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test-coverage test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        env:
+          GOMAXPROCS: 4
+        run: make test-coverage test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=8m -p 1 --parallel 4" test_target="${{ matrix.test_target }}"
 
       - name: Compute artifact name for codecov upload
         id: artifact_name
@@ -390,7 +393,9 @@ jobs:
 
       - name: Run Flaky Integration tests ${{ matrix.test_target }}
         working-directory: ./router-tests
-        run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        env:
+          GOMAXPROCS: 4
+        run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=8m -p 1 --parallel 4" test_target="${{ matrix.test_target }}"
 
       - name: Upload flaky integration results to Codecov
         uses: ./.github/actions/codecov-upload-pr
