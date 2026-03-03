@@ -11,6 +11,9 @@
     "aws-lambda",
     "serverless"
   ],
+  "scripts": {
+    "format": "find . -type f -name '*.go' -not -path './gen/*' -not -path './vendor/*' -exec gofmt -w {} +"
+  },
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"
