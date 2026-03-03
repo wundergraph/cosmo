@@ -77,6 +77,9 @@ func (s *EngineStats) Wait(ctx context.Context, predicate func(*UsageReport) boo
 		defer s.mu.Unlock()
 		for !predicate(s.GetReport()) {
 			s.cond.Wait()
+			if ctx.Err() != nil {
+				return
+			}
 		}
 		close(done)
 	}()

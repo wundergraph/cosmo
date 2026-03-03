@@ -1724,7 +1724,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 					defaultLogs.FilterMessage("NATS connection established").Len() == 4 &&
 					defaultLogs.FilterMessage("NATS disconnected").Len() == 1 &&
 					defaultLogs.FilterMessage("NATS connection closed").Len() == 1
-			}, NatsWaitTimeout, 10*time.Second)
+			}, NatsWaitTimeout, time.Second)
 
 			// Then wait for subscriptions to be started again
 			xEnv.WaitForSubscriptionCount(3, NatsWaitTimeout)
