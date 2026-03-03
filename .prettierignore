@@ -22,8 +22,3 @@ logs
 
 CHANGELOG.md
 .husky
-
-
-controlplane/migrations
-
-composition/tests/unstaged-tests
