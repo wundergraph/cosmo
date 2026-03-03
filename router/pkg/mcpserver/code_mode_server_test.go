@@ -25,7 +25,7 @@ func newTestCodeModeServer(t *testing.T) *CodeModeServer {
 		ListenAddr:              "localhost:0",
 		RequireMutationApproval: true,
 		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        5 * time.Second,
+			Timeout:        30 * time.Second, // 30s to accommodate WASM cold start on CI
 			MaxMemoryMB:    16,
 			MaxOutputBytes: 1024 * 1024,
 		},
@@ -144,7 +144,7 @@ func TestExecute_GraphQL(t *testing.T) {
 
 	cfg := CodeModeServerConfig{
 		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        5 * time.Second,
+			Timeout:        30 * time.Second,
 			MaxMemoryMB:    16,
 			MaxOutputBytes: 1024 * 1024,
 		},
@@ -191,7 +191,7 @@ func TestExecute_MutationAllowed(t *testing.T) {
 	cfg := CodeModeServerConfig{
 		RequireMutationApproval: false, // mutations allowed without approval
 		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        5 * time.Second,
+			Timeout:        30 * time.Second,
 			MaxMemoryMB:    16,
 			MaxOutputBytes: 1024 * 1024,
 		},
@@ -255,7 +255,7 @@ func TestExecute_HeaderForwarding(t *testing.T) {
 	cfg := CodeModeServerConfig{
 		RequireMutationApproval: false,
 		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        5 * time.Second,
+			Timeout:        30 * time.Second,
 			MaxMemoryMB:    16,
 			MaxOutputBytes: 1024 * 1024,
 		},
@@ -291,7 +291,7 @@ func TestExecute_HeaderForwarding(t *testing.T) {
 func TestCodeModeServer_Stop(t *testing.T) {
 	cfg := CodeModeServerConfig{
 		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        5 * time.Second,
+			Timeout:        30 * time.Second,
 			MaxMemoryMB:    16,
 			MaxOutputBytes: 1024 * 1024,
 		},
@@ -424,7 +424,7 @@ func TestExecute_MultipleGraphQLCalls(t *testing.T) {
 
 	cfg := CodeModeServerConfig{
 		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        5 * time.Second,
+			Timeout:        30 * time.Second,
 			MaxMemoryMB:    16,
 			MaxOutputBytes: 1024 * 1024,
 		},
@@ -465,7 +465,7 @@ func TestExecute_PromiseAll(t *testing.T) {
 
 	cfg := CodeModeServerConfig{
 		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        5 * time.Second,
+			Timeout:        30 * time.Second,
 			MaxMemoryMB:    16,
 			MaxOutputBytes: 1024 * 1024,
 		},
@@ -510,7 +510,7 @@ func TestExecute_ConditionalMutation(t *testing.T) {
 	cfg := CodeModeServerConfig{
 		RequireMutationApproval: false,
 		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        5 * time.Second,
+			Timeout:        30 * time.Second,
 			MaxMemoryMB:    16,
 			MaxOutputBytes: 1024 * 1024,
 		},
@@ -622,7 +622,7 @@ func TestExecute_GraphQLWithHash(t *testing.T) {
 
 	cfg := CodeModeServerConfig{
 		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        5 * time.Second,
+			Timeout:        30 * time.Second,
 			MaxMemoryMB:    16,
 			MaxOutputBytes: 1024 * 1024,
 		},
@@ -692,7 +692,7 @@ func TestExecute_TOONByDefault(t *testing.T) {
 
 	cfg := CodeModeServerConfig{
 		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        5 * time.Second,
+			Timeout:        30 * time.Second,
 			MaxMemoryMB:    16,
 			MaxOutputBytes: 1024 * 1024,
 		},
