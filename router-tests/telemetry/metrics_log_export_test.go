@@ -282,7 +282,7 @@ func TestMetricsLogExporter(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, err error) {
-			require.Error(t, err, "metrics log exporter: exclude_metrics and include_metrics cannot be used together, use only one")
+			require.ErrorContains(t, err, "metrics log exporter: exclude_metrics and include_metrics cannot be used together, use only one")
 		})
 	})
 

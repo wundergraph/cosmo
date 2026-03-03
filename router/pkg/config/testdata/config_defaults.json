@@ -51,7 +51,8 @@
         "Exporters": null,
         "LogExporter": {
           "Enabled": false,
-          "ExcludeMetrics": null
+          "ExcludeMetrics": null,
+          "IncludeMetrics": null
         }
       },
       "Prometheus": {
