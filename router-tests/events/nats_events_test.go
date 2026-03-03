@@ -1565,7 +1565,11 @@ func TestNatsEvents(t *testing.T) {
 
 			xEnv.WaitForMessagesSent(1, NatsWaitTimeout)
 
+			err = conn.SetReadDeadline(time.Now().Add(NatsWaitTimeout))
+			require.NoError(t, err)
 			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			err = conn.SetReadDeadline(time.Time{})
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "next", msg.Type)
@@ -1582,7 +1586,11 @@ func TestNatsEvents(t *testing.T) {
 
 			xEnv.WaitForMessagesSent(2, NatsWaitTimeout)
 
+			err = conn.SetReadDeadline(time.Now().Add(NatsWaitTimeout))
+			require.NoError(t, err)
 			err = conn.ReadJSON(&msg)
+			require.NoError(t, err)
+			err = conn.SetReadDeadline(time.Time{})
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "next", msg.Type)

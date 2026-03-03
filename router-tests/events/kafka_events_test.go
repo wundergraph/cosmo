@@ -711,10 +711,13 @@ func TestKafkaEvents(t *testing.T) {
 			}
 
 			// Events 1, 2, 11, and 12 should be included
+			expectedMessages := uint64(0)
 			for i := uint32(1); i < 13; i++ {
 				events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 				if i == 1 || i == 2 || i == 11 || i == 12 {
-					conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
+					expectedMessages++
+					xEnv.WaitForMessagesSent(expectedMessages, KafkaWaitTimeout)
+					conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 					gErr := conn.ReadJSON(&msg)
 					require.NoError(t, gErr)
 					require.Equal(t, "1", msg.ID)
@@ -778,10 +781,13 @@ func TestKafkaEvents(t *testing.T) {
 			}
 
 			// Events 1, 2, 11, and 12 should be included
+			expectedMessages := uint64(0)
 			for i := uint32(1); i < 13; i++ {
 				events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 				if i == 1 || i == 2 || i == 11 || i == 12 {
-					conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
+					expectedMessages++
+					xEnv.WaitForMessagesSent(expectedMessages, KafkaWaitTimeout)
+					conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 					gErr := conn.ReadJSON(&msg)
 					require.NoError(t, gErr)
 					require.Equal(t, "1", msg.ID)

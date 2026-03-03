@@ -373,7 +373,7 @@ jobs:
         working-directory: ./router-tests
         env:
           GOMAXPROCS: 4
-        run: make test-coverage test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=8m -p 1 --parallel 4" test_target="${{ matrix.test_target }}"
+        run: make test-coverage test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
 
       - name: Compute artifact name for codecov upload
         id: artifact_name
@@ -395,7 +395,7 @@ jobs:
         working-directory: ./router-tests
         env:
           GOMAXPROCS: 4
-        run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=8m -p 1 --parallel 4" test_target="${{ matrix.test_target }}"
+        run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
 
       - name: Upload flaky integration results to Codecov
         uses: ./.github/actions/codecov-upload-pr

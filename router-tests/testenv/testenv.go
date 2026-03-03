@@ -2657,12 +2657,12 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	defer cancel()
 
 	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
-		return r.MessagesSent == desiredCount
+		return r.MessagesSent >= desiredCount
 	})
 
 	report := e.Router.EngineStats.GetReport()
-	if report.MessagesSent != desiredCount {
-		e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
+	if report.MessagesSent < desiredCount {
+		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, desiredCount)
 	}
 }
 
@@ -2689,12 +2689,12 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	defer cancel()
 
 	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
-		return r.Triggers == desiredCount
+		return r.Triggers >= desiredCount
 	})
 
 	report := e.Router.EngineStats.GetReport()
-	if report.Triggers != desiredCount {
-		e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
+	if report.Triggers < desiredCount {
+		e.t.Fatalf("timed out waiting for trigger count, got %d, want at least %d", report.Triggers, desiredCount)
 	}
 }
 

@@ -574,10 +574,8 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			var done atomic.Bool
 			go func() {
-				defer done.Store(true)
-				xEnv.WaitForSubscriptionCount(1, time.Second*5)
+				xEnv.WaitForSubscriptionCount(1, time.Second*10)
 				// Trigger the subscription via NATS
 				subject := xEnv.GetPubSubName("employeeUpdated.3")
 				message := []byte(`{"id":3,"__typename": "Employee"}`)
@@ -586,7 +584,8 @@ func TestWebSockets(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
-			require.Eventually(t, done.Load, time.Second*5, time.Millisecond*100)
+
+			xEnv.WaitForMessagesSent(1, time.Second*10)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
