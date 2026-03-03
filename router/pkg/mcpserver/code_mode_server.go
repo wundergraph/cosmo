@@ -25,17 +25,16 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/yokoclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	toonformat "github.com/toon-format/toon-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
-	toonformat "github.com/toon-format/toon-go"
 	"go.uber.org/zap"
 )
 
 // CodeModeServerConfig holds all configuration for the Code Mode MCP server.
 type CodeModeServerConfig struct {
-	GraphName               string
 	ListenAddr              string
 	RequireMutationApproval bool
 	SandboxConfig           sandbox.ExecutionConfig
@@ -53,9 +52,8 @@ type CodeModeServer struct {
 	logger         *zap.Logger
 	transpiler     *sandbox.Transpiler
 	sandboxPool    *sandbox.Pool
-	httpClient     *http.Client
-	httpServer     *server.StreamableHTTPServer
-	rawHTTPServer  *http.Server
+	httpClient    *http.Client
+	rawHTTPServer *http.Server
 	yokoClient     yokoclient.YokoClient
 	tracer         trace.Tracer
 	execCounter    otelmetric.Int64Counter
@@ -71,7 +69,7 @@ type CodeModeServer struct {
 // NewCodeModeServer creates a new Code Mode MCP server.
 func NewCodeModeServer(cfg CodeModeServerConfig) (*CodeModeServer, error) {
 	if cfg.RouterGraphQLEndpoint == "" {
-		return nil, fmt.Errorf("router GraphQL endpoint is required")
+		return nil, errors.New("router GraphQL endpoint is required")
 	}
 	if !strings.Contains(cfg.RouterGraphQLEndpoint, "://") {
 		cfg.RouterGraphQLEndpoint = "http://" + cfg.RouterGraphQLEndpoint
@@ -186,7 +184,6 @@ func (s *CodeModeServer) Start() error {
 		}
 	}()
 
-	s.httpServer = streamableHTTPServer
 	s.rawHTTPServer = httpSrv
 	return nil
 }
@@ -280,6 +277,10 @@ func (s *CodeModeServer) handleSearch() server.ToolHandlerFunc {
 			status = "error"
 			return mcp.NewToolResultError("'prompts' must be a non-empty array of strings"), nil
 		}
+		if len(prompts) > maxPrompts {
+			status = "error"
+			return mcp.NewToolResultError(fmt.Sprintf("too many prompts: %d (max %d) — pass all prompts in one call", len(prompts), maxPrompts)), nil
+		}
 
 		if s.yokoClient == nil {
 			status = "error"
@@ -289,7 +290,7 @@ func (s *CodeModeServer) handleSearch() server.ToolHandlerFunc {
 		results, err := s.generateQueries(ctx, prompts)
 		if err != nil {
 			status = "error"
-			return mcp.NewToolResultError(fmt.Sprintf("Query generation failed: %s", err.Error())), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Query generation failed: %v", err)), nil
 		}
 
 		encoded, err := json.Marshal(results)
@@ -323,7 +324,7 @@ func (s *CodeModeServer) handleExecute() server.ToolHandlerFunc {
 		jsCode, err := s.transpiler.Transpile(code)
 		if err != nil {
 			status = "error"
-			return mcp.NewToolResultError(fmt.Sprintf("TypeScript compilation error: %s", err.Error())), nil
+			return mcp.NewToolResultError(fmt.Sprintf("TypeScript compilation error: %v", err)), nil
 		}
 
 		// Create a context for async functions (like executeOperationByHash with mutation approval).
@@ -342,7 +343,7 @@ func (s *CodeModeServer) handleExecute() server.ToolHandlerFunc {
 		result, err := s.sandboxPool.Execute(ctx, jsCode, nil, asyncFuncs, nil)
 		if err != nil {
 			status = "error"
-			return mcp.NewToolResultError(fmt.Sprintf("Sandbox execution error: %s", err.Error())), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Sandbox execution error: %v", err)), nil
 		}
 
 		return mcp.NewToolResultText(s.formatToolResult(result.Value)), nil
@@ -354,12 +355,12 @@ func (s *CodeModeServer) handleExecute() server.ToolHandlerFunc {
 func (s *CodeModeServer) executeOperationByHashFunc(ctx context.Context) func(args []any) (any, error) {
 	return func(args []any) (any, error) {
 		if len(args) == 0 {
-			return nil, fmt.Errorf("executeOperationByHash(hash, variables?) requires a hash string from search_graphql")
+			return nil, errors.New("executeOperationByHash(hash, variables?) requires a hash string from search_graphql")
 		}
 
 		hashStr, ok := args[0].(string)
 		if !ok {
-			return nil, fmt.Errorf("executeOperationByHash(hash, variables?) — first argument must be a hash string from search_graphql")
+			return nil, errors.New("executeOperationByHash(hash, variables?) — first argument must be a hash string from search_graphql")
 		}
 
 		queryStr, found := s.resolveQueryHash(hashStr)
@@ -411,7 +412,7 @@ func (s *CodeModeServer) executeOperationByHashFunc(ctx context.Context) func(ar
 			return nil, fmt.Errorf("failed to marshal GraphQL request: %w", err)
 		}
 
-		httpReq, err := http.NewRequestWithContext(ctx, "POST", s.config.RouterGraphQLEndpoint, bytes.NewReader(reqBody))
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, s.config.RouterGraphQLEndpoint, bytes.NewReader(reqBody))
 		if err != nil {
 			return nil, fmt.Errorf("failed to create HTTP request: %w", err)
 		}
@@ -515,7 +516,7 @@ func (s *CodeModeServer) requestMutationApproval(ctx context.Context, queryStr s
 
 // isMutation checks if a GraphQL query string contains a mutation operation.
 // If operationName is non-empty, only that operation is checked.
-func isMutation(queryStr string, operationName string) bool {
+func isMutation(queryStr, operationName string) bool {
 	doc, report := astparser.ParseGraphqlDocumentString(queryStr)
 	if report.HasErrors() {
 		return false
@@ -565,11 +566,11 @@ func (s *CodeModeServer) generateQueries(ctx context.Context, prompts []string) 
 	var wg sync.WaitGroup
 	for i, p := range prompts {
 		wg.Add(1)
-		go func(idx int, prompt string) {
+		go func() {
 			defer wg.Done()
-			results, err := s.yokoClient.Generate(ctx, prompt, schemaHash)
-			ch <- indexedResult{index: idx, results: results, err: err}
-		}(i, p)
+			results, err := s.yokoClient.Generate(ctx, p, schemaHash)
+			ch <- indexedResult{index: i, results: results, err: err}
+		}()
 	}
 	go func() { wg.Wait(); close(ch) }()
 
@@ -588,7 +589,7 @@ func (s *CodeModeServer) generateQueries(ctx context.Context, prompts []string) 
 		all = append(all, s.toQueryResultsWithHash(results)...)
 	}
 	if len(all) == 0 {
-		return nil, fmt.Errorf("all query generation prompts failed")
+		return nil, errors.New("all query generation prompts failed")
 	}
 	return all, nil
 }
@@ -618,16 +619,12 @@ func makeSnippet(hash string, variables map[string]any) string {
 	return fmt.Sprintf(`await executeOperationByHash("%s", %s)`, hash, string(varsJSON))
 }
 
-// SetHTTPClient allows setting a custom HTTP client (useful for testing).
-func (s *CodeModeServer) SetHTTPClient(client *http.Client) {
-	s.httpClient = client
-}
-
 // SetYokoClient allows setting a custom Yoko client (useful for testing).
 func (s *CodeModeServer) SetYokoClient(client yokoclient.YokoClient) {
 	s.yokoClient = client
 }
 
+const maxPrompts = 20
 const maxQueryStoreSize = 1000
 
 // storeQueryHash computes the xxhash64 of a query string, stores the
@@ -636,6 +633,7 @@ func (s *CodeModeServer) storeQueryHash(query string) string {
 	hash := strconv.FormatUint(xxhash.Sum64String(query), 16)
 	s.queryStoreMu.Lock()
 	if len(s.queryStore) >= maxQueryStoreSize {
+		s.logger.Warn("query hash store full, clearing all entries", zap.Int("size", len(s.queryStore)))
 		clear(s.queryStore)
 	}
 	s.queryStore[hash] = query
@@ -651,9 +649,8 @@ func (s *CodeModeServer) resolveQueryHash(hash string) (string, bool) {
 	return query, ok
 }
 
-// formatToolResult returns the sandbox result formatted for the MCP response.
-// When toon is true, the result is encoded as TOON (Token-Oriented Object Notation).
-// Falls back to JSON on encoding failure or when toon is false.
+// formatToolResult encodes the result as TOON (Token-Oriented Object Notation)
+// to reduce LLM token consumption. Falls back to raw JSON on encoding failure.
 func (s *CodeModeServer) formatToolResult(raw json.RawMessage) string {
 	var payload any
 	if err := json.Unmarshal(raw, &payload); err == nil {
@@ -665,7 +662,7 @@ func (s *CodeModeServer) formatToolResult(raw json.RawMessage) string {
 }
 
 // recordMetrics records counter and histogram metrics for a sandbox execution.
-func (s *CodeModeServer) recordMetrics(ctx context.Context, tool string, status string, start time.Time) {
+func (s *CodeModeServer) recordMetrics(ctx context.Context, tool, status string, start time.Time) {
 	attrs := otelmetric.WithAttributes(
 		attribute.String("mcp.tool", tool),
 		attribute.String("mcp.status", status),

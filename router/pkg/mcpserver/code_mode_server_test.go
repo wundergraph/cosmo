@@ -22,7 +22,6 @@ func newTestCodeModeServer(t *testing.T) *CodeModeServer {
 	t.Helper()
 
 	cfg := CodeModeServerConfig{
-		GraphName:               "test",
 		ListenAddr:              "localhost:0",
 		RequireMutationApproval: true,
 		SandboxConfig: sandbox.ExecutionConfig{

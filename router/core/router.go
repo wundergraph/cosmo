@@ -1009,7 +1009,6 @@ func (r *Router) bootstrap(ctx context.Context) (bootstrapErr error) {
 		}
 
 		codeModeCfg := mcpserver.CodeModeServerConfig{
-			GraphName:               r.mcp.GraphName,
 			ListenAddr:              r.mcp.CodeMode.Server.ListenAddr,
 			RequireMutationApproval: r.mcp.CodeMode.RequireMutationApproval,
 			SandboxConfig: sandbox.ExecutionConfig{
