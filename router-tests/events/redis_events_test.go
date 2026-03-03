@@ -103,6 +103,7 @@ func TestRedisEvents(t *testing.T) {
 
 			// produce a message
 			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.WaitForMessagesSent(1, RedisWaitTimeout)
 
 			// process the message
 			select {
@@ -588,6 +589,7 @@ func TestRedisEvents(t *testing.T) {
 
 			// produce a message so that the subscription is triggered
 			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.WaitForMessagesSent(1, RedisWaitTimeout)
 
 			// get the client response
 			var clientRet struct {
@@ -828,6 +830,7 @@ func TestFlakyRedisEvents(t *testing.T) {
 
 			// produce a message so that the subscription is triggered
 			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.WaitForMessagesSent(1, RedisWaitTimeout)
 
 			// get the client response
 			var clientRet struct {

@@ -461,6 +461,7 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 
 			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.WaitForMessagesSent(1, KafkaWaitTimeout)
 
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(t *testing.T, resp struct {
 				response *http.Response

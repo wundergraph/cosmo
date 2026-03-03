@@ -291,6 +291,8 @@ func TestWebSockets(t *testing.T) {
 				require.NoError(t, err)
 			}()
 
+			xEnv.WaitForMessagesSent(1, time.Second*10)
+
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
@@ -355,6 +357,9 @@ func TestWebSockets(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
+
+			xEnv.WaitForMessagesSent(1, time.Second*10)
+
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
@@ -423,6 +428,8 @@ func TestWebSockets(t *testing.T) {
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 			}()
+
+			xEnv.WaitForMessagesSent(1, time.Second*10)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
