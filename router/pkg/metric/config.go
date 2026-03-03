@@ -78,6 +78,8 @@ func (e *EngineStatsConfig) Enabled() bool {
 type LogExporterConfig struct {
 	Enabled        bool
 	ExcludeMetrics []*regexp.Regexp
+	// IncludeMetrics is an allowlist. If set, only metrics matching these patterns are logged.
+	IncludeMetrics []*regexp.Regexp
 	// ExportInterval overrides the default export interval. If zero, the default interval is used.
 	ExportInterval time.Duration
 }
@@ -95,8 +97,8 @@ type OpenTelemetry struct {
 	// Metric labels to exclude from the OTLP exporter.
 	ExcludeMetricLabels []*regexp.Regexp
 	// TestReader is used for testing purposes. If set, the reader will be used instead of the configured exporters.
-	TestReader    sdkmetric.Reader
-	Streams       bool
+	TestReader  sdkmetric.Reader
+	Streams     bool
 	LogExporter LogExporterConfig
 }
 

@@ -150,6 +150,7 @@ type Metrics struct {
 type MetricsLogExporter struct {
 	Enabled        bool       `yaml:"enabled" envDefault:"false"`
 	ExcludeMetrics RegExArray `yaml:"exclude_metrics,omitempty"`
+	IncludeMetrics RegExArray `yaml:"include_metrics,omitempty"`
 }
 
 type MetricsOTLP struct {

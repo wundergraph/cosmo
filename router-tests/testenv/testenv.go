@@ -263,6 +263,7 @@ type EngineStatOptions struct {
 type MetricsLogExporterOptions struct {
 	Enabled        bool
 	ExcludeMetrics []*regexp.Regexp
+	IncludeMetrics []*regexp.Regexp
 	ExportInterval time.Duration
 }
 
@@ -1610,6 +1611,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					LogExporter: config.MetricsLogExporter{
 						Enabled:        testConfig.MetricOptions.LogExporter.Enabled,
 						ExcludeMetrics: testConfig.MetricOptions.LogExporter.ExcludeMetrics,
+						IncludeMetrics: testConfig.MetricOptions.LogExporter.IncludeMetrics,
 					},
 				},
 			},

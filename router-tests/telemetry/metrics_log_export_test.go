@@ -155,6 +155,137 @@ func TestMetricsLogExporter(t *testing.T) {
 		})
 	})
 
+	t.Run("includes only matching metrics in logs", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			MetricOptions: testenv.MetricOptions{
+				LogExporter: testenv.MetricsLogExporterOptions{
+					Enabled:        true,
+					ExportInterval: 100 * time.Millisecond,
+					IncludeMetrics: []*regexp.Regexp{
+						regexp.MustCompile(`^router\.http\.requests$`),
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+
+			// Wait for the log exporter to log the included metric
+			require.Eventually(t, func() bool {
+				metricLogs := xEnv.Observer().FilterMessage("Metric").All()
+				return findMetricLog(metricLogs, "router.http.requests") != nil
+			}, 5*time.Second, 100*time.Millisecond)
+
+			// Verify the included metric was logged
+			metricLogs := xEnv.Observer().FilterMessage("Metric").All()
+			requestsLog := findMetricLog(metricLogs, "router.http.requests")
+			require.NotNil(t, requestsLog, "expected included metric to be logged")
+
+			// Verify other metrics were NOT logged (only the included one should be)
+			for _, entry := range metricLogs {
+				name := entry.ContextMap()["name"].(string)
+				require.Equal(t, "router.http.requests", name)
+			}
+
+			// Verify other metrics still exist in the reader
+			rm := metricdata.ResourceMetrics{}
+			err := metricReader.Collect(t.Context(), &rm)
+			require.NoError(t, err)
+
+			scopeMetric := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			require.NotNil(t, scopeMetric)
+
+			durationMetric := findMetricByName(scopeMetric.Metrics, "router.http.request.duration_milliseconds")
+			require.NotNil(t, durationMetric, "non-included metric should still exist in reader")
+		})
+	})
+
+	t.Run("include_metrics with multiple patterns logs all matching", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.Run(t, &testenv.Config{
+			MetricReader: metricReader,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			MetricOptions: testenv.MetricOptions{
+				LogExporter: testenv.MetricsLogExporterOptions{
+					Enabled:        true,
+					ExportInterval: 100 * time.Millisecond,
+					IncludeMetrics: []*regexp.Regexp{
+						regexp.MustCompile(`^router\.http\.requests$`),
+						regexp.MustCompile(`^router\.http\.request\.duration_milliseconds$`),
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+
+			// Wait for both included metrics to appear
+			require.Eventually(t, func() bool {
+				metricLogs := xEnv.Observer().FilterMessage("Metric").All()
+				return findMetricLog(metricLogs, "router.http.requests") != nil &&
+					findMetricLog(metricLogs, "router.http.request.duration_milliseconds") != nil
+			}, 5*time.Second, 100*time.Millisecond)
+
+			// Verify only included metrics were logged
+			metricLogs := xEnv.Observer().FilterMessage("Metric").All()
+			allowedNames := map[string]bool{
+				"router.http.requests":                      true,
+				"router.http.request.duration_milliseconds": true,
+			}
+			for _, entry := range metricLogs {
+				name := entry.ContextMap()["name"].(string)
+				require.True(t, allowedNames[name], "expected only included metrics to be logged, but found %q", name)
+			}
+		})
+	})
+
+	t.Run("fails on startup when both include and exclude are set", func(t *testing.T) {
+		t.Parallel()
+
+		metricReader := metric.NewManualReader()
+
+		testenv.FailsOnStartup(t, &testenv.Config{
+			MetricReader: metricReader,
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.InfoLevel,
+			},
+			MetricOptions: testenv.MetricOptions{
+				LogExporter: testenv.MetricsLogExporterOptions{
+					Enabled:        true,
+					ExportInterval: 100 * time.Millisecond,
+					ExcludeMetrics: []*regexp.Regexp{
+						regexp.MustCompile(`^router\.http\.requests$`),
+					},
+					IncludeMetrics: []*regexp.Regexp{
+						regexp.MustCompile(`^router\.http\.request\.duration_milliseconds$`),
+					},
+				},
+			},
+		}, func(t *testing.T, err error) {
+			require.Error(t, err, "metrics log exporter: exclude_metrics and include_metrics cannot be used together, use only one")
+		})
+	})
+
 	t.Run("does not log when disabled", func(t *testing.T) {
 		t.Parallel()
 

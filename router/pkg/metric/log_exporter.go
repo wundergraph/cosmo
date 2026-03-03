@@ -17,12 +17,14 @@ import (
 type logExporter struct {
 	logger         *zap.Logger
 	excludeMetrics []*regexp.Regexp
+	includeMetrics []*regexp.Regexp
 }
 
-func newLogExporter(logger *zap.Logger, excludeMetrics []*regexp.Regexp) *logExporter {
+func newLogExporter(logger *zap.Logger, excludeMetrics, includeMetrics []*regexp.Regexp) *logExporter {
 	return &logExporter{
 		logger:         logger,
 		excludeMetrics: excludeMetrics,
+		includeMetrics: includeMetrics,
 	}
 }
 
@@ -58,24 +60,33 @@ func (s *logExporter) Export(_ context.Context, rm *metricdata.ResourceMetrics) 
 
 	for _, sm := range rm.ScopeMetrics {
 		for _, m := range sm.Metrics {
-			// If metric is excluded by name, skip logging it
-			if isMetricExcluded(m.Name, s.excludeMetrics) {
-				continue
+			if s.shouldLogMetric(m.Name) {
+				logMetricData(s.logger, m)
 			}
-			logMetricData(s.logger, m)
 		}
 	}
 
 	return nil
 }
 
-func isMetricExcluded(name string, excludeMetrics []*regexp.Regexp) bool {
-	for _, re := range excludeMetrics {
+// shouldLogMetric returns true if the metric should be logged.
+// If includeMetrics is set, only metrics matching at least one include pattern are logged.
+// Otherwise, metrics matching any exclude pattern are skipped.
+func (s *logExporter) shouldLogMetric(name string) bool {
+	if len(s.includeMetrics) > 0 {
+		for _, re := range s.includeMetrics {
+			if re.MatchString(name) {
+				return true
+			}
+		}
+		return false
+	}
+	for _, re := range s.excludeMetrics {
 		if re.MatchString(name) {
-			return true
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func logMetricData(logger *zap.Logger, m metricdata.Metrics) {

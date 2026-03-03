@@ -286,7 +286,10 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 	}
 
 	if c.OpenTelemetry.LogExporter.Enabled {
-		logExp := newLogExporter(log, c.OpenTelemetry.LogExporter.ExcludeMetrics)
+		if len(c.OpenTelemetry.LogExporter.ExcludeMetrics) > 0 && len(c.OpenTelemetry.LogExporter.IncludeMetrics) > 0 {
+			return nil, fmt.Errorf("metrics log exporter: exclude_metrics and include_metrics cannot be used together, use only one")
+		}
+		logExp := newLogExporter(log, c.OpenTelemetry.LogExporter.ExcludeMetrics, c.OpenTelemetry.LogExporter.IncludeMetrics)
 		exportInterval := defaultExportInterval
 		if c.OpenTelemetry.LogExporter.ExportInterval > 0 {
 			exportInterval = c.OpenTelemetry.LogExporter.ExportInterval
@@ -297,7 +300,7 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 				sdkmetric.WithInterval(exportInterval),
 			),
 		))
-		log.Warn("Metrics log exporter enabled")
+		log.Warn("Metrics log exporter is enabled. Expect increased log volume.")
 	}
 
 	mp := sdkmetric.NewMeterProvider(opts...)
