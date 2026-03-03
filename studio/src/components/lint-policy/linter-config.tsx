@@ -77,8 +77,10 @@ export const SeverityDropdown = ({
   );
 };
 
-const findRuleByName = (rules: LintConfig[], candidateName: string): LintConfig | undefined => (
-  rules.find((l) => l.ruleName === candidateName))
+const findRuleByName = (
+  rules: LintConfig[],
+  candidateName: string,
+): LintConfig | undefined => rules.find((l) => l.ruleName === candidateName);
 
 const ruleHasErrorSeverity = (rules: LintConfig[], name: string): boolean =>
   findRuleByName(rules, name)?.severityLevel === LintSeverity.error;
@@ -117,18 +119,23 @@ export const LinterConfig = ({
     setSelectedLintRules((prevState) => {
       const index = prevState.findIndex((rule) => rule.ruleName === name);
       if (index === -1) {
-        return prevState
+        return prevState;
       }
 
       const updatedRule = new LintConfig({
         ...prevState[index],
-        severityLevel: value === 'error' ? LintSeverity.error : LintSeverity.warn,
-      })
+        severityLevel:
+          value === "error" ? LintSeverity.error : LintSeverity.warn,
+      });
 
-      const newRules = [...prevState.slice(0, index), updatedRule, ...prevState.slice(index + 1)]
+      const newRules = [
+        ...prevState.slice(0, index),
+        updatedRule,
+        ...prevState.slice(index + 1),
+      ];
       return newRules;
-    })
-  }
+    });
+  };
 
   useEffect(() => {
     setLinterEnabled(data.linterEnabled);
@@ -340,8 +347,16 @@ export const LinterConfig = ({
                                   selectedLintRules,
                                   rule.name,
                                 )}
-                                onChange={(value) => handleRuleSeverityDropdownChange(rule.name, value)}
-                                disabled={!data.linterEnabled || !findRuleByName(selectedLintRules, rule.name)}
+                                onChange={(value) =>
+                                  handleRuleSeverityDropdownChange(
+                                    rule.name,
+                                    value,
+                                  )
+                                }
+                                disabled={
+                                  !data.linterEnabled ||
+                                  !findRuleByName(selectedLintRules, rule.name)
+                                }
                               />
                             </div>
                           </div>
