@@ -342,7 +342,7 @@ func (pg *PlanGenerator) loadConfiguration(routerConfig *nodev1.RouterConfig, lo
 			if _, ok := redisSources[providerId]; !ok {
 				redisSources[providerId] = nil
 				routerEngineConfig.Events.Providers.Redis = append(routerEngineConfig.Events.Providers.Redis, config.RedisEventSource{
-					ID:   providerId,
+					ID: providerId,
 				})
 			}
 		}
