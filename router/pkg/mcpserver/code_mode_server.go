@@ -62,7 +62,7 @@ type CodeModeServer struct {
 	execDuration   otelmetric.Float64Histogram
 
 	// queryStore maps xxhash64 hex hashes to query strings.
-	// Populated by generateQueriesFunc, read by graphqlFunc.
+	// Populated by generateQueries, read by executeOperationByHashFunc.
 	// Bounded to maxQueryStoreSize entries; cleared entirely when full.
 	queryStoreMu sync.RWMutex
 	queryStore   map[string]string
@@ -214,9 +214,10 @@ func (s *CodeModeServer) registerTools() {
 	s.mcpServer.AddTool(
 		mcp.NewTool(searchToolName,
 			mcp.WithDescription(searchToolDescription),
-			mcp.WithString("code",
+			mcp.WithArray("prompts",
 				mcp.Required(),
-				mcp.Description("An async arrow function. Example: async () => { return await generateQuery('find all users'); }"),
+				mcp.Description("Natural language descriptions of the GraphQL operations you need."),
+				mcp.WithStringItems(),
 			),
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:        "Search GraphQL Supergraph",
@@ -232,30 +233,19 @@ func (s *CodeModeServer) registerTools() {
 			mcp.WithDescription(executeToolDescription),
 			mcp.WithString("code",
 				mcp.Required(),
-				mcp.Description("An async arrow function. Example: async () => { const { data } = await graphql({ query: '{ users { id } }' }); return data; }"),
+				mcp.Description("Async arrow function (NOT a hash). The ONLY global is executeOperationByHash(hash, variables?). Example: async () => { return await executeOperationByHash('hashFromSearch'); }"),
 			),
-			),
+			mcp.WithToolAnnotation(mcp.ToolAnnotation{
+				Title:           "Execute GraphQL Operations",
+				ReadOnlyHint:    mcp.ToBoolPtr(false),
+				DestructiveHint: mcp.ToBoolPtr(false),
+			}),
+		),
 		s.handleExecute(),
 	)
 }
 
 func (s *CodeModeServer) registerResources() {
-	s.mcpServer.AddResource(
-		mcp.NewResource(searchAPIResourceURI, "Search API Type Definitions",
-			mcp.WithResourceDescription("TypeScript type definitions for the search tool sandbox API"),
-			mcp.WithMIMEType("text/typescript"),
-		),
-		func(ctx context.Context, request mcp.ReadResourceRequest) ([]mcp.ResourceContents, error) {
-			return []mcp.ResourceContents{
-				mcp.TextResourceContents{
-					URI:      searchAPIResourceURI,
-					MIMEType: "text/typescript",
-					Text:     searchTypeDefs,
-				},
-			}, nil
-		},
-	)
-
 	s.mcpServer.AddResource(
 		mcp.NewResource(executeAPIResourceURI, "Execute API Type Definitions",
 			mcp.WithResourceDescription("TypeScript type definitions for the execute tool sandbox API"),
@@ -273,55 +263,42 @@ func (s *CodeModeServer) registerResources() {
 	)
 }
 
-// searchPreamble is prepended to transpiled search code to expose generateQueries (and generateQuery alias).
-const searchPreamble = `var generateQueries = function(...prompts) { return __generate_queries(...prompts); };
-var generateQuery = function(prompt) { return __generate_queries(prompt); };
-`
-
 // handleSearch returns the MCP tool handler for the search tool.
 func (s *CodeModeServer) handleSearch() server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		ctx, span := s.tracer.Start(ctx, "MCP Code Mode - Search",
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attribute.String("mcp.tool", "search")),
+			trace.WithAttributes(attribute.String("mcp.tool", "search_graphql")),
 		)
 		defer span.End()
 		start := time.Now()
 		status := "success"
-		defer func() { s.recordMetrics(ctx, "search", status, start) }()
+		defer func() { s.recordMetrics(ctx, "search_graphql", status, start) }()
 
-		args := request.GetArguments()
-		code, ok := args["code"].(string)
-		if !ok || strings.TrimSpace(code) == "" {
+		prompts, err := request.RequireStringSlice("prompts")
+		if err != nil || len(prompts) == 0 {
 			status = "error"
-			return mcp.NewToolResultError("'code' argument is required and must be a non-empty string"), nil
+			return mcp.NewToolResultError("'prompts' must be a non-empty array of strings"), nil
 		}
-		jsCode, err := s.transpiler.Transpile(code)
+
+		if s.yokoClient == nil {
+			status = "error"
+			return mcp.NewToolResultError("query generation is not available"), nil
+		}
+
+		results, err := s.generateQueries(ctx, prompts)
 		if err != nil {
 			status = "error"
-			return mcp.NewToolResultError(fmt.Sprintf("TypeScript compilation error: %s", err.Error())), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Query generation failed: %s", err.Error())), nil
 		}
 
-		var asyncFuncs []sandbox.AsyncFunc
-		var preamble string
-		if s.yokoClient != nil {
-			asyncFuncs = append(asyncFuncs, sandbox.AsyncFunc{
-				Name: "__generate_queries",
-				Fn:   s.generateQueriesFunc(ctx),
-			})
-			preamble = searchPreamble
-		}
-
-		jsCode = "(async function(){" + preamble + "return " +
-			strings.TrimRight(jsCode, "; \t\n\r") + ";})()"
-
-		result, err := s.sandboxPool.Execute(ctx, jsCode, nil, asyncFuncs, nil)
+		encoded, err := json.Marshal(results)
 		if err != nil {
 			status = "error"
-			return mcp.NewToolResultError(fmt.Sprintf("Sandbox execution error: %s", err.Error())), nil
+			return mcp.NewToolResultError("failed to encode results"), nil
 		}
 
-		return mcp.NewToolResultText(s.formatToolResult(result.Value)), nil
+		return mcp.NewToolResultText(s.formatToolResult(encoded)), nil
 	}
 }
 
@@ -330,18 +307,18 @@ func (s *CodeModeServer) handleExecute() server.ToolHandlerFunc {
 	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		ctx, span := s.tracer.Start(ctx, "MCP Code Mode - Execute",
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attribute.String("mcp.tool", "execute")),
+			trace.WithAttributes(attribute.String("mcp.tool", "execute_graphql")),
 		)
 		defer span.End()
 		start := time.Now()
 		status := "success"
-		defer func() { s.recordMetrics(ctx, "execute", status, start) }()
+		defer func() { s.recordMetrics(ctx, "execute_graphql", status, start) }()
 
 		args := request.GetArguments()
 		code, ok := args["code"].(string)
 		if !ok || strings.TrimSpace(code) == "" {
 			status = "error"
-			return mcp.NewToolResultError("'code' argument is required and must be a non-empty string"), nil
+			return mcp.NewToolResultError("'code' must be an async arrow function, e.g.: async () => { return await executeOperationByHash(\"hashFromSearch\"); }"), nil
 		}
 		jsCode, err := s.transpiler.Transpile(code)
 		if err != nil {
@@ -349,7 +326,7 @@ func (s *CodeModeServer) handleExecute() server.ToolHandlerFunc {
 			return mcp.NewToolResultError(fmt.Sprintf("TypeScript compilation error: %s", err.Error())), nil
 		}
 
-		// Create a context for async functions (like graphql with mutation approval).
+		// Create a context for async functions (like executeOperationByHash with mutation approval).
 		// This context is cancelled after sandbox execution completes, ensuring
 		// pending elicitation requests are cleaned up on sandbox timeout.
 		asyncCtx, asyncCancel := context.WithCancel(ctx)
@@ -357,8 +334,8 @@ func (s *CodeModeServer) handleExecute() server.ToolHandlerFunc {
 
 		asyncFuncs := []sandbox.AsyncFunc{
 			{
-				Name: "graphql",
-				Fn:   s.graphqlFunc(asyncCtx),
+				Name: "executeOperationByHash",
+				Fn:   s.executeOperationByHashFunc(asyncCtx),
 			},
 		}
 
@@ -372,37 +349,33 @@ func (s *CodeModeServer) handleExecute() server.ToolHandlerFunc {
 	}
 }
 
-// graphqlFunc creates the async graphql() host function for the execute sandbox.
-func (s *CodeModeServer) graphqlFunc(ctx context.Context) func(args []any) (any, error) {
+// executeOperationByHashFunc creates the async executeOperationByHash() host function for the execute sandbox.
+// Signature: executeOperationByHash(hash: string, variables?: Record<string, any>): Promise<GraphQLResponse>
+func (s *CodeModeServer) executeOperationByHashFunc(ctx context.Context) func(args []any) (any, error) {
 	return func(args []any) (any, error) {
 		if len(args) == 0 {
-			return nil, fmt.Errorf("graphql requires an options argument")
+			return nil, fmt.Errorf("executeOperationByHash(hash, variables?) requires a hash string from search_graphql")
 		}
 
-		optsMap, ok := args[0].(map[string]any)
+		hashStr, ok := args[0].(string)
 		if !ok {
-			return nil, fmt.Errorf("graphql requires an object argument with 'query' or 'hash' field")
+			return nil, fmt.Errorf("executeOperationByHash(hash, variables?) — first argument must be a hash string from search_graphql")
 		}
 
-		queryStr, _ := optsMap["query"].(string)
+		queryStr, found := s.resolveQueryHash(hashStr)
+		if !found {
+			return nil, fmt.Errorf("unknown query hash %q — use search_graphql to get valid hashes", hashStr)
+		}
 
-		// Resolve query from hash if no query text provided
-		if queryStr == "" {
-			hashStr, _ := optsMap["hash"].(string)
-			if hashStr == "" {
-				return nil, fmt.Errorf("graphql options must include a 'query' string or a 'hash' from generateQuery")
-			}
-			resolved, found := s.resolveQueryHash(hashStr)
-			if !found {
-				return nil, fmt.Errorf("unknown query hash %q — hash may have expired or be from a different session", hashStr)
-			}
-			queryStr = resolved
+		// Optional variables as second argument
+		var variables map[string]any
+		if len(args) > 1 {
+			variables, _ = args[1].(map[string]any)
 		}
 
 		// Check for mutation and require approval via MCP elicitation
-		opName, _ := optsMap["operationName"].(string)
-		if s.config.RequireMutationApproval && isMutation(queryStr, opName) {
-			approved, reason, err := s.requestMutationApproval(ctx, queryStr, optsMap["variables"])
+		if s.config.RequireMutationApproval && isMutation(queryStr, "") {
+			approved, reason, err := s.requestMutationApproval(ctx, queryStr, variables)
 			if err != nil {
 				// Elicitation not supported by client — decline with reason
 				return map[string]any{
@@ -429,11 +402,8 @@ func (s *CodeModeServer) graphqlFunc(ctx context.Context) func(args []any) (any,
 		gqlReq := map[string]any{
 			"query": queryStr,
 		}
-		if vars, ok := optsMap["variables"]; ok {
-			gqlReq["variables"] = vars
-		}
-		if opName, ok := optsMap["operationName"].(string); ok {
-			gqlReq["operationName"] = opName
+		if variables != nil {
+			gqlReq["variables"] = variables
 		}
 
 		reqBody, err := json.Marshal(gqlReq)
@@ -562,94 +532,90 @@ func isMutation(queryStr string, operationName string) bool {
 }
 
 // queryResultWithHash extends yokoclient.QueryResult with a server-computed hash
-// for use in the sandbox return value.
+// and a ready-to-use JS snippet for execute_graphql.
 type queryResultWithHash struct {
 	Query       string         `json:"query"`
 	Variables   map[string]any `json:"variables,omitempty"`
 	Description string         `json:"description"`
 	Hash        string         `json:"hash"`
+	Execute     string         `json:"execute"`
 }
 
-// generateQueriesFunc creates the async generateQueries() host function for the search sandbox.
-// Accepts variadic prompt strings and fires Yoko API calls in parallel for multiple prompts.
-// Individual prompt failures are tolerated — only fails if all prompts fail.
-func (s *CodeModeServer) generateQueriesFunc(ctx context.Context) func(args []any) (any, error) {
-	return func(args []any) (any, error) {
-		if len(args) == 0 {
-			return nil, fmt.Errorf("generateQueries requires at least one prompt string argument")
-		}
+// generateQueries calls the Yoko API for each prompt and returns results with hashes and snippets.
+// Multiple prompts are executed in parallel; individual failures are tolerated.
+func (s *CodeModeServer) generateQueries(ctx context.Context, prompts []string) ([]queryResultWithHash, error) {
+	schemaHash := "" // TODO: compute from schema document for cache invalidation
 
-		prompts := make([]string, len(args))
-		for i, a := range args {
-			p, ok := a.(string)
-			if !ok || strings.TrimSpace(p) == "" {
-				return nil, fmt.Errorf("generateQueries argument %d must be a non-empty string", i)
-			}
-			prompts[i] = p
+	// Single prompt — skip goroutine overhead
+	if len(prompts) == 1 {
+		results, err := s.yokoClient.Generate(ctx, prompts[0], schemaHash)
+		if err != nil {
+			return nil, fmt.Errorf("query generation failed: %w", err)
 		}
-
-		schemaHash := "" // TODO: compute from schema document for cache invalidation
-
-		// Single prompt — skip goroutine overhead
-		if len(prompts) == 1 {
-			results, err := s.yokoClient.Generate(ctx, prompts[0], schemaHash)
-			if err != nil {
-				return nil, fmt.Errorf("query generation failed: %w", err)
-			}
-			return s.toQueryResultsWithHash(results), nil
-		}
-
-		// Multiple prompts — parallel execution, individual failures tolerated
-		type indexedResult struct {
-			index   int
-			results []yokoclient.QueryResult
-			err     error
-		}
-		ch := make(chan indexedResult, len(prompts))
-		var wg sync.WaitGroup
-		for i, p := range prompts {
-			wg.Add(1)
-			go func(idx int, prompt string) {
-				defer wg.Done()
-				results, err := s.yokoClient.Generate(ctx, prompt, schemaHash)
-				ch <- indexedResult{index: idx, results: results, err: err}
-			}(i, p)
-		}
-		go func() { wg.Wait(); close(ch) }()
-
-		ordered := make([][]yokoclient.QueryResult, len(prompts))
-		for r := range ch {
-			if r.err != nil {
-				s.logger.Warn("query generation failed for prompt",
-					zap.Int("index", r.index), zap.Error(r.err))
-				continue
-			}
-			ordered[r.index] = r.results
-		}
-
-		var all []queryResultWithHash
-		for _, results := range ordered {
-			all = append(all, s.toQueryResultsWithHash(results)...)
-		}
-		if len(all) == 0 {
-			return nil, fmt.Errorf("all query generation prompts failed")
-		}
-		return all, nil
+		return s.toQueryResultsWithHash(results), nil
 	}
+
+	// Multiple prompts — parallel execution, individual failures tolerated
+	type indexedResult struct {
+		index   int
+		results []yokoclient.QueryResult
+		err     error
+	}
+	ch := make(chan indexedResult, len(prompts))
+	var wg sync.WaitGroup
+	for i, p := range prompts {
+		wg.Add(1)
+		go func(idx int, prompt string) {
+			defer wg.Done()
+			results, err := s.yokoClient.Generate(ctx, prompt, schemaHash)
+			ch <- indexedResult{index: idx, results: results, err: err}
+		}(i, p)
+	}
+	go func() { wg.Wait(); close(ch) }()
+
+	ordered := make([][]yokoclient.QueryResult, len(prompts))
+	for r := range ch {
+		if r.err != nil {
+			s.logger.Warn("query generation failed for prompt",
+				zap.Int("index", r.index), zap.Error(r.err))
+			continue
+		}
+		ordered[r.index] = r.results
+	}
+
+	var all []queryResultWithHash
+	for _, results := range ordered {
+		all = append(all, s.toQueryResultsWithHash(results)...)
+	}
+	if len(all) == 0 {
+		return nil, fmt.Errorf("all query generation prompts failed")
+	}
+	return all, nil
 }
 
 // toQueryResultsWithHash converts yokoclient results to queryResultWithHash, storing hashes.
 func (s *CodeModeServer) toQueryResultsWithHash(results []yokoclient.QueryResult) []queryResultWithHash {
 	out := make([]queryResultWithHash, len(results))
 	for i, r := range results {
+		hash := s.storeQueryHash(r.Query)
 		out[i] = queryResultWithHash{
 			Query:       r.Query,
 			Variables:   r.Variables,
 			Description: r.Description,
-			Hash:        s.storeQueryHash(r.Query),
+			Hash:        hash,
+			Execute:     makeSnippet(hash, r.Variables),
 		}
 	}
 	return out
+}
+
+// makeSnippet generates a JS code snippet showing how to call executeOperationByHash.
+func makeSnippet(hash string, variables map[string]any) string {
+	if len(variables) == 0 {
+		return fmt.Sprintf(`await executeOperationByHash("%s")`, hash)
+	}
+	varsJSON, _ := json.Marshal(variables)
+	return fmt.Sprintf(`await executeOperationByHash("%s", %s)`, hash, string(varsJSON))
 }
 
 // SetHTTPClient allows setting a custom HTTP client (useful for testing).

@@ -54,12 +54,16 @@ func newCodeModeServerWithSchema(t *testing.T, cfg CodeModeServerConfig) (*CodeM
 	return srv, nil
 }
 
-func callSearchTool(t *testing.T, srv *CodeModeServer, code string) *mcp.CallToolResult {
+func callSearchTool(t *testing.T, srv *CodeModeServer, prompts ...string) *mcp.CallToolResult {
 	t.Helper()
 	handler := srv.handleSearch()
 	req := mcp.CallToolRequest{}
-	req.Params.Name = "search"
-	req.Params.Arguments = map[string]any{"code": code}
+	req.Params.Name = "search_graphql"
+	promptsAny := make([]any, len(prompts))
+	for i, p := range prompts {
+		promptsAny[i] = p
+	}
+	req.Params.Arguments = map[string]any{"prompts": promptsAny}
 	result, err := handler(context.Background(), req)
 	require.NoError(t, err)
 	return result
@@ -69,7 +73,7 @@ func callExecuteTool(t *testing.T, srv *CodeModeServer, code string) *mcp.CallTo
 	t.Helper()
 	handler := srv.handleExecute()
 	req := mcp.CallToolRequest{}
-	req.Params.Name = "execute"
+	req.Params.Name = "execute_graphql"
 	req.Params.Arguments = map[string]any{"code": code}
 	result, err := handler(context.Background(), req)
 	require.NoError(t, err)
@@ -96,38 +100,21 @@ func TestCodeModeServer_NewPrependsHTTP(t *testing.T) {
 
 // --- Search tool tests ---
 
-func TestSearch_EmptyCode(t *testing.T) {
+func TestSearch_EmptyPrompts(t *testing.T) {
 	srv := newTestCodeModeServer(t)
-	result := callSearchTool(t, srv, "")
-	assert.True(t, result.IsError)
-}
-
-func TestSearch_InvalidTypeScript(t *testing.T) {
-	srv := newTestCodeModeServer(t)
-	result := callSearchTool(t, srv, "async () => { const x = ")
-	assert.True(t, result.IsError)
-	// Should contain a user-friendly error, not stack traces
-	text := result.Content[0].(mcp.TextContent).Text
-	assert.Contains(t, text, "TypeScript compilation error")
-}
-
-func TestSearch_SandboxTimeout(t *testing.T) {
-	cfg := CodeModeServerConfig{
-		SandboxConfig: sandbox.ExecutionConfig{
-			Timeout:        100 * time.Millisecond,
-			MaxMemoryMB:    16,
-			MaxOutputBytes: 1024 * 1024,
-		},
-		Logger:                zap.NewNop(),
-		RouterGraphQLEndpoint: "http://localhost:4000/graphql",
-	}
-	srv, err := newCodeModeServerWithSchema(t, cfg)
-	require.NoError(t, err)
-
-	result := callSearchTool(t, srv, `async () => { while(true) {} }`)
+	result := callSearchTool(t, srv)
 	assert.True(t, result.IsError)
 	text := result.Content[0].(mcp.TextContent).Text
-	assert.Contains(t, text, "Sandbox execution error")
+	assert.Contains(t, text, "non-empty array")
+}
+
+func TestSearch_NoYokoClient(t *testing.T) {
+	srv := newTestCodeModeServer(t)
+	// No yokoClient set — should return error
+	result := callSearchTool(t, srv, "find all users")
+	assert.True(t, result.IsError)
+	text := result.Content[0].(mcp.TextContent).Text
+	assert.Contains(t, text, "not available")
 }
 
 // --- Execute tool tests ---
@@ -168,10 +155,11 @@ func TestExecute_GraphQL(t *testing.T) {
 	srv, err := newCodeModeServerWithSchema(t, cfg)
 	require.NoError(t, err)
 
-	result := callExecuteTool(t, srv, `async () => {
-		const result = graphql({ query: "{ users { id name } }" });
+	hash := srv.storeQueryHash("{ users { id name } }")
+	result := callExecuteTool(t, srv, fmt.Sprintf(`async () => {
+		const result = executeOperationByHash("%s");
 		return result;
-	}`)
+	}`, hash))
 	require.False(t, result.IsError, "unexpected error: %+v", result.Content)
 
 	text := result.Content[0].(mcp.TextContent).Text
@@ -183,10 +171,11 @@ func TestExecute_GraphQL(t *testing.T) {
 func TestExecute_MutationDeclined(t *testing.T) {
 	srv := newTestCodeModeServer(t)
 
-	result := callExecuteTool(t, srv, `async () => {
-		const result = graphql({ query: "mutation { createUser(input: {name: \"test\", email: \"test@test.com\"}) { id } }" });
+	hash := srv.storeQueryHash(`mutation { createUser(input: {name: "test", email: "test@test.com"}) { id } }`)
+	result := callExecuteTool(t, srv, fmt.Sprintf(`async () => {
+		const result = executeOperationByHash("%s");
 		return result;
-	}`)
+	}`, hash))
 	require.False(t, result.IsError)
 
 	text := result.Content[0].(mcp.TextContent).Text
@@ -213,10 +202,11 @@ func TestExecute_MutationAllowed(t *testing.T) {
 	srv, err := newCodeModeServerWithSchema(t, cfg)
 	require.NoError(t, err)
 
-	result := callExecuteTool(t, srv, `async () => {
-		const result = graphql({ query: "mutation { createUser(input: {name: \"test\", email: \"test@test.com\"}) { id } }" });
+	hash := srv.storeQueryHash(`mutation { createUser(input: {name: "test", email: "test@test.com"}) { id } }`)
+	result := callExecuteTool(t, srv, fmt.Sprintf(`async () => {
+		const result = executeOperationByHash("%s");
 		return result;
-	}`)
+	}`, hash))
 	require.False(t, result.IsError)
 
 	text := result.Content[0].(mcp.TextContent).Text
@@ -276,11 +266,12 @@ func TestExecute_HeaderForwarding(t *testing.T) {
 	srv, err := newCodeModeServerWithSchema(t, cfg)
 	require.NoError(t, err)
 
+	hash := srv.storeQueryHash("{ ok }")
 	handler := srv.handleExecute()
 	req := mcp.CallToolRequest{}
-	req.Params.Name = "execute"
+	req.Params.Name = "execute_graphql"
 	req.Params.Arguments = map[string]any{
-		"code": `async () => { return graphql({ query: "{ ok }" }); }`,
+		"code": fmt.Sprintf(`async () => { return executeOperationByHash("%s"); }`, hash),
 	}
 
 	// Create context with auth header
@@ -291,6 +282,8 @@ func TestExecute_HeaderForwarding(t *testing.T) {
 	result, err := handler(ctx, req)
 	require.NoError(t, err)
 	require.False(t, result.IsError, "unexpected error: %+v", result.Content)
+	text := result.Content[0].(mcp.TextContent).Text
+	assert.Contains(t, text, "ok")
 	assert.Equal(t, "Bearer test-token", receivedAuth)
 }
 
@@ -313,27 +306,29 @@ func TestCodeModeServer_Stop(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// --- graphqlFunc edge cases ---
+// --- executeOperationByHashFunc edge cases ---
 
-func TestGraphqlFunc_NoArgs(t *testing.T) {
+func TestExecuteOperationFunc_NoArgs(t *testing.T) {
 	srv := newTestCodeModeServer(t)
-	fn := srv.graphqlFunc(context.Background())
+	fn := srv.executeOperationByHashFunc(context.Background())
 	_, err := fn(nil)
 	assert.Error(t, err)
 }
 
-func TestGraphqlFunc_InvalidArgs(t *testing.T) {
+func TestExecuteOperationFunc_InvalidArgs(t *testing.T) {
 	srv := newTestCodeModeServer(t)
-	fn := srv.graphqlFunc(context.Background())
-	_, err := fn([]any{"not a map"})
+	fn := srv.executeOperationByHashFunc(context.Background())
+	// Pass a map instead of a string — should reject since hash must be a string
+	_, err := fn([]any{map[string]any{"hash": "abc"}})
 	assert.Error(t, err)
 }
 
-func TestGraphqlFunc_MissingQuery(t *testing.T) {
+func TestExecuteOperationFunc_UnknownHash(t *testing.T) {
 	srv := newTestCodeModeServer(t)
-	fn := srv.graphqlFunc(context.Background())
-	_, err := fn([]any{map[string]any{}})
+	fn := srv.executeOperationByHashFunc(context.Background())
+	_, err := fn([]any{"nonexistent-hash"})
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unknown query hash")
 }
 
 // --- Resource tests ---
@@ -345,9 +340,7 @@ func TestCodeModeServer_Resources(t *testing.T) {
 
 	// The resources are registered during NewCodeModeServer, we can't easily query them
 	// through the MCP server without a client, so just verify the constants are non-empty
-	assert.NotEmpty(t, searchTypeDefs)
 	assert.NotEmpty(t, executeTypeDefs)
-	assert.NotEmpty(t, searchAPIResourceURI)
 	assert.NotEmpty(t, executeAPIResourceURI)
 }
 
@@ -383,7 +376,7 @@ func (m *mockYokoClient) Generate(_ context.Context, prompt string, _ string) ([
 	return m.results, nil
 }
 
-func TestSearch_GenerateQueryAvailableWhenYokoSet(t *testing.T) {
+func TestSearch_BasicPrompt(t *testing.T) {
 	srv := newTestCodeModeServer(t)
 	srv.SetYokoClient(&mockYokoClient{
 		results: []yokoclient.QueryResult{
@@ -391,44 +384,25 @@ func TestSearch_GenerateQueryAvailableWhenYokoSet(t *testing.T) {
 		},
 	})
 
-	result := callSearchTool(t, srv, `async () => {
-		const results = await generateQueries("find all users");
-		return results;
-	}`)
+	result := callSearchTool(t, srv, "find all users")
 	require.False(t, result.IsError, "expected no error, got: %+v", result)
 	text := result.Content[0].(mcp.TextContent).Text
 	assert.Contains(t, text, "users")
 	assert.Contains(t, text, "Get all users")
+	assert.Contains(t, text, "execute")
+	assert.Contains(t, text, "executeOperationByHash")
 }
 
-func TestSearch_GenerateQueryNotAvailableByDefault(t *testing.T) {
-	srv := newTestCodeModeServer(t)
-	// No yokoClient set — generateQueries should not be available
-	result := callSearchTool(t, srv, `async () => {
-		try { await generateQueries("test"); return "AVAILABLE"; } catch(e) { return "NOT_AVAILABLE"; }
-	}`)
-	require.False(t, result.IsError)
-	text := result.Content[0].(mcp.TextContent).Text
-	assert.Contains(t, text, "NOT_AVAILABLE")
-}
-
-func TestSearch_GenerateQueryError(t *testing.T) {
+func TestSearch_YokoError(t *testing.T) {
 	srv := newTestCodeModeServer(t)
 	srv.SetYokoClient(&mockYokoClient{
 		err: fmt.Errorf("yoko API unavailable"),
 	})
 
-	result := callSearchTool(t, srv, `async () => {
-		try {
-			await generateQueries("test");
-			return "OK";
-		} catch(e) {
-			return "ERROR: " + e.message;
-		}
-	}`)
-	require.False(t, result.IsError)
+	result := callSearchTool(t, srv, "test")
+	assert.True(t, result.IsError)
 	text := result.Content[0].(mcp.TextContent).Text
-	assert.Contains(t, text, "ERROR")
+	assert.Contains(t, text, "generation failed")
 }
 
 // --- Multi-call execute tests (BFF patterns) ---
@@ -461,15 +435,17 @@ func TestExecute_MultipleGraphQLCalls(t *testing.T) {
 	srv, err := newCodeModeServerWithSchema(t, cfg)
 	require.NoError(t, err)
 
-	result := callExecuteTool(t, srv, `async () => {
-		const users = await graphql({ query: "{ users { id name } }" });
-		const prods = await graphql({ query: "{ products { id title } }" });
+	usersHash := srv.storeQueryHash("{ users { id name } }")
+	prodsHash := srv.storeQueryHash("{ products { id title } }")
+	result := callExecuteTool(t, srv, fmt.Sprintf(`async () => {
+		const users = await executeOperationByHash("%s");
+		const prods = await executeOperationByHash("%s");
 		return {
 			userCount: users.data.users.length,
 			productCount: prods.data.products.length,
 			combined: true
 		};
-	}`)
+	}`, usersHash, prodsHash))
 	require.False(t, result.IsError, "unexpected error: %+v", result.Content)
 
 	text := result.Content[0].(mcp.TextContent).Text
@@ -500,14 +476,16 @@ func TestExecute_PromiseAll(t *testing.T) {
 	srv, err := newCodeModeServerWithSchema(t, cfg)
 	require.NoError(t, err)
 
-	result := callExecuteTool(t, srv, `async () => {
+	usersHash := srv.storeQueryHash("{ users { id } }")
+	prodsHash := srv.storeQueryHash("{ products { id } }")
+	result := callExecuteTool(t, srv, fmt.Sprintf(`async () => {
 		const [a, b, c] = await Promise.all([
-			graphql({ query: "{ users { id } }" }),
-			graphql({ query: "{ products { id } }" }),
-			graphql({ query: "{ users { id } }" })
+			executeOperationByHash("%s"),
+			executeOperationByHash("%s"),
+			executeOperationByHash("%s")
 		]);
 		return { calls: [a.data, b.data, c.data] };
-	}`)
+	}`, usersHash, prodsHash, usersHash))
 	require.False(t, result.IsError, "unexpected error: %+v", result.Content)
 
 	text := result.Content[0].(mcp.TextContent).Text
@@ -543,18 +521,17 @@ func TestExecute_ConditionalMutation(t *testing.T) {
 	srv, err := newCodeModeServerWithSchema(t, cfg)
 	require.NoError(t, err)
 
-	result := callExecuteTool(t, srv, `async () => {
-		const users = await graphql({ query: "{ users { id name } }" });
+	usersHash := srv.storeQueryHash("{ users { id name } }")
+	deleteHash := srv.storeQueryHash("mutation($id: ID!) { deleteUser(id: $id) }")
+	result := callExecuteTool(t, srv, fmt.Sprintf(`async () => {
+		const users = await executeOperationByHash("%s");
 		const bob = users.data.users.find(u => u.name === "Bob");
 		if (bob) {
-			const del = await graphql({
-				query: "mutation($id: ID!) { deleteUser(id: $id) }",
-				variables: { id: bob.id }
-			});
+			const del = await executeOperationByHash("%s", { id: bob.id });
 			return { action: "deleted", userId: bob.id, success: del.data.deleteUser };
 		}
 		return { action: "none" };
-	}`)
+	}`, usersHash, deleteHash))
 	require.False(t, result.IsError, "unexpected error: %+v", result.Content)
 
 	text := result.Content[0].(mcp.TextContent).Text
@@ -568,26 +545,26 @@ func TestContract_ExecuteGlobalsMatchDescription(t *testing.T) {
 	result := callExecuteTool(t, srv, `async () => {
 		const errors = [];
 
-		// graphql must be a function
-		if (typeof graphql !== 'function') errors.push("graphql is not a function");
+		// executeOperationByHash must be a function
+		if (typeof executeOperationByHash !== 'function') errors.push("executeOperationByHash is not a function");
 
-		// graphql must reject string arguments
+		// executeOperationByHash must reject non-string arguments
 		try {
-			await graphql("{ hello }");
-			errors.push("graphql accepted a string argument, should require an object");
+			await executeOperationByHash({ hash: "abc" });
+			errors.push("executeOperationByHash accepted an object, should require a hash string");
 		} catch(e) {
-			if (!e.message.includes("object argument")) {
-				errors.push("graphql string rejection message unclear: " + e.message);
+			if (!e.message.includes("hash string")) {
+				errors.push("executeOperationByHash rejection message unclear: " + e.message);
 			}
 		}
 
-		// graphql must reject calls with neither query nor hash
+		// executeOperationByHash must reject unknown hashes
 		try {
-			await graphql({});
-			errors.push("graphql accepted empty object, should require 'query' or 'hash' field");
+			await executeOperationByHash("unknown-hash");
+			errors.push("executeOperationByHash accepted unknown hash");
 		} catch(e) {
-			if (!e.message.includes("query") || !e.message.includes("hash")) {
-				errors.push("graphql empty-object rejection should mention both query and hash: " + e.message);
+			if (!e.message.includes("unknown query hash")) {
+				errors.push("executeOperationByHash unknown hash message unclear: " + e.message);
 			}
 		}
 
@@ -622,7 +599,7 @@ func TestQueryHashStore_Deterministic(t *testing.T) {
 	assert.Equal(t, h1, h2)
 }
 
-func TestSearch_GenerateQueryReturnsHash(t *testing.T) {
+func TestSearch_ReturnsHash(t *testing.T) {
 	srv := newTestCodeModeServer(t)
 	srv.SetYokoClient(&mockYokoClient{
 		results: []yokoclient.QueryResult{
@@ -630,10 +607,7 @@ func TestSearch_GenerateQueryReturnsHash(t *testing.T) {
 		},
 	})
 
-	result := callSearchTool(t, srv, `async () => {
-		const results = await generateQueries("find all users");
-		return results;
-	}`)
+	result := callSearchTool(t, srv, "find all users")
 	require.False(t, result.IsError, "expected no error, got: %+v", result)
 	text := result.Content[0].(mcp.TextContent).Text
 	assert.Contains(t, text, "hash")
@@ -663,7 +637,7 @@ func TestExecute_GraphQLWithHash(t *testing.T) {
 	hash := srv.storeQueryHash("{ users { id } }")
 
 	result := callExecuteTool(t, srv, fmt.Sprintf(`async () => {
-		const result = await graphql({ hash: "%s" });
+		const result = await executeOperationByHash("%s");
 		return result;
 	}`, hash))
 	require.False(t, result.IsError, "unexpected error: %+v", result.Content)
@@ -678,7 +652,7 @@ func TestExecute_GraphQLWithUnknownHash(t *testing.T) {
 
 	result := callExecuteTool(t, srv, `async () => {
 		try {
-			await graphql({ hash: "deadbeef" });
+			await executeOperationByHash("deadbeef");
 			return "SHOULD_FAIL";
 		} catch(e) {
 			return "ERROR: " + e.message;
@@ -729,10 +703,11 @@ func TestExecute_TOONByDefault(t *testing.T) {
 	srv, err := newCodeModeServerWithSchema(t, cfg)
 	require.NoError(t, err)
 
+	hash := srv.storeQueryHash("{ employees { id name } }")
 	// No toon parameter — TOON is now the default
-	result := callExecuteTool(t, srv, `async () => {
-		return await graphql({ query: '{ employees { id name } }' });
-	}`)
+	result := callExecuteTool(t, srv, fmt.Sprintf(`async () => {
+		return await executeOperationByHash("%s");
+	}`, hash))
 	require.False(t, result.IsError)
 
 	text := result.Content[0].(mcp.TextContent).Text
@@ -752,8 +727,7 @@ func TestSearch_TOONByDefault(t *testing.T) {
 		},
 	})
 
-	// No toon parameter — TOON is now the default
-	result := callSearchTool(t, srv, `async () => { return await generateQueries("find all users"); }`)
+	result := callSearchTool(t, srv, "find all users")
 	require.False(t, result.IsError)
 
 	text := result.Content[0].(mcp.TextContent).Text
@@ -763,9 +737,9 @@ func TestSearch_TOONByDefault(t *testing.T) {
 	assert.Contains(t, text, "users")
 }
 
-// --- generateQueries multi-prompt tests ---
+// --- Multi-prompt search tests ---
 
-func TestSearch_GenerateQueriesMultiplePrompts(t *testing.T) {
+func TestSearch_MultiplePrompts(t *testing.T) {
 	srv := newTestCodeModeServer(t)
 	srv.SetYokoClient(&mockYokoClient{
 		resultsFn: func(prompt string) ([]yokoclient.QueryResult, error) {
@@ -784,16 +758,14 @@ func TestSearch_GenerateQueriesMultiplePrompts(t *testing.T) {
 		},
 	})
 
-	result := callSearchTool(t, srv, `async () => {
-		return await generateQueries("find users", "find products");
-	}`)
+	result := callSearchTool(t, srv, "find users", "find products")
 	require.False(t, result.IsError, "unexpected error: %+v", result)
 	text := result.Content[0].(mcp.TextContent).Text
 	assert.Contains(t, text, "Get users")
 	assert.Contains(t, text, "Get products")
 }
 
-func TestSearch_GenerateQueriesPartialFailure(t *testing.T) {
+func TestSearch_PartialFailure(t *testing.T) {
 	srv := newTestCodeModeServer(t)
 	srv.SetYokoClient(&mockYokoClient{
 		resultsFn: func(prompt string) ([]yokoclient.QueryResult, error) {
@@ -806,15 +778,32 @@ func TestSearch_GenerateQueriesPartialFailure(t *testing.T) {
 		},
 	})
 
-	result := callSearchTool(t, srv, `async () => {
-		return await generateQueries("good", "bad");
-	}`)
+	result := callSearchTool(t, srv, "good", "bad")
 	require.False(t, result.IsError, "unexpected error: %+v", result)
 	text := result.Content[0].(mcp.TextContent).Text
 	assert.Contains(t, text, "OK query")
 }
 
-func TestSearch_GenerateQueryAliasWorks(t *testing.T) {
+func TestSearch_ExecuteSnippetWithVariables(t *testing.T) {
+	srv := newTestCodeModeServer(t)
+	srv.SetYokoClient(&mockYokoClient{
+		results: []yokoclient.QueryResult{
+			{
+				Query:       "query($id: ID!) { user(id: $id) { name } }",
+				Variables:   map[string]any{"id": "123"},
+				Description: "Get user by ID",
+			},
+		},
+	})
+
+	result := callSearchTool(t, srv, "get user by id")
+	require.False(t, result.IsError, "unexpected error: %+v", result)
+	text := result.Content[0].(mcp.TextContent).Text
+	assert.Contains(t, text, "executeOperationByHash")
+	assert.Contains(t, text, "123")
+}
+
+func TestSearch_ExecuteSnippetWithoutVariables(t *testing.T) {
 	srv := newTestCodeModeServer(t)
 	srv.SetYokoClient(&mockYokoClient{
 		results: []yokoclient.QueryResult{
@@ -822,10 +811,11 @@ func TestSearch_GenerateQueryAliasWorks(t *testing.T) {
 		},
 	})
 
-	result := callSearchTool(t, srv, `async () => {
-		return await generateQuery("find users");
-	}`)
+	result := callSearchTool(t, srv, "find users")
 	require.False(t, result.IsError, "unexpected error: %+v", result)
 	text := result.Content[0].(mcp.TextContent).Text
-	assert.Contains(t, text, "Get users")
+	assert.Contains(t, text, "executeOperationByHash")
+	// Should not contain variable object when no variables
+	assert.NotContains(t, text, "variables")
 }
+

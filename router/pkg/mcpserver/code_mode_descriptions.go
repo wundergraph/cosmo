@@ -5,98 +5,68 @@ package mcpserver
 // The TypeScript type specs are embedded inline so agents can write correct code
 // without extra round-trips.
 
-const searchToolName = "search"
+const searchToolName = "search_graphql"
 
-const searchToolDescription = `Generate GraphQL queries from natural language. Returns QueryResult[].
-Write a single async arrow function (ES2020, no imports). Write compact code.
+const searchToolDescription = `Search the GraphQL supergraph for operations matching natural language prompts.
+Returns operations with query strings, hashes, and ready-to-use JS snippets for execute_graphql.
+Do NOT call this tool multiple times — pass all prompts in one call.
 
-interface QueryResult { query: string; variables: Record<string, any>; description: string; hash: string; }
-declare function generateQueries(...prompts: string[]): Promise<QueryResult[]>;
+Each result contains:
+  query: string        — the GraphQL query/mutation
+  variables: object    — example variable values
+  description: string  — what the operation does
+  hash: string         — identifier for use with executeOperationByHash() inside your code
+  execute: string      — JS expression to use inside your async arrow function in execute_graphql
 
-Pass multiple prompts to generate queries in parallel (faster than separate calls).
-Results include a hash — pass it to graphql() in the execute tool to save tokens.
+Workflow: search_graphql (1 call) → execute_graphql (1 call) = done. Never revisit either tool.
 
 Example:
-  return await generateQueries("find items matching criteria", "mutation to update item status");`
+  prompts: ["list all employees", "mutation to update employee department"]`
 
-const executeToolName = "execute"
+const executeToolName = "execute_graphql"
 
-const executeToolDescription = `Execute GraphQL operations against the supergraph. Returns any JSON-serializable value.
-Write a single async arrow function (ES2020, no imports). Write compact code.
+const executeToolDescription = `Execute GraphQL operations. The "code" parameter must be an async arrow function (ES2020, no imports).
+Do NOT call this tool multiple times. Fetch data, inspect it, decide, mutate, and return — ALL in one function.
+Do NOT fetch data in one call and process/mutate in another — combine everything into a single function.
+Write compact code: no comments, no blank lines, short variable names. Every token costs money.
 
-This tool runs your code in a sandbox with one global function: graphql(options).
-  await graphql({ hash: "abc123" })                           // by hash (preferred)
-  await graphql({ query: "{ users { id } }", variables: {} }) // by query string
-There is no execute() function — graphql() is the only way to run operations.
-Response data is in result.data. Prefer hash (from search) over query to save tokens.
+Your code runs in a JS sandbox with full language support: loops, conditionals, Promise.all, try/catch, array methods.
+The ONLY available global is:
+  executeOperationByHash(hash: string, variables?: Record<string, any>): Promise<{data, errors, declined?}>
 
-Use search first to get queries with hashes, then solve all tasks in one call to this tool.
-Write all logic in the function — loops, conditionals, filtering, aggregation.
-When given multiple tasks, fetch all data with Promise.all(), process each task, return all results.
+Use hashes from search_graphql results. Do NOT pass query strings. Response data is in result.data.
+Mutations may require human approval — check result.declined.
 
-interface GraphQLOptions { query?: string; variables?: Record<string, any>; operationName?: string; hash?: string; }
-interface GraphQLResponse { data: any | null; errors: GraphQLError[] | null; declined?: { reason: string | null; }; }
-interface GraphQLError { message: string; path: (string | number)[] | null; extensions: Record<string, any> | null; }
+Example (fetch → inspect → mutate → analyze — all in one call):
+  async () => {
+    const r = await executeOperationByHash(listHash);
+    const items = r.data.items;
+    for (const i of items.filter(x => !x.active)) await executeOperationByHash(activateHash, {id: i.id});
+    return { activated: items.filter(x => !x.active).length, byType: items.reduce((a,i) => (a[i.type]=(a[i.type]||0)+1,a), {}) };
+  }`
 
-Example (multiple tasks in one call):
-  const [a, b] = await Promise.all([graphql({ hash: h1 }), graphql({ hash: h2 })]);
-  for (const x of a.data.items.filter(i => !i.ok)) await graphql({ hash: fixHash, variables: { id: x.id } });
-  return { task1: a.data.items.length, task2: b.data.items.map(i => i.name) };
-
-Example (read → filter → mutate — single call):
-  const r = await graphql({ hash: listHash });
-  const targets = r.data.items.filter(i => !i.active);
-  for (const t of targets) await graphql({ hash: updateHash, variables: { id: t.id, active: true } });
-  return { updated: targets.map(t => t.id) };
-
-Mutations may require human approval. If result.declined is set, the operator declined the mutation.`
-
-// MCP resource URIs for type definitions.
-const searchAPIResourceURI = "code-mode://search-api.d.ts"
+// MCP resource URI for execute tool type definitions.
 const executeAPIResourceURI = "code-mode://execute-api.d.ts"
 
-// searchTypeDefs is served as an MCP resource for agents that support resource fetching.
-const searchTypeDefs = `// Search sandbox — write a single async arrow function (ES2020, no imports), return QueryResult[].
-
-interface QueryResult {
-  query: string;                    // GraphQL query string, ready for execute
-  variables: Record<string, any>;   // Variable values (defaults/examples)
-  description: string;              // What this query does
-  hash: string;                     // Hash — pass to graphql() instead of query to save tokens
-}
-
-// Globals
-
-// Generates ready-to-execute GraphQL queries from natural language.
-// Pass multiple prompts to generate queries in parallel.
-declare function generateQueries(...prompts: string[]): Promise<QueryResult[]>;
-`
-
 // executeTypeDefs is served as an MCP resource for agents that support resource fetching.
-const executeTypeDefs = `// Execute sandbox — write a single async arrow function (ES2020, no imports), return any JSON-serializable value.
+const executeTypeDefs = `// The "code" parameter must be an async arrow function (ES2020, no imports).
+// Do NOT call this tool multiple times. Do everything in ONE function.
+// Do NOT fetch data in one call and mutate in another — combine into a single function.
+// Write compact code: no comments, no blank lines, short variable names. Every token costs money.
 //
-// The sandbox provides one global function:
+// Your code has full JS: loops, conditionals, Promise.all, try/catch, array methods.
+// The ONLY global function is executeOperationByHash.
 
-declare function graphql(options: GraphQLOptions): Promise<GraphQLResponse>;
+declare function executeOperationByHash(hash: string, variables?: Record<string, any>): Promise<GraphQLResponse>;
 
-// Call with hash:  await graphql({ hash: "abc123" })
-// Call with query: await graphql({ query: "{ ... }", variables: { ... } })
-// Response data is in result.data. Prefer hash over query to save tokens.
-// There is no execute() function — graphql() is the only way to run operations.
-
-interface GraphQLOptions {
-  query?: string;                     // GraphQL query or mutation string
-  variables?: Record<string, any>;    // Operation variables
-  operationName?: string;             // Operation name (if multiple in document)
-  hash?: string;                      // Hash from search — use instead of query to save tokens
-}
+// hash: from search_graphql results. Do NOT pass GraphQL query strings.
+// variables: optional. Example: executeOperationByHash("abc123", { id: 1 })
+// Response data is in result.data. Check result.declined for rejected mutations.
 
 interface GraphQLResponse {
   data: any | null;
   errors: GraphQLError[] | null;
-  declined?: {                    // Present when a mutation was declined by the operator
-    reason: string | null;        // Operator's reason for declining (if provided)
-  };
+  declined?: { reason: string | null };
 }
 
 interface GraphQLError {
@@ -105,22 +75,11 @@ interface GraphQLError {
   extensions: Record<string, any> | null;
 }
 
-// Solve the entire task in ONE call to this tool.
-// Read data, inspect it, decide what to do, mutate, and return — all in one function.
-// For multiple tasks, fetch all data with Promise.all(), process each, return all results.
-//
-// Example (multiple tasks in one call):
-//   const [a, b] = await Promise.all([graphql({ hash: h1 }), graphql({ hash: h2 })]);
-//   for (const x of a.data.items.filter(i => !i.ok)) await graphql({ hash: fixHash, variables: { id: x.id } });
-//   return { task1: a.data.items.length, task2: b.data.items.map(i => i.name) };
-//
-// Example (read → filter → mutate — single call):
-//   const r = await graphql({ hash: listHash });
-//   const targets = r.data.items.filter(i => !i.active);
-//   for (const t of targets) await graphql({ hash: updateHash, variables: { id: t.id, active: true } });
-//   return { updated: targets.map(t => t.id) };
-//
-// Mutations may require human approval. A declined mutation returns:
-// { data: null, declined: { reason: "..." } }
-// Check with: if (result.declined) { ... result.declined.reason ... }
+// Example (fetch → inspect → mutate → analyze — all in one call):
+//   async () => {
+//     const r = await executeOperationByHash(listHash);
+//     const items = r.data.items;
+//     for (const i of items.filter(x => !x.active)) await executeOperationByHash(activateHash, {id: i.id});
+//     return { activated: items.filter(x => !x.active).length, byType: items.reduce((a,i) => (a[i.type]=(a[i.type]||0)+1,a), {}) };
+//   }
 `
