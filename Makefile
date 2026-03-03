@@ -52,6 +52,9 @@ infra-debug-down-v:
 infra-debug-up:
 	docker compose -f docker-compose.yml --profile debug up --remove-orphans --detach
 
+format-all:
+	pnpm -r --parallel format
+
 seed:
 	pnpm -r run --filter './controlplane' seed
 
