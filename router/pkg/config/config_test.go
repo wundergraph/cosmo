@@ -204,6 +204,63 @@ telemetry:
 	require.Equal(t, RegExArray{regexp.MustCompile("^instance")}, cfg.Config.Telemetry.Metrics.Prometheus.ExcludeMetricLabels)
 }
 
+func TestLogExporterIncludeExcludeMetricsMutuallyExclusive(t *testing.T) {
+	t.Parallel()
+
+	t.Run("only exclude_metrics is valid", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: '1'
+
+telemetry:
+  metrics:
+    otlp:
+      log_exporter:
+        enabled: true
+        exclude_metrics: ["^runtime_.*"]
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("only include_metrics is valid", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: '1'
+
+telemetry:
+  metrics:
+    otlp:
+      log_exporter:
+        enabled: true
+        include_metrics: ["^router_http_.*"]
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("both include_metrics and exclude_metrics is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: '1'
+
+telemetry:
+  metrics:
+    otlp:
+      log_exporter:
+        enabled: true
+        exclude_metrics: ["^runtime_.*"]
+        include_metrics: ["^router_http_.*"]
+`)
+		_, err := LoadConfig([]string{f})
+		require.Error(t, err)
+		require.ErrorContains(t, err, "log_exporter")
+	})
+}
+
 func TestLogLevels(t *testing.T) {
 	t.Parallel()
 

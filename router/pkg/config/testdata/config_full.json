@@ -78,7 +78,15 @@
             "Headers": {},
             "Temporality": ""
           }
-        ]
+        ],
+        "LogExporter": {
+          "Enabled": true,
+          "ExcludeMetrics": [
+            "process\\.",
+            "server\\.uptime"
+          ],
+          "IncludeMetrics": null
+        }
       },
       "Prometheus": {
         "Enabled": true,

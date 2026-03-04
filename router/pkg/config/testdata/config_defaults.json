@@ -48,7 +48,12 @@
         "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "Exporters": null
+        "Exporters": null,
+        "LogExporter": {
+          "Enabled": false,
+          "ExcludeMetrics": null,
+          "IncludeMetrics": null
+        }
       },
       "Prometheus": {
         "Enabled": true,

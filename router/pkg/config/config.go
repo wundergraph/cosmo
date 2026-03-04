@@ -7,14 +7,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
-
 	"github.com/caarlos0/env/v11"
 	"github.com/goccy/go-yaml"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/wundergraph/cosmo/router/internal/unique"
+	"github.com/wundergraph/cosmo/router/internal/yamlmerge"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -149,6 +147,12 @@ type Metrics struct {
 	CardinalityLimit int               `yaml:"experiment_cardinality_limit" envDefault:"2000" env:"METRICS_EXPERIMENT_CARDINALITY_LIMIT"`
 }
 
+type MetricsLogExporter struct {
+	Enabled        bool       `yaml:"enabled" envDefault:"false"`
+	ExcludeMetrics RegExArray `yaml:"exclude_metrics,omitempty"`
+	IncludeMetrics RegExArray `yaml:"include_metrics,omitempty"`
+}
+
 type MetricsOTLP struct {
 	Enabled             bool                  `yaml:"enabled" envDefault:"true" env:"METRICS_OTLP_ENABLED"`
 	RouterRuntime       bool                  `yaml:"router_runtime" envDefault:"true" env:"METRICS_OTLP_ROUTER_RUNTIME"`
@@ -160,6 +164,7 @@ type MetricsOTLP struct {
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
+	LogExporter         MetricsLogExporter    `yaml:"log_exporter"`
 }
 
 type Telemetry struct {

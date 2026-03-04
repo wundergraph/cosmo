@@ -1327,6 +1327,35 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "log_exporter": {
+                  "type": "object",
+                  "description": "Log exporter. When enabled, logs all collected metrics via the router's logger at each export interval.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enables the log exporter. The default value is false."
+                    },
+                    "exclude_metrics": {
+                      "type": "array",
+                      "description": "List of regex patterns for metric names to exclude from log output. Cannot be used together with include_metrics.",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "include_metrics": {
+                      "type": "array",
+                      "description": "List of regex patterns for metric names to include in log output. Only matching metrics will be logged. Cannot be used together with exclude_metrics.",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "not": {
+                    "required": ["exclude_metrics", "include_metrics"]
+                  }
                 }
               }
             },
