@@ -1119,7 +1119,13 @@ export class SchemaCheckRepository {
 
     // Detect if any subgraph changes involve field or type additions, modifications, or deletions
     // on interfaces and objects, as these are the only changes that can affect the composed federated schema
-    const fieldChangeTypes = new Set(['FIELD_ADDED', 'FIELD_REMOVED', 'FIELD_TYPE_CHANGED', 'TYPE_ADDED', 'TYPE_REMOVED']);
+    const fieldChangeTypes = new Set([
+      'FIELD_ADDED',
+      'FIELD_REMOVED',
+      'FIELD_TYPE_CHANGED',
+      'TYPE_ADDED',
+      'TYPE_REMOVED',
+    ]);
     let hasFieldChanges = false;
     // Collect all subgraph-level breaking changes (path + message) to avoid duplicating in federated graph changes
     const subgraphBreakingChangeKeys = new Set<string>();
