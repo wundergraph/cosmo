@@ -659,9 +659,6 @@ importers:
       '@types/nodemailer':
         specifier: ^7.0.3
         version: 7.0.4
-      '@types/prettier':
-        specifier: ^3.0.0
-        version: 3.0.0
       '@types/stream-json':
         specifier: ^1.7.7
         version: 1.7.7
@@ -7687,10 +7684,6 @@ packages:
 
   '@types/pg@8.6.1':
     resolution: {integrity: sha512-1Kc4oAGzAl7uqUStZCDvaLFqZrW9qWSjXOmBfdgyBP5La7Us6Mg4GBvRlSoaZMhQF/zSj1C8CtKMBkoiT8eL8w==}
-
-  '@types/prettier@3.0.0':
-    resolution: {integrity: sha512-mFMBfMOz8QxhYVbuINtswBp9VL2b4Y0QqYHwqLz3YbgtfAcat2Dl6Y1o4e22S/OVE6Ebl9m7wWiMT2lSbAs1wA==}
-    deprecated: This is a stub types definition. prettier provides its own type definitions, so you do not need this installed.
 
   '@types/prismjs@1.26.3':
     resolution: {integrity: sha512-A0D0aTXvjlqJ5ZILMz3rNfDBOx9hHxLZYv2by47Sm/pqW35zzjusrZTryatjN/Rf8Us2gZrJD+KeHbUSTux1Cw==}
@@ -22354,10 +22347,6 @@ snapshots:
       '@types/node': 20.12.12
       pg-protocol: 1.10.3
       pg-types: 2.2.0
-
-  '@types/prettier@3.0.0':
-    dependencies:
-      prettier: 3.5.2
 
   '@types/prismjs@1.26.3': {}
 
