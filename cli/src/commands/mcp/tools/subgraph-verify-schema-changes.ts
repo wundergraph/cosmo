@@ -41,7 +41,7 @@ export const registerSubgraphVerifySchemaChangesTool = ({ server, opts }: ToolCo
                 ...resp,
                 isCheckSuccessful: isCheckSuccessful({
                   isComposable: resp.compositionErrors.length === 0,
-                  isBreaking: resp.breakingChanges.length > 0,
+                  isBreaking: resp.breakingChanges.length > 0 || resp.composedSchemaBreakingChanges.length > 0,
                   hasClientTraffic:
                     (resp.operationUsageStats?.totalOperations ?? 0) > 0 &&
                     (resp.operationUsageStats?.totalOperations ?? 0) !==
