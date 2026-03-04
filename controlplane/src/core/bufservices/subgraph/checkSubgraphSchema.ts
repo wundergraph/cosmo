@@ -27,7 +27,7 @@ import {
   limitCombinedArrays,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
-import { maxRowLimitForChecks } from '../../constants.js';
+import { maxRowLimitForChecks, defaultRetentionLimitInDays } from '../../constants.js';
 
 export function checkSubgraphSchema(
   opts: RouterOptions,
@@ -257,7 +257,7 @@ export function checkSubgraphSchema(
       featureId: 'breaking-change-retention',
     });
 
-    let limit = changeRetention?.limit ?? 7;
+    let limit = changeRetention?.limit ?? defaultRetentionLimitInDays;
     limit = clamp(namespace?.checksTimeframeInDays ?? limit, 1, limit);
 
     // If req.limit is not provided, we return all rows
@@ -421,7 +421,7 @@ export function checkSubgraphSchema(
         };
       }
 
-      let targetLimit = changeRetention?.limit ?? 7;
+      let targetLimit = changeRetention?.limit ?? defaultRetentionLimitInDays;
       targetLimit = clamp(targetNamespace?.checksTimeframeInDays ?? targetLimit, 1, targetLimit);
 
       let targetNewGraphQLSchema = newGraphQLSchema;

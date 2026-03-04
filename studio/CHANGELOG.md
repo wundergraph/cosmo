@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.159.0](https://github.com/wundergraph/cosmo/compare/studio@0.158.0...studio@0.159.0) (2026-03-04)
+
+### Features
+
+* ignore pascal case + input prefix lint rules for EDFS ([#2574](https://github.com/wundergraph/cosmo/issues/2574)) ([ffeaf59](https://github.com/wundergraph/cosmo/commit/ffeaf59e0efa1ee041a0867b3c2939cf3c2103a7)) (@comatory)
+
+# [0.158.0](https://github.com/wundergraph/cosmo/compare/studio@0.157.0...studio@0.158.0) (2026-03-03)
+
+### Features
+
+* show hub banner ([#2570](https://github.com/wundergraph/cosmo/issues/2570)) ([589af86](https://github.com/wundergraph/cosmo/commit/589af860d073e01d0e6ed2182bce38e4a0ad240d)) (@StarpTech)
+
+# [0.157.0](https://github.com/wundergraph/cosmo/compare/studio@0.156.1...studio@0.157.0) (2026-03-02)
+
+### Features
+
+* **studio:** delete persisted operations ([#2553](https://github.com/wundergraph/cosmo/issues/2553)) ([1adf02c](https://github.com/wundergraph/cosmo/commit/1adf02c0a84bb3ae63b1d900d1075ae2c8f8c069)) (@comatory)
+
+## [0.156.1](https://github.com/wundergraph/cosmo/compare/studio@0.156.0...studio@0.156.1) (2026-02-28)
+
+**Note:** Version bump only for package studio
+
 # [0.156.0](https://github.com/wundergraph/cosmo/compare/studio@0.155.1...studio@0.156.0) (2026-02-26)
 
 ### Features

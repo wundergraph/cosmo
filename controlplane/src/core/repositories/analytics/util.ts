@@ -399,7 +399,7 @@ export const getEndDate = () => {
  * Returns a date range in seconds
  * @param dateRange
  * @param offset Offset in hours
- * @returns
+ * @returns - start and end in unix seconds
  */
 export const getDateRange = (dateRange?: { start?: number; end?: number }, offset = 0) => {
   if (dateRange?.start && dateRange?.end) {

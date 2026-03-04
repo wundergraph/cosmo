@@ -13,7 +13,7 @@ func TestConnectRPC_ServiceDiscovery(t *testing.T) {
 
 	t.Run("discovers services from proto files", func(t *testing.T) {
 		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{})
-		
+
 		err := ts.Start()
 		require.NoError(t, err)
 
@@ -30,7 +30,7 @@ func TestConnectRPC_ServiceDiscovery(t *testing.T) {
 		for _, serviceName := range serviceNames {
 			t.Logf("  - Service: %s", serviceName)
 		}
-		
+
 		operationCount := ts.GetOperationCount()
 		t.Logf("Discovered %d operation(s)", operationCount)
 	})
