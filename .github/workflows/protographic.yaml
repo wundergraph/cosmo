@@ -29,8 +29,9 @@ jobs:
       - name: Generate code
         run: pnpm generate
 
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
+      - uses: ./.github/actions/git-dirty-check
+        with:
+          package-name: protographic
 
       - name: Build
         run: pnpm run --filter ./connect --filter ./composition --filter ./protographic build
