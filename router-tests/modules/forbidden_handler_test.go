@@ -72,7 +72,7 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// This query touches both employees (works) and products (403)
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
-				Query: `{ employees { id details { forename surname } notes } }`,
+				Query: `{ employees { id details { forename surname } products } }`,
 			})
 			require.NoError(t, err)
 

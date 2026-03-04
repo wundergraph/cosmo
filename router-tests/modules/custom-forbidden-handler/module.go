@@ -114,7 +114,6 @@ func (m *ForbiddenHandlerModule) Middleware(ctx core.RequestContext, next http.H
 
 	bw := &bufferedWriter{
 		header: make(http.Header),
-		code:   http.StatusOK,
 	}
 
 	next.ServeHTTP(bw, ctx.Request())
@@ -149,9 +148,18 @@ type bufferedWriter struct {
 	body   bytes.Buffer
 }
 
-func (w *bufferedWriter) Header() http.Header      { return w.header }
-func (w *bufferedWriter) WriteHeader(code int)      { w.code = code }
-func (w *bufferedWriter) Write(b []byte) (int, error) { return w.body.Write(b) }
+func (w *bufferedWriter) Header() http.Header { return w.header }
+func (w *bufferedWriter) WriteHeader(code int) {
+	if w.code == 0 {
+		w.code = code
+	}
+}
+func (w *bufferedWriter) Write(b []byte) (int, error) {
+	if w.code == 0 {
+		w.code = http.StatusOK
+	}
+	return w.body.Write(b)
+}
 
 func (m *ForbiddenHandlerModule) Module() core.ModuleInfo {
 	return core.ModuleInfo{
