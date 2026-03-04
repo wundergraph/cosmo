@@ -246,6 +246,14 @@ export interface SchemaCheckDetailsDTO {
   }[];
   compositionErrors: string[];
   compositionWarnings: string[];
+  composedSchemaBreakingChanges: {
+    id: string;
+    message: string;
+    changeType: string;
+    path?: string;
+    isBreaking: boolean;
+    federatedGraphName: string;
+  }[];
 }
 
 export interface OrganizationDTO {
