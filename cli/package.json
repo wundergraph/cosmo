@@ -28,7 +28,8 @@
     "test": "pnpm lint && vitest run test/",
     "coverage": "vitest run test/ --coverage",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && pnpm format",
+    "format": "prettier -w -c .",
     "e2e": "bun test e2e/"
   },
   "keywords": [

@@ -6,13 +6,13 @@ import {
   createTestRBACEvaluator,
   createAPIKeyTestRBACEvaluator,
   createTestGroup,
-  genID
+  genID,
 } from '../../src/core/test-util.js';
 import {
-    DEFAULT_SUBGRAPH_URL_ONE,
-    DEFAULT_SUBGRAPH_URL_TWO,
-    SetupTest,
-    createBaseAndFeatureSubgraph,
+  DEFAULT_SUBGRAPH_URL_ONE,
+  DEFAULT_SUBGRAPH_URL_TWO,
+  SetupTest,
+  createBaseAndFeatureSubgraph,
 } from '../test-util.js';
 
 let dbname = '';
@@ -185,83 +185,84 @@ describe('List feature subgraphs', (ctx) => {
     await server.close();
   });
 
-  test.each([
-    'subgraph-admin',
-    'subgraph-publisher',
-    'subgraph-viewer',
-  ])('%s should be able to list feature subgraphs from allowed namespaces', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname });
+  test.each(['subgraph-admin', 'subgraph-publisher', 'subgraph-viewer'])(
+    '%s should be able to list feature subgraphs from allowed namespaces',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname });
 
-    const subgraphName = genID('subgraph');
-    const featureSubgraphName = genID('featureSubgraph');
-    const flagName = genID('flag');
+      const subgraphName = genID('subgraph');
+      const featureSubgraphName = genID('featureSubgraph');
+      const flagName = genID('flag');
 
-    const createNamespaceResp = await client.createNamespace({
-      name: 'prod',
-    });
+      const createNamespaceResp = await client.createNamespace({
+        name: 'prod',
+      });
 
-    expect(createNamespaceResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(createNamespaceResp.response?.code).toBe(EnumStatusCode.OK);
 
-    const getNamespaceResponse = await client.getNamespace({ name: 'prod' });
-    expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+      const getNamespaceResponse = await client.getNamespace({ name: 'prod' });
+      expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-    );
+      await createBaseAndFeatureSubgraph(
+        client,
+        subgraphName,
+        featureSubgraphName,
+        DEFAULT_SUBGRAPH_URL_ONE,
+        DEFAULT_SUBGRAPH_URL_TWO,
+      );
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-      'prod',
-    );
+      await createBaseAndFeatureSubgraph(
+        client,
+        subgraphName,
+        featureSubgraphName,
+        DEFAULT_SUBGRAPH_URL_ONE,
+        DEFAULT_SUBGRAPH_URL_TWO,
+        'prod',
+      );
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role,
-        namespaces: [getNamespaceResponse.namespace!.id],
-      })),
-    });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role,
+            namespaces: [getNamespaceResponse.namespace!.id],
+          }),
+        ),
+      });
 
-    // fetching feature subgraphs from default namespace
-    let listFeatureSubgraphsResp = await client.getFeatureSubgraphs({
-      namespace: 'default',
-      offset: 0,
-      // fetches all
-      limit: 0,
-    });
+      // fetching feature subgraphs from default namespace
+      let listFeatureSubgraphsResp = await client.getFeatureSubgraphs({
+        namespace: 'default',
+        offset: 0,
+        // fetches all
+        limit: 0,
+      });
 
-    expect(listFeatureSubgraphsResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(listFeatureSubgraphsResp.count).toBe(0);
+      expect(listFeatureSubgraphsResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(listFeatureSubgraphsResp.count).toBe(0);
 
-    // fetching feature subgraphs from prod namespace
-    listFeatureSubgraphsResp = await client.getFeatureSubgraphs({
-      namespace: 'prod',
-      offset: 0,
-      // fetches all
-      limit: 0,
-    });
+      // fetching feature subgraphs from prod namespace
+      listFeatureSubgraphsResp = await client.getFeatureSubgraphs({
+        namespace: 'prod',
+        offset: 0,
+        // fetches all
+        limit: 0,
+      });
 
-    expect(listFeatureSubgraphsResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(listFeatureSubgraphsResp.count).toBe(1);
+      expect(listFeatureSubgraphsResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(listFeatureSubgraphsResp.count).toBe(1);
 
-    // fetching all feature subgraphs
-    listFeatureSubgraphsResp = await client.getFeatureSubgraphs({
-      offset: 0,
-      // fetches all
-      limit: 0,
-    });
+      // fetching all feature subgraphs
+      listFeatureSubgraphsResp = await client.getFeatureSubgraphs({
+        offset: 0,
+        // fetches all
+        limit: 0,
+      });
 
-    expect(listFeatureSubgraphsResp.response?.code).toBe(EnumStatusCode.OK);
-    expect(listFeatureSubgraphsResp.count).toBe(1);
+      expect(listFeatureSubgraphsResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(listFeatureSubgraphsResp.count).toBe(1);
 
-    await server.close();
-  });
+      await server.close();
+    },
+  );
 });
