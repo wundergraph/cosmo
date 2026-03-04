@@ -1,1 +1,4 @@
 ignorefile: .trivyignore.yaml
+db:
+  repositories:
+    - ghcr.io/aquasecurity/trivy-db:2

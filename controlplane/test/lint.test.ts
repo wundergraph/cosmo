@@ -33,11 +33,23 @@ input InputA{
 `;
 
     const lintRules: { severity: LintSeverityLevel; ruleName: LintRule }[] = [
-      { severity: 'warn', ruleName: LintRules.TYPE_NAMES_SHOULD_BE_PASCAL_CASE },
+      {
+        severity: 'warn',
+        ruleName: LintRules.TYPE_NAMES_SHOULD_BE_PASCAL_CASE,
+      },
       { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INPUT_PREFIX },
-      { severity: 'warn', ruleName: LintRules.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES },
-      { severity: 'warn', ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE },
-      { severity: 'error', ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
+      {
+        severity: 'warn',
+        ruleName: LintRules.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES,
+      },
+      {
+        severity: 'warn',
+        ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE,
+      },
+      {
+        severity: 'error',
+        ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE,
+      },
       { severity: 'error', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_PREFIX },
       { severity: 'error', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_SUFFIX },
       { severity: 'error', ruleName: LintRules.SHOULD_HAVE_INPUT_SUFFIX },
@@ -45,7 +57,10 @@ input InputA{
 
     const schemaLinter = new SchemaLinter();
 
-    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: lintRules });
+    const lintIssues = schemaLinter.schemaLintCheck({
+      schema,
+      rulesInput: lintRules,
+    });
 
     expect(lintIssues.warnings.length).toBe(4);
     expect(lintIssues.errors.length).toBe(1);
@@ -99,13 +114,22 @@ enum ProductNamesEnum {
 `;
 
     const rules: { severity: LintSeverityLevel; ruleName: LintRule }[] = [
-      { severity: 'warn', ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE },
-      { severity: 'warn', ruleName: LintRules.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES },
+      {
+        severity: 'warn',
+        ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE,
+      },
+      {
+        severity: 'warn',
+        ruleName: LintRules.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES,
+      },
       { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_ENUM_SUFFIX },
     ];
 
     const schemaLinter = new SchemaLinter();
-    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
+    const lintIssues = schemaLinter.schemaLintCheck({
+      schema,
+      rulesInput: rules,
+    });
 
     expect(lintIssues.warnings.length).toBe(3);
     expect(lintIssues.warnings).toStrictEqual([
@@ -156,7 +180,10 @@ enum ProductNamesEnum {
     ];
 
     const schemaLinter = new SchemaLinter();
-    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
+    const lintIssues = schemaLinter.schemaLintCheck({
+      schema,
+      rulesInput: rules,
+    });
     expect(lintIssues.warnings.length).toBe(4);
     expect(lintIssues.warnings).toStrictEqual([
       {
@@ -198,7 +225,10 @@ enum ProductNamesEnum {
     ];
 
     const schemaLinter = new SchemaLinter();
-    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
+    const lintIssues = schemaLinter.schemaLintCheck({
+      schema,
+      rulesInput: rules,
+    });
     expect(lintIssues.warnings.length).toBe(1);
     expect(lintIssues.warnings).toStrictEqual([
       {
@@ -222,7 +252,10 @@ enum ProductNamesEnum {
     ];
 
     const schemaLinter = new SchemaLinter();
-    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
+    const lintIssues = schemaLinter.schemaLintCheck({
+      schema,
+      rulesInput: rules,
+    });
     expect(lintIssues.warnings.length).toBe(1);
     expect(lintIssues.warnings).toStrictEqual([
       {
@@ -242,12 +275,21 @@ enum ProductNamesEnum {
 `;
 
     const rules: { severity: LintSeverityLevel; ruleName: LintRule }[] = [
-      { severity: 'warn', ruleName: LintRules.NO_TYPENAME_PREFIX_IN_TYPE_FIELDS },
-      { severity: 'warn', ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
+      {
+        severity: 'warn',
+        ruleName: LintRules.NO_TYPENAME_PREFIX_IN_TYPE_FIELDS,
+      },
+      {
+        severity: 'warn',
+        ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE,
+      },
     ];
 
     const schemaLinter = new SchemaLinter();
-    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
+    const lintIssues = schemaLinter.schemaLintCheck({
+      schema,
+      rulesInput: rules,
+    });
     expect(lintIssues.warnings.length).toBe(2);
     expect(lintIssues.warnings).toStrictEqual([
       {
@@ -283,7 +325,10 @@ input InputUser{
     ];
 
     const schemaLinter = new SchemaLinter();
-    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
+    const lintIssues = schemaLinter.schemaLintCheck({
+      schema,
+      rulesInput: rules,
+    });
     expect(lintIssues.warnings.length).toBe(3);
     expect(lintIssues.warnings).toStrictEqual([
       {
@@ -327,32 +372,62 @@ interface A{
 `;
 
     const rules: { severity: LintSeverityLevel; ruleName: LintRule }[] = [
-      { severity: 'warn', ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
-      { severity: 'warn', ruleName: LintRules.TYPE_NAMES_SHOULD_BE_PASCAL_CASE },
+      {
+        severity: 'warn',
+        ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE,
+      },
+      {
+        severity: 'warn',
+        ruleName: LintRules.TYPE_NAMES_SHOULD_BE_PASCAL_CASE,
+      },
       { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_PREFIX },
       { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_SUFFIX },
       { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INPUT_PREFIX },
       { severity: 'warn', ruleName: LintRules.SHOULD_HAVE_INPUT_SUFFIX },
       { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_ENUM_PREFIX },
       { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_ENUM_SUFFIX },
-      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INTERFACE_PREFIX },
-      { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INTERFACE_SUFFIX },
-      { severity: 'warn', ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE },
+      {
+        severity: 'warn',
+        ruleName: LintRules.SHOULD_NOT_HAVE_INTERFACE_PREFIX,
+      },
+      {
+        severity: 'warn',
+        ruleName: LintRules.SHOULD_NOT_HAVE_INTERFACE_SUFFIX,
+      },
+      {
+        severity: 'warn',
+        ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE,
+      },
     ];
 
     const schemaLinter = new SchemaLinter();
-    const lintIssues = schemaLinter.schemaLintCheck({ schema, rulesInput: rules });
+    const lintIssues = schemaLinter.schemaLintCheck({
+      schema,
+      rulesInput: rules,
+    });
     expect(lintIssues.warnings.length).toBe(0);
     expect(lintIssues.warnings).toStrictEqual([]);
   });
 
   test('Should test creating rules config', (testContext) => {
     const rules: { severity: LintSeverityLevel; ruleName: LintRule }[] = [
-      { severity: 'warn', ruleName: LintRules.TYPE_NAMES_SHOULD_BE_PASCAL_CASE },
+      {
+        severity: 'warn',
+        ruleName: LintRules.TYPE_NAMES_SHOULD_BE_PASCAL_CASE,
+      },
       { severity: 'warn', ruleName: LintRules.SHOULD_NOT_HAVE_INPUT_PREFIX },
-      { severity: 'warn', ruleName: LintRules.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES },
-      { severity: 'warn', ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE },
-      { severity: 'error', ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE },
+      {
+        severity: 'warn',
+        ruleName: LintRules.DISALLOW_CASE_INSENSITIVE_ENUM_VALUES,
+      },
+      {
+        severity: 'warn',
+        ruleName: LintRules.ENUM_VALUES_SHOULD_BE_UPPER_CASE,
+      },
+      {
+        severity: 'error',
+        ruleName: LintRules.FIELD_NAMES_SHOULD_BE_CAMEL_CASE,
+      },
       { severity: 'error', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_PREFIX },
       { severity: 'error', ruleName: LintRules.SHOULD_NOT_HAVE_TYPE_SUFFIX },
       { severity: 'error', ruleName: LintRules.SHOULD_HAVE_INPUT_SUFFIX },
@@ -364,33 +439,124 @@ interface A{
     expect(rulesConfig).toStrictEqual({
       TYPE_NAMES_SHOULD_BE_PASCAL_CASE: [
         'warn',
-        { ObjectTypeDefinition: { style: 'PascalCase' }, allowLeadingUnderscore: true },
+        {
+          ObjectTypeDefinition: { style: 'PascalCase', ignorePattern: '^(edfs__PublishResult)$' },
+          allowLeadingUnderscore: true,
+        },
       ],
       SHOULD_NOT_HAVE_INPUT_PREFIX: [
         'warn',
-        { InputObjectTypeDefinition: { forbiddenPrefixes: ['Input', 'input'] }, allowLeadingUnderscore: true },
+        {
+          InputObjectTypeDefinition: { forbiddenPrefixes: ['Input', 'input'] },
+          allowLeadingUnderscore: true,
+        },
       ],
       DISALLOW_CASE_INSENSITIVE_ENUM_VALUES: ['warn'],
       ENUM_VALUES_SHOULD_BE_UPPER_CASE: [
         'warn',
-        { EnumValueDefinition: { style: 'UPPER_CASE' }, allowLeadingUnderscore: true },
+        {
+          EnumValueDefinition: { style: 'UPPER_CASE' },
+          allowLeadingUnderscore: true,
+        },
       ],
       FIELD_NAMES_SHOULD_BE_CAMEL_CASE: [
         'error',
-        { FieldDefinition: { style: 'camelCase' }, allowLeadingUnderscore: true },
+        {
+          FieldDefinition: { style: 'camelCase' },
+          allowLeadingUnderscore: true,
+        },
       ],
       SHOULD_NOT_HAVE_TYPE_PREFIX: [
         'error',
-        { ObjectTypeDefinition: { forbiddenPrefixes: ['Type', 'type'] }, allowLeadingUnderscore: true },
+        {
+          ObjectTypeDefinition: { forbiddenPrefixes: ['Type', 'type'] },
+          allowLeadingUnderscore: true,
+        },
       ],
       SHOULD_NOT_HAVE_TYPE_SUFFIX: [
         'error',
-        { ObjectTypeDefinition: { forbiddenSuffixes: ['Type', 'type'] }, allowLeadingUnderscore: true },
+        {
+          ObjectTypeDefinition: { forbiddenSuffixes: ['Type', 'type'] },
+          allowLeadingUnderscore: true,
+        },
       ],
       SHOULD_HAVE_INPUT_SUFFIX: [
         'error',
-        { InputObjectTypeDefinition: { requiredSuffixes: ['Input'] }, allowLeadingUnderscore: true },
+        {
+          InputObjectTypeDefinition: {
+            requiredSuffixes: ['Input'],
+            ignorePattern:
+              '^(edfs__NatsStreamConfiguration|openfed__SubscriptionFieldCondition|openfed__SubscriptionFilterCondition)$',
+          },
+          allowLeadingUnderscore: true,
+        },
       ],
     });
+  });
+
+  test("Should ignore casing of 'edfs__PublishResult' on type definitions", () => {
+    const schema = `type Query {
+  sdl: String
+}
+
+type edfs__PublishResult {
+    success: Boolean!
+}
+`;
+    const lintRules: { severity: LintSeverityLevel; ruleName: LintRule }[] = [
+      {
+        severity: 'error',
+        ruleName: LintRules.TYPE_NAMES_SHOULD_BE_PASCAL_CASE,
+      },
+    ];
+    const schemaLinter = new SchemaLinter();
+
+    const lintIssues = schemaLinter.schemaLintCheck({
+      schema,
+      rulesInput: lintRules,
+    });
+
+    expect(lintIssues.errors).toHaveLength(0);
+  });
+
+  test("Should ignore prefixing of 'edfs__' and 'openfed__' inputs", () => {
+    const schema = `directive @edfs__natsSubscribe(
+subjects: [String!]!,
+providerId: String! = "default",
+streamConfiguration: edfs__NatsStreamConfiguration
+) on FIELD_DEFINITION
+
+input edfs__NatsStreamConfiguration {
+    consumerInactiveThreshold: Int! = 30
+    consumerName: String!
+    streamName: String!
+}
+
+input openfed__SubscriptionFieldCondition {
+    fieldPath: String!
+    values: [openfed__SubscriptionFilterValue]!
+}
+
+input openfed__SubscriptionFilterCondition {
+    AND: [openfed__SubscriptionFilterCondition!]
+    IN: openfed__SubscriptionFieldCondition
+    NOT: openfed__SubscriptionFilterCondition
+    OR: [openfed__SubscriptionFilterCondition!]
+}
+`;
+    const lintRules: { severity: LintSeverityLevel; ruleName: LintRule }[] = [
+      {
+        severity: 'error',
+        ruleName: LintRules.SHOULD_HAVE_INPUT_SUFFIX,
+      },
+    ];
+    const schemaLinter = new SchemaLinter();
+
+    const lintIssues = schemaLinter.schemaLintCheck({
+      schema,
+      rulesInput: lintRules,
+    });
+
+    expect(lintIssues.errors).toHaveLength(0);
   });
 });
