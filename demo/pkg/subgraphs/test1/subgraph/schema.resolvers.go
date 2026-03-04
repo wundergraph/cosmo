@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/99designs/gqlgen/graphql"
 	"github.com/wundergraph/cosmo/demo/pkg/injector"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/test1/subgraph/generated"
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/test1/subgraph/model"
@@ -188,6 +189,8 @@ func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, rep
 	}
 	ch := make(chan *model.TimestampedString, 1)
 
+	opCtx := graphql.GetOperationContext(ctx)
+
 	if repeat == nil {
 		repeat = new(int)
 		*repeat = 1
@@ -214,6 +217,7 @@ func (r *subscriptionResolver) HeaderValue(ctx context.Context, name string, rep
 				Seq:            ii,
 				Total:          *repeat,
 				InitialPayload: payload,
+				Extensions:     opCtx.Extensions,
 			}:
 			}
 		}
@@ -228,6 +232,8 @@ func (r *subscriptionResolver) InitPayloadValue(ctx context.Context, key string,
 		return nil, errors.New("payload not injected into context.Context")
 	}
 	ch := make(chan *model.TimestampedString, 1)
+
+	opCtx := graphql.GetOperationContext(ctx)
 
 	if repeat == nil {
 		repeat = new(int)
@@ -250,6 +256,7 @@ func (r *subscriptionResolver) InitPayloadValue(ctx context.Context, key string,
 				Seq:            ii,
 				Total:          *repeat,
 				InitialPayload: payload,
+				Extensions:     opCtx.Extensions,
 			}:
 			}
 		}
@@ -289,8 +296,43 @@ func (r *subscriptionResolver) InitialPayload(ctx context.Context, repeat *int) 
 }
 
 // ReturnsError is the resolver for the returnsError field.
-func (r *subscriptionResolver) ReturnsError(ctx context.Context) (<-chan *string, error) {
+func (r *subscriptionResolver) ReturnsError(ctx context.Context) (<-chan string, error) {
 	return nil, errors.New("this is an error")
+}
+
+// Metadata is the resolver for the metadata field.
+func (r *subscriptionResolver) Metadata(ctx context.Context, repeat int) (<-chan *model.SubscribeMetadata, error) {
+	payload := injector.InitPayload(ctx)
+	if payload == nil {
+		payload = make(map[string]any)
+	}
+
+	opCtx := graphql.GetOperationContext(ctx)
+	if opCtx == nil {
+		return nil, errors.New("operation context not found")
+	}
+
+	ch := make(chan *model.SubscribeMetadata, 1)
+
+	go func() {
+		defer close(ch)
+
+		for range repeat {
+			// In our example we'll send the current time every second.
+			time.Sleep(100 * time.Millisecond)
+			select {
+			case <-ctx.Done():
+				return
+
+			case ch <- &model.SubscribeMetadata{
+				InitialPayload:      payload,
+				SubscribeExtensions: opCtx.Extensions,
+			}:
+			}
+		}
+	}()
+
+	return ch, nil
 }
 
 // Query returns generated.QueryResolver implementation.
@@ -299,5 +341,7 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 // Subscription returns generated.SubscriptionResolver implementation.
 func (r *Resolver) Subscription() generated.SubscriptionResolver { return &subscriptionResolver{r} }
 
-type queryResolver struct{ *Resolver }
-type subscriptionResolver struct{ *Resolver }
+type (
+	queryResolver        struct{ *Resolver }
+	subscriptionResolver struct{ *Resolver }
+)

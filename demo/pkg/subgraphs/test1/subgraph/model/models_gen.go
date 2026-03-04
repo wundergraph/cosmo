@@ -668,6 +668,11 @@ type Secret struct {
 	Value *string `json:"value,omitempty"`
 }
 
+type SubscribeMetadata struct {
+	InitialPayload      map[string]any `json:"initialPayload,omitempty"`
+	SubscribeExtensions map[string]any `json:"subscribeExtensions,omitempty"`
+}
+
 type Subscription struct {
 }
 
@@ -716,6 +721,7 @@ type TimestampedString struct {
 	// Total number of responses to be sent
 	Total          int            `json:"total"`
 	InitialPayload map[string]any `json:"initialPayload,omitempty"`
+	Extensions     map[string]any `json:"extensions,omitempty"`
 }
 
 type UBigObject struct {
