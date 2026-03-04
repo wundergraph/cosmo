@@ -588,6 +588,7 @@ func TestRedisEvents(t *testing.T) {
 
 			// Wait for the subscription to be started
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
+			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
 
 			// produce a message so that the subscription is triggered
 			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
@@ -822,6 +823,7 @@ func TestFlakyRedisEvents(t *testing.T) {
 
 			// Wait for the subscription to be started
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
+			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
 
 			// produce a message so that the subscription is triggered
 			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
