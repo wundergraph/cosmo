@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -4624,6 +4625,12 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				metrics := metricFamily.GetMetric()
 				require.Len(t, metrics, 2)
 
+				// Sort by wg_subgraph_name for deterministic assertion order
+				sort.Slice(metrics, func(i, j int) bool {
+					return metrics[i].Label[len(metrics[i].Label)-1].GetValue() <
+						metrics[j].Label[len(metrics[j].Label)-1].GetValue()
+				})
+
 				metricDataPoint1 := metrics[0]
 				require.Greater(t, *metricDataPoint1.Histogram.SampleSum, 0.0)
 				expected1 := []*io_prometheus_client.LabelPair{
@@ -4649,7 +4656,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 					},
 					{
 						Name:  PointerOf("wg_subgraph_name"),
-						Value: PointerOf("employees"),
+						Value: PointerOf("availability"),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -4679,7 +4686,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 					},
 					{
 						Name:  PointerOf("wg_subgraph_name"),
-						Value: PointerOf("availability"),
+						Value: PointerOf("employees"),
 					},
 				}
 				require.Equal(t, expected2, metricDataPoint2.Label)
