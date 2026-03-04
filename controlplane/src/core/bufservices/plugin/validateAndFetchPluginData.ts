@@ -62,7 +62,7 @@ export function validateAndFetchPluginData(
         organizationId: authContext.organizationId,
         featureId: 'plugins',
       });
-      const limit = feature?.limit === -1 ? 0 : (feature?.limit ?? 0);
+      const limit = feature?.limit === -1 ? 0 : feature?.limit ?? 0;
       if (count >= limit) {
         return {
           response: {
