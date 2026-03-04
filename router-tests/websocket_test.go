@@ -1806,6 +1806,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			xEnv.WaitForSubscriptionCount(2, time.Second*5)
+			xEnv.WaitForTriggerCount(2, time.Second*5)
 
 			wg := sync.WaitGroup{}
 			wg.Add(1)

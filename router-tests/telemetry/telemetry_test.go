@@ -141,6 +141,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 			}, func(data string) {
 				defer wg2.Done()
 				xEnv.WaitForSubscriptionCount(2, time.Second*5)
+				xEnv.WaitForTriggerCount(1, time.Second*5)
 
 				sentMessages.Add(1)
 				xEnv.WaitForMinMessagesSent(uint64(sentMessages.Load()), time.Second*5)
@@ -166,6 +167,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				defer wg1.Done()
 
 				xEnv.WaitForSubscriptionCount(2, time.Second*5)
+				xEnv.WaitForTriggerCount(1, time.Second*5)
 
 				sentMessages.Add(1)
 				xEnv.WaitForMinMessagesSent(uint64(sentMessages.Load()), time.Second*5)
@@ -11748,6 +11750,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					require.NoError(t, err)
 
 					xEnv.WaitForSubscriptionCount(1, time.Second*5)
+					xEnv.WaitForTriggerCount(1, time.Second*5)
 
 					rm := metricdata.ResourceMetrics{}
 					err = metricReader.Collect(context.Background(), &rm)

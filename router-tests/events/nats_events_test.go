@@ -136,6 +136,7 @@ func TestNatsEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			// Send a mutation to trigger the first subscription
 			resOne := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -217,6 +218,7 @@ func TestNatsEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			// Send a mutation to trigger the subscription
 
@@ -292,6 +294,7 @@ func TestNatsEvents(t *testing.T) {
 				reader := bufio.NewReader(resp.Body)
 
 				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+				xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 				// Send a mutation to trigger the subscription
 
@@ -339,6 +342,7 @@ func TestNatsEvents(t *testing.T) {
 				reader := bufio.NewReader(resp.Body)
 
 				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+				xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 				// Read the first part
 				assertNatsMultipartPrefix(t, reader)
@@ -364,6 +368,7 @@ func TestNatsEvents(t *testing.T) {
 				reader := bufio.NewReader(resp.Body)
 
 				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+				xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 				// Read the first part
 				assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":0}}}")
@@ -435,6 +440,7 @@ func TestNatsEvents(t *testing.T) {
 				reader := bufio.NewReader(resp.Body)
 
 				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+				xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 				// Read the first part
 
@@ -465,6 +471,7 @@ func TestNatsEvents(t *testing.T) {
 				reader := bufio.NewReader(resp.Body)
 
 				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+				xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 				assert.Eventually(t, func() bool {
 					allData, err := io.ReadAll(reader)
@@ -523,6 +530,7 @@ func TestNatsEvents(t *testing.T) {
 				reader := bufio.NewReader(resp.Body)
 
 				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+				xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 				// Read the first part
 
@@ -561,6 +569,7 @@ func TestNatsEvents(t *testing.T) {
 				reader := bufio.NewReader(resp.Body)
 
 				xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+				xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 				// Read the first part
 				assertNatsMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"countFor\":0}}}")
@@ -609,6 +618,7 @@ func TestNatsEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			// Send a mutation to trigger the subscription
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -685,6 +695,7 @@ func TestNatsEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			// Send a mutation to trigger the subscription
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -822,6 +833,7 @@ func TestNatsEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			// Send a mutation to trigger the subscription
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -1023,6 +1035,7 @@ func TestNatsEvents(t *testing.T) {
 			var payload subscriptionPayload
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			// Trigger the first subscription via NATS
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.12"), []byte(`{"id":13,"__typename":"Employee"}`))
@@ -1067,6 +1080,7 @@ func TestNatsEvents(t *testing.T) {
 			})
 			require.NoError(t, err)
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			err = conn.ReadJSON(&msg)
 			require.NoError(t, err)
@@ -1198,6 +1212,7 @@ func TestNatsEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
 			require.NoError(t, err)
@@ -1372,6 +1387,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			var payload subscriptionPayload
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			// Trigger the first subscription via NATS
 			err = xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNats.12"), []byte(`{"id":13,"__typename":"Employee"}`))
@@ -1541,6 +1557,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 
 			// Then wait for subscriptions to be started again
 			xEnv.WaitForSubscriptionCount(3, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(6, NatsWaitTimeout)
 
 			xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename":"Employee"}`))
 			xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.2"), []byte(`{"id":2,"__typename":"Employee"}`))
@@ -1624,6 +1641,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			// Trigger the subscription via NATS
 			err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename": "Employee"}`))
@@ -1723,6 +1741,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			testData := map[uint32]struct{ forename, surname string }{
 				1:  {forename: "Jens", surname: "Neuse"},
@@ -1802,6 +1821,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(``)) // Empty message
 			require.NoError(t, err)
@@ -1888,6 +1908,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{asas`)) // Invalid message
 			require.NoError(t, err)

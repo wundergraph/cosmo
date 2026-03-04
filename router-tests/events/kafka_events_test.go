@@ -104,6 +104,7 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
 			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
@@ -161,6 +162,7 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
 			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], ``) // Empty message
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
@@ -311,6 +313,7 @@ func TestKafkaEvents(t *testing.T) {
 				reader := bufio.NewReader(resp.Body)
 
 				xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+				xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
 				events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 				assertKafkaMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
@@ -554,6 +557,7 @@ func TestKafkaEvents(t *testing.T) {
 			var payload subscriptionPayload
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
 			testData := map[uint32]struct {
 				ID       int
@@ -695,6 +699,7 @@ func TestKafkaEvents(t *testing.T) {
 			var payload subscriptionPayload
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
 			// The message should be ignored because "1" does not equal 1
 			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id":1}`)
@@ -887,6 +892,7 @@ func TestKafkaEvents(t *testing.T) {
 			var payload subscriptionPayload
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
 			const MsgCount = uint32(12)
 
@@ -1048,6 +1054,7 @@ func TestFlakyKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
 			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
