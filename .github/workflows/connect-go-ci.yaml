@@ -26,5 +26,6 @@ jobs:
       - name: Generate code
         run: make generate-go
 
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
+      - uses: ./.github/actions/git-dirty-check
+        with:
+          package-name: connect-go
