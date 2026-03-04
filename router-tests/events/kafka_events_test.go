@@ -106,7 +106,7 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
-			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, KafkaWaitTimeout)
 
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
@@ -164,7 +164,7 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
-			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], ``) // Empty message
+			xEnv.KafkaPublishUntilReceived(topics[0], ``, 1, KafkaWaitTimeout)
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.ErrorContains(t, args.errValue, "Invalid message received")
 			})
@@ -249,7 +249,7 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(2, KafkaWaitTimeout)
 			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
-			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, KafkaWaitTimeout)
 
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
@@ -261,7 +261,7 @@ func TestKafkaEvents(t *testing.T) {
 				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
 			})
 
-			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`)
+			xEnv.KafkaPublishUntilReceived(topics[1], `{"__typename":"Employee","id": 2,"update":{"name":"foo"}}`, 2, KafkaWaitTimeout)
 
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
@@ -315,7 +315,7 @@ func TestKafkaEvents(t *testing.T) {
 				xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 				xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
-				events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, KafkaWaitTimeout)
 				assertKafkaMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
 				events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
@@ -573,7 +573,11 @@ func TestKafkaEvents(t *testing.T) {
 			// Events 1, 2, 11, and 12 should be included
 			expectedMessages := uint64(0)
 			for i := uint32(1); i < 13; i++ {
-				events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				if i == 1 {
+					xEnv.KafkaPublishUntilReceived(topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i), 1, KafkaWaitTimeout)
+				} else {
+					events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				}
 				if i == 1 || i == 2 || i == 11 || i == 12 {
 					expectedMessages++
 					xEnv.WaitForMessagesSent(expectedMessages, KafkaWaitTimeout)
@@ -644,7 +648,11 @@ func TestKafkaEvents(t *testing.T) {
 			// Events 1, 2, 11, and 12 should be included
 			expectedMessages := uint64(0)
 			for i := uint32(1); i < 13; i++ {
-				events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				if i == 1 {
+					xEnv.KafkaPublishUntilReceived(topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i), 1, KafkaWaitTimeout)
+				} else {
+					events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				}
 				if i == 1 || i == 2 || i == 11 || i == 12 {
 					expectedMessages++
 					xEnv.WaitForMessagesSent(expectedMessages, KafkaWaitTimeout)
@@ -705,7 +713,7 @@ func TestKafkaEvents(t *testing.T) {
 			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id":1}`)
 
 			// This message should be delivered because it matches the filter
-			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id":12}`)
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id":12}`, 1, KafkaWaitTimeout)
 			conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
 			readErr := conn.ReadJSON(&msg)
 			require.NoError(t, readErr)
@@ -762,7 +770,7 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
-			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{asas`) // Invalid message
+			xEnv.KafkaPublishUntilReceived(topics[0], `{asas`, 1, KafkaWaitTimeout)
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.ErrorContains(t, args.errValue, "Invalid message received")
 			})
@@ -910,7 +918,11 @@ func TestKafkaEvents(t *testing.T) {
 
 			// Events 1, 3, 4, 7, and 11 should be included
 			for i := int(MsgCount); i > 0; i-- {
-				events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				if i == 11 {
+					xEnv.KafkaPublishUntilReceived(topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i), 1, KafkaWaitTimeout)
+				} else {
+					events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
+				}
 				if i == 1 || i == 3 || i == 4 || i == 7 || i == 11 {
 					conn.SetReadDeadline(time.Now().Add(KafkaWaitTimeout))
 					jsonErr := conn.ReadJSON(&msg)
@@ -989,7 +1001,7 @@ func TestFlakyKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(2, KafkaWaitTimeout)
 			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
-			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, KafkaWaitTimeout)
 
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
@@ -1056,7 +1068,7 @@ func TestFlakyKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
-			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, KafkaWaitTimeout)
 
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.NoError(t, args.errValue)
