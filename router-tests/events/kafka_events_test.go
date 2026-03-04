@@ -952,14 +952,6 @@ func TestKafkaEvents(t *testing.T) {
 			}
 		})
 	})
-}
-
-func TestFlakyKafkaEvents(t *testing.T) {
-	t.Parallel()
-
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
 
 	t.Run("every subscriber gets the message", func(t *testing.T) {
 		t.Parallel()

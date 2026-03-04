@@ -780,14 +780,6 @@ func TestRedisEvents(t *testing.T) {
 			require.JSONEq(t, `{"data":{"updateEmployeeMyRedis":{"__typename":"edfs__PublishResult","success":true}}}`, resOne.Body)
 		})
 	})
-}
-
-func TestFlakyRedisEvents(t *testing.T) {
-	t.Parallel()
-
-	if testing.Short() {
-		t.Skip("skipping test in short mode.")
-	}
 
 	t.Run("subscribe sync sse legacy method works", func(t *testing.T) {
 		t.Parallel()

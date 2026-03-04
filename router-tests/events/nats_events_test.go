@@ -1352,10 +1352,6 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
-}
-
-func TestFlakyNatsEvents(t *testing.T) {
-	t.Parallel()
 
 	t.Run("subscribe to multiple subjects", func(t *testing.T) {
 		t.Parallel()
@@ -1609,6 +1605,180 @@ func TestFlakyNatsEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("message and resolve errors should not abort the subscription", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionOne struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdated(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+			subscriptionArgsCh := make(chan natsSubscriptionArgs)
+
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subscriptionArgsCh <- natsSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionOneID)
+
+			clientRunErrCh := make(chan error)
+
+			go func() {
+				clientErr := client.Run()
+				clientRunErrCh <- clientErr
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
+
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(``)) // Empty message
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
+				var gqlErr graphql.Errors
+				require.ErrorAs(t, args.errValue, &gqlErr)
+				require.Equal(t, "Invalid message received", gqlErr[0].Message)
+			})
+
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(args.dataValue))
+			})
+
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
+				require.ErrorContains(t, args.errValue, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.")
+			})
+
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(args.dataValue))
+			})
+
+			require.NoError(t, client.Close())
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, clientRunErrCh, func(t *testing.T, err error) {
+				require.NoError(t, err)
+			}, "unable to close client before timeout")
+
+			xEnv.WaitForSubscriptionCount(0, NatsWaitTimeout)
+			xEnv.WaitForConnectionCount(0, NatsWaitTimeout)
+		})
+	})
+
+	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			var subscriptionOne struct {
+				employeeUpdated struct {
+					ID      float64 `graphql:"id"`
+					Details struct {
+						Forename string `graphql:"forename"`
+						Surname  string `graphql:"surname"`
+					} `graphql:"details"`
+				} `graphql:"employeeUpdated(employeeID: 3)"`
+			}
+
+			surl := xEnv.GraphQLWebSocketSubscriptionURL()
+			client := graphql.NewSubscriptionClient(surl)
+
+			subscriptionArgsCh := make(chan natsSubscriptionArgs)
+
+			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
+				subscriptionArgsCh <- natsSubscriptionArgs{
+					dataValue: dataValue,
+					errValue:  errValue,
+				}
+				return nil
+			})
+			require.NoError(t, err)
+			require.NotEqual(t, "", subscriptionOneID)
+
+			clientRunCh := make(chan error)
+			go func() {
+				clientRunCh <- client.Run()
+			}()
+
+			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
+
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{asas`)) // Invalid message
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
+				assert.ErrorContains(t, subscriptionArgs.errValue, "Invalid message received")
+			})
+
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
+				assert.NoError(t, subscriptionArgs.errValue)
+				assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(subscriptionArgs.dataValue))
+			})
+
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
+				assert.ErrorContains(t, subscriptionArgs.errValue, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.")
+			})
+
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
+				assert.NoError(t, subscriptionArgs.errValue)
+				assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(subscriptionArgs.dataValue))
+			})
+
+			require.NoError(t, client.Close())
+
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, clientRunCh, func(t *testing.T, clientRunErr error) {
+				require.NoError(t, clientRunErr)
+			}, "unable to close client before timeout")
+		})
+	})
+}
+
+func TestFlakyNatsEvents(t *testing.T) {
+	t.Parallel()
+
 	t.Run("subscribe sse with filter", func(t *testing.T) {
 		t.Parallel()
 
@@ -1779,176 +1949,6 @@ func TestFlakyNatsEvents(t *testing.T) {
 					require.Equal(t, testData[i].surname, payload.Data.FilteredEmployeeUpdated.Details.Surname)
 				}
 			}
-		})
-	})
-
-	t.Run("message and resolve errors should not abort the subscription", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
-			EnableNats:               true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			var subscriptionOne struct {
-				employeeUpdated struct {
-					ID      float64 `graphql:"id"`
-					Details struct {
-						Forename string `graphql:"forename"`
-						Surname  string `graphql:"surname"`
-					} `graphql:"details"`
-				} `graphql:"employeeUpdated(employeeID: 3)"`
-			}
-
-			surl := xEnv.GraphQLWebSocketSubscriptionURL()
-			client := graphql.NewSubscriptionClient(surl)
-			subscriptionArgsCh := make(chan natsSubscriptionArgs)
-
-			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				subscriptionArgsCh <- natsSubscriptionArgs{
-					dataValue: dataValue,
-					errValue:  errValue,
-				}
-				return nil
-			})
-			require.NoError(t, err)
-			require.NotEqual(t, "", subscriptionOneID)
-
-			clientRunErrCh := make(chan error)
-
-			go func() {
-				clientErr := client.Run()
-				clientRunErrCh <- clientErr
-			}()
-
-			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
-			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
-
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(``)) // Empty message
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
-				var gqlErr graphql.Errors
-				require.ErrorAs(t, args.errValue, &gqlErr)
-				require.Equal(t, "Invalid message received", gqlErr[0].Message)
-			})
-
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
-				require.NoError(t, args.errValue)
-				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(args.dataValue))
-			})
-
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
-				require.ErrorContains(t, args.errValue, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.")
-			})
-
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
-				require.NoError(t, args.errValue)
-				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(args.dataValue))
-			})
-
-			require.NoError(t, client.Close())
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, clientRunErrCh, func(t *testing.T, err error) {
-				require.NoError(t, err)
-			}, "unable to close client before timeout")
-
-			xEnv.WaitForSubscriptionCount(0, NatsWaitTimeout)
-			xEnv.WaitForConnectionCount(0, NatsWaitTimeout)
-		})
-	})
-
-	t.Run("message with invalid JSON should give a specific error", func(t *testing.T) {
-		t.Parallel()
-
-		testenv.Run(t, &testenv.Config{
-			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
-			EnableNats:               true,
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			var subscriptionOne struct {
-				employeeUpdated struct {
-					ID      float64 `graphql:"id"`
-					Details struct {
-						Forename string `graphql:"forename"`
-						Surname  string `graphql:"surname"`
-					} `graphql:"details"`
-				} `graphql:"employeeUpdated(employeeID: 3)"`
-			}
-
-			surl := xEnv.GraphQLWebSocketSubscriptionURL()
-			client := graphql.NewSubscriptionClient(surl)
-
-			subscriptionArgsCh := make(chan natsSubscriptionArgs)
-
-			subscriptionOneID, err := client.Subscribe(&subscriptionOne, nil, func(dataValue []byte, errValue error) error {
-				subscriptionArgsCh <- natsSubscriptionArgs{
-					dataValue: dataValue,
-					errValue:  errValue,
-				}
-				return nil
-			})
-			require.NoError(t, err)
-			require.NotEqual(t, "", subscriptionOneID)
-
-			clientRunCh := make(chan error)
-			go func() {
-				clientRunCh <- client.Run()
-			}()
-
-			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
-			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
-
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{asas`)) // Invalid message
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
-				assert.ErrorContains(t, subscriptionArgs.errValue, "Invalid message received")
-			})
-
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
-				assert.NoError(t, subscriptionArgs.errValue)
-				assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(subscriptionArgs.dataValue))
-			})
-
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","update":{"name":"foo"}}`)) // Missing id
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
-				assert.ErrorContains(t, subscriptionArgs.errValue, "Cannot return null for non-nullable field 'Subscription.employeeUpdated.id'.")
-			})
-
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
-				assert.NoError(t, subscriptionArgs.errValue)
-				assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(subscriptionArgs.dataValue))
-			})
-
-			require.NoError(t, client.Close())
-
-			testenv.AwaitChannelWithT(t, NatsWaitTimeout, clientRunCh, func(t *testing.T, clientRunErr error) {
-				require.NoError(t, clientRunErr)
-			}, "unable to close client before timeout")
 		})
 	})
 }
