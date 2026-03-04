@@ -1776,4 +1776,133 @@ describe('Proposal federated graph schema breaking changes', () => {
 
     await server.close();
   });
+
+  test('Should detect federated graph breaking change when proposal adds a type with nullable field conflicting with required field', async () => {
+    const { client, server } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: { plan: 'enterprise' },
+      enabledFeatures: ['proposals'],
+    });
+
+    const fedGraphName = genID('fedGraph');
+    const subgraphAName = genID('subgraphA');
+    const subgraphBName = genID('subgraphB');
+    const label = genUniqueLabel();
+    const proposalName = genID('proposal');
+
+    // Subgraph A has User type with required name field
+    const subgraphASchema = `
+      type Query {
+        users: [User!]!
+      }
+
+      type User @key(fields: "id") {
+        id: ID!
+        name: String!
+      }
+    `;
+
+    // Subgraph B initial schema - does NOT have User type
+    const subgraphBInitialSchema = `
+      type Query {
+        placeholder: String
+      }
+    `;
+
+    // Subgraph B updated schema - adds User type with nullable name field
+    // When composed, the federated schema's User.name field will change from String! to String
+    // This is a breaking change in the federated graph
+    const subgraphBUpdatedSchema = `
+      type User @key(fields: "id") {
+        id: ID!
+        name: String
+        email: String!
+      }
+
+      type Query {
+        placeholder: String
+      }
+    `;
+
+    // Create federated graph
+    const createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      routingUrl: DEFAULT_ROUTER_URL,
+      labelMatchers: [joinLabel(label)],
+    });
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create and publish subgraph A
+    await createThenPublishSubgraph(
+      client,
+      subgraphAName,
+      DEFAULT_NAMESPACE,
+      subgraphASchema,
+      [label],
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
+
+    // Verify the federated graph has User.name as String! (required)
+    const fedGraphSDLBefore = await client.getFederatedGraphSDLByName({
+      name: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(fedGraphSDLBefore.response?.code).toBe(EnumStatusCode.OK);
+    expect(fedGraphSDLBefore.sdl).toContain('name: String!');
+
+    // Create and publish subgraph B with initial schema (no User type)
+    await createThenPublishSubgraph(
+      client,
+      subgraphBName,
+      DEFAULT_NAMESPACE,
+      subgraphBInitialSchema,
+      [label],
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
+
+    // Enable proposals for the namespace
+    const enableResponse = await enableProposalsForNamespace(client);
+    expect(enableResponse.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create a proposal that updates subgraph B to add User type with nullable name
+    const createProposalResponse = await client.createProposal({
+      federatedGraphName: fedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      name: proposalName,
+      namingConvention: ProposalNamingConvention.INCREMENTAL,
+      origin: ProposalOrigin.INTERNAL,
+      subgraphs: [
+        {
+          name: subgraphBName,
+          schemaSDL: subgraphBUpdatedSchema,
+          isDeleted: false,
+          isNew: false,
+          labels: [],
+        },
+      ],
+    });
+
+    expect(createProposalResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(createProposalResponse.checkId).toBeDefined();
+
+    // Fetch check summary
+    const checkSummary = await client.getCheckSummary({
+      namespace: DEFAULT_NAMESPACE,
+      graphName: fedGraphName,
+      checkId: createProposalResponse.checkId,
+    });
+
+    expect(checkSummary.response?.code).toBe(EnumStatusCode.OK);
+
+    // The composed schema breaking changes should detect the nullability change
+    // because the federated schema's User.name field would change from String! to String
+    expect(checkSummary.composedSchemaBreakingChanges.length).toBe(1);
+    expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
+    expect(checkSummary.composedSchemaBreakingChanges[0].path).toBe('User.name');
+    expect(checkSummary.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
+
+    await server.close();
+  });
 });

@@ -2093,9 +2093,9 @@ export class SubgraphRepository {
     );
 
     // Detect breaking changes in federated graph schemas by comparing old vs new client schemas
-    // Only perform this diff if the subgraph schema changes involve field additions, modifications, or deletions
+    // Only perform this diff if the subgraph schema changes involve field or type additions, modifications, or deletions
     // on interfaces and objects, as these are the only changes that can affect the composed federated schema
-    const fieldChangeTypes = new Set(['FIELD_ADDED', 'FIELD_REMOVED', 'FIELD_TYPE_CHANGED']);
+    const fieldChangeTypes = new Set(['FIELD_ADDED', 'FIELD_REMOVED', 'FIELD_TYPE_CHANGED', 'TYPE_ADDED', 'TYPE_REMOVED']);
     const allSubgraphChanges = [...schemaChanges.breakingChanges, ...schemaChanges.nonBreakingChanges];
     // For new subgraphs (no existing schema), always perform federated diff since any field could affect composed schema
     const isNewSubgraph = !subgraph?.schemaSDL;
