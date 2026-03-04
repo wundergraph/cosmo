@@ -69,8 +69,8 @@ export function toggleChangeOverridesForAllOperations(
       }
 
       for (const affectedOperation of affectedOperations) {
-        const impactingChanges = [...checkDetails.changes, ...checkDetails.composedSchemaBreakingChanges].filter(({ id }) =>
-          affectedOperation.schemaChangeIds.includes(id),
+        const impactingChanges = [...checkDetails.changes, ...checkDetails.composedSchemaBreakingChanges].filter(
+          ({ id }) => affectedOperation.schemaChangeIds.includes(id),
         );
 
         const affectedRows = [];
