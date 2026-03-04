@@ -1997,6 +1997,30 @@ type Category {
       expect(fedGraphNames).toContain(fedGraphName1);
       expect(fedGraphNames).toContain(fedGraphName2);
 
+      // Get check summary for federated graph 1 - should only show breaking change for that graph
+      const checkSummary1 = await client.getCheckSummary({
+        namespace: 'default',
+        graphName: fedGraphName1,
+        checkId: checkResp.checkId,
+      });
+      expect(checkSummary1.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkSummary1.composedSchemaBreakingChanges.length).toBe(1);
+      expect(checkSummary1.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName1);
+      expect(checkSummary1.composedSchemaBreakingChanges[0].path).toBe('User.name');
+      expect(checkSummary1.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
+
+      // Get check summary for federated graph 2 - should only show breaking change for that graph
+      const checkSummary2 = await client.getCheckSummary({
+        namespace: 'default',
+        graphName: fedGraphName2,
+        checkId: checkResp.checkId,
+      });
+      expect(checkSummary2.response?.code).toBe(EnumStatusCode.OK);
+      expect(checkSummary2.composedSchemaBreakingChanges.length).toBe(1);
+      expect(checkSummary2.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName2);
+      expect(checkSummary2.composedSchemaBreakingChanges[0].path).toBe('User.name');
+      expect(checkSummary2.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
+
       await server.close();
     });
 
