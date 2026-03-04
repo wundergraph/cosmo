@@ -9,7 +9,7 @@
     "cosmo"
   ],
   "scripts": {
-    "format": "find . -type f -name '*.go' -not -path './gen/*' -not -path './vendor/*' -exec gofmt -w {} +",
+    "format": "go fmt ./...",
     "postversion": "name=$(jq -r .name package.json); version=$(jq -r .version package.json); gh workflow run image-release.yml -F name=$name -F workingDirectory=router -F tag=$version -F dockerContext=router"
   },
   "author": {
