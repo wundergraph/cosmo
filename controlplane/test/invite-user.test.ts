@@ -316,6 +316,11 @@ describe('InviteUser', () => {
     expect(listOrganizationsResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(listOrganizationsResponse.organizations).toHaveLength(2);
 
+    const members = await orgMemberRepo.getMembers({
+      organizationID: adminAliceCompanyA.organizationId,
+    });
+    expect(members.filter((m) => m.userID === adminJimCompanyB!.userId)).toHaveLength(1);
+
     await server.close();
   });
 });

@@ -329,6 +329,7 @@ describe('Scim server v2.0', () => {
     });
 
     expect(createUserResp.status).toBe(400);
+    expect(spy).not.toHaveBeenCalled();
 
     spy.mockReset();
   });
