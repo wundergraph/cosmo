@@ -708,12 +708,10 @@ func TestNatsEvents(t *testing.T) {
 			defer resp.Body.Close()
 			reader := bufio.NewReader(resp.Body)
 
-			eventNext := testenv.ReadSSELine(t, reader)
+			eventNext := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "event: next", eventNext)
-			data := testenv.ReadSSELine(t, reader)
+			data := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "data: {\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}", data)
-			line := testenv.ReadSSELine(t, reader)
-			require.Equal(t, "", line)
 
 			// Trigger the subscription via NATS
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
@@ -722,12 +720,10 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
-			eventNext = testenv.ReadSSELine(t, reader)
+			eventNext = testenv.ReadSSEField(t, reader)
 			require.Equal(t, "event: next", eventNext)
-			data = testenv.ReadSSELine(t, reader)
+			data = testenv.ReadSSEField(t, reader)
 			require.Equal(t, "data: {\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}", data)
-			line = testenv.ReadSSELine(t, reader)
-			require.Equal(t, "", line)
 		})
 	})
 
@@ -850,7 +846,7 @@ func TestNatsEvents(t *testing.T) {
 
 			reader := bufio.NewReader(resp.Body)
 
-			eventNext := testenv.ReadSSELine(t, reader)
+			eventNext := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "event: next", eventNext)
 
 			// Trigger the subscription via NATS
@@ -860,10 +856,8 @@ func TestNatsEvents(t *testing.T) {
 			err = xEnv.NatsConnectionDefault.Flush()
 			require.NoError(t, err)
 
-			data := testenv.ReadSSELine(t, reader)
+			data := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "data: {\"data\":{\"employeeUpdated\":{\"id\":3,\"details\":{\"forename\":\"Stefan\",\"surname\":\"Avram\"}}}}", data)
-			line := testenv.ReadSSELine(t, reader)
-			require.Equal(t, "", line)
 		})
 	})
 
@@ -1668,12 +1662,10 @@ func TestFlakyNatsEvents(t *testing.T) {
 				11: {forename: "Alexandra", surname: "Neuse"},
 			}
 
-			eventNext := testenv.ReadSSELine(t, reader)
+			eventNext := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "event: next", eventNext)
-			data := testenv.ReadSSELine(t, reader)
+			data := testenv.ReadSSEField(t, reader)
 			require.Equal(t, fmt.Sprintf("data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":%d,\"details\":{\"forename\":\"%s\",\"surname\":\"%s\"}}}}", 1, testData[1].forename, testData[1].surname), data)
-			line := testenv.ReadSSELine(t, reader)
-			require.Equal(t, "", line)
 
 			// This loop is used to test the filter
 			// It will emit 12 events, and only 7 of them should be included:
@@ -1689,12 +1681,10 @@ func TestFlakyNatsEvents(t *testing.T) {
 				// if some message is not filtered out, the test will fail
 				switch i {
 				case 1, 3, 4, 5, 7, 8, 11:
-					eventNext = testenv.ReadSSELine(t, reader)
+					eventNext = testenv.ReadSSEField(t, reader)
 					require.Equal(t, "event: next", eventNext)
-					data = testenv.ReadSSELine(t, reader)
+					data = testenv.ReadSSEField(t, reader)
 					require.Equal(t, fmt.Sprintf("data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":%d,\"details\":{\"forename\":\"%s\",\"surname\":\"%s\"}}}}", i, testData[i].forename, testData[i].surname), data)
-					line = testenv.ReadSSELine(t, reader)
-					require.Equal(t, "", line)
 				}
 			}
 		})

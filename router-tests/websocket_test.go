@@ -281,6 +281,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
 			// Trigger the subscription via NATS
 			subject := xEnv.GetPubSubName("employeeUpdated.3")
 			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))
@@ -345,6 +346,7 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
 			// Trigger the subscription via NATS
 			subject := xEnv.GetPubSubName("employeeUpdated.3")
 			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))
@@ -413,6 +415,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
 			// Trigger the subscription via NATS
 			subject := xEnv.GetPubSubName("employeeUpdated.3")
 			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))
@@ -573,6 +576,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
 			// Trigger the subscription via NATS
 			subject := xEnv.GetPubSubName("employeeUpdated.3")
 			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))

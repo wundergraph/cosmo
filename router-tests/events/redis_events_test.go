@@ -166,6 +166,7 @@ func TestRedisEvents(t *testing.T) {
 
 			// Wait for the subscription to be started before producing a message
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
+			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
 
 			// produce an empty message
 			events.ProduceRedisMessage(t, xEnv, topics[0], ``)
@@ -610,12 +611,10 @@ func TestRedisEvents(t *testing.T) {
 
 			// read the message from the subscription
 			reader := bufio.NewReader(clientRet.resp.Body)
-			eventNext := testenv.ReadSSELine(t, reader)
+			eventNext := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "event: next", eventNext)
-			data := testenv.ReadSSELine(t, reader)
+			data := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", data)
-			line := testenv.ReadSSELine(t, reader)
-			require.Empty(t, line)
 		})
 	})
 
@@ -651,9 +650,9 @@ func TestRedisEvents(t *testing.T) {
 			defer resp.Body.Close()
 			reader := bufio.NewReader(resp.Body)
 
-			eventNext := testenv.ReadSSELine(t, reader)
+			eventNext := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "event: next", eventNext)
-			data := testenv.ReadSSELine(t, reader)
+			data := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", data)
 
 			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
@@ -846,12 +845,10 @@ func TestFlakyRedisEvents(t *testing.T) {
 
 			// read the message from the subscription
 			reader := bufio.NewReader(clientRet.resp.Body)
-			eventNext := testenv.ReadSSELine(t, reader)
+			eventNext := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "event: next", eventNext)
-			data := testenv.ReadSSELine(t, reader)
+			data := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", data)
-			line := testenv.ReadSSELine(t, reader)
-			require.Empty(t, line)
 		})
 	})
 

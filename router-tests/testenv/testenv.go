@@ -2755,6 +2755,21 @@ func ReadSSELine(t testing.TB, reader *bufio.Reader) string {
 	}
 }
 
+// ReadSSEField reads the next SSE field line, skipping comments and empty lines.
+// Use this instead of ReadSSELine when reading "event:" or "data:" fields,
+// as heartbeats produce both a comment line and a trailing empty delimiter.
+func ReadSSEField(t testing.TB, reader *bufio.Reader) string {
+	t.Helper()
+	for {
+		line, _, err := reader.ReadLine()
+		require.NoError(t, err)
+		s := string(line)
+		if s != "" && !strings.HasPrefix(s, ":") {
+			return s
+		}
+	}
+}
+
 func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 

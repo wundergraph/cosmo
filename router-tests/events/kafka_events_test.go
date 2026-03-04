@@ -404,12 +404,10 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, http.StatusOK, response.response.StatusCode)
 				reader := bufio.NewReader(response.response.Body)
 				defer response.response.Body.Close()
-				eventNext := testenv.ReadSSELine(t, reader)
+				eventNext := testenv.ReadSSEField(t, reader)
 				require.Equal(t, "event: next", eventNext)
-				data := testenv.ReadSSELine(t, reader)
+				data := testenv.ReadSSEField(t, reader)
 				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", data)
-				line := testenv.ReadSSELine(t, reader)
-				require.Equal(t, "", line)
 			})
 		})
 	})
@@ -468,12 +466,10 @@ func TestKafkaEvents(t *testing.T) {
 				defer resp.response.Body.Close()
 				reader := bufio.NewReader(resp.response.Body)
 
-				eventNext := testenv.ReadSSELine(t, reader)
+				eventNext := testenv.ReadSSEField(t, reader)
 				require.Equal(t, "event: next", eventNext)
-				data := testenv.ReadSSELine(t, reader)
+				data := testenv.ReadSSEField(t, reader)
 				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", data)
-				line := testenv.ReadSSELine(t, reader)
-				require.Equal(t, "", line)
 			})
 		})
 	})
@@ -756,6 +752,7 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
 			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{asas`) // Invalid message
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
