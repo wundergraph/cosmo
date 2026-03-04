@@ -2666,6 +2666,38 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	}
 }
 
+// NATSPublishUntilReceived publishes a NATS message and retries until
+// the subscription processes it. Handles the race between NATS ChanSubscribe
+// (which buffers the SUB command) and server-side subscription registration.
+func (e *Environment) NATSPublishUntilReceived(conn *nats.Conn, subject string, data []byte, desiredMsgCount uint64, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	for {
+		err := conn.Publish(subject, data)
+		require.NoError(e.t, err)
+		err = conn.Flush()
+		require.NoError(e.t, err)
+
+		// Event-driven wait with short retry window
+		shortCtx, shortCancel := context.WithTimeout(ctx, 500*time.Millisecond)
+		e.Router.EngineStats.Wait(shortCtx, func(r *statistics.UsageReport) bool {
+			return r.MessagesSent >= desiredMsgCount
+		})
+		shortCancel()
+
+		report := e.Router.EngineStats.GetReport()
+		if report.MessagesSent >= desiredMsgCount {
+			return
+		}
+
+		if ctx.Err() != nil {
+			e.t.Fatalf("timed out: messages sent %d, want >= %d", report.MessagesSent, desiredMsgCount)
+		}
+	}
+}
+
 func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Duration) {
 	e.t.Helper()
 

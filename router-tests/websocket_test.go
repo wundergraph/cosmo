@@ -282,14 +282,9 @@ func TestWebSockets(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*15)
 			xEnv.WaitForTriggerCount(1, time.Second*15)
-			// Trigger the subscription via NATS
+			// Trigger the subscription via NATS (with retry to handle NATS SUB buffering race)
 			subject := xEnv.GetPubSubName("employeeUpdated.3")
-			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-
-			xEnv.WaitForMessagesSent(1, time.Second*15)
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
@@ -347,14 +342,9 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 			xEnv.WaitForSubscriptionCount(1, time.Second*15)
 			xEnv.WaitForTriggerCount(1, time.Second*15)
-			// Trigger the subscription via NATS
+			// Trigger the subscription via NATS (with retry to handle NATS SUB buffering race)
 			subject := xEnv.GetPubSubName("employeeUpdated.3")
-			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-
-			xEnv.WaitForMessagesSent(1, time.Second*15)
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
@@ -416,14 +406,9 @@ func TestWebSockets(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*15)
 			xEnv.WaitForTriggerCount(1, time.Second*15)
-			// Trigger the subscription via NATS
+			// Trigger the subscription via NATS (with retry to handle NATS SUB buffering race)
 			subject := xEnv.GetPubSubName("employeeUpdated.3")
-			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-
-			xEnv.WaitForMessagesSent(1, time.Second*15)
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
@@ -577,14 +562,9 @@ func TestWebSockets(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*15)
 			xEnv.WaitForTriggerCount(1, time.Second*15)
-			// Trigger the subscription via NATS
+			// Trigger the subscription via NATS (with retry to handle NATS SUB buffering race)
 			subject := xEnv.GetPubSubName("employeeUpdated.3")
-			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-
-			xEnv.WaitForMessagesSent(1, time.Second*15)
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)

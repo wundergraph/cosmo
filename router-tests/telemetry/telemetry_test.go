@@ -212,6 +212,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 			})
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForTriggerCount(1, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 1,
 				Connections:   1,
@@ -396,6 +397,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 			require.NoError(t, err)
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForTriggerCount(1, time.Second*5)
 
 			rm := metricdata.ResourceMetrics{}
 			err = metricReader.Collect(context.Background(), &rm)
