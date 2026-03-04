@@ -2741,6 +2741,20 @@ func WSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, p []byt
 	return 0, nil, fmt.Errorf("failed to read from WebSocket: %w", err)
 }
 
+// ReadSSELine reads the next non-comment line from an SSE stream.
+// SSE comment lines (starting with ':') like heartbeats are silently skipped.
+func ReadSSELine(t testing.TB, reader *bufio.Reader) string {
+	t.Helper()
+	for {
+		line, _, err := reader.ReadLine()
+		require.NoError(t, err)
+		s := string(line)
+		if !strings.HasPrefix(s, ":") {
+			return s
+		}
+	}
+}
+
 func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
@@ -2757,7 +2771,7 @@ func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 			return err
 		}
 
-		require.NoError(t, ReadAndCheckJSON(t, conn, v))
+		err = ReadAndCheckJSON(t, conn, v)
 
 		// Reset the deadline to prevent future operations from timing out
 		if resetErr := conn.SetReadDeadline(time.Time{}); resetErr != nil {

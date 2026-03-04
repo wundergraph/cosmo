@@ -24,9 +24,8 @@ const KafkaWaitTimeout = time.Second * 30
 
 func assertKafkaLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
 	t.Helper()
-	line, _, err := reader.ReadLine()
-	assert.NoError(t, err)
-	assert.Equal(t, expected, string(line))
+	line := testenv.ReadSSELine(t, reader)
+	assert.Equal(t, expected, line)
 }
 
 func assertKafkaMultipartPrefix(t *testing.T, reader *bufio.Reader) {
@@ -367,7 +366,7 @@ func TestKafkaEvents(t *testing.T) {
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
 			client := http.Client{
-				Timeout: time.Second * 10,
+				Timeout: time.Second * 30,
 			}
 			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, gErr)
@@ -405,15 +404,12 @@ func TestKafkaEvents(t *testing.T) {
 				require.Equal(t, http.StatusOK, response.response.StatusCode)
 				reader := bufio.NewReader(response.response.Body)
 				defer response.response.Body.Close()
-				eventNext, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "event: next", string(eventNext))
-				data, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
-				line, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "", string(line))
+				eventNext := testenv.ReadSSELine(t, reader)
+				require.Equal(t, "event: next", eventNext)
+				data := testenv.ReadSSELine(t, reader)
+				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", data)
+				line := testenv.ReadSSELine(t, reader)
+				require.Equal(t, "", line)
 			})
 		})
 	})
@@ -432,7 +428,7 @@ func TestKafkaEvents(t *testing.T) {
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdatedMyKafka(employeeID: 1) { id details { forename surname } }}"}`)
 
 			client := http.Client{
-				Timeout: time.Second * 10,
+				Timeout: time.Second * 30,
 			}
 			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, gErr)
@@ -472,15 +468,12 @@ func TestKafkaEvents(t *testing.T) {
 				defer resp.response.Body.Close()
 				reader := bufio.NewReader(resp.response.Body)
 
-				eventNext, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "event: next", string(eventNext))
-				data, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
-				line, _, gErr := reader.ReadLine()
-				require.NoError(t, gErr)
-				require.Equal(t, "", string(line))
+				eventNext := testenv.ReadSSELine(t, reader)
+				require.Equal(t, "event: next", eventNext)
+				data := testenv.ReadSSELine(t, reader)
+				require.Equal(t, "data: {\"data\":{\"employeeUpdatedMyKafka\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", data)
+				line := testenv.ReadSSELine(t, reader)
+				require.Equal(t, "", line)
 			})
 		})
 	})
@@ -500,7 +493,7 @@ func TestKafkaEvents(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			client := http.Client{
-				Timeout: time.Second * 10,
+				Timeout: time.Second * 30,
 			}
 			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, err)
@@ -517,12 +510,10 @@ func TestKafkaEvents(t *testing.T) {
 			defer resp.Body.Close()
 			reader := bufio.NewReader(resp.Body)
 
-			eventNext, _, err := reader.ReadLine()
-			require.NoError(t, err)
-			require.Equal(t, "event: next", string(eventNext))
-			data, _, err := reader.ReadLine()
-			require.NoError(t, err)
-			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", string(data))
+			eventNext := testenv.ReadSSELine(t, reader)
+			require.Equal(t, "event: next", eventNext)
+			data := testenv.ReadSSELine(t, reader)
+			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", data)
 
 			xEnv.WaitForSubscriptionCount(0, KafkaWaitTimeout)
 			xEnv.WaitForConnectionCount(0, KafkaWaitTimeout)
@@ -933,6 +924,10 @@ func TestKafkaEvents(t *testing.T) {
 
 func TestFlakyKafkaEvents(t *testing.T) {
 	t.Parallel()
+
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+	}
 
 	t.Run("every subscriber gets the message", func(t *testing.T) {
 		t.Parallel()

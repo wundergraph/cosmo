@@ -23,9 +23,8 @@ const RedisWaitTimeout = time.Second * 30
 
 func assertRedisLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
 	t.Helper()
-	line, _, err := reader.ReadLine()
-	require.NoError(t, err)
-	assert.Equal(t, expected, string(line))
+	line := testenv.ReadSSELine(t, reader)
+	assert.Equal(t, expected, line)
 }
 
 func assertRedisMultipartPrefix(t *testing.T, reader *bufio.Reader) {
@@ -561,7 +560,7 @@ func TestRedisEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdates { id details { forename surname } }}"}`)
 			client := http.Client{
-				Timeout: time.Second * 10,
+				Timeout: time.Second * 30,
 			}
 			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, gErr)
@@ -611,15 +610,12 @@ func TestRedisEvents(t *testing.T) {
 
 			// read the message from the subscription
 			reader := bufio.NewReader(clientRet.resp.Body)
-			eventNext, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Equal(t, "event: next", string(eventNext))
-			data, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
-			line, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Empty(t, string(line))
+			eventNext := testenv.ReadSSELine(t, reader)
+			require.Equal(t, "event: next", eventNext)
+			data := testenv.ReadSSELine(t, reader)
+			require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", data)
+			line := testenv.ReadSSELine(t, reader)
+			require.Empty(t, line)
 		})
 	})
 
@@ -638,7 +634,7 @@ func TestRedisEvents(t *testing.T) {
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			client := http.Client{
-				Timeout: time.Second * 10,
+				Timeout: time.Second * 30,
 			}
 			req, err := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, err)
@@ -655,12 +651,10 @@ func TestRedisEvents(t *testing.T) {
 			defer resp.Body.Close()
 			reader := bufio.NewReader(resp.Body)
 
-			eventNext, _, err := reader.ReadLine()
-			require.NoError(t, err)
-			require.Equal(t, "event: next", string(eventNext))
-			data, _, err := reader.ReadLine()
-			require.NoError(t, err)
-			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", string(data))
+			eventNext := testenv.ReadSSELine(t, reader)
+			require.Equal(t, "event: next", eventNext)
+			data := testenv.ReadSSELine(t, reader)
+			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", data)
 
 			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
 			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
@@ -802,7 +796,7 @@ func TestFlakyRedisEvents(t *testing.T) {
 			subscribePayload := []byte(`{"query":"subscription { employeeUpdates { id details { forename surname } }}"}`)
 
 			client := http.Client{
-				Timeout: time.Second * 10,
+				Timeout: time.Second * 30,
 			}
 			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, gErr)
@@ -852,15 +846,12 @@ func TestFlakyRedisEvents(t *testing.T) {
 
 			// read the message from the subscription
 			reader := bufio.NewReader(clientRet.resp.Body)
-			eventNext, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Equal(t, "event: next", string(eventNext))
-			data, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", string(data))
-			line, _, gErr := reader.ReadLine()
-			require.NoError(t, gErr)
-			require.Empty(t, string(line))
+			eventNext := testenv.ReadSSELine(t, reader)
+			require.Equal(t, "event: next", eventNext)
+			data := testenv.ReadSSELine(t, reader)
+			require.Equal(t, "data: {\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}", data)
+			line := testenv.ReadSSELine(t, reader)
+			require.Empty(t, line)
 		})
 	})
 

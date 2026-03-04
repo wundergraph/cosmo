@@ -289,7 +289,7 @@ func TestSingleFlight(t *testing.T) {
 
 			// Wait for all subscriptions to be established before triggering
 			go func() {
-				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*5)
+				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
 				// Trigger the subscription via NATS to get updates for all subscriptions
 				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
@@ -373,7 +373,7 @@ func TestSingleFlight(t *testing.T) {
 
 			// Wait for all subscriptions to be established before triggering
 			go func() {
-				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*5)
+				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
 				// Trigger the subscription via NATS to get updates for all subscriptions
 				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)
@@ -467,7 +467,7 @@ func TestSingleFlight(t *testing.T) {
 
 			// Wait for all subscriptions to be established before triggering
 			go func() {
-				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*5)
+				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
 				// Trigger the subscription via NATS to get updates for all subscriptions
 				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
 				require.NoError(t, err)

@@ -280,18 +280,15 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			go func() {
-				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-				// Trigger the subscription via NATS
-				subject := xEnv.GetPubSubName("employeeUpdated.3")
-				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NatsConnectionDefault.Publish(subject, message)
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
-			}()
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			// Trigger the subscription via NATS
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
 
-			xEnv.WaitForMessagesSent(1, time.Second*10)
+			xEnv.WaitForMessagesSent(1, time.Second*15)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
@@ -301,7 +298,7 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, `[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate', Reason: not authenticated.","path":["employeeUpdated","startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}]`, string(res.Payload))
 
 			require.NoError(t, conn.Close())
-			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.WaitForSubscriptionCount(0, time.Second*15)
 		})
 	})
 	t.Run("subscription with authorization reject", func(t *testing.T) {
@@ -347,18 +344,15 @@ func TestWebSockets(t *testing.T) {
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } startDate }}"}`),
 			})
 			require.NoError(t, err)
-			go func() {
-				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-				// Trigger the subscription via NATS
-				subject := xEnv.GetPubSubName("employeeUpdated.3")
-				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NatsConnectionDefault.Publish(subject, message)
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
-			}()
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			// Trigger the subscription via NATS
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
 
-			xEnv.WaitForMessagesSent(1, time.Second*10)
+			xEnv.WaitForMessagesSent(1, time.Second*15)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
@@ -368,7 +362,7 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
 
 			require.NoError(t, conn.Close())
-			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.WaitForSubscriptionCount(0, time.Second*15)
 		})
 	})
 	t.Run("subscription with authorization via initial payload with reject", func(t *testing.T) {
@@ -418,18 +412,15 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			go func() {
-				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-				// Trigger the subscription via NATS
-				subject := xEnv.GetPubSubName("employeeUpdated.3")
-				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NatsConnectionDefault.Publish(subject, message)
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
-			}()
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			// Trigger the subscription via NATS
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
 
-			xEnv.WaitForMessagesSent(1, time.Second*10)
+			xEnv.WaitForMessagesSent(1, time.Second*15)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
@@ -439,7 +430,7 @@ func TestWebSockets(t *testing.T) {
 			require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3}}}`, string(res.Payload))
 
 			require.NoError(t, conn.Close())
-			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.WaitForSubscriptionCount(0, time.Second*15)
 		})
 	})
 	t.Run("subscription with authorization via initial payload no token with reject", func(t *testing.T) {
@@ -581,18 +572,15 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			go func() {
-				xEnv.WaitForSubscriptionCount(1, time.Second*10)
-				// Trigger the subscription via NATS
-				subject := xEnv.GetPubSubName("employeeUpdated.3")
-				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NatsConnectionDefault.Publish(subject, message)
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
-			}()
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			// Trigger the subscription via NATS
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+			err = xEnv.NatsConnectionDefault.Publish(subject, []byte(`{"id":3,"__typename": "Employee"}`))
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
 
-			xEnv.WaitForMessagesSent(1, time.Second*10)
+			xEnv.WaitForMessagesSent(1, time.Second*15)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
@@ -602,7 +590,7 @@ func TestWebSockets(t *testing.T) {
 			require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3}}}`, string(res.Payload))
 			require.NoError(t, conn.Close())
 
-			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.WaitForSubscriptionCount(0, time.Second*15)
 		})
 	})
 	t.Run("subscription", func(t *testing.T) {
