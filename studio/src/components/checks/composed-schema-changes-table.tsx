@@ -45,7 +45,6 @@ export const ComposedSchemaChangesTable = ({
           <TableRow>
             <TableHead className="w-[200px]">Change</TableHead>
             <TableHead>Description</TableHead>
-            <TableHead>Federated Graph</TableHead>
             <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -104,7 +103,6 @@ const Row = ({
         </div>
       </TableCell>
       <TableCell>{message}</TableCell>
-      <TableCell>{federatedGraphName}</TableCell>
       <TableCell>
         <div className="flex items-center gap-x-2">
           <Tooltip delayDuration={100}>

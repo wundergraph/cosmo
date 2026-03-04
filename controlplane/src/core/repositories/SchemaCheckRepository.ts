@@ -202,6 +202,7 @@ export class SchemaCheckRepository {
 
   public async getFederatedGraphSchemaChanges(data: { schemaCheckId: string; federatedGraphId: string }): Promise<
     Array<{
+      id: string;
       changeType: string;
       changeMessage: string | null;
       path: string | null;
@@ -210,6 +211,7 @@ export class SchemaCheckRepository {
   > {
     const changes = await this.db
       .select({
+        id: schema.schemaCheckChangeAction.id,
         changeType: schema.schemaCheckChangeAction.changeType,
         changeMessage: schema.schemaCheckChangeAction.changeMessage,
         path: schema.schemaCheckChangeAction.path,
@@ -232,6 +234,7 @@ export class SchemaCheckRepository {
       );
 
     return changes.map((change) => ({
+      id: change.id,
       changeType: change.changeType || '',
       changeMessage: change.changeMessage,
       path: change.path,

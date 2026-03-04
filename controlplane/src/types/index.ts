@@ -247,6 +247,7 @@ export interface SchemaCheckDetailsDTO {
   compositionErrors: string[];
   compositionWarnings: string[];
   composedSchemaBreakingChanges: {
+    id: string;
     message: string;
     changeType: string;
     path?: string;
