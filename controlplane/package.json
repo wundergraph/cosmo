@@ -27,7 +27,7 @@
     "test:coverage": "tsc -p tsconfig.test.json && vitest run --reporter=default --reporter=hanging-process --coverage",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
     "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && pnpm format",
-    "format": "prettier -w -c .",
+    "format": "prettier -w .",
     "migrate": "pnpm db:migrate && pnpm ch:migrate",
     "drizzle:up": "drizzle-kit up",
     "ch:down": "dbmate -d \"./clickhouse/migrations\" down",
