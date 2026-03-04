@@ -4,7 +4,8 @@ import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.j
 import {
   createBaseAndFeatureSubgraph,
   createNamespace,
-  createSubgraph, DEFAULT_NAMESPACE,
+  createSubgraph,
+  DEFAULT_NAMESPACE,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,
@@ -41,8 +42,9 @@ describe('Move subgraph tests', () => {
       newNamespace: 'prod',
     });
     expect(moveSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(moveSubgraphResponse.response?.details)
-      .toBe('Subgraphs that form the base of one or more feature subgraphs cannot be moved.');
+    expect(moveSubgraphResponse.response?.details).toBe(
+      'Subgraphs that form the base of one or more feature subgraphs cannot be moved.',
+    );
 
     await server.close();
   });
