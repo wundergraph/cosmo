@@ -395,7 +395,7 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
-			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, KafkaWaitTimeout)
 
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(t *testing.T, response struct {
 				response *http.Response
@@ -456,8 +456,7 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
-			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-			xEnv.WaitForMessagesSent(1, KafkaWaitTimeout)
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, KafkaWaitTimeout)
 
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, responseCh, func(t *testing.T, resp struct {
 				response *http.Response
@@ -624,6 +623,7 @@ func TestKafkaEvents(t *testing.T) {
 			var payload subscriptionPayload
 
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
+			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
 			testData := map[uint32]struct {
 				ID       int

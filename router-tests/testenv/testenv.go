@@ -2698,6 +2698,48 @@ func (e *Environment) NATSPublishUntilReceived(conn *nats.Conn, subject string, 
 	}
 }
 
+// KafkaPublishUntilReceived produces a Kafka message and retries until
+// the subscription processes it. Handles the race between Kafka consumer
+// group join/partition assignment and message production.
+func (e *Environment) KafkaPublishUntilReceived(topicName string, message string, desiredMsgCount uint64, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	for {
+		pErrCh := make(chan error, 1)
+		e.KafkaClient.Produce(ctx, &kgo.Record{
+			Topic: e.GetPubSubName(topicName),
+			Value: []byte(message),
+		}, func(_ *kgo.Record, err error) {
+			pErrCh <- err
+		})
+
+		select {
+		case pErr := <-pErrCh:
+			require.NoError(e.t, pErr)
+		case <-ctx.Done():
+			e.t.Fatalf("timed out producing Kafka message")
+		}
+
+		// Event-driven wait with short retry window
+		shortCtx, shortCancel := context.WithTimeout(ctx, 500*time.Millisecond)
+		e.Router.EngineStats.Wait(shortCtx, func(r *statistics.UsageReport) bool {
+			return r.MessagesSent >= desiredMsgCount
+		})
+		shortCancel()
+
+		report := e.Router.EngineStats.GetReport()
+		if report.MessagesSent >= desiredMsgCount {
+			return
+		}
+
+		if ctx.Err() != nil {
+			e.t.Fatalf("timed out: messages sent %d, want >= %d", report.MessagesSent, desiredMsgCount)
+		}
+	}
+}
+
 func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
