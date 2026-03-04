@@ -164,7 +164,14 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
-			xEnv.KafkaPublishUntilReceived(topics[0], ``, 1, KafkaWaitTimeout)
+			// Warm up: confirm consumer has partition assignment with a valid message
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, KafkaWaitTimeout)
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+
+			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], ``) // Empty message
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.ErrorContains(t, args.errValue, "Invalid message received")
 			})
@@ -770,7 +777,14 @@ func TestKafkaEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
-			xEnv.KafkaPublishUntilReceived(topics[0], `{asas`, 1, KafkaWaitTimeout)
+			// Warm up: confirm consumer has partition assignment with a valid message
+			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id":1}`, 1, KafkaWaitTimeout)
+			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdatedMyKafka":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
+			})
+
+			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{asas`) // Invalid message
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionOneArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
 				require.ErrorContains(t, args.errValue, "Invalid message received")
 			})
