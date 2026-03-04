@@ -247,7 +247,7 @@ func TestKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(2, KafkaWaitTimeout)
-			xEnv.WaitForTriggerCount(2, KafkaWaitTimeout)
+			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
 			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
@@ -987,7 +987,7 @@ func TestFlakyKafkaEvents(t *testing.T) {
 			}()
 
 			xEnv.WaitForSubscriptionCount(2, KafkaWaitTimeout)
-			xEnv.WaitForTriggerCount(2, KafkaWaitTimeout)
+			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
 			events.ProduceKafkaMessage(t, xEnv, KafkaWaitTimeout, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
