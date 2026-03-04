@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.194.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.193.1...controlplane@0.194.0) (2026-03-04)
+
+### Features
+
+* ignore pascal case + input prefix lint rules for EDFS ([#2574](https://github.com/wundergraph/cosmo/issues/2574)) ([ffeaf59](https://github.com/wundergraph/cosmo/commit/ffeaf59e0efa1ee041a0867b3c2939cf3c2103a7)) (@comatory)
+
 ## [0.193.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.193.0...controlplane@0.193.1) (2026-03-03)
 
 ### Bug Fixes

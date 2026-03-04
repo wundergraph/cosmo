@@ -37,8 +37,9 @@ jobs:
       - name: Generate router templates
         run: pnpm --filter ./cli compile-templates
 
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
+      - uses: ./.github/actions/git-dirty-check
+        with:
+          package-name: cli
 
       - name: Build Node.js NPM Package
         run: pnpm --filter ./cli --filter ./connect --filter ./shared --filter ./composition --filter ./protographic run build
