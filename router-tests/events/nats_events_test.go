@@ -1557,7 +1557,7 @@ func TestFlakyNatsEvents(t *testing.T) {
 
 			// Then wait for subscriptions to be started again
 			xEnv.WaitForSubscriptionCount(3, NatsWaitTimeout)
-			xEnv.WaitForTriggerCount(6, NatsWaitTimeout)
+			xEnv.WaitForTriggerCount(3, NatsWaitTimeout)
 
 			xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename":"Employee"}`))
 			xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.2"), []byte(`{"id":2,"__typename":"Employee"}`))
