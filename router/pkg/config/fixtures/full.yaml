@@ -176,6 +176,11 @@ telemetry:
           path: '/v1/metrics'
           endpoint: https://my-otel-collector.example.com
           # headers: {Authorization: Bearer <my-token>}
+      log_exporter:
+        enabled: true
+        exclude_metrics:
+          - "process\\."
+          - "server\\.uptime"
 
     # Expose OpenTelemetry metrics for scraping
     prometheus:
