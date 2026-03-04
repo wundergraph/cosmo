@@ -11,7 +11,7 @@ import {
   createTestGroup,
   createTestRBACEvaluator,
   genID,
-  genUniqueLabel,
+  genUniqueLabel
 } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { DEFAULT_NAMESPACE, SetupTest } from './test-util.js';
@@ -44,111 +44,10 @@ describe('CheckFederatedGraph', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test.each(['organization-admin', 'organization-developer'])(
-    '%s should be able to create a federated graph, subgraphs, publish the schema and then check the graph for composition errors',
-    async (role) => {
-      const { client, server, users, authenticator } = await SetupTest({ dbname, chClient });
-
-      const federatedGraphName = genID('fedGraph');
-
-      const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
-      const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
-      const usersSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/users.graphql'));
-
-      const pandasSchema = new TextDecoder().decode(pandasSchemaBuffer);
-      const productsSchema = new TextDecoder().decode(productsSchemaBuffer);
-      const usersSchema = new TextDecoder().decode(usersSchemaBuffer);
-
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({ role })),
-      });
-
-      const createFederatedGraphResp = await client.createFederatedGraph({
-        name: federatedGraphName,
-        namespace: DEFAULT_NAMESPACE,
-        labelMatchers: ['team=A'],
-        routingUrl: 'http://localhost:8080',
-      });
-      expect(createFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-      let resp = await client.createFederatedSubgraph({
-        name: 'pandas',
-        namespace: DEFAULT_NAMESPACE,
-        labels: [{ key: 'team', value: 'A' }],
-        routingUrl: 'http://localhost:8081',
-      });
-
-      expect(resp.response?.code).toBe(EnumStatusCode.OK);
-
-      let publishResp = await client.publishFederatedSubgraph({
-        name: 'pandas',
-        namespace: DEFAULT_NAMESPACE,
-        schema: pandasSchema,
-      });
-
-      expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
-
-      resp = await client.createFederatedSubgraph({
-        name: 'users',
-        namespace: DEFAULT_NAMESPACE,
-        labels: [{ key: 'team', value: 'A' }],
-        routingUrl: 'http://localhost:8082',
-      });
-
-      expect(resp.response?.code).toBe(EnumStatusCode.OK);
-
-      publishResp = await client.publishFederatedSubgraph({
-        name: 'users',
-        namespace: DEFAULT_NAMESPACE,
-        schema: usersSchema,
-      });
-
-      expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
-
-      resp = await client.createFederatedSubgraph({
-        name: 'products',
-        namespace: DEFAULT_NAMESPACE,
-        labels: [{ key: 'team', value: 'B' }],
-        routingUrl: 'http://localhost:8082',
-      });
-
-      expect(resp.response?.code).toBe(EnumStatusCode.OK);
-
-      publishResp = await client.publishFederatedSubgraph({
-        name: 'products',
-        namespace: DEFAULT_NAMESPACE,
-        schema: productsSchema,
-      });
-
-      expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
-
-      let checkResp = await client.checkFederatedGraph({
-        name: federatedGraphName,
-        namespace: DEFAULT_NAMESPACE,
-        labelMatchers: ['team=A'],
-      });
-      expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
-      expect(checkResp.compositionErrors).toHaveLength(0);
-
-      checkResp = await client.checkFederatedGraph({
-        name: federatedGraphName,
-        namespace: DEFAULT_NAMESPACE,
-        labelMatchers: ['team=B'],
-      });
-      expect(checkResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
-      expect(checkResp.compositionErrors).toHaveLength(2);
-      expect(checkResp.compositionErrors[0].message).toBe(noBaseDefinitionForExtensionError(OBJECT, 'User').message);
-      expect(checkResp.compositionErrors[1].message).toBe(
-        allExternalFieldInstancesError('User', new Map<string, Array<string>>([['totalProductsCreated', ['products']]]))
-          .message,
-      );
-
-      await server.close();
-    },
-  );
-
-  test('Should be able to create a federated graph, subgraphs, publish the schema and then check the graph for composition errors when using legacy API key', async (role) => {
+  test.each([
+    'organization-admin',
+    'organization-developer',
+  ])('%s should be able to create a federated graph, subgraphs, publish the schema and then check the graph for composition errors', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, chClient });
 
     const federatedGraphName = genID('fedGraph');
@@ -163,8 +62,8 @@ describe('CheckFederatedGraph', (ctx) => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createAPIKeyTestRBACEvaluator(),
-    });
+      rbac: createTestRBACEvaluator(createTestGroup({ role }))
+    })
 
     const createFederatedGraphResp = await client.createFederatedGraph({
       name: federatedGraphName,
@@ -242,8 +141,117 @@ describe('CheckFederatedGraph', (ctx) => {
     expect(checkResp.compositionErrors).toHaveLength(2);
     expect(checkResp.compositionErrors[0].message).toBe(noBaseDefinitionForExtensionError(OBJECT, 'User').message);
     expect(checkResp.compositionErrors[1].message).toBe(
-      allExternalFieldInstancesError('User', new Map<string, Array<string>>([['totalProductsCreated', ['products']]]))
-        .message,
+      allExternalFieldInstancesError(
+        'User',
+        new Map<string, Array<string>>([
+          ['totalProductsCreated', ['products']],
+        ]),
+      ).message,
+    );
+
+    await server.close();
+  });
+
+  test('Should be able to create a federated graph, subgraphs, publish the schema and then check the graph for composition errors when using legacy API key', async (role) => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname, chClient });
+
+    const federatedGraphName = genID('fedGraph');
+
+    const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
+    const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
+    const usersSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/users.graphql'));
+
+    const pandasSchema = new TextDecoder().decode(pandasSchemaBuffer);
+    const productsSchema = new TextDecoder().decode(productsSchemaBuffer);
+    const usersSchema = new TextDecoder().decode(usersSchemaBuffer);
+
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createAPIKeyTestRBACEvaluator()
+    })
+
+    const createFederatedGraphResp = await client.createFederatedGraph({
+      name: federatedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labelMatchers: ['team=A'],
+      routingUrl: 'http://localhost:8080',
+    });
+    expect(createFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
+
+    let resp = await client.createFederatedSubgraph({
+      name: 'pandas',
+      namespace: DEFAULT_NAMESPACE,
+      labels: [{ key: 'team', value: 'A' }],
+      routingUrl: 'http://localhost:8081',
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    let publishResp = await client.publishFederatedSubgraph({
+      name: 'pandas',
+      namespace: DEFAULT_NAMESPACE,
+      schema: pandasSchema,
+    });
+
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+    resp = await client.createFederatedSubgraph({
+      name: 'users',
+      namespace: DEFAULT_NAMESPACE,
+      labels: [{ key: 'team', value: 'A' }],
+      routingUrl: 'http://localhost:8082',
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    publishResp = await client.publishFederatedSubgraph({
+      name: 'users',
+      namespace: DEFAULT_NAMESPACE,
+      schema: usersSchema,
+    });
+
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+    resp = await client.createFederatedSubgraph({
+      name: 'products',
+      namespace: DEFAULT_NAMESPACE,
+      labels: [{ key: 'team', value: 'B' }],
+      routingUrl: 'http://localhost:8082',
+    });
+
+    expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+    publishResp = await client.publishFederatedSubgraph({
+      name: 'products',
+      namespace: DEFAULT_NAMESPACE,
+      schema: productsSchema,
+    });
+
+    expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+    let checkResp = await client.checkFederatedGraph({
+      name: federatedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labelMatchers: ['team=A'],
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(checkResp.compositionErrors).toHaveLength(0);
+
+    checkResp = await client.checkFederatedGraph({
+      name: federatedGraphName,
+      namespace: DEFAULT_NAMESPACE,
+      labelMatchers: ['team=B'],
+    });
+    expect(checkResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+    expect(checkResp.compositionErrors).toHaveLength(2);
+    expect(checkResp.compositionErrors[0].message).toBe(noBaseDefinitionForExtensionError(OBJECT, 'User').message);
+    expect(checkResp.compositionErrors[1].message).toBe(
+      allExternalFieldInstancesError(
+        'User',
+        new Map<string, Array<string>>([
+          ['totalProductsCreated', ['products']],
+        ]),
+      ).message,
     );
 
     await server.close();
@@ -323,7 +331,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role: 'graph-admin' })),
+      rbac: createTestRBACEvaluator(createTestGroup({ role: 'graph-admin' }))
     });
 
     let checkResp = await client.checkFederatedGraph({
@@ -343,8 +351,12 @@ describe('CheckFederatedGraph', (ctx) => {
     expect(checkResp.compositionErrors).toHaveLength(2);
     expect(checkResp.compositionErrors[0].message).toBe(noBaseDefinitionForExtensionError(OBJECT, 'User').message);
     expect(checkResp.compositionErrors[1].message).toBe(
-      allExternalFieldInstancesError('User', new Map<string, Array<string>>([['totalProductsCreated', ['products']]]))
-        .message,
+      allExternalFieldInstancesError(
+        'User',
+        new Map<string, Array<string>>([
+          ['totalProductsCreated', ['products']],
+        ]),
+      ).message,
     );
 
     await server.close();
@@ -433,7 +445,7 @@ describe('CheckFederatedGraph', (ctx) => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+      rbac: createTestRBACEvaluator(createTestGroup({ role }))
     });
 
     const checkResp = await client.checkFederatedGraph({

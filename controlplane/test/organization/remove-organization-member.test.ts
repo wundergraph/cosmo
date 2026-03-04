@@ -19,12 +19,7 @@ describe('Remove organization member', () => {
   });
 
   test('that an organization admin can remove a member from the organization', async () => {
-    const {
-      authenticator,
-      client,
-      server,
-      users: { adminAliceCompanyA, adminBobCompanyA },
-    } = await SetupTest({ dbname, enableMultiUsers: true });
+    const { authenticator, client, server, users: { adminAliceCompanyA, adminBobCompanyA } } = await SetupTest({ dbname, enableMultiUsers: true, });
 
     authenticator.changeUserWithSuppliedContext(adminAliceCompanyA!);
 
@@ -43,12 +38,7 @@ describe('Remove organization member', () => {
   });
 
   test('that an organization developer cannot remove a member from the organization', async () => {
-    const {
-      authenticator,
-      client,
-      server,
-      users: { adminAliceCompanyA, devJoeCompanyA, adminBobCompanyA },
-    } = await SetupTest({ dbname, enableMultiUsers: true });
+    const { authenticator, client, server, users: { adminAliceCompanyA, devJoeCompanyA, adminBobCompanyA } } = await SetupTest({ dbname, enableMultiUsers: true, });
 
     authenticator.changeUserWithSuppliedContext(adminAliceCompanyA!);
 

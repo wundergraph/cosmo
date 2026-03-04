@@ -4,8 +4,7 @@ import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.j
 import {
   createBaseAndFeatureSubgraph,
   createNamespace,
-  createSubgraph,
-  DEFAULT_NAMESPACE,
+  createSubgraph, DEFAULT_NAMESPACE,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,

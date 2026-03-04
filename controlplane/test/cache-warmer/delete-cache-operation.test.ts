@@ -193,60 +193,60 @@ describe('DeleteCacheOperation', (ctx) => {
     await server.close();
   });
 
-  test.each(['organization-admin', 'organization-developer'])(
-    '%s should be able to push a cache operation and delete it',
-    async (role) => {
-      const { client, server, authenticator, users } = await SetupTest({
-        dbname,
-        chClient,
-        setupBilling: {
-          plan: 'enterprise',
-        },
-      });
+  test.each([
+    'organization-admin',
+    'organization-developer',
+  ])('%s should be able to push a cache operation and delete it', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({
+      dbname,
+      chClient,
+      setupBilling: {
+        plan: 'enterprise',
+      },
+    });
 
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({ role })),
-      });
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
 
-      const federatedGraphName = genID('fedGraph');
-      await createFederatedAndSubgraph(client, federatedGraphName);
+    const federatedGraphName = genID('fedGraph');
+    await createFederatedAndSubgraph(client, federatedGraphName);
 
-      const configureCacheWarmerResp = await client.configureCacheWarmer({
-        namespace: 'default',
-        enableCacheWarmer: true,
-        maxOperationsCount: 100,
-      });
-      expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
+    const configureCacheWarmerResp = await client.configureCacheWarmer({
+      namespace: 'default',
+      enableCacheWarmer: true,
+      maxOperationsCount: 100,
+    });
+    expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
 
-      (chClient.queryPromise as Mock).mockResolvedValue([]);
+    (chClient.queryPromise as Mock).mockResolvedValue([]);
 
-      const pushCacheOperationResp = await client.pushCacheWarmerOperation({
-        federatedGraphName,
-        namespace: 'default',
-        operationName: 'Hello',
-        operationContent: 'query Hello { hello { message } }',
-      });
-      expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.OK);
+    const pushCacheOperationResp = await client.pushCacheWarmerOperation({
+      federatedGraphName,
+      namespace: 'default',
+      operationName: 'Hello',
+      operationContent: 'query Hello { hello { message } }',
+    });
+    expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.OK);
 
-      const getCacheOperationsResp = await client.getCacheWarmerOperations({
-        federatedGraphName,
-        namespace: 'default',
-      });
+    const getCacheOperationsResp = await client.getCacheWarmerOperations({
+      federatedGraphName,
+      namespace: 'default',
+    });
 
-      expect(getCacheOperationsResp.response?.code).toBe(EnumStatusCode.OK);
-      expect(getCacheOperationsResp.totalCount).toBe(1);
+    expect(getCacheOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(getCacheOperationsResp.totalCount).toBe(1);
 
-      const deleteCacheOperationResp = await client.deleteCacheWarmerOperation({
-        id: getCacheOperationsResp.operations[0].id,
-        federatedGraphName,
-        namespace: 'default',
-      });
-      expect(deleteCacheOperationResp.response?.code).toBe(EnumStatusCode.OK);
+    const deleteCacheOperationResp = await client.deleteCacheWarmerOperation({
+      id: getCacheOperationsResp.operations[0].id,
+      federatedGraphName,
+      namespace: 'default',
+    });
+    expect(deleteCacheOperationResp.response?.code).toBe(EnumStatusCode.OK);
 
-      await server.close();
-    },
-  );
+    await server.close();
+  });
 
   test.each([
     'organization-apikey-manager',

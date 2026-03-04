@@ -24,7 +24,7 @@ describe('Apollo Federated Graph', (ctx) => {
   afterEach(() => {
     vi.clearAllMocks();
   });
-
+  
   beforeAll(async () => {
     dbname = await beforeAllSetup();
   });

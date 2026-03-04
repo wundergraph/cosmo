@@ -8,7 +8,7 @@ import {
   createTestGroup,
   createTestRBACEvaluator,
   genID,
-  genUniqueLabel,
+  genUniqueLabel
 } from '../src/core/test-util.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
 import { SetupTest } from './test-util.js';
@@ -600,91 +600,89 @@ describe('Federated Graph', (ctx) => {
     await server.close();
   });
 
-  test.each(['graph-admin', 'graph-viewer'])(
-    '%s should be able to list federated graphs from allowed namespaces',
-    async (role) => {
-      const { client, server, authenticator, users } = await SetupTest({ dbname });
+  test.each([
+    'graph-admin',
+    'graph-viewer',
+  ])('%s should be able to list federated graphs from allowed namespaces', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
 
-      const fedGraphName = genID('fedGraph');
-      const label = genUniqueLabel();
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel();
 
-      const createNamespaceResp = await client.createNamespace({
-        name: 'prod',
-      });
+    const createNamespaceResp = await client.createNamespace({
+      name: 'prod',
+    });
 
-      expect(createNamespaceResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(createNamespaceResp.response?.code).toBe(EnumStatusCode.OK);
 
-      const getNamespaceResponse = await client.getNamespace({ name: 'prod' });
-      expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
+    const getNamespaceResponse = await client.getNamespace({ name: 'prod' });
+    expect(getNamespaceResponse.response?.code).toBe(EnumStatusCode.OK);
 
-      // creating the fed graph in default namespace
-      let createFedGraphRes = await client.createFederatedGraph({
-        name: fedGraphName,
-        namespace: 'default',
-        routingUrl: 'http://localhost:8081',
-        labelMatchers: [joinLabel(label)],
-      });
+    // creating the fed graph in default namespace
+    let createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+    });
 
-      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
 
-      // creating the fed graph in prod namespace
-      createFedGraphRes = await client.createFederatedGraph({
-        name: fedGraphName,
-        namespace: 'prod',
-        routingUrl: 'http://localhost:8081',
-        labelMatchers: [joinLabel(label)],
-      });
+    // creating the fed graph in prod namespace
+    createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: 'prod',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+    });
 
-      expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
 
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(
-          createTestGroup({
-            role,
-            namespaces: [getNamespaceResponse.namespace!.id],
-          }),
-        ),
-      });
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({
+        role,
+        namespaces: [getNamespaceResponse.namespace!.id],
+      })),
+    });
 
-      // fetching fed graphs from default namespace
-      let listFedGraphsResp = await client.getFederatedGraphs({
-        namespace: 'default',
-        supportsFederation: true,
-        offset: 0,
-        // fetches all
-        limit: 0,
-      });
+    // fetching fed graphs from default namespace
+    let listFedGraphsResp = await client.getFederatedGraphs({
+      namespace: 'default',
+      supportsFederation: true,
+      offset: 0,
+      // fetches all
+      limit: 0,
+    });
 
-      expect(listFedGraphsResp.response?.code).toBe(EnumStatusCode.OK);
-      expect(listFedGraphsResp.graphs).toHaveLength(0);
+    expect(listFedGraphsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(listFedGraphsResp.graphs).toHaveLength(0);
 
-      // fetching fed graphs from prod namespace
-      listFedGraphsResp = await client.getFederatedGraphs({
-        namespace: 'prod',
-        supportsFederation: true,
-        offset: 0,
-        // fetches all
-        limit: 0,
-      });
+    // fetching fed graphs from prod namespace
+    listFedGraphsResp = await client.getFederatedGraphs({
+      namespace: 'prod',
+      supportsFederation: true,
+      offset: 0,
+      // fetches all
+      limit: 0,
+    });
 
-      expect(listFedGraphsResp.response?.code).toBe(EnumStatusCode.OK);
-      expect(listFedGraphsResp.graphs).toHaveLength(1);
+    expect(listFedGraphsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(listFedGraphsResp.graphs).toHaveLength(1);
 
-      // fetching all fed graphs
-      listFedGraphsResp = await client.getFederatedGraphs({
-        supportsFederation: true,
-        offset: 0,
-        // fetches all
-        limit: 0,
-      });
+    // fetching all fed graphs
+    listFedGraphsResp = await client.getFederatedGraphs({
+      supportsFederation: true,
+      offset: 0,
+      // fetches all
+      limit: 0,
+    });
 
-      expect(listFedGraphsResp.response?.code).toBe(EnumStatusCode.OK);
-      expect(listFedGraphsResp.graphs).toHaveLength(1);
+    expect(listFedGraphsResp.response?.code).toBe(EnumStatusCode.OK);
+    expect(listFedGraphsResp.graphs).toHaveLength(1);
 
-      await server.close();
-    },
-  );
+    await server.close();
+  });
 
   test('Should return an error if the graph name is invalid', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });

@@ -36,7 +36,7 @@ describe('router compatibility-version list tests', () => {
     const organizationId = randomUUID();
     const organizationSlug = `slug-${organizationId}`;
     const organizationName = 'company-a';
-    const { client, server } = await SetupTest({ dbname, chClient, organizationId });
+    const { client, server, } = await SetupTest({ dbname, chClient, organizationId, });
     const response = await client.getOrganizationBySlug({
       slug: organizationSlug,
     });

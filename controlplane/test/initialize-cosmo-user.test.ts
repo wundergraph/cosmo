@@ -44,8 +44,7 @@ describe('initializeCosmoUser', () => {
 
     const initializeCosmoUserResponse = await client.initializeCosmoUser({
       // The token was obtained from jwt.io
-      token:
-        'eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.jYW04zLDHfR1v7xdrW3lCGZrMIsVe0vWCfVkN2DRns2c3MN-mcp_-RE6TN9umSBYoNV-mnb31wFf8iun3fB6aDS6m_OXAiURVEKrPFNGlR38JSHUtsFzqTOj-wFrJZN4RwvZnNGSMvK3wzzUriZqmiNLsG8lktlEn6KA4kYVaM61_NpmPHWAjGExWv7cjHYupcjMSmR8uMTwN5UuAwgW6FRstCJEfoxwb0WKiyoaSlDuIiHZJ0cyGhhEmmAPiCwtPAwGeaL1yZMcp0p82cpTQ5Qb-7CtRov3N4DcOHgWYk6LomPR5j5cCkePAz87duqyzSMpCB0mCOuE3CU2VMtGeQ',
+      token: 'eyJhbGciOiJSUzUxMiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWUsImlhdCI6MTUxNjIzOTAyMn0.jYW04zLDHfR1v7xdrW3lCGZrMIsVe0vWCfVkN2DRns2c3MN-mcp_-RE6TN9umSBYoNV-mnb31wFf8iun3fB6aDS6m_OXAiURVEKrPFNGlR38JSHUtsFzqTOj-wFrJZN4RwvZnNGSMvK3wzzUriZqmiNLsG8lktlEn6KA4kYVaM61_NpmPHWAjGExWv7cjHYupcjMSmR8uMTwN5UuAwgW6FRstCJEfoxwb0WKiyoaSlDuIiHZJ0cyGhhEmmAPiCwtPAwGeaL1yZMcp0p82cpTQ5Qb-7CtRov3N4DcOHgWYk6LomPR5j5cCkePAz87duqyzSMpCB0mCOuE3CU2VMtGeQ',
     });
     expect(initializeCosmoUserResponse?.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
 
@@ -94,13 +93,11 @@ describe('initializeCosmoUser', () => {
       firstName: 'Fake',
       lastName: 'User',
       realm,
-      credentials: [
-        {
-          type: 'password',
-          value: 'wunder@123',
-          temporary: false,
-        },
-      ],
+      credentials: [{
+        type: 'password',
+        value: 'wunder@123',
+        temporary: false,
+      }],
     });
 
     // Ensure that the user does not exist in the database
@@ -132,27 +129,30 @@ describe('initializeCosmoUser', () => {
 
 type AuthResponse = {
   access_token: string;
-};
+}
 
-function createSignInFn({ keycloakBaseUrl, realm }: { keycloakBaseUrl: string; realm: string }) {
+function createSignInFn({ keycloakBaseUrl, realm }: { keycloakBaseUrl: string, realm: string }) {
   return async (username: string, password: string): Promise<AuthResponse> => {
-    const response = await fetch(`${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'password',
-        client_id: 'admin-cli',
-        username,
-        password,
-        scope: 'openid',
-      }),
-    });
+    const response = await fetch(
+      `${keycloakBaseUrl}/realms/${realm}/protocol/openid-connect/token`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'password',
+          client_id: 'admin-cli',
+          username,
+          password,
+          scope: 'openid',
+        }),
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to authenticate user: ${response.statusText}`);
     }
 
-    const respObj = (await response.json()) as AuthResponse;
+    const respObj = await response.json() as AuthResponse;
     if (!respObj.access_token) {
       throw new Error('No ID token returned from Keycloak');
     }

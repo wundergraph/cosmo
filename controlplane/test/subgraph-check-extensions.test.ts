@@ -156,7 +156,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     await server.close();
   });
 
-  test.each(['http', 'https'])('that `%s://localhost` is allowed as the endpoint', async (protocol) => {
+  test.each(['http', 'https'])('that `%s://localhost` is allowed as the endpoint' , async (protocol) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
@@ -198,7 +198,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     await server.close();
   });
 
-  test('that an endpoint with invalid schema is not saved', async () => {
+  test('that an endpoint with invalid schema is not saved' , async () => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
@@ -212,7 +212,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     await server.close();
   });
 
-  test('that https is required when not using localhost', async () => {
+  test('that https is required when not using localhost' , async () => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
@@ -226,7 +226,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     await server.close();
   });
 
-  test('that an endpoint with https is updated successfully', async (protocol) => {
+  test('that an endpoint with https is updated successfully' , async (protocol) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,

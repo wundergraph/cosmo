@@ -141,7 +141,13 @@ describe('Schema updated webhook tests', () => {
       DEFAULT_SUBGRAPH_URL_TWO,
     );
 
-    await createFederatedGraph(client, fedGraph2Name, DEFAULT_NAMESPACE, [joinLabel(label2)], 'http://localhost:3003');
+    await createFederatedGraph(
+      client,
+      fedGraph2Name,
+      DEFAULT_NAMESPACE,
+      [joinLabel(label2)],
+      'http://localhost:3003',
+    );
 
     // Get federated graph IDs
     const fedGraph1Res = await client.getFederatedGraphByName({
@@ -524,7 +530,13 @@ describe('Schema updated webhook tests', () => {
       'http://localhost:4004',
     );
 
-    await createFederatedGraph(client, fedGraph2Name, DEFAULT_NAMESPACE, [joinLabel(label2)], 'http://localhost:3003');
+    await createFederatedGraph(
+      client,
+      fedGraph2Name,
+      DEFAULT_NAMESPACE,
+      [joinLabel(label2)],
+      'http://localhost:3003',
+    );
 
     // Get federated graph IDs
     const fedGraph1Res = await client.getFederatedGraphByName({

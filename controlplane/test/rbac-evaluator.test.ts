@@ -44,7 +44,7 @@ describe('RBAC Evaluator', () => {
     expect(rbac.hasSubGraphCheckAccess(fakeTarget())).toBe(false);
     expect(rbac.hasSubGraphReadAccess(fakeTarget())).toBe(false);
   });
-
+  
   test('Should merge multiple groups', () => {
     const rbac = createTestRBACEvaluator(orgAdmin, createTestGroup({ role: 'graph-admin' }));
 
@@ -663,9 +663,7 @@ describe('RBAC Evaluator', () => {
       const ns = randomUUID();
       const graph1 = fakeTarget({ namespace: ns });
       const graph2 = fakeTarget();
-      const rbac = createTestRBACEvaluator(
-        createTestGroup({ role: 'subgraph-publisher', resources: [graph1.targetId] }),
-      );
+      const rbac = createTestRBACEvaluator(createTestGroup({ role: 'subgraph-publisher', resources: [graph1.targetId] }));
 
       expect(rbac.groups).toHaveLength(1);
       expect(rbac.isOrganizationAdmin).toBe(false);
@@ -886,7 +884,7 @@ function fakeFeatureFlag(namespace?: string) {
   return { namespaceId: namespace ?? randomUUID() };
 }
 
-function fakeTarget(input?: { id?: string; namespace?: string; userId?: string }) {
+function fakeTarget(input?: { id?: string, namespace?: string, userId?: string }) {
   return {
     targetId: input?.id ?? randomUUID(),
     namespaceId: input?.namespace ?? randomUUID(),

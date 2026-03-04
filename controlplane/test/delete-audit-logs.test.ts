@@ -37,6 +37,7 @@ describe('Delete Organization Audit Logs', (ctx) => {
     await afterAllSetup(dbname);
   });
 
+
   test('should queue audit logs deletion when org is deleted and delete after scheduled', async (testContext) => {
     const { client, server, keycloakClient, realm, users, authenticator, queues, blobStorage } = await SetupTest({
       dbname,

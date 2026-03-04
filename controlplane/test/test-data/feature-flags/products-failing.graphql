@@ -1,5 +1,5 @@
 type Mutation {
-  addProductToUserBasket(userID: ID!, upc: Int!, sku: String!): User
+  addProductToUserBasket(userID: ID!, upc: Int! sku: String!): User
 }
 
 type Product @key(fields: "upc sku") {

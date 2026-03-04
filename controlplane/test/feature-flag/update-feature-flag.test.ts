@@ -9,8 +9,7 @@ import {
 } from '../../src/core/test-util.js';
 import {
   createBaseAndFeatureSubgraph,
-  createFeatureFlag,
-  DEFAULT_NAMESPACE,
+  createFeatureFlag, DEFAULT_NAMESPACE,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,
@@ -33,13 +32,7 @@ describe('Update feature flag tests', () => {
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      'http://localhost:4002',
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
     const featureFlagName = genID('flag');
 
@@ -49,9 +42,8 @@ describe('Update feature flag tests', () => {
     });
 
     expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(updateFeatureFlagResponse.response?.details).toBe(
-      `The feature flag "${featureFlagName}" does not exist in the namespace "default".`,
-    );
+    expect(updateFeatureFlagResponse.response?.details)
+      .toBe(`The feature flag "${featureFlagName}" does not exist in the namespace "default".`);
 
     await server.close();
   });
@@ -62,13 +54,7 @@ describe('Update feature flag tests', () => {
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_TWO);
 
     const featureFlagName = genID('flag');
 
@@ -79,9 +65,8 @@ describe('Update feature flag tests', () => {
       featureSubgraphNames: [featureSubgraphName, featureSubgraphName],
     });
     expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(updateFeatureFlagResponse.response?.details).toBe(
-      '1. Feature subgraphs with the same base subgraph cannot compose the same feature flag.',
-    );
+    expect(updateFeatureFlagResponse.response?.details)
+      .toBe('1. Feature subgraphs with the same base subgraph cannot compose the same feature flag.');
 
     await server.close();
   });
@@ -93,13 +78,7 @@ describe('Update feature flag tests', () => {
     const featureSubgraphNameOne = genID('featureSubgraphOne');
     const featureSubgraphNameTwo = genID('featureSubgraphTwo');
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphNameOne,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphNameOne, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_TWO);
 
     const featureFlagName = genID('flag');
 
@@ -118,9 +97,8 @@ describe('Update feature flag tests', () => {
       featureSubgraphNames: [featureSubgraphNameOne, featureSubgraphNameTwo],
     });
     expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(updateFeatureFlagResponse.response?.details).toBe(
-      '1. Feature subgraphs with the same base subgraph cannot compose the same feature flag.',
-    );
+    expect(updateFeatureFlagResponse.response?.details)
+      .toBe('1. Feature subgraphs with the same base subgraph cannot compose the same feature flag.');
 
     await server.close();
   });
@@ -131,13 +109,7 @@ describe('Update feature flag tests', () => {
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_TWO);
 
     const featureFlagName = genID('flag');
 
@@ -148,9 +120,8 @@ describe('Update feature flag tests', () => {
       featureSubgraphNames: [subgraphName],
     });
     expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(updateFeatureFlagResponse.response?.details).toBe(
-      `1. The subgraph "${subgraphName}" is not a feature subgraph.`,
-    );
+    expect(updateFeatureFlagResponse.response?.details)
+      .toBe(`1. The subgraph "${subgraphName}" is not a feature subgraph.`);
 
     await server.close();
   });
@@ -163,13 +134,7 @@ describe('Update feature flag tests', () => {
     const featureSubgraphNameTwo = genID('featureSubgraphTwo');
     const labels = [{ key: 'team', value: 'A' }];
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphNameOne,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      'http://localhost:4002',
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphNameOne, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
     const featureFlagName = genID('flag');
     await createFeatureFlag(client, featureFlagName, labels, [featureSubgraphNameOne]);
@@ -193,9 +158,8 @@ describe('Update feature flag tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(getFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureFlagResponse.featureSubgraphs.map((featureSubraph) => featureSubraph.name)).toStrictEqual([
-      featureSubgraphNameTwo,
-    ]);
+    expect(getFeatureFlagResponse.featureSubgraphs.map((featureSubraph) => featureSubraph.name))
+      .toStrictEqual([featureSubgraphNameTwo]);
     expect(getFeatureFlagResponse.featureFlag?.labels).toEqual(labels);
 
     await server.close();
@@ -208,16 +172,10 @@ describe('Update feature flag tests', () => {
     const featureSubgraphName = genID('featureSubgraph');
     const labels = [{ key: 'team', value: 'A' }];
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      'http://localhost:4002',
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
     const featureFlagName = genID('flag');
-    await createFeatureFlag(client, featureFlagName, [], [featureSubgraphName]);
+    await createFeatureFlag(client, featureFlagName, [], [featureSubgraphName])
 
     const updateFeatureFlagResponse = await client.updateFeatureFlag({
       name: featureFlagName,
@@ -230,9 +188,8 @@ describe('Update feature flag tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(getFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureFlagResponse.featureSubgraphs.map((featureSubgraph) => featureSubgraph.name)).toStrictEqual([
-      featureSubgraphName,
-    ]);
+    expect(getFeatureFlagResponse.featureSubgraphs.map((featureSubgraph) => featureSubgraph.name))
+      .toStrictEqual([featureSubgraphName]);
     expect(getFeatureFlagResponse.featureFlag?.labels).toEqual(labels);
 
     await server.close();
@@ -245,16 +202,10 @@ describe('Update feature flag tests', () => {
     const featureSubgraphName = genID('featureSubgraph');
     const labels = [{ key: 'team', value: 'A' }];
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      'http://localhost:4002',
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
     const featureFlagName = genID('flag');
-    await createFeatureFlag(client, featureFlagName, labels, [featureSubgraphName]);
+    await createFeatureFlag(client, featureFlagName, labels, [featureSubgraphName])
 
     const updateFeatureFlagResponse = await client.updateFeatureFlag({
       name: featureFlagName,
@@ -267,9 +218,8 @@ describe('Update feature flag tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(getFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureFlagResponse.featureSubgraphs.map((featureSubgraph) => featureSubgraph.name)).toStrictEqual([
-      featureSubgraphName,
-    ]);
+    expect(getFeatureFlagResponse.featureSubgraphs.map((featureSubgraph) => featureSubgraph.name))
+      .toStrictEqual([featureSubgraphName]);
     expect(getFeatureFlagResponse.featureFlag?.labels).toStrictEqual([]);
 
     await server.close();
@@ -283,16 +233,10 @@ describe('Update feature flag tests', () => {
     const featureSubgraphNameTwo = genID('featureSubgraphTwo');
     const labels = [{ key: 'team', value: 'A' }];
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphNameOne,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      'http://localhost:4002',
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphNameOne, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
     const featureFlagName = genID('flag');
-    await createFeatureFlag(client, featureFlagName, labels, [featureSubgraphNameOne]);
+    await createFeatureFlag(client, featureFlagName, labels, [featureSubgraphNameOne])
 
     const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphNameTwo,
@@ -315,93 +259,74 @@ describe('Update feature flag tests', () => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(getFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
-    expect(getFeatureFlagResponse.featureSubgraphs.map((featureSubgraph) => featureSubgraph.name)).toStrictEqual([
-      featureSubgraphNameTwo,
-    ]);
+    expect(getFeatureFlagResponse.featureSubgraphs.map((featureSubgraph) => featureSubgraph.name))
+      .toStrictEqual([featureSubgraphNameTwo]);
     expect(getFeatureFlagResponse.featureFlag?.labels).toStrictEqual([]);
 
     await server.close();
   });
 
-  test.each(['organization-admin', 'organization-developer'])(
-    '%s should be able to update feature flag',
-    async (role) => {
-      const { client, server, authenticator, users } = await SetupTest({ dbname });
+  test.each([
+    'organization-admin',
+    'organization-developer',
+  ])('%s should be able to update feature flag', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
 
-      const subgraphName = genID('subgraph');
-      const featureSubgraphName = genID('featureSubgraph');
+    const subgraphName = genID('subgraph');
+    const featureSubgraphName = genID('featureSubgraph');
 
-      await createBaseAndFeatureSubgraph(
-        client,
-        subgraphName,
-        featureSubgraphName,
-        DEFAULT_SUBGRAPH_URL_ONE,
-        'http://localhost:4002',
-      );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
-      const featureFlagName = genID('flag');
-      await createFeatureFlag(client, featureFlagName, [], [featureSubgraphName]);
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(client, featureFlagName, [], [featureSubgraphName]);
 
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({ role })),
-      });
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
 
-      const updateFeatureFlagResponse = await client.updateFeatureFlag({
-        name: featureFlagName,
-        featureSubgraphNames: [featureSubgraphName],
-      });
-      expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+    const updateFeatureFlagResponse = await client.updateFeatureFlag({
+      name: featureFlagName,
+      featureSubgraphNames: [featureSubgraphName],
+    });
+    expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
 
-      await server.close();
-    },
-  );
+    await server.close();
+  });
 
-  test.each(['organization-admin', 'organization-developer'])(
-    '%s should be able to update feature flag can be updated with another feature subgraph',
-    async (role) => {
-      const { client, server, authenticator, users } = await SetupTest({ dbname });
+  test.each([
+    'organization-admin',
+    'organization-developer',
+  ])('%s should be able to update feature flag can be updated with another feature subgraph', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
 
-      const subgraphName = genID('subgraph');
-      const featureSubgraphName = genID('featureSubgraph');
+    const subgraphName = genID('subgraph');
+    const featureSubgraphName = genID('featureSubgraph');
 
-      await createBaseAndFeatureSubgraph(
-        client,
-        subgraphName,
-        featureSubgraphName,
-        DEFAULT_SUBGRAPH_URL_ONE,
-        'http://localhost:4002',
-      );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
-      const featureFlagName = genID('flag');
-      await createFeatureFlag(client, featureFlagName, [], [featureSubgraphName]);
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(client, featureFlagName, [], [featureSubgraphName])
 
-      const subgraphNameTwo = genID('subgraph');
-      const featureSubgraphNameTwo = genID('featureSubgraph');
+    const subgraphNameTwo = genID('subgraph');
+    const featureSubgraphNameTwo = genID('featureSubgraph');
 
-      await createBaseAndFeatureSubgraph(
-        client,
-        subgraphNameTwo,
-        featureSubgraphNameTwo,
-        DEFAULT_SUBGRAPH_URL_ONE,
-        'http://localhost:4002',
-      );
+    await createBaseAndFeatureSubgraph(client, subgraphNameTwo, featureSubgraphNameTwo, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({ role })),
-      });
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
 
-      const updateFeatureFlagResponse = await client.updateFeatureFlag({
-        name: featureFlagName,
-        featureSubgraphNames: [featureSubgraphName, featureSubgraphNameTwo],
-      });
+    const updateFeatureFlagResponse = await client.updateFeatureFlag({
+      name: featureFlagName,
+      featureSubgraphNames: [featureSubgraphName, featureSubgraphNameTwo],
+    });
 
-      expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
 
-      await server.close();
-    },
-  );
+    await server.close();
+  });
 
   test.each([
     'organization-apikey-manager',
@@ -419,13 +344,7 @@ describe('Update feature flag tests', () => {
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      'http://localhost:4002',
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
     const featureFlagName = genID('flag');
     await createFeatureFlag(client, featureFlagName, [], [featureSubgraphName]);

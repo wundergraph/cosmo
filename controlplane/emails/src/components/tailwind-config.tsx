@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tailwind } from '@react-email/components';
+import { Tailwind, } from '@react-email/components';
 
 export function TailwindConfig({ children }: React.PropsWithChildren) {
   return (
@@ -9,9 +9,9 @@ export function TailwindConfig({ children }: React.PropsWithChildren) {
           extend: {
             colors: {
               brand: '#ea4899',
-            },
-          },
-        },
+            }
+          }
+        }
       }}
     >
       {children}

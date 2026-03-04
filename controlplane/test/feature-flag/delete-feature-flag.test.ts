@@ -63,7 +63,8 @@ describe('Delete feature flag tests', () => {
 
     const deleteFeatureFlagResponseOne = await client.deleteFeatureFlag({ name: featureFlagName });
     expect(deleteFeatureFlagResponseOne.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(deleteFeatureFlagResponseOne.response?.details).toBe(`The feature flag "${featureFlagName}" was not found.`);
+    expect(deleteFeatureFlagResponseOne.response?.details)
+      .toBe(`The feature flag "${featureFlagName}" was not found.`);
 
     // Providing the namespace should delete the feature flag successfully
     const deleteFeatureFlagResponseTwo = await client.deleteFeatureFlag({ name: featureFlagName, namespace });
@@ -72,50 +73,48 @@ describe('Delete feature flag tests', () => {
     // Attempting to delete the feature flag again should result in a not found error
     const deleteFeatureFlagResponseThree = await client.deleteFeatureFlag({ name: featureFlagName, namespace });
     expect(deleteFeatureFlagResponseThree.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(deleteFeatureFlagResponseThree.response?.details).toBe(
-      `The feature flag "${featureFlagName}" was not found.`,
-    );
+    expect(deleteFeatureFlagResponseThree.response?.details)
+      .toBe(`The feature flag "${featureFlagName}" was not found.`);
 
     await server.close();
   });
 
-  test.each(['organization-admin', 'organization-developer'])(
-    '%s should be able to delete feature flag',
-    async (role) => {
-      const { client, server, users, authenticator } = await SetupTest({ dbname });
+  test.each([
+    'organization-admin',
+    'organization-developer',
+  ])('%s should be able to delete feature flag', async (role) => {
+    const { client, server, users, authenticator } = await SetupTest({ dbname });
 
-      const subgraphName = genID('subgraph');
-      const featureSubgraphName = genID('featureSubgraph');
+    const subgraphName = genID('subgraph');
+    const featureSubgraphName = genID('featureSubgraph');
 
-      await createBaseAndFeatureSubgraph(
-        client,
-        subgraphName,
-        featureSubgraphName,
-        DEFAULT_SUBGRAPH_URL_ONE,
-        DEFAULT_SUBGRAPH_URL_TWO,
-      );
+    await createBaseAndFeatureSubgraph(
+      client,
+      subgraphName,
+      featureSubgraphName,
+      DEFAULT_SUBGRAPH_URL_ONE,
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
 
-      const featureFlagName = genID('flag');
-      await createFeatureFlag(client, featureFlagName, [], [featureSubgraphName]);
+    const featureFlagName = genID('flag');
+    await createFeatureFlag(client, featureFlagName, [], [featureSubgraphName]);
 
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({ role })),
-      });
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
 
-      const deleteFeatureFlagResponseOne = await client.deleteFeatureFlag({ name: featureFlagName });
-      expect(deleteFeatureFlagResponseOne.response?.code).toBe(EnumStatusCode.OK);
+    const deleteFeatureFlagResponseOne = await client.deleteFeatureFlag({ name: featureFlagName });
+    expect(deleteFeatureFlagResponseOne.response?.code).toBe(EnumStatusCode.OK);
 
-      // attempting to delete the feature flag again should result in a not found error
-      const deleteFeatureFlagResponseTwo = await client.deleteFeatureFlag({ name: featureFlagName });
-      expect(deleteFeatureFlagResponseTwo.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-      expect(deleteFeatureFlagResponseTwo.response?.details).toBe(
-        `The feature flag "${featureFlagName}" was not found.`,
-      );
+    // attempting to delete the feature flag again should result in a not found error
+    const deleteFeatureFlagResponseTwo = await client.deleteFeatureFlag({ name: featureFlagName });
+    expect(deleteFeatureFlagResponseTwo.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    expect(deleteFeatureFlagResponseTwo.response?.details)
+      .toBe(`The feature flag "${featureFlagName}" was not found.`);
 
-      await server.close();
-    },
-  );
+    await server.close();
+  });
 
   test.each([
     'organization-apikey-manager',

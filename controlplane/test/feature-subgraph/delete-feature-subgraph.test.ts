@@ -7,7 +7,7 @@ import {
   beforeAllSetup,
   createTestGroup,
   createTestRBACEvaluator,
-  genID,
+  genID
 } from '../../src/core/test-util.js';
 import {
   createBaseAndFeatureSubgraph,
@@ -38,11 +38,10 @@ describe('Delete feature subgraph tests', () => {
     const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
       subgraphName: featureSubgraphName,
       namespace: DEFAULT_NAMESPACE,
-    });
+    })
     expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-    expect(deleteFederatedSubgraphResponse.response?.details).toBe(
-      `The subgraph "${featureSubgraphName}" was not found.`,
-    );
+    expect(deleteFederatedSubgraphResponse.response?.details)
+      .toBe(`The subgraph "${featureSubgraphName}" was not found.`);
 
     await server.close();
   });
@@ -53,14 +52,18 @@ describe('Delete feature subgraph tests', () => {
     const baseSubgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
 
-    await createSubgraph(client, baseSubgraphName, DEFAULT_SUBGRAPH_URL_ONE);
+    await createSubgraph(
+      client,
+      baseSubgraphName,
+      DEFAULT_SUBGRAPH_URL_ONE,
+    );
 
     await createThenPublishFeatureSubgraph(
       client,
       featureSubgraphName,
       baseSubgraphName,
       DEFAULT_NAMESPACE,
-      fs.readFileSync(join(process.cwd(), `test/test-data/feature-flags/products-feature.graphql`)).toString(),
+      fs.readFileSync(join(process.cwd(),`test/test-data/feature-flags/products-feature.graphql`)).toString(),
       [],
       DEFAULT_SUBGRAPH_URL_TWO,
     );
@@ -68,7 +71,7 @@ describe('Delete feature subgraph tests', () => {
     const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
       subgraphName: featureSubgraphName,
       namespace: DEFAULT_NAMESPACE,
-    });
+    })
     expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Expect the feature subgraph to no longer exist
@@ -88,50 +91,51 @@ describe('Delete feature subgraph tests', () => {
     await server.close();
   });
 
-  test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
-    '%s should be able to delete feature subgraph',
-    async (role) => {
-      const { client, server, authenticator, users } = await SetupTest({ dbname });
+  test.each([
+    'organization-admin',
+    'organization-developer',
+    'subgraph-admin',
+  ])('%s should be able to delete feature subgraph', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
 
-      const baseSubgraphName = genID('subgraph');
-      const featureSubgraphName = genID('featureSubgraph');
+    const baseSubgraphName = genID('subgraph');
+    const featureSubgraphName = genID('featureSubgraph');
 
-      await createBaseAndFeatureSubgraph(
-        client,
-        baseSubgraphName,
-        featureSubgraphName,
-        DEFAULT_SUBGRAPH_URL_ONE,
-        DEFAULT_SUBGRAPH_URL_TWO,
-      );
+    await createBaseAndFeatureSubgraph(
+      client,
+      baseSubgraphName,
+      featureSubgraphName,
+      DEFAULT_SUBGRAPH_URL_ONE,
+      DEFAULT_SUBGRAPH_URL_TWO,
+    );
 
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({ role })),
-      });
+    authenticator.changeUserWithSuppliedContext({
+      ...users.adminAliceCompanyA,
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
 
-      const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
-        subgraphName: featureSubgraphName,
-        namespace: DEFAULT_NAMESPACE,
-      });
-      expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
+    const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
+      subgraphName: featureSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+    })
+    expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
-      // Expect the feature subgraph to no longer exist
-      const getFeatureSubgraphByNameResponse = await client.getSubgraphByName({
-        name: featureSubgraphName,
-        namespace: DEFAULT_NAMESPACE,
-      });
-      expect(getFeatureSubgraphByNameResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
+    // Expect the feature subgraph to no longer exist
+    const getFeatureSubgraphByNameResponse = await client.getSubgraphByName({
+      name: featureSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(getFeatureSubgraphByNameResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
 
-      // Expect the base subgraph to still exist
-      const getSubgraphByNameResponse = await client.getSubgraphByName({
-        name: baseSubgraphName,
-        namespace: DEFAULT_NAMESPACE,
-      });
-      expect(getSubgraphByNameResponse.response?.code).toBe(EnumStatusCode.OK);
+    // Expect the base subgraph to still exist
+    const getSubgraphByNameResponse = await client.getSubgraphByName({
+      name: baseSubgraphName,
+      namespace: DEFAULT_NAMESPACE,
+    });
+    expect(getSubgraphByNameResponse.response?.code).toBe(EnumStatusCode.OK);
 
-      await server.close();
-    },
-  );
+    await server.close();
+  });
 
   test('subgraph-admin should be able to delete feature subgraph from allowed namespace', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
@@ -152,18 +156,16 @@ describe('Delete feature subgraph tests', () => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(
-        createTestGroup({
-          role: 'subgraph-admin',
-          namespaces: [getNamespaceResponse.namespace!.id],
-        }),
-      ),
+      rbac: createTestRBACEvaluator(createTestGroup({
+        role: 'subgraph-admin',
+        namespaces: [getNamespaceResponse.namespace!.id],
+      })),
     });
 
     const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
       subgraphName: featureSubgraphName,
       namespace: DEFAULT_NAMESPACE,
-    });
+    })
     expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
 
     // Expect the feature subgraph to no longer exist
@@ -214,7 +216,7 @@ describe('Delete feature subgraph tests', () => {
     const deleteFederatedSubgraphResponse = await client.deleteFederatedSubgraph({
       subgraphName: featureSubgraphName,
       namespace: DEFAULT_NAMESPACE,
-    });
+    })
     expect(deleteFederatedSubgraphResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
 
     await server.close();

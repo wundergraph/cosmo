@@ -6,14 +6,13 @@ import {
   createTestGroup,
   createTestRBACEvaluator,
   genID,
-  TestUser,
+  TestUser
 } from '../../src/core/test-util.js';
 import {
   createBaseAndFeatureSubgraph,
   createNamespace,
   createSubgraph,
-  DEFAULT_SUBGRAPH_URL_ONE,
-  DEFAULT_SUBGRAPH_URL_TWO,
+  DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_TWO,
   SetupTest,
 } from '../test-util.js';
 
@@ -37,9 +36,8 @@ describe('Create feature flag tests', () => {
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(featureFlagResponse.response?.details).toBe(
-      'At least one feature subgraph is required to create a feature flag.',
-    );
+    expect(featureFlagResponse.response?.details)
+      .toBe('At least one feature subgraph is required to create a feature flag.');
 
     await server.close();
   });
@@ -50,13 +48,7 @@ describe('Create feature flag tests', () => {
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      'http://localhost:4002',
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
     const flagName = genID('flag');
 
@@ -73,9 +65,8 @@ describe('Create feature flag tests', () => {
     });
 
     expect(featureFlagResponseTwo.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
-    expect(featureFlagResponseTwo.response?.details).toBe(
-      `The feature flag "${flagName}" already exists in the namespace "default".`,
-    );
+    expect(featureFlagResponseTwo.response?.details)
+      .toBe(`The feature flag "${flagName}" already exists in the namespace "default".`);
 
     await server.close();
   });
@@ -92,9 +83,8 @@ describe('Create feature flag tests', () => {
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(featureFlagResponse.response?.details).toBe(
-      `1. The feature subgraph "${featureSubgraphName}" was not found.`,
-    );
+    expect(featureFlagResponse.response?.details)
+      .toBe(`1. The feature subgraph "${featureSubgraphName}" was not found.`);
 
     await server.close();
   });
@@ -113,7 +103,8 @@ describe('Create feature flag tests', () => {
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(featureFlagResponse.response?.details).toBe(`1. The subgraph "${subgraphName}" is not a feature subgraph.`);
+    expect(featureFlagResponse.response?.details)
+      .toBe(`1. The subgraph "${subgraphName}" is not a feature subgraph.`);
 
     await server.close();
   });
@@ -124,13 +115,7 @@ describe('Create feature flag tests', () => {
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      'http://localhost:4002',
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, 'http://localhost:4002');
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
@@ -144,9 +129,8 @@ describe('Create feature flag tests', () => {
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(featureFlagResponse.response?.details).toBe(
-      `1. The feature subgraph "${featureSubgraphName}" was not found.`,
-    );
+    expect(featureFlagResponse.response?.details)
+      .toBe(`1. The feature subgraph "${featureSubgraphName}" was not found.`);
 
     await server.close();
   });
@@ -157,13 +141,7 @@ describe('Create feature flag tests', () => {
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_TWO);
 
     const flagName = genID('flag');
 
@@ -173,9 +151,8 @@ describe('Create feature flag tests', () => {
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(featureFlagResponse.response?.details).toBe(
-      '1. Feature subgraphs with the same base subgraph cannot compose the same feature flag.',
-    );
+    expect(featureFlagResponse.response?.details)
+      .toBe('1. Feature subgraphs with the same base subgraph cannot compose the same feature flag.');
 
     await server.close();
   });
@@ -187,13 +164,7 @@ describe('Create feature flag tests', () => {
     const featureSubgraphNameOne = genID('featureSubgraphOne');
     const featureSubgraphNameTwo = genID('featureSubgraphTwo');
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphNameOne,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphNameOne, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_TWO);
 
     const createFeatureSubgraphResponse = await client.createFederatedSubgraph({
       name: featureSubgraphNameTwo,
@@ -211,46 +182,39 @@ describe('Create feature flag tests', () => {
     });
 
     expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(featureFlagResponse.response?.details).toBe(
-      '1. Feature subgraphs with the same base subgraph cannot compose the same feature flag.',
-    );
+    expect(featureFlagResponse.response?.details)
+      .toBe('1. Feature subgraphs with the same base subgraph cannot compose the same feature flag.');
 
     await server.close();
   });
 
-  test.each(['organization-admin', 'organization-developer'])(
-    '%s should be able to create feature graph with a feature subgraph',
-    async (role) => {
-      const { client, server, authenticator, users } = await SetupTest({ dbname });
+  test.each([
+    'organization-admin',
+    'organization-developer',
+  ])('%s should be able to create feature graph with a feature subgraph', async (role) => {
+    const { client, server, authenticator, users } = await SetupTest({ dbname });
 
-      const subgraphName = genID('subgraph');
-      const featureSubgraphName = genID('featureSubgraph');
+    const subgraphName = genID('subgraph');
+    const featureSubgraphName = genID('featureSubgraph');
 
-      authenticator.changeUserWithSuppliedContext({
-        ...users[TestUser.adminAliceCompanyA],
-        rbac: createTestRBACEvaluator(createTestGroup({ role })),
-      });
+    authenticator.changeUserWithSuppliedContext({
+      ...users[TestUser.adminAliceCompanyA],
+      rbac: createTestRBACEvaluator(createTestGroup({ role })),
+    });
 
-      await createBaseAndFeatureSubgraph(
-        client,
-        subgraphName,
-        featureSubgraphName,
-        DEFAULT_SUBGRAPH_URL_ONE,
-        DEFAULT_SUBGRAPH_URL_TWO,
-      );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_TWO);
 
-      const flagName = genID('flag');
+    const flagName = genID('flag');
 
-      const featureFlagResponse = await client.createFeatureFlag({
-        name: flagName,
-        featureSubgraphNames: [featureSubgraphName],
-      });
+    const featureFlagResponse = await client.createFeatureFlag({
+      name: flagName,
+      featureSubgraphNames: [featureSubgraphName],
+    });
 
-      expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
+    expect(featureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
 
-      await server.close();
-    },
-  );
+    await server.close();
+  });
 
   test.each([
     'organization-apikey-manager',
@@ -268,13 +232,7 @@ describe('Create feature flag tests', () => {
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
 
-    await createBaseAndFeatureSubgraph(
-      client,
-      subgraphName,
-      featureSubgraphName,
-      DEFAULT_SUBGRAPH_URL_ONE,
-      DEFAULT_SUBGRAPH_URL_TWO,
-    );
+    await createBaseAndFeatureSubgraph(client, subgraphName, featureSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_SUBGRAPH_URL_TWO);
 
     const flagName = genID('flag');
 

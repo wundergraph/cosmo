@@ -49,7 +49,7 @@ async function createTestProposal(
     subgraphName: string;
     subgraphSchemaSDL: string;
     updatedSubgraphSDL: string;
-    origin?: ProposalOrigin;
+    origin?: ProposalOrigin,
   },
 ) {
   const { federatedGraphName, proposalName, subgraphName, subgraphSchemaSDL, updatedSubgraphSDL, origin } = options;

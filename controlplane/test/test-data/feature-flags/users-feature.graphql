@@ -1,5 +1,5 @@
 type Mutation {
-  addProductToUserBasket(userID: ID!, upc: Int!, sku: String!): User @override(from: "products-feature")
+  addProductToUserBasket(userID: ID!, upc: Int! sku: String!): User @override(from: "products-feature")
 }
 
 type Product @key(fields: "upc sku") {

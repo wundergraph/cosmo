@@ -1,6 +1,6 @@
 directive @tag(name: String!) repeatable on FIELD_DEFINITION
 
-type Product @key(fields: "id") @key(fields: "sku package") @key(fields: "sku variation { id }") {
+type Product @key(fields: "id") @key(fields: "sku package") @key(fields: "sku variation { id }"){
   id: ID! @tag(name: "hi-from-products")
   sku: String @tag(name: "hi-from-products")
   package: String
