@@ -33,6 +33,7 @@ export default (opts: BaseCommandOptions) => {
     'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
   );
   command.option('-l, --limit [number]', 'The amount of entries shown in the schema checks output.', '50');
+  command.option('-j, --json', 'Prints to the console in json format instead of table');
 
   command.action(async (name, options) => {
     let schemaFile;
@@ -91,7 +92,7 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    const success = handleCheckResult(resp, limit);
+    const success = handleCheckResult({ response: resp, rowLimit: limit, shouldOutputJson: options.json });
 
     if (!success && !ignoreErrorsDueToGitHubIntegration) {
       process.exitCode = 1;

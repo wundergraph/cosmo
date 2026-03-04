@@ -79,7 +79,7 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    const success = handleCheckResult(resp, limit);
+    const success = handleCheckResult({ response: resp, rowLimit: limit });
 
     if (!success && !ignoreErrorsDueToGitHubIntegration) {
       process.exitCode = 1;

@@ -44,9 +44,15 @@ async function runCheck(
 ): Promise<void> {
   const schema = 'schema' in opts ? opts.schema : 'test/fixtures/schema.graphql';
   const args = ['check', 'wg.orders'];
-  if (schema !== null) { args.push('--schema', schema ?? 'test/fixtures/schema.graphql'); }
-  if (opts.delete) { args.push('--delete'); }
-  if (opts.limit !== undefined) { args.push('--limit', String(opts.limit)); }
+  if (schema !== null) {
+    args.push('--schema', schema ?? 'test/fixtures/schema.graphql');
+  }
+  if (opts.delete) {
+    args.push('--delete');
+  }
+  if (opts.limit !== undefined) {
+    args.push('--limit', String(opts.limit));
+  }
 
   const client: Client = {
     platform: createPromiseClient(PlatformService, createMockTransport(response)),
@@ -130,9 +136,7 @@ describe('stdout', () => {
       clientTrafficCheckSkipped: false,
     });
 
-    expect(logSpy).toHaveBeenCalledWith(
-      expect.stringContaining('5 operations were considered safe due to overrides.'),
-    );
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('5 operations were considered safe due to overrides.'));
     expect(process.exitCode).not.toBe(1);
   });
 
