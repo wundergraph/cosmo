@@ -9,6 +9,9 @@
     "cosmo",
     "plugin"
   ],
+  "scripts": {
+    "format": "go fmt ./..."
+  },
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"

@@ -949,7 +949,7 @@ describe('Create subgraph tests', () => {
         name: grpcServiceName,
         namespace: DEFAULT_NAMESPACE,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: "invalid-url",
+        routingUrl: 'invalid-url',
         labels: [grpcServiceLabel],
       });
 
