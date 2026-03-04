@@ -4,16 +4,23 @@
 //  1. Replaces the default subgraph 403 response with a uniform format:
 //     {"errors":[{"message":"...","extensions":{"code":"FORBIDDEN"}}]}
 //  2. If any subgraph returns 403, the entire response is replaced — no partial data.
-//  3. Uses a deferred-write pattern so the happy path (no 403) has zero buffering overhead.
 //
 // How it works:
 //   - OnOriginResponse (EnginePostOriginHandler) runs per-subgraph and flags 403s on the context.
-//   - Middleware wraps the ResponseWriter to defer writes until the engine is done.
-//     By the first Write call, all subgraph requests have completed and the flag is known.
-//     On 403, writes are discarded and WriteResponseError produces the standardized error.
+//     It detects 403 in two ways:
+//     a. HTTP status code 403 on the subgraph response.
+//     b. GraphQL-level error with extensions.code == 403 (number or string) in the response body,
+//        even when the HTTP status is 200. The body is read, inspected, and restored so
+//        downstream handlers can still consume it.
+//   - Middleware buffers the response. After the engine finishes, if a 403 was flagged,
+//     the buffered response is discarded and replaced with the standardized error.
 package custom_forbidden_handler
 
 import (
+	"bytes"
+	"encoding/json"
+	"io"
+	"maps"
 	"net/http"
 	"strings"
 
@@ -37,43 +44,95 @@ func (m *ForbiddenHandlerModule) Cleanup() error {
 }
 
 // OnOriginResponse detects 403 from any subgraph and flags it on the context.
+// It checks both the HTTP status code and the GraphQL response body for
+// errors with extensions.code == 403.
 func (m *ForbiddenHandlerModule) OnOriginResponse(resp *http.Response, ctx core.RequestContext) *http.Response {
-	if resp != nil && resp.StatusCode == http.StatusForbidden {
-		ctx.Set("forbidden_encountered", true)
+	if resp == nil {
+		return nil
 	}
+
+	if resp.StatusCode == http.StatusForbidden {
+		ctx.Set("forbidden_encountered", true)
+		return nil
+	}
+
+	// Also check if the response body contains a GraphQL error with code 403
+	if resp.Body != nil {
+		body, err := io.ReadAll(resp.Body)
+		_ = resp.Body.Close()
+		// Always restore the body so downstream can still read it
+		resp.Body = io.NopCloser(bytes.NewReader(body))
+		if err == nil && hasForbiddenGraphQLError(body) {
+			ctx.Set("forbidden_encountered", true)
+		}
+	}
+
 	return nil
 }
 
-// Middleware uses a deferred-write wrapper so the happy path (no 403) writes
-// directly to the real ResponseWriter with zero buffering. Only WriteHeader is
-// deferred until the first Write, at which point all OnOriginResponse hooks
-// have already fired and the forbidden flag is known.
+// hasForbiddenGraphQLError checks if a GraphQL response body contains an error
+// with extensions.code == 403 (as a number).
+func hasForbiddenGraphQLError(body []byte) bool {
+	var result struct {
+		Errors []struct {
+			Extensions struct {
+				Code json.RawMessage `json:"code"`
+			} `json:"extensions"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return false
+	}
+	for _, e := range result.Errors {
+		if len(e.Extensions.Code) == 0 {
+			continue
+		}
+		// Check as number
+		var code float64
+		if json.Unmarshal(e.Extensions.Code, &code) == nil && code == 403 {
+			return true
+		}
+		// Check as string
+		var codeStr string
+		if json.Unmarshal(e.Extensions.Code, &codeStr) == nil && codeStr == "403" {
+			return true
+		}
+	}
+	return false
+}
+
+// Middleware buffers the engine's response. After all subgraph calls complete,
+// it checks the forbidden flag: on 403, the buffer is discarded and replaced
+// with the standardized error; otherwise the buffered response is flushed.
 func (m *ForbiddenHandlerModule) Middleware(ctx core.RequestContext, next http.Handler) {
 	// Skip for streaming subscriptions (SSE/multipart) — they require
-	// http.Flusher and deliver data incrementally, so the deferred-write
-	// pattern does not apply.
+	// http.Flusher and deliver data incrementally, so buffering does not apply.
 	if isStreamingRequest(ctx.Request()) {
 		next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 		return
 	}
 
-	dw := &deferredWriter{
-		real:   ctx.ResponseWriter(),
-		ctx:    ctx,
+	bw := &bufferedWriter{
 		header: make(http.Header),
 		code:   http.StatusOK,
 	}
 
-	next.ServeHTTP(dw, ctx.Request())
+	next.ServeHTTP(bw, ctx.Request())
 
-	if dw.discarded {
-		// 403 was detected — write the standardized error to the real writer
+	if ctx.GetBool("forbidden_encountered") {
 		core.WriteResponseError(ctx, core.NewHttpGraphqlError(
 			"Insufficient permissions to fulfill the request.",
 			"FORBIDDEN",
 			http.StatusForbidden,
 		))
+		return
 	}
+
+	// Flush buffered response to the real writer
+	real := ctx.ResponseWriter()
+	maps.Copy(real.Header(), bw.header)
+	real.WriteHeader(bw.code)
+	_, _ = real.Write(bw.body.Bytes())
 }
 
 func isStreamingRequest(r *http.Request) bool {
@@ -82,45 +141,17 @@ func isStreamingRequest(r *http.Request) bool {
 		strings.Contains(accept, "multipart/mixed")
 }
 
-// deferredWriter defers WriteHeader until the first Write call. By that point
-// the engine has finished all subgraph requests, so the forbidden flag is set.
-// On the happy path, headers and body flow straight to the real writer.
-// On 403, all writes are silently discarded.
-type deferredWriter struct {
-	real      http.ResponseWriter
-	ctx       core.RequestContext
-	header    http.Header
-	code      int
-	flushed   bool
-	discarded bool
+// bufferedWriter captures the full response (headers, status, body) in memory
+// so the middleware can decide whether to flush it or replace it.
+type bufferedWriter struct {
+	header http.Header
+	code   int
+	body   bytes.Buffer
 }
 
-func (w *deferredWriter) Header() http.Header { return w.header }
-
-func (w *deferredWriter) WriteHeader(code int) {
-	if !w.flushed {
-		w.code = code
-	}
-}
-
-func (w *deferredWriter) Write(b []byte) (int, error) {
-	if !w.flushed {
-		w.flushed = true
-		if w.ctx.GetBool("forbidden_encountered") {
-			w.discarded = true
-			return len(b), nil
-		}
-		// Happy path: flush deferred headers + status to real writer
-		for k, v := range w.header {
-			w.real.Header()[k] = v
-		}
-		w.real.WriteHeader(w.code)
-	}
-	if w.discarded {
-		return len(b), nil
-	}
-	return w.real.Write(b)
-}
+func (w *bufferedWriter) Header() http.Header      { return w.header }
+func (w *bufferedWriter) WriteHeader(code int)      { w.code = code }
+func (w *bufferedWriter) Write(b []byte) (int, error) { return w.body.Write(b) }
 
 func (m *ForbiddenHandlerModule) Module() core.ModuleInfo {
 	return core.ModuleInfo{

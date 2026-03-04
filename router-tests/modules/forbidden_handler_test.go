@@ -127,6 +127,33 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		})
 	})
 
+	t.Run("subgraph returns 200 with GraphQL error code 403 in body", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: routerOpts,
+			Subgraphs: testenv.SubgraphsConfig{
+				Employees: testenv.SubgraphConfig{
+					Middleware: func(handler http.Handler) http.Handler {
+						return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+							w.Header().Set("Content-Type", "application/json")
+							w.WriteHeader(http.StatusOK)
+							_, _ = w.Write([]byte(`{"errors":[{"message":"Insufficient permissions to fulfill the request.","extensions":{"code":403,"remedy":null,"serviceName":"xxx"}}],"data":{"data":null}}`))
+						})
+					},
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusForbidden, res.Response.StatusCode)
+			assert.JSONEq(t, `{"errors":[{"message":"Insufficient permissions to fulfill the request.","extensions":{"code":"FORBIDDEN"}}]}`, res.Body)
+		})
+	})
+
 	t.Run("all subgraphs return 403", func(t *testing.T) {
 		t.Parallel()
 
