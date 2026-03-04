@@ -27,9 +27,6 @@ lint:
 	go vet ./...
 	staticcheck ./...
 
-format:
-	go fmt ./...
-
 clean-testcache:
 	go clean -testcache
 

@@ -23,9 +23,6 @@ deploy: build-sam
 lint:
 	staticcheck ./...
 
-format:
-	go fmt ./...
-
 test:
 	go test -v ./...
 

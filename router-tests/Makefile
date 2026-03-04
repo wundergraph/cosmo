@@ -37,9 +37,6 @@ lint:
 	go vet ./...
 	staticcheck ./...
 
-format:
-	go fmt ./...
-
 test-stability:
 	@while $(MAKE) test-fresh; do :; done
 
