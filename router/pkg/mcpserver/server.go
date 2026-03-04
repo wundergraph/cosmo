@@ -40,7 +40,6 @@ func requestHeadersFromRequest(ctx context.Context, r *http.Request) context.Con
 	return withRequestHeaders(ctx, headers)
 }
 
-
 // headersFromContext extracts the request headers from the context.
 func headersFromContext(ctx context.Context) (http.Header, error) {
 	headers, ok := ctx.Value(requestHeadersKey{}).(http.Header)
