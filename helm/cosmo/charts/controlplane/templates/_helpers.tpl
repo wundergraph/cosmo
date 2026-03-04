@@ -45,6 +45,10 @@ Create chart name and version as used by the chart label.
 
 {{/*
 Common labels
+Includes standard Kubernetes recommended labels, selector labels,
+and user-defined commonLabels. Note: commonLabels are rendered here
+(not in selectorLabels) to avoid adding mutable labels to immutable
+selector matchLabels.
 */}}
 {{- define "controlplane.labels" -}}
 {{ $version := .Values.image.version | default .Chart.AppVersion -}}
@@ -52,6 +56,9 @@ helm.sh/chart: {{ include "controlplane.chart" . }}
 {{ include "controlplane.selectorLabels" . }}
 app.kubernetes.io/version: {{ $version | quote }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- range $key, $value := .Values.commonLabels }}
+{{ $key }}: {{ quote $value }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -72,13 +79,13 @@ extra labels (jobLabels) to each job
 
 {{/*
 Selector labels
+Used in spec.selector.matchLabels which are immutable after creation.
+Only include stable, deterministic labels here -- do not add commonLabels
+or other user-configurable values.
 */}}
 {{- define "controlplane.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "controlplane.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
-{{- range $key, $value := .Values.commonLabels }}
-{{ $key }}: {{ quote $value }}
-{{- end }}
 {{- end }}
 
 {{/*
