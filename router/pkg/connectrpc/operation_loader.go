@@ -116,4 +116,3 @@ func LoadOperationsForService(serviceName string, operationFiles []string, logge
 
 	return operations, nil
 }
-

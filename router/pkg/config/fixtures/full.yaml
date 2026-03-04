@@ -24,6 +24,7 @@ introspection:
   enabled: true
   secret: 'AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY'
 json_log: true
+log_service_name: "my-custom-router"
 shutdown_delay: 15s
 grace_period: 20s
 poll_interval: 10s
@@ -176,6 +177,11 @@ telemetry:
           path: '/v1/metrics'
           endpoint: https://my-otel-collector.example.com
           # headers: {Authorization: Bearer <my-token>}
+      log_exporter:
+        enabled: true
+        exclude_metrics:
+          - "process\\."
+          - "server\\.uptime"
 
     # Expose OpenTelemetry metrics for scraping
     prometheus:

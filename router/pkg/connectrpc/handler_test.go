@@ -176,4 +176,3 @@ func TestConvertProtoJSONToGraphQLVariables(t *testing.T) {
 		}`, string(result))
 	})
 }
-

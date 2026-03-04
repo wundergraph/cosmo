@@ -82,7 +82,15 @@
             "Headers": {},
             "Temporality": ""
           }
-        ]
+        ],
+        "LogExporter": {
+          "Enabled": true,
+          "ExcludeMetrics": [
+            "process\\.",
+            "server\\.uptime"
+          ],
+          "IncludeMetrics": null
+        }
       },
       "Prometheus": {
         "Enabled": true,
@@ -527,6 +535,7 @@
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
+  "LogServiceName": "my-custom-router",
   "ShutdownDelay": 15000000000,
   "GracePeriod": 20000000000,
   "PollInterval": 10000000000,

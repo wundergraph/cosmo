@@ -263,30 +263,44 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 	}
 
 	if c.OpenTelemetry.TestReader != nil {
-		mp := sdkmetric.NewMeterProvider(append(opts, sdkmetric.WithReader(c.OpenTelemetry.TestReader))...)
-		// Set the global MeterProvider to the SDK metric provider.
-		otel.SetMeterProvider(mp)
+		opts = append(opts, sdkmetric.WithReader(c.OpenTelemetry.TestReader))
+	} else {
+		for _, exp := range c.OpenTelemetry.Exporters {
+			if exp.Disabled {
+				continue
+			}
 
-		return mp, nil
+			exporter, err := createOTELExporter(log, exp)
+			if err != nil {
+				log.Error("creating OTEL metrics exporter", zap.Error(err))
+				return nil, err
+			}
+
+			opts = append(opts, sdkmetric.WithReader(
+				sdkmetric.NewPeriodicReader(exporter,
+					sdkmetric.WithTimeout(defaultExportTimeout),
+					sdkmetric.WithInterval(defaultExportInterval),
+				),
+			))
+		}
 	}
 
-	for _, exp := range c.OpenTelemetry.Exporters {
-		if exp.Disabled {
-			continue
+	if c.OpenTelemetry.LogExporter.Enabled {
+		if len(c.OpenTelemetry.LogExporter.ExcludeMetrics) > 0 && len(c.OpenTelemetry.LogExporter.IncludeMetrics) > 0 {
+			return nil, fmt.Errorf("metrics log exporter: exclude_metrics and include_metrics cannot be used together, use only one")
 		}
-
-		exporter, err := createOTELExporter(log, exp)
-		if err != nil {
-			log.Error("creating OTEL metrics exporter", zap.Error(err))
-			return nil, err
+		logExp := newLogExporter(log, c.OpenTelemetry.LogExporter.ExcludeMetrics, c.OpenTelemetry.LogExporter.IncludeMetrics)
+		exportInterval := defaultExportInterval
+		if c.OpenTelemetry.LogExporter.ExportInterval > 0 {
+			exportInterval = c.OpenTelemetry.LogExporter.ExportInterval
 		}
-
 		opts = append(opts, sdkmetric.WithReader(
-			sdkmetric.NewPeriodicReader(exporter,
+			sdkmetric.NewPeriodicReader(logExp,
 				sdkmetric.WithTimeout(defaultExportTimeout),
-				sdkmetric.WithInterval(defaultExportInterval),
+				sdkmetric.WithInterval(exportInterval),
 			),
 		))
+		log.Warn("Metrics log exporter is enabled. Expect increased log volume.")
 	}
 
 	mp := sdkmetric.NewMeterProvider(opts...)

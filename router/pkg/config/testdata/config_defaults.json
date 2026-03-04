@@ -52,7 +52,12 @@
         "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "Exporters": null
+        "Exporters": null,
+        "LogExporter": {
+          "Enabled": false,
+          "ExcludeMetrics": null,
+          "IncludeMetrics": null
+        }
       },
       "Prometheus": {
         "Enabled": true,
@@ -280,6 +285,7 @@
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
+  "LogServiceName": "@wundergraph/router",
   "ShutdownDelay": 60000000000,
   "GracePeriod": 30000000000,
   "PollInterval": 10000000000,
