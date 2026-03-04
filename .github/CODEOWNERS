@@ -13,8 +13,8 @@
 /connect-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera
 /controlplane/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
 /graphqlmetrics/ @Noroth @StarpTech
-/helm/ @Noroth @StarpTech
-/infrastructure/ @Noroth @StarpTech
+/helm/ @Noroth @StarpTech @pepol
+/infrastructure/ @Noroth @StarpTech @pepol
 /keycloak/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
 /otelcollector/ @Noroth @StarpTech
 /playground/ @wundergraph/Router @thisisnithin @StarpTech
