@@ -21,7 +21,7 @@ func directConfig(t *testing.T) (HarnessConfig, *Backend) {
 	t.Cleanup(b.Stop)
 
 	cfg := HarnessConfig{
-		ProxyAddr: "ws://" + b.Addr(),
+		TargetAddr: "ws://" + b.Addr(),
 		Backends: map[string]*Backend{
 			"default": b,
 		},

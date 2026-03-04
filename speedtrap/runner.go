@@ -13,9 +13,9 @@ func RunScenario(cfg HarnessConfig, s Scenario) ScenarioResult {
 	}
 
 	t := &S{
-		proxyAddr: cfg.ProxyAddr,
-		backends:  cfg.Backends,
-		timeout:   timeout,
+		targetAddr: cfg.TargetAddr,
+		backends:   cfg.Backends,
+		timeout:    timeout,
 	}
 
 	start := time.Now()

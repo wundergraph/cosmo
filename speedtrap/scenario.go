@@ -20,9 +20,9 @@ type Scenario struct {
 
 // HarnessConfig configures the test harness for running scenarios.
 type HarnessConfig struct {
-	ProxyAddr string
-	Backends  map[string]*Backend
-	Timeout   time.Duration
+	TargetAddr string
+	Backends   map[string]*Backend
+	Timeout    time.Duration
 }
 
 // clientConfig holds resolved client connection options.
@@ -58,10 +58,10 @@ func WithClientHeaders(h http.Header) ClientOption {
 //	Error / Errorf     — Log + Fail    (non-fatal)
 //	Fatal / Fatalf     — Log + FailNow (fatal, stops execution)
 type S struct {
-	proxyAddr string
-	backends  map[string]*Backend
-	handles   []*ConnectionHandle
-	timeout   time.Duration
+	targetAddr string
+	backends   map[string]*Backend
+	handles    []*ConnectionHandle
+	timeout    time.Duration
 
 	mu        sync.Mutex
 	hasFailed bool
@@ -85,9 +85,9 @@ func (t *S) Client(opts ...ClientOption) (*ConnectionHandle, error) {
 		dialer.Header = ws.HandshakeHeaderHTTP(cfg.headers)
 	}
 
-	conn, _, hs, err := dialer.Dial(context.Background(), t.proxyAddr)
+	conn, _, hs, err := dialer.Dial(context.Background(), t.targetAddr)
 	if err != nil {
-		return nil, fmt.Errorf("dial %s: %w", t.proxyAddr, err)
+		return nil, fmt.Errorf("dial %s: %w", t.targetAddr, err)
 	}
 
 	h := newConnectionHandle(conn, ws.StateClientSide, hs, nil, t.timeout)

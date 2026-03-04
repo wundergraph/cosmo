@@ -26,7 +26,7 @@ func TestAllScenarios(t *testing.T) {
 	t.Cleanup(backend.Stop)
 
 	cfg := speedtrap.HarnessConfig{
-		ProxyAddr: addr,
+		TargetAddr: addr,
 		Backends: map[string]*speedtrap.Backend{
 			"default": backend,
 		},
@@ -50,7 +50,7 @@ func TestFederatedScenarios(t *testing.T) {
 	t.Cleanup(products.Stop)
 
 	cfg := speedtrap.HarnessConfig{
-		ProxyAddr: addr,
+		TargetAddr: addr,
 		Backends: map[string]*speedtrap.Backend{
 			"users":    users,
 			"products": products,
