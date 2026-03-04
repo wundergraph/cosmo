@@ -2669,31 +2669,34 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 // NATSPublishUntilReceived publishes a NATS message and retries until
 // the subscription processes it. Handles the race between NATS ChanSubscribe
 // (which buffers the SUB command) and server-side subscription registration.
-func (e *Environment) NATSPublishUntilReceived(conn *nats.Conn, subject string, data []byte, desiredMsgCount uint64, timeout time.Duration) {
+func (e *Environment) NATSPublishUntilReceived(conn *nats.Conn, subject string, data []byte, _ uint64, timeout time.Duration) {
 	e.t.Helper()
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
 	for {
+		// Record MessagesSent BEFORE publishing so we can detect when THIS message is received
+		beforeCount := e.Router.EngineStats.GetReport().MessagesSent
+
 		err := conn.Publish(subject, data)
 		require.NoError(e.t, err)
 		err = conn.Flush()
 		require.NoError(e.t, err)
 
-		// Event-driven wait with short retry window
-		shortCtx, shortCancel := context.WithTimeout(ctx, 500*time.Millisecond)
+		// Wait for MessagesSent to increase, confirming THIS message was received
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
 		e.Router.EngineStats.Wait(shortCtx, func(r *statistics.UsageReport) bool {
-			return r.MessagesSent >= desiredMsgCount
+			return r.MessagesSent > beforeCount
 		})
 		shortCancel()
 
 		report := e.Router.EngineStats.GetReport()
-		if report.MessagesSent >= desiredMsgCount {
+		if report.MessagesSent > beforeCount {
 			return
 		}
 
 		if ctx.Err() != nil {
-			e.t.Fatalf("timed out: messages sent %d, want >= %d", report.MessagesSent, desiredMsgCount)
+			e.t.Fatalf("timed out: messages sent %d, didn't increase from %d", report.MessagesSent, beforeCount)
 		}
 	}
 }
@@ -2701,12 +2704,15 @@ func (e *Environment) NATSPublishUntilReceived(conn *nats.Conn, subject string, 
 // KafkaPublishUntilReceived produces a Kafka message and retries until
 // the subscription processes it. Handles the race between Kafka consumer
 // group join/partition assignment and message production.
-func (e *Environment) KafkaPublishUntilReceived(topicName string, message string, desiredMsgCount uint64, timeout time.Duration) {
+func (e *Environment) KafkaPublishUntilReceived(topicName string, message string, _ uint64, timeout time.Duration) {
 	e.t.Helper()
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
 	for {
+		// Record MessagesSent BEFORE publishing so we can detect when THIS message is received
+		beforeCount := e.Router.EngineStats.GetReport().MessagesSent
+
 		pErrCh := make(chan error, 1)
 		e.KafkaClient.Produce(ctx, &kgo.Record{
 			Topic: e.GetPubSubName(topicName),
@@ -2722,20 +2728,20 @@ func (e *Environment) KafkaPublishUntilReceived(topicName string, message string
 			e.t.Fatalf("timed out producing Kafka message")
 		}
 
-		// Event-driven wait with short retry window
-		shortCtx, shortCancel := context.WithTimeout(ctx, 500*time.Millisecond)
+		// Wait for MessagesSent to increase, confirming THIS message was received
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
 		e.Router.EngineStats.Wait(shortCtx, func(r *statistics.UsageReport) bool {
-			return r.MessagesSent >= desiredMsgCount
+			return r.MessagesSent > beforeCount
 		})
 		shortCancel()
 
 		report := e.Router.EngineStats.GetReport()
-		if report.MessagesSent >= desiredMsgCount {
+		if report.MessagesSent > beforeCount {
 			return
 		}
 
 		if ctx.Err() != nil {
-			e.t.Fatalf("timed out: messages sent %d, want >= %d", report.MessagesSent, desiredMsgCount)
+			e.t.Fatalf("timed out: messages sent %d, didn't increase from %d", report.MessagesSent, beforeCount)
 		}
 	}
 }
