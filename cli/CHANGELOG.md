@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.107.0](https://github.com/wundergraph/cosmo/compare/wgc@0.106.0...wgc@0.107.0) (2026-03-05)
+
+### Features
+
+* add format script + optional git hooks ([#2579](https://github.com/wundergraph/cosmo/issues/2579)) ([edabd2b](https://github.com/wundergraph/cosmo/commit/edabd2bd8f775c5717ca785f16616cff6f7ae039)) (@comatory)
+
+# [0.106.0](https://github.com/wundergraph/cosmo/compare/wgc@0.105.7...wgc@0.106.0) (2026-03-04)
+
+### Features
+
+* add support for federated graph schema changes ([#2566](https://github.com/wundergraph/cosmo/issues/2566)) ([2f0a666](https://github.com/wundergraph/cosmo/commit/2f0a666d8c82d649707e57f6ccd085197e485da5)) (@JivusAyrus)
+
 ## [0.105.7](https://github.com/wundergraph/cosmo/compare/wgc@0.105.6...wgc@0.105.7) (2026-03-02)
 
 **Note:** Version bump only for package wgc

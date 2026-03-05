@@ -1,13 +1,7 @@
 extend schema
   @link(
     url: "https://specs.apollo.dev/federation/v2.1"
-    import: [
-      "@key"
-      "@shareable"
-      "@inaccessible"
-      "@composeDirective"
-      "@tag"
-    ]
+    import: ["@key", "@shareable", "@inaccessible", "@composeDirective", "@tag"]
   )
   @link(
     url: "https://myspecs.dev/myDirective/v1.0"

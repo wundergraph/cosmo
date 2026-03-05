@@ -123,6 +123,8 @@ importers:
         specifier: ^5.3.2
         version: 5.3.2
 
+  aws-lambda-router: {}
+
   cdn-server:
     dependencies:
       '@aws-sdk/client-s3':
@@ -657,9 +659,6 @@ importers:
       '@types/nodemailer':
         specifier: ^7.0.3
         version: 7.0.4
-      '@types/prettier':
-        specifier: ^3.0.0
-        version: 3.0.0
       '@types/stream-json':
         specifier: ^1.7.7
         version: 1.7.7
@@ -687,9 +686,6 @@ importers:
       pino-pretty:
         specifier: ^10.3.1
         version: 10.3.1
-      prettier:
-        specifier: ^3.2.4
-        version: 3.2.4
       tsx:
         specifier: ^4.16.0
         version: 4.16.0
@@ -717,6 +713,8 @@ importers:
       react-email:
         specifier: 4.0.3
         version: 4.0.3(@opentelemetry/api@1.9.0)(babel-plugin-macros@3.1.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+
+  graphqlmetrics: {}
 
   playground:
     dependencies:
@@ -926,6 +924,10 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/debug@4.1.12)(@types/node@20.12.12)(jsdom@27.2.0)(terser@5.44.1)
+
+  router: {}
+
+  router-plugin: {}
 
   shared:
     dependencies:
@@ -7683,10 +7685,6 @@ packages:
   '@types/pg@8.6.1':
     resolution: {integrity: sha512-1Kc4oAGzAl7uqUStZCDvaLFqZrW9qWSjXOmBfdgyBP5La7Us6Mg4GBvRlSoaZMhQF/zSj1C8CtKMBkoiT8eL8w==}
 
-  '@types/prettier@3.0.0':
-    resolution: {integrity: sha512-mFMBfMOz8QxhYVbuINtswBp9VL2b4Y0QqYHwqLz3YbgtfAcat2Dl6Y1o4e22S/OVE6Ebl9m7wWiMT2lSbAs1wA==}
-    deprecated: This is a stub types definition. prettier provides its own type definitions, so you do not need this installed.
-
   '@types/prismjs@1.26.3':
     resolution: {integrity: sha512-A0D0aTXvjlqJ5ZILMz3rNfDBOx9hHxLZYv2by47Sm/pqW35zzjusrZTryatjN/Rf8Us2gZrJD+KeHbUSTux1Cw==}
 
@@ -12594,11 +12592,6 @@ packages:
         optional: true
       prettier-plugin-twig-melody:
         optional: true
-
-  prettier@3.2.4:
-    resolution: {integrity: sha512-FWu1oLHKCrtpO1ypU6J0SbK2d9Ckwysq6bHj/uaCP26DxrPpppCLQRGVuqAxSTvhF00AcvDRyYrLNW7ocBhFFQ==}
-    engines: {node: '>=14'}
-    hasBin: true
 
   prettier@3.2.5:
     resolution: {integrity: sha512-3/GWa9aOC0YeD7LUfvOG2NiDyhOWRvt1k+rcKhOuYnMY24iiCphgneUfJDyFXd6rZCAnuLBv6UeAULtrhT/F4A==}
@@ -22355,10 +22348,6 @@ snapshots:
       pg-protocol: 1.10.3
       pg-types: 2.2.0
 
-  '@types/prettier@3.0.0':
-    dependencies:
-      prettier: 3.5.2
-
   '@types/prismjs@1.26.3': {}
 
   '@types/prompts@2.4.9':
@@ -28228,8 +28217,6 @@ snapshots:
   prettier-plugin-tailwindcss@0.5.6(prettier@3.6.2):
     dependencies:
       prettier: 3.6.2
-
-  prettier@3.2.4: {}
 
   prettier@3.2.5: {}
 

@@ -9,7 +9,7 @@
     "sourceMap": true,
     "outDir": "./dist",
     "module": "NodeNext",
-    "noEmit": true,
+    "noEmit": true
   },
   "include": ["test/**/*"],
   "exclude": ["node_modules"]

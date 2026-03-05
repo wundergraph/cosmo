@@ -17,7 +17,10 @@ describe('Leave organization', () => {
   });
 
   test('Should remove member from organization groups when leaving', async () => {
-    const { client, server, keycloakClient, realm, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    const { client, server, keycloakClient, realm, users, authenticator } = await SetupTest({
+      dbname,
+      enableMultiUsers: true,
+    });
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
     const orgGroupRepo = new OrganizationGroupRepository(server.db);
@@ -33,7 +36,7 @@ describe('Leave organization', () => {
     const orgMember = await orgRepo.addOrganizationMember({
       organizationID: org!.id,
       userID: users.adminJimCompanyB!.userId,
-    })
+    });
 
     expect(orgMember).toBeDefined();
 
@@ -58,7 +61,7 @@ describe('Leave organization', () => {
       organizationId: users.adminAliceCompanyA.organizationId,
       organizationName: users.adminAliceCompanyA.organizationName,
       organizationSlug: users.adminAliceCompanyA.organizationSlug,
-    })
+    });
 
     const leaveOrganizationResponse = await client.leaveOrganization({});
     expect(leaveOrganizationResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -79,7 +82,9 @@ describe('Leave organization', () => {
     const leaveOrganizationResponse = await client.leaveOrganization({});
 
     expect(leaveOrganizationResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(leaveOrganizationResponse.response?.details).toBe('Creator of a organization cannot leave the organization.');
+    expect(leaveOrganizationResponse.response?.details).toBe(
+      'Creator of a organization cannot leave the organization.',
+    );
 
     await server.close();
   });

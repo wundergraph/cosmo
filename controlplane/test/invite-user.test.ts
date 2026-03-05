@@ -20,7 +20,13 @@ describe('InviteUser', () => {
   });
 
   test('that an organization admin can invite other users to the organization', async () => {
-    const { authenticator, client, mailerClient, server, users: { adminAliceCompanyA, adminJimCompanyB } } = await SetupTest({ dbname, enableMultiUsers: true, });
+    const {
+      authenticator,
+      client,
+      mailerClient,
+      server,
+      users: { adminAliceCompanyA, adminJimCompanyB },
+    } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -49,7 +55,13 @@ describe('InviteUser', () => {
   });
 
   test('that an organization developer cannot invite other users to the organization', async () => {
-    const { authenticator, client, mailerClient, server, users: { devJoeCompanyA, adminJimCompanyB } } = await SetupTest({ dbname, enableMultiUsers: true, });
+    const {
+      authenticator,
+      client,
+      mailerClient,
+      server,
+      users: { devJoeCompanyA, adminJimCompanyB },
+    } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -71,7 +83,13 @@ describe('InviteUser', () => {
   });
 
   test('that an organization admin can remove a user invitation', async () => {
-    const { authenticator, client, mailerClient, server, users: { adminAliceCompanyA, adminJimCompanyB } } = await SetupTest({ dbname, enableMultiUsers: true, });
+    const {
+      authenticator,
+      client,
+      mailerClient,
+      server,
+      users: { adminAliceCompanyA, adminJimCompanyB },
+    } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -107,7 +125,13 @@ describe('InviteUser', () => {
   });
 
   test('that an organization developer cannot remove a user invitation', async () => {
-    const { authenticator, client, mailerClient, server, users: { adminAliceCompanyA, devJoeCompanyA, adminJimCompanyB } } = await SetupTest({ dbname, enableMultiUsers: true, });
+    const {
+      authenticator,
+      client,
+      mailerClient,
+      server,
+      users: { adminAliceCompanyA, devJoeCompanyA, adminJimCompanyB },
+    } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
