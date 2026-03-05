@@ -1827,12 +1827,8 @@ func TestFlakyNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
 			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
-			// Trigger the subscription via NATS
-			err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename": "Employee"}`))
-			require.NoError(t, err)
-
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
+			// Warm-up: confirm subscription pipeline is fully active
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename": "Employee"}`), 1, NatsWaitTimeout)
 
 			var resp *http.Response
 
@@ -1869,20 +1865,17 @@ func TestFlakyNatsEvents(t *testing.T) {
 			data := testenv.ReadSSEField(t, reader)
 			require.Equal(t, fmt.Sprintf("data: {\"data\":{\"filteredEmployeeUpdated\":{\"id\":%d,\"details\":{\"forename\":\"%s\",\"surname\":\"%s\"}}}}", 1, testData[1].forename, testData[1].surname), data)
 
-			// This loop is used to test the filter
-			// It will emit 12 events, and only 7 of them should be included:
-			// 1, 3, 4, 5, 7, 8, and 11
-			for i := 1; i < 13; i++ {
-				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
+			// This loop tests the filter with events 2-12.
+			// Of these, 6 should be included: 3, 4, 5, 7, 8, and 11.
+			for i := 2; i < 13; i++ {
+				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename": "Employee"}`, i)))
 				require.NoError(t, err)
 
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 
-				// Should get the message only for the events that should be included
-				// if some message is not filtered out, the test will fail
 				switch i {
-				case 1, 3, 4, 5, 7, 8, 11:
+				case 3, 4, 5, 7, 8, 11:
 					eventNext = testenv.ReadSSEField(t, reader)
 					require.Equal(t, "event: next", eventNext)
 					data = testenv.ReadSSEField(t, reader)
@@ -1939,20 +1932,32 @@ func TestFlakyNatsEvents(t *testing.T) {
 
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
-			// This loop is used to test the filter
-			// It will emit 12 events, and only 7 of them should be included:
-			// 1, 3, 4, 5, 7, 8, and 11
-			for i := uint32(1); i < 13; i++ {
+
+			// Warm-up: confirm subscription pipeline is fully active
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename":"Employee"}`), 1, NatsWaitTimeout)
+			conn.SetReadDeadline(time.Now().Add(NatsWaitTimeout))
+			gErr := conn.ReadJSON(&msg)
+			require.NoError(t, gErr)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			gErr = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, gErr)
+			require.Equal(t, float64(1), payload.Data.FilteredEmployeeUpdated.ID)
+			require.Equal(t, testData[1].forename, payload.Data.FilteredEmployeeUpdated.Details.Forename)
+			require.Equal(t, testData[1].surname, payload.Data.FilteredEmployeeUpdated.Details.Surname)
+
+			// This loop tests the filter with events 2-12.
+			// Of these, 6 should be included: 3, 4, 5, 7, 8, and 11.
+			for i := uint32(2); i < 13; i++ {
 				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(fmt.Sprintf(`{"id":%d,"__typename":"Employee"}`, i)))
 				require.NoError(t, err)
 				err = xEnv.NatsConnectionDefault.Flush()
 				require.NoError(t, err)
 
-				// Should get the message only for the events that should be included
-				// if some message is not filtered out, the test will fail
 				switch i {
-				case 1, 3, 4, 5, 7, 8, 11:
-					gErr := conn.ReadJSON(&msg)
+				case 3, 4, 5, 7, 8, 11:
+					conn.SetReadDeadline(time.Now().Add(NatsWaitTimeout))
+					gErr = conn.ReadJSON(&msg)
 					require.NoError(t, gErr)
 					require.Equal(t, "1", msg.ID)
 					require.Equal(t, "next", msg.Type)
