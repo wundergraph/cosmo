@@ -91,7 +91,7 @@ const createTempUser = async (
     await orgGroupRepo.updateGroup({
       organizationId: personalOrgMember.organizationId,
       groupId: personalOrgAdminGroup.groupId,
-      rules: [{ role: 'organization-admin', namespaces: [], resources: [] }]
+      rules: [{ role: 'organization-admin', namespaces: [], resources: [] }],
     });
 
     await orgGroupRepo.addUserToGroup({
@@ -324,7 +324,10 @@ describe.sequential('Delete user tests', (ctx) => {
   });
 
   test('SSO configuration is deleted on keycloak', async (testContext) => {
-    const { client, server, users, keycloakClient, authenticator, realm } = await SetupTest({ dbname, enabledFeatures: ['oidc'] });
+    const { client, server, users, keycloakClient, authenticator, realm } = await SetupTest({
+      dbname,
+      enabledFeatures: ['oidc'],
+    });
     const mainUserContext = users[TestUser.adminAliceCompanyA];
     const tempUserContext = await createTempUser(server.db, keycloakClient, realm, mainUserContext.organizationSlug);
 

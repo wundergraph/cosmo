@@ -215,7 +215,7 @@ func TestVanguardService_ServiceHandler(t *testing.T) {
 
 		// Create handler with mock server
 		protoLoader := GetSharedProtoLoader(t, "testdata/services/employee.v1")
-		
+
 		// Build operations map with service-scoped approach before creating registry
 		serviceName := "employee.v1.EmployeeService"
 		operations := map[string]map[string]*schemaloader.Operation{

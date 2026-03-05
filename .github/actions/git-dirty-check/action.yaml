@@ -1,0 +1,32 @@
+name: 'Git dirty check'
+description: 'Check if git is not dirty after generating artifacts'
+
+inputs:
+  package-name:
+    required: true
+    description: Name of the package (folder) for checking git status
+
+runs:
+  using: 'composite'
+  steps:
+    - run: git diff --no-ext-diff --exit-code
+      id: git-dirty-check
+      shell: bash
+    - uses: marocchino/sticky-pull-request-comment@v2
+      if: failure() && steps.git-dirty-check.outcome == 'failure'
+      with:
+        header: git-dirty-check-${{ inputs.package-name }}
+        hide_and_recreate: true
+        message: |
+          # ${{ inputs.package-name }} - uncommitted changes detected
+
+          Seems like you forgot to commit some code. Possible causes:
+          * Generated code not part of the PR, fix with: `make generate` and commit the changes
+          * Dependency mismatch for tools (protoc, etc). Ensure your local machine has same versions of tools as CI does
+          * Formatting drift, fix with `make format ${{ inputs.package-name }}` / `pnpm format ${{ inputs.package-name }}`
+
+    - uses: marocchino/sticky-pull-request-comment@v2
+      if: success() && steps.git-dirty-check.outcome == 'success'
+      with:
+        header: git-dirty-check-${{ inputs.package-name }}
+        delete: true

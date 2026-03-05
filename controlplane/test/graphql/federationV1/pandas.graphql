@@ -4,6 +4,6 @@ type Query {
 }
 
 type Panda {
-    name:ID!
-    favoriteFood: String
+  name: ID!
+  favoriteFood: String
 }

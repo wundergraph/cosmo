@@ -23,7 +23,7 @@ runs:
       uses: aquasecurity/trivy-action@0.34.1
       id: scan
       with:
-        version: v0.58.0
+        version: v0.69.3
         image-ref: ${{ inputs.image_ref }}
         ignore-unfixed: true
         exit-code: 1

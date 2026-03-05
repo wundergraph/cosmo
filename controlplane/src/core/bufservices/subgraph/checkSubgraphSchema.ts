@@ -61,6 +61,7 @@ export function checkSubgraphSchema(
         },
         breakingChanges: [],
         nonBreakingChanges: [],
+        composedSchemaBreakingChanges: [],
         compositionErrors: [],
         checkId: '',
         checkedFederatedGraphs: [],
@@ -81,6 +82,7 @@ export function checkSubgraphSchema(
         },
         breakingChanges: [],
         nonBreakingChanges: [],
+        composedSchemaBreakingChanges: [],
         compositionErrors: [],
         checkId: '',
         checkedFederatedGraphs: [],
@@ -103,6 +105,7 @@ export function checkSubgraphSchema(
         },
         breakingChanges: [],
         nonBreakingChanges: [],
+        composedSchemaBreakingChanges: [],
         compositionErrors: [],
         checkId: '',
         checkedFederatedGraphs: [],
@@ -154,6 +157,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges: [],
           nonBreakingChanges: [],
+          composedSchemaBreakingChanges: [],
           compositionErrors: [],
           checkId: '',
           checkedFederatedGraphs: [],
@@ -171,6 +175,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges: [],
           nonBreakingChanges: [],
+          composedSchemaBreakingChanges: [],
           compositionErrors: [],
           checkId: '',
           checkedFederatedGraphs: [],
@@ -210,6 +215,7 @@ export function checkSubgraphSchema(
             },
             breakingChanges: [],
             nonBreakingChanges: [],
+            composedSchemaBreakingChanges: [],
             compositionErrors: [],
             checkId: '',
             checkedFederatedGraphs: [],
@@ -233,6 +239,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges: [],
           nonBreakingChanges: [],
+          composedSchemaBreakingChanges: [],
           compositionErrors: [],
           checkId: '',
           checkedFederatedGraphs: [],
@@ -310,7 +317,11 @@ export function checkSubgraphSchema(
       returnLimit,
     );
 
-    // Create counts object with total counts from the original checkResult
+    const composedSchemaBreakingChanges =
+      returnLimit == null
+        ? checkResult.composedSchemaBreakingChanges
+        : checkResult.composedSchemaBreakingChanges.slice(0, returnLimit);
+
     const counts = {
       lintWarnings: checkResult.lintWarnings.length,
       lintErrors: checkResult.lintErrors.length,
@@ -320,6 +331,7 @@ export function checkSubgraphSchema(
       compositionWarnings: checkResult.compositionWarnings.length,
       graphPruneErrors: checkResult.graphPruneErrors.length,
       graphPruneWarnings: checkResult.graphPruneWarnings.length,
+      composedSchemaBreakingChanges: checkResult.composedSchemaBreakingChanges.length,
     };
 
     if (response && response.code !== EnumStatusCode.OK) {
@@ -330,6 +342,7 @@ export function checkSubgraphSchema(
         },
         breakingChanges,
         nonBreakingChanges,
+        composedSchemaBreakingChanges,
         operationUsageStats,
         compositionErrors,
         checkId: schemaCheckID,
@@ -358,6 +371,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges,
           nonBreakingChanges,
+          composedSchemaBreakingChanges,
           operationUsageStats,
           compositionErrors,
           checkId: schemaCheckID,
@@ -389,6 +403,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges,
           nonBreakingChanges,
+          composedSchemaBreakingChanges,
           operationUsageStats,
           compositionErrors,
           checkId: schemaCheckID,
@@ -451,6 +466,7 @@ export function checkSubgraphSchema(
           },
           breakingChanges,
           nonBreakingChanges,
+          composedSchemaBreakingChanges,
           operationUsageStats,
           compositionErrors,
           checkId: schemaCheckID,
@@ -498,6 +514,7 @@ export function checkSubgraphSchema(
       },
       breakingChanges,
       nonBreakingChanges,
+      composedSchemaBreakingChanges,
       operationUsageStats,
       compositionErrors,
       checkId: schemaCheckID,

@@ -19,8 +19,9 @@
     "test": "vitest run",
     "test:core": "vitest run --exclude ./tests/unstaged-tests",
     "test:coverage": "vitest run --coverage",
-    "lint": "prettier --check src tests",
-    "lint:fix": "prettier --write src tests",
+    "lint": "prettier --check .",
+    "lint:fix": "pnpm format",
+    "format": "prettier -w -c .",
     "postversion": "node ./scripts/get-composition-version.mjs"
   },
   "main": "./dist/index.js",

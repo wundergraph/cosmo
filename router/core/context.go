@@ -708,9 +708,9 @@ func (o *operationContext) GetTypeFieldUsageInfoMetrics() []*graphqlmetrics.Type
 
 // OperationTimings contains timing information for various stages of operation processing
 type OperationTimings struct {
-	ParsingTime time.Duration
-	ValidationTime time.Duration
-	PlanningTime time.Duration
+	ParsingTime       time.Duration
+	ValidationTime    time.Duration
+	PlanningTime      time.Duration
 	NormalizationTime time.Duration
 }
 
