@@ -1385,14 +1385,8 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
 			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
-			// Trigger the first subscription via NATS
-			err = xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNats.12"), []byte(`{"id":13,"__typename":"Employee"}`))
-			require.NoError(t, err)
-
-			err = xEnv.NatsConnectionMyNats.Flush()
-			require.NoError(t, err)
-
-			xEnv.WaitForMessagesSent(1, NatsWaitTimeout)
+			// Warm-up: confirm the subscription pipeline is fully active
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionMyNats, xEnv.GetPubSubName("employeeUpdatedMyNats.12"), []byte(`{"id":13,"__typename":"Employee"}`), 1, NatsWaitTimeout)
 
 			err = conn.SetReadDeadline(time.Now().Add(NatsWaitTimeout))
 			require.NoError(t, err)
@@ -1406,14 +1400,8 @@ func TestNatsEvents(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, float64(13), payload.Data.EmployeeUpdatedMyNats.ID)
 
-			// Trigger the first subscription via NATS
-			err = xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNatsTwo.12"), []byte(`{"id":99,"__typename":"Employee"}`))
-			require.NoError(t, err)
-
-			err = xEnv.NatsConnectionMyNats.Flush()
-			require.NoError(t, err)
-
-			xEnv.WaitForMessagesSent(2, NatsWaitTimeout)
+			// Trigger second subscription via NATS on different subject
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionMyNats, xEnv.GetPubSubName("employeeUpdatedMyNatsTwo.12"), []byte(`{"id":99,"__typename":"Employee"}`), 2, NatsWaitTimeout)
 
 			err = conn.SetReadDeadline(time.Now().Add(NatsWaitTimeout))
 			require.NoError(t, err)
