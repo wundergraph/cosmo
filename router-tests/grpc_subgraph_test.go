@@ -144,7 +144,7 @@ func TestGRPCSubgraph(t *testing.T) {
 				query: `
 				query {
 					nodesById(id: 1) {
-                        __typename
+			            __typename
 						... on Project {
 							id
 						}
@@ -263,6 +263,21 @@ func TestGRPCSubgraph(t *testing.T) {
 				name:     "query project with normal and recursive field resolver and aliases and multiple levels of recursion and aliases",
 				query:    `{ project(id: 2) { id name urgent: topPriorityItem(category: "task") { __typename } nextDeadline: criticalDeadline(withinDays: 10000) { __typename } subsub: subProjects { id name status otherSubs: subProjects { id name } } } }`,
 				expected: `{"data":{"project":{"id":"2","name":"Microservices Revolution","urgent":{"__typename":"Task"},"nextDeadline":{"__typename":"Milestone"},"subsub":[{"id":"4","name":"DevOps Transformation","status":"PLANNING","otherSubs":[{"id":"1","name":"Cloud Migration Overhaul"}]},{"id":"5","name":"Security Overhaul","status":"ON_HOLD","otherSubs":[{"id":"2","name":"Microservices Revolution"}]}]}}}`,
+			},
+			{
+				name:     "query non-existent project returns null without invoking field resolvers",
+				query:    `{ project(id: 999) { id name topPriorityItem(category: "task") { __typename } criticalDeadline(withinDays: 10000) { __typename } } }`,
+				expected: `{"data":{"project":null}}`,
+			},
+			{
+				name:     "query non-existent project returns null without invoking recursive field resolvers",
+				query:    `{ project(id: 999) { id name subProjects { id name status subProjects { id name } } } }`,
+				expected: `{"data":{"project":null}}`,
+			},
+			{
+				name:     "query non-existent project returns null without invoking nested field resolvers with aliases",
+				query:    `{ project(id: 999) { id name urgent: topPriorityItem(category: "task") { __typename } nextDeadline: criticalDeadline(withinDays: 10000) { __typename } subsub: subProjects { id name status otherSubs: subProjects { id name } } } }`,
+				expected: `{"data":{"project":null}}`,
 			},
 		}
 		testenv.Run(t, &testenv.Config{
