@@ -10,5 +10,5 @@
     "rootDir": "."
   },
   "include": ["src/**/*", "test/**/*", "e2e/**/*"],
-  "exclude": ["node_modules", "dist", "test/fixtures/**","test/testdata/**","coverage/**/*"]
+  "exclude": ["node_modules", "dist", "test/fixtures/**", "test/testdata/**", "coverage/**/*"]
 }
