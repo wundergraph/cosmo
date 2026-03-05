@@ -148,9 +148,9 @@ type Metrics struct {
 }
 
 type MetricsLogExporter struct {
-	Enabled        bool       `yaml:"enabled" envDefault:"false"`
-	ExcludeMetrics RegExArray `yaml:"exclude_metrics,omitempty"`
-	IncludeMetrics RegExArray `yaml:"include_metrics,omitempty"`
+	Enabled        bool       `yaml:"enabled" envDefault:"false" env:"METRICS_OTLP_LOG_EXPORTER_ENABLED"`
+	ExcludeMetrics RegExArray `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_LOG_EXPORTER_EXCLUDE_METRICS"`
+	IncludeMetrics RegExArray `yaml:"include_metrics,omitempty" env:"METRICS_OTLP_LOG_EXPORTER_INCLUDE_METRICS"`
 }
 
 type MetricsOTLP struct {
