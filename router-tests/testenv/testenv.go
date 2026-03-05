@@ -89,6 +89,8 @@ var (
 	ConfigWithEdfsRedisJSONTemplate string
 	//go:embed testdata/configWithPlugins.json
 	ConfigWithPluginsJSONTemplate string
+	//go:embed testdata/configWithOCIPlugins.json
+	ConfigWithOCIPluginsJSONTemplate string
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
 
@@ -360,8 +362,9 @@ type Config struct {
 }
 
 type PluginConfig struct {
-	Path    string
-	Enabled bool
+	Path        string
+	Enabled     bool
+	RegistryURL string // for OCI plugin tests
 }
 
 type CacheMetricsAssertions struct {
@@ -1489,10 +1492,16 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
 
-	routerOpts = append(routerOpts, core.WithPlugins(config.PluginsConfiguration{
+	pluginsCfg := config.PluginsConfiguration{
 		Path:    testConfig.Plugins.Path,
 		Enabled: testConfig.Plugins.Enabled,
-	}))
+	}
+	if testConfig.Plugins.RegistryURL != "" {
+		pluginsCfg.Registry = config.PluginRegistryConfiguration{
+			URL: testConfig.Plugins.RegistryURL,
+		}
+	}
+	routerOpts = append(routerOpts, core.WithPlugins(pluginsCfg))
 
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true
