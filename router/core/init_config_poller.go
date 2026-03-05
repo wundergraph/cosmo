@@ -87,7 +87,6 @@ func getConfigClient(r *Router, cdnProviders map[string]config.CDNStorageProvide
 		return nil, fmt.Errorf("unknown storage provider id '%s' for execution config", providerID)
 	}
 
-
 	if r.graphApiToken == "" {
 		// If the router is running in demo mode, we don't need a graph token
 		// but the router will just never poll for execution config

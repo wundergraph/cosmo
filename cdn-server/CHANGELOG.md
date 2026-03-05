@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.16.2](https://github.com/wundergraph/cosmo/compare/cdn@0.16.1...cdn@0.16.2) (2026-02-25)
+
+### Bug Fixes
+
+* resolve cve-2026-25896 ([#2552](https://github.com/wundergraph/cosmo/issues/2552)) ([f271ff2](https://github.com/wundergraph/cosmo/commit/f271ff267c01bc1e8af5f6aeed6ceae187db0fbc)) (@pepol)
+
+## [0.16.1](https://github.com/wundergraph/cosmo/compare/cdn@0.16.0...cdn@0.16.1) (2026-01-12)
+
+### Bug Fixes
+
+* **infra:** ensure base images use target platform ([#2401](https://github.com/wundergraph/cosmo/issues/2401)) ([45d65c4](https://github.com/wundergraph/cosmo/commit/45d65c4c260e7888ecfc46fb46db0d73d33fc75e)) (@endigma)
+
 # [0.16.0](https://github.com/wundergraph/cosmo/compare/cdn@0.15.0...cdn@0.16.0) (2025-11-29)
 
 ### Features

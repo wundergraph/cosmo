@@ -93,7 +93,9 @@ func (c Client) getConfigFile(ctx context.Context, modifiedSince time.Time) ([]b
 		return nil, fmt.Errorf("error getting config from s3: %w", err)
 	}
 
-	defer minioReader.Close()
+	defer func() {
+		_ = minioReader.Close()
+	}()
 
 	var configReader io.Reader
 
@@ -104,7 +106,9 @@ func (c Client) getConfigFile(ctx context.Context, modifiedSince time.Time) ([]b
 			return nil, fmt.Errorf("error creating gzip reader: %w", err)
 		}
 
-		defer gzipReader.Close()
+		defer func() {
+			_ = gzipReader.Close()
+		}()
 
 		configReader = gzipReader
 

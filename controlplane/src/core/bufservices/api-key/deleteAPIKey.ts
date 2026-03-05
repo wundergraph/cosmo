@@ -7,6 +7,8 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { OrganizationGroupRepository } from '../../repositories/OrganizationGroupRepository.js';
+import { RBACEvaluator } from '../../services/RBACEvaluator.js';
 
 export function deleteAPIKey(
   opts: RouterOptions,
@@ -21,6 +23,7 @@ export function deleteAPIKey(
 
     const apiKeyRepo = new ApiKeyRepository(opts.db);
     const auditLogRepo = new AuditLogRepository(opts.db);
+    const groupRepo = new OrganizationGroupRepository(opts.db);
 
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
@@ -38,6 +41,26 @@ export function deleteAPIKey(
 
     if (!authContext.rbac.isOrganizationApiKeyManager) {
       throw new UnauthorizedError();
+    }
+
+    if (apiKey.group?.id) {
+      const group = await groupRepo.byId({
+        organizationId: authContext.organizationId,
+        groupId: apiKey.group.id,
+      });
+
+      if (group) {
+        const rbac = new RBACEvaluator([group]);
+        if (rbac.isOrganizationAdmin && !authContext.rbac.isOrganizationAdmin) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details: `You don't have access to remove the API key "${apiKey.name}"`,
+            },
+            apiKey: '',
+          };
+        }
+      }
     }
 
     await apiKeyRepo.removeAPIKey({

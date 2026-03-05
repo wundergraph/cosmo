@@ -1,6 +1,6 @@
 {
   "name": "graphqlmetrics",
-  "version": "0.36.2",
+  "version": "0.37.1",
   "private": true,
   "description": "Placeholder package to simplify versioning and releasing with lerna.",
   "keywords": [
@@ -9,6 +9,7 @@
     "cosmo"
   ],
   "scripts": {
+    "format": "go fmt ./...",
     "postversion": "name=$(jq -r .name package.json); version=$(jq -r .version package.json); gh workflow run image-release.yml -F name=$name -F workingDirectory=graphqlmetrics -F tag=$version -F dockerContext=graphqlmetrics"
   },
   "author": {

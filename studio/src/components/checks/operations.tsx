@@ -48,7 +48,7 @@ import {
 import copy from "copy-to-clipboard";
 import Fuse from "fuse.js";
 import { useRouter } from "next/router";
-import { useContext, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useApplyParams } from "../analytics/use-apply-params";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
@@ -57,6 +57,74 @@ import { Pagination } from "../ui/pagination";
 import { useDebounce } from "use-debounce";
 import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
+
+const CopyableOperationHash = ({ hash }: { hash: string }) => {
+  const [copied, setCopied] = useState(false);
+  const [tooltipOpen, setTooltipOpen] = useState<boolean | undefined>(
+    undefined,
+  );
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const secondTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      if (secondTimeoutRef.current) {
+        clearTimeout(secondTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleHashClick = (event: React.MouseEvent) => {
+    event.stopPropagation();
+
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    if (secondTimeoutRef.current) {
+      clearTimeout(secondTimeoutRef.current);
+    }
+
+    copy(hash);
+    setCopied(true);
+    setTooltipOpen(true);
+
+    timeoutRef.current = setTimeout(() => {
+      setTooltipOpen(false);
+      secondTimeoutRef.current = setTimeout(() => {
+        setCopied(false);
+        setTooltipOpen(undefined);
+      }, 200);
+    }, 1000);
+  };
+
+  return (
+    <Tooltip
+      delayDuration={100}
+      open={tooltipOpen}
+      onOpenChange={(open) => {
+        if (copied && !open) {
+          return;
+        }
+        setTooltipOpen(open ? true : undefined);
+      }}
+    >
+      <TooltipTrigger asChild>
+        <code
+          onClick={handleHashClick}
+          className="flex-shrink-0 cursor-pointer rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted-foreground/20"
+        >
+          {hash.slice(0, 4)}
+        </code>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{copied ? "Copied!" : "Copy Operation Hash"}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+};
 
 export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
@@ -323,7 +391,7 @@ export const CheckOperations = () => {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary">
-              Override All
+              Overrides
               <ChevronDownIcon className="ml-2" />
             </Button>
           </DropdownMenuTrigger>
@@ -342,12 +410,12 @@ export const CheckOperations = () => {
               className="cursor-pointer flex-col items-start gap-1"
             >
               {doAllOperationsHaveAllTheirChangesMarkedSafe
-                ? "Toggle changes as unsafe"
-                : "Toggle changes as safe"}
+                ? "Remove all changes overrides"
+                : "Ignore all changes"}
               <p className="max-w-xs text-xs text-muted-foreground">
                 {doAllOperationsHaveAllTheirChangesMarkedSafe
-                  ? "Future checks will break if the current changes appear again for the detected operations"
-                  : "Future checks will ignore the current breaking changes for the detected operations"}
+                  ? "Future checks will fail if any of these changes are breaking."
+                  : "Toggle overrides on so future checks will not treat the listed changes as breaking."}
               </p>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
@@ -366,10 +434,9 @@ export const CheckOperations = () => {
               }}
               className="cursor-pointer flex-col items-start gap-1"
             >
-              Ignore All Operations
+              Ignore all operations
               <p className="max-w-xs text-xs text-muted-foreground">
-                Future checks will ignore all current and new breaking changes
-                for the detected operations
+                All the operations listed will be ignored for future checks.
               </p>
               {doAllOperationsHaveIgnoreAllOverride && (
                 <p className=" mt-2 flex items-center gap-x-2 text-xs">
@@ -419,16 +486,16 @@ export const CheckOperations = () => {
                 <AccordionItem id={hash} key={hash} value={hash}>
                   <AccordionTrigger className="px-2 hover:bg-secondary/30 hover:no-underline">
                     <div className="flex flex-1 items-center gap-2">
-                      <p className="w-16 text-start text-muted-foreground">
-                        {hash.slice(0, 6)}
-                      </p>
-                      <p
-                        className={cn({
-                          "italic text-muted-foreground": name.length === 0,
-                        })}
-                      >
-                        {name || "unnamed operation"}
-                      </p>
+                      <div className="flex min-w-0 items-center gap-2">
+                        <CopyableOperationHash hash={hash} />
+                        <p
+                          className={cn("truncate", {
+                            "italic text-muted-foreground": name.length === 0,
+                          })}
+                        >
+                          {name || "unnamed operation"}
+                        </p>
+                      </div>
                       <Badge
                         className="!inline-block !decoration-[none]"
                         variant="outline"
@@ -440,7 +507,7 @@ export const CheckOperations = () => {
                           className="!inline-block !decoration-[none]"
                           variant="success"
                         >
-                          ignored for this check
+                          ignored in this check
                         </Badge>
                       )}
                     </div>
@@ -475,7 +542,7 @@ export const CheckOperations = () => {
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button size="sm" variant="secondary">
-                                  Configure Override
+                                  Overrides
                                   <ChevronDownIcon className="ml-2" />
                                 </Button>
                               </DropdownMenuTrigger>
@@ -487,30 +554,30 @@ export const CheckOperations = () => {
                                   onClick={() => {
                                     doAllChangesHaveOverrides
                                       ? removeOverrides({
-                                          graphName: graphContext?.graph?.name,
-                                          namespace:
-                                            graphContext?.graph?.namespace,
-                                          operationHash: hash,
-                                          changes: impactingChanges,
-                                        })
+                                        graphName: graphContext?.graph?.name,
+                                        namespace:
+                                          graphContext?.graph?.namespace,
+                                        operationHash: hash,
+                                        changes: impactingChanges,
+                                      })
                                       : createOverrides({
-                                          graphName: graphContext?.graph?.name,
-                                          namespace:
-                                            graphContext?.graph?.namespace,
-                                          operationHash: hash,
-                                          operationName: name,
-                                          changes: impactingChanges,
-                                        });
+                                        graphName: graphContext?.graph?.name,
+                                        namespace:
+                                          graphContext?.graph?.namespace,
+                                        operationHash: hash,
+                                        operationName: name,
+                                        changes: impactingChanges,
+                                      });
                                   }}
                                   className="cursor-pointer flex-col items-start gap-1"
                                 >
                                   {doAllChangesHaveOverrides
-                                    ? "Toggle changes as unsafe"
-                                    : "Toggle changes as safe"}
+                                    ? "Remove changes overrides"
+                                    : "Ignore changes"}
                                   <p className="max-w-xs text-xs text-muted-foreground">
                                     {doAllChangesHaveOverrides
-                                      ? "Future checks will break if the listed changes appear again for this operation"
-                                      : "Future checks will ignore the listed breaking changes for this operation"}
+                                      ? "Disable overrides so future checks will fail on breaking listed changes."
+                                      : "Enable overrides so future checks will not fail on breaking listed changes."}
                                   </p>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -526,10 +593,9 @@ export const CheckOperations = () => {
                                   }}
                                   className="cursor-pointer flex-col items-start gap-1"
                                 >
-                                  Ignore Operation
+                                  Ignore operation
                                   <p className="max-w-xs text-xs text-muted-foreground">
-                                    Future checks will ignore all current and
-                                    new breaking changes for this operation
+                                    This operation will be ignored in future checks
                                   </p>
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -540,12 +606,11 @@ export const CheckOperations = () => {
                       {hasIgnoreAllOverride && (
                         <Alert>
                           <AlertTitle>
-                            Ignore Operation override is active
+                            Operation ignored in future checks
                           </AlertTitle>
                           <AlertDescription>
-                            Future checks will ignore this operation even if
-                            breaking changes affect it. To configure overrides
-                            for individual changes, please remove this override.
+                            This operation will be excluded from future checks.
+                            Remove the override to include it again and manage individual change overrides.
                           </AlertDescription>
                           <Button
                             size="sm"
@@ -560,7 +625,7 @@ export const CheckOperations = () => {
                               })
                             }
                           >
-                            Remove Override
+                            Don&apos;t ignore this operation
                           </Button>
                         </Alert>
                       )}

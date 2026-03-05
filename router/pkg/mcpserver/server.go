@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -36,29 +38,6 @@ func requestHeadersFromRequest(ctx context.Context, r *http.Request) context.Con
 	// Clone the headers to avoid any mutation issues
 	headers := r.Header.Clone()
 	return withRequestHeaders(ctx, headers)
-}
-
-var skippedHeaders = map[string]struct{}{
-	"Connection":               {},
-	"Keep-Alive":               {},
-	"Proxy-Authenticate":       {},
-	"Proxy-Authorization":      {},
-	"Te":                       {},
-	"Trailer":                  {},
-	"Transfer-Encoding":        {},
-	"Upgrade":                  {},
-	"Host":                     {},
-	"Content-Length":           {},
-	"Content-Type":             {},
-	"Accept":                   {},
-	"Accept-Encoding":          {},
-	"Accept-Charset":           {},
-	"Alt-Svc":                  {},
-	"Proxy-Connection":         {},
-	"Sec-Websocket-Extensions": {},
-	"Sec-Websocket-Key":        {},
-	"Sec-Websocket-Protocol":   {},
-	"Sec-Websocket-Version":    {},
 }
 
 // headersFromContext extracts the request headers from the context.
@@ -90,6 +69,8 @@ type Options struct {
 	EnableArbitraryOperations bool
 	// ExposeSchema determines whether the GraphQL schema is exposed
 	ExposeSchema bool
+	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names
+	OmitToolNamePrefix bool
 	// Stateless determines whether the MCP server should be stateless
 	Stateless bool
 	// CorsConfig is the CORS configuration for the MCP server
@@ -110,6 +91,7 @@ type GraphQLSchemaServer struct {
 	excludeMutations          bool
 	enableArbitraryOperations bool
 	exposeSchema              bool
+	omitToolNamePrefix        bool
 	stateless                 bool
 	operationsManager         *OperationsManager
 	schemaCompiler            *SchemaCompiler
@@ -240,6 +222,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		excludeMutations:          options.ExcludeMutations,
 		enableArbitraryOperations: options.EnableArbitraryOperations,
 		exposeSchema:              options.ExposeSchema,
+		omitToolNamePrefix:        options.OmitToolNamePrefix,
 		stateless:                 options.Stateless,
 		corsConfig:                options.CorsConfig,
 	}
@@ -304,6 +287,13 @@ func WithExposeSchema(exposeSchema bool) func(*Options) {
 func WithStateless(stateless bool) func(*Options) {
 	return func(o *Options) {
 		o.Stateless = stateless
+	}
+}
+
+// WithOmitToolNamePrefix sets the omit tool name prefix option
+func WithOmitToolNamePrefix(omitToolNamePrefix bool) func(*Options) {
+	return func(o *Options) {
+		o.OmitToolNamePrefix = omitToolNamePrefix
 	}
 }
 
@@ -547,7 +537,17 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			toolDescription = fmt.Sprintf("Executes the GraphQL operation '%s' of type %s.", op.Name, op.OperationType)
 		}
 
-		toolName := fmt.Sprintf("execute_operation_%s", operationToolName)
+		toolName := operationToolName
+		if !s.omitToolNamePrefix {
+			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
+		} else if slices.Contains(s.registeredTools, operationToolName) {
+			s.logger.Warn("Operation name collides with built-in MCP tool, using prefixed name",
+				zap.String("operation", op.Name),
+				zap.String("conflicting_tool", operationToolName),
+				zap.String("using_name", fmt.Sprintf("execute_operation_%s", operationToolName)),
+			)
+			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
+		}
 		tool := mcp.NewToolWithRawSchema(
 			toolName,
 			toolDescription,
@@ -709,14 +709,14 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 
 	// Forward all headers from the original MCP request to the GraphQL server
 	// The router's header forwarding rules will then determine what gets sent to subgraphs
-	headers, err := headersFromContext(ctx)
+	reqHeaders, err := headersFromContext(ctx)
 	if err != nil {
 		s.logger.Debug("failed to get headers from context", zap.Error(err))
 	} else {
 		// Copy all headers from the MCP request
-		for key, values := range headers {
+		for key, values := range reqHeaders {
 			// Skip headers that should not be forwarded
-			if _, ok := skippedHeaders[key]; ok {
+			if _, ok := headers.SkippedHeaders[key]; ok {
 				continue
 			}
 			for _, value := range values {
@@ -733,7 +733,9 @@ func (s *GraphQLSchemaServer) executeGraphQLQuery(ctx context.Context, query str
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {

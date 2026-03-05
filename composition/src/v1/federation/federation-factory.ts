@@ -1807,6 +1807,7 @@ export class FederationFactory {
 
   fieldDataToGraphFieldData(fieldData: FieldData): GraphFieldData {
     return {
+      externalSubgraphNames: new Set<SubgraphName>(),
       name: fieldData.name,
       namedTypeName: fieldData.namedTypeName,
       isLeaf: isNodeLeaf(this.parentDefinitionDataByTypeName.get(fieldData.namedTypeName)?.kind),

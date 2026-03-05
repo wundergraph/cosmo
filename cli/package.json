@@ -1,6 +1,6 @@
 {
   "name": "wgc",
-  "version": "0.102.4",
+  "version": "0.106.0",
   "description": "The official CLI tool to manage the GraphQL Federation Platform Cosmo",
   "type": "module",
   "main": "dist/src/index.js",
@@ -28,7 +28,8 @@
     "test": "pnpm lint && vitest run test/",
     "coverage": "vitest run test/ --coverage",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && pnpm format",
+    "format": "prettier -w -c .",
     "e2e": "bun test e2e/"
   },
   "keywords": [
@@ -43,8 +44,8 @@
     "@bufbuild/protobuf": "1.9.0",
     "@connectrpc/connect": "1.4.0",
     "@connectrpc/connect-node": "1.4.0",
-    "@graphql-tools/utils": "10.2.2",
-    "@modelcontextprotocol/sdk": "1.9.0",
+    "@graphql-tools/utils": "11.0.0",
+    "@modelcontextprotocol/sdk": "1.26.0",
     "@octokit/rest": "22.0.0",
     "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
@@ -66,7 +67,7 @@
     "graphql": "16.9.0",
     "https-proxy-agent": "7.0.5",
     "inquirer": "9.2.7",
-    "js-yaml": "4.1.0",
+    "js-yaml": "4.1.1",
     "jwt-decode": "3.1.2",
     "lodash-es": "4.17.21",
     "log-symbols": "5.1.0",
@@ -82,7 +83,7 @@
     "tar": "7.4.3",
     "trieve-ts-sdk": "0.0.80",
     "undici": "6.21.2",
-    "zod": "^3.24.2"
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@types/bun": "1.2.3",

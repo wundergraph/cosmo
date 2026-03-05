@@ -246,7 +246,7 @@ export default async function build(opts: BuildConfig) {
   const apiKeyAuth = new ApiKeyAuthenticator(fastify.db, organizationRepository);
   const userRepo = new UserRepository(logger, fastify.db);
   const apiKeyRepository = new ApiKeyRepository(fastify.db);
-  const webAuth = new WebSessionAuthenticator(opts.auth.secret, userRepo);
+  const webAuth = new WebSessionAuthenticator(fastify.db, opts.auth.secret, userRepo);
   const graphKeyAuth = new GraphApiTokenAuthenticator(opts.auth.secret);
   const accessTokenAuth = new AccessTokenAuthenticator(organizationRepository, authUtils);
   const authenticator = new Authentication(webAuth, apiKeyAuth, accessTokenAuth, graphKeyAuth, organizationRepository);
@@ -318,7 +318,7 @@ export default async function build(opts: BuildConfig) {
     useIndividualDeletes:
       isGoogleCloudStorageUrl(opts.s3Storage.url) || isGoogleCloudStorageUrl(s3Config.endpoint as string)
         ? true
-        : opts.s3Storage.useIndividualDeletes ?? false,
+        : (opts.s3Storage.useIndividualDeletes ?? false),
   });
 
   const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);

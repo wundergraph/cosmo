@@ -4,6 +4,62 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.16.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.16.2...@wundergraph/protographic@0.16.3) (2026-03-04)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.16.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.16.1...@wundergraph/protographic@0.16.2) (2026-03-02)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.16.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.16.0...@wundergraph/protographic@0.16.1) (2026-02-28)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.6...@wundergraph/protographic@0.16.0) (2026-02-26)
+
+### Features
+
+* add support for requires in protographic ([#2439](https://github.com/wundergraph/cosmo/issues/2439)) ([48a1613](https://github.com/wundergraph/cosmo/commit/48a1613285c978589b95a2c18d7618c9569b8f4f)) (@Noroth)
+
+## [0.15.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.5...@wundergraph/protographic@0.15.6) (2026-02-20)
+
+### Bug Fixes
+
+* **protographic:** prevent duplicate UNSPECIFIED enum value in proto generation ([#2525](https://github.com/wundergraph/cosmo/issues/2525)) ([957d92a](https://github.com/wundergraph/cosmo/commit/957d92a103346a11c695020716f499210da46e65)) (@jensneuse)
+
+## [0.15.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.4...@wundergraph/protographic@0.15.5) (2026-02-16)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.15.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.3...@wundergraph/protographic@0.15.4) (2026-02-12)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.15.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.2...@wundergraph/protographic@0.15.3) (2026-01-27)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.15.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.1...@wundergraph/protographic@0.15.2) (2026-01-08)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.15.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.0...@wundergraph/protographic@0.15.1) (2026-01-07)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+# [0.15.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.14.0...@wundergraph/protographic@0.15.0) (2026-01-07)
+
+### Features
+
+* **cli,protographic:** improvements to operation validation and proto generation ([#2436](https://github.com/wundergraph/cosmo/issues/2436)) ([da0342d](https://github.com/wundergraph/cosmo/commit/da0342d308f6b4003749f61fbd51cde35337d4bf)) (@asoorm)
+
+# [0.14.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.13.0...@wundergraph/protographic@0.14.0) (2025-12-15)
+
+### Features
+
+* add coverage for other services with tests ([#2405](https://github.com/wundergraph/cosmo/issues/2405)) ([a53bb35](https://github.com/wundergraph/cosmo/commit/a53bb351336dc400b8b28b235a28725704a83919)) (@SkArchon)
+
 # [0.13.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.12.6...@wundergraph/protographic@0.13.0) (2025-12-10)
 
 ### Features

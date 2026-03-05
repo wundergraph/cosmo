@@ -1,6 +1,7 @@
 import protobuf from 'protobufjs';
 import { buildProtoOptions } from '../proto-options.js';
 import { MethodWithIdempotency } from '../types.js';
+import { GRAPHQL_VARIABLE_NAME } from './proto-field-options.js';
 
 /**
  * Helper to format indentation
@@ -94,6 +95,13 @@ function generateHeader(root: protobuf.Root, options?: ProtoTextOptions): string
   // Imports
   const imports = new Set<string>();
 
+  // Check if any field uses graphql_variable_name option
+  const usesGraphQLVariableName = detectGraphQLVariableNameUsage(root);
+  if (usesGraphQLVariableName) {
+    // Import descriptor.proto for field option extension
+    imports.add('google/protobuf/descriptor.proto');
+  }
+
   // Only add wrapper types import if actually used
   if (detectWrapperTypeUsage(root)) {
     imports.add('google/protobuf/wrappers.proto');
@@ -101,14 +109,25 @@ function generateHeader(root: protobuf.Root, options?: ProtoTextOptions): string
 
   // Add custom imports
   if (options?.imports) {
-    options.imports.forEach((imp) => imports.add(imp));
+    for (const imp of options.imports) {
+      imports.add(imp);
+    }
   }
 
-  for (const imp of Array.from(imports).sort()) {
+  for (const imp of [...imports].sort()) {
     lines.push(`import "${imp}";`);
   }
 
   if (imports.size > 0) {
+    lines.push('');
+  }
+
+  // Add field option extension if used
+  if (usesGraphQLVariableName) {
+    lines.push('// Field option extension for GraphQL variable name mapping');
+    lines.push('extend google.protobuf.FieldOptions {');
+    lines.push('  string graphql_variable_name = 50001;');
+    lines.push('}');
     lines.push('');
   }
 
@@ -158,9 +177,7 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
   // Sort methods for consistent output
   const methods = Object.values(service.methods).sort((a, b) => a.name.localeCompare(b.name));
 
-  for (let i = 0; i < methods.length; i++) {
-    const method = methods[i];
-
+  for (const [i, method] of methods.entries()) {
     // Add blank line between methods for readability
     if (i > 0) {
       lines.push('');
@@ -196,7 +213,7 @@ export function serviceToProtoText(service: protobuf.Service, options?: ProtoTex
 /**
  * Converts a protobuf Type (message) to proto text
  */
-export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOptions, indent: number = 0): string[] {
+export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOptions, indent = 0): string[] {
   const lines: string[] = [];
 
   // Message comment
@@ -241,7 +258,7 @@ export function messageToProtoText(message: protobuf.Type, options?: ProtoTextOp
 /**
  * Converts a protobuf Enum to proto text
  */
-export function enumToProtoText(enumType: protobuf.Enum, options?: ProtoTextOptions, indent: number = 0): string[] {
+export function enumToProtoText(enumType: protobuf.Enum, options?: ProtoTextOptions, indent = 0): string[] {
   const lines: string[] = [];
 
   // Enum comment
@@ -275,7 +292,7 @@ export function enumToProtoText(enumType: protobuf.Enum, options?: ProtoTextOpti
 /**
  * Formats a protobuf field as proto text
  */
-export function formatField(field: protobuf.Field, options?: ProtoTextOptions, indent: number = 1): string[] {
+export function formatField(field: protobuf.Field, options?: ProtoTextOptions, indent = 1): string[] {
   const lines: string[] = [];
 
   // Field comment
@@ -285,7 +302,24 @@ export function formatField(field: protobuf.Field, options?: ProtoTextOptions, i
 
   // Build field line
   const repeated = field.repeated ? 'repeated ' : '';
-  lines.push(formatIndent(indent, `${repeated}${field.type} ${field.name} = ${field.id};`));
+
+  // Check if field has options
+  if (field.options && Object.keys(field.options).length > 0) {
+    // Field with options - format with brackets
+    const optionsStr = Object.entries(field.options)
+      .map(([key, value]) => {
+        // The key already includes parentheses if it's an extension option
+        // e.g., "(graphql_variable_name)"
+        // Handle string values with quotes
+        const formattedValue = typeof value === 'string' ? `"${value}"` : value;
+        return `${key} = ${formattedValue}`;
+      })
+      .join(', ');
+    lines.push(formatIndent(indent, `${repeated}${field.type} ${field.name} = ${field.id} [${optionsStr}];`));
+  } else {
+    // Field without options
+    lines.push(formatIndent(indent, `${repeated}${field.type} ${field.name} = ${field.id};`));
+  }
 
   return lines;
 }
@@ -301,7 +335,7 @@ export function formatField(field: protobuf.Field, options?: ProtoTextOptions, i
  * - reserved 2, 5 to 10;
  * - reserved "old_field", "deprecated_field";
  */
-export function formatReserved(reserved: Array<number[] | string>, indent: number = 1): string[] {
+export function formatReserved(reserved: Array<number[] | string>, indent = 1): string[] {
   const lines: string[] = [];
 
   // Separate numbers and names
@@ -340,7 +374,9 @@ export function formatReserved(reserved: Array<number[] | string>, indent: numbe
  * Handles both individual numbers and ranges (e.g., "2, 5 to 10, 15")
  */
 function formatReservedNumbers(numbers: number[]): string {
-  if (numbers.length === 0) return '';
+  if (numbers.length === 0) {
+    return '';
+  }
 
   // Sort and deduplicate numbers
   const sortedNumbers = [...new Set(numbers)].sort((a, b) => a - b);
@@ -373,11 +409,7 @@ function formatReservedNumbers(numbers: number[]): string {
   // Format the ranges
   return ranges
     .map(([start, end]) => {
-      if (start === end) {
-        return start.toString();
-      } else {
-        return `${start} to ${end}`;
-      }
+      return start === end ? start.toString() : `${start} to ${end}`;
     })
     .join(', ');
 }
@@ -387,10 +419,8 @@ function formatReservedNumbers(numbers: number[]): string {
  */
 function detectWrapperTypeUsage(root: protobuf.Root): boolean {
   for (const nested of root.nestedArray) {
-    if (nested instanceof protobuf.Type) {
-      if (messageUsesWrapperTypes(nested)) {
-        return true;
-      }
+    if (nested instanceof protobuf.Type && messageUsesWrapperTypes(nested)) {
+      return true;
     }
   }
   return false;
@@ -409,10 +439,41 @@ function messageUsesWrapperTypes(message: protobuf.Type): boolean {
 
   // Check nested messages recursively
   for (const nested of message.nestedArray) {
-    if (nested instanceof protobuf.Type) {
-      if (messageUsesWrapperTypes(nested)) {
-        return true;
-      }
+    if (nested instanceof protobuf.Type && messageUsesWrapperTypes(nested)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Detects if any field in the root uses the graphql_variable_name option
+ */
+function detectGraphQLVariableNameUsage(root: protobuf.Root): boolean {
+  for (const nested of root.nestedArray) {
+    if (nested instanceof protobuf.Type && messageUsesGraphQLVariableName(nested)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Recursively checks if a message or its nested messages use graphql_variable_name option
+ */
+function messageUsesGraphQLVariableName(message: protobuf.Type): boolean {
+  // Check fields in this message
+  for (const field of message.fieldsArray) {
+    if (field.options && field.options[GRAPHQL_VARIABLE_NAME.optionName]) {
+      return true;
+    }
+  }
+
+  // Check nested messages recursively
+  for (const nested of message.nestedArray) {
+    if (nested instanceof protobuf.Type && messageUsesGraphQLVariableName(nested)) {
+      return true;
     }
   }
 
@@ -422,7 +483,7 @@ function messageUsesWrapperTypes(message: protobuf.Type): boolean {
 /**
  * Helper to format method definitions for services
  */
-export function formatMethod(method: protobuf.Method, options?: ProtoTextOptions, indent: number = 1): string[] {
+export function formatMethod(method: protobuf.Method, options?: ProtoTextOptions, indent = 1): string[] {
   const lines: string[] = [];
 
   // Method comment

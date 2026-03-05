@@ -24,7 +24,7 @@ func NewTracingHandler(s TracingHandlerOpts) func(next http.Handler) http.Handle
 	if !s.TraceConfig.Enabled {
 		return nil
 	}
-	
+
 	spanStartOptions := []oteltrace.SpanStartOption{
 		oteltrace.WithAttributes(
 			otel.RouterServerAttribute,

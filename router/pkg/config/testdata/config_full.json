@@ -49,7 +49,11 @@
       ],
       "OperationContentAttributes": false,
       "ExportGraphQLVariables": true,
-      "WithNewRoot": false
+      "WithNewRoot": false,
+      "SanitizeUTF8": {
+        "Enabled": false,
+        "LogSanitizations": false
+      }
     },
     "Metrics": {
       "Attributes": null,
@@ -74,7 +78,15 @@
             "Headers": {},
             "Temporality": ""
           }
-        ]
+        ],
+        "LogExporter": {
+          "Enabled": true,
+          "ExcludeMetrics": [
+            "process\\.",
+            "server\\.uptime"
+          ],
+          "IncludeMetrics": null
+        }
       },
       "Prometheus": {
         "Enabled": true,
@@ -144,6 +156,22 @@
         "CertFile": "",
         "Required": false
       }
+    },
+    "Client": {
+      "All": {
+        "CertFile": "/path/to/client.crt",
+        "KeyFile": "/path/to/client.key",
+        "CaFile": "/path/to/ca.crt",
+        "InsecureSkipCaVerification": false
+      },
+      "Subgraphs": {
+        "products": {
+          "CertFile": "/path/to/products-client.crt",
+          "KeyFile": "/path/to/products-client.key",
+          "CaFile": "/path/to/products-ca.crt",
+          "InsecureSkipCaVerification": false
+        }
+      }
     }
   },
   "CacheControl": {
@@ -172,7 +200,19 @@
     "ExcludeMutations": false,
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
-    "RouterURL": "https://cosmo-router.wundergraph.com"
+    "RouterURL": "https://cosmo-router.wundergraph.com",
+    "OmitToolNamePrefix": false
+  },
+  "ConnectRPC": {
+    "Enabled": false,
+    "Server": {
+      "ListenAddr": "localhost:5026",
+      "BaseURL": ""
+    },
+    "Storage": {
+      "ProviderID": ""
+    },
+    "GraphQLEndpoint": ""
   },
   "DemoMode": true,
   "Modules": {
@@ -309,7 +349,19 @@
     "CookieWhitelist": [
       "cookie1",
       "cookie2"
-    ]
+    ],
+    "Router": {
+      "Response": [
+        {
+          "Name": "X-Client-Version",
+          "Expression": "request.header.Get('User-Agent')"
+        },
+        {
+          "Name": "X-Request-ID",
+          "Expression": "request.header.Get('X-Request-ID') ?? 'default-request-id'"
+        }
+      ]
+    }
   },
   "TrafficShaping": {
     "All": {
@@ -475,6 +527,7 @@
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
+  "LogServiceName": "my-custom-router",
   "ShutdownDelay": 15000000000,
   "GracePeriod": 20000000000,
   "PollInterval": 10000000000,
@@ -489,6 +542,7 @@
       "JWKS": [
         {
           "URL": "https://example.com/.well-known/jwks.json",
+          "AllowedUse": null,
           "Algorithms": [
             "RS256"
           ],
@@ -506,6 +560,7 @@
         },
         {
           "URL": "https://example.com/.well-known/jwks2.json",
+          "AllowedUse": null,
           "Algorithms": [
             "RS256",
             "ES256"
@@ -524,6 +579,7 @@
         },
         {
           "URL": "https://example.com/.well-known/jwks3.json",
+          "AllowedUse": null,
           "Algorithms": null,
           "RefreshInterval": 0,
           "RefreshUnknownKID": {
@@ -657,11 +713,15 @@
   "CacheWarmup": {
     "Enabled": false,
     "Source": {
-      "Filesystem": null
+      "Filesystem": null,
+      "CdnSource": {
+        "Enabled": true
+      }
     },
     "Workers": 8,
     "ItemsPerSecond": 50,
-    "Timeout": 30000000000
+    "Timeout": 30000000000,
+    "InMemoryFallback": true
   },
   "RouterConfigPath": "latest.json",
   "RouterRegistration": true,
@@ -752,6 +812,9 @@
       "AlwaysSkipLoader": false
     },
     "EnableSingleFlight": true,
+    "ForceEnableSingleFlight": false,
+    "EnableInboundRequestDeduplication": true,
+    "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 32,
@@ -778,7 +841,8 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
-    "ValidateRequiredExternalFields": false
+    "ValidateRequiredExternalFields": false,
+    "RelaxSubgraphOperationFieldSelectionMergingNullability": false
   },
   "WebSocket": {
     "Enabled": true,

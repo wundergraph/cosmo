@@ -133,9 +133,46 @@ func (s *Server) SetRespondTime(d time.Duration) {
 	s.respondTime = d
 }
 
+// ServerOption represents a configuration option for the test JWKS server.
+type ServerOption func(*serverConfig)
+
+// serverConfig holds configurable parameters for server initialization.
+type serverConfig struct {
+	use       jwkset.USE
+	providers []Crypto
+}
+
+// WithUse sets the JWK "use" metadata value for keys written to storage.
+func WithUse(use jwkset.USE) ServerOption {
+	return func(cfg *serverConfig) {
+		cfg.use = use
+	}
+}
+
+func WithProviders(providers ...Crypto) ServerOption {
+	return func(cfg *serverConfig) {
+		cfg.providers = providers
+	}
+}
+
 func NewServerWithCrypto(t *testing.T, providers ...Crypto) (*Server, error) {
+	return NewServerWithOptions(t, WithProviders(providers...))
+}
+
+func NewServerWithOptions(t *testing.T, opts ...ServerOption) (*Server, error) {
 	t.Helper()
-	if len(providers) == 0 {
+
+	// Default configuration
+	cfg := &serverConfig{
+		use: jwkset.UseSig,
+	}
+
+	// Apply options
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
+	if len(cfg.providers) == 0 {
 		t.Fatalf("At least one crypto provider is required.")
 	}
 
@@ -146,10 +183,10 @@ func NewServerWithCrypto(t *testing.T, providers ...Crypto) (*Server, error) {
 
 	ctx := context.Background()
 
-	for _, p := range providers {
+	for _, p := range cfg.providers {
 		kid := p.KID()
 
-		jwk, err := p.MarshalJWK()
+		jwk, err := p.MarshalJWKWithUse(cfg.use)
 		if err != nil {
 			t.Fatalf("Failed to marshal the JWK.\nError: %s", err)
 		}

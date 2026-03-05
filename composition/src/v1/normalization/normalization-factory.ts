@@ -3683,7 +3683,7 @@ export class NormalizationFactory {
             this.isSubgraphVersionTwo
               ? this.errors.push(externalInterfaceFieldsError(parentTypeName, externalInterfaceFieldNames))
               : this.warnings.push(
-                  externalInterfaceFieldsWarning(this.subgraphName, parentTypeName, externalInterfaceFieldNames),
+                  externalInterfaceFieldsWarning(this.subgraphName, parentTypeName, [...externalInterfaceFieldNames]),
                 );
           }
           const newParentTypeName = getParentTypeName(parentData);
@@ -3740,6 +3740,7 @@ export class NormalizationFactory {
         }
       }
     }
+    this.isSubgraphEventDrivenGraph = this.edfsDirectiveReferences.size > 0;
     // this is where @provides and @requires configurations are added to the ConfigurationData
     this.addValidConditionalFieldSetConfigurations();
     // this is where @key configurations are added to the ConfigurationData
@@ -3813,7 +3814,6 @@ export class NormalizationFactory {
         executableLocations,
       );
     }
-    this.isSubgraphEventDrivenGraph = this.edfsDirectiveReferences.size > 0;
     if (this.isSubgraphEventDrivenGraph) {
       this.validateEventDrivenSubgraph();
     }

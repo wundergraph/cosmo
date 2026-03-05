@@ -540,48 +540,47 @@ describe('PushCacheOperation', (ctx) => {
     await server.close();
   });
 
-  test.each([
-    'organization-admin',
-    'organization-developer',
-    'graph-admin',
-  ])('%s should be able to configure cache warmer', async (role) => {
-    const { client, server, authenticator, users } = await SetupTest({
-      dbname,
-      chClient,
-      enableMultiUsers: true,
-      setupBilling: {
-        plan: 'enterprise',
-      },
-    });
+  test.each(['organization-admin', 'organization-developer', 'graph-admin'])(
+    '%s should be able to configure cache warmer',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({
+        dbname,
+        chClient,
+        enableMultiUsers: true,
+        setupBilling: {
+          plan: 'enterprise',
+        },
+      });
 
-    const federatedGraphName = genID('fedGraph');
-    await createFederatedAndSubgraph(client, federatedGraphName);
+      const federatedGraphName = genID('fedGraph');
+      await createFederatedAndSubgraph(client, federatedGraphName);
 
-    const configureCacheWarmerResp = await client.configureCacheWarmer({
-      namespace: 'default',
-      enableCacheWarmer: true,
-    });
-    expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
+      const configureCacheWarmerResp = await client.configureCacheWarmer({
+        namespace: 'default',
+        enableCacheWarmer: true,
+      });
+      expect(configureCacheWarmerResp.response?.code).toBe(EnumStatusCode.OK);
 
-    (chClient.queryPromise as Mock).mockResolvedValue([]);
+      (chClient.queryPromise as Mock).mockResolvedValue([]);
 
-    const operationContent = 'query Hello { hello { message } }';
+      const operationContent = 'query Hello { hello { message } }';
 
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role })),
-    });
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(createTestGroup({ role })),
+      });
 
-    const pushCacheOperationResp = await client.pushCacheWarmerOperation({
-      federatedGraphName,
-      namespace: 'default',
-      operationName: 'Hello',
-      operationContent,
-    });
-    expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.OK);
+      const pushCacheOperationResp = await client.pushCacheWarmerOperation({
+        federatedGraphName,
+        namespace: 'default',
+        operationName: 'Hello',
+        operationContent,
+      });
+      expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.OK);
 
-    await server.close();
-  });
+      await server.close();
+    },
+  );
 
   test('graph-admin should be able to publish when given access to namespace', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({
@@ -611,10 +610,12 @@ describe('PushCacheOperation', (ctx) => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role: 'graph-admin',
-        namespaces: [getNamespaceResponse.namespace!.id],
-      })),
+      rbac: createTestRBACEvaluator(
+        createTestGroup({
+          role: 'graph-admin',
+          namespaces: [getNamespaceResponse.namespace!.id],
+        }),
+      ),
     });
 
     let pushCacheOperationResp = await client.pushCacheWarmerOperation({
@@ -627,10 +628,12 @@ describe('PushCacheOperation', (ctx) => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role: 'graph-admin',
-        namespaces: [randomUUID()],
-      })),
+      rbac: createTestRBACEvaluator(
+        createTestGroup({
+          role: 'graph-admin',
+          namespaces: [randomUUID()],
+        }),
+      ),
     });
 
     pushCacheOperationResp = await client.pushCacheWarmerOperation({

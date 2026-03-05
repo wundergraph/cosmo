@@ -24,6 +24,7 @@ introspection:
   enabled: true
   secret: 'AN_EXAMPLE_PLACEHOLDER_SECRET_ONLY'
 json_log: true
+log_service_name: "my-custom-router"
 shutdown_delay: 15s
 grace_period: 20s
 poll_interval: 10s
@@ -33,6 +34,21 @@ liveness_check_path: '/health/live'
 router_registration: true
 graphql_path: /graphql
 dev_mode: false
+tls:
+  server:
+    enabled: false
+  client:
+    all:
+      cert_file: '/path/to/client.crt'
+      key_file: '/path/to/client.key'
+      ca_file: '/path/to/ca.crt'
+      insecure_skip_ca_verification: false
+    subgraphs:
+      products:
+        cert_file: '/path/to/products-client.crt'
+        key_file: '/path/to/products-client.key'
+        ca_file: '/path/to/products-ca.crt'
+        insecure_skip_ca_verification: false
 instance_id: ''
 graphql_metrics:
   enabled: true
@@ -45,6 +61,7 @@ mcp:
   expose_schema: false
   enable_arbitrary_operations: false
   exclude_mutations: false
+  omit_tool_name_prefix: false
   graph_name: cosmo
   router_url: https://cosmo-router.wundergraph.com
   server:
@@ -160,6 +177,11 @@ telemetry:
           path: '/v1/metrics'
           endpoint: https://my-otel-collector.example.com
           # headers: {Authorization: Bearer <my-token>}
+      log_exporter:
+        enabled: true
+        exclude_metrics:
+          - "process\\."
+          - "server\\.uptime"
 
     # Expose OpenTelemetry metrics for scraping
     prometheus:
@@ -267,6 +289,12 @@ headers:
   cookie_whitelist:
     - 'cookie1'
     - 'cookie2'
+  router:
+    response:
+      - name: 'X-Client-Version'
+        expression: "request.header.Get('User-Agent')"
+      - name: 'X-Request-ID'
+        expression: "request.header.Get('X-Request-ID') ?? 'default-request-id'"
 
 # Authentication and Authorization
 # See https://cosmo-docs.wundergraph.com/router/authentication-and-authorization for more information

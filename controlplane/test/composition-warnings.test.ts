@@ -1,7 +1,8 @@
 import {
   externalInterfaceFieldsWarning,
   invalidOverrideTargetSubgraphNameWarning,
-  nonExternalConditionalFieldWarning, REQUIRES,
+  nonExternalConditionalFieldWarning,
+  REQUIRES,
 } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';

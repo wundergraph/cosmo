@@ -352,6 +352,7 @@
         "tasksByPhase": 17,
         "milestoneGroups": 18,
         "priorityMatrix": 19,
+        "subProjects": 25,
         "filteredTasks": 20,
         "completionRate": 21,
         "estimatedDaysRemaining": 22,

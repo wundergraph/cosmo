@@ -12,6 +12,7 @@ data:
   host: "0.0.0.0"
   port: "{{ .Values.service.port }}"
   logLevel: "{{ .Values.configuration.logLevel }}"
+  authSsoCookieDomain: "{{ .Values.configuration.authSsoCookieDomain }}"
   allowedOrigins: "{{ join "," .Values.configuration.allowedOrigins }}"
   webBaseUrl: "{{ .Values.global.studio.webUrl }}"
   debugSQL: "{{ .Values.configuration.debugSQL }}"

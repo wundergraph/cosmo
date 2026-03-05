@@ -131,7 +131,11 @@ describe('OIDC provider', (ctx) => {
   });
 
   test('Non admins should not be able to delete an OIDC provider ', async () => {
-    const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['oidc'] });
+    const { client, server, authenticator } = await SetupTest({
+      dbname,
+      enableMultiUsers: true,
+      enabledFeatures: ['oidc'],
+    });
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
@@ -229,7 +233,11 @@ describe('OIDC provider', (ctx) => {
   });
 
   test('Non admins should not be able to update mappers of an OIDC provider ', async () => {
-    const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['oidc'] });
+    const { client, server, authenticator } = await SetupTest({
+      dbname,
+      enableMultiUsers: true,
+      enabledFeatures: ['oidc'],
+    });
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
@@ -345,7 +353,11 @@ describe('OIDC provider', (ctx) => {
     expect(createOIDCProviderResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
-    await orgRepo.updateFeature({ organizationId: users.adminAliceCompanyA.organizationId, id: 'oidc', enabled: false });
+    await orgRepo.updateFeature({
+      organizationId: users.adminAliceCompanyA.organizationId,
+      id: 'oidc',
+      enabled: false,
+    });
 
     const updateMappersResponse = await client.updateIDPMappers({
       mappers: [

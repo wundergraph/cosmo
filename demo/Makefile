@@ -25,7 +25,7 @@ plugin-build-ci-bun-binary:
 	$(wgc_router_ci) plugin build ./pkg/subgraphs/courses --yes
 
 plugin-build-ci-go-binary:
-	$(wgc_router_ci) plugin build ./pkg/subgraphs/projects --yes
+	$(wgc_router_ci) plugin build ./pkg/subgraphs/projects --yes --go-module-path github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects
 
 plugin-compose:
 	$(wgc_router) compose -i ./graph-with-plugin.yaml -o ./configWithPlugins.json

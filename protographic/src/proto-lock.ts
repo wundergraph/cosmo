@@ -64,12 +64,12 @@ export class ProtoLockManager {
     const removedItems: Record<string, number> = {};
 
     // Identify removed items
-    Object.entries(fieldsMap).forEach(([item, number]) => {
+    for (const [item, number] of Object.entries(fieldsMap)) {
       if (!availableItems.includes(item)) {
         reservedNumbers.push(number);
         removedItems[item] = number;
       }
-    });
+    }
 
     // Deduplicate reserved numbers
     reservedNumbers = [...new Set(reservedNumbers)];
@@ -78,7 +78,7 @@ export class ProtoLockManager {
     const newFieldsMap: Record<string, number> = {};
 
     // Preserve existing numbers for items that are still available
-    availableItems.forEach((item) => {
+    for (const item of availableItems) {
       const existingNumber = fieldsMap[item];
       if (existingNumber !== undefined) {
         newFieldsMap[item] = existingNumber;
@@ -89,13 +89,13 @@ export class ProtoLockManager {
           reservedNumbers.splice(index, 1);
         }
       }
-    });
+    }
 
     // Get highest assigned number
     let maxNumber = 0;
-    Object.values(newFieldsMap).forEach((num) => {
+    for (const num of Object.values(newFieldsMap)) {
       maxNumber = Math.max(maxNumber, num);
-    });
+    }
 
     // Also consider reserved numbers for max
     if (reservedNumbers.length > 0) {
@@ -103,26 +103,17 @@ export class ProtoLockManager {
     }
 
     // Assign numbers to items that don't have one
-    availableItems.forEach((item) => {
+    for (const item of availableItems) {
       if (newFieldsMap[item] === undefined) {
         // Check if the item was previously removed (exists in our reservedNumbers)
         let reservedNumber: number | undefined;
-        Object.entries(removedItems).forEach(([removedItem, number]) => {
+        for (const [removedItem, number] of Object.entries(removedItems)) {
           if (removedItem === item && reservedNumbers.includes(number)) {
             reservedNumber = number;
           }
-        });
+        }
 
-        if (reservedNumber !== undefined) {
-          // Reuse the reserved number for this item
-          newFieldsMap[item] = reservedNumber;
-
-          // Remove from reserved list
-          const index = reservedNumbers.indexOf(reservedNumber);
-          if (index !== -1) {
-            reservedNumbers.splice(index, 1);
-          }
-        } else {
+        if (reservedNumber === undefined) {
           // Find next available number
           let nextNumber = maxNumber + 1;
           while (reservedNumbers.includes(nextNumber)) {
@@ -131,9 +122,18 @@ export class ProtoLockManager {
 
           newFieldsMap[item] = nextNumber;
           maxNumber = nextNumber;
+        } else {
+          // Reuse the reserved number for this item
+          newFieldsMap[item] = reservedNumber;
+
+          // Remove from reserved list
+          const index = reservedNumbers.indexOf(reservedNumber);
+          if (index !== -1) {
+            reservedNumbers.splice(index, 1);
+          }
         }
       }
-    });
+    }
 
     // Update the fields map and reserved numbers
     container[itemName].fields = newFieldsMap;

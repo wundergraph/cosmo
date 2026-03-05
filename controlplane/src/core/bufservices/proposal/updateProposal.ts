@@ -26,6 +26,7 @@ import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookSe
 import { SchemaUsageTrafficInspector } from '../../services/SchemaUsageTrafficInspector.js';
 import { Composer } from '../../composition/composer.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { hubUserAgent } from '../../constants.js';
 
 export function updateProposal(
   opts: RouterOptions,
@@ -152,7 +153,7 @@ export function updateProposal(
     }
 
     const clientHdr = ctx.requestHeader.get('user-agent')?.toLowerCase() ?? '';
-    const expectedOrigin: ProposalOrigin = clientHdr.includes('cosmo-hub') ? 'EXTERNAL' : 'INTERNAL';
+    const expectedOrigin: ProposalOrigin = clientHdr.includes(hubUserAgent) ? 'EXTERNAL' : 'INTERNAL';
     if (proposal.proposal.origin !== expectedOrigin) {
       return {
         response: {

@@ -246,6 +246,14 @@ export interface SchemaCheckDetailsDTO {
   }[];
   compositionErrors: string[];
   compositionWarnings: string[];
+  composedSchemaBreakingChanges: {
+    id: string;
+    message: string;
+    changeType: string;
+    path?: string;
+    isBreaking: boolean;
+    federatedGraphName: string;
+  }[];
 }
 
 export interface OrganizationDTO {
@@ -319,6 +327,7 @@ export interface APIKeyDTO {
   name: string;
   createdAt: string;
   lastUsedAt: string;
+  external: boolean;
   expiresAt: string;
   createdBy: string;
   group: { id: string; name: string } | undefined;
@@ -536,6 +545,7 @@ export interface ClientDTO {
 export interface PersistedOperationWithClientDTO {
   id: string;
   operationId: string;
+  operationNames: string[];
   hash: string;
   filePath: string;
   createdAt: string;

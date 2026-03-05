@@ -6,9 +6,19 @@ import logSymbols from 'log-symbols';
 import pc from 'picocolors';
 import { config } from './core/config.js';
 
-export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
+export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: number) => {
   const changesTable = new Table({
     head: [pc.bold(pc.white('CHANGE')), pc.bold(pc.white('TYPE')), pc.bold(pc.white('DESCRIPTION'))],
+    wordWrap: true,
+  });
+
+  const composedSchemaChangesTable = new Table({
+    head: [
+      pc.bold(pc.white('CHANGE')),
+      pc.bold(pc.white('TYPE')),
+      pc.bold(pc.white('FEDERATED_GRAPH')),
+      pc.bold(pc.white('DESCRIPTION')),
+    ],
     wordWrap: true,
   });
 
@@ -62,6 +72,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
       if (
         resp.nonBreakingChanges.length === 0 &&
         resp.breakingChanges.length === 0 &&
+        resp.composedSchemaBreakingChanges.length === 0 &&
         resp.compositionErrors.length === 0 &&
         resp.lintErrors.length === 0 &&
         resp.lintWarnings.length === 0 &&
@@ -104,13 +115,18 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
             resp.breakingChanges.length === 0 &&
             resp.compositionErrors.length === 0 &&
             resp.lintErrors.length === 0 &&
-            resp.graphPruneErrors.length === 0;
+            resp.graphPruneErrors.length === 0 &&
+            resp.composedSchemaBreakingChanges.length === 0;
 
-          const { breakingChanges, operationUsageStats, clientTrafficCheckSkipped } = resp;
+          const { breakingChanges, operationUsageStats, clientTrafficCheckSkipped, composedSchemaBreakingChanges } =
+            resp;
           const { totalOperations, safeOperations, firstSeenAt, lastSeenAt } = operationUsageStats;
 
-          if (breakingChanges.length > 0) {
-            const warningMessage = [logSymbols.warning, ` Found ${pc.bold(breakingChanges.length)} breaking changes.`];
+          if (breakingChanges.length > 0 || composedSchemaBreakingChanges.length > 0) {
+            const warningMessage = [
+              logSymbols.warning,
+              ` Found ${pc.bold(breakingChanges.length + composedSchemaBreakingChanges.length)} breaking changes.`,
+            ];
 
             if (totalOperations > 0) {
               warningMessage.push(`${pc.bold(totalOperations - safeOperations)} operations impacted.`);
@@ -130,7 +146,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
 
             console.log(warningMessage.join(''));
 
-            finalStatement = `This check has encountered ${pc.bold(`${breakingChanges.length}`)} breaking changes${
+            finalStatement = `This check has encountered ${pc.bold(`${breakingChanges.length + composedSchemaBreakingChanges.length}`)} breaking changes${
               clientTrafficCheckSkipped ? `.` : ` that would break operations from existing client traffic.`
             }`;
           }
@@ -138,7 +154,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
       }
 
       if (resp.nonBreakingChanges.length > 0 || resp.breakingChanges.length > 0) {
-        console.log('\nDetected the following changes:');
+        console.log('\nDetected the following subgraph schema changes:');
 
         if (resp.breakingChanges.length > 0) {
           for (const breakingChange of resp.breakingChanges) {
@@ -161,6 +177,26 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
         }
 
         console.log(changesTable.toString());
+      }
+
+      if (resp.composedSchemaBreakingChanges.length > 0) {
+        console.log(pc.red('\nDetected the following federated graph schema breaking changes:'));
+        console.log(
+          pc.dim(
+            'These breaking changes were detected in the composed federated graph schema after composition. They are not reported above because they only become visible when all subgraphs are composed together (e.g., field type or nullability conflicts between subgraphs).',
+          ),
+        );
+
+        for (const change of resp.composedSchemaBreakingChanges) {
+          composedSchemaChangesTable.push([
+            `${logSymbols.error} ${pc.red('BREAKING')}`,
+            change.changeType,
+            change.federatedGraphName,
+            change.message,
+          ]);
+        }
+
+        console.log(composedSchemaChangesTable.toString());
       }
 
       if (resp.compositionErrors.length > 0) {
@@ -249,6 +285,29 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
         finalStatement += `\n${logSymbols.error} Subgraph extension check failed with message: ${resp.checkExtensionErrorMessage}`;
       }
 
+      let moreEntriesAvailableMessage = '';
+      if (resp.counts) {
+        const hasExceeded =
+          resp.counts.lintWarnings + resp.counts.lintErrors > rowLimit ||
+          resp.counts.breakingChanges + resp.counts.nonBreakingChanges > rowLimit ||
+          resp.counts.graphPruneErrors + resp.counts.graphPruneWarnings > rowLimit ||
+          resp.counts.compositionErrors > rowLimit ||
+          resp.counts.compositionWarnings > rowLimit ||
+          resp.counts.composedSchemaBreakingChanges > rowLimit;
+
+        if (hasExceeded) {
+          if (studioCheckDestination !== '') {
+            moreEntriesAvailableMessage += `\n\n`;
+          }
+          moreEntriesAvailableMessage += pc.red(
+            `Some results were truncated due to exceeding the limit of ${rowLimit} rows.`,
+          );
+          if (studioCheckDestination !== '') {
+            moreEntriesAvailableMessage += ` They can be viewed in the studio dashboard.`;
+          }
+        }
+      }
+
       if (success) {
         console.log(
           '\n' +
@@ -256,6 +315,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
             pc.green(` Schema check passed. ${finalStatement}`) +
             '\n\n' +
             studioCheckDestination +
+            moreEntriesAvailableMessage +
             '\n',
         );
       } else {
@@ -263,7 +323,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse) => {
           '\n' +
             logSymbols.error +
             pc.red(
-              ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.\n${studioCheckDestination}\n`,
+              ` Schema check failed. ${finalStatement}\nSee https://cosmo-docs.wundergraph.com/studio/schema-checks for more information on resolving operation check errors.\n${studioCheckDestination}${moreEntriesAvailableMessage}\n`,
             ) +
             '\n',
         );

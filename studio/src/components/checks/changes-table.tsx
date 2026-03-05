@@ -14,7 +14,6 @@ import {
   removeOperationOverrides,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { SchemaChange } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { formatISO, subHours } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useContext } from "react";
@@ -35,6 +34,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { useToast } from "../ui/use-toast";
 import { useWorkspace } from "@/hooks/use-workspace";
 import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { useOpenUsage } from "./use-open-usage";
 
 export const ChangesTable = ({
   changes,
@@ -53,48 +53,7 @@ export const ChangesTable = ({
   operationName?: string;
   hasIgnoreAll?: boolean;
 }) => {
-  const router = useRouter();
-  const { toast } = useToast();
-
-  const openUsage = (changeType: string, path?: string) => {
-    if (!path) {
-      toast({
-        description: "Not enough data to fetch usage for this change",
-        duration: 2000,
-      });
-      return;
-    }
-
-    const query: Record<string, any> = {
-      showUsage: path,
-    };
-
-    if (
-      [
-        "UNION_MEMBER_REMOVED",
-        "ENUM_VALUE_ADDED",
-        "ENUM_VALUE_REMOVED",
-      ].includes(changeType)
-    ) {
-      query.isNamedType = true;
-      query.showUsage = path.split(".")[0];
-    }
-
-    if (trafficCheckDays && createdAt) {
-      query.dateRange = JSON.stringify({
-        start: formatISO(subHours(new Date(createdAt), 24 * trafficCheckDays)),
-        end: formatISO(new Date(createdAt)),
-      });
-    }
-
-    router.replace({
-      pathname: router.pathname,
-      query: {
-        ...router.query,
-        ...query,
-      },
-    });
-  };
+  const openUsage = useOpenUsage({ trafficCheckDays, createdAt });
 
   return (
     <TableWrapper>
@@ -104,7 +63,9 @@ export const ChangesTable = ({
             <TableHead className="w-[200px]">Change</TableHead>
             <TableHead>Description</TableHead>
             {changes[0].subgraphName && <TableHead>Subgraph</TableHead>}
-            {operationHash && !hasIgnoreAll && <TableHead>Override</TableHead>}
+            {operationHash && !hasIgnoreAll && (
+              <TableHead>Overrides</TableHead>
+            )}
             <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -250,35 +211,43 @@ const Row = ({
                   onCheckedChange={() =>
                     hasOverride
                       ? removeOverrides({
-                          graphName: graphContext?.graph?.name,
-                          namespace: graphContext?.graph?.namespace,
-                          operationHash,
-                          changes: [
-                            {
-                              changeType,
-                              path,
-                            },
-                          ],
-                        })
+                        graphName: graphContext?.graph?.name,
+                        namespace: graphContext?.graph?.namespace,
+                        operationHash,
+                        changes: [
+                          {
+                            changeType,
+                            path,
+                          },
+                        ],
+                      })
                       : createOverrides({
-                          graphName: graphContext?.graph?.name,
-                          namespace: graphContext?.graph?.namespace,
-                          operationHash,
-                          operationName,
-                          changes: [
-                            {
-                              changeType,
-                              path,
-                            },
-                          ],
-                        })
+                        graphName: graphContext?.graph?.name,
+                        namespace: graphContext?.graph?.namespace,
+                        operationHash,
+                        operationName,
+                        changes: [
+                          {
+                            changeType,
+                            path,
+                          },
+                        ],
+                      })
                   }
                 />
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              Mark this change to {path} as {hasOverride ? "unsafe" : "safe"}{" "}
-              for future checks
+              {hasOverride ? (
+                <>
+                  Override active: future checks will <strong>not</strong>{" "}
+                  treat this change to {path} as breaking for this operation.
+                </>
+              ) : (
+                <>
+                  Toggle to prevent future checks from treating this change to {path} as breaking for this operation.
+                </>
+              )}
             </TooltipContent>
           </Tooltip>
         </TableCell>
@@ -298,14 +267,14 @@ const Row = ({
                   href={
                     path
                       ? {
-                          pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
-                          query: {
-                            organizationSlug,
-                            namespace,
-                            slug: router.query.slug,
-                            typename: path?.split(".")?.[0],
-                          },
-                        }
+                        pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
+                        query: {
+                          organizationSlug,
+                          namespace,
+                          slug: router.query.slug,
+                          typename: path?.split(".")?.[0],
+                        },
+                      }
                       : "#"
                   }
                 >

@@ -10,7 +10,7 @@ import { OperationsRepository } from '../../repositories/OperationsRepository.js
 import { SchemaCheckRepository } from '../../repositories/SchemaCheckRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getCheckOperations(
@@ -27,6 +27,7 @@ export function getCheckOperations(
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+    const operationsRepo = new OperationsRepository(opts.db, authContext.organizationId);
 
     const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
 
@@ -55,7 +56,13 @@ export function getCheckOperations(
       federatedGraphTargetId: graph.targetId,
       federatedGraphId: graph.id,
     });
-    const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+    const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId, {
+      federatedGraphId: graph.id,
+      federatedGraphName: graph.name,
+      namespaceId: graph.namespaceId,
+      schemaCheckRepo,
+      operationsRepo,
+    });
 
     if (!check || !checkDetails) {
       return {
@@ -73,22 +80,9 @@ export function getCheckOperations(
       };
     }
 
-    // check that the limit is less than the max option provided in the ui
-    if (req.limit > 200) {
-      return {
-        response: {
-          code: EnumStatusCode.ERR,
-          details: 'Invalid limit',
-        },
-        operations: [],
-        trafficCheckDays: 0,
-        createdAt: '',
-        clientTrafficCheckSkipped: false,
-        totalOperationsCount: 0,
-        doAllOperationsHaveIgnoreAllOverride: false,
-        doAllOperationsHaveAllTheirChangesMarkedSafe: false,
-      };
-    }
+    // default to 10 if no limit is provided
+    req.limit = clamp(req.limit || 10, 1, 200);
+    req.offset = clamp(req.offset || 0, 0, 500_000);
 
     const affectedOperations = await schemaCheckRepo.getAffectedOperationsByCheckId({
       checkId: req.checkId,
@@ -98,8 +92,6 @@ export function getCheckOperations(
     });
 
     const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
-
-    const operationsRepo = new OperationsRepository(opts.db, graph.id);
 
     const overrides = await operationsRepo.getChangeOverrides({
       namespaceId: graph.namespaceId,
@@ -128,7 +120,7 @@ export function getCheckOperations(
       },
       operations: affectedOperations.map((operation) => ({
         ...operation,
-        impactingChanges: checkDetails.changes
+        impactingChanges: [...checkDetails.changes, ...checkDetails.composedSchemaBreakingChanges]
           .filter(({ id }) => operation.schemaChangeIds.includes(id))
           .map((c) => ({
             ...c,

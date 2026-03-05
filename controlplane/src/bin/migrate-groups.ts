@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import * as process from 'node:process';
 import postgres from 'postgres';
 import { drizzle, PostgresJsDatabase } from 'drizzle-orm/postgres-js';
@@ -51,7 +52,7 @@ try {
   // Ensure keycloak is up and running
   await keycloakClient.authenticateClient();
 
-  // Create database connection. TLS is optionally.
+  // Create the database connection. TLS is optional.
   const connectionConfig = await buildDatabaseConnectionConfig({
     tls:
       databaseTlsCa || databaseTlsCert || databaseTlsKey

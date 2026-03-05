@@ -4238,6 +4238,50 @@ func TestPrometheus(t *testing.T) {
 		})
 	})
 
+	t.Run("Authentication failure records correct HTTP status code in metrics", func(t *testing.T) {
+		t.Parallel()
+
+		authenticators, _ := ConfigureAuth(t)
+		accessController, err := core.NewAccessController(core.AccessControllerOptions{
+			Authenticators:         authenticators,
+			AuthenticationRequired: true,
+		})
+		require.NoError(t, err)
+
+		metricReader := metric.NewManualReader()
+		promRegistry := prometheus.NewRegistry()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithAccessController(accessController),
+			},
+			MetricReader:       metricReader,
+			PrometheusRegistry: promRegistry,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Make unauthenticated request - should get 401
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil,
+				strings.NewReader(`{"query":"{ employees { id } }"}`))
+			require.NoError(t, err)
+			defer res.Body.Close()
+			require.Equal(t, http.StatusUnauthorized, res.StatusCode)
+
+			// Verify metrics record 401, not 200
+			mf, err := promRegistry.Gather()
+			require.NoError(t, err)
+
+			requestTotal := findMetricFamilyByName(mf, "router_http_requests_total")
+			require.NotNil(t, requestTotal, "expected router_http_requests_total metric to exist")
+
+			// Find metrics with http_status_code=401
+			metricsWithStatus401 := findMetricsByLabel(requestTotal, "http_status_code", "401")
+			require.Len(t, metricsWithStatus401, 1, "expected exactly one metric with http_status_code=401")
+
+			// Ensure there are no metrics with http_status_code=200
+			metricsWithStatus200 := findMetricsByLabel(requestTotal, "http_status_code", "200")
+			require.Len(t, metricsWithStatus200, 0, "expected no metrics with http_status_code=200 for auth failure")
+		})
+	})
+
 }
 
 func getPort(connectionTotal *io_prometheus_client.Metric) string {
@@ -4509,7 +4553,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 
 				connectionTotal := metrics[0]
 
-				require.Equal(t, 100.0, *connectionTotal.Gauge.Value)
+				require.Equal(t, float64(1024), *connectionTotal.Gauge.Value)
 
 				expected := []*io_prometheus_client.LabelPair{
 					{
@@ -4689,7 +4733,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Len(t, metrics, 2)
 
 				metricDataPoint1 := metrics[0]
-				require.Equal(t, 100.0, *metricDataPoint1.Gauge.Value)
+				require.Equal(t, float64(1024), *metricDataPoint1.Gauge.Value)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
@@ -4703,7 +4747,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Equal(t, expected1, metricDataPoint1.Label)
 
 				metricDataPoint2 := metrics[1]
-				require.Equal(t, 100.0, *metricDataPoint2.Gauge.Value)
+				require.Equal(t, float64(1024), *metricDataPoint2.Gauge.Value)
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
 						Name:  PointerOf("otel_scope_name"),
@@ -4918,7 +4962,7 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 
 				connectionTotal := metrics[0]
 
-				require.Equal(t, 100.0, *connectionTotal.Gauge.Value)
+				require.Equal(t, float64(1024), *connectionTotal.Gauge.Value)
 
 				expected := []*io_prometheus_client.LabelPair{
 					{
