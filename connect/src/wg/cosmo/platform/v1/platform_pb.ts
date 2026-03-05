@@ -1774,6 +1774,73 @@ export class SchemaChange extends Message<SchemaChange> {
 }
 
 /**
+ * @generated from message wg.cosmo.platform.v1.FederatedGraphSchemaChange
+ */
+export class FederatedGraphSchemaChange extends Message<FederatedGraphSchemaChange> {
+  /**
+   * @generated from field: string message = 1;
+   */
+  message = "";
+
+  /**
+   * @generated from field: string changeType = 2;
+   */
+  changeType = "";
+
+  /**
+   * @generated from field: optional string path = 3;
+   */
+  path?: string;
+
+  /**
+   * @generated from field: bool isBreaking = 4;
+   */
+  isBreaking = false;
+
+  /**
+   * @generated from field: string federatedGraphName = 5;
+   */
+  federatedGraphName = "";
+
+  /**
+   * @generated from field: optional bool hasOverride = 6;
+   */
+  hasOverride?: boolean;
+
+  constructor(data?: PartialMessage<FederatedGraphSchemaChange>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.FederatedGraphSchemaChange";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "message", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "changeType", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "path", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
+    { no: 4, name: "isBreaking", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 5, name: "federatedGraphName", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 6, name: "hasOverride", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): FederatedGraphSchemaChange {
+    return new FederatedGraphSchemaChange().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): FederatedGraphSchemaChange {
+    return new FederatedGraphSchemaChange().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): FederatedGraphSchemaChange {
+    return new FederatedGraphSchemaChange().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: FederatedGraphSchemaChange | PlainMessage<FederatedGraphSchemaChange> | undefined, b: FederatedGraphSchemaChange | PlainMessage<FederatedGraphSchemaChange> | undefined): boolean {
+    return proto3.util.equals(FederatedGraphSchemaChange, a, b);
+  }
+}
+
+/**
  * @generated from message wg.cosmo.platform.v1.CompositionError
  */
 export class CompositionError extends Message<CompositionError> {
@@ -2336,6 +2403,13 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
    */
   counts?: SchemaCheckCounts;
 
+  /**
+   * Breaking changes detected in the composed federated graph schema (not subgraph level)
+   *
+   * @generated from field: repeated wg.cosmo.platform.v1.FederatedGraphSchemaChange composedSchemaBreakingChanges = 20;
+   */
+  composedSchemaBreakingChanges: FederatedGraphSchemaChange[] = [];
+
   constructor(data?: PartialMessage<CheckSubgraphSchemaResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2363,6 +2437,7 @@ export class CheckSubgraphSchemaResponse extends Message<CheckSubgraphSchemaResp
     { no: 17, name: "isCheckExtensionSkipped", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 18, name: "checkExtensionErrorMessage", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 19, name: "counts", kind: "message", T: SchemaCheckCounts, opt: true },
+    { no: 20, name: "composedSchemaBreakingChanges", kind: "message", T: FederatedGraphSchemaChange, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CheckSubgraphSchemaResponse {
@@ -2426,6 +2501,11 @@ export class SchemaCheckCounts extends Message<SchemaCheckCounts> {
    */
   graphPruneWarnings = 0;
 
+  /**
+   * @generated from field: int32 composedSchemaBreakingChanges = 9;
+   */
+  composedSchemaBreakingChanges = 0;
+
   constructor(data?: PartialMessage<SchemaCheckCounts>) {
     super();
     proto3.util.initPartial(data, this);
@@ -2442,6 +2522,7 @@ export class SchemaCheckCounts extends Message<SchemaCheckCounts> {
     { no: 6, name: "compositionWarnings", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 7, name: "graphPruneErrors", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
     { no: 8, name: "graphPruneWarnings", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
+    { no: 9, name: "composedSchemaBreakingChanges", kind: "scalar", T: 5 /* ScalarType.INT32 */ },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): SchemaCheckCounts {
@@ -4647,6 +4728,11 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
    */
   isProposalsEnabled = false;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.FederatedGraphSchemaChange composedSchemaBreakingChanges = 16;
+   */
+  composedSchemaBreakingChanges: FederatedGraphSchemaChange[] = [];
+
   constructor(data?: PartialMessage<GetCheckSummaryResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -4669,6 +4755,7 @@ export class GetCheckSummaryResponse extends Message<GetCheckSummaryResponse> {
     { no: 13, name: "proposalName", kind: "scalar", T: 9 /* ScalarType.STRING */, opt: true },
     { no: 14, name: "proposalMatches", kind: "message", T: GetCheckSummaryResponse_ProposalSchemaMatch, repeated: true },
     { no: 15, name: "isProposalsEnabled", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 16, name: "composedSchemaBreakingChanges", kind: "message", T: FederatedGraphSchemaChange, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): GetCheckSummaryResponse {

@@ -11,6 +11,9 @@
     "aws-lambda",
     "serverless"
   ],
+  "scripts": {
+    "format": "go fmt ./..."
+  },
   "author": {
     "name": "WunderGraph Maintainers",
     "email": "info@wundergraph.com"

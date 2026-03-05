@@ -318,7 +318,7 @@ export default async function build(opts: BuildConfig) {
     useIndividualDeletes:
       isGoogleCloudStorageUrl(opts.s3Storage.url) || isGoogleCloudStorageUrl(s3Config.endpoint as string)
         ? true
-        : opts.s3Storage.useIndividualDeletes ?? false,
+        : (opts.s3Storage.useIndividualDeletes ?? false),
   });
 
   const platformWebhooks = new PlatformWebhookService(opts.webhook?.url, opts.webhook?.key, logger);
