@@ -150,7 +150,8 @@
       "key": "id",
       "rpc": "LookupProjectById",
       "request": "LookupProjectByIdRequest",
-      "response": "LookupProjectByIdResponse"
+      "response": "LookupProjectByIdResponse",
+      "requiredFieldMappings": []
     },
     {
       "typeName": "Milestone",
@@ -158,7 +159,8 @@
       "key": "id",
       "rpc": "LookupMilestoneById",
       "request": "LookupMilestoneByIdRequest",
-      "response": "LookupMilestoneByIdResponse"
+      "response": "LookupMilestoneByIdResponse",
+      "requiredFieldMappings": []
     },
     {
       "typeName": "Task",
@@ -166,7 +168,8 @@
       "key": "id",
       "rpc": "LookupTaskById",
       "request": "LookupTaskByIdRequest",
-      "response": "LookupTaskByIdResponse"
+      "response": "LookupTaskByIdResponse",
+      "requiredFieldMappings": []
     },
     {
       "typeName": "Employee",
@@ -174,7 +177,8 @@
       "key": "id",
       "rpc": "LookupEmployeeById",
       "request": "LookupEmployeeByIdRequest",
-      "response": "LookupEmployeeByIdResponse"
+      "response": "LookupEmployeeByIdResponse",
+      "requiredFieldMappings": []
     },
     {
       "typeName": "Product",
@@ -182,7 +186,8 @@
       "key": "upc",
       "rpc": "LookupProductByUpc",
       "request": "LookupProductByUpcRequest",
-      "response": "LookupProductByUpcResponse"
+      "response": "LookupProductByUpcResponse",
+      "requiredFieldMappings": []
     }
   ],
   "typeFieldMappings": [
