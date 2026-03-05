@@ -173,7 +173,7 @@ describe('stdout', () => {
       }),
     ).rejects.toThrow();
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Found 1 breaking changes.'));
+    expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/Found .*1.* breaking changes\./);
   });
 
   test('breaking changes reports impacted and safe operation counts', async () => {
@@ -190,8 +190,8 @@ describe('stdout', () => {
       }),
     ).rejects.toThrow();
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('2 operations impacted.'));
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('1 operations marked safe due to overrides.'));
+    expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/2.*operations impacted\./);
+    expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/1.*operations marked safe due to overrides\./);
   });
 
   test('non-breaking changes succeeds and logs detected changes table', async () => {
