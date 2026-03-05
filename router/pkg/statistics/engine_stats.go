@@ -18,11 +18,12 @@ type EngineStatistics interface {
 	SubscriptionCountDec(count int)
 	TriggerCountInc(count int)
 	TriggerCountDec(count int)
-	Wait(ctx context.Context, predicate func(*UsageReport) bool)
+	// Wait blocks until predicate returns true for the current stats or ctx is cancelled.
+	// Returns the report that satisfied the predicate, or the last report if ctx was cancelled.
+	Wait(ctx context.Context, predicate func(*UsageReport) bool) *UsageReport
 }
 
 type EngineStats struct {
-	mu            sync.Mutex
 	cond          *sync.Cond
 	ctx           context.Context
 	logger        *zap.Logger
@@ -45,10 +46,9 @@ func NewEngineStats(ctx context.Context, logger *zap.Logger, reportStats bool) *
 	stats := &EngineStats{
 		ctx:         ctx,
 		logger:      logger,
-		mu:          sync.Mutex{},
 		reportStats: reportStats,
 	}
-	stats.cond = sync.NewCond(&stats.mu)
+	stats.cond = sync.NewCond(&sync.Mutex{})
 	if reportStats {
 		go stats.runReporter(ctx)
 	}
@@ -65,30 +65,42 @@ func (s *EngineStats) GetReport() *UsageReport {
 	return report
 }
 
-// Wait blocks until predicate returns true for the current stats or ctx is cancelled.
-func (s *EngineStats) Wait(ctx context.Context, predicate func(*UsageReport) bool) {
-	if predicate(s.GetReport()) {
-		return
+func (s *EngineStats) Wait(ctx context.Context, predicate func(*UsageReport) bool) *UsageReport {
+	report := s.GetReport()
+	if predicate(report) {
+		return report
 	}
 
-	done := make(chan struct{})
+	type result struct {
+		report *UsageReport
+	}
+	done := make(chan result, 1)
 	go func() {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-		for !predicate(s.GetReport()) {
-			s.cond.Wait()
-			if ctx.Err() != nil {
+		s.cond.L.Lock()
+		defer s.cond.L.Unlock()
+		for {
+			r := s.GetReport()
+			if predicate(r) {
+				done <- result{report: r}
 				return
 			}
+			if ctx.Err() != nil {
+				done <- result{report: r}
+				return
+			}
+			s.cond.Wait()
 		}
-		close(done)
 	}()
 
 	select {
-	case <-done:
+	case res := <-done:
+		return res.report
 	case <-ctx.Done():
 		// Unblock the goroutine waiting on cond.Wait()
 		s.cond.Broadcast()
+		// Wait for goroutine to exit
+		res := <-done
+		return res.report
 	}
 }
 
@@ -163,8 +175,8 @@ func (s *NoopEngineStats) GetReport() *UsageReport {
 	return nil
 }
 
-func (s *NoopEngineStats) Wait(ctx context.Context, _ func(*UsageReport) bool) {
-	<-ctx.Done()
+func (s *NoopEngineStats) Wait(_ context.Context, _ func(*UsageReport) bool) *UsageReport {
+	return nil
 }
 
 func (s *NoopEngineStats) SubscriptionUpdateSent() {}

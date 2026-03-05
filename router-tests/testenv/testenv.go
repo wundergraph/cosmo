@@ -2578,12 +2578,11 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+	report := e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
 		return r.Subscriptions == desiredCount
 	})
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Subscriptions != desiredCount {
+	if report == nil || report.Subscriptions != desiredCount {
 		e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
 	}
 }
@@ -2594,12 +2593,11 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+	report := e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
 		return r.Connections == desiredCount
 	})
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Connections != desiredCount {
+	if report == nil || report.Connections != desiredCount {
 		e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
 	}
 }
@@ -2656,12 +2654,11 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+	report := e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
 		return r.MessagesSent >= desiredCount
 	})
 
-	report := e.Router.EngineStats.GetReport()
-	if report.MessagesSent < desiredCount {
+	if report == nil || report.MessagesSent < desiredCount {
 		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, desiredCount)
 	}
 }
@@ -2685,18 +2682,21 @@ func (e *Environment) NATSPublishUntilReceived(conn *nats.Conn, subject string, 
 
 		// Wait for MessagesSent to increase, confirming THIS message was received
 		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
-		e.Router.EngineStats.Wait(shortCtx, func(r *statistics.UsageReport) bool {
+		report := e.Router.EngineStats.Wait(shortCtx, func(r *statistics.UsageReport) bool {
 			return r.MessagesSent > beforeCount
 		})
 		shortCancel()
 
-		report := e.Router.EngineStats.GetReport()
-		if report.MessagesSent > beforeCount {
+		if report != nil && report.MessagesSent > beforeCount {
 			return
 		}
 
 		if ctx.Err() != nil {
-			e.t.Fatalf("timed out: messages sent %d, didn't increase from %d", report.MessagesSent, beforeCount)
+			sent := uint64(0)
+			if report != nil {
+				sent = report.MessagesSent
+			}
+			e.t.Fatalf("timed out: messages sent %d, didn't increase from %d", sent, beforeCount)
 		}
 	}
 }
@@ -2730,18 +2730,21 @@ func (e *Environment) KafkaPublishUntilReceived(topicName string, message string
 
 		// Wait for MessagesSent to increase, confirming THIS message was received
 		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
-		e.Router.EngineStats.Wait(shortCtx, func(r *statistics.UsageReport) bool {
+		report := e.Router.EngineStats.Wait(shortCtx, func(r *statistics.UsageReport) bool {
 			return r.MessagesSent > beforeCount
 		})
 		shortCancel()
 
-		report := e.Router.EngineStats.GetReport()
-		if report.MessagesSent > beforeCount {
+		if report != nil && report.MessagesSent > beforeCount {
 			return
 		}
 
 		if ctx.Err() != nil {
-			e.t.Fatalf("timed out: messages sent %d, didn't increase from %d", report.MessagesSent, beforeCount)
+			sent := uint64(0)
+			if report != nil {
+				sent = report.MessagesSent
+			}
+			e.t.Fatalf("timed out: messages sent %d, didn't increase from %d", sent, beforeCount)
 		}
 	}
 }
@@ -2752,12 +2755,11 @@ func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Durat
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+	report := e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
 		return r.MessagesSent >= minCount
 	})
 
-	report := e.Router.EngineStats.GetReport()
-	if report.MessagesSent < minCount {
+	if report == nil || report.MessagesSent < minCount {
 		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, minCount)
 	}
 }
@@ -2768,12 +2770,11 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+	report := e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
 		return r.Triggers >= desiredCount
 	})
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Triggers < desiredCount {
+	if report == nil || report.Triggers < desiredCount {
 		e.t.Fatalf("timed out waiting for trigger count, got %d, want at least %d", report.Triggers, desiredCount)
 	}
 }
