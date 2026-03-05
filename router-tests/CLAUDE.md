@@ -106,4 +106,4 @@ Tests known to be flaky use the `TestFlaky` prefix (e.g., `TestFlakyNatsEvents`)
 | `ToPtr` | `utils.go` | Generic pointer helper |
 | `EmployeesIDData` | `utils.go` | Standard expected response constant |
 
-<!-- CI stability counter: 7 -->
+<!-- CI stability counter: 1 -->
