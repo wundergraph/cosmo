@@ -2584,6 +2584,7 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 
 	if report == nil {
 		e.t.Fatalf("timed out waiting for subscription count (no report), want %d", desiredCount)
+		return
 	}
 	if report.Subscriptions != desiredCount {
 		e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
@@ -2602,6 +2603,7 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 
 	if report == nil {
 		e.t.Fatalf("timed out waiting for connection count (no report), want %d", desiredCount)
+		return
 	}
 	if report.Connections != desiredCount {
 		e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
@@ -2666,6 +2668,7 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 
 	if report == nil {
 		e.t.Fatalf("timed out waiting for messages sent (no report), want at least %d", desiredCount)
+		return
 	}
 	if report.MessagesSent < desiredCount {
 		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, desiredCount)
@@ -2770,6 +2773,7 @@ func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Durat
 
 	if report == nil {
 		e.t.Fatalf("timed out waiting for messages sent (no report), want at least %d", minCount)
+		return
 	}
 	if report.MessagesSent < minCount {
 		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, minCount)
@@ -2788,6 +2792,7 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 
 	if report == nil {
 		e.t.Fatalf("timed out waiting for trigger count (no report), want at least %d", desiredCount)
+		return
 	}
 	if report.Triggers < desiredCount {
 		e.t.Fatalf("timed out waiting for trigger count, got %d, want at least %d", report.Triggers, desiredCount)
