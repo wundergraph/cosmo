@@ -198,14 +198,44 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        test_target:
-          [
-            './.',
-            './fuzzquery ./lifecycle ./modules',
-            './telemetry',
-            './events',
-            './connectrpc',
-          ]
+        include:
+          # Root tests split into logical groups for faster CI
+          - test_target: './.'
+            test_run: '^(TestPrometheus|TestExcludeAttributes|TestRouterStartLogs|TestAccessLogs|TestGraphQLMetrics)'
+            test_skip: '^TestFlaky'
+            run_flaky: true
+            label: root-observability
+          - test_target: './.'
+            test_run: '^(TestAuth|TestAlgorithm|TestAllowedExt|TestAudience|TestBlockOp|TestCircuitBreaker|TestEnginePanic|TestError|TestFallback|TestHttpJwks|TestIntrospectionAuth|TestMTLS|TestMultipartError|TestMultipleKeys|TestNonHttp|TestOidc|TestParser|TestQueryNaming|TestRateLimit|TestRelaxedField|TestRetry|TestSSEError|TestSubgraphMerge|TestSubgraphMTLS|TestSupported|TestTLS|TestUseCustom)'
+            test_skip: '^TestFlaky'
+            run_flaky: false
+            label: root-security
+          # Catch-all: runs everything not in the above two groups
+          - test_target: './.'
+            test_run: '^Test'
+            test_skip: '^(TestFlaky|TestPrometheus|TestExcludeAttributes|TestRouterStartLogs|TestAccessLogs|TestGraphQLMetrics|TestAuth|TestAlgorithm|TestAllowedExt|TestAudience|TestBlockOp|TestCircuitBreaker|TestEnginePanic|TestError|TestFallback|TestHttpJwks|TestIntrospectionAuth|TestMTLS|TestMultipartError|TestMultipleKeys|TestNonHttp|TestOidc|TestParser|TestQueryNaming|TestRateLimit|TestRelaxedField|TestRetry|TestSSEError|TestSubgraphMerge|TestSubgraphMTLS|TestSupported|TestTLS|TestUseCustom)'
+            run_flaky: false
+            label: root-core
+          - test_target: './fuzzquery ./lifecycle ./modules'
+            test_run: '^Test'
+            test_skip: '^TestFlaky'
+            run_flaky: true
+            label: fuzzquery_lifecycle_modules
+          - test_target: './telemetry'
+            test_run: '^Test'
+            test_skip: '^TestFlaky'
+            run_flaky: true
+            label: telemetry
+          - test_target: './events'
+            test_run: '^Test'
+            test_skip: '^TestFlaky'
+            run_flaky: true
+            label: events
+          - test_target: './connectrpc'
+            test_run: '^Test'
+            test_skip: '^TestFlaky'
+            run_flaky: true
+            label: connectrpc
     services:
       nats:
         image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
@@ -371,34 +401,28 @@ jobs:
           docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" ping
           docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" cluster nodes
 
-      - name: Run Integration tests ${{ matrix.test_target }}
+      - name: Run Integration tests ${{ matrix.label }}
         working-directory: ./router-tests
-        run: make test-coverage test_retry_count=0 test_params="-run '^Test' -skip '^TestFlaky' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
-
-      - name: Compute artifact name for codecov upload
-        id: artifact_name
-        run: |
-          # Sanitize test target: remove './', replace spaces and special chars with underscores
-          target="${{ matrix.test_target }}"
-          sanitized=$(echo "$target" | sed 's|\.\/||g' | sed 's|[^a-zA-Z0-9]|_|g' | sed 's|_\+|_|g' | sed 's|^_||' | sed 's|_$||')
-          echo "sanitized=$sanitized" >> $GITHUB_OUTPUT
+        run: make test-coverage test_retry_count=0 test_params="-run '${{ matrix.test_run }}' -skip '${{ matrix.test_skip }}' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
 
       - name: Upload integration results to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
-          artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-nonFlaky
+          artifact-name: router-${{ matrix.label }}-nonFlaky
           coverage-path: router-tests/coverage.out
           retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Run Flaky Integration tests ${{ matrix.test_target }}
+      - name: Run Flaky Integration tests ${{ matrix.label }}
+        if: ${{ matrix.run_flaky }}
         working-directory: ./router-tests
         run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
 
       - name: Upload flaky integration results to Codecov
+        if: ${{ matrix.run_flaky }}
         uses: ./.github/actions/codecov-upload-pr
         with:
-          artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-flaky
+          artifact-name: router-${{ matrix.label }}-flaky
           coverage-path: router-tests/coverage.out
           retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
