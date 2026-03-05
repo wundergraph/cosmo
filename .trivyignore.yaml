@@ -5,5 +5,5 @@ vulnerabilities:
     statement: >
       Windows-only vulnerability in github.com/docker/cli (dependency of go-containerregistry in router).
       The router image is built and runs on Linux. Per the CVE description, "this issue does not impact non-Windows binaries".
-      Updating go-containerregistry fixes the issue but expects us to set router go version to 1.25.6 for a fix we are not affected by.
-      This can be reevaluated once we surpass 1.25.6 as the router's go version.
+      Updating go-containerregistry fixes the issue but expects us to set router go version to 1.25.6 for a fix on sparsely used machines.
+      This can be reevaluated once we update go version to 1.26.
