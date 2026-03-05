@@ -1,0 +1,107 @@
+# Router Integration Tests
+
+## Directory Structure
+
+Tests are organized into subdirectories by functional area. New test files added to any subdirectory are automatically included in CI — no matrix or config changes needed.
+
+| Directory | Purpose |
+|-----------|---------|
+| `observability/` | Prometheus metrics, logging, metrics exporters |
+| `security/` | Auth, TLS, mTLS, error handling, circuit breakers, rate limiting |
+| `operations/` | Caching, persisted ops, normalization, query plans, introspection |
+| `subscriptions/` | WebSocket, HTTP subscriptions |
+| `protocol/` | GraphQL/HTTP protocol, headers, uploads, config, plugins |
+| `events/` | NATS, Kafka, Redis event-driven subscriptions |
+| `telemetry/` | OpenTelemetry tracing and metrics |
+| `connectrpc/` | ConnectRPC/gRPC subgraph integration |
+| `lifecycle/` | Router startup, shutdown, goroutine leaks |
+| `modules/` | Custom router modules |
+| `fuzzquery/` | Fuzz testing for query parsing |
+
+Shared test helpers live in `utils.go` (root package) and `testenv/` (test environment setup). Subdirectories import shared helpers via `integration "github.com/wundergraph/cosmo/router-tests"`.
+
+Each subdirectory has a `main_test.go` with `TestMain` that calls `os.Chdir("..")` so relative `testdata/` paths resolve correctly from the router-tests root.
+
+## Writing Reliable Tests
+
+### 1. NATS/Kafka/Redis subscription tests: use warm-up before publishing
+
+**Problem:** After `WaitForSubscriptionCount` and `WaitForTriggerCount`, the internal subscription pipeline may not be fully wired up. A direct `Publish()` can be silently lost, causing timeouts.
+
+**Fix:** Use `NATSPublishUntilReceived` (or `KafkaPublishUntilReceived`) for the first message. These helpers publish, check if `MessagesSent` incremented, and retry if the message was lost.
+
+```go
+// WRONG — message can be lost to race condition
+xEnv.WaitForSubscriptionCount(1, timeout)
+xEnv.WaitForTriggerCount(1, timeout)
+err = conn.Publish(subject, data)
+conn.Flush()
+xEnv.WaitForMessagesSent(1, timeout)  // may timeout forever
+
+// RIGHT — retries until delivery is confirmed
+xEnv.WaitForSubscriptionCount(1, timeout)
+xEnv.WaitForTriggerCount(1, timeout)
+xEnv.NATSPublishUntilReceived(conn, subject, data, 1, timeout)
+```
+
+### 2. Error-testing with intentionally bad messages: warm up first, then single-send
+
+**Problem:** `PublishUntilReceived` retries on failure. If the message is intentionally invalid, retries produce duplicates that pollute the subscription channel.
+
+**Fix:** First confirm the pipeline is active with a valid warm-up message via `PublishUntilReceived`. Then use a single non-retrying publish for the bad message.
+
+```go
+// Warm-up: confirm pipeline is active
+xEnv.NATSPublishUntilReceived(conn, subject, validMsg, 1, timeout)
+// read and validate the warm-up response...
+
+// Now send the intentionally bad message (single publish, no retry)
+conn.Publish(subject, invalidMsg)
+conn.Flush()
+// read and validate the error response...
+```
+
+### 3. WebSocket reads: always set a read deadline
+
+**Problem:** `conn.ReadJSON()` blocks forever if the expected message never arrives (e.g., due to a lost publish). The test hangs until the 8-minute Go test timeout kills it.
+
+**Fix:** Set a read deadline before every `ReadJSON` call. Clear it after.
+
+```go
+err = conn.SetReadDeadline(time.Now().Add(timeout))
+require.NoError(t, err)
+err = conn.ReadJSON(&msg)
+require.NoError(t, err)
+err = conn.SetReadDeadline(time.Time{})
+require.NoError(t, err)
+```
+
+### 4. Non-deterministic order: sort before asserting
+
+**Problem:** Metrics, spans, or other collections may appear in non-deterministic order. Asserting on index positions (`metrics[0]`) fails intermittently.
+
+**Fix:** Sort the collection by a stable key before making positional assertions.
+
+```go
+sort.Slice(metrics, func(i, j int) bool {
+    return metrics[i].Labels["subgraph"] < metrics[j].Labels["subgraph"]
+})
+require.Equal(t, "employees", metrics[0].Labels["subgraph"])
+```
+
+### 5. Flaky test prefix convention
+
+Tests known to be flaky use the `TestFlaky` prefix (e.g., `TestFlakyNatsEvents`). CI runs these with `test_retry_count=3` and a separate `-run '^TestFlaky'` pass. Once the root cause is fixed, move tests back to their non-flaky parent function.
+
+## Key Test Helpers
+
+| Helper | Location | Purpose |
+|--------|----------|---------|
+| `NATSPublishUntilReceived` | `testenv/testenv.go` | Publish with retry until MessagesSent increments |
+| `KafkaPublishUntilReceived` | `testenv/testenv.go` | Same pattern for Kafka |
+| `WaitForSubscriptionCount` | `testenv/testenv.go` | Wait for subscription count to reach exact value |
+| `WaitForTriggerCount` | `testenv/testenv.go` | Wait for trigger count to reach at least N |
+| `WaitForMessagesSent` | `testenv/testenv.go` | Wait for MessagesSent to reach at least N |
+| `ConfigureAuth` | `utils.go` | Set up JWKS auth for tests |
+| `ToPtr` | `utils.go` | Generic pointer helper |
+| `EmployeesIDData` | `utils.go` | Standard expected response constant |
