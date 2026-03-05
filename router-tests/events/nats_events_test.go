@@ -1543,9 +1543,9 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(3, NatsWaitTimeout)
 			xEnv.WaitForTriggerCount(3, NatsWaitTimeout)
 
-			xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename":"Employee"}`))
-			xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.2"), []byte(`{"id":2,"__typename":"Employee"}`))
-			xEnv.NatsConnectionMyNats.Publish(xEnv.GetPubSubName("employeeUpdatedMyNats.1"), []byte(`{"id":1,"__typename":"Employee"}`))
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.1"), []byte(`{"id":1,"__typename":"Employee"}`), 1, NatsWaitTimeout)
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.2"), []byte(`{"id":2,"__typename":"Employee"}`), 1, NatsWaitTimeout)
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionMyNats, xEnv.GetPubSubName("employeeUpdatedMyNats.1"), []byte(`{"id":1,"__typename":"Employee"}`), 1, NatsWaitTimeout)
 
 			testenv.AwaitChannelWithT(t, NatsWaitTimeout, sub1DataCh, func(t *testing.T, data natsSubscriptionArgs) {
 				assert.NoError(t, data.errValue)
