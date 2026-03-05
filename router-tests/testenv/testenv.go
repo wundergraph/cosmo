@@ -2582,7 +2582,10 @@ func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time
 		return r.Subscriptions == desiredCount
 	})
 
-	if report == nil || report.Subscriptions != desiredCount {
+	if report == nil {
+		e.t.Fatalf("timed out waiting for subscription count (no report), want %d", desiredCount)
+	}
+	if report.Subscriptions != desiredCount {
 		e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
 	}
 }
@@ -2597,7 +2600,10 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 		return r.Connections == desiredCount
 	})
 
-	if report == nil || report.Connections != desiredCount {
+	if report == nil {
+		e.t.Fatalf("timed out waiting for connection count (no report), want %d", desiredCount)
+	}
+	if report.Connections != desiredCount {
 		e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
 	}
 }
@@ -2658,7 +2664,10 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 		return r.MessagesSent >= desiredCount
 	})
 
-	if report == nil || report.MessagesSent < desiredCount {
+	if report == nil {
+		e.t.Fatalf("timed out waiting for messages sent (no report), want at least %d", desiredCount)
+	}
+	if report.MessagesSent < desiredCount {
 		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, desiredCount)
 	}
 }
@@ -2759,7 +2768,10 @@ func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Durat
 		return r.MessagesSent >= minCount
 	})
 
-	if report == nil || report.MessagesSent < minCount {
+	if report == nil {
+		e.t.Fatalf("timed out waiting for messages sent (no report), want at least %d", minCount)
+	}
+	if report.MessagesSent < minCount {
 		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, minCount)
 	}
 }
@@ -2774,7 +2786,10 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 		return r.Triggers >= desiredCount
 	})
 
-	if report == nil || report.Triggers < desiredCount {
+	if report == nil {
+		e.t.Fatalf("timed out waiting for trigger count (no report), want at least %d", desiredCount)
+	}
+	if report.Triggers < desiredCount {
 		e.t.Fatalf("timed out waiting for trigger count, got %d, want at least %d", report.Triggers, desiredCount)
 	}
 }

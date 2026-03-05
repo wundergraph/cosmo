@@ -71,21 +71,18 @@ func (s *EngineStats) Wait(ctx context.Context, predicate func(*UsageReport) boo
 		return report
 	}
 
-	type result struct {
-		report *UsageReport
-	}
-	done := make(chan result, 1)
+	done := make(chan *UsageReport, 1)
 	go func() {
 		s.cond.L.Lock()
 		defer s.cond.L.Unlock()
 		for {
 			r := s.GetReport()
 			if predicate(r) {
-				done <- result{report: r}
+				done <- r
 				return
 			}
 			if ctx.Err() != nil {
-				done <- result{report: r}
+				done <- r
 				return
 			}
 			s.cond.Wait()
@@ -93,14 +90,13 @@ func (s *EngineStats) Wait(ctx context.Context, predicate func(*UsageReport) boo
 	}()
 
 	select {
-	case res := <-done:
-		return res.report
+	case report = <-done:
+		return report
 	case <-ctx.Done():
 		// Unblock the goroutine waiting on cond.Wait()
 		s.cond.Broadcast()
 		// Wait for goroutine to exit
-		res := <-done
-		return res.report
+		return <-done
 	}
 }
 

@@ -551,7 +551,7 @@ func TestBatch(t *testing.T) {
 				require.JSONEq(t, `{"errors":[{"message":"failed to read request body"}]}`, res.Body)
 
 				sn := exporter.GetSpans().Snapshots()
-				rootSpan := sn[len(sn)-1]
+				rootSpan := findRootSpan(t, sn)
 
 				events := rootSpan.Events()
 				require.Len(t, events, 1)
