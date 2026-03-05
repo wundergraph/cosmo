@@ -35,6 +35,25 @@ type (
 	}
 )
 
+// errorHandlingExporter wraps a SpanExporter and handles export errors locally
+// instead of letting them propagate to the global OTEL error handler.
+// This prevents parallel tests from interfering with each other's error handlers.
+type errorHandlingExporter struct {
+	inner   sdktrace.SpanExporter
+	handler func(error)
+}
+
+func (e *errorHandlingExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
+	if err := e.inner.ExportSpans(ctx, spans); err != nil {
+		e.handler(err)
+	}
+	return nil
+}
+
+func (e *errorHandlingExporter) Shutdown(ctx context.Context) error {
+	return e.inner.Shutdown(ctx)
+}
+
 func createExporter(log *zap.Logger, exp *ExporterConfig) (sdktrace.SpanExporter, error) {
 	u, err := url.Parse(exp.Endpoint)
 	if err != nil {
@@ -169,7 +188,13 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 		// Either memory exporter or the configured exporters are used.
 		if config.MemoryExporter != nil {
-			opts = append(opts, sdktrace.WithSyncer(config.MemoryExporter))
+			// Wrap the test exporter to handle errors locally instead of through
+			// the global OTEL error handler, which races between parallel tests.
+			wrapped := &errorHandlingExporter{
+				inner:   config.MemoryExporter,
+				handler: errHandler(config),
+			}
+			opts = append(opts, sdktrace.WithSyncer(wrapped))
 		} else {
 			for _, exp := range config.Config.Exporters {
 				if exp.Disabled {
@@ -213,13 +238,13 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 	tp := sdktrace.NewTracerProvider(opts...)
 
-	// Don't set it globally when we use the router in tests.
-	// In practice, setting it globally only makes sense for module development.
+	// Don't set globals when we use the router in tests.
+	// In practice, setting them globally only makes sense for module development.
+	// In tests, the error handler is wired locally via errorHandlingExporter above.
 	if config.MemoryExporter == nil {
 		otel.SetTracerProvider(tp)
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(errHandler(config)))
 	}
-
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(errHandler(config)))
 
 	return tp, nil
 }
