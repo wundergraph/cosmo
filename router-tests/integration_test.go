@@ -1,4 +1,4 @@
-package integration // trigger CI
+package integration // trigger CI 2
 
 import (
 	"bytes"
