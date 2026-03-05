@@ -1642,6 +1642,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithGraphQLPath(testConfig.OverrideGraphQLPath))
 	}
 
+	syncReporter := NewSyncReporter(context.Background(), testConfig.Logger)
+	routerOpts = append(routerOpts, core.WithEngineStats(syncReporter))
+
 	if !testConfig.DisableWebSockets {
 		wsConfig := &config.WebSocketConfiguration{
 			Enabled: true,
@@ -2572,22 +2575,31 @@ func (e *Environment) InitAbsintheWebSocketConnection(header http.Header, initia
 	return conn
 }
 
+func (e *Environment) syncReporter() *SyncReporter {
+	sr, ok := e.Router.EngineStats.(*SyncReporter)
+	if !ok {
+		e.t.Fatal("EngineStats is not a *SyncReporter; test environment misconfigured")
+	}
+	return sr
+}
+
 func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
 		return r.Subscriptions == desiredCount
 	})
 
-	if report == nil {
-		e.t.Fatalf("timed out waiting for subscription count (no report), want %d", desiredCount)
-		return
-	}
-	if report.Subscriptions != desiredCount {
-		e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
+	if report == nil || report.Subscriptions != desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.Subscriptions
+		}
+		e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", got, desiredCount)
 	}
 }
 
@@ -2597,16 +2609,17 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
 		return r.Connections == desiredCount
 	})
 
-	if report == nil {
-		e.t.Fatalf("timed out waiting for connection count (no report), want %d", desiredCount)
-		return
-	}
-	if report.Connections != desiredCount {
-		e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
+	if report == nil || report.Connections != desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.Connections
+		}
+		e.t.Fatalf("timed out waiting for connection count, got %d, want %d", got, desiredCount)
 	}
 }
 
@@ -2662,16 +2675,17 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
 		return r.MessagesSent >= desiredCount
 	})
 
-	if report == nil {
-		e.t.Fatalf("timed out waiting for messages sent (no report), want at least %d", desiredCount)
-		return
-	}
-	if report.MessagesSent < desiredCount {
-		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, desiredCount)
+	if report == nil || report.MessagesSent < desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.MessagesSent
+		}
+		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", got, desiredCount)
 	}
 }
 
@@ -2683,32 +2697,25 @@ func (e *Environment) NATSPublishUntilReceived(conn *nats.Conn, subject string, 
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	for {
-		// Record MessagesSent BEFORE publishing so we can detect when THIS message is received
-		beforeCount := e.Router.EngineStats.GetReport().MessagesSent
+	sr := e.syncReporter()
 
+	for {
 		err := conn.Publish(subject, data)
 		require.NoError(e.t, err)
 		err = conn.Flush()
 		require.NoError(e.t, err)
 
-		// Wait for MessagesSent to increase, confirming THIS message was received
+		// Wait for SubscriptionUpdateSent event confirming message delivery
 		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
-		report := e.Router.EngineStats.Wait(shortCtx, func(r *statistics.UsageReport) bool {
-			return r.MessagesSent > beforeCount
-		})
+		ok := sr.WaitForEvent(shortCtx, EventSubscriptionUpdateSent)
 		shortCancel()
 
-		if report != nil && report.MessagesSent > beforeCount {
+		if ok {
 			return
 		}
 
 		if ctx.Err() != nil {
-			sent := uint64(0)
-			if report != nil {
-				sent = report.MessagesSent
-			}
-			e.t.Fatalf("timed out: messages sent %d, didn't increase from %d", sent, beforeCount)
+			e.t.Fatalf("timed out: no SubscriptionUpdateSent received after publish")
 		}
 	}
 }
@@ -2721,10 +2728,9 @@ func (e *Environment) KafkaPublishUntilReceived(topicName string, message string
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	for {
-		// Record MessagesSent BEFORE publishing so we can detect when THIS message is received
-		beforeCount := e.Router.EngineStats.GetReport().MessagesSent
+	sr := e.syncReporter()
 
+	for {
 		pErrCh := make(chan error, 1)
 		e.KafkaClient.Produce(ctx, &kgo.Record{
 			Topic: e.GetPubSubName(topicName),
@@ -2740,23 +2746,17 @@ func (e *Environment) KafkaPublishUntilReceived(topicName string, message string
 			e.t.Fatalf("timed out producing Kafka message")
 		}
 
-		// Wait for MessagesSent to increase, confirming THIS message was received
+		// Wait for SubscriptionUpdateSent event confirming message delivery
 		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
-		report := e.Router.EngineStats.Wait(shortCtx, func(r *statistics.UsageReport) bool {
-			return r.MessagesSent > beforeCount
-		})
+		ok := sr.WaitForEvent(shortCtx, EventSubscriptionUpdateSent)
 		shortCancel()
 
-		if report != nil && report.MessagesSent > beforeCount {
+		if ok {
 			return
 		}
 
 		if ctx.Err() != nil {
-			sent := uint64(0)
-			if report != nil {
-				sent = report.MessagesSent
-			}
-			e.t.Fatalf("timed out: messages sent %d, didn't increase from %d", sent, beforeCount)
+			e.t.Fatalf("timed out: no SubscriptionUpdateSent received after Kafka produce")
 		}
 	}
 }
@@ -2767,16 +2767,17 @@ func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Durat
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
 		return r.MessagesSent >= minCount
 	})
 
-	if report == nil {
-		e.t.Fatalf("timed out waiting for messages sent (no report), want at least %d", minCount)
-		return
-	}
-	if report.MessagesSent < minCount {
-		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, minCount)
+	if report == nil || report.MessagesSent < minCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.MessagesSent
+		}
+		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", got, minCount)
 	}
 }
 
@@ -2786,16 +2787,17 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.Wait(ctx, func(r *statistics.UsageReport) bool {
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
 		return r.Triggers >= desiredCount
 	})
 
-	if report == nil {
-		e.t.Fatalf("timed out waiting for trigger count (no report), want at least %d", desiredCount)
-		return
-	}
-	if report.Triggers < desiredCount {
-		e.t.Fatalf("timed out waiting for trigger count, got %d, want at least %d", report.Triggers, desiredCount)
+	if report == nil || report.Triggers < desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.Triggers
+		}
+		e.t.Fatalf("timed out waiting for trigger count, got %d, want at least %d", got, desiredCount)
 	}
 }
 

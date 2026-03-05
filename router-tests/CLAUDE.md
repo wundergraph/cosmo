@@ -22,13 +22,23 @@ Shared test helpers live in `utils.go` (root package) and `testenv/` (test envir
 
 Each subdirectory has a `main_test.go` with `TestMain` that calls `os.Chdir("..")` so relative `testdata/` paths resolve correctly from the router-tests root.
 
+## Test Synchronization Architecture
+
+Tests synchronize with the engine via `SyncReporter` (`testenv/sync_reporter.go`), a channel-based wrapper around `EngineStats` that is injected into the router at test setup. It emits typed `Event` values on a buffered channel whenever a Reporter method is called (subscription added, trigger fired, message sent, etc.).
+
+**Two synchronization mechanisms:**
+- **Predicate-based** (`Wait()` on inner `EngineStats`): Used by `WaitForSubscriptionCount`, `WaitForTriggerCount`, etc. Best for "wait until absolute count matches" conditions.
+- **Channel-based** (`Events()` channel): Used by `NATSPublishUntilReceived` and `KafkaPublishUntilReceived`. Best for "wait until this specific event happens" patterns.
+
+Tests access the `SyncReporter` through `e.syncReporter()` or via the existing `WaitFor*` helpers which delegate internally.
+
 ## Writing Reliable Tests
 
 ### 1. NATS/Kafka/Redis subscription tests: use warm-up before publishing
 
 **Problem:** After `WaitForSubscriptionCount` and `WaitForTriggerCount`, the internal subscription pipeline may not be fully wired up. A direct `Publish()` can be silently lost, causing timeouts.
 
-**Fix:** Use `NATSPublishUntilReceived` (or `KafkaPublishUntilReceived`) for the first message. These helpers publish, check if `MessagesSent` incremented, and retry if the message was lost.
+**Fix:** Use `NATSPublishUntilReceived` (or `KafkaPublishUntilReceived`) for the first message. These helpers publish, wait for a `SubscriptionUpdateSent` event on the SyncReporter channel, and retry if the message was lost.
 
 ```go
 // WRONG — message can be lost to race condition
@@ -38,7 +48,7 @@ err = conn.Publish(subject, data)
 conn.Flush()
 xEnv.WaitForMessagesSent(1, timeout)  // may timeout forever
 
-// RIGHT — retries until delivery is confirmed
+// RIGHT — retries until delivery is confirmed via SyncReporter event
 xEnv.WaitForSubscriptionCount(1, timeout)
 xEnv.WaitForTriggerCount(1, timeout)
 xEnv.NATSPublishUntilReceived(conn, subject, data, 1, timeout)
@@ -97,11 +107,12 @@ Tests known to be flaky use the `TestFlaky` prefix (e.g., `TestFlakyNatsEvents`)
 
 | Helper | Location | Purpose |
 |--------|----------|---------|
-| `NATSPublishUntilReceived` | `testenv/testenv.go` | Publish with retry until MessagesSent increments |
+| `SyncReporter` | `testenv/sync_reporter.go` | Channel-based wrapper around EngineStats for test synchronization |
+| `NATSPublishUntilReceived` | `testenv/testenv.go` | Publish with retry until `SubscriptionUpdateSent` event received |
 | `KafkaPublishUntilReceived` | `testenv/testenv.go` | Same pattern for Kafka |
-| `WaitForSubscriptionCount` | `testenv/testenv.go` | Wait for subscription count to reach exact value |
-| `WaitForTriggerCount` | `testenv/testenv.go` | Wait for trigger count to reach at least N |
-| `WaitForMessagesSent` | `testenv/testenv.go` | Wait for MessagesSent to reach at least N |
+| `WaitForSubscriptionCount` | `testenv/testenv.go` | Wait for subscription count to reach exact value (predicate-based) |
+| `WaitForTriggerCount` | `testenv/testenv.go` | Wait for trigger count to reach at least N (predicate-based) |
+| `WaitForMessagesSent` | `testenv/testenv.go` | Wait for MessagesSent to reach at least N (predicate-based) |
 | `ConfigureAuth` | `utils.go` | Set up JWKS auth for tests |
 | `ToPtr` | `utils.go` | Generic pointer helper |
 | `EmployeesIDData` | `utils.go` | Standard expected response constant |
