@@ -1646,6 +1646,13 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
 			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
+			// Warm-up: confirm the subscription pipeline is fully active
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`), 1, NatsWaitTimeout)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, args natsSubscriptionArgs) {
+				require.NoError(t, args.errValue)
+				require.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(args.dataValue))
+			})
+
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(``)) // Empty message
 			require.NoError(t, err)
 			err = xEnv.NatsConnectionDefault.Flush()
@@ -1732,6 +1739,13 @@ func TestNatsEvents(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
 			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
+
+			// Warm-up: confirm the subscription pipeline is fully active
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`), 1, NatsWaitTimeout)
+			testenv.AwaitChannelWithT(t, NatsWaitTimeout, subscriptionArgsCh, func(t *testing.T, subscriptionArgs natsSubscriptionArgs) {
+				assert.NoError(t, subscriptionArgs.errValue)
+				assert.JSONEq(t, `{"employeeUpdated":{"id":3,"details":{"forename":"Stefan","surname":"Avram"}}}`, string(subscriptionArgs.dataValue))
+			})
 
 			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{asas`)) // Invalid message
 			require.NoError(t, err)
