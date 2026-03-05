@@ -164,7 +164,13 @@ describe('InviteUser', () => {
   });
 
   test('that an user can accept an organization invitation successfully', async () => {
-    const { authenticator, client, mailerClient, server, users: { adminAliceCompanyA, adminJimCompanyB } } = await SetupTest({ dbname, enableMultiUsers: true, });
+    const {
+      authenticator,
+      client,
+      mailerClient,
+      server,
+      users: { adminAliceCompanyA, adminJimCompanyB },
+    } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -220,7 +226,13 @@ describe('InviteUser', () => {
   });
 
   test('that an user can reject an organization invitation successfully', async () => {
-    const { authenticator, client, mailerClient, server, users: { adminAliceCompanyA, adminJimCompanyB } } = await SetupTest({ dbname, enableMultiUsers: true, });
+    const {
+      authenticator,
+      client,
+      mailerClient,
+      server,
+      users: { adminAliceCompanyA, adminJimCompanyB },
+    } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -280,7 +292,13 @@ describe('InviteUser', () => {
   // members of the organization
 
   test('that an user who is part of an organization can still accept invitations successfully', async () => {
-    const { authenticator, client, mailerClient, server, users: { adminAliceCompanyA, adminJimCompanyB } } = await SetupTest({ dbname, enableMultiUsers: true, });
+    const {
+      authenticator,
+      client,
+      mailerClient,
+      server,
+      users: { adminAliceCompanyA, adminJimCompanyB },
+    } = await SetupTest({ dbname, enableMultiUsers: true });
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -310,7 +328,7 @@ describe('InviteUser', () => {
 
     await orgMemberRepo.addOrganizationMember({
       userID: adminJimCompanyB!.userId,
-      organizationID: adminAliceCompanyA.organizationId
+      organizationID: adminAliceCompanyA.organizationId,
     });
 
     // Make sure that the user can see the invitation
