@@ -105,3 +105,5 @@ Tests known to be flaky use the `TestFlaky` prefix (e.g., `TestFlakyNatsEvents`)
 | `ConfigureAuth` | `utils.go` | Set up JWKS auth for tests |
 | `ToPtr` | `utils.go` | Generic pointer helper |
 | `EmployeesIDData` | `utils.go` | Standard expected response constant |
+
+<!-- CI stability counter: 1 -->
