@@ -2370,6 +2370,17 @@ func (e *Environment) MakeGraphQLMultipartRequest(method string, body io.Reader)
 	return req
 }
 
+func (e *Environment) MakeGraphQLDeferRequest(method string, body io.Reader) *http.Request {
+	req, err := http.NewRequest(method, e.GraphQLRequestURL(), body)
+	require.NoError(e.t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "multipart/mixed;deferSpec=20220824, application/json")
+	req.Header.Set("Connection", "keep-alive")
+
+	return req
+}
+
 func (e *Environment) GraphQLWebSocketSubscriptionURL() string {
 	u, err := url.Parse(e.GraphQLRequestURL())
 	require.NoError(e.t, err)
