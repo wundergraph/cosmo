@@ -278,7 +278,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				MetricReader:                       metricReader,
 				RouterConfigJSONTemplate:           testenv.ConfigWithEdfsNatsJSONTemplate,
 				EnableNats:                         true,
-				ModifyEngineExecutionConfiguration: func(ec *config.EngineExecutionConfiguration) { ec.WebSocketClientReadTimeout = time.Second },
+				ModifyEngineExecutionConfiguration: func(ec *config.EngineExecutionConfiguration) { ec.WebSocketServerReadTimeout = time.Second },
 				MetricOptions:                      testenv.MetricOptions{EnableOTLPStreamMetrics: true},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				var subscriptionOne struct {

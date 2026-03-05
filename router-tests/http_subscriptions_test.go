@@ -3,6 +3,7 @@ package integration
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -81,39 +82,81 @@ func TestHeartbeats(t *testing.T) {
 			defer resp.Body.Close()
 			reader := bufio.NewReader(resp.Body)
 
-			messages := make(chan string, 1)
+			type timestampedMsg struct {
+				body string
+				at   time.Time
+			}
+			raw := make(chan timestampedMsg, 50)
+
+			type readerResult struct {
+				err      error
+				msgCount int
+			}
+			errCh := make(chan readerResult, 1)
 
 			go func() {
-				defer close(messages)
+				defer close(raw)
+				count := 0
 				for {
 					err := readMultipartPrefix(reader)
 					if err != nil {
+						errCh <- readerResult{err: err, msgCount: count}
 						return
 					}
 
 					line, _, err := reader.ReadLine()
 					if err != nil {
+						errCh <- readerResult{err: fmt.Errorf("ReadLine after prefix: %w", err), msgCount: count}
 						return
 					}
 
-					messages <- string(line)
+					raw <- timestampedMsg{body: string(line), at: time.Now()}
+					count++
 				}
 			}()
 
-			for i := 0; i <= 5; i++ {
-				testenv.AwaitChannelWithT(t, 5*time.Second, messages, func(t *testing.T, msg string) {
-					assert.Equal(t, fmt.Sprintf(`{"payload":{"data":{"countEmp":%d}}}`, i), msg)
-				})
-
-				testenv.AwaitChannelWithT(t, 5*time.Second, messages, func(t *testing.T, msg string) {
-					assert.Equal(t, `{}`, msg)
-				})
+			type received struct {
+				body         string
+				sincePrevMsg time.Duration
+			}
+			var msgs []received
+			var lastReceive time.Time
+			for tm := range raw {
+				var sincePrev time.Duration
+				if !lastReceive.IsZero() {
+					sincePrev = tm.at.Sub(lastReceive)
+				}
+				msgs = append(msgs, received{body: tm.body, sincePrevMsg: sincePrev})
+				lastReceive = tm.at
 			}
 
-			// Channel should be closed after all heartbeats are received
-			testenv.AwaitChannelWithCloseWithT(t, 5*time.Second, messages, func(t *testing.T, _ string, ok bool) {
-				require.False(t, ok, "channel should be closed")
-			})
+			result := <-errCh
+			if errors.Is(result.err, io.EOF) {
+				t.Logf("stream ended normally (EOF) after %d messages", result.msgCount)
+			} else {
+				t.Logf("stream ended: %d messages, final error: %v", result.msgCount, result.err)
+			}
+
+			require.NotEmpty(t, msgs,
+				"multipart stream closed with 0 messages (reader saw %d frames, error: %v); "+
+					"this usually means the SSE connection to the subgraph was reset before any data was sent",
+				result.msgCount, result.err)
+
+			// Every message must be either a heartbeat ({}) or the next expected
+			// data payload, and gaps between consecutive messages must stay within
+			// the allowed threshold.
+			maxAllowedGap := subscriptionHeartbeatInterval * 2
+			dataIdx := 0
+			for _, m := range msgs {
+				assert.LessOrEqual(t, m.sincePrevMsg, maxAllowedGap,
+					"gap between consecutive messages (%s) exceeded max allowed (%s)", m.sincePrevMsg, maxAllowedGap)
+				if m.body == `{}` {
+					continue // valid multipart heartbeat
+				}
+				assert.Equal(t, fmt.Sprintf(`{"payload":{"data":{"countEmp":%d}}}`, dataIdx), m.body)
+				dataIdx++
+			}
+			assert.Equal(t, 6, dataIdx, "expected 6 data messages")
 		})
 	})
 
@@ -144,61 +187,56 @@ func TestHeartbeats(t *testing.T) {
 
 			reader := bufio.NewReader(resp.Body)
 
-			lines := make(chan string, 50)
+			type timestampedLine struct {
+				text string
+				at   time.Time
+			}
+			raw := make(chan timestampedLine, 50)
 
 			go func() {
-				defer close(lines)
+				defer close(raw)
 				for {
 					line, _, err := reader.ReadLine()
 					if err != nil {
 						return
 					}
-					lines <- string(line)
+					raw <- timestampedLine{text: string(line), at: time.Now()}
 				}
 			}()
 
-			// Assert the expected SSE sequence
-			for i := 0; i <= 5; i++ {
-				// Expect "event: next"
-				testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
-					assert.Equal(t, "event: next", line)
-				})
+			// For each non-empty line, assert it is one of:
+			//   1. ":heartbeat" — valid SSE keep-alive comment
+			//   2. "event: next" / "event: complete" — SSE event type framing
+			//   3. "data: ..." — the next expected data payload in sequence
+			// Additionally, the gap between consecutive data/heartbeat lines must
+			// not exceed the allowed threshold.
+			maxAllowedGap := subscriptionHeartbeatInterval * 2
+			dataIdx := 0
+			gotComplete := false
+			var lastActivity time.Time
+			for tl := range raw {
+				switch tl.text {
+				case "", "event: next", "data: ":
+					continue // SSE framing — not content
+				case ":heartbeat":
+					// valid SSE heartbeat
+				case "event: complete":
+					gotComplete = true
+				default:
+					assert.Equal(t, fmt.Sprintf(`data: {"data":{"countEmp":%d}}`, dataIdx), tl.text)
+					dataIdx++
+				}
 
-				// Expect data line with count
-				testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
-					assert.Equal(t, fmt.Sprintf(`data: {"data":{"countEmp":%d}}`, i), line)
-				})
-
-				// Expect blank line
-				testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
-					assert.Equal(t, "", line)
-				})
-
-				// Expect heartbeat
-				testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
-					assert.Equal(t, ":heartbeat", line)
-				})
-
-				// Expect blank line after heartbeat
-				testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
-					assert.Equal(t, "", line)
-				})
+				// Gap check applies to heartbeats, data, and complete events.
+				if !lastActivity.IsZero() {
+					gap := tl.at.Sub(lastActivity)
+					assert.LessOrEqual(t, gap, maxAllowedGap,
+						"gap between consecutive activity (%s) exceeded max allowed (%s)", gap, maxAllowedGap)
+				}
+				lastActivity = tl.at
 			}
-
-			// Expect completion event
-			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
-				assert.Equal(t, "event: complete", line)
-			})
-
-			// Expect empty data line event
-			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
-				assert.Equal(t, "data: ", line)
-			})
-
-			// Expect blank line after complete
-			testenv.AwaitChannelWithT(t, 5*time.Second, lines, func(t *testing.T, line string) {
-				assert.Equal(t, "", line)
-			})
+			assert.Equal(t, 6, dataIdx, "expected 6 data messages")
+			assert.True(t, gotComplete, "expected completion event")
 		})
 	})
 

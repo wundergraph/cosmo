@@ -38,9 +38,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
-var (
-	errClientTerminatedConnection = errors.New("client terminated connection")
-)
+var errClientTerminatedConnection = errors.New("client terminated connection")
 
 type WebsocketMiddlewareOptions struct {
 	OperationProcessor *OperationProcessor
@@ -68,7 +66,6 @@ type WebsocketMiddlewareOptions struct {
 }
 
 func NewWebsocketMiddleware(ctx context.Context, opts WebsocketMiddlewareOptions) func(http.Handler) http.Handler {
-
 	handler := &WebsocketHandler{
 		ctx:                       ctx,
 		operationProcessor:        opts.OperationProcessor,
@@ -167,7 +164,6 @@ func newWSConnectionWrapper(conn net.Conn, readTimeout, writeTimeout time.Durati
 }
 
 func (c *wsConnectionWrapper) ReadJSON(v any) error {
-
 	if c.readTimeout > 0 {
 		err := c.conn.SetReadDeadline(time.Now().Add(c.readTimeout))
 		if err != nil {
@@ -184,7 +180,6 @@ func (c *wsConnectionWrapper) ReadJSON(v any) error {
 }
 
 func (c *wsConnectionWrapper) WriteText(text string) error {
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -270,9 +265,7 @@ type WebsocketHandler struct {
 }
 
 func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.Request) {
-	var (
-		subProtocol string
-	)
+	var subProtocol string
 
 	requestID := middleware.GetReqID(r.Context())
 	requestContext := getRequestContext(r.Context())
@@ -366,7 +359,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		Protocol:                     protocol,
 		Logger:                       requestLogger,
 		Stats:                        h.stats,
-		ConnectionID:                 resolve.ConnectionIDs.Inc(),
+		ConnectionID:                 resolve.ConnectionIDs.Add(1),
 		ClientInfo:                   clientInfo,
 		InitRequestID:                requestID,
 		ForwardUpgradeHeaders:        h.forwardUpgradeHeadersConfig,
@@ -383,7 +376,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 
 		requestLogger.Debug("Initializing websocket connection", zap.Error(err))
 
-		handler.Close(false)
+		handler.Close(false, resolve.SubscriptionCloseKindNormal)
 		return
 	}
 
@@ -405,7 +398,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 				}
 				http.Error(handler.w, http.StatusText(statusCode), statusCode)
 				_ = handler.writeErrorMessage(requestID, errorMessage)
-				handler.Close(false)
+				handler.Close(false, resolve.SubscriptionCloseKindNormal)
 				return
 			}
 		}
@@ -417,7 +410,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 			if err != nil {
 				requestLogger.Error("Error parsing initial payload: %v", zap.Error(err))
 				_ = handler.writeErrorMessage(requestID, err)
-				handler.Close(false)
+				handler.Close(false, resolve.SubscriptionCloseKindNormal)
 				return
 			}
 			jwtToken, ok := initialPayloadMap[fromInitialPayloadConfig.Key].(string)
@@ -425,7 +418,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 				err := fmt.Errorf("invalid JWT token in initial payload: JWT token is not a string")
 				requestLogger.Error(err.Error())
 				_ = handler.writeErrorMessage(requestID, err)
-				handler.Close(false)
+				handler.Close(false, resolve.SubscriptionCloseKindNormal)
 				return
 			}
 			handler.request.Header.Set(fromInitialPayloadConfig.ExportToken.HeaderKey, jwtToken)
@@ -439,7 +432,7 @@ func (h *WebsocketHandler) handleUpgradeRequest(w http.ResponseWriter, r *http.R
 		err = h.addConnection(c, handler)
 		if err != nil {
 			requestLogger.Error("Adding connection to net poller", zap.Error(err))
-			handler.Close(true)
+			handler.Close(true, resolve.SubscriptionCloseKindNormal)
 		}
 		return
 	}
@@ -453,11 +446,11 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 	h.stats.ConnectionsInc()
 	defer h.stats.ConnectionsDec()
 	serverDone := h.ctx.Done()
-	defer handler.Close(true)
 
 	for {
 		select {
 		case <-serverDone:
+			handler.Close(true, resolve.SubscriptionCloseKindGoingAway)
 			return
 		default:
 			msg, err := handler.protocol.ReadMessage()
@@ -466,12 +459,14 @@ func (h *WebsocketHandler) handleConnectionSync(handler *WebSocketConnectionHand
 					continue
 				}
 				h.logger.Debug("Client closed connection")
+				handler.Close(true, resolve.SubscriptionCloseKindNormal)
 				return
 			}
 			err = h.HandleMessage(handler, msg)
 			if err != nil {
 				h.logger.Debug("Handling websocket message", zap.Error(err))
 				if errors.Is(err, errClientTerminatedConnection) {
+					handler.Close(true, resolve.SubscriptionCloseKindNormal)
 					return
 				}
 			}
@@ -500,7 +495,7 @@ func (h *WebsocketHandler) removeConnection(conn net.Conn, handler *WebSocketCon
 	if err != nil {
 		h.logger.Warn("Removing connection from net poller", zap.Error(err))
 	}
-	handler.Close(true)
+	handler.Close(true, resolve.SubscriptionCloseKindNormal)
 }
 
 func socketFd(conn net.Conn) int {
@@ -535,13 +530,12 @@ func isReadTimeout(err error) bool {
 func (h *WebsocketHandler) runPoller() {
 	done := h.ctx.Done()
 	defer func() {
-		h.connectionsMu.Lock()
-		_ = h.netPoll.Close(true)
-		h.connectionsMu.Unlock()
+		_ = h.netPoll.Close(false)
 	}()
 	for {
 		select {
 		case <-done:
+			h.closeAllConnections(resolve.SubscriptionCloseKindGoingAway)
 			return
 		default:
 			connections, err := h.netPoll.Wait(128)
@@ -590,6 +584,24 @@ func (h *WebsocketHandler) runPoller() {
 	}
 }
 
+func (h *WebsocketHandler) closeAllConnections(closeKind resolve.SubscriptionCloseKind) {
+	h.connectionsMu.Lock()
+	handlers := make([]*WebSocketConnectionHandler, 0, len(h.connections))
+	for fd, handler := range h.connections {
+		handlers = append(handlers, handler)
+		delete(h.connections, fd)
+	}
+	h.connectionsMu.Unlock()
+
+	for range handlers {
+		h.stats.ConnectionsDec()
+	}
+
+	for _, handler := range handlers {
+		handler.Close(true, closeKind)
+	}
+}
+
 type websocketResponseWriter struct {
 	id              string
 	protocol        wsproto.Proto
@@ -601,8 +613,10 @@ type websocketResponseWriter struct {
 	propagateErrors bool
 }
 
-var _ http.ResponseWriter = (*websocketResponseWriter)(nil)
-var _ resolve.SubscriptionResponseWriter = (*websocketResponseWriter)(nil)
+var (
+	_ http.ResponseWriter                = (*websocketResponseWriter)(nil)
+	_ resolve.SubscriptionResponseWriter = (*websocketResponseWriter)(nil)
+)
 
 func newWebsocketResponseWriter(id string, protocol wsproto.Proto, propagateErrors bool, logger *zap.Logger, stats statistics.EngineStatistics) *websocketResponseWriter {
 	return &websocketResponseWriter{
@@ -649,7 +663,6 @@ func (rw *websocketResponseWriter) Write(data []byte) (int, error) {
 
 func (rw *websocketResponseWriter) Flush() error {
 	if rw.buf.Len() > 0 {
-		rw.logger.Debug("flushing", zap.Int("bytes", rw.buf.Len()))
 		payload := rw.buf.Bytes()
 		var extensions []byte
 		var err error
@@ -764,9 +777,7 @@ type forwardConfig struct {
 	regexAllowList      []*regexp.Regexp
 }
 
-var (
-	detectNonRegex = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
-)
+var detectNonRegex = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
 func NewWebsocketConnectionHandler(ctx context.Context, opts WebSocketConnectionHandlerOptions) *WebSocketConnectionHandler {
 	return &WebSocketConnectionHandler{
@@ -817,7 +828,6 @@ func (h *WebSocketConnectionHandler) writeErrorMessage(operationID string, err e
 }
 
 func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegistration) (*ParsedOperation, *operationContext, error) {
-
 	operationKit, err := h.operationProcessor.NewKit()
 	if err != nil {
 		return nil, nil, err
@@ -964,7 +974,6 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 }
 
 func (h *WebSocketConnectionHandler) executeSubscription(registration *SubscriptionRegistration) {
-
 	rw := newWebsocketResponseWriter(registration.msg.ID, h.protocol, h.graphqlHandler.subgraphErrorPropagation.Enabled, h.logger, h.stats)
 
 	_, operationCtx, err := h.parseAndPlan(registration)
@@ -1129,7 +1138,7 @@ func (h *WebSocketConnectionHandler) handleComplete(msg *wsproto.Message) error 
 		ConnectionID:   h.connectionID,
 		SubscriptionID: subscriptionID,
 	}
-	return h.graphqlHandler.executor.Resolver.AsyncCompleteSubscription(id)
+	return h.graphqlHandler.executor.Resolver.CompleteSubscription(id)
 }
 
 func (h *WebsocketHandler) HandleMessage(handler *WebSocketConnectionHandler, msg *wsproto.Message) (err error) {
@@ -1284,10 +1293,18 @@ func (h *WebSocketConnectionHandler) Complete(rw *websocketResponseWriter) {
 	_ = rw.Flush()
 }
 
-func (h *WebSocketConnectionHandler) Close(unsubscribe bool) {
+func (h *WebSocketConnectionHandler) Close(unsubscribe bool, closeKind resolve.SubscriptionCloseKind) {
+	effectiveCloseKind := closeKind
+
+	// During router shutdown, always surface a "going away" close reason to clients.
+	// This avoids racing normal-close paths while the server context is already canceled.
+	if closeKind == resolve.SubscriptionCloseKindNormal && h.ctx.Err() != nil {
+		effectiveCloseKind = resolve.SubscriptionCloseKindGoingAway
+	}
+
 	if unsubscribe {
 		// Remove any pending IDs associated with this connection
-		err := h.graphqlHandler.executor.Resolver.AsyncUnsubscribeClient(h.connectionID)
+		err := h.graphqlHandler.executor.Resolver.UnsubscribeClientWithReason(h.connectionID, effectiveCloseKind)
 		if err != nil {
 			h.logger.Debug("Unsubscribing client", zap.Error(err))
 		}
