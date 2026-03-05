@@ -1,0 +1,17 @@
+{
+  "name": "mcp-ts-client-tests",
+  "version": "1.0.0",
+  "description": "MCP client e2e tests using the official TypeScript SDK",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest watch"
+  },
+  "packageManager": "pnpm@9.12.3",
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.0",
+    "@types/node": "^22.17.0",
+    "typescript": "^5.9.2",
+    "vitest": "^3.2.4"
+  }
+}

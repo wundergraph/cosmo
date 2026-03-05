@@ -958,6 +958,16 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
 		}
 
+		// Add OAuth configuration if enabled
+		if r.mcp.OAuth.Enabled {
+			mcpOpts = append(mcpOpts, mcpserver.WithOAuth(&r.mcp.OAuth))
+
+			// Add server base URL for OAuth discovery if configured
+			if r.mcp.Server.BaseURL != "" {
+				mcpOpts = append(mcpOpts, mcpserver.WithServerBaseURL(r.mcp.Server.BaseURL))
+			}
+		}
+
 		mcpGraphQLEndpoint := r.graphqlEndpointURL
 		if r.mcp.RouterURL != "" {
 			mcpGraphQLEndpoint = r.mcp.RouterURL
