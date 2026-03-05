@@ -1,6 +1,8 @@
 package integration
 
 import (
+	integration "github.com/wundergraph/cosmo/router-tests"
+
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
@@ -332,7 +334,7 @@ func TestBatch(t *testing.T) {
 	t.Run("run a mutation in a batch request", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := ConfigureAuth(t)
+		authenticators, authServer := integration.ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
 			Authenticators:           authenticators,
 			AuthenticationRequired:   false,
@@ -698,7 +700,7 @@ func TestBatch(t *testing.T) {
 	t.Run("check batch request with gzip compression", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := ConfigureAuth(t)
+		authenticators, authServer := integration.ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
 			Authenticators:           authenticators,
 			AuthenticationRequired:   false,

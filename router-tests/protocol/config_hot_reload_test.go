@@ -1,6 +1,8 @@
 package integration
 
 import (
+	integration "github.com/wundergraph/cosmo/router-tests"
+
 	"context"
 	"encoding/json"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
@@ -78,7 +80,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			})
 			require.Equal(t, res.Response.StatusCode, 200)
 			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			// Wait for the config poller to be ready
 			<-pm.ready
@@ -91,7 +93,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			})
 			require.Equal(t, res.Response.StatusCode, 200)
 			require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "updated")
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 		})
 	})
@@ -132,7 +134,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 				})
 				assert.Equal(t, res.Response.StatusCode, 200)
 				assert.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
-				assert.JSONEq(t, employeesIDData, res.Body)
+				assert.JSONEq(t, integration.EmployeesIDData, res.Body)
 			}()
 
 			go func() {
@@ -143,7 +145,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 				})
 				assert.Equal(t, res.Response.StatusCode, 200)
 				assert.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
-				assert.JSONEq(t, employeesIDData, res.Body)
+				assert.JSONEq(t, integration.EmployeesIDData, res.Body)
 			}()
 
 			// Let's wait a bit to make sure the requests are in flight
@@ -161,7 +163,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			})
 			require.Equal(t, res.Response.StatusCode, 200)
 			require.Equal(t, res.Response.Header.Get("X-Router-Config-Version"), "updated")
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			// Ensure that all requests are served successfully
 			require.Eventually(t, func() bool {
@@ -430,7 +432,7 @@ func TestSwapConfig(t *testing.T) {
 					})
 					require.NoError(t, err)
 					require.Equal(t, res.Response.StatusCode, 200)
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 				}()
 			}
 
@@ -520,7 +522,7 @@ func TestFlakyConfigHotReloadPoller(t *testing.T) {
 			rm := metricdata.ResourceMetrics{}
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
-			scopeMetric := *GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 			beforeUpdate := metricdata.Metrics{
 				Name:        "router.info",
@@ -552,7 +554,7 @@ func TestFlakyConfigHotReloadPoller(t *testing.T) {
 				rm := metricdata.ResourceMetrics{}
 				err := metricReader.Collect(context.Background(), &rm)
 				require.NoError(collectT, err)
-				scopeMetricAfterUpdate := *GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				scopeMetricAfterUpdate := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 				afterUpdate := metricdata.Metrics{
 					Name:        "router.info",
 					Description: "Router configuration info.",

@@ -1,6 +1,8 @@
 package integration
 
 import (
+	integration "github.com/wundergraph/cosmo/router-tests"
+
 	"context"
 	"encoding/json"
 	"net/http"
@@ -23,7 +25,7 @@ func TestPersistedOperationOverGET(t *testing.T) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + cacheHashNotStored + `"}}`),
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + integration.CacheHashNotStored + `"}}`),
 				Header:     header,
 			})
 			require.NoError(t, err)
@@ -99,7 +101,7 @@ func TestAutomatedPersistedQueriesOverGET(t *testing.T) {
 			header := make(http.Header)
 			header.Add("graphql-client-name", "my-client")
 			res, err := xEnv.MakeGraphQLRequestOverGET(testenv.GraphQLRequest{
-				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + cacheHashNotStored + `"}}`),
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + integration.CacheHashNotStored + `"}}`),
 				Header:     header,
 			})
 			require.NoError(t, err)

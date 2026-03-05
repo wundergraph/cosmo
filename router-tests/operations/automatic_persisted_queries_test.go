@@ -1,6 +1,8 @@
 package integration
 
 import (
+	integration "github.com/wundergraph/cosmo/router-tests"
+
 	"context"
 	"fmt"
 	"net/http"
@@ -35,7 +37,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + cacheHashNotStored + `"}}`),
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + integration.CacheHashNotStored + `"}}`),
 				})
 				require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 			})
@@ -235,7 +237,7 @@ func TestAutomaticPersistedQueries(t *testing.T) {
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + cacheHashNotStored + `"}}`),
+					Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + integration.CacheHashNotStored + `"}}`),
 				})
 				require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)
 			})

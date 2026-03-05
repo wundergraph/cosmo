@@ -1,7 +1,10 @@
 package integration
 
 import (
+	integration "github.com/wundergraph/cosmo/router-tests"
+
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -18,6 +21,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/routerconfig"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -45,7 +49,7 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.JSONEq(t, employeesIDData, res.Body)
+				require.JSONEq(t, integration.EmployeesIDData, res.Body)
 			})
 		})
 		t.Run("cache warmup enabled", func(t *testing.T) {
@@ -78,11 +82,11 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, employeesIDData, res.Body)
+				require.Equal(t, integration.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, employeesIDData, res.Body)
+				require.Equal(t, integration.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id details { forename } } }`,
 				})
@@ -152,11 +156,11 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, employeesIDData, res.Body)
+				require.Equal(t, integration.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, employeesIDData, res.Body)
+				require.Equal(t, integration.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id details { forename } } }`,
 				})
@@ -220,7 +224,7 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, employeesIDData, res.Body)
+				require.Equal(t, integration.EmployeesIDData, res.Body)
 			})
 		})
 		t.Run("cache warmup json", func(t *testing.T) {
@@ -574,11 +578,11 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, employeesIDData, res.Body)
+				require.Equal(t, integration.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, employeesIDData, res.Body)
+				require.Equal(t, integration.EmployeesIDData, res.Body)
 			})
 		})
 	})
@@ -636,7 +640,7 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.JSONEq(t, employeesIDData, res.Body)
+				require.JSONEq(t, integration.EmployeesIDData, res.Body)
 			})
 		})
 
@@ -672,7 +676,7 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, employeesIDData, res.Body)
+				require.Equal(t, integration.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id details { forename } } }`,
 				})
@@ -876,7 +880,7 @@ func TestCacheWarmup(t *testing.T) {
 				Query: `query { employees { id } }`,
 			})
 			require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
-			require.Equal(t, employeesIDData, res.Body)
+			require.Equal(t, integration.EmployeesIDData, res.Body)
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
@@ -888,7 +892,7 @@ func TestCacheWarmup(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, rm.ScopeMetrics, 2)
 
-			metricScope := GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			metricScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.NotNil(t, metricScope)
 
 			require.Len(t, metricScope.Metrics, 7)
@@ -938,7 +942,7 @@ func TestCacheWarmup(t *testing.T) {
 				},
 			}
 
-			m := *GetMetricByName(metricScope, "router.graphql.operation.planning_time")
+			m := *integration.GetMetricByName(metricScope, "router.graphql.operation.planning_time")
 
 			// One when warming up the operation and one when executing the operation
 			require.Len(t, m.Data.(metricdata.Histogram[float64]).DataPoints, 2)
@@ -997,7 +1001,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			})
 			require.Equal(t, 200, res.Response.StatusCode)
 			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 
 			// Wait for the config poller to be ready
@@ -1011,7 +1015,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			})
 			require.Equal(t, 200, res.Response.StatusCode)
 			require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 			require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
 
 		})
@@ -1331,4 +1335,67 @@ func findDataPoint(t *testing.T, dataPoints []metricdata.HistogramDataPoint[floa
 	}
 	t.Fatalf("Could not find data point with WgEnginePlanCacheHit=%v", cacheHit)
 	return metricdata.HistogramDataPoint[float64]{}
+}
+
+func writeTestConfig(t *testing.T, version string, path string) {
+	t.Helper()
+
+	cfg := &nodev1.RouterConfig{
+		Version: version,
+		EngineConfig: &nodev1.EngineConfiguration{
+			DefaultFlushInterval: 500,
+			DatasourceConfigurations: []*nodev1.DataSourceConfiguration{
+				{
+					Kind: nodev1.DataSourceKind_STATIC,
+					RootNodes: []*nodev1.TypeField{
+						{
+							TypeName:   "Query",
+							FieldNames: []string{"hello"},
+						},
+					},
+					CustomStatic: &nodev1.DataSourceCustom_Static{
+						Data: &nodev1.ConfigurationVariable{
+							StaticVariableContent: `{"hello": "Hello!"}`,
+						},
+					},
+					Id: "0",
+				},
+			},
+			GraphqlSchema: "schema {\n  query: Query\n}\ntype Query {\n  hello: String\n}",
+			FieldConfigurations: []*nodev1.FieldConfiguration{
+				{
+					TypeName:  "Query",
+					FieldName: "hello",
+				},
+			},
+		},
+	}
+
+	bytes, err := json.Marshal(cfg)
+	require.NoError(t, err)
+
+	err = os.WriteFile(path, bytes, 0644)
+	require.NoError(t, err)
+}
+
+type ConfigPollerMock struct {
+	initConfig   *nodev1.RouterConfig
+	updateConfig func(newConfig *nodev1.RouterConfig, oldVersion string) error
+	ready        chan struct{}
+}
+
+func (c *ConfigPollerMock) Subscribe(_ context.Context, handler func(newConfig *nodev1.RouterConfig, oldVersion string) error) {
+	c.updateConfig = handler
+	close(c.ready)
+}
+
+func (c *ConfigPollerMock) GetRouterConfig(_ context.Context) (*routerconfig.Response, error) {
+	result := &routerconfig.Response{
+		Config: c.initConfig,
+	}
+	return result, nil
+}
+
+func (c *ConfigPollerMock) Stop(_ context.Context) error {
+	return nil
 }

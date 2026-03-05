@@ -1,6 +1,8 @@
 package integration
 
 import (
+	integration "github.com/wundergraph/cosmo/router-tests"
+
 	"fmt"
 	"net/http"
 	"strings"
@@ -265,11 +267,11 @@ func TestHeaderSetWithExpression(t *testing.T) {
 
 		t.Cleanup(authServer.Close)
 
-		tokenDecoder, err := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		tokenDecoder, err := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 		require.NoError(t, err)
 
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         integration.JwksName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -393,4 +395,12 @@ func TestHeaderSetWithExpression(t *testing.T) {
 			assert.Equal(t, `{"data":{"headerValue":"test-client 1.0.0"}}`, res.Body)
 		})
 	})
+}
+
+func toJWKSConfig(url string, refresh time.Duration, allowedAlgorithms ...string) authentication.JWKSConfig {
+	return authentication.JWKSConfig{
+		URL:               url,
+		RefreshInterval:   refresh,
+		AllowedAlgorithms: allowedAlgorithms,
+	}
 }

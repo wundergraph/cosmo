@@ -199,42 +199,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Root tests split into logical groups for faster CI
-          - test_target: './.'
-            test_run: '^(TestPrometheus|TestExcludeAttributes|TestRouterStartLogs|TestAccessLogs|TestGraphQLMetrics)'
-            test_skip: '^TestFlaky'
-            run_flaky: true
-            label: root-observability
-          - test_target: './.'
-            test_run: '^(TestAuth|TestAlgorithm|TestAllowedExt|TestAudience|TestBlockOp|TestCircuitBreaker|TestEnginePanic|TestError|TestFallback|TestHttpJwks|TestIntrospectionAuth|TestMTLS|TestMultipartError|TestMultipleKeys|TestNonHttp|TestOidc|TestParser|TestQueryNaming|TestRateLimit|TestRelaxedField|TestRetry|TestSSEError|TestSubgraphMerge|TestSubgraphMTLS|TestSupported|TestTLS|TestUseCustom)'
-            test_skip: '^TestFlaky'
-            run_flaky: false
-            label: root-security
-          # Catch-all: runs everything not in the above two groups
-          - test_target: './.'
-            test_run: '^Test'
-            test_skip: '^(TestFlaky|TestPrometheus|TestExcludeAttributes|TestRouterStartLogs|TestAccessLogs|TestGraphQLMetrics|TestAuth|TestAlgorithm|TestAllowedExt|TestAudience|TestBlockOp|TestCircuitBreaker|TestEnginePanic|TestError|TestFallback|TestHttpJwks|TestIntrospectionAuth|TestMTLS|TestMultipartError|TestMultipleKeys|TestNonHttp|TestOidc|TestParser|TestQueryNaming|TestRateLimit|TestRelaxedField|TestRetry|TestSSEError|TestSubgraphMerge|TestSubgraphMTLS|TestSupported|TestTLS|TestUseCustom)'
-            run_flaky: false
-            label: root-core
+          - test_target: './observability'
+            label: observability
+          - test_target: './security'
+            label: security
+          - test_target: './operations'
+            label: operations
+          - test_target: './subscriptions'
+            label: subscriptions
+          - test_target: './protocol'
+            label: protocol
           - test_target: './fuzzquery ./lifecycle ./modules'
-            test_run: '^Test'
-            test_skip: '^TestFlaky'
-            run_flaky: true
             label: fuzzquery_lifecycle_modules
           - test_target: './telemetry'
-            test_run: '^Test'
-            test_skip: '^TestFlaky'
-            run_flaky: true
             label: telemetry
           - test_target: './events'
-            test_run: '^Test'
-            test_skip: '^TestFlaky'
-            run_flaky: true
             label: events
           - test_target: './connectrpc'
-            test_run: '^Test'
-            test_skip: '^TestFlaky'
-            run_flaky: true
             label: connectrpc
     services:
       nats:
@@ -403,7 +384,7 @@ jobs:
 
       - name: Run Integration tests ${{ matrix.label }}
         working-directory: ./router-tests
-        run: make test-coverage test_retry_count=0 test_params="-run '${{ matrix.test_run }}' -skip '${{ matrix.test_skip }}' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
+        run: make test-coverage test_retry_count=0 test_params="-run '^Test' -skip '^TestFlaky' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
 
       - name: Upload integration results to Codecov
         uses: ./.github/actions/codecov-upload-pr
@@ -414,12 +395,10 @@ jobs:
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Run Flaky Integration tests ${{ matrix.label }}
-        if: ${{ matrix.run_flaky }}
         working-directory: ./router-tests
         run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
 
       - name: Upload flaky integration results to Codecov
-        if: ${{ matrix.run_flaky }}
         uses: ./.github/actions/codecov-upload-pr
         with:
           artifact-name: router-${{ matrix.label }}-flaky
