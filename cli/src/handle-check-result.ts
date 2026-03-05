@@ -13,7 +13,7 @@ import logSymbols from 'log-symbols';
 import pc from 'picocolors';
 import { config } from './core/config.js';
 
-type JsonOutputDescriptor = {
+export type JsonOutputDescriptor = {
   status: 'error' | 'success';
   code: EnumStatusCode;
   details?: string;
