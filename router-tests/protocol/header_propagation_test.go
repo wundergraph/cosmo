@@ -1,8 +1,6 @@
 package integration
 
 import (
-	integration "github.com/wundergraph/cosmo/router-tests"
-
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -69,7 +67,7 @@ func TestCacheControl(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:      "", // Empty query
 				Variables:  json.RawMessage(`{}`),
-				Extensions: json.RawMessage(`{"persistedQuery": {"version": 1, "sha256Hash": "` + integration.CacheHashNotStored + `"}}`),
+				Extensions: json.RawMessage(`{"persistedQuery": {"version": 1, "sha256Hash": "0000000000000000000000000000000000000000000000000000000000000000"}}`),
 			})
 
 			require.Contains(t, res.Body, "PERSISTED_QUERY_NOT_FOUND")

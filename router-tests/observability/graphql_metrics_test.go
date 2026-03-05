@@ -59,12 +59,12 @@ func TestGraphQLMetrics(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { employees { id } }`,
 		})
-		require.JSONEq(t, integration.EmployeesIDData, res.Body)
+		require.Equal(t, integration.EmployeesIDData, res.Body)
 
 		res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { employees { id } }`,
 		})
-		require.JSONEq(t, integration.EmployeesIDData, res.Body)
+		require.Equal(t, integration.EmployeesIDData, res.Body)
 	})
 
 	select {

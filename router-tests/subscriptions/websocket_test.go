@@ -282,9 +282,12 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
+			// Wait for the subscription to be registered and a trigger to be created in the engine.
 			xEnv.WaitForSubscriptionCount(1, time.Second*15)
 			xEnv.WaitForTriggerCount(1, time.Second*15)
-			// Trigger the subscription via NATS (with retry to handle NATS SUB buffering race)
+			// Publish with retry: the first NATS message may be lost because the
+			// subscription pipeline isn't fully wired up yet. NATSPublishUntilReceived
+			// retries until the engine's MessagesSent counter increments.
 			subject := xEnv.GetPubSubName("employeeUpdated.3")
 			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 

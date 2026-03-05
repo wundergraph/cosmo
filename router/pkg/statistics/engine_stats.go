@@ -65,12 +65,22 @@ func (s *EngineStats) GetReport() *UsageReport {
 	return report
 }
 
+// Wait blocks until the predicate returns true for the current stats snapshot,
+// or until ctx is cancelled. Returns the UsageReport that satisfied the predicate,
+// or the last snapshot if the context expired.
+//
+// Implementation: sync.Cond cannot select on context cancellation directly, so we
+// bridge it with a goroutine that loops on cond.Wait() and sends the result on a
+// channel. The caller selects on that channel and ctx.Done(). On cancellation, a
+// Broadcast wakes the goroutine so it can observe ctx.Err() and exit cleanly.
 func (s *EngineStats) Wait(ctx context.Context, predicate func(*UsageReport) bool) *UsageReport {
+	// Fast path: check without blocking.
 	report := s.GetReport()
 	if predicate(report) {
 		return report
 	}
 
+	// Slow path: wait for cond broadcasts from stat mutations.
 	done := make(chan *UsageReport, 1)
 	go func() {
 		s.cond.L.Lock()
@@ -95,7 +105,7 @@ func (s *EngineStats) Wait(ctx context.Context, predicate func(*UsageReport) boo
 	case <-ctx.Done():
 		// Unblock the goroutine waiting on cond.Wait()
 		s.cond.Broadcast()
-		// Wait for goroutine to exit
+		// Wait for goroutine to exit to prevent leak
 		return <-done
 	}
 }

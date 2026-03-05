@@ -1,8 +1,6 @@
 package integration
 
 import (
-	integration "github.com/wundergraph/cosmo/router-tests"
-
 	"encoding/json"
 	"io"
 	"net/http"
@@ -25,7 +23,7 @@ func TestPersistedOperationNotFound(t *testing.T) {
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + integration.CacheHashNotStored + `"}}`),
+			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "0000000000000000000000000000000000000000000000000000000000000000"}}`),
 		})
 		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 		require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)

@@ -256,7 +256,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.Equal(t, integration.EmployeesIDData, res.Body)
 			data, err := os.ReadFile(fp)
 			require.NoError(t, err)
 

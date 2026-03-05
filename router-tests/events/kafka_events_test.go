@@ -103,9 +103,13 @@ func TestKafkaEvents(t *testing.T) {
 				clientRunCh <- client.Run()
 			}()
 
+			// Wait for the subscription to be registered and a trigger to be created in the engine.
 			xEnv.WaitForSubscriptionCount(1, KafkaWaitTimeout)
 			xEnv.WaitForTriggerCount(1, KafkaWaitTimeout)
 
+			// Publish with retry: the first message may be lost because the Kafka consumer
+			// group hasn't finished rebalancing yet. KafkaPublishUntilReceived retries
+			// until the engine's MessagesSent counter increments.
 			xEnv.KafkaPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, 1, KafkaWaitTimeout)
 
 			testenv.AwaitChannelWithT(t, KafkaWaitTimeout, subscriptionArgsCh, func(t *testing.T, args kafkaSubscriptionArgs) {
