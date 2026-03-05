@@ -56,15 +56,21 @@ export function toggleChangeOverridesForAllOperations(
         checkId: req.checkId,
         search: req.search,
       });
-      const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+      const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId, {
+        federatedGraphId: graph.id,
+        federatedGraphName: graph.name,
+        namespaceId: graph.namespaceId,
+        schemaCheckRepo,
+        operationsRepo,
+      });
 
       if (!checkDetails) {
         throw new PublicError(EnumStatusCode.ERR_NOT_FOUND, `Could not find details of requested check`);
       }
 
       for (const affectedOperation of affectedOperations) {
-        const impactingChanges = checkDetails.changes.filter(({ id }) =>
-          affectedOperation.schemaChangeIds.includes(id),
+        const impactingChanges = [...checkDetails.changes, ...checkDetails.composedSchemaBreakingChanges].filter(
+          ({ id }) => affectedOperation.schemaChangeIds.includes(id),
         );
 
         const affectedRows = [];

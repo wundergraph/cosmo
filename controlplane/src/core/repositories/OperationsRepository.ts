@@ -424,7 +424,7 @@ export class OperationsRepository {
 
     const allOperations = affectedOperations.map((operation) => ({
       ...operation,
-      impactingChanges: checkDetails.changes
+      impactingChanges: [...checkDetails.changes, ...checkDetails.composedSchemaBreakingChanges]
         .filter(({ id }) => operation.schemaChangeIds.includes(id))
         .map((c) => ({
           ...c,

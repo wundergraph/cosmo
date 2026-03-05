@@ -1,6 +1,6 @@
 {
   "name": "wgc",
-  "version": "0.105.7",
+  "version": "0.106.0",
   "description": "The official CLI tool to manage the GraphQL Federation Platform Cosmo",
   "type": "module",
   "main": "dist/src/index.js",
@@ -28,7 +28,8 @@
     "test": "pnpm lint && vitest run test/",
     "coverage": "vitest run test/ --coverage",
     "lint": "eslint --cache --ext .ts,.mjs,.cjs . && prettier -c src",
-    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && prettier --write -c src",
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && pnpm format",
+    "format": "prettier -w -c .",
     "e2e": "bun test e2e/"
   },
   "keywords": [

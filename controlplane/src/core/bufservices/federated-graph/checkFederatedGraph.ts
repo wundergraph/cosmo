@@ -124,6 +124,7 @@ export function checkFederatedGraph(
       nonBreakingChanges: 0,
       graphPruneErrors: 0,
       graphPruneWarnings: 0,
+      composedSchemaBreakingChanges: 0,
     };
 
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];

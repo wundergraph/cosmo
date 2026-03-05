@@ -33,7 +33,8 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "copy-html": "cp dist/index.html ../router/internal/graphiql/graphiql.html",
-    "build:router": "VITE_SINGLE_FILE_OUTPUT=true pnpm build && pnpm copy-html"
+    "build:router": "VITE_SINGLE_FILE_OUTPUT=true pnpm build && pnpm copy-html",
+    "format": "prettier -w -c ."
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
