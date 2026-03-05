@@ -1498,7 +1498,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 	if testConfig.Plugins.RegistryURL != "" {
 		if strings.HasPrefix(testConfig.Plugins.RegistryURL, "http://") || strings.HasPrefix(testConfig.Plugins.RegistryURL, "https://") {
-			t.Fatal("RegistryURL must be a host-only OCI registry address (no http:// or https:// scheme)")
+			return nil, fmt.Errorf("RegistryURL must be a host-only OCI registry address (no http:// or https:// scheme), got %q", testConfig.Plugins.RegistryURL)
 		}
 		pluginsCfg.Registry = config.PluginRegistryConfiguration{
 			URL: testConfig.Plugins.RegistryURL,
