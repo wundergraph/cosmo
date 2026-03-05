@@ -1791,8 +1791,13 @@ func TestFlakyNatsEvents(t *testing.T) {
 
 			subscribePayload := []byte(`{"query":"subscription { filteredEmployeeUpdated(id: 1) { id details { forename surname } } }"}`)
 
+			// Use a context with timeout to prevent SSE reads from blocking
+			// for the full 8-minute Go test timeout if a message is lost.
+			ctx, cancel := context.WithTimeout(xEnv.Context, NatsWaitTimeout)
+			defer cancel()
+
 			client := http.Client{}
-			req, gErr := http.NewRequest(http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
+			req, gErr := http.NewRequestWithContext(ctx, http.MethodPost, xEnv.GraphQLRequestURL(), bytes.NewReader(subscribePayload))
 			require.NoError(t, gErr)
 
 			req.Header.Set("Content-Type", "application/json")
