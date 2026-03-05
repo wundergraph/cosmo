@@ -26,7 +26,7 @@ export default class AccessTokenAuthenticator {
   public async authenticate(accessToken: string, organizationSlug: string | null): Promise<AccessTokenAuthContext> {
     const userInfoData = await this.authUtils.getUserInfo(accessToken);
 
-    const orgSlug = organizationSlug || userInfoData.groups[0].split('/')[1];
+    const orgSlug = organizationSlug || userInfoData.groups?.[0]?.split('/')?.[1];
     if (!orgSlug) {
       throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Cannot determine organization slug');
     }
