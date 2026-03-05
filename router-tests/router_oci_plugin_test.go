@@ -97,9 +97,11 @@ func TestOCIPlugin_Restart(t *testing.T) {
 		}, 5*time.Second, 1*time.Second)
 
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			response := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			response, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
 				Query: `query { projects { id name } }`,
 			})
+			require.NoError(c, err)
+			require.Equal(c, 200, response.Response.StatusCode)
 			require.Equal(c, `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
 		}, 20*time.Second, 2*time.Second)
 	})
