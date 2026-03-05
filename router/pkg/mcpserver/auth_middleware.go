@@ -40,16 +40,16 @@ type MCPScopeConfig struct {
 
 // MCPAuthMiddleware creates authentication middleware for MCP tools and resources
 type MCPAuthMiddleware struct {
-	authenticator       authentication.Authenticator
-	enabled             bool
-	resourceMetadataURL string
-	scopes              MCPScopeConfig
-	scopeChallengeMode  string // "required_only" or "required_and_existing"
+	authenticator                    authentication.Authenticator
+	enabled                          bool
+	resourceMetadataURL              string
+	scopes                           MCPScopeConfig
+	scopeChallengeIncludeTokenScopes bool
 }
 
 // NewMCPAuthMiddleware creates a new authentication middleware using the existing
 // authentication infrastructure from the router
-func NewMCPAuthMiddleware(tokenDecoder authentication.TokenDecoder, enabled bool, resourceMetadataURL string, scopes MCPScopeConfig, scopeChallengeMode string) (*MCPAuthMiddleware, error) {
+func NewMCPAuthMiddleware(tokenDecoder authentication.TokenDecoder, enabled bool, resourceMetadataURL string, scopes MCPScopeConfig, scopeChallengeIncludeTokenScopes bool) (*MCPAuthMiddleware, error) {
 	if tokenDecoder == nil {
 		return nil, fmt.Errorf("token decoder must be provided")
 	}
@@ -66,16 +66,12 @@ func NewMCPAuthMiddleware(tokenDecoder authentication.TokenDecoder, enabled bool
 		return nil, fmt.Errorf("failed to create authenticator: %w", err)
 	}
 
-	if scopeChallengeMode == "" {
-		scopeChallengeMode = "required_and_existing"
-	}
-
 	return &MCPAuthMiddleware{
-		authenticator:       authenticator,
-		enabled:             enabled,
-		resourceMetadataURL: resourceMetadataURL,
-		scopes:              scopes,
-		scopeChallengeMode:  scopeChallengeMode,
+		authenticator:                    authenticator,
+		enabled:                          enabled,
+		resourceMetadataURL:              resourceMetadataURL,
+		scopes:                           scopes,
+		scopeChallengeIncludeTokenScopes: scopeChallengeIncludeTokenScopes,
 	}, nil
 }
 
@@ -216,16 +212,13 @@ func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, err 
 // sendInsufficientScopeResponse sends a 403 Forbidden response per RFC 6750 Section 3.1
 // when the token is valid but lacks required scopes.
 //
-// The scope parameter content depends on scopeChallengeMode:
-//   - "required_only": only the scopes the operation needs (RFC 6750 strict)
-//   - "required_and_existing": token's existing scopes + required scopes (SDK-compatible)
+// When scopeChallengeIncludeTokenScopes is false (default), only the scopes required for the
+// operation are returned (RFC 6750 strict). When true, the token's existing scopes are unioned
+// with the required scopes to work around client SDKs that replace rather than accumulate scopes.
 func (m *MCPAuthMiddleware) sendInsufficientScopeResponse(w http.ResponseWriter, operationScopes []string, claims authentication.Claims, err error) {
-	var challengeScopes []string
+	challengeScopes := operationScopes
 
-	switch m.scopeChallengeMode {
-	case "required_only":
-		challengeScopes = operationScopes
-	default: // "required_and_existing"
+	if m.scopeChallengeIncludeTokenScopes {
 		// Union of token's existing scopes + operation's required scopes
 		existing := extractScopes(claims)
 		seen := make(map[string]struct{})

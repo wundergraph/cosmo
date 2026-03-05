@@ -268,7 +268,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 			ToolsList:  options.OAuthConfig.Scopes.ToolsList,
 			ToolsCall:  options.OAuthConfig.Scopes.ToolsCall,
 		}
-		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, true, resourceMetadataURL, scopeConfig, options.OAuthConfig.ScopeChallengeMode)
+		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, true, resourceMetadataURL, scopeConfig, options.OAuthConfig.ScopeChallengeIncludeTokenScopes)
 		if err != nil {
 			cancel() // Clean up the context if initialization fails
 			return nil, fmt.Errorf("failed to create auth middleware: %w", err)

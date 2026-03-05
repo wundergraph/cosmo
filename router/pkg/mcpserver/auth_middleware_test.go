@@ -60,7 +60,7 @@ func TestNewMCPAuthMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(tt.decoder, tt.enabled, "http://localhost:5025/.well-known/oauth-protected-resource/mcp", MCPScopeConfig{}, "")
+			middleware, err := NewMCPAuthMiddleware(tt.decoder, tt.enabled, "http://localhost:5025/.well-known/oauth-protected-resource/mcp", MCPScopeConfig{}, false)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, middleware)
@@ -244,7 +244,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 			wantWWWAuthenticatePrefix: `Bearer realm="mcp", scope="mcp:connect", resource_metadata="` + testMetadataURL + `"`,
 		},
 		{
-			name:   "insufficient init scopes - 403 required_and_existing includes token scopes",
+			name:   "insufficient init scopes - 403 with include token scopes enabled",
 			scopes: MCPScopeConfig{Initialize: []string{"mcp:connect"}},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
@@ -297,7 +297,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			decoder := tt.setupDecoder()
-			middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, tt.scopes, "required_and_existing")
+			middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, tt.scopes, true)
 			assert.NoError(t, err)
 
 			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -353,71 +353,71 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
-		token          string
-		body           string
-		challengeMode  string
-		wantStatusCode int
-		wantScope      string // expected scope value in WWW-Authenticate, empty if not checked
+		name                             string
+		token                            string
+		body                             string
+		scopeChallengeIncludeTokenScopes bool
+		wantStatusCode                   int
+		wantScope                        string // expected scope value in WWW-Authenticate, empty if not checked
 	}{
 		{
-			name:           "tools/list with insufficient scopes - required_only returns operation scopes only",
-			token:          "connect-only",
-			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
-			challengeMode:  "required_only",
-			wantStatusCode: 403,
-			wantScope:      `scope="mcp:tools:read"`,
+			name:                             "tools/list with insufficient scopes - default returns operation scopes only",
+			token:                            "connect-only",
+			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
+			scopeChallengeIncludeTokenScopes: false,
+			wantStatusCode:                   403,
+			wantScope:                        `scope="mcp:tools:read"`,
 		},
 		{
-			name:           "tools/list with insufficient scopes - required_and_existing includes token scopes",
-			token:          "connect-only",
-			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
-			challengeMode:  "required_and_existing",
-			wantStatusCode: 403,
-			wantScope:      `scope="mcp:connect mcp:tools:read"`,
+			name:                             "tools/list with insufficient scopes - include token scopes",
+			token:                            "connect-only",
+			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
+			scopeChallengeIncludeTokenScopes: true,
+			wantStatusCode:                   403,
+			wantScope:                        `scope="mcp:connect mcp:tools:read"`,
 		},
 		{
-			name:           "tools/list with sufficient scopes succeeds",
-			token:          "connect-and-read",
-			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
-			challengeMode:  "required_only",
-			wantStatusCode: 200,
+			name:                             "tools/list with sufficient scopes succeeds",
+			token:                            "connect-and-read",
+			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
+			scopeChallengeIncludeTokenScopes: false,
+			wantStatusCode:                   200,
 		},
 		{
-			name:           "tools/call with insufficient scopes - required_only returns operation scopes only",
-			token:          "connect-and-read",
-			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
-			challengeMode:  "required_only",
-			wantStatusCode: 403,
-			wantScope:      `scope="mcp:tools:write"`,
+			name:                             "tools/call with insufficient scopes - default returns operation scopes only",
+			token:                            "connect-and-read",
+			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
+			scopeChallengeIncludeTokenScopes: false,
+			wantStatusCode:                   403,
+			wantScope:                        `scope="mcp:tools:write"`,
 		},
 		{
-			name:           "tools/call with insufficient scopes - required_and_existing includes token scopes",
-			token:          "connect-and-read",
-			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
-			challengeMode:  "required_and_existing",
-			wantStatusCode: 403,
-			wantScope:      `scope="mcp:connect mcp:tools:read mcp:tools:write"`,
+			name:                             "tools/call with insufficient scopes - include token scopes",
+			token:                            "connect-and-read",
+			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
+			scopeChallengeIncludeTokenScopes: true,
+			wantStatusCode:                   403,
+			wantScope:                        `scope="mcp:connect mcp:tools:read mcp:tools:write"`,
 		},
 		{
-			name:           "tools/call with all scopes succeeds",
-			token:          "all-scopes",
-			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
-			challengeMode:  "required_only",
-			wantStatusCode: 200,
+			name:                             "tools/call with all scopes succeeds",
+			token:                            "all-scopes",
+			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_graphql"}}`,
+			scopeChallengeIncludeTokenScopes: false,
+			wantStatusCode:                   200,
 		},
 		{
-			name:           "unknown method with no scope requirements succeeds",
-			token:          "connect-only",
-			body:           `{"jsonrpc":"2.0","id":1,"method":"ping"}`,
-			challengeMode:  "required_only",
-			wantStatusCode: 200,
+			name:                             "unknown method with no scope requirements succeeds",
+			token:                            "connect-only",
+			body:                             `{"jsonrpc":"2.0","id":1,"method":"ping"}`,
+			scopeChallengeIncludeTokenScopes: false,
+			wantStatusCode:                   200,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(validDecoder, true, testMetadataURL, scopes, tt.challengeMode)
+			middleware, err := NewMCPAuthMiddleware(validDecoder, true, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes)
 			assert.NoError(t, err)
 
 			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

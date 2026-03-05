@@ -1044,11 +1044,12 @@ type MCPOAuthConfiguration struct {
 	AuthorizationServerURL string              `yaml:"authorization_server_url,omitempty" env:"AUTHORIZATION_SERVER_URL"`
 	// Scopes configures which OAuth scopes are required for different MCP operations.
 	Scopes MCPOAuthScopesConfiguration `yaml:"scopes,omitempty"`
-	// ScopeChallenge controls how the server builds the scope parameter in 403 insufficient_scope responses.
-	//   "required_only"         - Only the scopes the operation needs (RFC 6750 strict)
-	//   "required_and_existing" - Token's existing scopes + required scopes (works around SDK scope accumulation bugs)
-	// Default: "required_and_existing"
-	ScopeChallengeMode string `yaml:"scope_challenge_mode,omitempty" envDefault:"required_and_existing" env:"SCOPE_CHALLENGE_MODE"`
+	// ScopeChallengeIncludeTokenScopes controls whether the server includes the token's existing scopes
+	// in the scope parameter of 403 insufficient_scope responses.
+	// When false (default), only the scopes required for the operation are returned (RFC 6750 strict).
+	// When true, the token's existing scopes are unioned with the required scopes.
+	// This is a workaround for MCP client SDKs that replace rather than accumulate scopes.
+	ScopeChallengeIncludeTokenScopes bool `yaml:"scope_challenge_include_token_scopes" envDefault:"false" env:"SCOPE_CHALLENGE_INCLUDE_TOKEN_SCOPES"`
 }
 
 // MCPOAuthScopesConfiguration defines which scopes are required for different MCP operations.

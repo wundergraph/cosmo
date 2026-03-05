@@ -2369,11 +2369,10 @@
                 }
               }
             },
-            "scope_challenge_mode": {
-              "type": "string",
-              "default": "required_and_existing",
-              "enum": ["required_only", "required_and_existing"],
-              "description": "Controls how the server builds the scope parameter in 403 insufficient_scope responses. 'required_only' returns only the scopes the operation needs (RFC 6750 strict). 'required_and_existing' returns the token's existing scopes plus required scopes (works around client SDK scope accumulation bugs). Default: 'required_and_existing'."
+            "scope_challenge_include_token_scopes": {
+              "type": "boolean",
+              "default": false,
+              "description": "When true, includes the token's existing scopes in the scope parameter of 403 insufficient_scope responses (workaround for MCP client SDKs that replace rather than accumulate scopes). When false (default), only the scopes required for the operation are returned (RFC 6750 strict)."
             },
             "jwks": {
               "type": "array",

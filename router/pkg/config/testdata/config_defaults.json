@@ -152,7 +152,7 @@
         "ToolsList": null,
         "ToolsCall": null
       },
-      "ScopeChallengeMode": "required_and_existing"
+      "ScopeChallengeIncludeTokenScopes": false
     }
   },
   "ConnectRPC": {
