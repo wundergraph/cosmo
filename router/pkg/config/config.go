@@ -148,9 +148,9 @@ type Metrics struct {
 }
 
 type MetricsLogExporter struct {
-	Enabled        bool       `yaml:"enabled" envDefault:"false" env:"METRICS_OTLP_LOG_EXPORTER_ENABLED"`
-	ExcludeMetrics RegExArray `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_LOG_EXPORTER_EXCLUDE_METRICS"`
-	IncludeMetrics RegExArray `yaml:"include_metrics,omitempty" env:"METRICS_OTLP_LOG_EXPORTER_INCLUDE_METRICS"`
+	Enabled        bool       `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	ExcludeMetrics RegExArray `yaml:"exclude_metrics,omitempty" env:"EXCLUDE_METRICS"`
+	IncludeMetrics RegExArray `yaml:"include_metrics,omitempty" env:"INCLUDE_METRICS"`
 }
 
 type MetricsOTLP struct {
@@ -164,7 +164,7 @@ type MetricsOTLP struct {
 	ExcludeMetrics      RegExArray            `yaml:"exclude_metrics,omitempty" env:"METRICS_OTLP_EXCLUDE_METRICS"`
 	ExcludeMetricLabels RegExArray            `yaml:"exclude_metric_labels,omitempty" env:"METRICS_OTLP_EXCLUDE_METRIC_LABELS"`
 	Exporters           []MetricsOTLPExporter `yaml:"exporters"`
-	LogExporter         MetricsLogExporter    `yaml:"log_exporter"`
+	LogExporter         MetricsLogExporter    `yaml:"log_exporter" envPrefix:"METRICS_OTLP_LOG_EXPORTER_"`
 }
 
 type Telemetry struct {
