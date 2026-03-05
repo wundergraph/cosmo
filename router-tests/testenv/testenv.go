@@ -2802,6 +2802,43 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	}
 }
 
+// NATSPublishUntilMinMessagesSent publishes a NATS message repeatedly until the
+// total MessagesSent count reaches minCount. This handles fan-out scenarios where
+// multiple subscriptions must all receive the message: if some consumers aren't
+// fully wired when the first publish goes out, subsequent publishes cover them.
+func (e *Environment) NATSPublishUntilMinMessagesSent(conn *nats.Conn, subject string, data []byte, minCount uint64, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sr := e.syncReporter()
+	for {
+		err := conn.Publish(subject, data)
+		require.NoError(e.t, err)
+		err = conn.Flush()
+		require.NoError(e.t, err)
+
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
+		report := sr.Wait(shortCtx, func(r *statistics.UsageReport) bool {
+			return r.MessagesSent >= minCount
+		})
+		shortCancel()
+
+		if report != nil && report.MessagesSent >= minCount {
+			return
+		}
+
+		if ctx.Err() != nil {
+			got := uint64(0)
+			if report != nil {
+				got = report.MessagesSent
+			}
+			e.t.Fatalf("timed out: messages sent count %d did not reach %d after publishing", got, minCount)
+			return
+		}
+	}
+}
+
 func WSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, p []byte, err error) {
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 

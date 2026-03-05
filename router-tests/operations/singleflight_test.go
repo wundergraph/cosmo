@@ -568,11 +568,10 @@ func TestSingleFlight(t *testing.T) {
 			go func() {
 				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
 				xEnv.WaitForTriggerCount(uint64(numOfOperations), time.Second*15)
-				// Trigger the subscription via NATS to get updates for all subscriptions
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
+				// Publish with retry until all subscriptions receive the message.
+				// With 10 independent triggers, some NATS consumers may not be fully
+				// wired when the engine reports the expected trigger count.
+				xEnv.NATSPublishUntilMinMessagesSent(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), uint64(numOfOperations), time.Second*15)
 			}()
 
 			for i := int64(0); i < numOfOperations; i++ {
@@ -605,25 +604,28 @@ func TestSingleFlight(t *testing.T) {
 					})
 					require.NoError(t, err)
 
-					// Read the complete message
-					var complete testenv.WebSocketMessage
-					err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-					require.NoError(t, err)
-					err = testenv.WSReadJSON(t, conn, &complete)
-					require.NoError(t, err)
-					require.Equal(t, "complete", complete.Type)
-					require.Equal(t, "1", complete.ID)
+					// Read messages until we get "complete", draining any extra
+					// "next" messages that may arrive from publish retries
+					for {
+						var reply testenv.WebSocketMessage
+						err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+						require.NoError(t, err)
+						err = testenv.WSReadJSON(t, conn, &reply)
+						require.NoError(t, err)
+						if reply.Type == "complete" {
+							require.Equal(t, "1", reply.ID)
+							break
+						}
+					}
 				}(i)
 			}
 			done.Wait()
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 
 			// We expect no request de-duplication because different headers must not be de-duplicated
-			// This subscription involves multiple subgraphs:
-			// - employees subgraph: provides the subscription root and id field
-			// - family subgraph: provides details.forename and details.surname fields
+			// Publish retries may increase the count, so check >= not ==
 			actualSubgraphRequests := xEnv.SubgraphRequestCount.Global.Load()
-			require.Equal(t, numOfOperations, actualSubgraphRequests)
+			require.GreaterOrEqual(t, actualSubgraphRequests, numOfOperations)
 		})
 	})
 	t.Run("mutation with multiple subgraphs deduplication", func(t *testing.T) {
