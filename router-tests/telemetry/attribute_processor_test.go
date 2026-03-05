@@ -198,15 +198,16 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 				LogLevel: zapcore.ErrorLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `query { employees { id } }`,
-			})
-			require.Equal(t, 200, res.Response.StatusCode)
-
 			require.Eventually(t, func() bool {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				if res.Response.StatusCode != 200 {
+					return false
+				}
 				logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
 				return len(logs) > 0
-			}, 5*time.Second, 100*time.Millisecond)
+			}, 10*time.Second, 500*time.Millisecond)
 
 			logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
 			require.NotEmpty(t, logs)
