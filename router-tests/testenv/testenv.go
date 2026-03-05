@@ -1315,12 +1315,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableNetPoll:            true,
-		EnableSingleFlight:       true,
-		EnableInboundRequestDeduplication:      false,
-		EnableRequestTracing:     true,
-		EnableNormalizationCache: true,
-		NormalizationCacheSize:   1024,
+		EnableNetPoll:                     true,
+		EnableSingleFlight:                true,
+		EnableInboundRequestDeduplication: false,
+		EnableRequestTracing:              true,
+		EnableNormalizationCache:          true,
+		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
 			PrintQueryPlans:            false,
@@ -2281,6 +2281,17 @@ func (e *Environment) MakeGraphQLMultipartRequest(method string, body io.Reader)
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "multipart/mixed;subscriptionSpec=\"1.0\", application/json")
+	req.Header.Set("Connection", "keep-alive")
+
+	return req
+}
+
+func (e *Environment) MakeGraphQLDeferRequest(method string, body io.Reader) *http.Request {
+	req, err := http.NewRequest(method, e.GraphQLRequestURL(), body)
+	require.NoError(e.t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "multipart/mixed;deferSpec=20220824, application/json")
 	req.Header.Set("Connection", "keep-alive")
 
 	return req

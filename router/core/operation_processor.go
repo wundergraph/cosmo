@@ -111,23 +111,23 @@ type OperationProcessorOptions struct {
 	PersistedOperationClient            *persistedoperation.Client
 	AutomaticPersistedOperationCacheTtl int
 
-	EnablePersistedOperationsCache                   bool
-	PersistedOpsNormalizationCache                   *ristretto.Cache[uint64, NormalizationCacheEntry]
-	NormalizationCache                               *ristretto.Cache[uint64, NormalizationCacheEntry]
-	QueryDepthCache                                  *ristretto.Cache[uint64, ComplexityCacheEntry]
-	VariablesNormalizationCache                      *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
-	RemapVariablesCache                              *ristretto.Cache[uint64, RemapVariablesCacheEntry]
-	ValidationCache                                  *ristretto.Cache[uint64, bool]
-	OperationHashCache                               *ristretto.Cache[uint64, string]
-	ParseKitPoolSize                                 int
-	IntrospectionEnabled                             bool
-	ApolloCompatibilityFlags                         config.ApolloCompatibilityFlags
-	ApolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
-	DisableExposingVariablesContentOnValidationError          bool
-	RelaxSubgraphOperationFieldSelectionMergingNullability    bool
-	ComplexityLimits                                          *config.ComplexityLimits
-	ParserTokenizerLimits                                     astparser.TokenizerLimits
-	OperationNameLengthLimit                                  int
+	EnablePersistedOperationsCache                         bool
+	PersistedOpsNormalizationCache                         *ristretto.Cache[uint64, NormalizationCacheEntry]
+	NormalizationCache                                     *ristretto.Cache[uint64, NormalizationCacheEntry]
+	QueryDepthCache                                        *ristretto.Cache[uint64, ComplexityCacheEntry]
+	VariablesNormalizationCache                            *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
+	RemapVariablesCache                                    *ristretto.Cache[uint64, RemapVariablesCacheEntry]
+	ValidationCache                                        *ristretto.Cache[uint64, bool]
+	OperationHashCache                                     *ristretto.Cache[uint64, string]
+	ParseKitPoolSize                                       int
+	IntrospectionEnabled                                   bool
+	ApolloCompatibilityFlags                               config.ApolloCompatibilityFlags
+	ApolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
+	DisableExposingVariablesContentOnValidationError       bool
+	RelaxSubgraphOperationFieldSelectionMergingNullability bool
+	ComplexityLimits                                       *config.ComplexityLimits
+	ParserTokenizerLimits                                  astparser.TokenizerLimits
+	OperationNameLengthLimit                               int
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -1413,10 +1413,10 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 }
 
 type parseKitOptions struct {
-	apolloCompatibilityFlags                                  config.ApolloCompatibilityFlags
-	apolloRouterCompatibilityFlags                            config.ApolloRouterCompatibilityFlags
-	disableExposingVariablesContentOnValidationError          bool
-	relaxSubgraphOperationFieldSelectionMergingNullability    bool
+	apolloCompatibilityFlags                               config.ApolloCompatibilityFlags
+	apolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
+	disableExposingVariablesContentOnValidationError       bool
+	relaxSubgraphOperationFieldSelectionMergingNullability bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
@@ -1431,6 +1431,7 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			astnormalization.WithInlineFragmentSpreads(),
 			astnormalization.WithRemoveFragmentDefinitions(),
 			astnormalization.WithRemoveUnusedVariables(),
+			astnormalization.WithInlineDefer(),
 		),
 		variablesNormalizer: astnormalization.NewVariablesNormalizer(),
 		variablesRemapper:   astnormalization.NewVariablesMapper(),
@@ -1477,9 +1478,9 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		operationNameLengthLimit: opts.OperationNameLengthLimit,
 		complexityLimits:         opts.ComplexityLimits,
 		parseKitOptions: &parseKitOptions{
-			apolloCompatibilityFlags:                              opts.ApolloCompatibilityFlags,
-			apolloRouterCompatibilityFlags:                        opts.ApolloRouterCompatibilityFlags,
-			disableExposingVariablesContentOnValidationError:      opts.DisableExposingVariablesContentOnValidationError,
+			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
+			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
+			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
 			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		},
 	}

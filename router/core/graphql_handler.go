@@ -270,6 +270,67 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		}
+	case *plan.DeferResponsePlan:
+		var (
+			writer resolve.DeferResponseWriter
+			ok     bool
+		)
+		h.setDebugCacheHeaders(w, reqCtx.operation)
+
+		defer propagateSubgraphErrors(resolveCtx)
+		resolveCtx, writer, ok = GetDeferResponseWriter(resolveCtx, r, w)
+		if !ok {
+			reqCtx.logger.Error("unable to get defer response writer", zap.Error(errCouldNotFlushResponse))
+			trackFinalResponseError(r.Context(), errCouldNotFlushResponse)
+			writeRequestErrors(writeRequestErrorsParams{
+				request:           r,
+				writer:            w,
+				statusCode:        http.StatusInternalServerError,
+				requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotFlushResponse),
+				logger:            reqCtx.logger,
+				headerPropagation: h.headerPropagation,
+			})
+			return
+		}
+
+		if !resolveCtx.ExecutionOptions.SkipLoader {
+			h.engineStats.ConnectionsInc()
+			defer h.engineStats.ConnectionsDec()
+		}
+
+		_, err := h.executor.Resolver.ResolveGraphQLDeferResponse(resolveCtx, p.Response, writer)
+		reqCtx.dataSourceNames = getSubgraphNames(p.Response.Response.DataSources)
+
+		if err != nil {
+			if errors.Is(err, context.Canceled) {
+				reqCtx.logger.Debug("context canceled: unable to resolve defer response", zap.Error(err))
+				trackFinalResponseError(r.Context(), err)
+				return
+			} else if errors.Is(err, ErrUnauthorized) {
+				trackFinalResponseError(resolveCtx.Context(), err)
+				writeRequestErrors(writeRequestErrorsParams{
+					request:           r,
+					writer:            w,
+					statusCode:        http.StatusUnauthorized,
+					requestErrors:     graphqlerrors.RequestErrorsFromError(err),
+					logger:            reqCtx.logger,
+					headerPropagation: h.headerPropagation,
+				})
+				return
+			}
+
+			reqCtx.logger.Error("unable to resolve defer response", zap.Error(err))
+			trackFinalResponseError(resolveCtx.Context(), err)
+			writeRequestErrors(writeRequestErrorsParams{
+				request:           r,
+				writer:            w,
+				statusCode:        http.StatusInternalServerError,
+				requestErrors:     graphqlerrors.RequestErrorsFromError(errCouldNotResolveResponse),
+				logger:            reqCtx.logger,
+				headerPropagation: h.headerPropagation,
+			})
+			return
+		}
 	default:
 		reqCtx.logger.Error("unsupported plan kind")
 		trackFinalResponseError(resolveCtx.Context(), errOperationPlanUnsupported)
