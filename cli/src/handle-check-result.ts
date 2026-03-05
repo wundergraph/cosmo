@@ -117,26 +117,16 @@ class JsonOutputBuilder {
   addBreakingChanges(changes: SchemaChange[]): this {
     this.data.changes = {
       ...this.data.changes,
-      breaking: {
-        ...(this.data.changes?.breaking ?? []),
-        ...changes,
-      },
-      nonBreaking: {
-        ...(this.data.changes?.nonBreaking ?? []),
-      },
+      breaking: [...(this.data.changes?.breaking ?? []), ...changes],
+      nonBreaking: [...(this.data.changes?.nonBreaking ?? [])],
     };
     return this;
   }
 
   addNonBreakingChanges(changes: SchemaChange[]): this {
     this.data.changes = {
-      breaking: {
-        ...(this.data.changes?.breaking ?? []),
-      },
-      nonBreaking: {
-        ...(this.data.changes?.nonBreaking ?? []),
-        ...changes,
-      },
+      breaking: [...(this.data.changes?.breaking ?? [])],
+      nonBreaking: [...(this.data.changes?.nonBreaking ?? []), ...changes],
     };
     return this;
   }
@@ -150,13 +140,8 @@ class JsonOutputBuilder {
     this.data.composition = {
       ...this.data.composition,
       success: false,
-      errors: {
-        ...(this.data.composition?.errors ?? []),
-        ...errors,
-      },
-      warnings: {
-        ...(this.data.composition?.warnings ?? []),
-      },
+      errors: [...(this.data.composition?.errors ?? []), ...errors],
+      warnings: [...(this.data.composition?.warnings ?? [])],
     };
     return this;
   }
@@ -165,13 +150,8 @@ class JsonOutputBuilder {
     this.data.composition = {
       ...this.data.composition,
       success: false,
-      errors: {
-        ...(this.data.composition?.errors ?? []),
-      },
-      warnings: {
-        ...(this.data.composition?.warnings ?? []),
-        ...warnings,
-      },
+      errors: [...(this.data.composition?.errors ?? [])],
+      warnings: [...(this.data.composition?.warnings ?? []), ...warnings],
     };
     return this;
   }
@@ -180,13 +160,8 @@ class JsonOutputBuilder {
     this.data.lint = {
       ...this.data.lint,
       success: false,
-      errors: {
-        ...(this.data.lint?.errors ?? []),
-        ...errors,
-      },
-      warnings: {
-        ...(this.data.lint?.warnings ?? []),
-      },
+      errors: [...(this.data.lint?.errors ?? []), ...errors],
+      warnings: [...(this.data.lint?.warnings ?? [])],
     };
     return this;
   }
@@ -195,13 +170,8 @@ class JsonOutputBuilder {
     this.data.lint = {
       ...this.data.lint,
       success: false,
-      errors: {
-        ...(this.data.lint?.errors ?? []),
-      },
-      warnings: {
-        ...(this.data.lint?.warnings ?? []),
-        ...warnings,
-      },
+      errors: [...(this.data.lint?.errors ?? [])],
+      warnings: [...(this.data.lint?.warnings ?? []), ...warnings],
     };
     return this;
   }
@@ -211,13 +181,8 @@ class JsonOutputBuilder {
       ...this.data.graphPrune,
       success: false,
       isLinkedToTargetSubgraph: this.data.graphPrune?.isLinkedToTargetSubgraph ?? false,
-      errors: {
-        ...(this.data.graphPrune?.errors ?? []),
-        ...errors,
-      },
-      warnings: {
-        ...(this.data.graphPrune?.warnings ?? []),
-      },
+      errors: [...(this.data.graphPrune?.errors ?? []), ...errors],
+      warnings: [...(this.data.graphPrune?.warnings ?? [])],
     };
     return this;
   }
@@ -227,13 +192,8 @@ class JsonOutputBuilder {
       ...this.data.graphPrune,
       success: false,
       isLinkedToTargetSubgraph: this.data.graphPrune?.isLinkedToTargetSubgraph ?? false,
-      errors: {
-        ...(this.data.graphPrune?.errors ?? []),
-      },
-      warnings: {
-        ...(this.data.graphPrune?.warnings ?? []),
-        ...warnings,
-      },
+      errors: [...(this.data.graphPrune?.errors ?? [])],
+      warnings: [...(this.data.graphPrune?.warnings ?? []), ...warnings],
     };
     return this;
   }
@@ -243,12 +203,8 @@ class JsonOutputBuilder {
       ...this.data.graphPrune,
       success: false,
       isLinkedToTargetSubgraph: isLinked,
-      errors: {
-        ...(this.data.graphPrune?.errors ?? []),
-      },
-      warnings: {
-        ...(this.data.graphPrune?.warnings ?? []),
-      },
+      errors: [...(this.data.graphPrune?.errors ?? [])],
+      warnings: [...(this.data.graphPrune?.warnings ?? [])],
     };
     return this;
   }

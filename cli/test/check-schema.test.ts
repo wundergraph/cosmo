@@ -551,6 +551,8 @@ describe('json output', () => {
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('error');
     expect(output.changes).toBeDefined();
+    expect(Array.isArray(output.changes?.breaking)).toBe(true);
+    expect(Array.isArray(output.changes?.nonBreaking)).toBe(true);
     expect(output.operationUsageStats).toBeDefined();
   });
 
@@ -567,6 +569,7 @@ describe('json output', () => {
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
     expect(output.changes).toBeDefined();
+    expect(Array.isArray(output.changes?.nonBreaking)).toBe(true);
   });
 
   test('composition errors outputs JSON with error status and composition.errors populated', async () => {
@@ -585,6 +588,8 @@ describe('json output', () => {
     expect(output.status).toBe('error');
     expect(output.composition?.success).toBe(false);
     expect(output.composition).toBeDefined();
+    expect(Array.isArray(output.composition?.errors)).toBe(true);
+    expect(Array.isArray(output.composition?.warnings)).toBe(true);
   });
 
   test('composition warnings outputs JSON with success status and composition.warnings populated', async () => {
@@ -603,6 +608,8 @@ describe('json output', () => {
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
     expect(output.composition).toBeDefined();
+    expect(Array.isArray(output.composition?.errors)).toBe(true);
+    expect(Array.isArray(output.composition?.warnings)).toBe(true);
   });
 
   test('lint errors outputs JSON with error status and lint.errors populated', async () => {
@@ -625,6 +632,8 @@ describe('json output', () => {
     expect(output.status).toBe('error');
     expect(output.lint?.success).toBe(false);
     expect(output.lint).toBeDefined();
+    expect(Array.isArray(output.lint?.errors)).toBe(true);
+    expect(Array.isArray(output.lint?.warnings)).toBe(true);
   });
 
   test('lint warnings outputs JSON with success status and lint.warnings populated', async () => {
@@ -646,6 +655,8 @@ describe('json output', () => {
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
     expect(output.lint).toBeDefined();
+    expect(Array.isArray(output.lint?.errors)).toBe(true);
+    expect(Array.isArray(output.lint?.warnings)).toBe(true);
   });
 
   test('graph pruning errors outputs JSON with error status and graphPrune errors', async () => {
@@ -669,6 +680,8 @@ describe('json output', () => {
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('error');
     expect(output.graphPrune?.success).toBe(false);
+    expect(Array.isArray(output.graphPrune?.errors)).toBe(true);
+    expect(Array.isArray(output.graphPrune?.warnings)).toBe(true);
   });
 
   test('graph pruning warnings outputs JSON with success status', async () => {
@@ -692,6 +705,8 @@ describe('json output', () => {
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
     expect(output.graphPrune).toBeDefined();
+    expect(Array.isArray(output.graphPrune?.errors)).toBe(true);
+    expect(Array.isArray(output.graphPrune?.warnings)).toBe(true);
   });
 
   test('linked traffic check failure outputs JSON with traffic.isLinkedToTargetSubgraph true', async () => {
