@@ -2579,6 +2579,7 @@ func (e *Environment) syncReporter() *SyncReporter {
 	sr, ok := e.Router.EngineStats.(*SyncReporter)
 	if !ok {
 		e.t.Fatal("EngineStats is not a *SyncReporter; test environment misconfigured")
+		return nil
 	}
 	return sr
 }
