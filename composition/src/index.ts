@@ -3,6 +3,7 @@ export * from './buildASTSchema/buildASTSchema';
 export * from './errors/errors';
 export * from './errors/types';
 export * from './federation/federation';
+export * from './federation/params';
 export * from './federation/types';
 export * from './normalization/normalization';
 export * from './normalization/params';

@@ -1,17 +1,17 @@
-import { ContractName, DirectiveName, FieldName, SubgraphName, TypeName } from '../../types/types';
-import {
+import type { ContractName, DirectiveName, FieldName, SubgraphName, TypeName } from '../../types/types';
+import type {
   AuthorizationData,
   EntityData,
   EntityInterfaceFederationData,
   InputObjectDefinitionData,
   PersistedDirectivesData,
 } from '../../schema-building/types';
-import { ConstDirectiveNode, InputValueDefinitionNode } from 'graphql';
-import { InternalSubgraph, Subgraph } from '../../subgraph/types';
-import { ContractTagOptions } from '../../federation/types';
-import { CompositionOptions } from '../../types/params';
-import { Graph } from '../../resolvability-graph/graph';
-import { Warning } from '../../warnings/types';
+import type { ConstDirectiveNode, InputValueDefinitionNode } from 'graphql';
+import type { InternalSubgraph, Subgraph } from '../../subgraph/types';
+import type { ContractTagOptions } from '../../federation/types';
+import type { CompositionOptions } from '../../types/params';
+import type { Graph } from '../../resolvability-graph/graph';
+import type { Warning } from '../../warnings/types';
 
 export type ValidateOneOfDirectiveParams = {
   data: InputObjectDefinitionData;

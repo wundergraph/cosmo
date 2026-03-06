@@ -20,7 +20,6 @@ import {
   kindToNodeType,
   nonExternalConditionalFieldError,
   nonExternalConditionalFieldWarning,
-  NormalizationFailure,
   numberToOrdinal,
   OBJECT,
   parse,
@@ -160,10 +159,7 @@ describe('openfed_FieldSet tests', () => {
     });
 
     test('that a selection set on a type without fields returns an error', () => {
-      const { errors, warnings } = normalizeSubgraphFailure(
-        naaao,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
+      const { errors, warnings } = normalizeSubgraphFailure(naaao, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [

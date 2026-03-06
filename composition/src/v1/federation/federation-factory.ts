@@ -229,7 +229,7 @@ import {
   getValueOrDefault,
   kindToNodeType,
 } from '../../utils/utils';
-import {
+import type {
   GraphFieldData,
   ImplementationErrors,
   InvalidEntityInterface,
@@ -238,7 +238,7 @@ import {
 } from '../../utils/types';
 import { ContractName, DirectiveName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
 import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
-import {
+import type {
   ExtractPersistedDirectivesParams,
   FederateSubgraphsContractV1Params,
   FederateSubgraphsWithContractsV1Params,
@@ -255,7 +255,7 @@ import {
   SEMANTIC_NON_NULL_DEFINITION,
   TAG_DEFINITION,
 } from '../constants/directive-definitions';
-import { CompositionOptions } from '../../types/params';
+import type { CompositionOptions } from '../../types/params';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<TypeName, AuthorizationData>;
@@ -2874,7 +2874,7 @@ export class FederationFactory {
      * These checks can be disabled by setting `disableResolvabilityValidation` to true.
      * This should only be done for troubleshooting purposes.
      * */
-    if (!this.options?.disableResolvabilityValidation && this.internalSubgraphBySubgraphName.size > 1) {
+    if (!this.options.disableResolvabilityValidation && this.internalSubgraphBySubgraphName.size > 1) {
       const validationResult = this.internalGraph.validate();
       if (!validationResult.success) {
         return { errors: validationResult.errors, success: false, warnings: this.warnings };

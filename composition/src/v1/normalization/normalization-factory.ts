@@ -373,7 +373,7 @@ import {
   ValidateOneOfDirectiveParams,
 } from './params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
-import { CompositionOptions } from '../../types/params';
+import type { CompositionOptions } from '../../types/params';
 
 export function normalizeSubgraphFromString({
   noLocation,

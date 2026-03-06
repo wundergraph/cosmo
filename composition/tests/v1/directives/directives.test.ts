@@ -7,7 +7,6 @@ import {
   INACCESSIBLE_DEFINITION,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
-  NormalizationFailure,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   Subgraph,
@@ -105,10 +104,7 @@ describe('Directive tests', () => {
     });
 
     test('that an error is returned if an @inaccessible Enum attempts to coerce into a List type', () => {
-      const { errors, warnings } = normalizeSubgraphFailure(
-        nf,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
+      const { errors, warnings } = normalizeSubgraphFailure(nf, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError('z', 'Query.dummy', FIRST_ORDINAL, [
@@ -149,7 +145,6 @@ describe('Directive tests', () => {
             `
             directive @z(list: [[Int!]!]!) on FIELD_DEFINITION
             
-            
             type Query {
               dummy: String! @z(list: 1)
             }
@@ -159,14 +154,13 @@ describe('Directive tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that a float can be coerced into a list of Int type', () => {
+    test('that a float can be coerced into a List of Float type', () => {
       const { schema, warnings } = normalizeSubgraphSuccess(ni, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Float!]!]!) on FIELD_DEFINITION
-            
             
             type Query {
               dummy: String! @z(list: 1.1)
@@ -177,14 +171,13 @@ describe('Directive tests', () => {
       expect(warnings).toHaveLength(0);
     });
 
-    test('that a custom scalar can be coerced into a List of Int type', () => {
+    test('that a custom scalar can be coerced into a List of that type', () => {
       const { schema, warnings } = normalizeSubgraphSuccess(nj, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Scalar!]!]!) on FIELD_DEFINITION
-            
             
             type Query {
               dummy: String! @z(list: {name: "test"})
@@ -204,7 +197,6 @@ describe('Directive tests', () => {
           SCHEMA_QUERY_DEFINITION +
             `
             directive @z(float: Float!) on FIELD_DEFINITION
-            
             
             type Query {
               dummy: String! @z(float: 1)

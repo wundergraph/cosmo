@@ -1,10 +1,10 @@
 import type { DirectiveName, FieldName, SubgraphName } from '../../types/types';
 import type { CompositeOutputData, InputObjectDefinitionData } from '../../schema-building/types';
 import type { ConstDirectiveNode } from 'graphql';
-import { Subgraph } from '../../subgraph/types';
-import { CompositionOptions } from '../../types/params';
-import { Graph } from '../../resolvability-graph/graph';
-import { DocumentNode } from 'graphql/index';
+import type { Subgraph } from '../../subgraph/types';
+import type { CompositionOptions } from '../../types/params';
+import type { Graph } from '../../resolvability-graph/graph';
+import type { DocumentNode } from 'graphql/index';
 
 export type ValidateOneOfDirectiveParams = {
   data: InputObjectDefinitionData;

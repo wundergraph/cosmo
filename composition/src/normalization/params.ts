@@ -1,9 +1,9 @@
-import { Subgraph } from '../subgraph/types';
-import { SupportedRouterCompatibilityVersion } from '../router-compatibility-version/router-compatibility-version';
-import { CompositionOptions } from '../types/params';
-import { DocumentNode } from 'graphql';
-import { Graph } from '../resolvability-graph/graph';
-import { SubgraphName } from '../types/types';
+import type { Subgraph } from '../subgraph/types';
+import type { SupportedRouterCompatibilityVersion } from '../router-compatibility-version/router-compatibility-version';
+import type { CompositionOptions } from '../types/params';
+import type { DocumentNode } from 'graphql';
+import type { Graph } from '../resolvability-graph/graph';
+import type { SubgraphName } from '../types/types';
 
 export type BatchNormalizeParams = {
   subgraphs: Array<Subgraph>;
