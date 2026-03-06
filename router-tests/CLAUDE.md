@@ -132,4 +132,4 @@ Tests known to be flaky use the `TestFlaky` prefix (e.g., `TestFlakyNatsEvents`)
 | `ToPtr` | `utils.go` | Generic pointer helper |
 | `EmployeesIDData` | `utils.go` | Standard expected response constant |
 
-<!-- CI stability run: 11 of 20 -->
+<!-- CI stability run: 12 of 20 -->
