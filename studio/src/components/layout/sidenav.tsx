@@ -88,7 +88,7 @@ const MobileNav = () => {
 const Organizations = () => {
   const user = useContext(UserContext);
   const router = useRouter();
-  const pathSegments = router.pathname.substring(1).split('/');
+  const pathSegments = router.pathname.substring(1).split("/");
   const isOrganizationRoot = pathSegments.length === 2;
 
   if (!user?.currentOrganization) return null;
@@ -113,11 +113,12 @@ const Organizations = () => {
             );
             if (currentOrg) {
               router.replace({
-                pathname: isOrganizationRoot &&
+                pathname:
+                  isOrganizationRoot &&
                   pathSegments[0]?.toLowerCase() !== "account" &&
                   pathSegments[1]?.toLowerCase() !== "invitations"
-                  ? `/[organizationSlug]/${pathSegments[1]}`
-                  : `/[organizationSlug]`,
+                    ? `/[organizationSlug]/${pathSegments[1]}`
+                    : `/[organizationSlug]`,
                 query: {
                   organizationSlug: currentOrg.slug,
                 },
@@ -127,7 +128,11 @@ const Organizations = () => {
         >
           {user?.organizations?.map(({ name, slug }) => {
             return (
-              <DropdownMenuRadioItem className="pl-2 gap-x-2" key={slug} value={slug}>
+              <DropdownMenuRadioItem
+                className="gap-x-2 pl-2"
+                key={slug}
+                value={slug}
+              >
                 <span className="w-full">{name}</span>
               </DropdownMenuRadioItem>
             );

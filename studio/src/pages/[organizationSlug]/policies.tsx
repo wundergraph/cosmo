@@ -21,7 +21,9 @@ import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
 import { useWorkspace } from "@/hooks/use-workspace";
 
 const PoliciesPage: NextPageWithLayout = () => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const proposalsFeature = useFeature("proposals");
 
   const { data, isLoading, refetch, error } = useQuery(getNamespaceLintConfig, {

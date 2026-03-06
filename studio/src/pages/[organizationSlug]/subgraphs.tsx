@@ -22,7 +22,9 @@ import { useWorkspace } from "@/hooks/use-workspace";
 
 const SubgraphsDashboardPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const tab = router.query.tab as string;
 
   const pageNumber = router.query.page

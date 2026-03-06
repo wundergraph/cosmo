@@ -6,12 +6,10 @@ import { Cross2Icon } from "@radix-ui/react-icons";
 import { DataTableFacetedFilter } from "@/components/analytics/data-table-faceted-filter";
 
 export function SelectedChecksFilters({
-    selectedSubgraphs
-} :
-  {
-    selectedSubgraphs: string[];
-  }
-) {
+  selectedSubgraphs,
+}: {
+  selectedSubgraphs: string[];
+}) {
   const applyParams = useApplyParams();
   const { subgraphs = [] } = useContext(GraphContext) ?? {};
 
@@ -30,15 +28,17 @@ export function SelectedChecksFilters({
         <DataTableFacetedFilter
           id="subgraphs"
           title="Subgraphs"
-          selectedOptions={
-            selectedSubgraphs
-              .map((id) => subgraphs.find((sg) => sg.id === id)!)
-              .filter(Boolean)
-              .map((sg) => JSON.stringify({ label: sg.name, value: sg.id }))
-          }
+          selectedOptions={selectedSubgraphs
+            .map((id) => subgraphs.find((sg) => sg.id === id)!)
+            .filter(Boolean)
+            .map((sg) => JSON.stringify({ label: sg.name, value: sg.id }))}
           onSelect={(value) => {
             applyParams({
-              subgraphs: value?.map(JSON.parse).map((sg: { value: string; }) => sg.value).join(',') ?? null,
+              subgraphs:
+                value
+                  ?.map(JSON.parse)
+                  .map((sg: { value: string }) => sg.value)
+                  .join(",") ?? null,
             });
           }}
           options={subgraphOptions}

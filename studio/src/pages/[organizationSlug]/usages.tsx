@@ -115,8 +115,8 @@ const UsagesPage: NextPageWithLayout = () => {
         requestLimit < 0
           ? undefined
           : Number(data.count) > requestLimit
-          ? 0
-          : requestLimit - Number(data.count),
+            ? 0
+            : requestLimit - Number(data.count),
     },
   ];
   const currentUsagePct = chartData[0].usage / requestLimit;

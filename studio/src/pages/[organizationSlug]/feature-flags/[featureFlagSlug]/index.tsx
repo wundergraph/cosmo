@@ -16,7 +16,9 @@ import { useCurrentOrganization } from "@/hooks/use-current-organization";
 
 const FeatureFlagDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.featureFlagSlug as string;
 
   const { data, isLoading, error, refetch } = useQuery(getFeatureFlagByName, {
@@ -61,7 +63,9 @@ const FeatureFlagDetailsPage: NextPageWithLayout = () => {
 
 const FeatureFlagBreadcrumb = () => {
   const organizationSlug = useCurrentOrganization()?.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   return (
     <div className="flex h-8 items-center justify-center">

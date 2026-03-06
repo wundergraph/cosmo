@@ -48,7 +48,11 @@ import {
   ExclamationTriangleIcon,
   KeyIcon,
 } from "@heroicons/react/24/outline";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { InfoCircledIcon, PlusIcon } from "@radix-ui/react-icons";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
@@ -866,18 +870,26 @@ const APIKeysPage: NextPageWithLayout = () => {
                   }) => {
                     return (
                       <TableRow key={name}>
-                        <TableCell className="font-medium space-x-3">
+                        <TableCell className="space-x-3 font-medium">
                           <span>{name}</span>
                           {external && (
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <span className={badgeVariants({ variant: "outline", className: "space-x-1" })}>
-                                  <InfoCircledIcon className="size-3 pointer-events-none" />
-                                  <span className="pointer-events-none">External</span>
+                                <span
+                                  className={badgeVariants({
+                                    variant: "outline",
+                                    className: "space-x-1",
+                                  })}
+                                >
+                                  <InfoCircledIcon className="pointer-events-none size-3" />
+                                  <span className="pointer-events-none">
+                                    External
+                                  </span>
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent>
-                                This API key is managed by an external service and cannot be modified or deleted.
+                                This API key is managed by an external service
+                                and cannot be modified or deleted.
                               </TooltipContent>
                             </Tooltip>
                           )}

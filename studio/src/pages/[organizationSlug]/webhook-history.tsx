@@ -50,9 +50,7 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import {
-  getOrganizationWebhookHistory,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { getOrganizationWebhookHistory } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { GetOrganizationWebhookHistoryResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { formatISO } from "date-fns";
 import { useRouter } from "next/router";
@@ -94,9 +92,9 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
   const applyParams = useApplyParams();
 
   const onDateRangeChange: DateRangePickerChangeHandler = ({
-                                                             dateRange,
-                                                             range,
-                                                           }) => {
+    dateRange,
+    range,
+  }) => {
     if (range) {
       applyParams({
         range: range.toString(),
@@ -264,9 +262,9 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
                     </TableHead>
                   );
                 })}

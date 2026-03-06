@@ -119,64 +119,71 @@ export const graphPruningRules = [
 ];
 
 export const OPTION_TYPES = {
-  OPERATION: 'operation',
-  VARIABLES: 'variables',
-  HEADERS: 'headers',
-  PRE_FLIGHT: 'preFlight',
-  PRE_OPERATION: 'preOperation',
-  POST_OPERATION: 'postOperation',
+  OPERATION: "operation",
+  VARIABLES: "variables",
+  HEADERS: "headers",
+  PRE_FLIGHT: "preFlight",
+  PRE_OPERATION: "preOperation",
+  POST_OPERATION: "postOperation",
 } as const;
 
 export const hideScriptsSharing = true;
 
 export const SHARE_OPTIONS = [
   // operation is always checked and disabled
-  { 
+  {
     id: OPTION_TYPES.OPERATION,
     label: "Operation",
-    description: "The GraphQL operation (query, mutation, or subscription) to be shared",
+    description:
+      "The GraphQL operation (query, mutation, or subscription) to be shared",
     isChecked: true,
-    isDisabled: true
+    isDisabled: true,
   },
-  { 
+  {
     id: OPTION_TYPES.VARIABLES,
     label: "Variables",
     description: "The variables used in the GraphQL operation",
     isChecked: false,
-    isDisabled: false
+    isDisabled: false,
   },
-  { 
+  {
     id: OPTION_TYPES.HEADERS,
     label: "Headers",
     description: "The HTTP headers to include in the shared request",
     isChecked: false,
-    isDisabled: false
+    isDisabled: false,
   },
   // [ENG-7093] hiding scripts sharing for now
-  ...!hideScriptsSharing ? [{ 
-    id: OPTION_TYPES.PRE_FLIGHT,
-    label: "Pre-Flight Script",
-    description: "A script that runs before the GraphQL operation is executed",
-    isChecked: false,
-    isDisabled: false
-  },
-  { 
-    id: OPTION_TYPES.PRE_OPERATION,
-    label: "Pre-Operation Script",
-    description: "A script that runs before sending the GraphQL request",
-    isChecked: false,
-    isDisabled: false
-  },
-  { 
-    id: OPTION_TYPES.POST_OPERATION,
-    label: "Post-Operation Script",
-    description: "A script that runs after the GraphQL request is completed",
-    isChecked: false,
-    isDisabled: false
-  }] : [],
+  ...(!hideScriptsSharing
+    ? [
+        {
+          id: OPTION_TYPES.PRE_FLIGHT,
+          label: "Pre-Flight Script",
+          description:
+            "A script that runs before the GraphQL operation is executed",
+          isChecked: false,
+          isDisabled: false,
+        },
+        {
+          id: OPTION_TYPES.PRE_OPERATION,
+          label: "Pre-Operation Script",
+          description: "A script that runs before sending the GraphQL request",
+          isChecked: false,
+          isDisabled: false,
+        },
+        {
+          id: OPTION_TYPES.POST_OPERATION,
+          label: "Post-Operation Script",
+          description:
+            "A script that runs after the GraphQL request is completed",
+          isChecked: false,
+          isDisabled: false,
+        },
+      ]
+    : []),
 ] as const;
 
-export const PLAYGROUND_STATE_QUERY_PARAM = 'playgroundUrlState';
+export const PLAYGROUND_STATE_QUERY_PARAM = "playgroundUrlState";
 
 export const PLAYGROUND_DEFAULT_QUERY_TEMPLATE = `# Welcome to WunderGraph Studio
 #
@@ -217,7 +224,8 @@ export const roles = [
     key: "organization-admin",
     category: "organization",
     displayName: "Admin",
-    description: "Grants full access to the organization and all its resources.",
+    description:
+      "Grants full access to the organization and all its resources.",
   },
   {
     key: "organization-developer",
@@ -229,7 +237,8 @@ export const roles = [
     key: "organization-apikey-manager",
     category: "organization",
     displayName: "API Key Manager",
-    description: "Grants access to creating, updating and deleting API keys in the organization.",
+    description:
+      "Grants access to creating, updating and deleting API keys in the organization.",
   },
   {
     key: "organization-viewer",
@@ -287,4 +296,4 @@ export const roles = [
   },
 ];
 
-export type OrganizationRole = typeof roles[number]["key"];
+export type OrganizationRole = (typeof roles)[number]["key"];

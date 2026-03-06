@@ -31,7 +31,9 @@ export const CacheWarmerConfig = ({
   cacheWarmerEnabled: boolean;
   refetch: () => void;
 }) => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const { mutate: configureCacheWarmerConfig, isPending } =
     useMutation(configureCacheWarmer);
   const [maxOperationsCount, setMaxOperationsCount] = useState(
@@ -66,7 +68,9 @@ export const CacheWarmerConfig = ({
             isLoading={isPending}
             disabled={
               !cacheWarmerEnabled ||
-              !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+              !checkUserAccess({
+                rolesToBe: ["organization-admin", "organization-developer"],
+              })
             }
             onClick={() => {
               configureCacheWarmerConfig(
@@ -127,7 +131,9 @@ export const CacheWarmerConfig = ({
                 }}
                 disabled={
                   !cacheWarmerEnabled ||
-                  !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+                  !checkUserAccess({
+                    rolesToBe: ["organization-admin", "organization-developer"],
+                  })
                 }
               >
                 <SelectTrigger className="h-8 w-36">

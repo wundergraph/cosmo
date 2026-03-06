@@ -52,7 +52,9 @@ const CompositionsPage: NextPageWithLayout = () => {
     : 1;
 
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const {
     dateRange: { start, end },

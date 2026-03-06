@@ -93,7 +93,9 @@ export const ProposalDetails = ({
   const user = useUser();
   const graphData = useContext(GraphContext);
 
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.proposalId as string;
   const tab = router.query.tab as string;
@@ -305,7 +307,10 @@ export const ProposalDetails = ({
           <div className="flex flex-1 items-center justify-end gap-1">
             {state === "DRAFT" && (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild disabled={origin !== ProposalOrigin.INTERNAL}>
+                <DropdownMenuTrigger
+                  asChild
+                  disabled={origin !== ProposalOrigin.INTERNAL}
+                >
                   {origin === ProposalOrigin.INTERNAL ? (
                     <Button
                       className="ml-4"
@@ -319,7 +324,8 @@ export const ProposalDetails = ({
                       <TooltipTrigger asChild>
                         <span
                           className={buttonVariants({
-                            className: "ml-4 cursor-not-allowed opacity-60 hover:!bg-primary",
+                            className:
+                              "ml-4 cursor-not-allowed opacity-60 hover:!bg-primary",
                           })}
                         >
                           Review Changes
@@ -327,7 +333,8 @@ export const ProposalDetails = ({
                         </span>
                       </TooltipTrigger>
                       <TooltipContent>
-                        This proposal was created outside of Cosmo and cannot be updated within Cosmo.
+                        This proposal was created outside of Cosmo and cannot be
+                        updated within Cosmo.
                       </TooltipContent>
                     </Tooltip>
                   )}
@@ -655,8 +662,8 @@ export const ProposalDetails = ({
                                         (checkedSubgraphs.length > 1
                                           ? "Multiple Subgraphs"
                                           : checkedSubgraphs.length > 0
-                                          ? checkedSubgraphs[0].subgraphName
-                                          : "Subgraph")}
+                                            ? checkedSubgraphs[0].subgraphName
+                                            : "Subgraph")}
                                     </TableCell>
                                   )}
                                   <TableCell>

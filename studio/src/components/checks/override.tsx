@@ -80,7 +80,9 @@ const Override = ({
   const router = useRouter();
   const { toast } = useToast();
   const graphContext = useContext(GraphContext);
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
   const { mutate: removeOverrides, isPending: removingOverrides } = useMutation(
@@ -132,14 +134,14 @@ const Override = ({
                   href={
                     path
                       ? {
-                        pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
-                        query: {
-                          organizationSlug,
-                          namespace,
-                          slug: router.query.slug,
-                          typename: path?.split(".")?.[0],
-                        },
-                      }
+                          pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
+                          query: {
+                            organizationSlug,
+                            namespace,
+                            slug: router.query.slug,
+                            typename: path?.split(".")?.[0],
+                          },
+                        }
                       : "#"
                   }
                 >
@@ -209,7 +211,9 @@ const Override = ({
 export const ConfigureOverride = () => {
   const graphContext = useContext(GraphContext);
   const checkUserAccess = useCheckUserAccess();
-  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] })
+  const isAdminOrDeveloper = checkUserAccess({
+    rolesToBe: ["organization-admin", "organization-developer"],
+  });
 
   const router = useRouter();
   const operationHash = router.query.override as string;
@@ -329,16 +333,16 @@ export const ConfigureOverride = () => {
                 onCheckedChange={() =>
                   data.ignoreAll
                     ? removeIgnoreAll({
-                      graphName: graphContext?.graph?.name,
-                      namespace: graphContext?.graph?.namespace,
-                      operationHash,
-                    })
+                        graphName: graphContext?.graph?.name,
+                        namespace: graphContext?.graph?.namespace,
+                        operationHash,
+                      })
                     : createIgnoreAll({
-                      operationHash,
-                      operationName,
-                      graphName: graphContext?.graph?.name,
-                      namespace: graphContext?.graph?.namespace,
-                    })
+                        operationHash,
+                        operationName,
+                        graphName: graphContext?.graph?.name,
+                        namespace: graphContext?.graph?.namespace,
+                      })
                 }
               />
             </div>

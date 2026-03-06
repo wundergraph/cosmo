@@ -1,10 +1,7 @@
 import { GraphContext } from "@/components/layout/graph-layout";
 import { useUser } from "@/hooks/use-user";
 import { cn } from "@/lib/utils";
-import {
-  CheckCircleIcon,
-  NoSymbolIcon
-} from "@heroicons/react/24/outline";
+import { CheckCircleIcon, NoSymbolIcon } from "@heroicons/react/24/outline";
 import { Cross1Icon, CrossCircledIcon } from "@radix-ui/react-icons";
 import {
   GraphPruningIssue,
@@ -44,7 +41,9 @@ export const GraphPruningIssuesTable = ({
   const router = useRouter();
   const user = useUser();
   const graphContext = useContext(GraphContext);
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
   if (pruneIssues.length === 0 && !isGraphPruningEnabled) {

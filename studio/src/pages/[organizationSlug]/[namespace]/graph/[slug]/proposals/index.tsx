@@ -51,7 +51,9 @@ const ProposalsPage: NextPageWithLayout = () => {
   const user = useUser();
   const proposalsFeature = useFeature("proposals");
   const federatedGraphName = router.query.slug as string;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
     : 1;

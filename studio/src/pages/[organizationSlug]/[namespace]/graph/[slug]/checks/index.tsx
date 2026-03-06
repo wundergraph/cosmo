@@ -70,7 +70,9 @@ const ChecksPage: NextPageWithLayout = () => {
 
   const limit = Number.parseInt((router.query.pageSize as string) || "10");
   const selectedSubgraphs = parseSelectedSubgraphs(router.query.subgraphs);
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const {
     dateRange: { start, end },
@@ -81,7 +83,9 @@ const ChecksPage: NextPageWithLayout = () => {
 
   const graphContext = useContext(GraphContext);
   const proposalsFeature = useFeature("proposals");
-  const subgraphCheckExtensionsFeature = useFeature("subgraph-check-extensions");
+  const subgraphCheckExtensionsFeature = useFeature(
+    "subgraph-check-extensions",
+  );
 
   const [, setRouteCache] = useSessionStorage("checks.route", router.asPath);
 
@@ -96,7 +100,7 @@ const ChecksPage: NextPageWithLayout = () => {
       endDate: formatISO(endDate),
       filters: {
         subgraphs: !selectedSubgraphs.length
-          ? graphContext?.subgraphs?.map((sg) => sg.id) ?? []
+          ? (graphContext?.subgraphs?.map((sg) => sg.id) ?? [])
           : selectedSubgraphs,
       },
     },
@@ -257,8 +261,8 @@ const ChecksPage: NextPageWithLayout = () => {
                             (checkedSubgraphs.length > 1
                               ? "Multiple Subgraphs"
                               : checkedSubgraphs.length > 0
-                              ? checkedSubgraphs[0].subgraphName
-                              : "Subgraph")}
+                                ? checkedSubgraphs[0].subgraphName
+                                : "Subgraph")}
                         </TableCell>
                       )}
                       <TableCell>
@@ -359,7 +363,8 @@ const ChecksPage: NextPageWithLayout = () => {
                               variant="outline"
                               className={cn(
                                 "gap-2 py-1.5",
-                                !checkExtensionDeliveryId && "text-muted-foreground",
+                                !checkExtensionDeliveryId &&
+                                  "text-muted-foreground",
                               )}
                             >
                               {!checkExtensionDeliveryId ? (
@@ -367,9 +372,7 @@ const ChecksPage: NextPageWithLayout = () => {
                               ) : (
                                 getCheckIcon(!checkExtensionErrorMessage)
                               )}
-                              <span className="flex-1 truncate">
-                                Extension
-                              </span>
+                              <span className="flex-1 truncate">Extension</span>
                             </Badge>
                           )}
                         </div>

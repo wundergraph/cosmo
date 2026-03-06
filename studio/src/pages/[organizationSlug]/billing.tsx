@@ -365,7 +365,9 @@ const UpgradeButton = ({
         variant="secondary"
         disabled={
           isPending ||
-          !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+          !checkUserAccess({
+            rolesToBe: ["organization-admin", "organization-developer"],
+          })
         }
         onClick={() => upgrade()}
       >

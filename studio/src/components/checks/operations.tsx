@@ -554,20 +554,20 @@ export const CheckOperations = () => {
                                   onClick={() => {
                                     doAllChangesHaveOverrides
                                       ? removeOverrides({
-                                        graphName: graphContext?.graph?.name,
-                                        namespace:
-                                          graphContext?.graph?.namespace,
-                                        operationHash: hash,
-                                        changes: impactingChanges,
-                                      })
+                                          graphName: graphContext?.graph?.name,
+                                          namespace:
+                                            graphContext?.graph?.namespace,
+                                          operationHash: hash,
+                                          changes: impactingChanges,
+                                        })
                                       : createOverrides({
-                                        graphName: graphContext?.graph?.name,
-                                        namespace:
-                                          graphContext?.graph?.namespace,
-                                        operationHash: hash,
-                                        operationName: name,
-                                        changes: impactingChanges,
-                                      });
+                                          graphName: graphContext?.graph?.name,
+                                          namespace:
+                                            graphContext?.graph?.namespace,
+                                          operationHash: hash,
+                                          operationName: name,
+                                          changes: impactingChanges,
+                                        });
                                   }}
                                   className="cursor-pointer flex-col items-start gap-1"
                                 >
@@ -595,7 +595,8 @@ export const CheckOperations = () => {
                                 >
                                   Ignore operation
                                   <p className="max-w-xs text-xs text-muted-foreground">
-                                    This operation will be ignored in future checks
+                                    This operation will be ignored in future
+                                    checks
                                   </p>
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
@@ -610,7 +611,8 @@ export const CheckOperations = () => {
                           </AlertTitle>
                           <AlertDescription>
                             This operation will be excluded from future checks.
-                            Remove the override to include it again and manage individual change overrides.
+                            Remove the override to include it again and manage
+                            individual change overrides.
                           </AlertDescription>
                           <Button
                             size="sm"

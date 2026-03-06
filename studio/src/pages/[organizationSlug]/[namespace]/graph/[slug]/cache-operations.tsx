@@ -34,7 +34,9 @@ import { useWorkspace } from "@/hooks/use-workspace";
 const CacheOperationsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const federatedGraphName = router.query.slug as string;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const user = useUser();
   const checkUserAccess = useCheckUserAccess();
   const plan = user?.currentOrganization?.billing?.plan;
@@ -194,7 +196,9 @@ const CacheOperationsPage: NextPageWithLayout = () => {
               disabled={
                 isPending ||
                 recomputeDisabled ||
-                !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+                !checkUserAccess({
+                  rolesToBe: ["organization-admin", "organization-developer"],
+                })
               }
             >
               <UpdateIcon

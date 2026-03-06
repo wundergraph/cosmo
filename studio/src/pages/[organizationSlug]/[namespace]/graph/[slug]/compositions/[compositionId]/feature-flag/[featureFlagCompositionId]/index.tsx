@@ -20,7 +20,9 @@ const FeatureFlagCompositionDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
 
   const organizationSlug = useCurrentOrganization()?.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.compositionId as string;
   const featureFlagCompositionId = router.query

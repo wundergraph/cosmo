@@ -1639,7 +1639,7 @@ const CheckDetails = ({
                       <>
                         {data.changes.length > 0 && (
                           <>
-                            <h3 className="mb-2 text-md font-medium">
+                            <h3 className="text-md mb-2 font-medium">
                               Subgraph Schema Changes
                             </h3>
                             <ChangesTable
@@ -1655,7 +1655,7 @@ const CheckDetails = ({
                           <div
                             className={data.changes.length > 0 ? "mt-6" : ""}
                           >
-                            <h3 className="mb-2 text-md font-medium">
+                            <h3 className="text-md mb-2 font-medium">
                               Federated Graph Schema Breaking Changes
                             </h3>
                             <p className="mb-4 text-sm text-muted-foreground">

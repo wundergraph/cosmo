@@ -288,7 +288,9 @@ const Webhook = ({
           variant={mode === "create" ? "default" : "secondary"}
           size={mode === "create" ? "default" : "icon"}
           disabled={
-            !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+            !checkUserAccess({
+              rolesToBe: ["organization-admin", "organization-developer"],
+            })
           }
         >
           {mode === "create" ? (
@@ -381,7 +383,10 @@ const Webhook = ({
                       <a
                         target="_blank"
                         rel="noreferrer"
-                        href={docsBaseURL + "/studio/alerts-and-notifications/webhooks#verification"}
+                        href={
+                          docsBaseURL +
+                          "/studio/alerts-and-notifications/webhooks#verification"
+                        }
                         className="text-primary"
                       >
                         Learn more.
@@ -476,7 +481,9 @@ const WebhooksPage: NextPageWithLayout = () => {
     getOrganizationWebhookConfigs,
   );
 
-  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
+  const isAdminOrDeveloper = checkUserAccess({
+    rolesToBe: ["organization-admin", "organization-developer"],
+  });
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -529,7 +536,9 @@ const WebhooksPage: NextPageWithLayout = () => {
             Learn more
           </Link>
         </p>
-        {isAdminOrDeveloper && <Webhook mode="create" refresh={() => refetch()} />}
+        {isAdminOrDeveloper && (
+          <Webhook mode="create" refresh={() => refetch()} />
+        )}
       </div>
       <TableWrapper>
         <Table>
@@ -537,7 +546,9 @@ const WebhooksPage: NextPageWithLayout = () => {
             <TableRow>
               <TableHead>Endpoint</TableHead>
               <TableHead>Events</TableHead>
-              {isAdminOrDeveloper && <TableHead aria-label="Actions"></TableHead>}
+              {isAdminOrDeveloper && (
+                <TableHead aria-label="Actions"></TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>

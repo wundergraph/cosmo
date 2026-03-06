@@ -396,13 +396,28 @@ const SubgraphAnalyticsPage: NextPageWithLayout = () => {
     <div className="w-full space-y-4">
       <OverviewToolbar />
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3">
-        <RequestMetricsCard data={data?.requests} isSubgraphAnalytics={true} syncId={syncId} />
-        <LatencyMetricsCard data={data?.latency} isSubgraphAnalytics={true} syncId={syncId} />
-        <ErrorMetricsCard data={data?.errors} isSubgraphAnalytics={true} syncId={syncId} />
+        <RequestMetricsCard
+          data={data?.requests}
+          isSubgraphAnalytics={true}
+          syncId={syncId}
+        />
+        <LatencyMetricsCard
+          data={data?.latency}
+          isSubgraphAnalytics={true}
+          syncId={syncId}
+        />
+        <ErrorMetricsCard
+          data={data?.errors}
+          isSubgraphAnalytics={true}
+          syncId={syncId}
+        />
       </div>
 
       <SubgraphErrorRateOverTimeCard syncId={syncId} />
-      <LatencyDistributionCard series={data?.latency?.series ?? []} syncId={syncId} />
+      <LatencyDistributionCard
+        series={data?.latency?.series ?? []}
+        syncId={syncId}
+      />
     </div>
   );
 };

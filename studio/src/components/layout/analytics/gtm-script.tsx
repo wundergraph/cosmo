@@ -1,6 +1,6 @@
 export interface GtmScriptProps {
   gtmId: string | undefined;
-};
+}
 
 export function GtmScript({ gtmId }: GtmScriptProps) {
   if (!gtmId) {
@@ -11,7 +11,8 @@ export function GtmScript({ gtmId }: GtmScriptProps) {
     <>
       <script
         id="gtm"
-        dangerouslySetInnerHTML={{__html: `
+        dangerouslySetInnerHTML={{
+          __html: `
         (function(w,d,s,l,i){
           w[l]=w[l]||[];
           w[l].push({'gtm.start': new Date().getTime(), event:'gtm.js'});
@@ -20,13 +21,14 @@ export function GtmScript({ gtmId }: GtmScriptProps) {
           j.async=true; j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;
           f.parentNode.insertBefore(j,f);
         })(window,document,'script','dataLayer',${JSON.stringify(gtmId)});
-      `
-      }}
+      `,
+        }}
       />
 
       <script
         id="gtm-consent"
-        dangerouslySetInnerHTML={{ __html: `
+        dangerouslySetInnerHTML={{
+          __html: `
 (function(){
   function updateConsentFromOsano() {
     const consent = window.Osano && Osano.cm && Osano.cm.getConsent ? Osano.cm.getConsent() : null;
@@ -55,7 +57,9 @@ export function GtmScript({ gtmId }: GtmScriptProps) {
     window.addEventListener('osano-cm-initialized', onOsanoReady, { once: true });
   }
 })();
-      `}}/>
+      `,
+        }}
+      />
     </>
   );
 }

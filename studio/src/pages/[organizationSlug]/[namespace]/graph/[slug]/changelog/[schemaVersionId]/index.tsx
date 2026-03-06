@@ -22,7 +22,9 @@ import { useCurrentOrganization } from "@/hooks/use-current-organization";
 const SchemaVersionChangelogPage: NextPageWithLayout = () => {
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.schemaVersionId as string;
 

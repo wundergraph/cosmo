@@ -66,93 +66,99 @@ const LoginPage: NextPageWithLayout = () => {
           {/* Left section - Form */}
           <div className="flex min-h-screen w-full flex-col items-center justify-center lg:min-h-0 lg:w-1/2 lg:p-12">
             <div className="w-full max-w-md lg:max-w-lg">
-            <AuthCard className="w-full rounded-xl px-6 py-8 lg:px-10 lg:py-12">
-              <AuthLogoHeader />
+              <AuthCard className="w-full rounded-xl px-6 py-8 lg:px-10 lg:py-12">
+                <AuthLogoHeader />
 
-              <div className="mt-8 lg:mt-12">
-                <h2 className="text-2xl font-normal leading-[120%] text-white lg:text-[32px]">
-                  Log in
-                </h2>
+                <div className="mt-8 lg:mt-12">
+                  <h2 className="text-2xl font-normal leading-[120%] text-white lg:text-[32px]">
+                    Log in
+                  </h2>
 
-                <div className="mt-6 space-y-3 lg:mt-8 lg:space-y-4">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
-                    asChild
-                  >
-                    <Link
-                      href={constructLoginURL({ redirectURL, provider: "github" })}
-                    >
-                      <GitHubLogoIcon className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
-                      Log in with GitHub
-                    </Link>
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
-                    asChild
-                  >
-                    <Link
-                      href={constructLoginURL({ redirectURL, provider: "google" })}
-                    >
-                      <FaGoogle className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
-                      Log in with Google
-                    </Link>
-                  </Button>
-
-                  {sso && (
+                  <div className="mt-6 space-y-3 lg:mt-8 lg:space-y-4">
                     <Button
                       variant="outline"
                       size="lg"
                       className="h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
                       asChild
                     >
-                      <Link href={constructLoginURL({ redirectURL, sso })}>
-                        <BsBuildingLock className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
-                        Log in with SSO
+                      <Link
+                        href={constructLoginURL({
+                          redirectURL,
+                          provider: "github",
+                        })}
+                      >
+                        <GitHubLogoIcon className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
+                        Log in with GitHub
                       </Link>
                     </Button>
-                  )}
 
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="group h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
-                    asChild
-                  >
-                    <Link href={constructLoginURL({ redirectURL })}>
-                      Continue with Email
-                      <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1 lg:ml-3 lg:h-5 lg:w-5" />
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
+                      asChild
+                    >
+                      <Link
+                        href={constructLoginURL({
+                          redirectURL,
+                          provider: "google",
+                        })}
+                      >
+                        <FaGoogle className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
+                        Log in with Google
+                      </Link>
+                    </Button>
+
+                    {sso && (
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
+                        asChild
+                      >
+                        <Link href={constructLoginURL({ redirectURL, sso })}>
+                          <BsBuildingLock className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
+                          Log in with SSO
+                        </Link>
+                      </Button>
+                    )}
+
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="group h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
+                      asChild
+                    >
+                      <Link href={constructLoginURL({ redirectURL })}>
+                        Continue with Email
+                        <ArrowRightIcon className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1 lg:ml-3 lg:h-5 lg:w-5" />
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {/* Divider line */}
+                  <div className="mb-6 mt-7 h-px w-full bg-white/10" />
+
+                  <p className="text-center text-sm text-gray-400">
+                    Don&apos;t have an account?
+                    <Link
+                      href={
+                        redirectURL
+                          ? `/signup?redirectURL=${encodeURIComponent(redirectURL)}`
+                          : "/signup"
+                      }
+                      className="ml-[5px] font-medium text-primary hover:underline"
+                    >
+                      Sign Up
                     </Link>
-                  </Button>
+                  </p>
                 </div>
+              </AuthCard>
 
-                {/* Divider line */}
-                <div className="mb-6 mt-7 h-px w-full bg-white/10" />
-
-                <p className="text-center text-sm text-gray-400">
-                  Don&apos;t have an account?
-                  <Link
-                    href={
-                      redirectURL
-                        ? `/signup?redirectURL=${encodeURIComponent(redirectURL)}`
-                        : "/signup"
-                    }
-                    className="ml-[5px] font-medium text-primary hover:underline"
-                  >
-                    Sign Up
-                  </Link>
-                </p>
+              {/* Trusted companies */}
+              <div className="mt-8 lg:mt-16">
+                <TrustedCompanies />
               </div>
-            </AuthCard>
-
-            {/* Trusted companies */}
-            <div className="mt-8 lg:mt-16">
-              <TrustedCompanies />
-            </div>
             </div>
           </div>
 

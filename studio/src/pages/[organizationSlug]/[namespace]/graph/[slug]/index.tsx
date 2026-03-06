@@ -215,8 +215,8 @@ const GraphOverviewPage: NextPageWithLayout = () => {
                 {contract
                   ? "Contract Graph"
                   : isMonograph
-                  ? "Monograph"
-                  : "Federated Graph"}{" "}
+                    ? "Monograph"
+                    : "Federated Graph"}{" "}
                 Details
               </CardTitle>
               <CardDescription className="text-xs">
@@ -429,8 +429,8 @@ const GraphOverviewPage: NextPageWithLayout = () => {
               emptyGraph
                 ? "destructive"
                 : validGraph
-                ? "default"
-                : "destructive"
+                  ? "default"
+                  : "destructive"
             }
             className="scrollbar-custom max-h-[15rem] w-full overflow-auto"
           >
@@ -445,8 +445,8 @@ const GraphOverviewPage: NextPageWithLayout = () => {
               {emptyGraph
                 ? "Heads up!"
                 : validGraph
-                ? "All good!"
-                : "Needs Attention!"}
+                  ? "All good!"
+                  : "Needs Attention!"}
             </AlertTitle>
             <AlertDescription className="space-y-2">
               <ComposeStatusMessage

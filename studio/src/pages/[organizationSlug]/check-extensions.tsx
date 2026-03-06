@@ -12,7 +12,10 @@ import { Loader } from "@/components/ui/loader";
 import { useFeature } from "@/hooks/use-feature";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { EmptyState } from "@/components/empty-state";
-import { ExclamationTriangleIcon, InfoCircledIcon } from "@radix-ui/react-icons";
+import {
+  ExclamationTriangleIcon,
+  InfoCircledIcon,
+} from "@radix-ui/react-icons";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/router";
 import { useUser } from "@/hooks/use-user";
@@ -20,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
 import {
   CheckExtensionsConfig,
-  type SubgraphCheckExtensionsConfig
+  type SubgraphCheckExtensionsConfig,
 } from "@/components/check-extensions/check-extensions-config";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -29,9 +32,14 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
   const user = useUser();
   const { toast } = useToast();
   const checkUserAccess = useCheckUserAccess();
-  const { namespace: { name: namespace } } = useWorkspace();
-  const subgraphCheckExtensionsFeature = useFeature("subgraph-check-extensions");
-  const [enableSubgraphCheckExtensions, setEnableSubgraphCheckExtensions] = useState(false);
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
+  const subgraphCheckExtensionsFeature = useFeature(
+    "subgraph-check-extensions",
+  );
+  const [enableSubgraphCheckExtensions, setEnableSubgraphCheckExtensions] =
+    useState(false);
 
   const { mutate, isPending } = useMutation(configureSubgraphCheckExtensions);
   const { data, isLoading, isRefetching, refetch, error } = useQuery(
@@ -44,19 +52,23 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
           details: res.response?.details,
           isSecretKeyAssigned: res.isSecretKeyAssigned,
           isLintingEnabledForNamespace: res.isLintingEnabledForNamespace,
-          isGraphPruningEnabledForNamespace: res.isGraphPruningEnabledForNamespace,
+          isGraphPruningEnabledForNamespace:
+            res.isGraphPruningEnabledForNamespace,
           config: {
             ...res,
             enableSubgraphCheckExtensions: res.isEnabledForNamespace,
             secretKey: undefined,
-          } satisfies SubgraphCheckExtensionsConfig
+          } satisfies SubgraphCheckExtensionsConfig,
         };
       },
     },
   );
 
   useEffect(
-    () => setEnableSubgraphCheckExtensions(data?.config.enableSubgraphCheckExtensions === true),
+    () =>
+      setEnableSubgraphCheckExtensions(
+        data?.config.enableSubgraphCheckExtensions === true,
+      ),
     [data?.config.enableSubgraphCheckExtensions],
   );
 
@@ -64,7 +76,7 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
     config: Partial<SubgraphCheckExtensionsConfig>,
     onSuccessMessage: string,
     onFailureMessage: string,
-    onConfigUpdated?: (newConfig: SubgraphCheckExtensionsConfig) => void
+    onConfigUpdated?: (newConfig: SubgraphCheckExtensionsConfig) => void,
   ) => {
     mutate(
       { namespace, ...config, enableSubgraphCheckExtensions },
@@ -75,7 +87,7 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
             refetch().then(
               (result) => {
                 if (result.data?.code === EnumStatusCode.OK) {
-                  onConfigUpdated?.(result.data.config)
+                  onConfigUpdated?.(result.data.config);
                 }
               },
               () => {
@@ -99,14 +111,17 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
     return <Loader fullscreen />;
   }
 
-  if (error || !data || (data?.code !== EnumStatusCode.OK && data?.code !== EnumStatusCode.ERR_UPGRADE_PLAN)) {
+  if (
+    error ||
+    !data ||
+    (data?.code !== EnumStatusCode.OK &&
+      data?.code !== EnumStatusCode.ERR_UPGRADE_PLAN)
+  ) {
     return (
       <EmptyState
         icon={<ExclamationTriangleIcon className="h-12 w-12" />}
         title="Could not retrieve the subgraph check extensions config of the namespace"
-        description={
-          data?.details || error?.message || "Please try again"
-        }
+        description={data?.details || error?.message || "Please try again"}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -146,7 +161,9 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
             isPending ||
             isRefetching ||
             !subgraphCheckExtensionsFeature?.enabled ||
-            !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+            !checkUserAccess({
+              rolesToBe: ["organization-admin", "organization-developer"],
+            })
           }
           onCheckedChange={setEnableSubgraphCheckExtensions}
         />
@@ -157,18 +174,22 @@ const CheckExtensionsPage: NextPageWithLayout = () => {
         enableSubgraphCheckExtensions={enableSubgraphCheckExtensions}
         isSecretKeyAssigned={data.isSecretKeyAssigned}
         isLintingEnabledForNamespace={data.isLintingEnabledForNamespace}
-        isGraphPruningEnabledForNamespace={data.isGraphPruningEnabledForNamespace}
+        isGraphPruningEnabledForNamespace={
+          data.isGraphPruningEnabledForNamespace
+        }
         isUpdatingConfig={isPending || isRefetching}
-        onSaveChanges={(newConfig, onConfigUpdated) => saveChanges(
-          newConfig,
-          'Subgraph check extensions config updated successfully.',
-          'Could not update the subgraph check extensions config. Please try again.',
-          onConfigUpdated,
-        )}
+        onSaveChanges={(newConfig, onConfigUpdated) =>
+          saveChanges(
+            newConfig,
+            "Subgraph check extensions config updated successfully.",
+            "Could not update the subgraph check extensions config. Please try again.",
+            onConfigUpdated,
+          )
+        }
       />
     </div>
   );
-}
+};
 
 CheckExtensionsPage.getLayout = (page) => {
   return getDashboardLayout(
@@ -179,6 +200,6 @@ CheckExtensionsPage.getLayout = (page) => {
     undefined,
     [<WorkspaceSelector key="0" />],
   );
-}
+};
 
 export default CheckExtensionsPage;

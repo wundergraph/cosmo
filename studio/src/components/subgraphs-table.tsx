@@ -58,7 +58,9 @@ export const Empty = ({
   graph?: FederatedGraph;
   tab: "subgraphs" | "featureSubgraphs";
 }) => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   let label = "team=A";
   if (graph?.labelMatchers && graph.labelMatchers.length > 0) {

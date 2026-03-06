@@ -13,35 +13,44 @@ export interface WorkspaceSelectorProps {
   truncateNamespace?: boolean;
 }
 
-export function WorkspaceSelector({ children, truncateNamespace = true }: WorkspaceSelectorProps) {
+export function WorkspaceSelector({
+  children,
+  truncateNamespace = true,
+}: WorkspaceSelectorProps) {
   const router = useRouter();
   const subgraphContext = useSubgraph();
   const { namespace } = useWorkspace();
 
-  const [activeGraph, activeSubgraph] = useMemo(
-    () => {
-      const routeSegment = router.asPath.split("/")[3]?.toLowerCase();
-      const currentSlug = (router.query.slug as string)?.toLowerCase();
-      return [
-        routeSegment === "graph"
-          ? namespace.graphs.find((graph) => graph.name.toLowerCase() === currentSlug)
-          : undefined,
-        !!subgraphContext?.subgraph?.id
-          ? namespace.graphs
+  const [activeGraph, activeSubgraph] = useMemo(() => {
+    const routeSegment = router.asPath.split("/")[3]?.toLowerCase();
+    const currentSlug = (router.query.slug as string)?.toLowerCase();
+    return [
+      routeSegment === "graph"
+        ? namespace.graphs.find(
+            (graph) => graph.name.toLowerCase() === currentSlug,
+          )
+        : undefined,
+      !!subgraphContext?.subgraph?.id
+        ? namespace.graphs
             .flatMap((graph) => graph.subgraphs)
             .find((subgraph) => subgraph.id === subgraphContext?.subgraph?.id)
-          : undefined,
-      ];
-    },
-    [namespace, router.asPath, router.query.slug, subgraphContext?.subgraph?.id],
-  );
+        : undefined,
+    ];
+  }, [
+    namespace,
+    router.asPath,
+    router.query.slug,
+    subgraphContext?.subgraph?.id,
+  ]);
 
   const isViewingGraphOrSubgraph = !!activeGraph || !!activeSubgraph;
   return (
-    <div className={cn(
-      "flex justify-start items-center h-9 text-sm",
-      isViewingGraphOrSubgraph && "gap-x-2",
-    )}>
+    <div
+      className={cn(
+        "flex h-9 items-center justify-start text-sm",
+        isViewingGraphOrSubgraph && "gap-x-2",
+      )}
+    >
       <NamespaceSelector
         isViewingGraphOrSubgraph={isViewingGraphOrSubgraph}
         truncateNamespace={truncateNamespace}
@@ -50,7 +59,7 @@ export function WorkspaceSelector({ children, truncateNamespace = true }: Worksp
         activeGraph={activeGraph}
         activeSubgraph={activeSubgraph}
       />
-      <div className="flex flex-1 items-center justify-start truncate gap-x-2 text-sm">
+      <div className="flex flex-1 items-center justify-start gap-x-2 truncate text-sm">
         {children}
       </div>
     </div>

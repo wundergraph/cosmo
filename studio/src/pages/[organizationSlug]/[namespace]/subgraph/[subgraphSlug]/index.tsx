@@ -34,7 +34,9 @@ import { useWorkspace } from "@/hooks/use-workspace";
 import { SafeMarkdown } from "@/components/safe-markdown";
 
 export const Empty = ({ subgraphName }: { subgraphName: string }) => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   return (
     <EmptyState

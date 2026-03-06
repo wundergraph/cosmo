@@ -88,7 +88,9 @@ const MigrationDialog = ({
   isEmptyState?: boolean;
 }) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
   const migrate = !!router.query.migrate;
 
@@ -470,7 +472,9 @@ export const Empty = ({
   setIsMigrating: Dispatch<SetStateAction<boolean>>;
 }) => {
   const checkUserAccess = useCheckUserAccess();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   let labels = "team=A";
   return (
@@ -520,7 +524,9 @@ export const Empty = ({
             </TabsContent>
           </Tabs>
 
-          {checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) && (
+          {checkUserAccess({
+            rolesToBe: ["organization-admin", "organization-developer"],
+          }) && (
             <>
               <span className="text-sm font-bold">OR</span>
               <MigrationDialog
@@ -746,7 +752,9 @@ export const FederatedGraphsCards = ({
         {graphs.map((graph, graphIndex) => {
           return <GraphCard key={graphIndex.toString()} graph={graph} />;
         })}
-        {checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) && (
+        {checkUserAccess({
+          rolesToBe: ["organization-admin", "organization-developer"],
+        }) && (
           <MigrationDialog
             refetch={refetch}
             setIsMigrationSuccess={setIsMigrationSuccess}

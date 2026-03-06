@@ -2,7 +2,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useMutation, useQuery } from "@connectrpc/connect-query";
 import {
   getWebhookDeliveryDetails,
-  redeliverWebhook
+  redeliverWebhook,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import { Loader } from "@/components/ui/loader";
@@ -10,12 +10,25 @@ import { EmptyState } from "@/components/empty-state";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableWrapper,
+} from "@/components/ui/table";
 import { formatDateTime } from "@/lib/format-date";
 import { msToTime } from "@/lib/insights-helpers";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CodeViewer } from "@/components/code-viewer";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 
 export interface WebhookDeliveryDetailsProps {
   deliveryId: string | undefined;
@@ -23,7 +36,11 @@ export interface WebhookDeliveryDetailsProps {
   refreshDeliveries?: () => void;
 }
 
-export function WebhookDeliveryDetails({ deliveryId, onOpenChange, refreshDeliveries }: WebhookDeliveryDetailsProps) {
+export function WebhookDeliveryDetails({
+  deliveryId,
+  onOpenChange,
+  refreshDeliveries,
+}: WebhookDeliveryDetailsProps) {
   const { toast } = useToast();
   const { data, error, isLoading, refetch } = useQuery(
     getWebhookDeliveryDetails,
@@ -86,18 +103,20 @@ export function WebhookDeliveryDetails({ deliveryId, onOpenChange, refreshDelive
               {details.endpoint}
             </code>
           </div>
-          {details.type !== 'check-extension' && (<Button
-            variant="secondary"
-            className="w-full md:w-auto"
-            isLoading={isPending}
-            onClick={() => {
-              mutate({
-                id: details.id,
-              });
-            }}
-          >
-            Redeliver
-          </Button>)}
+          {details.type !== "check-extension" && (
+            <Button
+              variant="secondary"
+              className="w-full md:w-auto"
+              isLoading={isPending}
+              onClick={() => {
+                mutate({
+                  id: details.id,
+                });
+              }}
+            >
+              Redeliver
+            </Button>
+          )}
         </div>
         <TableWrapper>
           <Table>

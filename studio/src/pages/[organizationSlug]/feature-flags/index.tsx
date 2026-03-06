@@ -18,7 +18,9 @@ import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
 import { useWorkspace } from "@/hooks/use-workspace";
 
 const FeatureFlagsDashboardPage: NextPageWithLayout = () => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const router = useRouter();
 
   const pageNumber = router.query.page
@@ -59,7 +61,10 @@ const FeatureFlagsDashboardPage: NextPageWithLayout = () => {
     content = null;
   } else {
     content = (
-      <FeatureFlagsTable featureFlags={data.featureFlags} totalCount={data.totalCount} />
+      <FeatureFlagsTable
+        featureFlags={data.featureFlags}
+        totalCount={data.totalCount}
+      />
     );
   }
 
