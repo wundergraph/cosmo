@@ -56,6 +56,9 @@ func (m *ForbiddenHandlerModule) Cleanup() error {
 // OnOriginRequest short-circuits subgraph calls when a 403 has already been
 // detected from a previous subgraph. This avoids unnecessary network round-trips.
 func (m *ForbiddenHandlerModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+	if ctx.GetBool("streaming_request") {
+		return req, nil
+	}
 	if ctx.GetBool("forbidden_encountered") {
 		// Return an empty data response. The middleware will replace the entire
 		// response anyway, so the body content here does not matter much — it
@@ -75,7 +78,7 @@ func (m *ForbiddenHandlerModule) OnOriginRequest(req *http.Request, ctx core.Req
 // input. It also flags the request context so the middleware and OnOriginRequest
 // can act on it.
 func (m *ForbiddenHandlerModule) OnOriginResponse(resp *http.Response, ctx core.RequestContext) *http.Response {
-	if resp == nil {
+	if resp == nil || ctx.GetBool("streaming_request") {
 		return nil
 	}
 
@@ -182,6 +185,9 @@ func (m *ForbiddenHandlerModule) Middleware(ctx core.RequestContext, next http.H
 		// standardised forbidden response directly.
 		maps.Copy(w.Header(), bw.header)
 		w.Header().Del("Content-Length")
+		w.Header().Del("Content-Encoding")
+		w.Header().Del("Transfer-Encoding")
+		w.Header().Del("ETag")
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write(forbiddenErrorBody)
