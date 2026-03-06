@@ -1,6 +1,9 @@
 package trace
 
-import sdktrace "go.opentelemetry.io/otel/sdk/trace"
+import (
+	"context"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+)
 
 // syncSpanProcessor exports spans synchronously and routes errors through a
 // local handler instead of the global otel.Handle. This is equivalent to
