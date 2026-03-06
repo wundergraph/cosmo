@@ -2580,6 +2580,11 @@
                         }
                       }
                     ]
+                  },
+                  "delete_durable_consumers_on_shutdown": {
+                    "type": "boolean",
+                    "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down. This prevents zombie consumers accumulating on the NATS server across Kubernetes rolling deployments where each pod has a unique hostname baked into the consumer name. Defaults to false.",
+                    "default": false
                   }
                 }
               }

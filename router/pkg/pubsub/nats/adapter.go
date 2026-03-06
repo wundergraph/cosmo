@@ -32,6 +32,11 @@ type Adapter interface {
 // Ensure ProviderAdapter implements ProviderSubscriptionHooks
 var _ datasource.Adapter = (*ProviderAdapter)(nil)
 
+type trackedConsumer struct {
+	streamName   string
+	consumerName string
+}
+
 // ProviderAdapter implements the AdapterInterface for NATS pub/sub
 type ProviderAdapter struct {
 	ctx               context.Context
@@ -46,6 +51,10 @@ type ProviderAdapter struct {
 	opts              []nats.Option
 	flushTimeout      time.Duration
 	streamMetricStore metric.StreamMetricStore
+
+	deleteConsumersOnShutdown bool
+	trackedConsumersMu        sync.Mutex
+	trackedConsumers          []trackedConsumer
 }
 
 // getInstanceIdentifier returns an identifier for the current instance.
@@ -114,6 +123,15 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 		if err != nil {
 			log.Error("creating or updating consumer", zap.Error(err))
 			return datasource.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, subConf.StreamConfiguration.StreamName), err)
+		}
+
+		if p.deleteConsumersOnShutdown {
+			p.trackedConsumersMu.Lock()
+			p.trackedConsumers = append(p.trackedConsumers, trackedConsumer{
+				streamName:   subConf.StreamConfiguration.StreamName,
+				consumerName: durableConsumerName,
+			})
+			p.trackedConsumersMu.Unlock()
 		}
 
 		p.closeWg.Add(1)
@@ -383,6 +401,23 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 
 	var shutdownErr error
 
+	// Delete durable consumers before closing the connection — the JetStream
+	// API requires an open connection to reach the NATS server.
+	if p.deleteConsumersOnShutdown && p.js != nil {
+		p.trackedConsumersMu.Lock()
+		consumers := p.trackedConsumers
+		p.trackedConsumersMu.Unlock()
+		for _, tc := range consumers {
+			if err := p.js.DeleteConsumer(ctx, tc.streamName, tc.consumerName); err != nil {
+				p.logger.Warn("failed to delete durable consumer on shutdown",
+					zap.String("stream", tc.streamName),
+					zap.String("consumer", tc.consumerName),
+					zap.Error(err),
+				)
+			}
+		}
+	}
+
 	fErr := p.flush(ctx)
 	if fErr != nil {
 		shutdownErr = errors.Join(shutdownErr, fErr)
@@ -407,7 +442,7 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string, providerOpts datasource.ProviderOpts) (Adapter, error) {
+func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats.Option, hostName string, routerListenAddr string, deleteConsumersOnShutdown bool, providerOpts datasource.ProviderOpts) (Adapter, error) {
 	if logger == nil {
 		logger = zap.NewNop()
 	}
@@ -422,16 +457,17 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 	ctx, cancelFunc := context.WithCancel(ctx)
 
 	return &ProviderAdapter{
-		ctx:               ctx,
-		cancel:            cancelFunc,
-		logger:            logger.With(zap.String("pubsub", "nats")),
-		closeWg:           sync.WaitGroup{},
-		hostName:          hostName,
-		routerListenAddr:  routerListenAddr,
-		url:               url,
-		opts:              opts,
-		flushTimeout:      10 * time.Second,
-		streamMetricStore: store,
+		ctx:                       ctx,
+		cancel:                    cancelFunc,
+		logger:                    logger.With(zap.String("pubsub", "nats")),
+		closeWg:                   sync.WaitGroup{},
+		hostName:                  hostName,
+		routerListenAddr:          routerListenAddr,
+		url:                       url,
+		opts:                      opts,
+		flushTimeout:              10 * time.Second,
+		streamMetricStore:         store,
+		deleteConsumersOnShutdown: deleteConsumersOnShutdown,
 	}, nil
 }
 

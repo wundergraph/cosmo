@@ -212,7 +212,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 
 	natsPubSubByProviderID := map[string]natsPubsub.Adapter{}
 
-	defaultAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test", datasource.ProviderOpts{
+	defaultAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test", false, datasource.ProviderOpts{
 		StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
 	})
 	if err != nil {
@@ -223,7 +223,7 @@ func New(ctx context.Context, config *Config) (*Subgraphs, error) {
 	}
 	natsPubSubByProviderID["default"] = defaultAdapter
 
-	myNatsAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test", datasource.ProviderOpts{
+	myNatsAdapter, err := natsPubsub.NewAdapter(ctx, zap.NewNop(), url, []nats.Option{}, "hostname", "test", false, datasource.ProviderOpts{
 		StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
 	})
 	if err != nil {
