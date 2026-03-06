@@ -101,9 +101,8 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
 
-			// produce a message
-			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-			xEnv.WaitForMessagesSent(1, RedisWaitTimeout)
+			// produce a message (retry until subscription pipeline is confirmed active)
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
 
 			// process the message
 			select {
@@ -168,6 +167,16 @@ func TestRedisEvents(t *testing.T) {
 			// Wait for the subscription to be started before producing a message
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+
+			// Warm-up: confirm the subscription pipeline is fully active
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
+			select {
+			case subscriptionArgs := <-subscriptionArgsCh:
+				require.NoError(t, subscriptionArgs.errValue)
+				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
+			case <-time.After(RedisWaitTimeout):
+				t.Fatal("timeout waiting for warm-up message")
+			}
 
 			// produce an empty message
 			events.ProduceRedisMessage(t, xEnv, topics[0], ``)
@@ -273,8 +282,8 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(2, RedisWaitTimeout)
 			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
 
-			// produce a message
-			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			// produce a message (retry until subscription pipeline is confirmed active)
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
 
 			// read the message from the first subscription
 			select {
@@ -355,8 +364,8 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(2, RedisWaitTimeout)
 			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
 
-			// produce a message
-			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			// produce a message (retry until subscription pipeline is confirmed active)
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
 
 			// read the message from the first subscription
 			select {
@@ -453,8 +462,8 @@ func TestRedisEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
 
-			// produce a message
-			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+			// produce a message (retry until subscription pipeline is confirmed active)
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
 
 			// read the message from the subscription
 			select {
@@ -512,12 +521,12 @@ func TestRedisEvents(t *testing.T) {
 				xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
 				xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
 
-				// produce a message
-				events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
+				// produce a message (retry until subscription pipeline is confirmed active)
+				xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
 				// read the message from the subscription
 				assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
-				// produce a message
+				// produce a message (pipeline already active, direct produce is safe)
 				events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 				// read the message from the subscription
 				assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
@@ -716,12 +725,24 @@ func TestRedisEvents(t *testing.T) {
 				11: {"Alexandra", "Neuse"},
 			}
 
+			// Warm-up: confirm the subscription pipeline is fully active with a matching ID
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id":1}`, RedisWaitTimeout)
+			gErr := testenv.WSReadJSON(t, conn, &msg)
+			require.NoError(t, gErr)
+			require.Equal(t, "1", msg.ID)
+			require.Equal(t, "next", msg.Type)
+			gErr = json.Unmarshal(msg.Payload, &payload)
+			require.NoError(t, gErr)
+			require.Equal(t, 1, payload.Data.FilteredEmployeeUpdatedMyRedis.ID)
+			require.Equal(t, employeesCheck[1].Forename, payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Forename)
+			require.Equal(t, employeesCheck[1].Surname, payload.Data.FilteredEmployeeUpdatedMyRedis.Details.Surname)
+
 			// Events 1, 3, 4, 7, and 11 should be included
 			for i := MsgCount; i > 0; i-- {
 				events.ProduceRedisMessage(t, xEnv, topics[0], fmt.Sprintf(`{"__typename":"Employee","id":%d}`, i))
 
 				if i == 11 || i == 7 || i == 4 || i == 3 || i == 1 {
-					gErr := conn.ReadJSON(&msg)
+					gErr := testenv.WSReadJSON(t, conn, &msg)
 					require.NoError(t, gErr)
 					require.Equal(t, "1", msg.ID)
 					require.Equal(t, "next", msg.Type)

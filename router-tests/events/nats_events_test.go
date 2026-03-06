@@ -1038,13 +1038,9 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
 			// Trigger the first subscription via NATS
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.12"), []byte(`{"id":13,"__typename":"Employee"}`))
-			require.NoError(t, err)
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.12"), []byte(`{"id":13,"__typename":"Employee"}`), 1, NatsWaitTimeout)
 
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-
-			err = conn.ReadJSON(&msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "next", msg.Type)
@@ -1061,7 +1057,7 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, NatsWaitTimeout)
 
 			var complete testenv.WebSocketMessage
-			err = conn.ReadJSON(&complete)
+			err = testenv.WSReadJSON(t, conn, &complete)
 			require.NoError(t, err)
 			require.Equal(t, "1", complete.ID)
 			require.Equal(t, "complete", complete.Type)
@@ -1082,7 +1078,7 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
 			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
-			err = conn.ReadJSON(&msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "2", msg.ID)
 			require.Equal(t, "next", msg.Type)
@@ -1091,13 +1087,9 @@ func TestNatsEvents(t *testing.T) {
 			require.Equal(t, float64(14), payload.Data.EmployeeUpdatedNatsStream.ID)
 
 			// Publish the third event while the subscription is subscribed
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.12"), []byte(`{"id":15,"__typename":"Employee"}`))
-			require.NoError(t, err)
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.12"), []byte(`{"id":15,"__typename":"Employee"}`), 1, NatsWaitTimeout)
 
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
-
-			err = conn.ReadJSON(&msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "2", msg.ID)
 			require.Equal(t, "next", msg.Type)
@@ -1214,10 +1206,7 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
 			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
-			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`)) // Correct message
-			require.NoError(t, err)
-			err = xEnv.NatsConnectionDefault.Flush()
-			require.NoError(t, err)
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`), 1, NatsWaitTimeout)
 
 			assert.NoError(t, client.Close())
 

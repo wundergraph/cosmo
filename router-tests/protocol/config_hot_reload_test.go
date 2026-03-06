@@ -211,7 +211,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			var payload currentTimePayload
 
 			// Read a result and store its timestamp, next result should be 1 second later
-			err = conn.ReadJSON(&msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "next", msg.Type)
@@ -221,9 +221,12 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			// Wait for the config poller to be ready
 			<-pm.ready
 
-			// Swap config
+			// Swap config — the ReadJSON below expects a possible websocket close error,
+			// so use a deadline instead of WSReadJSON (which retries on errors)
 			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+			conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 			err = conn.ReadJSON(&msg)
+			conn.SetReadDeadline(time.Time{})
 
 			// If the operation happen fast enough, ensure that the connection is closed.
 			// In the future, we might want to send a complete message to the client
@@ -246,7 +249,7 @@ func TestConfigHotReloadPoller(t *testing.T) {
 			require.NoError(t, err)
 
 			// Read a result and store its timestamp, next result should be 1 second later
-			err = conn.ReadJSON(&msg)
+			err = testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, err)
 			require.Equal(t, "1", msg.ID)
 			require.Equal(t, "next", msg.Type)

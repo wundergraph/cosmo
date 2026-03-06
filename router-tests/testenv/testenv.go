@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -2758,6 +2759,49 @@ func (e *Environment) KafkaPublishUntilReceived(topicName string, message string
 
 		if ctx.Err() != nil {
 			e.t.Fatalf("timed out: no SubscriptionUpdateSent received after Kafka produce")
+		}
+	}
+}
+
+// RedisPublishUntilReceived publishes a Redis message and retries until
+// the subscription processes it. Handles the race between Redis subscription
+// setup and message publishing, similar to NATSPublishUntilReceived.
+func (e *Environment) RedisPublishUntilReceived(topicName string, message string, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sr := e.syncReporter()
+
+	parsedURL, err := url.Parse(e.RedisHosts[0])
+	require.NoError(e.t, err, "failed to parse Redis URL")
+
+	var redisConn redis.UniversalClient
+	if !e.RedisWithClusterMode {
+		redisConn = redis.NewClient(&redis.Options{
+			Addr: parsedURL.Host,
+		})
+	} else {
+		redisConn = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs: []string{parsedURL.Host},
+		})
+	}
+	defer redisConn.Close()
+
+	for {
+		intCmd := redisConn.Publish(ctx, e.GetPubSubName(topicName), message)
+		require.NoError(e.t, intCmd.Err())
+
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
+		ok := sr.WaitForEvent(shortCtx, EventSubscriptionUpdateSent)
+		shortCancel()
+
+		if ok {
+			return
+		}
+
+		if ctx.Err() != nil {
+			e.t.Fatalf("timed out: no SubscriptionUpdateSent received after Redis publish")
 		}
 	}
 }

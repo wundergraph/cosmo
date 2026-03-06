@@ -1886,12 +1886,8 @@ func TestWebSockets(t *testing.T) {
 			}()
 
 			go func() {
-				time.Sleep(time.Millisecond * 100)
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-				time.Sleep(time.Millisecond * 100)
-				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*5)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*5)
 			}()
 
 			wg.Wait()

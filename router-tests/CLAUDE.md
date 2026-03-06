@@ -38,7 +38,10 @@ Tests access the `SyncReporter` through `e.syncReporter()` or via the existing `
 
 **Problem:** After `WaitForSubscriptionCount` and `WaitForTriggerCount`, the internal subscription pipeline may not be fully wired up. A direct `Publish()` can be silently lost, causing timeouts.
 
-**Fix:** Use `NATSPublishUntilReceived` (or `KafkaPublishUntilReceived`) for the first message. These helpers publish, wait for a `SubscriptionUpdateSent` event on the SyncReporter channel, and retry if the message was lost.
+**Fix:** Use the `*PublishUntilReceived` methods for the first message. These helpers publish, wait for a `SubscriptionUpdateSent` event on the SyncReporter channel, and retry if the message was lost. All three event systems have a safe variant:
+- `NATSPublishUntilReceived` / `NATSPublishUntilMinMessagesSent` (for fan-out)
+- `KafkaPublishUntilReceived`
+- `RedisPublishUntilReceived`
 
 ```go
 // WRONG — message can be lost to race condition
@@ -52,6 +55,8 @@ xEnv.WaitForMessagesSent(1, timeout)  // may timeout forever
 xEnv.WaitForSubscriptionCount(1, timeout)
 xEnv.WaitForTriggerCount(1, timeout)
 xEnv.NATSPublishUntilReceived(conn, subject, data, 1, timeout)
+// or: xEnv.KafkaPublishUntilReceived(topic, message, 1, timeout)
+// or: xEnv.RedisPublishUntilReceived(topic, message, timeout)
 ```
 
 ### 2. Error-testing with intentionally bad messages: warm up first, then single-send
@@ -71,19 +76,26 @@ conn.Flush()
 // read and validate the error response...
 ```
 
-### 3. WebSocket reads: always set a read deadline
+### 3. WebSocket reads: use `WSReadJSON` instead of `conn.ReadJSON`
 
 **Problem:** `conn.ReadJSON()` blocks forever if the expected message never arrives (e.g., due to a lost publish). The test hangs until the 8-minute Go test timeout kills it.
 
-**Fix:** Set a read deadline before every `ReadJSON` call. Clear it after.
+**Fix:** Use `testenv.WSReadJSON` (or `testenv.WSWriteJSON` for writes) which has built-in retry with 2-second deadlines per attempt and exponential backoff (up to 10 retries).
 
 ```go
-err = conn.SetReadDeadline(time.Now().Add(timeout))
-require.NoError(t, err)
+// WRONG — hangs indefinitely if no message arrives
 err = conn.ReadJSON(&msg)
-require.NoError(t, err)
-err = conn.SetReadDeadline(time.Time{})
-require.NoError(t, err)
+
+// RIGHT — retries with deadline, fails fast after ~20 seconds
+err = testenv.WSReadJSON(t, conn, &msg)
+```
+
+Only use manual `SetReadDeadline` + `conn.ReadJSON` when you expect an error (e.g., websocket close after config hot reload):
+
+```go
+conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+err = conn.ReadJSON(&msg)  // may return websocket.CloseError
+conn.SetReadDeadline(time.Time{})
 ```
 
 ### 4. Non-deterministic order: sort before asserting
@@ -108,8 +120,11 @@ Tests known to be flaky use the `TestFlaky` prefix (e.g., `TestFlakyNatsEvents`)
 | Helper | Location | Purpose |
 |--------|----------|---------|
 | `SyncReporter` | `testenv/sync_reporter.go` | Channel-based wrapper around EngineStats for test synchronization |
-| `NATSPublishUntilReceived` | `testenv/testenv.go` | Publish with retry until `SubscriptionUpdateSent` event received |
+| `NATSPublishUntilReceived` | `testenv/testenv.go` | Publish NATS message with retry until `SubscriptionUpdateSent` event received |
 | `KafkaPublishUntilReceived` | `testenv/testenv.go` | Same pattern for Kafka |
+| `RedisPublishUntilReceived` | `testenv/testenv.go` | Same pattern for Redis |
+| `WSReadJSON` / `WSWriteJSON` | `testenv/testenv.go` | WebSocket read/write with retry + read deadline (10 attempts, exponential backoff) |
+| `WSReadMessage` / `WSWriteMessage` | `testenv/testenv.go` | WebSocket raw message read/write with retry + deadline |
 | `WaitForSubscriptionCount` | `testenv/testenv.go` | Wait for subscription count to reach exact value (predicate-based) |
 | `WaitForTriggerCount` | `testenv/testenv.go` | Wait for trigger count to reach at least N (predicate-based) |
 | `WaitForMessagesSent` | `testenv/testenv.go` | Wait for MessagesSent to reach at least N (predicate-based) |

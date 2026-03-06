@@ -292,10 +292,7 @@ func TestSingleFlight(t *testing.T) {
 				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
 				xEnv.WaitForTriggerCount(1, time.Second*15)
 				// Trigger the subscription via NATS to get updates for all subscriptions
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
 			for i := int64(0); i < numOfOperations; i++ {
@@ -377,10 +374,7 @@ func TestSingleFlight(t *testing.T) {
 				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
 				xEnv.WaitForTriggerCount(1, time.Second*15)
 				// Trigger the subscription via NATS to get updates for all subscriptions
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
 			for i := int64(0); i < numOfOperations; i++ {
@@ -472,10 +466,7 @@ func TestSingleFlight(t *testing.T) {
 				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
 				xEnv.WaitForTriggerCount(1, time.Second*15)
 				// Trigger the subscription via NATS to get updates for all subscriptions
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
 			for i := int64(0); i < numOfOperations; i++ {
