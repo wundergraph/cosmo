@@ -16,7 +16,9 @@ export const OverviewToolbar = ({
   children?: React.ReactNode;
 }) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
   const query = {

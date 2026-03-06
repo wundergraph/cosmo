@@ -2,7 +2,7 @@ import { identify, resetTracking } from "@/lib/track";
 import { Transport } from "@connectrpc/connect";
 import { TransportProvider } from "@connectrpc/connect-query";
 import { createConnectTransport } from "@connectrpc/connect-web";
-import { QueryClient, useQuery, useQueryClient, } from "@tanstack/react-query";
+import { QueryClient, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/router";
 import { ReactNode, createContext, useEffect, useState } from "react";
 import { useCookieOrganization } from "@/hooks/use-cookie-organization";
@@ -263,9 +263,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return (
       <UserContext.Provider value={user}>
         <SessionClientContext.Provider value={sessionQueryClient}>
-          <WorkspaceProvider>
-            {children}
-          </WorkspaceProvider>
+          <WorkspaceProvider>{children}</WorkspaceProvider>
         </SessionClientContext.Provider>
       </UserContext.Provider>
     );
@@ -275,9 +273,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     <TransportProvider transport={transport}>
       <UserContext.Provider value={user}>
         <SessionClientContext.Provider value={sessionQueryClient}>
-          <WorkspaceProvider>
-            {children}
-          </WorkspaceProvider>
+          <WorkspaceProvider>{children}</WorkspaceProvider>
         </SessionClientContext.Provider>
       </UserContext.Provider>
     </TransportProvider>

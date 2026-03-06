@@ -8,7 +8,9 @@ import { useWorkspace } from "@/hooks/use-workspace";
 
 export const EmptySchema = ({ subgraphName }: { subgraphName?: string }) => {
   const graphContext = useContext(GraphContext);
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const isFederated = graphContext?.graph?.supportsFederation;
 

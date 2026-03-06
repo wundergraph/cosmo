@@ -29,7 +29,9 @@ export const AnalyticsFilters: React.FC<AnalyticsFiltersProps> = (props) => {
 
   return (
     <>
-      {filters.length > 0 && <DataTablePrimaryFilterMenu filters={filters} className={className} />}
+      {filters.length > 0 && (
+        <DataTablePrimaryFilterMenu filters={filters} className={className} />
+      )}
     </>
   );
 };

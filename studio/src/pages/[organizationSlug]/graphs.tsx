@@ -31,10 +31,14 @@ const GraphToolbar = () => {
   const org = useCurrentOrganization();
   const router = useRouter();
   const applyParams = useApplyParams();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const type = (router.query.type as string) || "all-graphs";
-  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
+  const isAdminOrDeveloper = checkUserAccess({
+    rolesToBe: ["organization-admin", "organization-developer"],
+  });
 
   return (
     <Toolbar className="py-0 md:w-auto">
@@ -55,10 +59,7 @@ const GraphToolbar = () => {
           </SelectGroup>
         </SelectContent>
       </Select>
-      <Button
-        asChild={isAdminOrDeveloper}
-        disabled={!isAdminOrDeveloper}
-      >
+      <Button asChild={isAdminOrDeveloper} disabled={!isAdminOrDeveloper}>
         <Link href={`/${org?.slug}/new?namespace=${namespace}`}>Create</Link>
       </Button>
     </Toolbar>
@@ -67,7 +68,9 @@ const GraphToolbar = () => {
 
 const GraphsDashboardPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const type = (router.query.type as string) || "all-graphs";
 

@@ -247,7 +247,9 @@ const NewMapper = ({
 }) => {
   type CreateMapperFormInput = z.infer<typeof createMapperSchema>;
 
-  const groupLabel = availableGroups.find((g) => g.groupId === mapper.groupId)?.name || "Select a group";
+  const groupLabel =
+    availableGroups.find((g) => g.groupId === mapper.groupId)?.name ||
+    "Select a group";
 
   const {
     register,
@@ -273,7 +275,10 @@ const NewMapper = ({
             }}
             {...groupIdField}
           >
-            <SelectTrigger value={mapper.groupId} className="w-[200px] lg:w-full">
+            <SelectTrigger
+              value={mapper.groupId}
+              className="w-[200px] lg:w-full"
+            >
               <SelectValue aria-label={groupLabel}>{groupLabel}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -340,26 +345,28 @@ const AddNewMappers = ({
   return (
     <>
       {mappers.length === 0 ? (
-        <div className="text-muted-foreground text-sm px-1">
+        <div className="px-1 text-sm text-muted-foreground">
           No mappers have been added.
         </div>
-      ) : mappers.map((mapper, index) => (
-        <NewMapper
-          key={`mapper-${mapper.id}-${index}`}
-          mapper={mapper}
-          availableGroups={availableGroups}
-          remove={() => {
-            const newMappers = [...mappers];
-            newMappers.splice(index, 1);
-            updateMappers(newMappers);
-          }}
-          onChange={(newMapper) => {
-            const newMappers = [...mappers];
-            newMappers[index] = { ...newMappers[index], ...newMapper };
-            updateMappers(newMappers);
-          }}
-        />
-      ))}
+      ) : (
+        mappers.map((mapper, index) => (
+          <NewMapper
+            key={`mapper-${mapper.id}-${index}`}
+            mapper={mapper}
+            availableGroups={availableGroups}
+            remove={() => {
+              const newMappers = [...mappers];
+              newMappers.splice(index, 1);
+              updateMappers(newMappers);
+            }}
+            onChange={(newMapper) => {
+              const newMappers = [...mappers];
+              newMappers[index] = { ...newMappers[index], ...newMapper };
+              updateMappers(newMappers);
+            }}
+          />
+        ))
+      )}
       <Button
         className="flex w-max gap-x-2"
         variant="outline"
@@ -455,7 +462,9 @@ const UpdateIDPMappers = ({
       >
         <DialogHeader>
           <DialogTitle>Update group mappers</DialogTitle>
-          <DialogDescription>Map your groups to cosmo groups.</DialogDescription>
+          <DialogDescription>
+            Map your groups to cosmo groups.
+          </DialogDescription>
         </DialogHeader>
         <div className="flex justify-between px-1 text-sm font-bold">
           <span>Group in cosmo</span>
@@ -1487,7 +1496,9 @@ const SettingsDashboardPage: NextPageWithLayout = () => {
         refetch={refetchOIDCProvider}
       />
       <Scim />
-      {(!isCreator || orgs > 1 || orgIsPendingDeletion) && <Separator className="my-2" />}
+      {(!isCreator || orgs > 1 || orgIsPendingDeletion) && (
+        <Separator className="my-2" />
+      )}
 
       {!isCreator && <LeaveOrganization />}
 

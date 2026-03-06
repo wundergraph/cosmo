@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import {
   WorkspaceNamespace,
   WorkspaceFederatedGraph,
-  WorkspaceSubgraph
+  WorkspaceSubgraph,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import Fuse from "fuse.js";
 import * as React from "react";
@@ -33,13 +33,17 @@ export function WorkspaceCommandWrapper({
 }: WorkspacePopoverContentProps) {
   const { namespaceByName, setNamespace } = useWorkspace();
   const filteredGraphs = useMemo<WorkspaceNamespace[]>(() => {
-    const filterValue = filter?.trim().toLowerCase() ?? '';
+    const filterValue = filter?.trim().toLowerCase() ?? "";
     if (filterValue.length === 0) {
       // There is no filter, so return all namespaces
       return Array.from(namespaceByName.values());
     }
 
-    const fuse = new Fuse<unknown>([], { keys: ['name'], threshold: 0.2, includeScore: true });
+    const fuse = new Fuse<unknown>([], {
+      keys: ["name"],
+      threshold: 0.2,
+      includeScore: true,
+    });
     const searchResults: WorkspaceNamespace[] = [];
     for (const wns of Array.from(namespaceByName.values())) {
       // Determine whether the namespace contains the filter value
@@ -101,27 +105,28 @@ export function WorkspaceCommandWrapper({
 
   const isFiltering = filter.trim().length > 0;
   return (
-    <PopoverContentWithScrollableContent
-      className="p-0 w-72 lg:w-96 mt-4"
-    >
+    <PopoverContentWithScrollableContent className="mt-4 w-72 p-0 lg:w-96">
       <Command
         loop
         shouldFilter={false}
         className="max-h-[calc(var(--radix-popover-content-available-height)_-32px)]"
       >
-        {showFilter && (<CommandInput
-          value={filter}
-          onValueChange={setFilter}
-          placeholder="Search namespace, graphs and subgraphs"
-        />)}
+        {showFilter && (
+          <CommandInput
+            value={filter}
+            onValueChange={setFilter}
+            placeholder="Search namespace, graphs and subgraphs"
+          />
+        )}
         <div className="scrollbar-custom h-full overflow-y-auto">
           {isFiltering || !children ? (
             <>
               {filteredGraphs.length === 0 ? (
-                <div className="p-3 text-sm text-muted-foreground text-center pointer-events-none">
+                <div className="pointer-events-none p-3 text-center text-sm text-muted-foreground">
                   No namespace, graph or subgraph matches your criteria.
                 </div>
-              ) : filteredGraphs.map((wns, index) => (
+              ) : (
+                filteredGraphs.map((wns, index) => (
                   <GraphCommandGroup
                     key={`namespace-${index}`}
                     isFiltering={isFiltering}
@@ -134,9 +139,12 @@ export function WorkspaceCommandWrapper({
                       close();
                     }}
                   />
-              ))}
+                ))
+              )}
             </>
-          ) : children}
+          ) : (
+            children
+          )}
         </div>
       </Command>
     </PopoverContentWithScrollableContent>

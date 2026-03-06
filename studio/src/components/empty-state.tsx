@@ -15,7 +15,7 @@ export const EmptyState: React.FC<EmptyStateProps> = (props) => {
     <div
       className={cn(
         "flex h-[520px] w-full items-center justify-center rounded-md",
-        className
+        className,
       )}
     >
       <div className="mx-auto flex w-full flex-col items-center justify-center px-6 text-center md:max-w-2xl">

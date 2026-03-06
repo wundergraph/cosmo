@@ -13,7 +13,11 @@ import { addDays } from "date-fns";
 import { useRouter } from "next/router";
 import { Dispatch, SetStateAction, useMemo } from "react";
 import { AiOutlineAudit } from "react-icons/ai";
-import { MdOutlineFeaturedPlayList, MdOutlinePolicy, MdOutlineExtension } from "react-icons/md";
+import {
+  MdOutlineFeaturedPlayList,
+  MdOutlinePolicy,
+  MdOutlineExtension,
+} from "react-icons/md";
 import {
   PiBell,
   PiChartDonut,
@@ -89,21 +93,22 @@ export const OrganizationBanner = () => {
       <p className="flex items-center gap-x-2 px-4 py-2">
         <ExclamationTriangleIcon className="flex-shrink-0" />
         <span className="flex gap-x-1 font-bold text-gray-950 dark:text-primary-foreground">
-          {org.deactivation
-            ? (
-              <>
-                Your organization is deactivated and is in read-only mode.{" "}
-                {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} It will
-                be permanently deleted on{" "}
-                {formatDateTime(addDays(new Date(org.deactivation.initiatedAt), 30))}
-              </>
-            )
-            : (
-              <>
-                Your organization is queued for deletion. It will be permanently deleted on{" "}
-                {formatDateTime(addDays(new Date(org.deletion!.queuedAt), 3))}
-              </>
-            )}
+          {org.deactivation ? (
+            <>
+              Your organization is deactivated and is in read-only mode.{" "}
+              {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} It
+              will be permanently deleted on{" "}
+              {formatDateTime(
+                addDays(new Date(org.deactivation.initiatedAt), 30),
+              )}
+            </>
+          ) : (
+            <>
+              Your organization is queued for deletion. It will be permanently
+              deleted on{" "}
+              {formatDateTime(addDays(new Date(org.deletion!.queuedAt), 3))}
+            </>
+          )}
         </span>
       </p>
     </div>
@@ -118,13 +123,20 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const [isStarBannerDisabled, setDisableStarBanner] = useStarBannerDisabled();
   const { namespace } = useWorkspace();
 
-  const isAdmin = checkUserAccess({ rolesToBe: ["organization-admin" ]});
-  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
-  const isApiKeyManager = checkUserAccess({ rolesToBe: ["organization-apikey-manager"] });
+  const isAdmin = checkUserAccess({ rolesToBe: ["organization-admin"] });
+  const isAdminOrDeveloper = checkUserAccess({
+    rolesToBe: ["organization-admin", "organization-developer"],
+  });
+  const isApiKeyManager = checkUserAccess({
+    rolesToBe: ["organization-apikey-manager"],
+  });
   const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
   const isOrganizationPendingDeletion = !!user?.currentOrganization?.deletion;
 
-  const isBannerDisplayed = isOrganizationDeactivated || isOrganizationPendingDeletion || !isStarBannerDisabled;
+  const isBannerDisplayed =
+    isOrganizationDeactivated ||
+    isOrganizationPendingDeletion ||
+    !isStarBannerDisabled;
 
   const plans = useQuery(
     getBillingPlans,
@@ -236,7 +248,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
       navigation.push({
         title: "Audit log",
         href: basePath + "/audit-log",
-        icon: <AiOutlineAudit className="size-4"/>,
+        icon: <AiOutlineAudit className="size-4" />,
         separator: !isAdminOrDeveloper,
       });
     }
@@ -260,15 +272,21 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
             Invitations
             {user?.invitations?.length ? (
               <div className="relative ml-auto">
-                <div aria-hidden="true" className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400" />
-                <div aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-400" />
+                <div
+                  aria-hidden="true"
+                  className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400"
+                />
+                <div
+                  aria-hidden="true"
+                  className="h-2 w-2 rounded-full bg-blue-400"
+                />
               </div>
             ) : null}
           </>
         ),
         href: "/account/invitations",
         icon: <EnvelopeClosedIcon className="size-4" />,
-        className: 'flex justify-between items-center w-full gap-x-1',
+        className: "flex justify-between items-center w-full gap-x-1",
       },
       {
         title: "Manage",

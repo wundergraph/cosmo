@@ -77,17 +77,22 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
               let preParagraph = null;
               let postParagraph = null;
 
-              if (auditAction === "organization_invitation.created" ||
+              if (
+                auditAction === "organization_invitation.created" ||
                 auditAction === "scim.organization_invitation_created" ||
-                action === "queued_deletion") {
+                action === "queued_deletion"
+              ) {
                 postParagraph = "for";
               } else if (auditAction === "member_role.updated") {
                 preParagraph = "role for";
                 postParagraph = "to";
-              } else if (auditAction === "member_group.updated" || auditAction === "api_key.group_updated") {
+              } else if (
+                auditAction === "member_group.updated" ||
+                auditAction === "api_key.group_updated"
+              ) {
                 preParagraph = "group for";
                 postParagraph = "to";
-              } else if (auditAction === "member_group.added" ) {
+              } else if (auditAction === "member_group.added") {
                 postParagraph = "to group";
               } else if (auditAction === "member_group.removed") {
                 postParagraph = "from group";
@@ -128,7 +133,7 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
               const actionView = (
                 <>
                   <span className="text-gray-500 dark:text-gray-400">
-                    {capitalize(action.replaceAll('_', ' '))}
+                    {capitalize(action.replaceAll("_", " "))}
                   </span>
                   {label}
                   {auditableDisplayName && (
@@ -146,10 +151,7 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
                 </>
               );
               return (
-                <TableRow
-                  key={id}
-                  className="group py-1"
-                >
+                <TableRow key={id} className="group py-1">
                   <TableCell className="align-top font-medium">
                     <span className="flex items-center space-x-2">
                       {actorType === "api_key" && (
@@ -168,7 +170,9 @@ export const AuditLogTable = ({ logs }: { logs?: AuditLog[] }) => {
                         />
                       )}
                       <span className="block font-medium">
-                        {apiKeyName ? `${apiKeyName} (${actorDisplayName})` : `${actorDisplayName}`}
+                        {apiKeyName
+                          ? `${apiKeyName} (${actorDisplayName})`
+                          : `${actorDisplayName}`}
                       </span>
                     </span>
                   </TableCell>

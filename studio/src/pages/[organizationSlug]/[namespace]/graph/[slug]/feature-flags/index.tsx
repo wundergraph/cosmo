@@ -27,7 +27,9 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
 
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const pageNumber = router.query.page
     ? parseInt(router.query.page as string)
@@ -41,15 +43,19 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
 
   const applyParams = useApplyParams();
 
-  const { data, isLoading, error, refetch } = useQuery(getFeatureFlagsByFederatedGraph, {
-    federatedGraphName: graphData?.graph?.name,
-    namespace,
-    query,
-    limit,
-    offset,
-  }, {
-    enabled: !!graphData,
-  });
+  const { data, isLoading, error, refetch } = useQuery(
+    getFeatureFlagsByFederatedGraph,
+    {
+      federatedGraphName: graphData?.graph?.name,
+      namespace,
+      query,
+      limit,
+      offset,
+    },
+    {
+      enabled: !!graphData,
+    },
+  );
 
   if (!graphData) return null;
 

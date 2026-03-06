@@ -39,7 +39,9 @@ export const LintIssuesTable = ({
   const router = useRouter();
   const user = useUser();
   const graphContext = useContext(GraphContext);
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
   if (lintIssues.length === 0 && !isLintingEnabled) {
@@ -126,9 +128,7 @@ export const LintIssuesTable = ({
                           }/graph/${router.query.slug}/checks/${
                             router.query.checkId
                           }?tab=schema&${
-                            l.subgraphName
-                              ? `subgraph=${l.subgraphName}`
-                              : ""
+                            l.subgraphName ? `subgraph=${l.subgraphName}` : ""
                           }${
                             l.issueLocation?.line
                               ? `#L${l.issueLocation?.line}`

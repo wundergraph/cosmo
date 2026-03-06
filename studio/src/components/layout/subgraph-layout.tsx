@@ -7,12 +7,8 @@ import {
   HomeIcon,
 } from "@radix-ui/react-icons";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import {
-  getSubgraphByName,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import {
-  GetSubgraphByNameResponse,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { getSubgraphByName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { GetSubgraphByNameResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
 import { useRouter } from "next/router";
 import { Fragment, createContext, useMemo } from "react";
 import { PiGraphLight } from "react-icons/pi";
@@ -39,7 +35,9 @@ export const SubgraphContext = createContext<SubgraphContextProps | undefined>(
 
 export const SubgraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
   const slug = router.query.subgraphSlug as string;
 

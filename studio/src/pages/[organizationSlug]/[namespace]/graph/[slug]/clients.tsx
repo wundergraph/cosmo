@@ -500,14 +500,18 @@ const ClientOperations = ({
                                   isCheckPersistedOperationTrafficPending ||
                                   isDeletePersistedOperationPending
                                 }
-                                onClick={clientName ? () => {
-                                  mutateCheckPersistedOperationTraffic({
-                                    operationId: op.id,
-                                    namespace,
-                                    fedGraphName: slug,
-                                    clientName,
-                                  });
-                                } : undefined}
+                                onClick={
+                                  clientName
+                                    ? () => {
+                                        mutateCheckPersistedOperationTraffic({
+                                          operationId: op.id,
+                                          namespace,
+                                          fedGraphName: slug,
+                                          clientName,
+                                        });
+                                      }
+                                    : undefined
+                                }
                               >
                                 <ArchiveBoxXMarkIcon className="h-4 w-4" />
                               </Button>
@@ -655,7 +659,7 @@ const ClientOperations = ({
         operationHasTraffic={Boolean(persistedOperationDeleteState.hasTraffic)}
         metricsLink={`/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${encodeURIComponent(createFilterState({ operationPersistedId: persistedOperationDeleteState.id ?? undefined }))}`}
         onSubmitButtonClick={
-          (persistedOperationDeleteState.id && clientName)
+          persistedOperationDeleteState.id && clientName
             ? () => {
                 mutateDeletePeristedOperation({
                   operationId: persistedOperationDeleteState.id!,

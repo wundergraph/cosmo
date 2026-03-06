@@ -14,7 +14,15 @@ import { GroupRolesCommand, GroupRolesAccordion } from "./group-roles-command";
 import { GroupResourceSelector } from "@/components/member-groups/group-resource-selector";
 import { PopoverContentWithScrollableContent } from "../popover-content-with-scrollable-content";
 
-export function GroupRuleBuilder({ builtin, roles, rule, accessibleResources, disabled, onRuleUpdated, onRemoveRule }: {
+export function GroupRuleBuilder({
+  builtin,
+  roles,
+  rule,
+  accessibleResources,
+  disabled,
+  onRuleUpdated,
+  onRemoveRule,
+}: {
   builtin: boolean;
   roles: (typeof originalRoles)[number][];
   rule: UpdateOrganizationGroupRequest_GroupRule;
@@ -33,7 +41,7 @@ export function GroupRuleBuilder({ builtin, roles, rule, accessibleResources, di
     return {
       roles,
       categories: Object.keys(rolesByCategories),
-      rolesByCategory: rolesByCategories
+      rolesByCategory: rolesByCategories,
     };
   }, [roles]);
 
@@ -49,7 +57,7 @@ export function GroupRuleBuilder({ builtin, roles, rule, accessibleResources, di
   };
 
   return (
-    <div className="grid grid-cols-2 gap-3 justify-start items-start">
+    <div className="grid grid-cols-2 items-start justify-start gap-3">
       <div className="gap-y-20">
         <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
           <PopoverTrigger asChild>
@@ -58,22 +66,29 @@ export function GroupRuleBuilder({ builtin, roles, rule, accessibleResources, di
               disabled={disabled || !rbac?.enabled || builtin}
               className="w-full justify-start"
             >
-            <span className={cn('truncate', !activeRole && 'text-muted-foreground')}>
-              {activeRole ? (
-                <span className="flex justify-start items-center gap-x-1">
-                  <span>
-                    {capitalize(activeRole.category).replace('-', ' ')}
+              <span
+                className={cn(
+                  "truncate",
+                  !activeRole && "text-muted-foreground",
+                )}
+              >
+                {activeRole ? (
+                  <span className="flex items-center justify-start gap-x-1">
+                    <span>
+                      {capitalize(activeRole.category).replace("-", " ")}
+                    </span>
+                    <ChevronRightIcon className="size-3 text-muted-foreground" />
+                    <span className="truncate">{activeRole.displayName}</span>
                   </span>
-                  <ChevronRightIcon className="size-3 text-muted-foreground" />
-                  <span className="truncate">{activeRole.displayName}</span>
-                </span>
-              ) : "Select a role"}
-            </span>
+                ) : (
+                  "Select a role"
+                )}
+              </span>
             </Button>
           </PopoverTrigger>
 
           <PopoverContentWithScrollableContent
-            className="p-0 w-[calc(100vw-54px)] sm:w-[350px] md:w-[500px]"
+            className="w-[calc(100vw-54px)] p-0 sm:w-[350px] md:w-[500px]"
             align="start"
           >
             {!isMobile ? (
@@ -83,29 +98,30 @@ export function GroupRuleBuilder({ builtin, roles, rule, accessibleResources, di
                 rolesByCategory={roleContext.rolesByCategory}
                 onSelectRole={onSelectRole}
               />
-              )
-              : (
-                <GroupRolesAccordion
-                  rolesByCategory={roleContext.rolesByCategory}
-                  onSelectRole={onSelectRole}
-                />
-              )}
+            ) : (
+              <GroupRolesAccordion
+                rolesByCategory={roleContext.rolesByCategory}
+                onSelectRole={onSelectRole}
+              />
+            )}
           </PopoverContentWithScrollableContent>
         </Popover>
       </div>
 
-      <div className="flex justify-start items-start gap-x-2">
-        {activeRole && activeRole.category !== 'organization' ? (
+      <div className="flex items-start justify-start gap-x-2">
+        {activeRole && activeRole.category !== "organization" ? (
           <GroupResourceSelector
-              rule={rule}
-              disabled={disabled}
-              activeRole={activeRole}
-              accessibleResources={accessibleResources}
-              onRuleUpdated={onRuleUpdated}
+            rule={rule}
+            disabled={disabled}
+            activeRole={activeRole}
+            accessibleResources={accessibleResources}
+            onRuleUpdated={onRuleUpdated}
           />
-        ) : (<div className="grow h-9 text-sm flex justify-start items-center text-muted-foreground">
-          {activeRole && "Grants access to all resources."}
-        </div>)}
+        ) : (
+          <div className="flex h-9 grow items-center justify-start text-sm text-muted-foreground">
+            {activeRole && "Grants access to all resources."}
+          </div>
+        )}
 
         {rbac?.enabled && !builtin && (
           <Button

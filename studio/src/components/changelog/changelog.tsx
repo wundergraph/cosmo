@@ -15,7 +15,9 @@ export const Changelog = ({
 }) => {
   const router = useRouter();
   const slug = router.query.slug as string;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
   return (

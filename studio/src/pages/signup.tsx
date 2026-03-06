@@ -48,8 +48,10 @@ const SignupPage: NextPageWithLayout = () => {
   const router = useRouter();
   // Parse query safely so invalid params (e.g. redirectURL from OAuth) don't crash the page
   const parseResult = querySchema.safeParse(router.query);
-  const query = parseResult.success ? parseResult.data : { redirectURL: undefined, uc: undefined };
-  const uc = router.isReady ? query.uc : getUcFromUrl() ?? query.uc;
+  const query = parseResult.success
+    ? parseResult.data
+    : { redirectURL: undefined, uc: undefined };
+  const uc = router.isReady ? query.uc : (getUcFromUrl() ?? query.uc);
   const variant = parseSignupVariant(uc);
   const content = getSignupContent(variant);
   const redirectURL = query.redirectURL;
@@ -90,7 +92,10 @@ const SignupPage: NextPageWithLayout = () => {
                       asChild
                     >
                       <Link
-                        href={constructSignupURL({ redirectURL, provider: "github" })}
+                        href={constructSignupURL({
+                          redirectURL,
+                          provider: "github",
+                        })}
                       >
                         <GitHubLogoIcon className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
                         Sign up with GitHub
@@ -104,7 +109,10 @@ const SignupPage: NextPageWithLayout = () => {
                       asChild
                     >
                       <Link
-                        href={constructSignupURL({ redirectURL, provider: "google" })}
+                        href={constructSignupURL({
+                          redirectURL,
+                          provider: "google",
+                        })}
                       >
                         <FaGoogle className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
                         Sign up with Google

@@ -15,16 +15,22 @@ export interface SubgraphCheckExtensionProps {
   errorMessage: string | undefined;
 }
 
-export function SubgraphCheckExtension({ enabled, deliveryId, errorMessage }: SubgraphCheckExtensionProps) {
+export function SubgraphCheckExtension({
+  enabled,
+  deliveryId,
+  errorMessage,
+}: SubgraphCheckExtensionProps) {
   const router = useRouter();
   const user = useUser();
   const graphContext = useContext(GraphContext);
-  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | undefined>(undefined);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<
+    string | undefined
+  >(undefined);
 
   if (!deliveryId) {
     return (
       <EmptyState
-        icon={<NoSymbolIcon className="text-gray-400"/>}
+        icon={<NoSymbolIcon className="text-gray-400" />}
         title="Subgraph Check Extension Skipped"
         description={
           !enabled
@@ -58,7 +64,7 @@ export function SubgraphCheckExtension({ enabled, deliveryId, errorMessage }: Su
               <p className="mt-4">
                 <Button
                   variant="link"
-                  className="p-0 h-auto"
+                  className="h-auto p-0"
                   onClick={() => setSelectedDeliveryId(deliveryId)}
                 >
                   View delivery details
@@ -67,12 +73,18 @@ export function SubgraphCheckExtension({ enabled, deliveryId, errorMessage }: Su
             )}
           </AlertDescription>
         </Alert>
-        ) : (
+      ) : (
         <EmptyState
           icon={<CheckCircleIcon className="text-success" />}
           title="Subgraph Check Extension Successful"
           description="The subgraph check extension completed successfully."
-          actions={deliveryId && (<Button onClick={() => setSelectedDeliveryId(deliveryId)}>View delivery details</Button>)}
+          actions={
+            deliveryId && (
+              <Button onClick={() => setSelectedDeliveryId(deliveryId)}>
+                View delivery details
+              </Button>
+            )
+          }
         />
       )}
 

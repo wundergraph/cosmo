@@ -19,7 +19,7 @@ type SetValue<T> = Dispatch<SetStateAction<T>>;
 
 export function useSessionStorage<T>(
   key: string,
-  initialValue: T
+  initialValue: T,
 ): [T, SetValue<T>] {
   // Get from session storage then
   // parse stored json or return initialValue
@@ -48,7 +48,7 @@ export function useSessionStorage<T>(
     // Prevent build error "window is undefined" but keeps working
     if (typeof window == "undefined") {
       console.warn(
-        `Tried setting sessionStorage key “${key}” even though environment is not a client`
+        `Tried setting sessionStorage key “${key}” even though environment is not a client`,
       );
     }
 
@@ -81,7 +81,7 @@ export function useSessionStorage<T>(
       }
       setStoredValue(readValue());
     },
-    [key, readValue]
+    [key, readValue],
   );
 
   // this only works for other documents, not the current one

@@ -69,8 +69,8 @@ export const SelectGraphs = ({
       (eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
         ? "federatedGraphSchemaUpdated"
         : eventName === OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED
-        ? "monographSchemaUpdated"
-        : "proposalStateUpdated")
+          ? "monographSchemaUpdated"
+          : "proposalStateUpdated")
     ) {
       return [];
     }
@@ -94,8 +94,8 @@ export const SelectGraphs = ({
           eventName === OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED
             ? "federatedGraphSchemaUpdated"
             : eventName === OrganizationEventName.MONOGRAPH_SCHEMA_UPDATED
-            ? "monographSchemaUpdated"
-            : "proposalStateUpdated",
+              ? "monographSchemaUpdated"
+              : "proposalStateUpdated",
         value: {
           graphIds: newGraphIds,
         },

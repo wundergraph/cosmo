@@ -25,7 +25,9 @@ export const AnalyticsToolbar: React.FC<{
   children?: React.ReactNode;
 }> = (props) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
   const query: ParsedUrlQueryInput = {

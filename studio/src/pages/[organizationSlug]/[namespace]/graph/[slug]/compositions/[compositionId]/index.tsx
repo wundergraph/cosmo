@@ -254,7 +254,9 @@ export const CompositionDetails = ({
 }) => {
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.compositionId as string;
   const tab = router.query.tab as string;
@@ -286,8 +288,8 @@ export const CompositionDetails = ({
         tab === "input"
           ? !!activeSubgraphName && !!activeSubgraphVersionId
           : composition && composition.schemaVersionId
-          ? true
-          : false,
+            ? true
+            : false,
     },
   );
 
@@ -728,7 +730,9 @@ const CompositionDetailsPage: NextPageWithLayout = () => {
   const router = useRouter();
 
   const organizationSlug = useCurrentOrganization()?.slug;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const slug = router.query.slug as string;
   const id = router.query.compositionId as string;
 

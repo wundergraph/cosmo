@@ -89,7 +89,7 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
     schema: emailInputSchema,
   });
 
-  const selectedGroups = watch('groups') ?? [];
+  const selectedGroups = watch("groups") ?? [];
 
   const { mutate, isPending } = useMutation(inviteUser);
 
@@ -136,11 +136,13 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
         <MultiGroupSelect
           disabled={isPending}
           value={selectedGroups}
-          onValueChange={(groups) => setValue(
-            'groups',
-            groups.map((g) => g.groupId),
-            { shouldValidate: true, shouldDirty: true, shouldTouch: true },
-          )}
+          onValueChange={(groups) =>
+            setValue(
+              "groups",
+              groups.map((g) => g.groupId),
+              { shouldValidate: true, shouldDirty: true, shouldTouch: true },
+            )
+          }
         />
         {errors.groups && (
           <span className="text-sm text-destructive">
@@ -198,7 +200,11 @@ const MemberCard = ({
       )}
       {acceptedInvite ? (
         <TableCell>
-          {active ? (<Badge variant="success">Active</Badge>) : (<Badge variant="destructive">Disabled</Badge>)}
+          {active ? (
+            <Badge variant="success">Active</Badge>
+          ) : (
+            <Badge variant="destructive">Disabled</Badge>
+          )}
         </TableCell>
       ) : (
         <TableCell className="text-sm text-gray-800 dark:text-gray-400">
@@ -383,7 +389,11 @@ const PendingInvitations = () => {
           </TableBody>
         </Table>
       </TableWrapper>
-      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} />
+      <Pagination
+        limit={pageSize}
+        noOfPages={noOfPages}
+        pageNumber={pageNumber}
+      />
     </>
   );
 };
@@ -469,7 +479,11 @@ const AcceptedMembers = () => {
           )}
         </Table>
       </TableWrapper>
-      <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} />
+      <Pagination
+        limit={pageSize}
+        noOfPages={noOfPages}
+        pageNumber={pageNumber}
+      />
     </>
   );
 };

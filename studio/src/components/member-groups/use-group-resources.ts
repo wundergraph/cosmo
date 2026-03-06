@@ -26,10 +26,14 @@ export interface GroupResourceItem {
 
 export type GroupResource = GroupResourceSection | GroupResourceItem;
 
-export function useGroupResources({ rule, activeRole, accessibleResources }: {
-  rule: UpdateOrganizationGroupRequest_GroupRule,
-  activeRole: (typeof roles[number]) | undefined,
-  accessibleResources: GetUserAccessibleResourcesResponse | undefined,
+export function useGroupResources({
+  rule,
+  activeRole,
+  accessibleResources,
+}: {
+  rule: UpdateOrganizationGroupRequest_GroupRule;
+  activeRole: (typeof roles)[number] | undefined;
+  accessibleResources: GetUserAccessibleResourcesResponse | undefined;
 }): readonly GroupResource[] {
   return useMemo<readonly GroupResource[]>(() => {
     const result: GroupResource[] = [];
@@ -64,7 +68,7 @@ export function useGroupResources({ rule, activeRole, accessibleResources }: {
 function mapNamespace(
   rule: UpdateOrganizationGroupRequest_GroupRule,
   namespace: GetUserAccessibleResourcesResponse_Namespace,
-): Omit<GroupResourceItem, 'disabled'> {
+): Omit<GroupResourceItem, "disabled"> {
   return {
     type: "item",
     label: namespace.name,
@@ -76,8 +80,10 @@ function mapNamespace(
 
 function mapGraph(
   rule: UpdateOrganizationGroupRequest_GroupRule,
-  graph: GetUserAccessibleResourcesResponse_FederatedGraph | GetUserAccessibleResourcesResponse_SubGraph
-): Omit<GroupResourceItem, 'disabled'> {
+  graph:
+    | GetUserAccessibleResourcesResponse_FederatedGraph
+    | GetUserAccessibleResourcesResponse_SubGraph,
+): Omit<GroupResourceItem, "disabled"> {
   return {
     type: "item",
     label: graph.name,
@@ -89,7 +95,7 @@ function mapGraph(
 
 function getNamespaces(
   rule: UpdateOrganizationGroupRequest_GroupRule,
-  accessibleResources: GetUserAccessibleResourcesResponse
+  accessibleResources: GetUserAccessibleResourcesResponse,
 ): GroupResourceItem[] {
   return accessibleResources.namespaces.map((ns) => {
     const namespaceResources = [
@@ -110,16 +116,18 @@ function getNamespaces(
 
 function getFederatedGraphs(
   rule: UpdateOrganizationGroupRequest_GroupRule,
-  accessibleResources: GetUserAccessibleResourcesResponse
+  accessibleResources: GetUserAccessibleResourcesResponse,
 ): GroupResourceItem[] {
   const fedGraphsByNamespace = Object.groupBy(
     accessibleResources.federatedGraphs,
-    (graph) => graph.namespace
+    (graph) => graph.namespace,
   );
 
   return Object.entries(fedGraphsByNamespace)
     .map(([namespace, graphs]) => {
-      const ns = accessibleResources.namespaces.find((ns) => ns.name === namespace)!;
+      const ns = accessibleResources.namespaces.find(
+        (ns) => ns.name === namespace,
+      )!;
       const isNamespaceSelected = rule.namespaces.includes(ns.id);
 
       return {
@@ -127,10 +135,13 @@ function getFederatedGraphs(
         isNamespaceResource: false,
         selected: false,
         disabled: isNamespaceSelected,
-        children: graphs?.map((graph) => ({
-          ...mapGraph(rule, graph),
-          disabled: isNamespaceSelected
-        } satisfies GroupResourceItem)),
+        children: graphs?.map(
+          (graph) =>
+            ({
+              ...mapGraph(rule, graph),
+              disabled: isNamespaceSelected,
+            }) satisfies GroupResourceItem,
+        ),
       } satisfies GroupResourceItem;
     })
     .filter((d) => d.children && d.children.length > 0);
@@ -138,21 +149,23 @@ function getFederatedGraphs(
 
 function getSubGraphs(
   rule: UpdateOrganizationGroupRequest_GroupRule,
-  accessibleResources: GetUserAccessibleResourcesResponse
+  accessibleResources: GetUserAccessibleResourcesResponse,
 ): GroupResourceItem[] {
   const subGraphsByNamespace = Object.groupBy(
     accessibleResources.subgraphs,
-    (graph) => graph.namespace
+    (graph) => graph.namespace,
   );
 
   return Object.entries(subGraphsByNamespace)
     .map(([namespace, graphs]) => {
       const subGraphsByFedGraph = Object.groupBy(
         graphs ?? [],
-        (graph) => graph.federatedGraphId
+        (graph) => graph.federatedGraphId,
       );
 
-      const ns = accessibleResources.namespaces.find((ns) => ns.name === namespace)!;
+      const ns = accessibleResources.namespaces.find(
+        (ns) => ns.name === namespace,
+      )!;
       const isNamespaceSelected = rule.namespaces.includes(ns.id);
 
       return {
@@ -161,17 +174,28 @@ function getSubGraphs(
         selected: false,
         disabled: isNamespaceSelected,
         children: Object.entries(subGraphsByFedGraph)
-          .map(([fedGraph, subgraphs]) => ({
-            ...mapGraph(rule, accessibleResources.federatedGraphs.find((graph) => graph.targetId === fedGraph)!),
-            selected: false,
-            disabled: isNamespaceSelected,
-            children: (subgraphs ?? []).map((graph) => ({
-              ...mapGraph(rule, graph),
-              disabled: isNamespaceSelected,
-            } satisfies GroupResourceItem)),
-          }) satisfies GroupResourceItem)
+          .map(
+            ([fedGraph, subgraphs]) =>
+              ({
+                ...mapGraph(
+                  rule,
+                  accessibleResources.federatedGraphs.find(
+                    (graph) => graph.targetId === fedGraph,
+                  )!,
+                ),
+                selected: false,
+                disabled: isNamespaceSelected,
+                children: (subgraphs ?? []).map(
+                  (graph) =>
+                    ({
+                      ...mapGraph(rule, graph),
+                      disabled: isNamespaceSelected,
+                    }) satisfies GroupResourceItem,
+                ),
+              }) satisfies GroupResourceItem,
+          )
           .filter((d) => d.children && d.children.length > 0),
       } satisfies GroupResourceItem;
     })
-    .filter((d) => d.children && d.children.length > 0)
+    .filter((d) => d.children && d.children.length > 0);
 }

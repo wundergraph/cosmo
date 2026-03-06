@@ -4,12 +4,22 @@ import { z } from "zod";
 import { useZodForm } from "@/hooks/use-form";
 import { useToast } from "@/components/ui/use-toast";
 import { useMutation } from "@connectrpc/connect-query";
-import {
-  deleteOrganization,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { deleteOrganization } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,15 +32,16 @@ export const DeleteOrganization = () => {
   const sessionQueryClient = useContext(SessionClientContext);
   const [open, setOpen] = useState(false);
 
-  const hasActiveSubscription = (
+  const hasActiveSubscription =
     !!user?.currentOrganization?.billing?.plan &&
-    user?.currentOrganization?.billing?.plan !== 'developer'
-  );
+    user?.currentOrganization?.billing?.plan !== "developer";
 
   const isOrganizationAdmin = useIsAdmin();
   const canDeleteOrganization = !hasActiveSubscription && isOrganizationAdmin;
 
-  const regex = new RegExp(`^I want to delete the organization ${user?.currentOrganization.name}$`);
+  const regex = new RegExp(
+    `^I want to delete the organization ${user?.currentOrganization.name}$`,
+  );
   const schema = z.object({
     organizationName: z.string().regex(regex, {
       message: "Please enter the organization name as requested.",
@@ -123,27 +134,34 @@ export const DeleteOrganization = () => {
           <DialogContent>
             <DialogHeader>
               <DialogTitle className="leading-6">
-                Permanently delete the organization &quot;{user?.currentOrganization?.name}&quot;?
+                Permanently delete the organization &quot;
+                {user?.currentOrganization?.name}&quot;?
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit(handleDeleteOrg)} className="mt-2 space-y-3">
+            <form
+              onSubmit={handleSubmit(handleDeleteOrg)}
+              className="mt-2 space-y-3"
+            >
               <div>
-                Deleting the organization &quot;{user?.currentOrganization?.name}&quot; is a{" "}
-                permanent action that cannot be undone.
+                Deleting the organization &quot;
+                {user?.currentOrganization?.name}&quot; is a permanent action
+                that cannot be undone.
               </div>
 
               <div>
-                Deleting the organization will also delete all related data, including graphs, subgraphs,{" "}
-                feature flags, members and API keys.
+                Deleting the organization will also delete all related data,
+                including graphs, subgraphs, feature flags, members and API
+                keys.
               </div>
 
               <div className="flex flex-col gap-y-3">
                 <span>
                   To confirm, enter &quot;
-                  <span className="rounded-md border px-1 font-bold focus:outline-none bg-secondary text-secondary-foreground">
-                    I want to delete the organization {user?.currentOrganization.name}
-                  </span>&quot;
-                  in the box below:
+                  <span className="rounded-md border bg-secondary px-1 font-bold text-secondary-foreground focus:outline-none">
+                    I want to delete the organization{" "}
+                    {user?.currentOrganization.name}
+                  </span>
+                  &quot; in the box below:
                 </span>
                 <Input
                   type="text"
