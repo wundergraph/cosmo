@@ -52,7 +52,7 @@
     "@graphql-eslint/eslint-plugin": "^3.20.1",
     "@graphql-inspector/core": "^6.2.1",
     "@graphql-tools/utils": "^11.0.0",
-    "@keycloak/keycloak-admin-client": "26.2.5",
+    "@keycloak/keycloak-admin-client": "26.5.4",
     "@octokit/webhooks-types": "^7.6.1",
     "@sentry/node": "^10.19.0",
     "@sentry/node-native": "^10.19.0",
