@@ -156,7 +156,10 @@ func isForbiddenCode(raw json.RawMessage) bool {
 func (m *ForbiddenHandlerModule) Middleware(ctx core.RequestContext, next http.Handler) {
 	// Skip for streaming subscriptions (SSE/multipart) — they require
 	// http.Flusher and deliver data incrementally, so buffering does not apply.
+	// The flag is set before calling next so that OnOriginRequest and
+	// OnOriginResponse also skip their forbidden-handling logic.
 	if isStreamingRequest(ctx.Request()) {
+		ctx.Set("streaming_request", true)
 		next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 		return
 	}
@@ -194,7 +197,7 @@ func (m *ForbiddenHandlerModule) Middleware(ctx core.RequestContext, next http.H
 }
 
 func isStreamingRequest(r *http.Request) bool {
-	accept := r.Header.Get("Accept")
+	accept := strings.ToLower(strings.TrimSpace(r.Header.Get("Accept")))
 	return strings.Contains(accept, "text/event-stream") ||
 		strings.Contains(accept, "multipart/mixed")
 }
