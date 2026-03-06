@@ -3,10 +3,6 @@ package telemetry
 import (
 	"context"
 	"fmt"
-	"strings"
-	"testing"
-	"time"
-
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -16,6 +12,9 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.uber.org/zap/zapcore"
+	"strings"
+	"testing"
+	"time"
 )
 
 func TestAttributeProcessorIntegration(t *testing.T) {
@@ -188,28 +187,6 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 		})
 	})
 
-	t.Run("invalid UTF-8 export error logs config hint", func(t *testing.T) {
-		testenv.Run(t, &testenv.Config{
-			TraceExporter: &invalidUTF8Exporter{},
-			LogObservation: testenv.LogObservationConfig{
-				Enabled:  true,
-				LogLevel: zapcore.ErrorLevel,
-			},
-		}, func(t *testing.T, xEnv *testenv.Environment) {
-			require.Eventually(t, func() bool {
-				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `query { employees { id } }`,
-				})
-				logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
-				return len(logs) > 0
-			}, 10*time.Second, 500*time.Millisecond)
-
-			logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
-			require.NotEmpty(t, logs)
-			require.Equal(t, "otel error: traces export: string field contains invalid UTF-8: Enable 'telemetry.tracing.sanitize_utf8.enabled' in your config to sanitize invalid UTF-8 attributes.", logs[0].Message)
-		})
-	})
-
 	t.Run("IPAnonymization hashes IP attributes", func(t *testing.T) {
 		t.Parallel()
 
@@ -243,6 +220,34 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 				}
 			}
 			require.Positive(t, hashedIPCount)
+		})
+	})
+}
+
+func TestFlakyAttributeProcessorIntegration(t *testing.T) {
+	t.Parallel()
+
+	t.Run("invalid UTF-8 export error logs config hint", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: &invalidUTF8Exporter{},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			require.Eventually(t, func() bool {
+				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `query { employees { id } }`,
+				})
+				logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
+				return len(logs) > 0
+			}, 10*time.Second, 500*time.Millisecond)
+
+			logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
+			require.NotEmpty(t, logs)
+			require.Equal(t, "otel error: traces export: string field contains invalid UTF-8: Enable 'telemetry.tracing.sanitize_utf8.enabled' in your config to sanitize invalid UTF-8 attributes.", logs[0].Message)
 		})
 	})
 }
