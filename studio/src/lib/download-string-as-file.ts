@@ -1,7 +1,7 @@
 export const downloadStringAsFile = (
   content: string,
   filename: string,
-  contentType: string
+  contentType: string,
 ) => {
   // Create a Blob object with the content, and the specified content type
   let blob = new Blob([content], { type: contentType });

@@ -77,7 +77,7 @@ export const useSyncTableWithQuery = <T>({
   useEffect(() => {
     if (router.isReady) {
       const filterStateFromUrl = JSON.parse(
-        decodeURI((router.query.filterState as string) ?? "[]")
+        decodeURI((router.query.filterState as string) ?? "[]"),
       );
 
       if (!isEqual(filterStateFromUrl, selectedFilters)) {
@@ -91,7 +91,7 @@ export const useSyncTableWithQuery = <T>({
         setSelectedGroup(
           AnalyticsViewGroupName[
             router.query.group as string as keyof typeof AnalyticsViewGroupName
-          ]
+          ],
         );
       }
 
@@ -143,7 +143,7 @@ export const useSyncTableWithQuery = <T>({
         Number(router.query.refreshInterval) !== refreshInterval
       ) {
         onRefreshIntervalChange(
-          Number(router.query.refreshInterval) || refreshIntervals[0].value
+          Number(router.query.refreshInterval) || refreshIntervals[0].value,
         );
       }
 

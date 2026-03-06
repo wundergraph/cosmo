@@ -12,7 +12,10 @@ export function clamp(value: number, min: number, max: number): number {
   return Number.isNaN(result) ? min : result;
 }
 
-export function distinctBy<T, TKey>(source: T[], keySelector: (item: T) => TKey) {
+export function distinctBy<T, TKey>(
+  source: T[],
+  keySelector: (item: T) => TKey,
+) {
   const keys = new Set<TKey>();
   return source.filter((item) => {
     const key = keySelector(item);

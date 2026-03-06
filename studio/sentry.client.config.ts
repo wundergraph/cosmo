@@ -54,15 +54,21 @@ init({
    * This is independent of `sessionSampleRate`.
    * 1.0 will record all sessions and 0 will record none.
    */
-  replaysOnErrorSampleRate: isSentryFeatureReplayEnabled ? parseFloat(
-    process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_ON_ERROR_SAMPLE_RATE || "0",
-  ) : 0,
+  replaysOnErrorSampleRate: isSentryFeatureReplayEnabled
+    ? parseFloat(
+        process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_ON_ERROR_SAMPLE_RATE ||
+          "0",
+      )
+    : 0,
   /**
    * The sample rate for session-long replays.
    * 1.0 will record all sessions and 0 will record none.
    */
-  replaysSessionSampleRate: isSentryFeatureReplayEnabled ? parseFloat(
-    process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_SESSION_SAMPLE_RATE || "0",
-  ) : 0,
+  replaysSessionSampleRate: isSentryFeatureReplayEnabled
+    ? parseFloat(
+        process.env.NEXT_PUBLIC_SENTRY_CLIENT_REPLAYS_SESSION_SAMPLE_RATE ||
+          "0",
+      )
+    : 0,
   integrations,
 });

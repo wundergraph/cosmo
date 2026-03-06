@@ -52,39 +52,41 @@ if (isSentryEnabled) {
 
 const lightweightCspHeader = `
   style-src 'report-sample' 'self' 'unsafe-inline' data: ${
-    isPreview || isProduction ? 'https://vercel.live' : ''
+    isPreview || isProduction ? "https://vercel.live" : ""
   };
   object-src 'none';
   base-uri 'self';
   font-src 'self' data:${
-    isPreview || isProduction ? ' https://vercel.live https://assets.vercel.com' : ''
+    isPreview || isProduction
+      ? " https://vercel.live https://assets.vercel.com"
+      : ""
   };
   frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://www.googletagmanager.com${
-    isPreview || isProduction ? ' https://vercel.live https://vercel.com' : ''
+    isPreview || isProduction ? " https://vercel.live https://vercel.com" : ""
   };
   img-src 'self' https://wundergraph.com ${
     isPreview || isProduction
-      ? ' https://vercel.live/ https://vercel.com *.pusher.com data: blob:'
-      : ''
+      ? " https://vercel.live/ https://vercel.com *.pusher.com data: blob:"
+      : ""
   } *.ads.linkedin.com *.google.com;
    script-src 'report-sample' 'self' 'unsafe-inline' ${
-     allowUnsafeEval ? "'unsafe-eval'" : ''
+     allowUnsafeEval ? "'unsafe-eval'" : ""
    } https://*.wundergraph.com https://js.stripe.com https://maps.googleapis.com https://plausible.io https://wundergraph.com https://static.reo.dev${
-     isPreview || isProduction ? ' https://vercel.live https://vercel.com' : ''
+     isPreview || isProduction ? " https://vercel.live https://vercel.com" : ""
    } ${
      isProduction
        ? [
-           'https://www.googletagmanager.com',
-           'https://snap.licdn.com',
-           'https://cmp.osano.com',
-           'https://googleads.g.doubleclick.net',
-           'https://*.clarity.ms',
-         ].join(' ')
-       : ''
+           "https://www.googletagmanager.com",
+           "https://snap.licdn.com",
+           "https://cmp.osano.com",
+           "https://googleads.g.doubleclick.net",
+           "https://*.clarity.ms",
+         ].join(" ")
+       : ""
    };
     manifest-src 'self';
     media-src 'self';
-    worker-src 'self'${isSentryFeatureReplayEnabled ? ' blob:' : ''};
+    worker-src 'self'${isSentryFeatureReplayEnabled ? " blob:" : ""};
 `;
 
 /**
