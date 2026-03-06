@@ -1206,7 +1206,13 @@ func TestNatsEvents(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(1, NatsWaitTimeout)
 			xEnv.WaitForTriggerCount(1, NatsWaitTimeout)
 
-			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`), 1, NatsWaitTimeout)
+			// Direct publish is correct here: the subgraph has a 1-minute delay,
+			// so SubscriptionUpdateSent will never fire. We only need to trigger
+			// the slow fetch, then verify shutdown doesn't hang.
+			err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"__typename":"Employee","id": 3,"update":{"name":"foo"}}`))
+			require.NoError(t, err)
+			err = xEnv.NatsConnectionDefault.Flush()
+			require.NoError(t, err)
 
 			assert.NoError(t, client.Close())
 
