@@ -1396,6 +1396,7 @@ export class OrganizationRepository {
       scim: false,
       'cache-warmer': false,
       proposals: false,
+      'composition-ignore-external-keys': false,
       'subgraph-check-extensions': false,
     };
 

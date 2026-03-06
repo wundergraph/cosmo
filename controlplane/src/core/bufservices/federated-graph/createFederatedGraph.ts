@@ -210,6 +210,12 @@ export function createFederatedGraph(
       };
     }
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'composition-ignore-external-keys',
+    });
+    const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
+
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
@@ -226,7 +232,7 @@ export function createFederatedGraph(
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
         compositionOptions: {
-          // @TODO ignoreExternalKeys: ?,
+          ignoreExternalKeys,
           disableResolvabilityValidation: req.disableResolvabilityValidation,
         },
         federatedGraphs: [federatedGraph],

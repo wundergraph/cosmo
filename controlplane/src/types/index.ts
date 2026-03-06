@@ -25,6 +25,7 @@ export type FeatureIds =
   | 'cache-warmer'
   | 'proposals'
   | 'plugins'
+  | 'composition-ignore-external-keys'
   | 'subgraph-check-extensions';
 
 export type Features = {

@@ -110,6 +110,11 @@ export function fixSubgraphSchema(
       organizationId: authContext.organizationId,
       featureId: 'ai',
     });
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'composition-ignore-external-keys',
+    });
+    const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
 
     if (!feature?.enabled) {
       return {
@@ -140,6 +145,9 @@ export function fixSubgraphSchema(
          * compatibility version.
          */
         getFederatedGraphRouterCompatibilityVersion(federatedGraphs),
+        {
+          ignoreExternalKeys,
+        },
       );
       if (!result.success) {
         return {
@@ -169,7 +177,7 @@ export function fixSubgraphSchema(
       subgraph.namespaceId,
       newSchemaSDL,
       {
-        // @TODO ignoreExternalKeys: ?,
+        ignoreExternalKeys,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       },
     );

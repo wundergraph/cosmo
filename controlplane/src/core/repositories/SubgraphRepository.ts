@@ -1862,6 +1862,7 @@ export class SubgraphRepository {
     chClient,
     newGraphQLSchema,
     disableResolvabilityValidation,
+    ignoreExternalKeys,
     webhookService,
   }: {
     actorId: string;
@@ -1886,6 +1887,7 @@ export class SubgraphRepository {
     chClient?: ClickHouseClient;
     newGraphQLSchema?: GraphQLSchema;
     disableResolvabilityValidation?: boolean;
+    ignoreExternalKeys?: boolean;
     webhookService: OrganizationWebhookService;
   }): Promise<
     PlainMessage<CheckSubgraphSchemaResponse> & {
@@ -2070,7 +2072,7 @@ export class SubgraphRepository {
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
       compositionOptions: {
-        // @TODO ignoreExternalKeys: ?,
+        ignoreExternalKeys,
         disableResolvabilityValidation,
       },
       graphs: federatedGraphs.filter((g) => !g.contract),
