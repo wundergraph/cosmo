@@ -123,7 +123,7 @@ func buildProvider(ctx context.Context, provider config.NatsEventSource, logger 
 		return nil, fmt.Errorf("failed to build options for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}
 
-	adapter, err := NewAdapter(ctx, logger, provider.URL, options, hostName, routerListenAddr, providerOpts)
+	adapter, err := NewAdapter(ctx, logger, provider.URL, options, hostName, routerListenAddr, provider.DeleteDurableConsumersOnShutdown, providerOpts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create adapter for Nats provider with ID \"%s\": %w", provider.ID, err)
 	}

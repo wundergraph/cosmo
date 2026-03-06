@@ -617,9 +617,10 @@ type NatsAuthentication struct {
 }
 
 type NatsEventSource struct {
-	ID             string              `yaml:"id,omitempty"`
-	URL            string              `yaml:"url,omitempty"`
-	Authentication *NatsAuthentication `yaml:"authentication,omitempty"`
+	ID                               string              `yaml:"id,omitempty"`
+	URL                              string              `yaml:"url,omitempty"`
+	Authentication                   *NatsAuthentication `yaml:"authentication,omitempty"`
+	DeleteDurableConsumersOnShutdown bool                `yaml:"delete_durable_consumers_on_shutdown" envDefault:"false"`
 }
 
 func (n NatsEventSource) GetID() string {
