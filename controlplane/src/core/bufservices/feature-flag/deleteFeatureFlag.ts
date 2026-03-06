@@ -14,7 +14,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, newCompositionOptions } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
@@ -135,7 +135,10 @@ export function deleteFeatureFlag(
         },
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
-        compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+        compositionOptions: {
+          // @TODO ignoreExternalKeys: ?,
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+        },
         federatedGraphs,
       });
 

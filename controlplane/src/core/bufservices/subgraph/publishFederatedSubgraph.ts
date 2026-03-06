@@ -32,7 +32,6 @@ import {
   isValidGrpcNamingScheme,
   isValidLabels,
   isValidPluginVersion,
-  newCompositionOptions,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -588,7 +587,10 @@ export function publishFederatedSubgraph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
-        newCompositionOptions(req.disableResolvabilityValidation),
+        {
+          // @TODO ignoreExternalKeys: ?,
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+        },
       );
 
     // if this subgraph is part of a proposal, mark the proposal subgraph as published

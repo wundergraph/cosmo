@@ -230,7 +230,7 @@ export function validateKeyFieldSets(
             !externalFieldData.isUnconditionallyProvided
           ) {
             const conditionalData = nf.conditionalFieldDataByCoords.get(fieldCoords);
-            if (!conditionalData) {
+            if (!conditionalData && !nf.options.ignoreExternalKeys) {
               isUnconditionallyExternalKey = true;
               const edge = graphNode.headToTailEdges.get(fieldName);
               if (edge) {

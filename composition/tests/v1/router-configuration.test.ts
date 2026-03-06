@@ -675,10 +675,7 @@ describe('Router Configuration tests', () => {
     });
 
     test('that the router configuration is correctly generated', () => {
-      const result = batchNormalize(
-        [monolith, reviews, users],
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as BatchNormalizationSuccess;
+      const result = batchNormalize({ subgraphs: [monolith, reviews, users] }) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       expect(result.internalSubgraphBySubgraphName.get('monolith')!.configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([

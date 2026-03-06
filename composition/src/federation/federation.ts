@@ -13,40 +13,40 @@ import {
 import { ROUTER_COMPATIBILITY_VERSION_ONE } from '../router-compatibility-version/router-compatibility-version';
 
 export function federateSubgraphs({
-  disableResolvabilityValidation,
+  options,
   subgraphs,
   version = ROUTER_COMPATIBILITY_VERSION_ONE,
 }: FederateSubgraphsParams): FederationResult {
   switch (version) {
     default: {
-      return federateSubgraphsV1({ disableResolvabilityValidation, subgraphs });
+      return federateSubgraphsV1({ options, subgraphs });
     }
   }
 }
 
 // the flow when publishing a subgraph that also has contracts
 export function federateSubgraphsWithContracts({
-  disableResolvabilityValidation,
+  options,
   subgraphs,
   tagOptionsByContractName,
   version = ROUTER_COMPATIBILITY_VERSION_ONE,
 }: FederateSubgraphsWithContractsParams): FederationResultWithContracts {
   switch (version) {
     default: {
-      return federateSubgraphsWithContractsV1({ disableResolvabilityValidation, subgraphs, tagOptionsByContractName });
+      return federateSubgraphsWithContractsV1({ options, subgraphs, tagOptionsByContractName });
     }
   }
 }
 
 export function federateSubgraphsContract({
   contractTagOptions,
-  disableResolvabilityValidation,
+  options,
   subgraphs,
   version = ROUTER_COMPATIBILITY_VERSION_ONE,
 }: FederateSubgraphsContractParams): FederationResult {
   switch (version) {
     default: {
-      return federateSubgraphsContractV1({ disableResolvabilityValidation, subgraphs, contractTagOptions });
+      return federateSubgraphsContractV1({ contractTagOptions, options, subgraphs });
     }
   }
 }

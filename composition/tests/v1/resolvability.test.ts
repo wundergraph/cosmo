@@ -1285,7 +1285,9 @@ describe('Field resolvability tests', () => {
     });
     expect(resultOne.success).toBe(false);
     const resultTwo = federateSubgraphs({
-      disableResolvabilityValidation: true,
+      options: {
+        disableResolvabilityValidation: true,
+      },
       subgraphs: [subgraphBQ, subgraphBR],
       version: ROUTER_COMPATIBILITY_VERSION_ONE,
     });
@@ -1816,6 +1818,27 @@ describe('Field resolvability tests', () => {
         }),
       ),
     ]);
+  });
+
+  test('that @external entity keys are ignored if set in options', () => {
+    const { federatedGraphSchema } = federateSubgraphsSuccess([iaaa, iaab], ROUTER_COMPATIBILITY_VERSION_ONE, {
+      ignoreExternalKeys: true,
+    });
+    expect(schemaToSortedNormalizedString(federatedGraphSchema)).toBe(
+      normalizeString(
+        SCHEMA_QUERY_DEFINITION +
+          `
+        type Entity {
+          id: ID!
+          name: String!
+        }
+      
+        type Query {
+          entities: [Entity!]!
+        }
+      `,
+      ),
+    );
   });
 
   test('that an @external key can still be a valid target', () => {

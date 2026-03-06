@@ -250,7 +250,7 @@ import {
 import { InvalidRootTypeFieldEventsDirectiveData } from '../../errors/types';
 import { Graph } from '../../resolvability-graph/graph';
 import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from '../constants/integers';
-import { InternalSubgraph, Subgraph } from '../../subgraph/types';
+import { InternalSubgraph } from '../../subgraph/types';
 import { Warning } from '../../warnings/types';
 import { BatchNormalizationResult, NormalizationResult } from '../../normalization/types';
 import {
@@ -364,27 +364,41 @@ import { newConfigurationData, newFieldSetConditionData } from '../../router-con
 import { ImplementationErrors, InvalidFieldImplementation } from '../../utils/types';
 import { DirectiveName, FieldName, SubgraphName, TypeName } from '../../types/types';
 import {
+  BatchNormalizeParams,
   HandleFieldInheritableDirectivesParams,
   HandleNonExternalConditionalFieldParams,
+  NormalizationFactoryParams,
+  NormalizeSubgraphFromStringParams,
+  NormalizeSubgraphParams,
   ValidateOneOfDirectiveParams,
 } from './params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
+import { CompositionOptions } from '../../types/params';
 
-export function normalizeSubgraphFromString(subgraphSDL: string, noLocation = true): NormalizationResult {
-  const { error, documentNode } = safeParse(subgraphSDL, noLocation);
+export function normalizeSubgraphFromString({
+  noLocation,
+  options,
+  sdlString,
+}: NormalizeSubgraphFromStringParams): NormalizationResult {
+  const { error, documentNode } = safeParse(sdlString, noLocation);
   if (error || !documentNode) {
     return { errors: [subgraphInvalidSyntaxError(error)], success: false, warnings: [] };
   }
-  const normalizationFactory = new NormalizationFactory(new Graph());
+  const normalizationFactory = new NormalizationFactory({ internalGraph: new Graph(), options });
   return normalizationFactory.normalize(documentNode);
 }
 
-export function normalizeSubgraph(
-  document: DocumentNode,
-  subgraphName?: string,
-  internalGraph?: Graph,
-): NormalizationResult {
-  const normalizationFactory = new NormalizationFactory(internalGraph || new Graph(), subgraphName);
+export function normalizeSubgraph({
+  document,
+  internalGraph,
+  options,
+  subgraphName,
+}: NormalizeSubgraphParams): NormalizationResult {
+  const normalizationFactory = new NormalizationFactory({
+    internalGraph: internalGraph || new Graph(),
+    options,
+    subgraphName,
+  });
   return normalizationFactory.normalize(document);
 }
 
@@ -416,6 +430,7 @@ export class NormalizationFactory {
   keyFieldSetDatasByTypeName = new Map<string, Map<string, KeyFieldSetData>>();
   lastParentNodeKind: Kind = Kind.NULL;
   lastChildNodeKind: Kind = Kind.NULL;
+  options: CompositionOptions;
   parentTypeNamesWithAuthDirectives = new Set<string>();
   keyFieldSetsByEntityTypeNameByFieldCoords = new Map<string, Map<string, Set<string>>>();
   keyFieldNamesByParentTypeName = new Map<string, Set<string>>();
@@ -434,12 +449,13 @@ export class NormalizationFactory {
   usesEdfsNatsStreamConfiguration: boolean = false;
   warnings: Array<Warning> = [];
 
-  constructor(internalGraph: Graph, subgraphName?: SubgraphName) {
+  constructor({ internalGraph, subgraphName, options }: NormalizationFactoryParams) {
+    this.options = options ?? {};
     this.subgraphName = subgraphName || NOT_APPLICABLE;
     this.internalGraph = internalGraph;
     this.internalGraph.setSubgraphName(this.subgraphName);
     this.schemaData = {
-      directivesByName: new Map<string, ConstDirectiveNode[]>(),
+      directivesByName: new Map<DirectiveName, Array<ConstDirectiveNode>>(),
       kind: Kind.SCHEMA_DEFINITION,
       name: SCHEMA,
       operationTypes: new Map<OperationTypeNode, OperationTypeDefinitionNode>(),
@@ -3560,7 +3576,7 @@ export class NormalizationFactory {
     this.validateDirectives(this.schemaData, SCHEMA);
     const schemaNode = this.getSchemaNodeByData(this.schemaData);
     /* Schema extension orphans are not supported on old routers.
-     * Consequently, it is a breaking change that requires a new composition version, and hat composition version
+     * Consequently, it is a breaking change that requires a new composition version, and that composition version
      * would only be compatible with newer routers that support schema extension orphans.
      * For now, only a valid schema definition node is pushed.
      */
@@ -3861,13 +3877,13 @@ export class NormalizationFactory {
   }
 }
 
-export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult {
+export function batchNormalize({ subgraphs, options }: BatchNormalizeParams): BatchNormalizationResult {
   const authorizationDataByParentTypeName = new Map<TypeName, AuthorizationData>();
   const concreteTypeNamesByAbstractTypeName = new Map<TypeName, Set<TypeName>>();
   const entityDataByTypeName = new Map<TypeName, EntityData>();
   const internalSubgraphBySubgraphName = new Map<SubgraphName, InternalSubgraph>();
-  const allOverridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
-  const overrideSourceSubgraphNamesByFieldPath = new Map<string, string[]>();
+  const allOverridesByTargetSubgraphName = new Map<SubgraphName, Map<TypeName, Set<FieldName>>>();
+  const overrideSourceSubgraphNamesByFieldPath = new Map<string, Array<SubgraphName>>();
   const duplicateOverriddenFieldPaths = new Set<string>();
   const parentDefinitionDataMapsBySubgraphName = new Map<SubgraphName, Map<TypeName, ParentDefinitionData>>();
   const subgraphNames = new Set<SubgraphName>();
@@ -3890,7 +3906,12 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
     if (!subgraph.name) {
       invalidNameErrorMessages.push(invalidSubgraphNameErrorMessage(i, subgraphName));
     }
-    const normalizationResult = normalizeSubgraph(subgraph.definitions, subgraph.name, internalGraph);
+    const normalizationResult = normalizeSubgraph({
+      document: subgraph.definitions,
+      internalGraph,
+      options,
+      subgraphName: subgraph.name,
+    });
     if (normalizationResult.warnings.length > 0) {
       warnings.push(...normalizationResult.warnings);
     }

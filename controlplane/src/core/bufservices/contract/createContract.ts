@@ -16,14 +16,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import {
-  enrichLogger,
-  getLogger,
-  handleError,
-  isValidGraphName,
-  isValidSchemaTags,
-  newCompositionOptions,
-} from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidGraphName, isValidSchemaTags } from '../../util.js';
 
 export function createContract(
   opts: RouterOptions,
@@ -204,7 +197,10 @@ export function createContract(
         },
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
-        compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+        compositionOptions: {
+          // @TODO ignoreExternalKeys: ?,
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+        },
         federatedGraphs: [{ ...contractGraph, contract }],
       });
 

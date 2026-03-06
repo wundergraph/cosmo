@@ -76,7 +76,6 @@ import {
 } from '../../errors/errors';
 import {
   ChildTagData,
-  FederationFactoryParams,
   getDescriptionFromString,
   InterfaceImplementationData,
   InterfaceObjectForInternalGraphOptions,
@@ -199,13 +198,13 @@ import {
   INPUT_OBJECT,
   LEFT_PARENTHESIS,
   LIST,
+  LITERAL_PERIOD,
   NON_REPEATABLE_PERSISTED_DIRECTIVES,
   NOT_UPPER,
   OBJECT,
   ONE_OF,
   OR_UPPER,
   PARENT_DEFINITION_DATA,
-  LITERAL_PERIOD,
   QUERY,
   REQUIRES_SCOPES,
   SEMANTIC_NON_NULL,
@@ -237,10 +236,16 @@ import {
   InvalidFieldImplementation,
   InvalidRequiredInputValueData,
 } from '../../utils/types';
-import { FederateSubgraphsContractV1Params, FederateSubgraphsWithContractsV1Params, FederationParams } from './types';
 import { ContractName, DirectiveName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
 import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
-import { ExtractPersistedDirectivesParams, ValidateOneOfDirectiveParams } from './params';
+import {
+  ExtractPersistedDirectivesParams,
+  FederateSubgraphsContractV1Params,
+  FederateSubgraphsWithContractsV1Params,
+  FederationFactoryParams,
+  FederationParams,
+  ValidateOneOfDirectiveParams,
+} from './params';
 import {
   AUTHENTICATED_DEFINITION,
   DEPRECATED_DEFINITION,
@@ -250,11 +255,11 @@ import {
   SEMANTIC_NON_NULL_DEFINITION,
   TAG_DEFINITION,
 } from '../constants/directive-definitions';
+import { CompositionOptions } from '../../types/params';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<TypeName, AuthorizationData>;
   coordsByNamedTypeName = new Map<TypeName, Set<string>>();
-  disableResolvabilityValidation: boolean = false;
   directiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
   clientDefinitions: Array<MutableDefinitionNode | DefinitionNode> = [];
   currentSubgraphName = '';
@@ -274,6 +279,7 @@ export class FederationFactory {
   isVersionTwo = false;
   namedInputValueTypeNames = new Set<TypeName>();
   namedOutputTypeNames = new Set<TypeName>();
+  options: CompositionOptions;
   parentDefinitionDataByTypeName = new Map<TypeName, ParentDefinitionData>();
   parentTagDataByTypeName = new Map<TypeName, ParentTagData>();
   persistedDirectiveDefinitionByDirectiveName = new Map<DirectiveName, DirectiveDefinitionNode>([
@@ -295,17 +301,17 @@ export class FederationFactory {
   constructor({
     authorizationDataByParentTypeName,
     concreteTypeNamesByAbstractTypeName,
-    disableResolvabilityValidation,
     entityDataByTypeName,
     entityInterfaceFederationDataByTypeName,
     fieldCoordsByNamedTypeName,
     internalGraph,
     internalSubgraphBySubgraphName,
+    options,
     warnings,
   }: FederationFactoryParams) {
     this.authorizationDataByParentTypeName = authorizationDataByParentTypeName;
+    this.options = options ?? {};
     this.concreteTypeNamesByAbstractTypeName = concreteTypeNamesByAbstractTypeName;
-    this.disableResolvabilityValidation = disableResolvabilityValidation ?? false;
     this.entityDataByTypeName = entityDataByTypeName;
     this.entityInterfaceFederationDataByTypeName = entityInterfaceFederationDataByTypeName;
     this.fieldCoordsByNamedTypeName = fieldCoordsByNamedTypeName;
@@ -2868,7 +2874,7 @@ export class FederationFactory {
      * These checks can be disabled by setting `disableResolvabilityValidation` to true.
      * This should only be done for troubleshooting purposes.
      * */
-    if (!this.disableResolvabilityValidation && this.internalSubgraphBySubgraphName.size > 1) {
+    if (!this.options?.disableResolvabilityValidation && this.internalSubgraphBySubgraphName.size > 1) {
       const validationResult = this.internalGraph.validate();
       if (!validationResult.success) {
         return { errors: validationResult.errors, success: false, warnings: this.warnings };
@@ -3241,19 +3247,16 @@ type FederationFactoryResultFailure = {
 
 type FederationFactoryResult = FederationFactoryResultFailure | FederationFactoryResultSuccess;
 
-function initializeFederationFactory({
-  disableResolvabilityValidation,
-  subgraphs,
-}: FederationParams): FederationFactoryResult {
+function initializeFederationFactory({ options, subgraphs }: FederationParams): FederationFactoryResult {
   if (subgraphs.length < 1) {
     return { errors: [minimumSubgraphRequirementError], success: false, warnings: [] };
   }
-  const result = batchNormalize(subgraphs);
+  const result = batchNormalize({ subgraphs, options });
   if (!result.success) {
     return { errors: result.errors, success: false, warnings: result.warnings };
   }
-  const entityInterfaceFederationDataByTypeName = new Map<string, EntityInterfaceFederationData>();
-  const invalidEntityInterfacesByTypeName = new Map<string, Array<InvalidEntityInterface>>();
+  const entityInterfaceFederationDataByTypeName = new Map<TypeName, EntityInterfaceFederationData>();
+  const invalidEntityInterfacesByTypeName = new Map<TypeName, Array<InvalidEntityInterface>>();
   for (const [subgraphName, internalSubgraph] of result.internalSubgraphBySubgraphName) {
     for (const [typeName, entityInterfaceData] of internalSubgraph.entityInterfaces) {
       const existingData = entityInterfaceFederationDataByTypeName.get(typeName);
@@ -3356,12 +3359,12 @@ function initializeFederationFactory({
     federationFactory: new FederationFactory({
       authorizationDataByParentTypeName: result.authorizationDataByParentTypeName,
       concreteTypeNamesByAbstractTypeName: result.concreteTypeNamesByAbstractTypeName,
-      disableResolvabilityValidation,
       entityDataByTypeName: result.entityDataByTypeName,
       entityInterfaceFederationDataByTypeName,
       fieldCoordsByNamedTypeName: result.fieldCoordsByNamedTypeName,
       internalSubgraphBySubgraphName: result.internalSubgraphBySubgraphName,
       internalGraph: result.internalGraph,
+      options,
       warnings: result.warnings,
     }),
     success: true,
@@ -3369,8 +3372,8 @@ function initializeFederationFactory({
   };
 }
 
-export function federateSubgraphs({ disableResolvabilityValidation, subgraphs }: FederationParams): FederationResult {
-  const federationFactoryResult = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
+export function federateSubgraphs({ options, subgraphs }: FederationParams): FederationResult {
+  const federationFactoryResult = initializeFederationFactory({ options, subgraphs });
   if (!federationFactoryResult.success) {
     return { errors: federationFactoryResult.errors, success: false, warnings: federationFactoryResult.warnings };
   }
@@ -3379,11 +3382,11 @@ export function federateSubgraphs({ disableResolvabilityValidation, subgraphs }:
 
 // the flow when publishing a subgraph that also has contracts
 export function federateSubgraphsWithContracts({
+  options,
   subgraphs,
   tagOptionsByContractName,
-  disableResolvabilityValidation,
 }: FederateSubgraphsWithContractsV1Params): FederationResultWithContracts {
-  const factoryResult = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
+  const factoryResult = initializeFederationFactory({ options, subgraphs });
   if (!factoryResult.success) {
     return {
       errors: factoryResult.errors,
@@ -3417,10 +3420,10 @@ export function federateSubgraphsWithContracts({
 // the flow when adding a completely new contract
 export function federateSubgraphsContract({
   contractTagOptions,
-  disableResolvabilityValidation,
+  options,
   subgraphs,
 }: FederateSubgraphsContractV1Params): FederationResult {
-  const result = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
+  const result = initializeFederationFactory({ options, subgraphs });
   if (!result.success) {
     return { errors: result.errors, success: false, warnings: result.warnings };
   }

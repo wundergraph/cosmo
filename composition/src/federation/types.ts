@@ -10,6 +10,7 @@ import { FieldConfiguration } from '../router-configuration/types';
 import { Subgraph, SubgraphConfig } from '../subgraph/types';
 import { SupportedRouterCompatibilityVersion } from '../router-compatibility-version/router-compatibility-version';
 import { ContractName, DirectiveName, SubgraphName, TypeName } from '../types/types';
+import { CompositionOptions } from '../types/params';
 
 export type FederationFailure = {
   errors: Array<Error>;
@@ -71,19 +72,20 @@ export type MutualParentDefinitionData = {
 export type FederateSubgraphsParams = {
   subgraphs: Array<Subgraph>;
   disableResolvabilityValidation?: boolean;
+  options?: CompositionOptions;
   version?: SupportedRouterCompatibilityVersion;
 };
 
 export type FederateSubgraphsWithContractsParams = {
   subgraphs: Array<Subgraph>;
   tagOptionsByContractName: Map<ContractName, ContractTagOptions>;
-  disableResolvabilityValidation?: boolean;
+  options?: CompositionOptions;
   version?: SupportedRouterCompatibilityVersion;
 };
 
 export type FederateSubgraphsContractParams = {
   contractTagOptions: ContractTagOptions;
   subgraphs: Array<Subgraph>;
-  disableResolvabilityValidation?: boolean;
+  options?: CompositionOptions;
   version?: SupportedRouterCompatibilityVersion;
 };

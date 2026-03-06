@@ -1,7 +1,6 @@
 import { BREAK, ConstDirectiveNode, Kind, StringValueNode, visit } from 'graphql';
 import { FieldSetConditionData, RequiredFieldConfiguration } from '../../router-configuration/types';
 import {
-  AuthorizationData,
   CompositeOutputData,
   ConditionalFieldData,
   EntityData,
@@ -11,31 +10,16 @@ import {
   ObjectDefinitionData,
   ParentDefinitionData,
 } from '../../schema-building/types';
-import { Graph } from '../../resolvability-graph/graph';
 import { getTypeNodeNamedTypeName, MutableFieldNode } from '../../schema-building/ast';
 import { BASE_SCALARS } from '../constants/constants';
 import { isKindAbstract } from '../../ast/utils';
 import { GraphNode } from '../../resolvability-graph/graph-nodes';
-
-import { Warning } from '../../warnings/types';
 import { InternalSubgraph } from '../../subgraph/types';
 import { ContractTagOptions } from '../../federation/types';
 import { getOrThrowError, getValueOrDefault } from '../../utils/utils';
 import { KeyFieldSetData } from '../normalization/types';
-import { SubgraphName, TypeName } from '../../types/types';
+import { TypeName } from '../../types/types';
 import { TYPENAME } from '../../utils/string-constants';
-
-export type FederationFactoryParams = {
-  authorizationDataByParentTypeName: Map<TypeName, AuthorizationData>;
-  concreteTypeNamesByAbstractTypeName: Map<TypeName, Set<TypeName>>;
-  entityDataByTypeName: Map<TypeName, EntityData>;
-  entityInterfaceFederationDataByTypeName: Map<TypeName, EntityInterfaceFederationData>;
-  fieldCoordsByNamedTypeName: Map<TypeName, Set<string>>;
-  internalGraph: Graph;
-  internalSubgraphBySubgraphName: Map<SubgraphName, InternalSubgraph>;
-  warnings: Warning[];
-  disableResolvabilityValidation?: boolean;
-};
 
 export type ParentTagData = {
   childTagDataByChildName: Map<string, ChildTagData>;

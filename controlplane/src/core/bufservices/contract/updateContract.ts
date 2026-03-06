@@ -14,7 +14,7 @@ import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidSchemaTags, newCompositionOptions } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidSchemaTags } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
@@ -140,7 +140,10 @@ export function updateContract(
       },
       labelMatchers: [],
       chClient: opts.chClient!,
-      compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+      compositionOptions: {
+        // @TODO ignoreExternalKeys: ?,
+        disableResolvabilityValidation: req.disableResolvabilityValidation,
+      },
     });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
@@ -155,7 +158,10 @@ export function updateContract(
       },
       blobStorage: opts.blobStorage,
       chClient: opts.chClient!,
-      compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+      compositionOptions: {
+        // @TODO ignoreExternalKeys: ?,
+        disableResolvabilityValidation: req.disableResolvabilityValidation,
+      },
       federatedGraphs: [
         {
           ...graph,

@@ -15,23 +15,16 @@ import { parse, visit } from 'graphql';
 import { uid } from 'uid/secure';
 import DOMPurify from 'isomorphic-dompurify';
 import {
+  CompositionOptions,
   ContractTagOptions,
   FederationResult,
   FederationResultWithContracts,
   LATEST_ROUTER_COMPATIBILITY_VERSION,
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
-import { SubgraphType, ProposalOrigin } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { MemberRole, WebsocketSubprotocol, ProposalOrigin as ProposalOriginEnum } from '../db/models.js';
-import {
-  AuthContext,
-  CompositionOptions,
-  DateRange,
-  FederatedGraphDTO,
-  Label,
-  ResponseMessage,
-  S3StorageOptions,
-} from '../types/index.js';
+import { ProposalOrigin, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { MemberRole, ProposalOrigin as ProposalOriginEnum, WebsocketSubprotocol } from '../db/models.js';
+import { AuthContext, DateRange, FederatedGraphDTO, Label, ResponseMessage, S3StorageOptions } from '../types/index.js';
 import { isAuthenticationError, isAuthorizationError, isPublicError } from './errors/errors.js';
 import { GraphKeyAuthContext } from './services/GraphApiTokenAuthenticator.js';
 import { composeFederatedContract, composeFederatedGraphWithPotentialContracts } from './composition/composition.js';
@@ -665,10 +658,7 @@ export const convertToSubgraphType = (type: string) => {
   }
 };
 
-export function newCompositionOptions(disableResolvabilityValidation?: boolean): CompositionOptions | undefined {
-  if (!disableResolvabilityValidation) {
-    return;
-  }
+export function newCompositionOptions(disableResolvabilityValidation?: boolean): CompositionOptions {
   return {
     disableResolvabilityValidation,
   };

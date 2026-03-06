@@ -16,14 +16,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import {
-  enrichLogger,
-  getLogger,
-  handleError,
-  isValidGraphName,
-  isValidLabelMatchers,
-  newCompositionOptions,
-} from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidGraphName, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
@@ -232,7 +225,10 @@ export function createFederatedGraph(
         },
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
-        compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+        compositionOptions: {
+          // @TODO ignoreExternalKeys: ?,
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+        },
         federatedGraphs: [federatedGraph],
       });
 

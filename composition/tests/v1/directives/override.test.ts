@@ -43,7 +43,7 @@ describe('@override directive tests', () => {
     });
 
     test('that @override produces the correct engine configuration', () => {
-      const result = batchNormalize([subgraphA, subgraphE, subgraphF]) as BatchNormalizationSuccess;
+      const result = batchNormalize({ subgraphs: [subgraphA, subgraphE, subgraphF] }) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       const a = result.internalSubgraphBySubgraphName.get('subgraph-a');
       expect(a).toBeDefined();
