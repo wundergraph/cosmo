@@ -2,6 +2,7 @@ package module_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"net/http"
@@ -150,6 +151,44 @@ func (m *passthroughOnRequestModule) RouterOnRequest(ctx core.RequestContext, ne
 	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
 }
 
+// transformingModule is a RouterMiddlewareHandler that captures the response and
+// injects a "_buffered":true field into the JSON body before writing it out.
+// If the buffer is bypassed (writer not propagated), the transformation does not
+// happen and the body assertion fails — proving the bug purely via response body.
+type transformingModule struct{}
+
+func (m *transformingModule) Module() core.ModuleInfo {
+	return core.ModuleInfo{
+		ID:       "transformingModule",
+		Priority: 1,
+		New: func() core.Module {
+			return &transformingModule{}
+		},
+	}
+}
+
+func (m *transformingModule) Middleware(ctx core.RequestContext, next http.Handler) {
+	w := ctx.ResponseWriter()
+
+	bw := &capturingWriter{header: make(http.Header)}
+	next.ServeHTTP(bw, ctx.Request())
+
+	// Inject "_buffered":true into the captured JSON body.
+	var obj map[string]json.RawMessage
+	body := bw.body.Bytes()
+	if json.Unmarshal(body, &obj) == nil {
+		obj["_buffered"] = json.RawMessage(`true`)
+		body, _ = json.Marshal(obj)
+	}
+
+	maps.Copy(w.Header(), bw.header)
+	w.Header().Del("Content-Length")
+	if bw.code != 0 {
+		w.WriteHeader(bw.code)
+	}
+	_, _ = w.Write(body)
+}
+
 // TestMultiModuleMiddlewareWriterPropagation verifies that the router correctly
 // propagates the http.ResponseWriter through chained RouterMiddlewareHandler
 // modules. Without this fix (router.go discarding the writer parameter), an
@@ -226,6 +265,33 @@ func TestMultiModuleMiddlewareWriterPropagation(t *testing.T) {
 			assert.Equal(t, `{"data":{"employee":{"id":1}}}`, res.Body)
 			assert.NotEqual(t, "0", res.Response.Header.Get("X-Buffer-Captured-Bytes"),
 				"buffer must have captured bytes")
+		})
+	})
+
+	t.Run("transforming module modifies captured body proving buffer was used", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithCustomModules(
+					&transformingModule{},
+					&passthroughModule{},
+				),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query { employee(id: 1) { id } }`,
+			})
+			require.NoError(t, err)
+
+			assert.Equal(t, http.StatusOK, res.Response.StatusCode)
+			// The transforming module injects "_buffered":true into the JSON.
+			// If the buffer was bypassed, the body would be the unmodified
+			// engine response without this field.
+			assert.JSONEq(t,
+				`{"data":{"employee":{"id":1}},"_buffered":true}`,
+				res.Body,
+			)
 		})
 	})
 }
