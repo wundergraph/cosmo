@@ -18,8 +18,8 @@ const labelFormatter = (label: number, utc?: boolean) => {
   return utc
     ? new Date(label).toUTCString()
     : label
-    ? formatDateTime(label)
-    : label;
+      ? formatDateTime(label)
+      : label;
 };
 
 export const valueFormatter = (tick: number) =>

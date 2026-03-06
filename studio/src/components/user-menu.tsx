@@ -14,16 +14,16 @@ import { Button } from "./ui/button";
 import { PropsWithChildren } from "react";
 
 const localStorageKeysToRemove = [
-  'graphiql:headers',
-  'graphiql:queries',
-  'graphiql:tabState',
-  'graphiql:variables',
-  'graphiql:query',
-  'graphiql:operationName',
-  'playground:pre-flight:selected',
-  'playground:pre-operation:selected',
-  'playground:post-operation:selected',
-  'playground:script:tabState'
+  "graphiql:headers",
+  "graphiql:queries",
+  "graphiql:tabState",
+  "graphiql:variables",
+  "graphiql:query",
+  "graphiql:operationName",
+  "playground:pre-flight:selected",
+  "playground:pre-operation:selected",
+  "playground:post-operation:selected",
+  "playground:script:tabState",
 ];
 
 function removeLocalStorageItems() {
@@ -48,7 +48,7 @@ const LogoutLink = ({ children }: PropsWithChildren) => {
       {children || "Logout"}
     </Link>
   );
-}
+};
 
 export const UserMenuMobile = () => {
   const user = useUser();
@@ -83,7 +83,7 @@ export const UserMenu = () => {
             </AvatarFallback>
           </Avatar>
           {hasInvitations ? (
-            <div className="absolute right-0 top-0 -translate-x-0.5 -translate-y-0.5 rounded-full border-2 border-background pointer-events-none">
+            <div className="pointer-events-none absolute right-0 top-0 -translate-x-0.5 -translate-y-0.5 rounded-full border-2 border-background">
               <div className="absolute size-2 animate-ping rounded-full bg-blue-400" />
               <div className="size-2 rounded-full bg-blue-400" />
             </div>

@@ -17,7 +17,7 @@ const Loader = React.forwardRef<HTMLSpanElement, LoaderProps>(
         <span className={cn("loader", className)} {...props}></span>
       </div>
     );
-  }
+  },
 );
 
 Loader.displayName = "Loader";

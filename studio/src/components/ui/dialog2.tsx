@@ -22,7 +22,7 @@ const Dialog2Title = ({
     <Dialog.Title
       className={cn(
         "text-lg font-semibold leading-none tracking-tight",
-        className
+        className,
       )}
     >
       {children}
@@ -41,7 +41,7 @@ const Dialog2Content = ({
     <Dialog.Panel
       className={cn(
         "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg md:w-full",
-        className
+        className,
       )}
     >
       {children}

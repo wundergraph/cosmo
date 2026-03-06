@@ -14,8 +14,8 @@ export const ComposeStatusBulb = ({
         validGraph
           ? "bg-success"
           : emptyGraph
-          ? "bg-warning"
-          : "bg-destructive",
+            ? "bg-warning"
+            : "bg-destructive",
       )}
     />
   );

@@ -5,26 +5,36 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useMutation } from "@connectrpc/connect-query";
-import {
-  deleteOrganizationGroup,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { deleteOrganizationGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { z } from "zod";
 import { SubmitHandler, useZodForm } from "@/hooks/use-form";
 import { useToast } from "@/components/ui/use-toast";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/components/ui/form";
 import { GroupSelect } from "@/components/group-select";
 
 const groupIdValidator = z
   .string()
-  .uuid({ message: "Please select a valid group."});
+  .uuid({ message: "Please select a valid group." });
 
-export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted, onOpenChange }: {
+export function DeleteGroupDialog({
+  open,
+  group,
+  existingGroups,
+  onGroupDeleted,
+  onOpenChange,
+}: {
   open: boolean;
   group: OrganizationGroup | null;
   existingGroups: OrganizationGroup[];
@@ -33,7 +43,9 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
 }) {
   const { toast } = useToast();
   const { mutate, isPending } = useMutation(deleteOrganizationGroup);
-  const otherGroups = existingGroups.filter((g) => g.groupId !== group?.groupId);
+  const otherGroups = existingGroups.filter(
+    (g) => g.groupId !== group?.groupId,
+  );
 
   function handleOnOpenChange(open: boolean) {
     if (isPending) {
@@ -50,9 +62,10 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
     name: z.string().regex(regex, {
       message: "Please enter the rule set name as requested.",
     }),
-    toGroupId: group?.membersCount && otherGroups.length > 0
-      ? groupIdValidator
-      : groupIdValidator.optional(),
+    toGroupId:
+      group?.membersCount && otherGroups.length > 0
+        ? groupIdValidator
+        : groupIdValidator.optional(),
   });
 
   type DeleteGroupInput = z.infer<typeof schema>;
@@ -82,7 +95,9 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
             await onGroupDeleted();
           } else {
             toast({
-              description: resp?.response?.details ?? "Could not delete the group. Please try again.",
+              description:
+                resp?.response?.details ??
+                "Could not delete the group. Please try again.",
               duration: 3000,
             });
           }
@@ -94,7 +109,7 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
           });
         },
       },
-    )
+    );
   };
 
   return (
@@ -103,7 +118,9 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete group</DialogTitle>
-          <DialogDescription>Are you sure you want to delete this group?</DialogDescription>
+          <DialogDescription>
+            Are you sure you want to delete this group?
+          </DialogDescription>
         </DialogHeader>
 
         <Form {...deleteForm}>
@@ -111,30 +128,37 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
             className="mt-1 flex flex-col gap-y-4"
             onSubmit={deleteForm.handleSubmit(onSubmit)}
           >
-            {group?.membersCount || group?.apiKeysCount || group?.hasOidcMappers ? (
+            {group?.membersCount ||
+            group?.apiKeysCount ||
+            group?.hasOidcMappers ? (
               <>
-
                 <span>
-                <span className="font-semibold">Before deleting</span> the group, you must select a new group. This is because:
+                  <span className="font-semibold">Before deleting</span> the
+                  group, you must select a new group. This is because:
                 </span>
 
-                <ol className="list-disc ml-8 space-y-2">
+                <ol className="ml-8 list-disc space-y-2">
                   {group.hasOidcMappers && (
                     <li>
-                      One or more OIDC mapper targets this group, we need to update the mappers so{" "}
-                      when user sign in using SSO they don&apos;t lose access to the organization.
+                      One or more OIDC mapper targets this group, we need to
+                      update the mappers so when user sign in using SSO they
+                      don&apos;t lose access to the organization.
                     </li>
                   )}
                   {!!group.membersCount && (
                     <li>
-                      {group.membersCount === 1 ? "One member " : "Multiple members "} have been
-                      assigned to this group.
+                      {group.membersCount === 1
+                        ? "One member "
+                        : "Multiple members "}{" "}
+                      have been assigned to this group.
                     </li>
                   )}
                   {!!group.apiKeysCount && (
                     <li>
-                      {group.apiKeysCount === 1 ? "One API Key" : "Multiple API Keys"} have been
-                      assigned to this group.
+                      {group.apiKeysCount === 1
+                        ? "One API Key"
+                        : "Multiple API Keys"}{" "}
+                      have been assigned to this group.
                     </li>
                   )}
                 </ol>
@@ -160,7 +184,8 @@ export function DeleteGroupDialog({ open, group, existingGroups, onGroupDeleted,
             ) : null}
 
             <div>
-              Enter <strong>{group?.name}</strong> to confirm you want to delete this group.
+              Enter <strong>{group?.name}</strong> to confirm you want to delete
+              this group.
             </div>
 
             <div className="space-y-2">

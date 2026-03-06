@@ -26,7 +26,7 @@ export interface TagInputStyleClassesProps {
 
 export interface TagInputProps
   extends OmittedInputProps,
-  VariantProps<typeof tagVariants> {
+    VariantProps<typeof tagVariants> {
   placeholder?: string;
   tags: Tag[];
   setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
@@ -110,38 +110,36 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
       onInputChange?.(newValue);
     };
 
-    const tryAddTag = 
-      (rawText: string, nextTags: Tag[]) => {
-        const newTagText = rawText.trim();
-        if (!newTagText) {
-          return nextTags;
-        }
-        if (!allowDuplicates && nextTags.some((tag) => tag.text === newTagText)) {
-          return nextTags;
-        }
-        if (maxTags !== undefined && nextTags.length >= maxTags) {
-          return nextTags;
-        }
-        const newTagId = crypto.randomUUID();
-        onTagAdd?.(newTagText);
-        return [...nextTags, { id: newTagId, text: newTagText }];
-      };
+    const tryAddTag = (rawText: string, nextTags: Tag[]) => {
+      const newTagText = rawText.trim();
+      if (!newTagText) {
+        return nextTags;
+      }
+      if (!allowDuplicates && nextTags.some((tag) => tag.text === newTagText)) {
+        return nextTags;
+      }
+      if (maxTags !== undefined && nextTags.length >= maxTags) {
+        return nextTags;
+      }
+      const newTagId = crypto.randomUUID();
+      onTagAdd?.(newTagText);
+      return [...nextTags, { id: newTagId, text: newTagText }];
+    };
 
     const escapeForCharClass = (value: string) =>
       value.replace(/[-\\^$*+?.()|[\]{}]/g, "\\$&");
 
-    const commitInputValue = 
-      (rawText: string, splitByDelimiters: boolean) => {
-        const trimmed = rawText.trim();
-        if (!trimmed) {
-          setInputValue("");
-          return;
-        }
+    const commitInputValue = (rawText: string, splitByDelimiters: boolean) => {
+      const trimmed = rawText.trim();
+      if (!trimmed) {
+        setInputValue("");
+        return;
+      }
 
-        const charDelimiters = delimiterList.filter((d) => d.length === 1);
-        const nextTagTexts =
-          splitByDelimiters && charDelimiters.length
-            ? trimmed
+      const charDelimiters = delimiterList.filter((d) => d.length === 1);
+      const nextTagTexts =
+        splitByDelimiters && charDelimiters.length
+          ? trimmed
               .split(
                 new RegExp(
                   `[${charDelimiters.map(escapeForCharClass).join("")}]+`,
@@ -149,21 +147,21 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
               )
               .map((t) => t.trim())
               .filter(Boolean)
-            : [trimmed];
+          : [trimmed];
 
-        // Use functional updater pattern to get latest state and avoid race conditions
-        setTags((prevTags) => {
-          let nextTags = prevTags;
-          for (const text of nextTagTexts) {
-            nextTags = tryAddTag(text, nextTags);
-          }
-          if (nextTags !== prevTags) {
-            return nextTags;
-          }
-          return prevTags;
-        });
-        setInputValue("");
-      };
+      // Use functional updater pattern to get latest state and avoid race conditions
+      setTags((prevTags) => {
+        let nextTags = prevTags;
+        for (const text of nextTagTexts) {
+          nextTags = tryAddTag(text, nextTags);
+        }
+        if (nextTags !== prevTags) {
+          return nextTags;
+        }
+        return prevTags;
+      });
+      setInputValue("");
+    };
 
     const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
       setActiveTagIndex(null); // Reset active tag index when the input field gains focus
@@ -215,22 +213,23 @@ const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
 
     const truncatedTags = truncate
       ? tags.map((tag) => ({
-        id: tag.id,
-        text:
-          tag.text?.length > truncate
-            ? `${tag.text.substring(0, truncate)}...`
-            : tag.text,
-      }))
+          id: tag.id,
+          text:
+            tag.text?.length > truncate
+              ? `${tag.text.substring(0, truncate)}...`
+              : tag.text,
+        }))
       : tags;
 
     return (
       <div
-        className={`flex w-full ${inputFieldPosition === "bottom"
-          ? "flex-col"
-          : inputFieldPosition === "top"
-            ? "flex-col-reverse"
-            : "flex-row"
-          }`}
+        className={`flex w-full ${
+          inputFieldPosition === "bottom"
+            ? "flex-col"
+            : inputFieldPosition === "top"
+              ? "flex-col-reverse"
+              : "flex-row"
+        }`}
       >
         <div className="w-full">
           <div

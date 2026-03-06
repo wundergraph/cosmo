@@ -23,7 +23,7 @@ const deltaBadgeVariants = cva(
     defaultVariants: {
       type: "neutral",
     },
-  }
+  },
 );
 
 export interface DeltaBadgeProps

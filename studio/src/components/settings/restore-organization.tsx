@@ -2,12 +2,22 @@ import { useContext, useState } from "react";
 import { SessionClientContext } from "@/components/app-provider";
 import { useToast } from "@/components/ui/use-toast";
 import { useMutation } from "@connectrpc/connect-query";
-import {
-  restoreOrganization
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { restoreOrganization } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 import { useUser } from "@/hooks/use-user";
@@ -53,10 +63,7 @@ export const RestoreOrganization = () => {
             Cancels the organization deletion.
           </CardDescription>
         </div>
-        <Dialog
-          open={open}
-          onOpenChange={setOpen}
-        >
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button
               className="w-full md:ml-auto md:w-max"
@@ -74,7 +81,8 @@ export const RestoreOrganization = () => {
             </DialogHeader>
 
             <p>
-              The deletion operation will be canceled upon restoring the organization.
+              The deletion operation will be canceled upon restoring the
+              organization.
             </p>
 
             <div className="mt-2 flex justify-end gap-x-4">
