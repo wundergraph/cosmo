@@ -7,7 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/asttransform"
 )
 
 // testFieldConfigs returns field configurations matching the demo subgraphs'
@@ -156,6 +159,16 @@ type MiscellaneousFact implements TopSecretFact {
 }
 `
 
+// parseTestSchema parses the test schema SDL and merges it with the base schema
+// (required by the AST walker to resolve operation types like Query/Mutation).
+func parseTestSchema(t *testing.T) ast.Document {
+	t.Helper()
+	doc, report := astparser.ParseGraphqlDocumentString(testSchemaSDL)
+	require.False(t, report.HasErrors(), "schema parse error: %s", report.Error())
+	require.NoError(t, asttransform.MergeDefinitionWithBaseSchema(&doc))
+	return doc
+}
+
 func TestExtractScopesForOperation(t *testing.T) {
 	t.Parallel()
 
@@ -269,8 +282,7 @@ func TestExtractScopesForOperation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			schemaDoc, schemaReport := astparser.ParseGraphqlDocumentString(testSchemaSDL)
-			require.False(t, schemaReport.HasErrors(), "schema parse error: %s", schemaReport.Error())
+			schemaDoc := parseTestSchema(t)
 
 			opDoc, opReport := astparser.ParseGraphqlDocumentString(tt.operation)
 			require.False(t, opReport.HasErrors(), "operation parse error: %s", opReport.Error())
@@ -292,8 +304,7 @@ func TestExtractScopesForOperation_FieldDetails(t *testing.T) {
 
 	fieldConfigs := testFieldConfigs()
 
-	schemaDoc, schemaReport := astparser.ParseGraphqlDocumentString(testSchemaSDL)
-	require.False(t, schemaReport.HasErrors())
+	schemaDoc := parseTestSchema(t)
 
 	extractor := NewScopeExtractor(fieldConfigs, &schemaDoc)
 
@@ -438,8 +449,7 @@ func TestComputeCombinedScopes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			schemaDoc, schemaReport := astparser.ParseGraphqlDocumentString(testSchemaSDL)
-			require.False(t, schemaReport.HasErrors())
+			schemaDoc := parseTestSchema(t)
 
 			extractor := NewScopeExtractor(testFieldConfigs(), &schemaDoc)
 			got := extractor.ComputeCombinedScopes(tt.fieldReqs)
