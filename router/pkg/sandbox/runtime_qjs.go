@@ -108,7 +108,9 @@ func (r *qjsRuntime) Execute(ctx context.Context, jsCode string, syncFuncs []Syn
 	// for the Go work (HTTP calls etc.). The goroutine sends results to a channel.
 	// The WASM thread drains the channel and resolves promises — keeping all
 	// WASM access single-threaded while enabling true concurrency for Promise.all.
-	resultCh := make(chan asyncResult, 64)
+	const maxConcurrentAsync = 64
+	resultCh := make(chan asyncResult, maxConcurrentAsync)
+	asyncSem := make(chan struct{}, maxConcurrentAsync)
 	done := make(chan struct{})
 	defer close(done)
 
@@ -117,10 +119,12 @@ func (r *qjsRuntime) Execute(ctx context.Context, jsCode string, syncFuncs []Syn
 		qctx.SetAsyncFunc(fn.Name, func(this *qjs.This) {
 			args := convertQJSArgs(this) // read args on WASM thread
 			promise := this.Promise()    // capture promise for later resolution
+			asyncSem <- struct{}{}       // limit in-flight goroutines
 			go func() {
 				var res any
 				var fnErr error
 				defer func() {
+					<-asyncSem
 					if r := recover(); r != nil {
 						fnErr = fmt.Errorf("sandbox panic: %v", r)
 					}

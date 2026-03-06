@@ -37,7 +37,7 @@ Yoko is an existing REST API that takes a natural language prompt and returns on
 
 **API contract:**
 
-```
+```http
 POST {endpoint}/v1/generate
 Authorization: Bearer {token}
 Content-Type: application/json
@@ -121,7 +121,7 @@ The TypeScript API surface is embedded in the MCP tool description and consumed 
 
 ### Architecture Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │                    AI Agent (Claude, etc.)               │
 └──────────────┬──────────────────────┬───────────────────┘

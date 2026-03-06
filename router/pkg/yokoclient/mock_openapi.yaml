@@ -68,6 +68,7 @@ components:
       properties:
         queries:
           type: array
+          maxItems: 20
           items:
             $ref: '#/components/schemas/QueryResult'
     QueryResult:
