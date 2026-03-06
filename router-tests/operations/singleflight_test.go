@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -555,14 +556,24 @@ func TestSingleFlight(t *testing.T) {
 			)
 			done.Add(int(numOfOperations))
 
-			// Wait for all subscriptions to be established before triggering
+			// Continuously publish until all consumers have received their message.
+			// NATSPublishUntilMinMessagesSent is insufficient here because cumulative
+			// MessagesSent can reach 10 before all 10 consumers are served (retries
+			// deliver to already-served consumers, inflating the count).
+			publishCtx, publishCancel := context.WithCancel(xEnv.Context)
 			go func() {
 				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
 				xEnv.WaitForTriggerCount(uint64(numOfOperations), time.Second*15)
-				// Publish with retry until all subscriptions receive the message.
-				// With 10 independent triggers, some NATS consumers may not be fully
-				// wired when the engine reports the expected trigger count.
-				xEnv.NATSPublishUntilMinMessagesSent(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), uint64(numOfOperations), time.Second*15)
+				for {
+					select {
+					case <-publishCtx.Done():
+						return
+					default:
+					}
+					_ = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
+					_ = xEnv.NatsConnectionDefault.Flush()
+					time.Sleep(500 * time.Millisecond)
+				}
 			}()
 
 			for i := int64(0); i < numOfOperations; i++ {
@@ -611,6 +622,7 @@ func TestSingleFlight(t *testing.T) {
 				}(i)
 			}
 			done.Wait()
+			publishCancel()
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 
 			// We expect no request de-duplication because different headers must not be de-duplicated
