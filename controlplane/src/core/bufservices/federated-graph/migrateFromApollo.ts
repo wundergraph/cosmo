@@ -131,6 +131,11 @@ export function migrateFromApollo(
       }
     }
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'composition-ignore-external-keys',
+    });
+
     await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
 
@@ -157,6 +162,7 @@ export function migrateFromApollo(
         },
         chClient: opts.chClient!,
         compositionOptions: {
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           disableResolvabilityValidation: true,
         },
       });

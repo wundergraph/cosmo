@@ -189,6 +189,10 @@ export function createFeatureFlag(
       namespaceId: namespace.id,
       excludeDisabled: true,
     });
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'composition-ignore-external-keys',
+    });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
@@ -206,7 +210,7 @@ export function createFeatureFlag(
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
         compositionOptions: {
-          // @TODO ignoreExternalKeys: ?,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           disableResolvabilityValidation: req.disableResolvabilityValidation,
         },
         federatedGraphs,

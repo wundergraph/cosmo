@@ -112,7 +112,6 @@ export function updateMonograph(
       }
 
       const subgraph = subgraphs[0];
-
       // check if the user is authorized to perform the action
       await opts.authorizer.authorize({
         db: opts.db,

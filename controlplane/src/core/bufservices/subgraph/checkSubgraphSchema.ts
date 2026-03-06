@@ -189,6 +189,10 @@ export function checkSubgraphSchema(
     }
 
     const subgraphName = subgraph?.name || req.subgraphName;
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'composition-ignore-external-keys',
+    });
 
     const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
       labels: subgraph ? subgraph.labels : req.labels,
@@ -206,7 +210,9 @@ export function checkSubgraphSchema(
     if (newSchemaSDL) {
       try {
         // Here we check if the schema is valid as a subgraph SDL
-        const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
+        const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion, {
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        });
         if (!result.success) {
           return {
             response: {
@@ -281,7 +287,10 @@ export function checkSubgraphSchema(
       limit,
       chClient: opts.chClient,
       newGraphQLSchema,
-      disableResolvabilityValidation: req.disableResolvabilityValidation,
+      compositionOptions: {
+        disableResolvabilityValidation: req.disableResolvabilityValidation,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+      },
       webhookService,
     });
 
@@ -449,7 +458,10 @@ export function checkSubgraphSchema(
         limit: targetLimit,
         chClient: opts.chClient,
         newGraphQLSchema: targetNewGraphQLSchema,
-        disableResolvabilityValidation: req.disableResolvabilityValidation,
+        compositionOptions: {
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        },
         webhookService,
       });
 

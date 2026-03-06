@@ -10,6 +10,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
@@ -32,6 +33,7 @@ export function deleteFederatedSubgraph(
     const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
       authContext.organizationId,
@@ -121,6 +123,11 @@ export function deleteFederatedSubgraph(
       }
     }
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'composition-ignore-external-keys',
+    });
+
     const { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
         const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -177,7 +184,7 @@ export function deleteFederatedSubgraph(
           blobStorage: opts.blobStorage,
           chClient: opts.chClient!,
           compositionOptions: {
-            // @TODO ignoreExternalKeys: ?,
+            ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
             disableResolvabilityValidation: req.disableResolvabilityValidation,
           },
           federatedGraphs: affectedFederatedGraphs,

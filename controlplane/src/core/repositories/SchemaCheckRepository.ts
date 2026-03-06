@@ -751,6 +751,10 @@ export class SchemaCheckRepository {
       organizationId,
       featureId: 'breaking-change-retention',
     });
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId,
+      featureId: 'composition-ignore-external-keys',
+    });
 
     const limit = changeRetention?.limit ?? defaultRetentionLimitInDays;
 
@@ -820,7 +824,9 @@ export class SchemaCheckRepository {
       if (newSchemaSDL) {
         try {
           // Here we check if the schema is valid as a subgraph SDL
-          const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
+          const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion, {
+            ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+          });
           if (!result.success) {
             await this.update({
               schemaCheckID,
@@ -1109,6 +1115,9 @@ export class SchemaCheckRepository {
     }
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
+      compositionOptions: {
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+      },
       inputSubgraphs: checkSubgraphs,
       graphs: federatedGraphs.filter((g) => !g.contract),
     });
@@ -1368,7 +1377,10 @@ export class SchemaCheckRepository {
         limit: targetLimit,
         chClient,
         newGraphQLSchema: targetNewGraphQLSchema,
-        disableResolvabilityValidation: false,
+        compositionOptions: {
+          disableResolvabilityValidation: false,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        },
         webhookService,
       });
 

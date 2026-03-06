@@ -38,6 +38,7 @@ export function publishMonograph(
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
@@ -66,12 +67,18 @@ export function publishMonograph(
     }
 
     const subgraphSchemaSDL = req.schema;
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'composition-ignore-external-keys',
+    });
 
     let isV2Graph: boolean | undefined;
 
     try {
       // Here we check if the schema is valid as a subgraph SDL
-      const result = buildSchema(subgraphSchemaSDL, true, graph.routerCompatibilityVersion);
+      const result = buildSchema(subgraphSchemaSDL, true, graph.routerCompatibilityVersion, {
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+      });
       if (!result.success) {
         return {
           response: {
@@ -151,7 +158,7 @@ export function publishMonograph(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
-        opts.chClient!,
+        opts.chClient!
       );
 
     for (const graph of updatedFederatedGraphs) {
@@ -181,7 +188,6 @@ export function publishMonograph(
       // Best effort approach. This way of counting tokens is not accurate.
       subgraphSchemaSDL.length <= 10_000
     ) {
-      const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
       const feature = await orgRepo.getFeature({
         organizationId: authContext.organizationId,
         featureId: 'ai',

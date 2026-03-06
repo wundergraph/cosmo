@@ -13,6 +13,7 @@ import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
@@ -30,6 +31,7 @@ export function updateFederatedGraph(
     logger = enrichLogger(ctx, logger, authContext);
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const auditLogRepo = new AuditLogRepository(opts.db);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
@@ -106,6 +108,11 @@ export function updateFederatedGraph(
       };
     }
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'composition-ignore-external-keys',
+    });
+
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     let compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
@@ -120,7 +127,7 @@ export function updateFederatedGraph(
       blobStorage: opts.blobStorage,
       chClient: opts.chClient!,
       compositionOptions: {
-        // @TODO ignoreExternalKeys: ?,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       },
       labelMatchers: req.labelMatchers,

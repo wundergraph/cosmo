@@ -7,6 +7,7 @@ import { PublicError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
@@ -25,6 +26,7 @@ export function moveSubgraph(
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
       authContext.organizationId,
@@ -82,6 +84,11 @@ export function moveSubgraph(
       authContext,
     });
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: 'composition-ignore-external-keys',
+    });
+
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
         const auditLogRepo = new AuditLogRepository(tx);
@@ -118,7 +125,7 @@ export function moveSubgraph(
             },
             opts.chClient!,
             {
-              // @TODO ignoreExternalKeys: ?,
+              ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
               disableResolvabilityValidation: req.disableResolvabilityValidation,
             },
           );
