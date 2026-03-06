@@ -2018,6 +2018,10 @@ func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs i
 		if maxAttempts == 0 {
 			return errors.New("max attempts reached, timed out waiting for server to be ready")
 		}
+		// If we're running a router binary process, check if it's still alive
+		if e.routerCmd != nil && e.routerCmd.ProcessState != nil {
+			return fmt.Errorf("router process exited unexpectedly: %s", e.routerCmd.ProcessState)
+		}
 		select {
 		case <-ctx.Done():
 			return errors.New("context timed out waiting for router to be ready")

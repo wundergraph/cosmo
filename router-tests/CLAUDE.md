@@ -115,6 +115,20 @@ require.Equal(t, "employees", metrics[0].Labels["subgraph"])
 
 Tests known to be flaky use the `TestFlaky` prefix (e.g., `TestFlakyNatsEvents`). CI runs these with `test_retry_count=3` and a separate `-run '^TestFlaky'` pass. Once the root cause is fixed, move tests back to their non-flaky parent function.
 
+### 6. Buffered channels in worker pools: prevent goroutine leaks on context cancellation
+
+**Problem:** When a worker pool uses an unbuffered completion channel and the main goroutine exits early (e.g., via context cancellation), workers block forever on sends, leaking goroutines and potentially crashing the process.
+
+**Fix:** Always buffer completion channels with capacity equal to the number of workers so sends never block when the receiver has stopped listening.
+
+```go
+// WRONG — workers block on send if main goroutine exits via <-done
+itemCompleted := make(chan struct{})
+
+// RIGHT — buffered, workers can always send and exit cleanly
+itemCompleted := make(chan struct{}, workerCount)
+```
+
 ## Key Test Helpers
 
 | Helper | Location | Purpose |
@@ -132,4 +146,4 @@ Tests known to be flaky use the `TestFlaky` prefix (e.g., `TestFlakyNatsEvents`)
 | `ToPtr` | `utils.go` | Generic pointer helper |
 | `EmployeesIDData` | `utils.go` | Standard expected response constant |
 
-<!-- CI stability run: 17 of 20 -->
+<!-- CI stability run: 1 of 20 -->
