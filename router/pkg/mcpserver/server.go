@@ -44,7 +44,6 @@ func requestHeadersFromRequest(ctx context.Context, r *http.Request) context.Con
 	return withRequestHeaders(ctx, headers)
 }
 
-
 // headersFromContext extracts the request headers from the context.
 func headersFromContext(ctx context.Context) (http.Header, error) {
 	headers, ok := ctx.Value(requestHeadersKey{}).(http.Header)
@@ -628,6 +627,9 @@ func (s *GraphQLSchemaServer) registerTools() error {
 
 	graphqlOperationNames := make([]string, 0, len(operations))
 
+	// Build per-tool scope map for the auth middleware
+	toolScopes := make(map[string][][]string)
+
 	for _, op := range operations {
 		var compiledSchema *jsonschema.Schema
 		var err error
@@ -715,6 +717,16 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		s.server.AddTool(tool, s.handleOperation(handler))
 
 		s.registeredTools = append(s.registeredTools, toolName)
+
+		// Record per-tool scope requirements for auth middleware enforcement
+		if len(op.RequiredScopes) > 0 {
+			toolScopes[toolName] = op.RequiredScopes
+		}
+	}
+
+	// Update auth middleware with per-tool scopes (thread-safe)
+	if s.authMiddleware != nil {
+		s.authMiddleware.SetToolScopes(toolScopes)
 	}
 
 	getOperationInfoTool := &mcp.Tool{

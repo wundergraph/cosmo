@@ -317,6 +317,166 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 	}
 }
 
+func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
+	t.Parallel()
+
+	const testMetadataURL = "http://localhost:5025/.well-known/oauth-protected-resource/mcp"
+
+	validDecoder := &mockTokenDecoder{
+		decodeFunc: func(token string) (authentication.Claims, error) {
+			switch token {
+			case "no-scopes":
+				return authentication.Claims{"sub": "user1", "scope": "mcp:connect mcp:tools:write"}, nil
+			case "has-read-fact":
+				return authentication.Claims{"sub": "user2", "scope": "mcp:connect mcp:tools:write read:fact"}, nil
+			case "has-read-all":
+				return authentication.Claims{"sub": "user3", "scope": "mcp:connect mcp:tools:write read:all"}, nil
+			case "has-read-employee":
+				return authentication.Claims{"sub": "user4", "scope": "mcp:connect mcp:tools:write read:employee"}, nil
+			case "has-read-employee-private":
+				return authentication.Claims{"sub": "user5", "scope": "mcp:connect mcp:tools:write read:employee read:private"}, nil
+			default:
+				return nil, errors.New("invalid token")
+			}
+		},
+	}
+
+	scopes := MCPScopeConfig{
+		Initialize: []string{"mcp:connect"},
+		ToolsCall:  []string{"mcp:tools:write"},
+	}
+
+	// Tool scopes simulating @requiresScopes extraction
+	toolScopes := map[string][][]string{
+		"execute_operation_get_top_secret_facts": {
+			{"read:fact"},
+			{"read:all"},
+		},
+		"execute_operation_get_employee_start_date": {
+			{"read:employee", "read:private"},
+			{"read:all"},
+		},
+		// execute_operation_list_employees has no scopes (not in map)
+	}
+
+	tests := []struct {
+		name                             string
+		token                            string
+		body                             string
+		scopeChallengeIncludeTokenScopes bool
+		wantStatusCode                   int
+		wantScope                        string
+		wantContains                     string // additional WWW-Authenticate check
+	}{
+		{
+			name:           "unscoped tool passes with just static scopes",
+			token:          "no-scopes",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_list_employees"}}`,
+			wantStatusCode: 200,
+		},
+		{
+			name:           "scoped tool - token has matching scope (read:fact)",
+			token:          "has-read-fact",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_top_secret_facts"}}`,
+			wantStatusCode: 200,
+		},
+		{
+			name:           "scoped tool - token has matching scope (read:all)",
+			token:          "has-read-all",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_top_secret_facts"}}`,
+			wantStatusCode: 200,
+		},
+		{
+			name:           "scoped tool - token lacks scopes, challenge picks smallest group",
+			token:          "no-scopes",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_top_secret_facts"}}`,
+			wantStatusCode: 403,
+			wantScope:      `scope="read:fact"`,
+			wantContains:   `error_description="insufficient scopes for tool execute_operation_get_top_secret_facts"`,
+		},
+		{
+			name:                             "scoped tool - include token scopes in challenge",
+			token:                            "no-scopes",
+			body:                             `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_top_secret_facts"}}`,
+			scopeChallengeIncludeTokenScopes: true,
+			wantStatusCode:                   403,
+			wantScope:                        `scope="mcp:connect mcp:tools:write read:fact"`,
+		},
+		{
+			name:           "AND group - token has one of two required, challenge picks closest group",
+			token:          "has-read-employee",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_employee_start_date"}}`,
+			wantStatusCode: 403,
+			// Group 1: ["read:employee", "read:private"] missing "read:private" (1 missing)
+			// Group 2: ["read:all"] missing "read:all" (1 missing)
+			// Tie → first group wins
+			wantScope: `scope="read:employee read:private"`,
+		},
+		{
+			name:           "AND group - token satisfies full AND group",
+			token:          "has-read-employee-private",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_employee_start_date"}}`,
+			wantStatusCode: 200,
+		},
+		{
+			name:           "AND group - token has read:all satisfies second OR group",
+			token:          "has-read-all",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_employee_start_date"}}`,
+			wantStatusCode: 200,
+		},
+		{
+			name:           "AND group - empty relevant scopes, challenge picks smallest group",
+			token:          "no-scopes",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"execute_operation_get_employee_start_date"}}`,
+			wantStatusCode: 403,
+			// Group 1: 2 missing, Group 2: 1 missing → Group 2 wins
+			wantScope: `scope="read:all"`,
+		},
+		{
+			name:           "tools/list is not affected by per-tool scopes",
+			token:          "no-scopes",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`,
+			wantStatusCode: 200,
+		},
+		{
+			name:           "unknown tool name passes (no per-tool scopes)",
+			token:          "no-scopes",
+			body:           `{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"unknown_tool"}}`,
+			wantStatusCode: 200,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			middleware, err := NewMCPAuthMiddleware(validDecoder, true, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes)
+			assert.NoError(t, err)
+
+			// Set per-tool scopes
+			middleware.SetToolScopes(toolScopes)
+
+			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(200)
+			}))
+
+			req, _ := http.NewRequest("POST", "/mcp", strings.NewReader(tt.body))
+			req.Header.Set("Authorization", "Bearer "+tt.token)
+			req.Header.Set("Content-Type", "application/json")
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
+
+			assert.Equal(t, tt.wantStatusCode, rr.Code)
+			if tt.wantScope != "" {
+				wwwAuth := rr.Header().Get("WWW-Authenticate")
+				assert.Contains(t, wwwAuth, tt.wantScope, "WWW-Authenticate header should contain expected scope")
+			}
+			if tt.wantContains != "" {
+				wwwAuth := rr.Header().Get("WWW-Authenticate")
+				assert.Contains(t, wwwAuth, tt.wantContains, "WWW-Authenticate header should contain expected string")
+			}
+		})
+	}
+}
+
 func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 	t.Parallel()
 

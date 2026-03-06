@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 )
@@ -45,6 +46,8 @@ type MCPAuthMiddleware struct {
 	resourceMetadataURL              string
 	scopes                           MCPScopeConfig
 	scopeChallengeIncludeTokenScopes bool
+	toolScopesMu                     sync.RWMutex
+	toolScopes                       map[string][][]string // toolName → OR-of-AND scope groups
 }
 
 // NewMCPAuthMiddleware creates a new authentication middleware using the existing
@@ -73,6 +76,25 @@ func NewMCPAuthMiddleware(tokenDecoder authentication.TokenDecoder, enabled bool
 		scopes:                           scopes,
 		scopeChallengeIncludeTokenScopes: scopeChallengeIncludeTokenScopes,
 	}, nil
+}
+
+// SetToolScopes atomically replaces the per-tool scope map.
+// Called during Reload() after tools are registered with their extracted scopes.
+func (m *MCPAuthMiddleware) SetToolScopes(scopes map[string][][]string) {
+	m.toolScopesMu.Lock()
+	defer m.toolScopesMu.Unlock()
+	m.toolScopes = scopes
+}
+
+// getToolScopes returns the OR-of-AND scope groups for the given tool name.
+// Returns nil if the tool has no per-tool scope requirements.
+func (m *MCPAuthMiddleware) getToolScopes(toolName string) [][]string {
+	m.toolScopesMu.RLock()
+	defer m.toolScopesMu.RUnlock()
+	if m.toolScopes == nil {
+		return nil
+	}
+	return m.toolScopes[toolName]
 }
 
 // authenticateRequest extracts and validates the JWT token using the existing
@@ -153,6 +175,9 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 		if len(body) > 0 {
 			var jsonRPCReq struct {
 				Method string `json:"method"`
+				Params struct {
+					Name string `json:"name"`
+				} `json:"params"`
 			}
 			if err := json.Unmarshal(body, &jsonRPCReq); err == nil && jsonRPCReq.Method != "" {
 				// Check method-level scopes
@@ -167,6 +192,18 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 					if err := m.validateScopesForRequest(claims, methodScopes); err != nil {
 						m.sendInsufficientScopeResponse(w, methodScopes, claims, err)
 						return
+					}
+				}
+
+				// Per-tool scope check for tools/call (additive to static tools_call gate)
+				if jsonRPCReq.Method == "tools/call" && jsonRPCReq.Params.Name != "" {
+					if toolOrScopes := m.getToolScopes(jsonRPCReq.Params.Name); len(toolOrScopes) > 0 {
+						tokenScopes := extractScopes(claims)
+						if !SatisfiesAnyGroup(tokenScopes, toolOrScopes) {
+							challengeScopes := BestScopeChallengeWithExisting(tokenScopes, toolOrScopes, m.scopeChallengeIncludeTokenScopes)
+							m.sendPerToolInsufficientScopeResponse(w, challengeScopes, jsonRPCReq.Params.Name)
+							return
+						}
 					}
 				}
 			}
@@ -258,6 +295,23 @@ func (m *MCPAuthMiddleware) sendInsufficientScopeResponse(w http.ResponseWriter,
 
 	// Per MCP spec: Authorization failures at HTTP level return only HTTP status and WWW-Authenticate header
 	// No JSON-RPC response body is returned
+}
+
+// sendPerToolInsufficientScopeResponse sends a 403 response for per-tool scope failures.
+// The challengeScopes have already been computed by BestScopeChallengeWithExisting.
+func (m *MCPAuthMiddleware) sendPerToolInsufficientScopeResponse(w http.ResponseWriter, challengeScopes []string, toolName string) {
+	scopeList := strings.Join(challengeScopes, " ")
+
+	authHeader := fmt.Sprintf(`Bearer error="insufficient_scope", scope="%s"`, scopeList)
+
+	if m.resourceMetadataURL != "" {
+		authHeader += fmt.Sprintf(`, resource_metadata="%s"`, m.resourceMetadataURL)
+	}
+
+	authHeader += fmt.Sprintf(`, error_description="insufficient scopes for tool %s"`, toolName)
+
+	w.Header().Set("WWW-Authenticate", authHeader)
+	w.WriteHeader(http.StatusForbidden)
 }
 
 // validateScopesForRequest checks if the token contains all required scopes
