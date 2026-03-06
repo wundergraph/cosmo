@@ -30,7 +30,9 @@ const CacheWarmerPage: NextPageWithLayout = () => {
   const router = useRouter();
   const user = useUser();
   const checkUserAccess = useCheckUserAccess();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const cacheWarmerFeature = useFeature("cache-warmer");
   const { mutate } = useMutation(configureCacheWarmer);
   const { toast } = useToast();
@@ -89,70 +91,70 @@ const CacheWarmerPage: NextPageWithLayout = () => {
   }
 
   return (
-      <div className="space-y-6 rounded-lg border p-6">
-        <div className="flex w-full items-center justify-between">
-          <div className="flex flex-col gap-y-1">
-            <h3 className="font-semibold tracking-tight">
-              Enable Cache Warmer
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {!!cacheWarmerFeature?.enabled
-                ? "Enable cache warmer to warm the router with your top opeartions."
-                : "Upgrade your billing plan to use this cacheWarmer."}{" "}
-              <Link
-                href={docsBaseURL + "/concepts/cache-warmer"}
-                className="text-primary"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Learn more
-              </Link>
-            </p>
-          </div>
-          <Switch
-            checked={cacheWarmerEnabled}
-            disabled={
-              !cacheWarmerFeature?.enabled ||
-              !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
-            }
-            onCheckedChange={(checked) => {
-              setCacheWarmerEnabled(checked);
-              mutate(
-                {
-                  enableCacheWarmer: checked,
-                  namespace,
-                  maxOperationsCount: checked ? 100 : undefined,
-                },
-                {
-                  onSuccess: (d) => {
-                    if (d.response?.code === EnumStatusCode.OK) {
-                      toast({
-                        description: checked
-                          ? "Cache Warmer enabled successfully."
-                          : "Cache Warmer disabled successfully",
-                        duration: 3000,
-                      });
-                    } else if (d.response?.details) {
-                      toast({
-                        description: d.response.details,
-                        duration: 3000,
-                      });
-                    }
-                    refetch();
-                  },
-                  onError: (error) => {
+    <div className="space-y-6 rounded-lg border p-6">
+      <div className="flex w-full items-center justify-between">
+        <div className="flex flex-col gap-y-1">
+          <h3 className="font-semibold tracking-tight">Enable Cache Warmer</h3>
+          <p className="text-sm text-muted-foreground">
+            {!!cacheWarmerFeature?.enabled
+              ? "Enable cache warmer to warm the router with your top opeartions."
+              : "Upgrade your billing plan to use this cacheWarmer."}{" "}
+            <Link
+              href={docsBaseURL + "/concepts/cache-warmer"}
+              className="text-primary"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Learn more
+            </Link>
+          </p>
+        </div>
+        <Switch
+          checked={cacheWarmerEnabled}
+          disabled={
+            !cacheWarmerFeature?.enabled ||
+            !checkUserAccess({
+              rolesToBe: ["organization-admin", "organization-developer"],
+            })
+          }
+          onCheckedChange={(checked) => {
+            setCacheWarmerEnabled(checked);
+            mutate(
+              {
+                enableCacheWarmer: checked,
+                namespace,
+                maxOperationsCount: checked ? 100 : undefined,
+              },
+              {
+                onSuccess: (d) => {
+                  if (d.response?.code === EnumStatusCode.OK) {
                     toast({
                       description: checked
-                        ? "Could not enable the cache warmer. Please try again."
-                        : "Could not disable the cache warmer. Please try again.",
+                        ? "Cache Warmer enabled successfully."
+                        : "Cache Warmer disabled successfully",
                       duration: 3000,
                     });
-                  },
+                  } else if (d.response?.details) {
+                    toast({
+                      description: d.response.details,
+                      duration: 3000,
+                    });
+                  }
+                  refetch();
                 },
-              );
-            }}
-          />
-        </div>
+                onError: (error) => {
+                  toast({
+                    description: checked
+                      ? "Could not enable the cache warmer. Please try again."
+                      : "Could not disable the cache warmer. Please try again.",
+                    duration: 3000,
+                  });
+                },
+              },
+            );
+          }}
+        />
+      </div>
       <CacheWarmerConfig
         key={currentOperationsCount}
         cacheWarmerEnabled={cacheWarmerEnabled}

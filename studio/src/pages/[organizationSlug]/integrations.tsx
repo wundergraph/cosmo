@@ -534,7 +534,9 @@ const IntegrationsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const checkUserAccess = useCheckUserAccess();
 
-  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
+  const isAdminOrDeveloper = checkUserAccess({
+    rolesToBe: ["organization-admin", "organization-developer"],
+  });
 
   const organizationSlug = router.query.organizationSlug as string;
   const code = router.query.code as string;
@@ -580,7 +582,10 @@ const IntegrationsPage: NextPageWithLayout = () => {
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL + "/studio/alerts-and-notifications/slack-integration"}
+              href={
+                docsBaseURL +
+                "/studio/alerts-and-notifications/slack-integration"
+              }
               className="text-primary"
             >
               Learn more.
@@ -622,7 +627,9 @@ const IntegrationsPage: NextPageWithLayout = () => {
           Integrations are used to receive notifications on certain events from
           the platform.{" "}
           <Link
-            href={docsBaseURL + "/studio/alerts-and-notifications/slack-integration"}
+            href={
+              docsBaseURL + "/studio/alerts-and-notifications/slack-integration"
+            }
             className="text-primary"
             target="_blank"
             rel="noreferrer"
@@ -656,7 +663,9 @@ const IntegrationsPage: NextPageWithLayout = () => {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Events</TableHead>
-              {isAdminOrDeveloper && <TableHead aria-label="Actions"></TableHead>}
+              {isAdminOrDeveloper && (
+                <TableHead aria-label="Actions"></TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>

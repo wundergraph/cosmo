@@ -48,7 +48,9 @@ const SDLPage: NextPageWithLayout = () => {
   const router = useRouter();
   const activeSubgraph = router.query.subgraph as string;
   const activeFeatureFlag = router.query.featureFlag as string;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const graphName = router.query.slug as string;
   const schemaType = router.query.schemaType as string;
 
@@ -119,7 +121,7 @@ const SDLPage: NextPageWithLayout = () => {
         routingUrl: graphData?.graph?.routingURL ?? "",
         sdl:
           schemaType === "router"
-            ? federatedGraphSdl?.sdl ?? ""
+            ? (federatedGraphSdl?.sdl ?? "")
             : federatedGraphSdl?.clientSchema || federatedGraphSdl?.sdl,
         time: graphData?.graph?.lastUpdatedAt,
         versionId: federatedGraphSdl?.versionId,
@@ -205,8 +207,8 @@ const SDLPage: NextPageWithLayout = () => {
                             {graphData?.graph?.supportsFederation
                               ? activeGraphWithSDL.title
                               : activeSubgraph
-                              ? "Published SDL"
-                              : "Router SDL"}
+                                ? "Published SDL"
+                                : "Router SDL"}
                           </p>
                           {!activeSubgraph && (
                             <Badge variant="secondary" className="ml-2">

@@ -39,7 +39,9 @@ import { PiWarningCircle } from "react-icons/pi";
 import { useWorkspace } from "@/hooks/use-workspace";
 
 export const Empty = ({ labels }: { labels: string[] }) => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   return (
     <EmptyState
@@ -203,7 +205,9 @@ export const FederatedGraphsTable = ({
 const FederatedGraphsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const subgraphSlug = router.query.subgraphSlug as string;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const { data, error, refetch, isLoading } = useQuery(
     getFederatedGraphsBySubgraphLabels,

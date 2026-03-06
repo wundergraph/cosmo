@@ -81,7 +81,9 @@ const ChangelogPage: NextPageWithLayout = () => {
   const [items, setItems] = useState<FederatedGraphChangelogOutput[]>([]);
   const [offset, setOffset] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const graphData = useContext(GraphContext);
 
