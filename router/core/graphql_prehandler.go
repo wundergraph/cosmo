@@ -57,6 +57,7 @@ type PreHandlerOptions struct {
 	FileUploadEnabled                      bool
 	TraceExportVariables                   bool
 	DevelopmentMode                        bool
+	RequireRequestTracingAuth              bool
 	EnableRequestTracing                   bool
 	AlwaysIncludeQueryPlan                 bool
 	AlwaysSkipLoader                       bool
@@ -88,6 +89,7 @@ type PreHandler struct {
 	operationBlocker                       *OperationBlocker
 	headerPropagation                      *HeaderPropagation
 	developmentMode                        bool
+	requireRequestTracingAuth              bool
 	alwaysIncludeQueryPlan                 bool
 	alwaysSkipLoader                       bool
 	queryPlansEnabled                      bool // queryPlansEnabled is a flag to enable query plans output in the extensions
@@ -148,6 +150,7 @@ func NewPreHandler(opts *PreHandlerOptions) *PreHandler {
 		operationBlocker:            opts.OperationBlocker,
 		routerPublicKey:             opts.RouterPublicKey,
 		developmentMode:             opts.DevelopmentMode,
+		requireRequestTracingAuth:   opts.RequireRequestTracingAuth,
 		enableRequestTracing:        opts.EnableRequestTracing,
 		flushTelemetryAfterResponse: opts.FlushTelemetryAfterResponse,
 		tracerProvider:              opts.TracerProvider,
@@ -1256,6 +1259,10 @@ func (h *PreHandler) internalParseRequestOptions(r *http.Request, clientInfo *Cl
 	if h.enableRequestTracing {
 		// In dev mode we always allow to enable tracing / query plans
 		if h.developmentMode {
+			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
+		}
+		// require_request_tracing_auth=false allows ART without dev_mode or a controlplane token
+		if !h.requireRequestTracingAuth {
 			return h.parseRequestExecutionOptions(r), h.parseRequestTraceOptions(r), nil
 		}
 		// If the client has a valid request token, and we have a public key from the controlplane
