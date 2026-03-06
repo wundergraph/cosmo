@@ -155,6 +155,7 @@ type GraphQLOperationInfoResponse struct {
 	Query          string          `json:"query"`
 	LLMGuidance    LLMGuidance     `json:"llmGuidance"`
 	Endpoint       string          `json:"endpoint"`
+	RequiredScopes [][]string      `json:"requiredScopes,omitempty"`
 }
 
 // GraphQLOperationInfoInput defines the input structure for the graphql_operation_info tool.
@@ -844,15 +845,26 @@ Usage Instructions:
 		}
 		requestFormat += "```"
 
+		// Scope requirements section
+		var scopeInfo string
+		if len(targetOp.RequiredScopes) > 0 {
+			scopeInfo = "\nRequired Scopes (OR-of-AND):\n"
+			for i, andGroup := range targetOp.RequiredScopes {
+				if i > 0 {
+					scopeInfo += "  OR\n"
+				}
+				scopeInfo += fmt.Sprintf("  - %s\n", strings.Join(andGroup, " AND "))
+			}
+		}
+
 		// Important notes section
 		importantNotes := `
-
 Important Notes:
 1. Use the query string exactly as provided above
 2. Do not modify or reformat the query string`
 
 		// Combine all sections
-		response := overview + schemaInfo + queryInfo + usageInstructions + requestFormat + importantNotes
+		response := overview + schemaInfo + scopeInfo + queryInfo + usageInstructions + requestFormat + importantNotes
 
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{&mcp.TextContent{Text: response}},
@@ -1034,6 +1046,7 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 	}
 
 	// Build scopes_supported from all configured scopes (union across all levels)
+	// plus all scopes extracted from @requiresScopes directives on operations
 	scopesSet := make(map[string]bool)
 	for _, scopeList := range [][]string{
 		s.oauthConfig.Scopes.Initialize,
@@ -1045,11 +1058,23 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 		}
 	}
 
+	// Include all scopes from per-tool @requiresScopes extraction
+	if s.operationsManager != nil {
+		for _, op := range s.operationsManager.GetOperations() {
+			for _, andGroup := range op.RequiredScopes {
+				for _, scope := range andGroup {
+					scopesSet[scope] = true
+				}
+			}
+		}
+	}
+
 	// Convert set to sorted slice for consistent output
 	scopes := make([]string, 0, len(scopesSet))
 	for scope := range scopesSet {
 		scopes = append(scopes, scope)
 	}
+	slices.Sort(scopes)
 	if len(scopes) == 0 {
 		scopes = []string{} // Ensure non-nil for JSON encoding
 	}
