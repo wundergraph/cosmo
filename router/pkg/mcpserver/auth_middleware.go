@@ -219,18 +219,22 @@ func (m *MCPAuthMiddleware) sendInsufficientScopeResponse(w http.ResponseWriter,
 	challengeScopes := operationScopes
 
 	if m.scopeChallengeIncludeTokenScopes {
-		// Union of token's existing scopes + operation's required scopes
+		// Union of token's existing scopes + operation's required scopes.
+		// Existing scopes come first so the client retains them on re-auth.
 		existing := extractScopes(claims)
-		seen := make(map[string]struct{})
+		seen := make(map[string]struct{}, len(existing)+len(operationScopes))
+		combined := make([]string, 0, len(existing)+len(operationScopes))
 		for _, s := range existing {
 			seen[s] = struct{}{}
-			challengeScopes = append(challengeScopes, s)
+			combined = append(combined, s)
 		}
 		for _, s := range operationScopes {
 			if _, ok := seen[s]; !ok {
-				challengeScopes = append(challengeScopes, s)
+				seen[s] = struct{}{}
+				combined = append(combined, s)
 			}
 		}
+		challengeScopes = combined
 	}
 
 	scopeList := strings.Join(challengeScopes, " ")
