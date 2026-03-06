@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
+	"github.com/dgraph-io/ristretto/v2"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
@@ -59,11 +60,9 @@ type CodeModeServer struct {
 	execCounter    otelmetric.Int64Counter
 	execDuration   otelmetric.Float64Histogram
 
-	// queryStore maps xxhash64 hex hashes to query strings.
+	// queryCache maps xxhash64 hashes to query strings using ristretto for LRU eviction.
 	// Populated by generateQueries, read by executeOperationByHashFunc.
-	// Bounded to maxQueryStoreSize entries; cleared entirely when full.
-	queryStoreMu sync.RWMutex
-	queryStore   map[string]string
+	queryCache *ristretto.Cache[uint64, string]
 }
 
 // NewCodeModeServer creates a new Code Mode MCP server.
@@ -99,13 +98,29 @@ func NewCodeModeServer(cfg CodeModeServerConfig) (*CodeModeServer, error) {
 	httpClient.Timeout = 60 * time.Second
 
 	meter := otel.Meter("wundergraph.cosmo.router.mcp.code_mode")
-	execCounter, _ := meter.Int64Counter("mcp.code_mode.sandbox.executions",
+	execCounter, err := meter.Int64Counter("mcp.code_mode.sandbox.executions",
 		otelmetric.WithDescription("Total number of Code Mode sandbox executions"),
 	)
-	execDuration, _ := meter.Float64Histogram("mcp.code_mode.sandbox.duration",
+	if err != nil {
+		cfg.Logger.Warn("Failed to create sandbox execution counter", zap.Error(err))
+	}
+	execDuration, err := meter.Float64Histogram("mcp.code_mode.sandbox.duration",
 		otelmetric.WithDescription("Duration of Code Mode sandbox executions in milliseconds"),
 		otelmetric.WithUnit("ms"),
 	)
+	if err != nil {
+		cfg.Logger.Warn("Failed to create sandbox execution duration histogram", zap.Error(err))
+	}
+
+	queryCache, err := ristretto.NewCache[uint64, string](&ristretto.Config[uint64, string]{
+		MaxCost:            maxQueryCacheSize,
+		NumCounters:        maxQueryCacheSize * 10,
+		BufferItems:        64,
+		IgnoreInternalCost: true,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create query cache: %w", err)
+	}
 
 	s := &CodeModeServer{
 		mcpServer:    mcpSrv,
@@ -117,7 +132,7 @@ func NewCodeModeServer(cfg CodeModeServerConfig) (*CodeModeServer, error) {
 		tracer:       otel.Tracer("wundergraph.cosmo.router.mcp.code_mode"),
 		execCounter:  execCounter,
 		execDuration: execDuration,
-		queryStore:   make(map[string]string),
+		queryCache:   queryCache,
 	}
 
 	// Initialize Yoko client for query generation if enabled
@@ -202,6 +217,7 @@ func (s *CodeModeServer) Stop(ctx context.Context) error {
 	}
 
 	s.sandboxPool.Close()
+	s.queryCache.Close()
 
 	return shutdownErr
 }
@@ -235,7 +251,8 @@ func (s *CodeModeServer) registerTools() {
 			mcp.WithToolAnnotation(mcp.ToolAnnotation{
 				Title:           "Execute GraphQL Operations",
 				ReadOnlyHint:    mcp.ToBoolPtr(false),
-				DestructiveHint: mcp.ToBoolPtr(false),
+				DestructiveHint: mcp.ToBoolPtr(true),
+				IdempotentHint:  mcp.ToBoolPtr(false),
 			}),
 		),
 		s.handleExecute(),
@@ -365,7 +382,7 @@ func (s *CodeModeServer) executeOperationByHashFunc(ctx context.Context) func(ar
 
 		queryStr, found := s.resolveQueryHash(hashStr)
 		if !found {
-			return nil, fmt.Errorf("unknown query hash %q — use search_graphql to get valid hashes", hashStr)
+			return nil, fmt.Errorf("query hash %q has expired from cache — please call search_graphql again to re-generate the query", hashStr)
 		}
 
 		// Optional variables as second argument
@@ -565,12 +582,10 @@ func (s *CodeModeServer) generateQueries(ctx context.Context, prompts []string) 
 	ch := make(chan indexedResult, len(prompts))
 	var wg sync.WaitGroup
 	for i, p := range prompts {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			results, err := s.yokoClient.Generate(ctx, p, schemaHash)
 			ch <- indexedResult{index: i, results: results, err: err}
-		}()
+		})
 	}
 	go func() { wg.Wait(); close(ch) }()
 
@@ -625,28 +640,24 @@ func (s *CodeModeServer) SetYokoClient(client yokoclient.YokoClient) {
 }
 
 const maxPrompts = 20
-const maxQueryStoreSize = 1000
+const maxQueryCacheSize = 1000
 
-// storeQueryHash computes the xxhash64 of a query string, stores the
-// mapping, and returns the hex-encoded hash.
+// storeQueryHash computes the xxhash64 of a query string, stores it
+// in the ristretto cache, and returns the hex-encoded hash.
 func (s *CodeModeServer) storeQueryHash(query string) string {
-	hash := strconv.FormatUint(xxhash.Sum64String(query), 16)
-	s.queryStoreMu.Lock()
-	if len(s.queryStore) >= maxQueryStoreSize {
-		s.logger.Warn("query hash store full, clearing all entries", zap.Int("size", len(s.queryStore)))
-		clear(s.queryStore)
-	}
-	s.queryStore[hash] = query
-	s.queryStoreMu.Unlock()
-	return hash
+	h := xxhash.Sum64String(query)
+	s.queryCache.Set(h, query, 1)
+	s.queryCache.Wait()
+	return strconv.FormatUint(h, 16)
 }
 
-// resolveQueryHash looks up a query string by its hash.
+// resolveQueryHash looks up a query string by its hex-encoded hash.
 func (s *CodeModeServer) resolveQueryHash(hash string) (string, bool) {
-	s.queryStoreMu.RLock()
-	query, ok := s.queryStore[hash]
-	s.queryStoreMu.RUnlock()
-	return query, ok
+	h, err := strconv.ParseUint(hash, 16, 64)
+	if err != nil {
+		return "", false
+	}
+	return s.queryCache.Get(h)
 }
 
 // formatToolResult encodes the result as TOON (Token-Oriented Object Notation)

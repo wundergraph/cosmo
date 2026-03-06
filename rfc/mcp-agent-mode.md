@@ -770,17 +770,16 @@ Both servers can run simultaneously. Clients connect to whichever server suits t
 
 #### Phase 1: Sandbox Infrastructure — Built
 
-- Added `esbuild` and `fastschema/qjs` dependencies (and `dop251/goja` as fallback).
+- Added `esbuild` and `fastschema/qjs` dependencies.
 - Created `router/pkg/sandbox/` package:
   - `runtime.go` — `Runtime` interface, `SyncFunc`/`AsyncFunc`/`ObjectDef` abstractions.
   - `runtime_qjs.go` — QuickJS via WASM with channel-based async for thread safety.
-  - `runtime_goja.go` — goja with synchronous async function execution.
-  - `transpiler.go` — esbuild Transform API for TS → JS (with async/await stripping for goja).
+  - `transpiler.go` — esbuild Transform API for TS → JS.
   - `pool.go` — Semaphore-based concurrency control, fresh runtime per execution.
 
 #### Phase 2: Search Tool — Built (simplified from original design)
 
-- Created `router/pkg/mcpserver/agentic_server.go` and `agentic_descriptions.go`.
+- Created `router/pkg/mcpserver/code_mode_server.go` and `code_mode_descriptions.go`.
 - The original design included `schema.*` exploration APIs and `validate()` — these were removed. Only `generateQuery()` was implemented, which proved sufficient for agent query discovery.
 - Published type definitions as MCP resources (`agentic://search-api.d.ts`).
 

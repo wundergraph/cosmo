@@ -170,7 +170,7 @@ func (m *MockClient) hasRequiredArgs(fieldRef int) bool {
 	for _, argRef := range argRefs {
 		typeRef := m.schema.InputValueDefinitionType(argRef)
 		t := m.schema.Types[typeRef]
-		if t.TypeKind == ast.TypeKindNonNull {
+		if t.TypeKind == ast.TypeKindNonNull && !m.schema.InputValueDefinitions[argRef].DefaultValue.IsDefined {
 			return true
 		}
 	}

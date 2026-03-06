@@ -327,7 +327,7 @@ func TestExecuteOperationFunc_UnknownHash(t *testing.T) {
 	fn := srv.executeOperationByHashFunc(context.Background())
 	_, err := fn([]any{"nonexistent-hash"})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unknown query hash")
+	assert.Contains(t, err.Error(), "has expired from cache")
 }
 
 // --- Resource tests ---
@@ -412,7 +412,10 @@ func TestExecute_MultipleGraphQLCalls(t *testing.T) {
 		callCount.Add(1)
 		w.Header().Set("Content-Type", "application/json")
 		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
 		query := body["query"].(string)
 		if query == "{ users { id name } }" {
 			_, _ = w.Write([]byte(`{"data":{"users":[{"id":"1","name":"Alice"},{"id":"2","name":"Bob"}]}}`))
@@ -496,7 +499,10 @@ func TestExecute_ConditionalMutation(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		var body map[string]any
-		json.NewDecoder(r.Body).Decode(&body)
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
 		query := body["query"].(string)
 		if query == "{ users { id name } }" {
 			_, _ = w.Write([]byte(`{"data":{"users":[{"id":"1","name":"Alice"},{"id":"2","name":"Bob"}]}}`))
@@ -562,7 +568,7 @@ func TestContract_ExecuteGlobalsMatchDescription(t *testing.T) {
 			await executeOperationByHash("unknown-hash");
 			errors.push("executeOperationByHash accepted unknown hash");
 		} catch(e) {
-			if (!e.message.includes("unknown query hash")) {
+			if (!e.message.includes("has expired from cache")) {
 				errors.push("executeOperationByHash unknown hash message unclear: " + e.message);
 			}
 		}
@@ -659,7 +665,7 @@ func TestExecute_GraphQLWithUnknownHash(t *testing.T) {
 	}`)
 	require.False(t, result.IsError)
 	text := result.Content[0].(mcp.TextContent).Text
-	assert.Contains(t, text, "unknown query hash")
+	assert.Contains(t, text, "has expired from cache")
 }
 
 // --- TOON encoding tests ---

@@ -31,9 +31,7 @@ func TestPool_ConcurrentExecution(t *testing.T) {
 	errors := make([]error, 10)
 
 	for i := range 10 {
-		wg.Add(1)
-		go func(idx int) {
-			defer wg.Done()
+		wg.Go(func() {
 			cur := current.Add(1)
 			defer current.Add(-1)
 
@@ -46,11 +44,11 @@ func TestPool_ConcurrentExecution(t *testing.T) {
 			}
 
 			result, err := pool.Execute(context.Background(), `(function() { return 1; })()`, nil, nil, nil)
-			errors[idx] = err
+			errors[i] = err
 			if err == nil {
 				assert.Equal(t, json.RawMessage("1"), result.Value)
 			}
-		}(i)
+		})
 	}
 
 	wg.Wait()
@@ -74,9 +72,7 @@ func TestPool_ConcurrencyLimit(t *testing.T) {
 	var wg sync.WaitGroup
 
 	for range 4 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			_, _ = pool.Execute(context.Background(), `(function() {
 				trackConcurrency();
 				var s = 0;
@@ -98,7 +94,7 @@ func TestPool_ConcurrencyLimit(t *testing.T) {
 					},
 				},
 			}, nil, nil)
-		}()
+		})
 	}
 
 	wg.Wait()

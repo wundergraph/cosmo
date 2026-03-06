@@ -2482,21 +2482,25 @@
                 "max_memory_mb": {
                   "type": "integer",
                   "default": 16,
+                  "minimum": 1,
                   "description": "Maximum memory in MB available to the sandbox runtime."
                 },
                 "max_fuel": {
                   "type": "integer",
                   "default": 10000000,
+                  "minimum": 1,
                   "description": "Maximum CPU fuel for sandbox execution."
                 },
                 "max_input_size_bytes": {
                   "type": "integer",
                   "default": 65536,
+                  "minimum": 1,
                   "description": "Maximum size in bytes of the sandbox input code."
                 },
                 "max_output_size_bytes": {
                   "type": "integer",
                   "default": 1048576,
+                  "minimum": 1,
                   "description": "Maximum size in bytes of the sandbox output."
                 }
               }
@@ -2544,7 +2548,27 @@
                       "type": "string",
                       "description": "Client secret for client credentials auth flow."
                     }
-                  }
+                  },
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": { "type": { "const": "static" } },
+                        "required": ["type"]
+                      },
+                      "then": {
+                        "required": ["static_token"]
+                      }
+                    },
+                    {
+                      "if": {
+                        "properties": { "type": { "const": "cosmo" } },
+                        "required": ["type"]
+                      },
+                      "then": {
+                        "required": ["token_endpoint", "client_id", "client_secret"]
+                      }
+                    }
+                  ]
                 },
                 "timeout": {
                   "type": "string",
