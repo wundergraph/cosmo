@@ -3,7 +3,7 @@
   "compilerOptions": {
     "declaration": true,
     "outDir": "./dist",
-    "module": "commonjs",
+    "module": "commonjs"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules"]

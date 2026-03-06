@@ -37,7 +37,6 @@ const schema = buildSchema(
   },
 );
 
-
 function normalizeFieldSet(fieldSet: string, typeName: string, s: GraphQLSchema = schema): string {
   const doc = parse(`{ ${fieldSet} }`);
   const objectType = s.getTypeMap()[typeName] as GraphQLObjectType;
@@ -388,7 +387,6 @@ describe('AbstractSelectionRewriter', () => {
   });
 });
 
-
 const schemaWithComplexInterfaces = buildSchema(
   `
   interface Iface {
@@ -417,11 +415,12 @@ const schemaWithComplexInterfaces = buildSchema(
   type Query {
     iface: Iface
   }
-  `, {
+  `,
+  {
     assumeValid: true,
     assumeValidSDL: true,
-  }
-)
+  },
+);
 
 describe('AbstractSelectionRewriter', () => {
   it('should handle complex interfaces', () => {
@@ -483,5 +482,5 @@ describe('AbstractSelectionRewriter', () => {
         }
       }"
     `);
-  })
+  });
 });

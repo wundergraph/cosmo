@@ -35,7 +35,7 @@ export function federateTestSubgraphs(): FederationResult {
 
   return federateSubgraphs({
     subgraphs: [accounts, inventory, products, reviews],
-    version: LATEST_ROUTER_COMPATIBILITY_VERSION
+    version: LATEST_ROUTER_COMPATIBILITY_VERSION,
   });
 }
 
