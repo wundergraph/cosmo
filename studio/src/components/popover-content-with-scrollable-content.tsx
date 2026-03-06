@@ -6,11 +6,13 @@ import type { PopoverContentProps } from "@radix-ui/react-popover";
 // `PopoverContent` to prevent that component from blocking the scroll.
 //
 // See: https://github.com/radix-ui/primitives/issues/1159
-export function PopoverContentWithScrollableContent(props: Omit<PopoverContentProps, 'onWheel' | 'onTouchMove'>) {
+export function PopoverContentWithScrollableContent(
+  props: Omit<PopoverContentProps, "onWheel" | "onTouchMove">,
+) {
   return (
     <PopoverContent
-      onWheel={e => e.stopPropagation()}
-      onTouchMove={e => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
+      onTouchMove={(e) => e.stopPropagation()}
       {...props}
     />
   );

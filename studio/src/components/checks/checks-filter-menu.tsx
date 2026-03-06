@@ -11,7 +11,7 @@ export const parseSelectedSubgraphs = (value: unknown) => {
   }
 
   return [];
-}
+};
 
 export function ChecksFilterMenu() {
   const router = useRouter();
@@ -30,13 +30,13 @@ export function ChecksFilterMenu() {
                 title: "Subgraphs",
                 selectedOptions: selectedSubgraphs,
                 onSelect: (selected) => {
-                  applyParams({ subgraphs: selected?.join(',') ?? null });
+                  applyParams({ subgraphs: selected?.join(",") ?? null });
                 },
                 options: subgraphs.map((sg) => ({
                   label: sg.name,
-                  value: sg.id
+                  value: sg.id,
                 })),
-              }
+              },
             ]}
           />
 

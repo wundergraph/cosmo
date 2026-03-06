@@ -55,7 +55,8 @@ const signupContentMap: Record<SignupVariant, SignupContent> = {
   },
   apollo: {
     heading: "Sign up for free",
-    description: "Try Cosmo managed and migrate from Apollo GraphOS in minutes. No credit card required.",
+    description:
+      "Try Cosmo managed and migrate from Apollo GraphOS in minutes. No credit card required.",
     marketingTitle: "Migrate to Cosmo\nfrom Apollo GraphOS",
     marketingDescription:
       "Escape the vendor lock. 100% open source GraphQL Federation with full control. A drop-in GraphOS replacement.",
@@ -93,7 +94,9 @@ const signupContentMap: Record<SignupVariant, SignupContent> = {
  * @param variant - The signup variant (from URL parameter)
  * @returns The content configuration for the variant
  */
-export const getSignupContent = (variant: SignupVariant = "default"): SignupContent => {
+export const getSignupContent = (
+  variant: SignupVariant = "default",
+): SignupContent => {
   return signupContentMap[variant] || signupContentMap.default;
 };
 

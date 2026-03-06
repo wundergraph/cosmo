@@ -27,7 +27,9 @@ import { Tooltip } from "./ui/tooltip";
 import { useWorkspace } from "@/hooks/use-workspace";
 
 export const Empty = ({ graph }: { graph?: FederatedGraph }) => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   let label = "[labels...]";
   if (graph?.labelMatchers && graph.labelMatchers.length > 0) {
@@ -158,7 +160,7 @@ export const FeatureFlagsTable = ({
                       </div>
                     </TableCell>
                     <TableCell className="px-4 text-muted-foreground">
-                      {createdBy || 'unknown user'}
+                      {createdBy || "unknown user"}
                     </TableCell>
                     <TableCell className="px-4 text-muted-foreground">
                       {createdAt

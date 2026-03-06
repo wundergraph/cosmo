@@ -141,7 +141,9 @@ export const GraphPruningLintConfig = ({
 }) => {
   const user = useUser();
   const checkUserAccess = useCheckUserAccess();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const feature = useFeature("field-pruning-grace-period");
   const plan = user?.currentOrganization?.billing?.plan;
 
@@ -180,7 +182,9 @@ export const GraphPruningLintConfig = ({
           checked={graphPruningEnabled}
           disabled={
             !feature?.limit ||
-            !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+            !checkUserAccess({
+              rolesToBe: ["organization-admin", "organization-developer"],
+            })
           }
           onCheckedChange={(checked) => {
             setGraphPruningEnabled(checked);
@@ -262,7 +266,9 @@ export const GraphPruningLintConfig = ({
                 isLoading={isConfiguring}
                 disabled={
                   !data.graphPrunerEnabled ||
-                  !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+                  !checkUserAccess({
+                    rolesToBe: ["organization-admin", "organization-developer"],
+                  })
                 }
                 onClick={() => {
                   configureGraphPruningRules(
@@ -320,7 +326,12 @@ export const GraphPruningLintConfig = ({
                         className="h-5 w-5"
                         disabled={
                           !data.graphPrunerEnabled ||
-                          !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+                          !checkUserAccess({
+                            rolesToBe: [
+                              "organization-admin",
+                              "organization-developer",
+                            ],
+                          })
                         }
                         checked={selectedPruneRules.some(
                           (l) => l.ruleName === rule.name,

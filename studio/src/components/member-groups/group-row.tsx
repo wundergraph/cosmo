@@ -4,16 +4,25 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/button";
 import { badgeVariants } from "@/components/ui/badge";
 import { InfoCircledIcon } from "@radix-ui/react-icons";
 import { useIsAdmin } from "@/hooks/use-is-admin";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-export function GroupRow({ group, rbacEnabled, onSelect, onDelete }: {
+export function GroupRow({
+  group,
+  rbacEnabled,
+  onSelect,
+  onDelete,
+}: {
   group: OrganizationGroup;
   rbacEnabled: boolean;
   onSelect(showMembers: boolean): void;
@@ -28,8 +37,13 @@ export function GroupRow({ group, rbacEnabled, onSelect, onDelete }: {
         {group.builtin && (
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className={badgeVariants({ variant: "outline", className: "space-x-1" })}>
-                <InfoCircledIcon className="size-3 pointer-events-none" />
+              <span
+                className={badgeVariants({
+                  variant: "outline",
+                  className: "space-x-1",
+                })}
+              >
+                <InfoCircledIcon className="pointer-events-none size-3" />
                 <span className="pointer-events-none">Built-In</span>
               </span>
             </TooltipTrigger>
@@ -49,7 +63,9 @@ export function GroupRow({ group, rbacEnabled, onSelect, onDelete }: {
           >
             {group.membersCount}
           </Button>
-        ) : group.membersCount}
+        ) : (
+          group.membersCount
+        )}
       </TableCell>
       {rbacEnabled && isAdmin && (
         <TableCell>
@@ -66,11 +82,10 @@ export function GroupRow({ group, rbacEnabled, onSelect, onDelete }: {
                 <DropdownMenuItem onClick={() => onSelect(false)}>
                   Edit
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onDelete}>
-                  Delete
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onDelete}>Delete</DropdownMenuItem>
               </DropdownMenuContent>
-            </DropdownMenu>)}
+            </DropdownMenu>
+          )}
         </TableCell>
       )}
     </TableRow>

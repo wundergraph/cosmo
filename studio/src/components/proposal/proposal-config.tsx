@@ -41,7 +41,9 @@ export const ProposalConfig = ({
   refetch: () => void;
 }) => {
   const checkUserAccess = useCheckUserAccess();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const proposalsFeature = useFeature("proposals");
 

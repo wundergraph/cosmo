@@ -1,10 +1,11 @@
 import Script from "next/script";
 
-const ACTIVE_CAMPAIGN_SCRIPT_SRC = 'https://diffuser-cdn.app-us1.com/diffuser/diffuser.js';
+const ACTIVE_CAMPAIGN_SCRIPT_SRC =
+  "https://diffuser-cdn.app-us1.com/diffuser/diffuser.js";
 
 export function ActiveCampaignScript() {
   const acAccount = process.env.NEXT_PUBLIC_ACTIVE_CAMPAIGN_ACCOUNT;
-  if (!acAccount || process.env.NODE_ENV !== 'production') {
+  if (!acAccount || process.env.NODE_ENV !== "production") {
     return null;
   }
 

@@ -26,7 +26,7 @@ export const AuthCard = ({ children, className }: AuthCardProps) => {
     <div
       className={cn(
         "flex w-full flex-col rounded-xl border border-[#FFFFFF1A] bg-[#08040CBF] backdrop-blur-xl",
-        className
+        className,
       )}
     >
       {children}
@@ -39,7 +39,10 @@ export const AuthCard = ({ children, className }: AuthCardProps) => {
  */
 export const AuthLogoHeader = () => {
   return (
-    <a href="https://wundergraph.com" className="flex items-center gap-2 text-white">
+    <a
+      href="https://wundergraph.com"
+      className="flex items-center gap-2 text-white"
+    >
       <Logo width={48} height={48} />
       <span className="text-base font-semibold lg:text-lg">
         WunderGraph Cosmo
@@ -103,14 +106,31 @@ export const AuthFooter = () => {
  */
 export const TrustedCompanies = () => {
   const companies = [
-    { name: "Shutterstock", logo: "https://wundergraph.com/images/logos/shutterstock.svg", width: 120, height: 24 },
-    { name: "eBay", logo: "https://wundergraph.com/images/logos/ebay.svg", width: 60, height: 24 },
-    { name: "SoundCloud", logo: "https://wundergraph.com/images/logos/soundcloud.svg", width: 120, height: 24 },
+    {
+      name: "Shutterstock",
+      logo: "https://wundergraph.com/images/logos/shutterstock.svg",
+      width: 120,
+      height: 24,
+    },
+    {
+      name: "eBay",
+      logo: "https://wundergraph.com/images/logos/ebay.svg",
+      width: 60,
+      height: 24,
+    },
+    {
+      name: "SoundCloud",
+      logo: "https://wundergraph.com/images/logos/soundcloud.svg",
+      width: 120,
+      height: 24,
+    },
   ];
 
   return (
     <div className="flex flex-col items-center gap-y-6 px-4 lg:gap-y-8 lg:px-0">
-      <p className="text-center text-sm text-white/65">Trusted by platform teams managing complex API ecosystems</p>
+      <p className="text-center text-sm text-white/65">
+        Trusted by platform teams managing complex API ecosystems
+      </p>
       <div className="flex items-center justify-center gap-x-5 lg:gap-x-20">
         {companies.map((company) => (
           <Image
@@ -154,7 +174,9 @@ export const MarketingHeader = ({
           </span>
         ))}
       </h1>
-      <p className="mx-auto mt-4 max-w-md text-sm text-white/85">{displayDescription}</p>
+      <p className="mx-auto mt-4 max-w-md text-sm text-white/85">
+        {displayDescription}
+      </p>
     </div>
   );
 };
@@ -270,7 +292,10 @@ export const ProductCosmoStack = ({
 
   return (
     <div className="flex w-full flex-col px-2 sm:max-w-[43.2rem] sm:px-8">
-      <MarketingHeader title={marketingTitle} description={marketingDescription} />
+      <MarketingHeader
+        title={marketingTitle}
+        description={marketingDescription}
+      />
       <div className="mt-10 flex flex-col gap-6">
         {features.map((feature, index) => (
           <FeatureItem

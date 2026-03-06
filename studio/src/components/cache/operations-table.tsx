@@ -58,7 +58,9 @@ export const CacheOperationsTable = ({
   return (
     <>
       {operationId &&
-        checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) && (
+        checkUserAccess({
+          rolesToBe: ["organization-admin", "organization-developer"],
+        }) && (
           <Dialog open={openDeleteDialog} onOpenChange={setOpenDeleteDialog}>
             <DialogContent>
               <DialogHeader>
@@ -207,8 +209,12 @@ export const CacheOperationsTable = ({
                               setOpenDeleteDialog(true);
                             }}
                             disabled={
-                              !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] }) ||
-                              !isManuallyAdded
+                              !checkUserAccess({
+                                rolesToBe: [
+                                  "organization-admin",
+                                  "organization-developer",
+                                ],
+                              }) || !isManuallyAdded
                             }
                           >
                             Delete

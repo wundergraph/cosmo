@@ -63,9 +63,7 @@ export const ChangesTable = ({
             <TableHead className="w-[200px]">Change</TableHead>
             <TableHead>Description</TableHead>
             {changes[0].subgraphName && <TableHead>Subgraph</TableHead>}
-            {operationHash && !hasIgnoreAll && (
-              <TableHead>Overrides</TableHead>
-            )}
+            {operationHash && !hasIgnoreAll && <TableHead>Overrides</TableHead>}
             <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -113,7 +111,9 @@ const Row = ({
 }) => {
   const router = useRouter();
   const { toast } = useToast();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
   const graphContext = useContext(GraphContext);
   const pageNumber = router.query.page
@@ -211,28 +211,28 @@ const Row = ({
                   onCheckedChange={() =>
                     hasOverride
                       ? removeOverrides({
-                        graphName: graphContext?.graph?.name,
-                        namespace: graphContext?.graph?.namespace,
-                        operationHash,
-                        changes: [
-                          {
-                            changeType,
-                            path,
-                          },
-                        ],
-                      })
+                          graphName: graphContext?.graph?.name,
+                          namespace: graphContext?.graph?.namespace,
+                          operationHash,
+                          changes: [
+                            {
+                              changeType,
+                              path,
+                            },
+                          ],
+                        })
                       : createOverrides({
-                        graphName: graphContext?.graph?.name,
-                        namespace: graphContext?.graph?.namespace,
-                        operationHash,
-                        operationName,
-                        changes: [
-                          {
-                            changeType,
-                            path,
-                          },
-                        ],
-                      })
+                          graphName: graphContext?.graph?.name,
+                          namespace: graphContext?.graph?.namespace,
+                          operationHash,
+                          operationName,
+                          changes: [
+                            {
+                              changeType,
+                              path,
+                            },
+                          ],
+                        })
                   }
                 />
               </div>
@@ -240,12 +240,13 @@ const Row = ({
             <TooltipContent>
               {hasOverride ? (
                 <>
-                  Override active: future checks will <strong>not</strong>{" "}
-                  treat this change to {path} as breaking for this operation.
+                  Override active: future checks will <strong>not</strong> treat
+                  this change to {path} as breaking for this operation.
                 </>
               ) : (
                 <>
-                  Toggle to prevent future checks from treating this change to {path} as breaking for this operation.
+                  Toggle to prevent future checks from treating this change to{" "}
+                  {path} as breaking for this operation.
                 </>
               )}
             </TooltipContent>
@@ -267,14 +268,14 @@ const Row = ({
                   href={
                     path
                       ? {
-                        pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
-                        query: {
-                          organizationSlug,
-                          namespace,
-                          slug: router.query.slug,
-                          typename: path?.split(".")?.[0],
-                        },
-                      }
+                          pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
+                          query: {
+                            organizationSlug,
+                            namespace,
+                            slug: router.query.slug,
+                            typename: path?.split(".")?.[0],
+                          },
+                        }
                       : "#"
                   }
                 >

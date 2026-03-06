@@ -57,7 +57,8 @@ test("return the correct types with deprecated fields or args", () => {
   expect(result).not.toBeNull();
 
   const parsedTypes = getParsedTypes(result!.doc);
-  const [totalDeprecatedNodesCount, deprecated] = getDeprecatedTypes(parsedTypes);
+  const [totalDeprecatedNodesCount, deprecated] =
+    getDeprecatedTypes(parsedTypes);
 
   expect(totalDeprecatedNodesCount).toEqual(2);
   expect(deprecated.length).toEqual(2);
@@ -65,7 +66,9 @@ test("return the correct types with deprecated fields or args", () => {
   expect(deprecated[0].fields?.[0]?.name).toEqual("teammates");
   expect(deprecated[1].fields?.length).toEqual(1);
   expect(deprecated[1].fields?.[0]?.name).toEqual("fullName");
-  expect(deprecated[1].fields?.[0]?.deprecationReason).toEqual("Please use first and last name instead");
+  expect(deprecated[1].fields?.[0]?.deprecationReason).toEqual(
+    "Please use first and last name instead",
+  );
 });
 
 test("that authentication types are read correctly", async () => {
@@ -74,7 +77,8 @@ test("that authentication types are read correctly", async () => {
   expect(result).not.toBeNull();
 
   const parsedTypes = getParsedTypes(result!.doc);
-  const [totalAuthenticatedNodesCount, authenticatedTypes] = getAuthenticatedTypes(parsedTypes);
+  const [totalAuthenticatedNodesCount, authenticatedTypes] =
+    getAuthenticatedTypes(parsedTypes);
 
   expect(totalAuthenticatedNodesCount).toEqual(4);
   expect(authenticatedTypes.length).toEqual(3);
@@ -84,7 +88,10 @@ test("that authentication types are read correctly", async () => {
   expect(authenticatedTypes[2].fields?.length).toEqual(2);
   expect(authenticatedTypes[2].fields?.[0]?.name).toEqual("role");
   expect(authenticatedTypes[2].fields?.[1]?.name).toEqual("email");
-  expect(authenticatedTypes[2].fields?.[1]?.requiresScopes).toStrictEqual([["read:profile", "read:email"], ["read:all"]]);
+  expect(authenticatedTypes[2].fields?.[1]?.requiresScopes).toStrictEqual([
+    ["read:profile", "read:email"],
+    ["read:all"],
+  ]);
 });
 
 test("returns correct type counts", () => {

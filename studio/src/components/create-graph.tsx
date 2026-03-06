@@ -27,7 +27,7 @@ import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb
 import {
   createFederatedGraph,
   createMonograph,
-  getWorkspace
+  getWorkspace,
 } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import Link from "next/link";
 import { useRouter } from "next/router";
@@ -49,7 +49,9 @@ export const CreateGraphForm = ({
 }) => {
   const router = useRouter();
   const user = useUser();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const queryClient = useQueryClient();
 
   const [tags, setTags] = useState<Tag[]>([]);
@@ -135,7 +137,9 @@ export const CreateGraphForm = ({
       ) => {
         if (d.response?.code === EnumStatusCode.OK) {
           // We need to refresh the workspace after creating a graph
-          await queryClient.refetchQueries({ queryKey: createConnectQueryKey(getWorkspace) });
+          await queryClient.refetchQueries({
+            queryKey: createConnectQueryKey(getWorkspace),
+          });
           router.replace(
             `/${user?.currentOrganization.slug}/${namespace}/graph/${data.name}`,
           );
@@ -284,10 +288,13 @@ export const CreateGraphForm = ({
                         />
                       </FormControl>
                       <FormDescription className="text-left">
-                        Label matchers are used to select which subgraphs participate in this federated graph composition.
-                        Enter space-separated key-value pairs in the format <code>key=value</code>.
-                        To specify multiple values for the same key (OR condition), use commas within a single matcher (e.g., <code>team=A,team=B</code> matches subgraphs where team is either A or B).
-                        {" "}
+                        Label matchers are used to select which subgraphs
+                        participate in this federated graph composition. Enter
+                        space-separated key-value pairs in the format{" "}
+                        <code>key=value</code>. To specify multiple values for
+                        the same key (OR condition), use commas within a single
+                        matcher (e.g., <code>team=A,team=B</code> matches
+                        subgraphs where team is either A or B).{" "}
                         <Link
                           href={docsBaseURL + "/cli/essentials#label-matcher"}
                           className="text-primary"

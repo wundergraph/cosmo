@@ -34,7 +34,9 @@ const FeatureFlagOverview = ({
   isEnabled: boolean;
 }) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const currentOrg = useCurrentOrganization();
   const slug = router.query.slug as string;
 
@@ -235,7 +237,7 @@ export const FeatureFlagDetails = ({
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <div className="h-full flex-1">
           <Tabs
-            value={slug ? tab ?? "overview" : tab ?? "graphs"}
+            value={slug ? (tab ?? "overview") : (tab ?? "graphs")}
             className="flex h-full min-h-0 flex-col"
           >
             <div className="flex flex-row px-4 py-4 lg:px-6">

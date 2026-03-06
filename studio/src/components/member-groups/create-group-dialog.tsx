@@ -1,10 +1,14 @@
 import { OrganizationGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { useMutation } from "@connectrpc/connect-query";
-import {
-  createOrganizationGroup,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import { createOrganizationGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
 import { z } from "zod";
 import { useZodForm } from "@/hooks/use-form";
 import { SubmitHandler } from "react-hook-form";
@@ -14,11 +18,17 @@ import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { useFeature } from "@/hooks/use-feature";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useIsAdmin } from "@/hooks/use-is-admin";
 
-export function CreateGroupDialog({ onGroupCreated }: {
-  onGroupCreated(group: OrganizationGroup): Promise<void>
+export function CreateGroupDialog({
+  onGroupCreated,
+}: {
+  onGroupCreated(group: OrganizationGroup): Promise<void>;
 }) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -76,17 +86,18 @@ export function CreateGroupDialog({ onGroupCreated }: {
               await onGroupCreated(data.group);
             }
           } else if (data.response?.details) {
-            setError('name', { message: data.response.details });
+            setError("name", { message: data.response.details });
           }
         },
         onError() {
           toast({
-            description: "Could not create the group at this time. Please try again.",
+            description:
+              "Could not create the group at this time. Please try again.",
             duration: 3000,
           });
         },
-      }
-    )
+      },
+    );
   };
 
   if (!isAdmin) {
@@ -97,12 +108,17 @@ export function CreateGroupDialog({ onGroupCreated }: {
     return (
       <Tooltip>
         <TooltipTrigger asChild>
-          <span className={buttonVariants({ className: "cursor-default opacity-50 hover:!bg-primary" })}>
+          <span
+            className={buttonVariants({
+              className: "cursor-default opacity-50 hover:!bg-primary",
+            })}
+          >
             New Group
           </span>
         </TooltipTrigger>
         <TooltipContent className="max-w-[300px] text-center">
-          You need to enable RBAC on the organization settings to be able to create new groups.
+          You need to enable RBAC on the organization settings to be able to
+          create new groups.
         </TooltipContent>
       </Tooltip>
     );
@@ -127,20 +143,21 @@ export function CreateGroupDialog({ onGroupCreated }: {
         </DialogHeader>
         <form
           className="mt-4 flex flex-col gap-y-3"
-          onSubmit={handleSubmit(onSubmit)}>
+          onSubmit={handleSubmit(onSubmit)}
+        >
           <div className="flex flex-col gap-y-2">
             <label
               htmlFor="create-group-name"
               className="text-sm font-semibold"
             >
-              Name{" "}
-              <span className="text-destructive">*</span>
+              Name <span className="text-destructive">*</span>
             </label>
             <Input
               id="create-group-name"
               className="w-full"
               disabled={isPending}
-              type="text" {...register("name")}
+              type="text"
+              {...register("name")}
             />
 
             {errors.name && (
