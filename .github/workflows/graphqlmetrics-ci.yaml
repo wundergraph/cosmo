@@ -46,8 +46,9 @@ jobs:
       - name: Generate code
         run: rm -rf graphqlmetrics/gen && buf generate --path proto/wg/cosmo/graphqlmetrics --path proto/wg/cosmo/common --template buf.graphqlmetrics.go.gen.yaml
 
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
+      - uses: ./.github/actions/git-dirty-check
+        with:
+          package-name: graphqlmetrics
 
       - name: Install dependencies
         working-directory: ./graphqlmetrics

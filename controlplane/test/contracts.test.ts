@@ -4,7 +4,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { normalizeString } from '@wundergraph/composition/tests/utils/utils.js';
+import { normalizeString } from '../../composition/tests/utils/utils.js';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
 import { unsuccessfulBaseCompositionError } from '../src/core/errors/errors.js';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';

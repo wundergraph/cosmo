@@ -43,8 +43,9 @@ jobs:
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
 
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
+      - uses: ./.github/actions/git-dirty-check
+        with:
+          package-name: studio
 
       - name: Build
         run: pnpm run --filter ./studio --filter ./connect --filter ./shared --filter ./composition build

@@ -4,6 +4,33 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.288.1](https://github.com/wundergraph/cosmo/compare/router@0.288.0...router@0.288.1) (2026-03-06)
+
+### Bug Fixes
+
+* fix selecting parent of unique nodes ([#2593](https://github.com/wundergraph/cosmo/issues/2593)) ([87af642](https://github.com/wundergraph/cosmo/commit/87af6425890431dac8af8cf2e3ac0a52611f7b46)) (@Aenimus)
+
+# [0.288.0](https://github.com/wundergraph/cosmo/compare/router@0.287.0...router@0.288.0) (2026-03-05)
+
+### Bug Fixes
+
+* upgrade docker cli dependency ([#2589](https://github.com/wundergraph/cosmo/issues/2589)) ([fad6b1c](https://github.com/wundergraph/cosmo/commit/fad6b1cfe9f7ba162a7e99765cce01794739ae2b)) (@SkArchon)
+
+### Features
+
+* add format script + optional git hooks ([#2579](https://github.com/wundergraph/cosmo/issues/2579)) ([edabd2b](https://github.com/wundergraph/cosmo/commit/edabd2bd8f775c5717ca785f16616cff6f7ae039)) (@comatory)
+
+# [0.287.0](https://github.com/wundergraph/cosmo/compare/router@0.286.1...router@0.287.0) (2026-03-04)
+
+### Features
+
+* metrics log exporter for otel to print span information ([#2538](https://github.com/wundergraph/cosmo/issues/2538)) ([f7f2a11](https://github.com/wundergraph/cosmo/commit/f7f2a11dc820a615988e838470084823d3c9060a)) (@SkArchon)
+* **router:** make log service name configurable via LOG_SERVICE_NAME ([#2533](https://github.com/wundergraph/cosmo/issues/2533)) ([4c5384d](https://github.com/wundergraph/cosmo/commit/4c5384decc5603a4efdcbe614fce0b401ad55923)) (@jensneuse)
+
+## [0.286.1](https://github.com/wundergraph/cosmo/compare/router@0.286.0...router@0.286.1) (2026-03-03)
+
+**Note:** Version bump only for package router
+
 # [0.286.0](https://github.com/wundergraph/cosmo/compare/router@0.285.0...router@0.286.0) (2026-02-26)
 
 ### Bug Fixes

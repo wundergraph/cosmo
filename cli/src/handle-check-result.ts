@@ -12,6 +12,16 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
     wordWrap: true,
   });
 
+  const composedSchemaChangesTable = new Table({
+    head: [
+      pc.bold(pc.white('CHANGE')),
+      pc.bold(pc.white('TYPE')),
+      pc.bold(pc.white('FEDERATED_GRAPH')),
+      pc.bold(pc.white('DESCRIPTION')),
+    ],
+    wordWrap: true,
+  });
+
   const compositionErrorsTable = new Table({
     head: [pc.bold(pc.white('GRAPH_NAME')), pc.bold(pc.white('NAMESPACE')), pc.bold(pc.white('ERROR_MESSAGE'))],
     colWidths: [30, 30, 120],
@@ -62,6 +72,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
       if (
         resp.nonBreakingChanges.length === 0 &&
         resp.breakingChanges.length === 0 &&
+        resp.composedSchemaBreakingChanges.length === 0 &&
         resp.compositionErrors.length === 0 &&
         resp.lintErrors.length === 0 &&
         resp.lintWarnings.length === 0 &&
@@ -104,13 +115,18 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
             resp.breakingChanges.length === 0 &&
             resp.compositionErrors.length === 0 &&
             resp.lintErrors.length === 0 &&
-            resp.graphPruneErrors.length === 0;
+            resp.graphPruneErrors.length === 0 &&
+            resp.composedSchemaBreakingChanges.length === 0;
 
-          const { breakingChanges, operationUsageStats, clientTrafficCheckSkipped } = resp;
+          const { breakingChanges, operationUsageStats, clientTrafficCheckSkipped, composedSchemaBreakingChanges } =
+            resp;
           const { totalOperations, safeOperations, firstSeenAt, lastSeenAt } = operationUsageStats;
 
-          if (breakingChanges.length > 0) {
-            const warningMessage = [logSymbols.warning, ` Found ${pc.bold(breakingChanges.length)} breaking changes.`];
+          if (breakingChanges.length > 0 || composedSchemaBreakingChanges.length > 0) {
+            const warningMessage = [
+              logSymbols.warning,
+              ` Found ${pc.bold(breakingChanges.length + composedSchemaBreakingChanges.length)} breaking changes.`,
+            ];
 
             if (totalOperations > 0) {
               warningMessage.push(`${pc.bold(totalOperations - safeOperations)} operations impacted.`);
@@ -130,7 +146,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
 
             console.log(warningMessage.join(''));
 
-            finalStatement = `This check has encountered ${pc.bold(`${breakingChanges.length}`)} breaking changes${
+            finalStatement = `This check has encountered ${pc.bold(`${breakingChanges.length + composedSchemaBreakingChanges.length}`)} breaking changes${
               clientTrafficCheckSkipped ? `.` : ` that would break operations from existing client traffic.`
             }`;
           }
@@ -138,7 +154,7 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
       }
 
       if (resp.nonBreakingChanges.length > 0 || resp.breakingChanges.length > 0) {
-        console.log('\nDetected the following changes:');
+        console.log('\nDetected the following subgraph schema changes:');
 
         if (resp.breakingChanges.length > 0) {
           for (const breakingChange of resp.breakingChanges) {
@@ -161,6 +177,26 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
         }
 
         console.log(changesTable.toString());
+      }
+
+      if (resp.composedSchemaBreakingChanges.length > 0) {
+        console.log(pc.red('\nDetected the following federated graph schema breaking changes:'));
+        console.log(
+          pc.dim(
+            'These breaking changes were detected in the composed federated graph schema after composition. They are not reported above because they only become visible when all subgraphs are composed together (e.g., field type or nullability conflicts between subgraphs).',
+          ),
+        );
+
+        for (const change of resp.composedSchemaBreakingChanges) {
+          composedSchemaChangesTable.push([
+            `${logSymbols.error} ${pc.red('BREAKING')}`,
+            change.changeType,
+            change.federatedGraphName,
+            change.message,
+          ]);
+        }
+
+        console.log(composedSchemaChangesTable.toString());
       }
 
       if (resp.compositionErrors.length > 0) {
@@ -256,7 +292,8 @@ export const handleCheckResult = (resp: CheckSubgraphSchemaResponse, rowLimit: n
           resp.counts.breakingChanges + resp.counts.nonBreakingChanges > rowLimit ||
           resp.counts.graphPruneErrors + resp.counts.graphPruneWarnings > rowLimit ||
           resp.counts.compositionErrors > rowLimit ||
-          resp.counts.compositionWarnings > rowLimit;
+          resp.counts.compositionWarnings > rowLimit ||
+          resp.counts.composedSchemaBreakingChanges > rowLimit;
 
         if (hasExceeded) {
           if (studioCheckDestination !== '') {
