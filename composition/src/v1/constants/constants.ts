@@ -1,4 +1,4 @@
-import { DirectiveDefinitionNode } from 'graphql';
+import { type DirectiveDefinitionNode } from 'graphql';
 import {
   AUTHENTICATED,
   BOOLEAN_SCALAR,
@@ -38,7 +38,7 @@ import {
   SUBSCRIPTION_FILTER,
   TAG,
 } from '../../utils/string-constants';
-import { DirectiveName } from '../../types/types';
+import { type DirectiveName } from '../../types/types';
 import {
   AUTHENTICATED_DEFINITION,
   COMPOSE_DIRECTIVE_DEFINITION,

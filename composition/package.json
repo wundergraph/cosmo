@@ -20,7 +20,7 @@
     "test:core": "vitest run --exclude ./tests/unstaged-tests",
     "test:coverage": "vitest run --coverage",
     "lint": "prettier --check .",
-    "lint:fix": "pnpm format",
+    "lint:fix": "eslint --cache --fix --ext .ts,.mjs,.cjs . && pnpm format",
     "format": "prettier -w -c .",
     "postversion": "node ./scripts/get-composition-version.mjs"
   },

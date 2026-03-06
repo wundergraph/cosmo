@@ -16,13 +16,7 @@ import { DefaultNamespace, NamespaceRepository } from '../../repositories/Namesp
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import {
-  enrichLogger,
-  getFederatedGraphRouterCompatibilityVersion,
-  getLogger,
-  handleError,
-  newCompositionOptions,
-} from '../../util.js';
+import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 
 export function fixSubgraphSchema(
   opts: RouterOptions,
@@ -174,7 +168,10 @@ export function fixSubgraphSchema(
       subgraph.name,
       subgraph.namespaceId,
       newSchemaSDL,
-      newCompositionOptions(req.disableResolvabilityValidation),
+      {
+        // @TODO ignoreExternalKeys: ?,
+        disableResolvabilityValidation: req.disableResolvabilityValidation,
+      },
     );
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];

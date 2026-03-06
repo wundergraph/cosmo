@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
-  AuthorizationData,
-  FieldAuthorizationData,
+  type AuthorizationData,
+  type FieldAuthorizationData,
   INTERFACE,
   MAX_OR_SCOPES,
   OBJECT,
@@ -9,7 +9,7 @@ import {
   parse,
   QUERY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
+  type Subgraph,
 } from '../../../src';
 import {
   AUTHENTICATED_DIRECTIVE,

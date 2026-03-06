@@ -21,7 +21,6 @@ import {
   getLogger,
   handleError,
   isValidLabelMatchers,
-  newCompositionOptions,
 } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { maxRowLimitForChecks } from '../../constants.js';
@@ -109,7 +108,10 @@ export function checkFederatedGraph(
         definitions: parse(s.schemaSDL),
       })),
       federatedGraph.routerCompatibilityVersion,
-      newCompositionOptions(req.disableResolvabilityValidation),
+      {
+        // @TODO ignoreExternalKeys: ?,
+        disableResolvabilityValidation: req.disableResolvabilityValidation,
+      },
     );
 
     // If req.limit is not provided, we return all rows

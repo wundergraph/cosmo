@@ -1,9 +1,13 @@
-import { FederationFactory } from './federation-factory';
-import { CompositeOutputData, InterfaceDefinitionData, ObjectDefinitionData } from '../../schema-building/types';
+import { type FederationFactory } from './federation-factory';
+import {
+  type CompositeOutputData,
+  type InterfaceDefinitionData,
+  type ObjectDefinitionData,
+} from '../../schema-building/types';
 import { visit } from 'graphql';
 import { operationTypeNodeToDefaultType } from '../../ast/utils';
 import { renameNamedTypeName } from '../schema-building/type-merging';
-import { InternalSubgraph } from '../../subgraph/types';
+import { type InternalSubgraph } from '../../subgraph/types';
 import {
   ENTITIES_FIELD,
   OPERATION_TO_DEFAULT,

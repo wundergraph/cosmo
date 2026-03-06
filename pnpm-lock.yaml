@@ -512,8 +512,8 @@ importers:
         specifier: ^2.1.13
         version: 2.1.13(@tiptap/pm@2.1.13)
       '@wundergraph/composition':
-        specifier: 0.51.1
-        version: 0.51.1
+        specifier: workspace:*
+        version: link:../composition
       '@wundergraph/cosmo-connect':
         specifier: workspace:*
         version: link:../connect
@@ -7951,9 +7951,6 @@ packages:
   '@whatwg-node/promise-helpers@1.3.2':
     resolution: {integrity: sha512-Nst5JdK47VIl9UcGwtv2Rcgyn5lWtZ0/mhRQ4G8NN2isxpq2TO30iqHzmwoJycjWuyUfg3GFXqP/gFHXeV57IA==}
     engines: {node: '>=16.0.0'}
-
-  '@wundergraph/composition@0.51.1':
-    resolution: {integrity: sha512-mBOWdhPAok0xRtj7omBb5jjFsb0F+m5Y5ImT60s7R8sWPP4K3ucROwcmLUBbCW4PvmzLEsLVKuMnJsVtUdtVIQ==}
 
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
@@ -22818,16 +22815,6 @@ snapshots:
   '@whatwg-node/promise-helpers@1.3.2':
     dependencies:
       tslib: 2.8.1
-
-  '@wundergraph/composition@0.51.1':
-    dependencies:
-      '@graphql-tools/merge': 9.0.0(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
-      '@graphql-tools/schema': 10.0.0(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
-      '@graphql-tools/utils': 11.0.0(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
-      core-js: 3.41.0
-      graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
-      lodash: 4.17.21
-      pathe: 1.1.1
 
   '@xtuc/ieee754@1.2.0': {}
 

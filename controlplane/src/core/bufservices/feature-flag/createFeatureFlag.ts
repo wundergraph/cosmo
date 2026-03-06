@@ -15,7 +15,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidLabels, newCompositionOptions } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidLabels } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
@@ -205,7 +205,10 @@ export function createFeatureFlag(
         },
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
-        compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+        compositionOptions: {
+          // @TODO ignoreExternalKeys: ?,
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+        },
         federatedGraphs,
       });
 

@@ -14,7 +14,7 @@ import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidLabelMatchers, newCompositionOptions } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidLabelMatchers } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
@@ -119,7 +119,10 @@ export function updateFederatedGraph(
       admissionWebhookURL: req.admissionWebhookURL,
       blobStorage: opts.blobStorage,
       chClient: opts.chClient!,
-      compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+      compositionOptions: {
+        // @TODO ignoreExternalKeys: ?,
+        disableResolvabilityValidation: req.disableResolvabilityValidation,
+      },
       labelMatchers: req.labelMatchers,
       namespaceId: federatedGraph.namespaceId,
       readme: req.readme,

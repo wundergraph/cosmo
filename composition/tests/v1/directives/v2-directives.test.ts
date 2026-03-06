@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import {
-  FieldData,
+  type FieldData,
   invalidFieldShareabilityError,
-  ObjectDefinitionData,
+  type ObjectDefinitionData,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
+  type Subgraph,
 } from '../../../src';
 import { SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {

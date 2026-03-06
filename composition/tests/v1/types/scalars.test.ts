@@ -3,8 +3,8 @@ import {
   noBaseScalarDefinitionError,
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
-  ScalarDefinitionData,
-  Subgraph,
+  type ScalarDefinitionData,
+  type Subgraph,
 } from '../../../src';
 import { parse } from 'graphql';
 import { SCHEMA_QUERY_DEFINITION, TAG_DIRECTIVE } from '../utils/utils';

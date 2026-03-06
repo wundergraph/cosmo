@@ -1,6 +1,6 @@
 import { add, getEntriesNotInHashSet, getValueOrDefault } from '../utils/utils';
-import { GraphFieldData } from '../utils/types';
-import { FieldName, NodeName, SubgraphName, TypeName } from './types/types';
+import { type GraphFieldData } from '../utils/types';
+import { type FieldName, type NodeName, type SubgraphName, type TypeName } from './types/types';
 
 export class Edge {
   edgeName: string;

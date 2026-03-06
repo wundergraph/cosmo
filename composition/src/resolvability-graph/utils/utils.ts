@@ -1,17 +1,23 @@
 import { unresolvablePathError } from '../../errors/errors';
 import { getOrThrowError } from '../../utils/utils';
-import { GraphFieldData } from '../../utils/types';
-import { FieldName, RootFieldData, SelectionPath, SubgraphName, TypeName } from '../types/types';
+import { type GraphFieldData } from '../../utils/types';
+import {
+  type FieldName,
+  type RootFieldData,
+  type SelectionPath,
+  type SubgraphName,
+  type TypeName,
+} from '../types/types';
 
 import {
-  GenerateResolvabilityErrorReasonsParams,
-  GenerateSharedResolvabilityErrorReasonsParams,
-  GetMultipliedRelativeOriginPathsParams,
-  ResolvabilityErrorsParams,
-  RootResolvabilityErrorsParams,
-  SharedResolvabilityErrorsParams,
+  type GenerateResolvabilityErrorReasonsParams,
+  type GenerateSharedResolvabilityErrorReasonsParams,
+  type GetMultipliedRelativeOriginPathsParams,
+  type ResolvabilityErrorsParams,
+  type RootResolvabilityErrorsParams,
+  type SharedResolvabilityErrorsParams,
 } from './types/params';
-import { SelectionSetSegments } from './types/types';
+import { type SelectionSetSegments } from './types/types';
 import { LITERAL_SPACE, QUOTATION_JOIN } from '../constants/string-constants';
 
 export type UnresolvableFieldData = {

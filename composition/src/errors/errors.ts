@@ -1,22 +1,22 @@
-import { Kind, OperationTypeNode } from 'graphql';
+import { Kind, type OperationTypeNode } from 'graphql';
 import {
-  EntityInterfaceFederationData,
-  FieldData,
-  InputValueData,
-  ObjectDefinitionData,
+  type EntityInterfaceFederationData,
+  type FieldData,
+  type InputValueData,
+  type ObjectDefinitionData,
 } from '../schema-building/types';
 import {
-  IncompatibleMergedTypesErrorParams,
-  IncompatibleParentTypeMergeErrorParams,
-  IncompatibleTypeWithProvidesErrorMessageParams,
-  InvalidNamedTypeErrorParams,
-  InvalidRootTypeFieldEventsDirectiveData,
-  NonExternalConditionalFieldErrorParams,
-  OneOfRequiredFieldsErrorParams,
-  SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
-  SemanticNonNullLevelsNonNullErrorParams,
+  type IncompatibleMergedTypesErrorParams,
+  type IncompatibleParentTypeMergeErrorParams,
+  type IncompatibleTypeWithProvidesErrorMessageParams,
+  type InvalidNamedTypeErrorParams,
+  type InvalidRootTypeFieldEventsDirectiveData,
+  type NonExternalConditionalFieldErrorParams,
+  type OneOfRequiredFieldsErrorParams,
+  type SemanticNonNullLevelsIndexOutOfBoundsErrorParams,
+  type SemanticNonNullLevelsNonNullErrorParams,
 } from './types';
-import { UnresolvableFieldData } from '../resolvability-graph/utils/utils';
+import { type UnresolvableFieldData } from '../resolvability-graph/utils/utils';
 import {
   AND_UPPER,
   ARGUMENT,
@@ -41,10 +41,14 @@ import {
 } from '../utils/string-constants';
 import { MAX_SUBSCRIPTION_FILTER_DEPTH, MAXIMUM_TYPE_NESTING } from '../utils/integer-constants';
 import { getEntriesNotInHashSet, getOrThrowError, kindToNodeType, numberToOrdinal } from '../utils/utils';
-import { ImplementationErrors, InvalidEntityInterface, InvalidRequiredInputValueData } from '../utils/types';
+import {
+  type ImplementationErrors,
+  type InvalidEntityInterface,
+  type InvalidRequiredInputValueData,
+} from '../utils/types';
 import { isFieldData } from '../schema-building/utils';
 import { printTypeNode } from '@graphql-tools/merge';
-import { NodeType, TypeName } from '../types/types';
+import { type NodeType, type TypeName } from '../types/types';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 

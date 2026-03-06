@@ -207,7 +207,10 @@ export default (opts: BaseCommandOptions) => {
           definitions: parse(s.sdl),
         };
       }),
-      options.disableResolvabilityValidation,
+      {
+        // @TODO ignoreExternalKeys: ?,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+      },
     );
 
     if (!result.success) {
@@ -587,7 +590,10 @@ async function buildFeatureFlagsConfig(
         url: normalizeURL(s.routingUrl),
         definitions: parse(s.sdl),
       })),
-      options.disableResolvabilityValidation,
+      {
+        // @TODO ignoreExternalKeys: ?,
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+      },
     );
 
     if (!featureResult.success) {

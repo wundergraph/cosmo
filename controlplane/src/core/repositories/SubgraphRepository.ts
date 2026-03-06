@@ -15,6 +15,7 @@ import { validate as isValidUuid } from 'uuid';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema } from 'graphql';
+import { CompositionOptions } from '@wundergraph/composition';
 import { DBSubgraphType, SchemaCheckChangeAction, WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -32,7 +33,6 @@ import {
   users,
 } from '../../db/schema.js';
 import {
-  CompositionOptions,
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
@@ -62,7 +62,6 @@ import {
 import {
   getFederatedGraphRouterCompatibilityVersion,
   hasLabelsChanged,
-  newCompositionOptions,
   normalizeLabels,
   sanitizeReadme,
 } from '../util.js';
@@ -2070,7 +2069,10 @@ export class SubgraphRepository {
     });
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
-      compositionOptions: newCompositionOptions(disableResolvabilityValidation),
+      compositionOptions: {
+        // @TODO ignoreExternalKeys: ?,
+        disableResolvabilityValidation,
+      },
       graphs: federatedGraphs.filter((g) => !g.contract),
       inputSubgraphs: checkSubgraphs,
     });

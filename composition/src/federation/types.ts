@@ -1,15 +1,20 @@
-import { Warning } from '../warnings/types';
-import { ConstDirectiveNode, DirectiveDefinitionNode, DocumentNode, GraphQLSchema, StringValueNode } from 'graphql';
+import { type Warning } from '../warnings/types';
 import {
-  ConfigureDescriptionData,
-  ExtensionType,
-  ParentDefinitionData,
-  PersistedDirectivesData,
+  type ConstDirectiveNode,
+  type DirectiveDefinitionNode,
+  type DocumentNode,
+  type GraphQLSchema,
+  type StringValueNode,
+} from 'graphql';
+import {
+  type ConfigureDescriptionData,
+  type ExtensionType,
+  type ParentDefinitionData,
+  type PersistedDirectivesData,
 } from '../schema-building/types';
-import { FieldConfiguration } from '../router-configuration/types';
-import { Subgraph, SubgraphConfig } from '../subgraph/types';
-import { SupportedRouterCompatibilityVersion } from '../router-compatibility-version/router-compatibility-version';
-import { ContractName, DirectiveName, SubgraphName, TypeName } from '../types/types';
+import { type FieldConfiguration } from '../router-configuration/types';
+import { type SubgraphConfig } from '../subgraph/types';
+import type { DirectiveName, SubgraphName, TypeName } from '../types/types';
 
 export type FederationFailure = {
   errors: Array<Error>;
@@ -66,24 +71,4 @@ export type MutualParentDefinitionData = {
   name: TypeName;
   persistedDirectivesData: PersistedDirectivesData;
   description?: StringValueNode;
-};
-
-export type FederateSubgraphsParams = {
-  subgraphs: Array<Subgraph>;
-  disableResolvabilityValidation?: boolean;
-  version?: SupportedRouterCompatibilityVersion;
-};
-
-export type FederateSubgraphsWithContractsParams = {
-  subgraphs: Array<Subgraph>;
-  tagOptionsByContractName: Map<ContractName, ContractTagOptions>;
-  disableResolvabilityValidation?: boolean;
-  version?: SupportedRouterCompatibilityVersion;
-};
-
-export type FederateSubgraphsContractParams = {
-  contractTagOptions: ContractTagOptions;
-  subgraphs: Array<Subgraph>;
-  disableResolvabilityValidation?: boolean;
-  version?: SupportedRouterCompatibilityVersion;
 };

@@ -1,17 +1,17 @@
 import { describe, expect, test } from 'vitest';
 import {
-  ConfigurationData,
+  type ConfigurationData,
   duplicateFieldDefinitionError,
-  FieldData,
-  InputObjectDefinitionData,
+  type FieldData,
+  type InputObjectDefinitionData,
   invalidNamedTypeError,
   noBaseDefinitionForExtensionError,
   noFieldDefinitionsError,
   OBJECT,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
-  TypeName,
+  type Subgraph,
+  type TypeName,
 } from '../../../src';
 import { SCHEMA_QUERY_DEFINITION, stringToTypeNode, TAG_DIRECTIVE } from '../utils/utils';
 import {

@@ -1,4 +1,4 @@
-import { ArgumentData, DirectiveDefinitionData } from '../../schema-building/types';
+import { type ArgumentData, type DirectiveDefinitionData } from '../../schema-building/types';
 import { stringToNamedTypeNode } from '../../ast/utils';
 import { DEFAULT_DEPRECATION_REASON, Kind } from 'graphql';
 import {

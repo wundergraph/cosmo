@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
-  ConditionalFieldData,
-  ConfigurationData,
+  type ConditionalFieldData,
+  type ConfigurationData,
   externalEntityExtensionKeyFieldWarning,
   fieldAlreadyProvidedErrorMessage,
   fieldAlreadyProvidedWarning,
@@ -17,9 +17,9 @@ import {
   parse,
   PROVIDES,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
+  type Subgraph,
   subgraphValidationError,
-  TypeName,
+  type TypeName,
   typeNameAlreadyProvidedErrorMessage,
   UNION,
 } from '../../../src';

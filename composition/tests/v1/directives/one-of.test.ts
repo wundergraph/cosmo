@@ -6,7 +6,7 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   singleFederatedInputFieldOneOfWarning,
   singleSubgraphInputFieldOneOfWarning,
-  Subgraph,
+  type Subgraph,
 } from '../../../src';
 import {
   federateSubgraphsFailure,

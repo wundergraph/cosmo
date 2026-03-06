@@ -9,7 +9,7 @@ import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, newCompositionOptions } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
 export function moveSubgraph(
@@ -117,7 +117,10 @@ export function moveSubgraph(
               jwtSecret: opts.admissionWebhookJWTSecret,
             },
             opts.chClient!,
-            newCompositionOptions(req.disableResolvabilityValidation),
+            {
+              // @TODO ignoreExternalKeys: ?,
+              disableResolvabilityValidation: req.disableResolvabilityValidation,
+            },
           );
 
         await auditLogRepo.addAuditLog({
