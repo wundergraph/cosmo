@@ -223,10 +223,6 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.Positive(t, hashedIPCount)
 		})
 	})
-}
-
-func TestFlakyAttributeProcessorIntegration(t *testing.T) {
-	t.Parallel()
 
 	t.Run("invalid UTF-8 export error logs config hint", func(t *testing.T) {
 		t.Parallel()
@@ -238,10 +234,11 @@ func TestFlakyAttributeProcessorIntegration(t *testing.T) {
 				LogLevel: zapcore.ErrorLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
+			_, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.NoError(t, err)
 			require.Eventually(t, func() bool {
-				xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `query { employees { id } }`,
-				})
 				logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
 				return len(logs) > 0
 			}, 10*time.Second, 500*time.Millisecond)
