@@ -208,6 +208,7 @@ export default (opts: BaseCommandOptions) => {
         };
       }),
       {
+        // @TODO ignoreExternalKeys: ?,
         disableResolvabilityValidation: options.disableResolvabilityValidation,
       },
     );
@@ -590,6 +591,7 @@ async function buildFeatureFlagsConfig(
         definitions: parse(s.sdl),
       })),
       {
+        // @TODO ignoreExternalKeys: ?,
         disableResolvabilityValidation: options.disableResolvabilityValidation,
       },
     );

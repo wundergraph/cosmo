@@ -658,12 +658,6 @@ export const convertToSubgraphType = (type: string) => {
   }
 };
 
-export function newCompositionOptions(disableResolvabilityValidation?: boolean): CompositionOptions {
-  return {
-    disableResolvabilityValidation,
-  };
-}
-
 export function toProposalOriginEnum(value: ProposalOrigin): ProposalOriginEnum {
   switch (value) {
     case ProposalOrigin.EXTERNAL: {

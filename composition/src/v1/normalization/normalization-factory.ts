@@ -449,7 +449,7 @@ export class NormalizationFactory {
   usesEdfsNatsStreamConfiguration: boolean = false;
   warnings: Array<Warning> = [];
 
-  constructor({ internalGraph, subgraphName, options }: NormalizationFactoryParams) {
+  constructor({ internalGraph, options, subgraphName }: NormalizationFactoryParams) {
     this.options = options ?? {};
     this.subgraphName = subgraphName || NOT_APPLICABLE;
     this.internalGraph = internalGraph;
