@@ -127,7 +127,6 @@ export function deleteFederatedSubgraph(
       organizationId: authContext.organizationId,
       featureId: 'composition-ignore-external-keys',
     });
-    const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
 
     const { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
@@ -185,7 +184,7 @@ export function deleteFederatedSubgraph(
           blobStorage: opts.blobStorage,
           chClient: opts.chClient!,
           compositionOptions: {
-            ignoreExternalKeys,
+            ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
             disableResolvabilityValidation: req.disableResolvabilityValidation,
           },
           federatedGraphs: affectedFederatedGraphs,

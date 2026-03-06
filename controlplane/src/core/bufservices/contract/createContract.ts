@@ -108,7 +108,6 @@ export function createContract(
         organizationId: authContext.organizationId,
         featureId: 'composition-ignore-external-keys',
       });
-      const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
 
       const limit = feature?.limit === -1 ? undefined : feature?.limit;
 
@@ -203,7 +202,7 @@ export function createContract(
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
         compositionOptions: {
-          ignoreExternalKeys,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           disableResolvabilityValidation: req.disableResolvabilityValidation,
         },
         federatedGraphs: [{ ...contractGraph, contract }],

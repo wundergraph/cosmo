@@ -106,7 +106,6 @@ export function checkFederatedGraph(
       organizationId: authContext.organizationId,
       featureId: 'composition-ignore-external-keys',
     });
-    const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
 
     const result = composeSubgraphs(
       subgraphsUsedForComposition.map((s) => ({
@@ -117,7 +116,7 @@ export function checkFederatedGraph(
       })),
       federatedGraph.routerCompatibilityVersion,
       {
-        ignoreExternalKeys,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       },
     );

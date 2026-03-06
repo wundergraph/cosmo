@@ -122,7 +122,6 @@ export function updateContract(
       organizationId: authContext.organizationId,
       featureId: 'composition-ignore-external-keys',
     });
-    const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
 
     const updatedContractDetails = await contractRepo.update({
       id: graph.contract.id,
@@ -149,7 +148,7 @@ export function updateContract(
       labelMatchers: [],
       chClient: opts.chClient!,
       compositionOptions: {
-        ignoreExternalKeys,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       },
     });
@@ -167,7 +166,7 @@ export function updateContract(
       blobStorage: opts.blobStorage,
       chClient: opts.chClient!,
       compositionOptions: {
-        ignoreExternalKeys,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       },
       federatedGraphs: [

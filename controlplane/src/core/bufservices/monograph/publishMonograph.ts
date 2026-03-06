@@ -71,14 +71,13 @@ export function publishMonograph(
       organizationId: authContext.organizationId,
       featureId: 'composition-ignore-external-keys',
     });
-    const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
 
     let isV2Graph: boolean | undefined;
 
     try {
       // Here we check if the schema is valid as a subgraph SDL
       const result = buildSchema(subgraphSchemaSDL, true, graph.routerCompatibilityVersion, {
-        ignoreExternalKeys,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
       });
       if (!result.success) {
         return {
@@ -159,10 +158,7 @@ export function publishMonograph(
           cdnBaseUrl: opts.cdnBaseUrl,
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
-        opts.chClient!,
-        {
-          ignoreExternalKeys,
-        },
+        opts.chClient!
       );
 
     for (const graph of updatedFederatedGraphs) {

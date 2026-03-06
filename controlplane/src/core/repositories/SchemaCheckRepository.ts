@@ -755,7 +755,6 @@ export class SchemaCheckRepository {
       organizationId,
       featureId: 'composition-ignore-external-keys',
     });
-    const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
 
     const limit = changeRetention?.limit ?? defaultRetentionLimitInDays;
 
@@ -826,7 +825,7 @@ export class SchemaCheckRepository {
         try {
           // Here we check if the schema is valid as a subgraph SDL
           const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion, {
-            ignoreExternalKeys,
+            ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           });
           if (!result.success) {
             await this.update({
@@ -1117,7 +1116,7 @@ export class SchemaCheckRepository {
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
       compositionOptions: {
-        ignoreExternalKeys,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
       },
       inputSubgraphs: checkSubgraphs,
       graphs: federatedGraphs.filter((g) => !g.contract),
@@ -1378,8 +1377,10 @@ export class SchemaCheckRepository {
         limit: targetLimit,
         chClient,
         newGraphQLSchema: targetNewGraphQLSchema,
-        disableResolvabilityValidation: false,
-        ignoreExternalKeys,
+        compositionOptions: {
+          disableResolvabilityValidation: false,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        },
         webhookService,
       });
 

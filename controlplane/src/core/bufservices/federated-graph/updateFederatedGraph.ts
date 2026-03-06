@@ -112,7 +112,6 @@ export function updateFederatedGraph(
       organizationId: authContext.organizationId,
       featureId: 'composition-ignore-external-keys',
     });
-    const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
 
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
     let compositionErrors: PlainMessage<CompositionError>[] = [];
@@ -128,7 +127,7 @@ export function updateFederatedGraph(
       blobStorage: opts.blobStorage,
       chClient: opts.chClient!,
       compositionOptions: {
-        ignoreExternalKeys,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       },
       labelMatchers: req.labelMatchers,

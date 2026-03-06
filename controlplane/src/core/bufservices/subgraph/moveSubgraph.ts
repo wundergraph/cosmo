@@ -88,7 +88,6 @@ export function moveSubgraph(
       organizationId: authContext.organizationId,
       featureId: 'composition-ignore-external-keys',
     });
-    const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
 
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
@@ -126,7 +125,7 @@ export function moveSubgraph(
             },
             opts.chClient!,
             {
-              ignoreExternalKeys,
+              ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
               disableResolvabilityValidation: req.disableResolvabilityValidation,
             },
           );

@@ -10,7 +10,6 @@ import { isValidUrl } from '@wundergraph/cosmo-shared';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
-import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
@@ -42,7 +41,6 @@ export function updateMonograph(
     return opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
       const subgraphRepo = new SubgraphRepository(logger, tx, authContext.organizationId);
-      const orgRepo = new OrganizationRepository(logger, tx, opts.billingDefaultPlanId);
       const auditLogRepo = new AuditLogRepository(tx);
       const orgWebhooks = new OrganizationWebhookService(
         tx,
@@ -114,12 +112,6 @@ export function updateMonograph(
       }
 
       const subgraph = subgraphs[0];
-      const ignoreExternalKeysFeature = await orgRepo.getFeature({
-        organizationId: authContext.organizationId,
-        featureId: 'composition-ignore-external-keys',
-      });
-      const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
-
       // check if the user is authorized to perform the action
       await opts.authorizer.authorize({
         db: opts.db,
@@ -157,9 +149,6 @@ export function updateMonograph(
         admissionWebhookURL: req.admissionWebhookURL,
         admissionWebhookSecret: req.admissionWebhookSecret,
         chClient: opts.chClient!,
-        compositionOptions: {
-          ignoreExternalKeys,
-        },
       });
 
       await subgraphRepo.update(
@@ -183,9 +172,6 @@ export function updateMonograph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
-        {
-          ignoreExternalKeys,
-        },
       );
 
       await auditLogRepo.addAuditLog({

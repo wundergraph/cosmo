@@ -173,7 +173,7 @@ export default (opts: BaseCommandOptions) => {
   );
   command.option(
     '--ignore-external-keys',
-    'This flag ignores resolvability checks on external fields during composition.',
+    'This flag ignores errors related to true external entity keys.',
   );
 
   command.action(async (options) => {

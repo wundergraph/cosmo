@@ -191,7 +191,6 @@ export function updateSubgraph(
       organizationId: authContext.organizationId,
       featureId: 'composition-ignore-external-keys',
     });
-    const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
 
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
       await subgraphRepo.update(
@@ -216,7 +215,7 @@ export function updateSubgraph(
         },
         opts.chClient!,
         {
-          ignoreExternalKeys,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           disableResolvabilityValidation: req.disableResolvabilityValidation,
         },
       );

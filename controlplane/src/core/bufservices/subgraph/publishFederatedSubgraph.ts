@@ -72,7 +72,6 @@ export function publishFederatedSubgraph(
       organizationId: authContext.organizationId,
       featureId: 'composition-ignore-external-keys',
     });
-    const ignoreExternalKeys = ignoreExternalKeysFeature?.enabled === true;
 
     const subgraphSchemaSDL = req.schema;
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -105,7 +104,7 @@ export function publishFederatedSubgraph(
        */
       // Here we check if the schema is valid as a subgraph SDL
       const result = buildSchema(subgraphSchemaSDL, true, routerCompatibilityVersion, {
-        ignoreExternalKeys,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
       });
       if (!result.success) {
         return {
@@ -596,7 +595,7 @@ export function publishFederatedSubgraph(
         },
         opts.chClient!,
         {
-          ignoreExternalKeys,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           disableResolvabilityValidation: req.disableResolvabilityValidation,
         },
       );
