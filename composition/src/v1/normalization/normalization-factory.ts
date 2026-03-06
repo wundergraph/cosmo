@@ -1,48 +1,48 @@
 import {
   BREAK,
-  ConstDirectiveNode,
-  ConstValueNode,
-  DefinitionNode,
-  DirectiveDefinitionNode,
-  DocumentNode,
-  EnumValueDefinitionNode,
-  FieldDefinitionNode,
-  InputValueDefinitionNode,
-  InterfaceTypeDefinitionNode,
-  InterfaceTypeExtensionNode,
-  IntValueNode,
+  type ConstDirectiveNode,
+  type ConstValueNode,
+  type DefinitionNode,
+  type DirectiveDefinitionNode,
+  type DocumentNode,
+  type EnumValueDefinitionNode,
+  type FieldDefinitionNode,
+  type InputValueDefinitionNode,
+  type InterfaceTypeDefinitionNode,
+  type InterfaceTypeExtensionNode,
+  type IntValueNode,
   Kind,
-  ListValueNode,
-  NamedTypeNode,
-  ObjectTypeDefinitionNode,
-  ObjectTypeExtensionNode,
-  OperationTypeDefinitionNode,
+  type ListValueNode,
+  type NamedTypeNode,
+  type ObjectTypeDefinitionNode,
+  type ObjectTypeExtensionNode,
+  type OperationTypeDefinitionNode,
   OperationTypeNode,
   print,
-  SchemaDefinitionNode,
-  SchemaExtensionNode,
-  StringValueNode,
-  TypeDefinitionNode,
-  TypeExtensionNode,
-  TypeNode,
+  type SchemaDefinitionNode,
+  type SchemaExtensionNode,
+  type StringValueNode,
+  type TypeDefinitionNode,
+  type TypeExtensionNode,
+  type TypeNode,
   visit,
 } from 'graphql';
 import {
-  EnumTypeNode,
+  type EnumTypeNode,
   extractExecutableDirectiveLocations,
   formatDescription,
-  InputObjectTypeNode,
-  InterfaceTypeNode,
+  type InputObjectTypeNode,
+  type InterfaceTypeNode,
   isKindAbstract,
   nodeKindToDirectiveLocation,
-  ObjectTypeNode,
+  type ObjectTypeNode,
   operationTypeNodeToDefaultType,
   safeParse,
-  ScalarTypeNode,
-  SchemaNode,
+  type ScalarTypeNode,
+  type SchemaNode,
   setToNamedTypeNodeArray,
   stringToNamedTypeNode,
-  UnionTypeNode,
+  type UnionTypeNode,
 } from '../../ast/utils';
 import {
   getConditionalFieldSetDirectiveName,
@@ -174,10 +174,10 @@ import {
 } from '../constants/strings';
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
-  ConfigurationData,
-  EventConfiguration,
-  NatsEventType,
-  RequiredFieldConfiguration,
+  type ConfigurationData,
+  type EventConfiguration,
+  type NatsEventType,
+  type RequiredFieldConfiguration,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import { recordSubgraphName } from '../subgraph/subgraph';
@@ -194,28 +194,28 @@ import {
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
 import {
-  ArgumentData,
-  AuthorizationData,
-  CompositeOutputData,
-  ConditionalFieldData,
-  ConfigureDescriptionData,
-  EntityData,
-  EntityInterfaceSubgraphData,
-  EnumDefinitionData,
-  EnumValueData,
+  type ArgumentData,
+  type AuthorizationData,
+  type CompositeOutputData,
+  type ConditionalFieldData,
+  type ConfigureDescriptionData,
+  type EntityData,
+  type EntityInterfaceSubgraphData,
+  type EnumDefinitionData,
+  type EnumValueData,
   ExtensionType,
-  ExternalFieldData,
-  FieldData,
-  InputObjectDefinitionData,
-  InputValueData,
-  InterfaceDefinitionData,
-  NodeData,
-  ObjectDefinitionData,
-  ParentDefinitionData,
-  PersistedDirectiveDefinitionData,
-  ScalarDefinitionData,
-  SchemaData,
-  UnionDefinitionData,
+  type ExternalFieldData,
+  type FieldData,
+  type InputObjectDefinitionData,
+  type InputValueData,
+  type InterfaceDefinitionData,
+  type NodeData,
+  type ObjectDefinitionData,
+  type ParentDefinitionData,
+  type PersistedDirectiveDefinitionData,
+  type ScalarDefinitionData,
+  type SchemaData,
+  type UnionDefinitionData,
 } from '../../schema-building/types';
 import {
   areDefaultValuesCompatible,
@@ -233,7 +233,7 @@ import {
   newPersistedDirectivesData,
 } from '../../schema-building/utils';
 import {
-  CompositeOutputNode,
+  type CompositeOutputNode,
   getMutableEnumNode,
   getMutableFieldNode,
   getMutableInputObjectNode,
@@ -245,14 +245,14 @@ import {
   getMutableUnionNode,
   getNamedTypeNode,
   getTypeNodeNamedTypeName,
-  MutableTypeNode,
+  type MutableTypeNode,
 } from '../../schema-building/ast';
-import { InvalidRootTypeFieldEventsDirectiveData } from '../../errors/types';
+import { type InvalidRootTypeFieldEventsDirectiveData } from '../../errors/types';
 import { Graph } from '../../resolvability-graph/graph';
 import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from '../constants/integers';
-import { InternalSubgraph } from '../../subgraph/types';
-import { Warning } from '../../warnings/types';
-import { BatchNormalizationResult, NormalizationResult } from '../../normalization/types';
+import { type InternalSubgraph } from '../../subgraph/types';
+import { type Warning } from '../../warnings/types';
+import { type BatchNormalizationResult, type NormalizationResult } from '../../normalization/types';
 import {
   ARGUMENT,
   AUTHENTICATED,
@@ -348,29 +348,29 @@ import {
   numberToOrdinal,
 } from '../../utils/utils';
 import {
-  AddInputValueDataByNodeParams,
-  ConditionalFieldSetValidationResult,
-  ExtractArgumentDataResult,
-  FieldSetData,
-  FieldSetParentResult,
-  HandleOverrideDirectiveParams,
-  HandleRequiresScopesDirectiveParams,
-  HandleSemanticNonNullDirectiveParams,
-  KeyFieldSetData,
-  UpsertInputObjectResult,
-  ValidateDirectiveParams,
+  type AddInputValueDataByNodeParams,
+  type ConditionalFieldSetValidationResult,
+  type ExtractArgumentDataResult,
+  type FieldSetData,
+  type FieldSetParentResult,
+  type HandleOverrideDirectiveParams,
+  type HandleRequiresScopesDirectiveParams,
+  type HandleSemanticNonNullDirectiveParams,
+  type KeyFieldSetData,
+  type UpsertInputObjectResult,
+  type ValidateDirectiveParams,
 } from './types';
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
-import { ImplementationErrors, InvalidFieldImplementation } from '../../utils/types';
-import { DirectiveName, FieldName, SubgraphName, TypeName } from '../../types/types';
+import { type ImplementationErrors, type InvalidFieldImplementation } from '../../utils/types';
+import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../../types/types';
 import {
-  BatchNormalizeParams,
-  HandleFieldInheritableDirectivesParams,
-  HandleNonExternalConditionalFieldParams,
-  NormalizationFactoryParams,
-  NormalizeSubgraphFromStringParams,
-  NormalizeSubgraphParams,
-  ValidateOneOfDirectiveParams,
+  type BatchNormalizeParams,
+  type HandleFieldInheritableDirectivesParams,
+  type HandleNonExternalConditionalFieldParams,
+  type NormalizationFactoryParams,
+  type NormalizeSubgraphFromStringParams,
+  type NormalizeSubgraphParams,
+  type ValidateOneOfDirectiveParams,
 } from './params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
 import type { CompositionOptions } from '../../types/params';

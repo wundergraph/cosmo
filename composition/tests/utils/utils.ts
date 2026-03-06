@@ -1,23 +1,23 @@
-import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
+import { type GraphQLSchema, lexicographicSortSchema } from 'graphql';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
-  CompositionOptions,
-  ContractTagOptions,
+  type CompositionOptions,
+  type ContractTagOptions,
   federateSubgraphs,
   federateSubgraphsContract,
   federateSubgraphsWithContracts,
-  FederationFailure,
-  FederationResultWithContractsSuccess,
-  FederationSuccess,
-  NormalizationFailure,
-  NormalizationSuccess,
+  type FederationFailure,
+  type FederationResultWithContractsSuccess,
+  type FederationSuccess,
+  type NormalizationFailure,
+  type NormalizationSuccess,
   normalizeSubgraph,
   normalizeSubgraphFromString,
-  NormalizeSubgraphFromStringParams,
+  type NormalizeSubgraphFromStringParams,
   parse,
-  Subgraph,
-  SubgraphName,
-  SupportedRouterCompatibilityVersion,
+  type Subgraph,
+  type SubgraphName,
+  type SupportedRouterCompatibilityVersion,
 } from '../../src';
 import { expect } from 'vitest';
 

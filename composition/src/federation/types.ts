@@ -1,13 +1,19 @@
-import { Warning } from '../warnings/types';
-import { ConstDirectiveNode, DirectiveDefinitionNode, DocumentNode, GraphQLSchema, StringValueNode } from 'graphql';
+import { type Warning } from '../warnings/types';
 import {
-  ConfigureDescriptionData,
-  ExtensionType,
-  ParentDefinitionData,
-  PersistedDirectivesData,
+  type ConstDirectiveNode,
+  type DirectiveDefinitionNode,
+  type DocumentNode,
+  type GraphQLSchema,
+  type StringValueNode,
+} from 'graphql';
+import {
+  type ConfigureDescriptionData,
+  type ExtensionType,
+  type ParentDefinitionData,
+  type PersistedDirectivesData,
 } from '../schema-building/types';
-import { FieldConfiguration } from '../router-configuration/types';
-import { SubgraphConfig } from '../subgraph/types';
+import { type FieldConfiguration } from '../router-configuration/types';
+import { type SubgraphConfig } from '../subgraph/types';
 import type { DirectiveName, SubgraphName, TypeName } from '../types/types';
 
 export type FederationFailure = {

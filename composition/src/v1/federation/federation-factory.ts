@@ -1,27 +1,27 @@
 import {
   buildASTSchema,
-  ConstDirectiveNode,
-  ConstObjectValueNode,
-  DefinitionNode,
-  DirectiveDefinitionNode,
-  DocumentNode,
-  GraphQLSchema,
+  type ConstDirectiveNode,
+  type ConstObjectValueNode,
+  type DefinitionNode,
+  type DirectiveDefinitionNode,
+  type DocumentNode,
+  type GraphQLSchema,
   Kind,
-  ListTypeNode,
-  NamedTypeNode,
-  NonNullTypeNode,
-  StringValueNode,
-  TypeNode,
+  type ListTypeNode,
+  type NamedTypeNode,
+  type NonNullTypeNode,
+  type StringValueNode,
+  type TypeNode,
 } from 'graphql';
 import {
   getMutableTypeNode,
   getTypeNodeNamedTypeName,
-  MutableDefinitionNode,
-  MutableEnumValueNode,
-  MutableFieldNode,
-  MutableInputValueNode,
-  MutableIntermediateTypeNode,
-  MutableTypeNode,
+  type MutableDefinitionNode,
+  type MutableEnumValueNode,
+  type MutableFieldNode,
+  type MutableInputValueNode,
+  type MutableIntermediateTypeNode,
+  type MutableTypeNode,
 } from '../../schema-building/ast';
 import { stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
@@ -75,14 +75,14 @@ import {
   unknownNamedTypeError,
 } from '../../errors/errors';
 import {
-  ChildTagData,
+  type ChildTagData,
   getDescriptionFromString,
-  InterfaceImplementationData,
-  InterfaceObjectForInternalGraphOptions,
+  type InterfaceImplementationData,
+  type InterfaceObjectForInternalGraphOptions,
   newChildTagData,
   newParentTagData,
-  ParentTagData,
-  SubscriptionFilterData,
+  type ParentTagData,
+  type SubscriptionFilterData,
   validateImplicitFieldSets,
 } from './utils';
 import {
@@ -107,34 +107,34 @@ import {
 } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
-  FieldConfiguration,
-  RequiredFieldConfiguration,
-  SubscriptionCondition,
-  SubscriptionFieldCondition,
-  SubscriptionFilterValue,
+  type FieldConfiguration,
+  type RequiredFieldConfiguration,
+  type SubscriptionCondition,
+  type SubscriptionFieldCondition,
+  type SubscriptionFilterValue,
 } from '../../router-configuration/types';
 import { BASE_SCALARS, DIRECTIVE_DEFINITION_BY_NAME, MAX_OR_SCOPES } from '../constants/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
 import { isNodeQuery } from '../normalization/utils';
 import {
-  AuthorizationData,
-  ChildData,
-  CompositeOutputData,
-  EntityData,
-  EntityInterfaceFederationData,
-  EnumValueData,
+  type AuthorizationData,
+  type ChildData,
+  type CompositeOutputData,
+  type EntityData,
+  type EntityInterfaceFederationData,
+  type EnumValueData,
   ExtensionType,
-  FieldData,
-  InputObjectDefinitionData,
-  InputValueData,
-  InterfaceDefinitionData,
-  NodeData,
-  ObjectDefinitionData,
-  ParentDefinitionData,
-  PersistedDirectiveDefinitionData,
-  PersistedDirectivesData,
-  ScalarDefinitionData,
-  UnionDefinitionData,
+  type FieldData,
+  type InputObjectDefinitionData,
+  type InputValueData,
+  type InterfaceDefinitionData,
+  type NodeData,
+  type ObjectDefinitionData,
+  type ParentDefinitionData,
+  type PersistedDirectiveDefinitionData,
+  type PersistedDirectivesData,
+  type ScalarDefinitionData,
+  type UnionDefinitionData,
 } from '../../schema-building/types';
 import {
   addValidPersistedDirectiveDefinitionNodeByData,
@@ -170,19 +170,19 @@ import { renameRootTypes } from './walkers';
 import { cloneDeep } from 'lodash';
 import {
   DivergentType,
-  FederateTypeParams,
-  FederateTypeResult,
+  type FederateTypeParams,
+  type FederateTypeResult,
   getMostRestrictiveMergedTypeNode,
 } from '../schema-building/type-merging';
-import { Graph } from '../../resolvability-graph/graph';
-import { GraphNode } from '../../resolvability-graph/graph-nodes';
-import { InternalSubgraph, SubgraphConfig } from '../../subgraph/types';
-import { Warning } from '../../warnings/types';
+import { type Graph } from '../../resolvability-graph/graph';
+import { type GraphNode } from '../../resolvability-graph/graph-nodes';
+import { type InternalSubgraph, type SubgraphConfig } from '../../subgraph/types';
+import { type Warning } from '../../warnings/types';
 import {
-  ContractTagOptions,
-  FederationResult,
-  FederationResultWithContracts,
-  MutualParentDefinitionData,
+  type ContractTagOptions,
+  type FederationResult,
+  type FederationResultWithContracts,
+  type MutualParentDefinitionData,
 } from '../../federation/types';
 import {
   AND_UPPER,
@@ -236,7 +236,14 @@ import type {
   InvalidFieldImplementation,
   InvalidRequiredInputValueData,
 } from '../../utils/types';
-import { ContractName, DirectiveName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
+import {
+  type ContractName,
+  type DirectiveName,
+  type FieldCoords,
+  type FieldName,
+  type SubgraphName,
+  type TypeName,
+} from '../../types/types';
 import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
 import type {
   ExtractPersistedDirectivesParams,

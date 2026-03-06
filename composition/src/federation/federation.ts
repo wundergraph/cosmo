@@ -1,4 +1,4 @@
-import { FederationResult, FederationResultWithContracts } from './types';
+import { type FederationResult, type FederationResultWithContracts } from './types';
 import {
   federateSubgraphs as federateSubgraphsV1,
   federateSubgraphsContract as federateSubgraphsContractV1,
@@ -6,9 +6,9 @@ import {
 } from '../v1/federation/federation-factory';
 import { ROUTER_COMPATIBILITY_VERSION_ONE } from '../router-compatibility-version/router-compatibility-version';
 import {
-  FederateSubgraphsContractParams,
-  FederateSubgraphsParams,
-  FederateSubgraphsWithContractsParams,
+  type FederateSubgraphsContractParams,
+  type FederateSubgraphsParams,
+  type FederateSubgraphsWithContractsParams,
 } from './params';
 
 export function federateSubgraphs({

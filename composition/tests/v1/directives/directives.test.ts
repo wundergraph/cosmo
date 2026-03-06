@@ -1,7 +1,7 @@
 import {
   DEPRECATED,
   DEPRECATED_DEFINITION,
-  DirectiveName,
+  type DirectiveName,
   FIRST_ORDINAL,
   INACCESSIBLE,
   INACCESSIBLE_DEFINITION,
@@ -9,7 +9,7 @@ import {
   invalidDirectiveError,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
+  type Subgraph,
   TAG,
   TAG_DEFINITION,
 } from '../../../src';
@@ -22,7 +22,7 @@ import {
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
-import { DirectiveDefinitionNode } from 'graphql';
+import { type DirectiveDefinitionNode } from 'graphql';
 
 describe('Directive tests', () => {
   describe('Normalization tests', () => {

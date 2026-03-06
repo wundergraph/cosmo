@@ -4,8 +4,12 @@ import {
   normalizeSubgraphFromString as normalizeSubgraphFromStringV1,
 } from '../v1/normalization/normalization-factory';
 import { ROUTER_COMPATIBILITY_VERSION_ONE } from '../router-compatibility-version/router-compatibility-version';
-import { BatchNormalizationResult, NormalizationResult } from './types';
-import { BatchNormalizeParams, NormalizeSubgraphFromStringParams, NormalizeSubgraphParams } from './params';
+import { type BatchNormalizationResult, type NormalizationResult } from './types';
+import {
+  type BatchNormalizeParams,
+  type NormalizeSubgraphFromStringParams,
+  type NormalizeSubgraphParams,
+} from './params';
 
 export function normalizeSubgraphFromString({
   noLocation = true,
