@@ -5,6 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -83,6 +84,18 @@ func (om *OperationsManager) GetOperation(name string) *schemaloader.Operation {
 		}
 	}
 	return nil
+}
+
+// ComputeToolScopes runs the scope extractor against all loaded operations,
+// populating each operation's RequiredScopes from @requiresScopes directives.
+func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfiguration) {
+	extractor := NewScopeExtractor(fieldConfigs, om.schemaDoc)
+	for i := range om.operations {
+		fieldReqs := extractor.ExtractScopesForOperation(&om.operations[i].Document)
+		if len(fieldReqs) > 0 {
+			om.operations[i].RequiredScopes = extractor.ComputeCombinedScopes(fieldReqs)
+		}
+	}
 }
 
 // GetSchema returns the schema document used by the operations manager

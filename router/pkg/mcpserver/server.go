@@ -18,6 +18,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"go.uber.org/zap"
 
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -505,8 +506,9 @@ func (s *GraphQLSchemaServer) Start() error {
 	return nil
 }
 
-// Reload reloads the operations and schema
-func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
+// Reload reloads the operations and schema, and computes per-tool scope
+// requirements from @requiresScopes directives in the field configurations.
+func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev1.FieldConfiguration) error {
 	if s.server == nil {
 		return fmt.Errorf("server is not started")
 	}
@@ -518,6 +520,11 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 		if err := s.operationsManager.LoadOperationsFromDirectory(s.operationsDir); err != nil {
 			return fmt.Errorf("failed to load operations: %w", err)
 		}
+	}
+
+	// Compute per-tool scope requirements from @requiresScopes directives
+	if len(fieldConfigs) > 0 {
+		s.operationsManager.ComputeToolScopes(fieldConfigs)
 	}
 
 	s.server.RemoveTools(s.registeredTools...)
