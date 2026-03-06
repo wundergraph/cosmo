@@ -169,7 +169,13 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 		// Either memory exporter or the configured exporters are used.
 		if config.MemoryExporter != nil {
-			opts = append(opts, sdktrace.WithSyncer(config.MemoryExporter))
+			// Use a custom span processor that routes export errors through the
+			// instance's logger instead of the global otel.Handle. This avoids
+			// flaky tests when parallel tests overwrite the global error handler.
+			opts = append(opts, sdktrace.WithSpanProcessor(&syncSpanProcessor{
+				exporter: config.MemoryExporter,
+				handler:  errHandler(config),
+			}))
 		} else {
 			for _, exp := range config.Config.Exporters {
 				if exp.Disabled {
