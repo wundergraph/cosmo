@@ -173,7 +173,6 @@ import {
   isWithoutQueryCacheErrorMessage,
   isReferencesUnknownKeyFieldErrorMessage,
   duplicateKeyFieldMappingErrorMessage,
-  redundantIsDirectiveErrorMessage,
   cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
   cacheInvalidateOnNonEntityReturnTypeErrorMessage,
   cachePopulateOnNonMutationSubscriptionFieldErrorMessage,
@@ -209,6 +208,7 @@ import {
   invalidExternalFieldWarning,
   invalidOverrideTargetSubgraphNameWarning,
   incompleteQueryCacheKeyMappingWarning,
+  redundantIsDirectiveWarning,
   nonExternalConditionalFieldWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
@@ -3420,6 +3420,7 @@ export class NormalizationFactory {
           }
           // Extract optional maxAge argument
           let maxAgeSeconds: number | undefined;
+          let hasMaxAgeError = false;
           const cachePopulateDirectives = fieldData.directivesByName.get(CACHE_POPULATE)!;
           if (cachePopulateDirectives[0].arguments) {
             for (const arg of cachePopulateDirectives[0].arguments) {
@@ -3432,17 +3433,20 @@ export class NormalizationFactory {
                       maxAgeNotPositiveIntegerErrorMessage(CACHE_POPULATE, parsed),
                     ]),
                   );
+                  hasMaxAgeError = true;
                 } else {
                   maxAgeSeconds = parsed;
                 }
               }
             }
           }
-          cachePopulateConfigs.push({
-            fieldName,
-            operationType: operationTypeString,
-            maxAgeSeconds,
-          });
+          if (!hasMaxAgeError) {
+            cachePopulateConfigs.push({
+              fieldName,
+              operationType: operationTypeString,
+              maxAgeSeconds,
+            });
+          }
         }
 
         // Validate @is on arguments (Rules 10-13)
@@ -3566,14 +3570,11 @@ export class NormalizationFactory {
           }
         }
         if (isFieldValue) {
-          // Rule 13: Redundant @is if argument name matches key field
+          // Rule 13: Redundant @is if argument name matches key field (warning, not error)
           if (isFieldValue === argumentName) {
-            this.errors.push(
-              invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, '1st', [
-                redundantIsDirectiveErrorMessage(argumentName, fieldCoords),
-              ]),
+            this.warnings.push(
+              redundantIsDirectiveWarning(this.subgraphName, argumentName, fieldCoords),
             );
-            continue;
           }
           // Rule 11: @is field must reference a @key field
           if (!keyFields.has(isFieldValue)) {
