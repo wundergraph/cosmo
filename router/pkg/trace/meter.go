@@ -35,24 +35,6 @@ type (
 	}
 )
 
-// errorHandlingExporter wraps a SpanExporter and handles export errors locally
-// instead of letting them propagate to the global OTEL error handler.
-// This prevents parallel tests from interfering with each other's error handlers.
-type errorHandlingExporter struct {
-	inner   sdktrace.SpanExporter
-	handler func(error)
-}
-
-func (e *errorHandlingExporter) ExportSpans(ctx context.Context, spans []sdktrace.ReadOnlySpan) error {
-	if err := e.inner.ExportSpans(ctx, spans); err != nil {
-		e.handler(err)
-	}
-	return nil
-}
-
-func (e *errorHandlingExporter) Shutdown(ctx context.Context) error {
-	return e.inner.Shutdown(ctx)
-}
 
 func createExporter(log *zap.Logger, exp *ExporterConfig) (sdktrace.SpanExporter, error) {
 	u, err := url.Parse(exp.Endpoint)
@@ -188,13 +170,14 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 		// Either memory exporter or the configured exporters are used.
 		if config.MemoryExporter != nil {
-			// Wrap the test exporter to handle errors locally instead of through
-			// the global OTEL error handler, which races between parallel tests.
-			wrapped := &errorHandlingExporter{
-				inner:   config.MemoryExporter,
-				handler: errHandler(config),
+			exporter := config.MemoryExporter
+			if config.Config.TestErrorHandler != nil {
+				exporter = &errorLoggingExporter{
+					wrapped: exporter,
+					handler: config.Config.TestErrorHandler,
+				}
 			}
-			opts = append(opts, sdktrace.WithSyncer(wrapped))
+			opts = append(opts, sdktrace.WithSyncer(exporter))
 		} else {
 			for _, exp := range config.Config.Exporters {
 				if exp.Disabled {
@@ -240,7 +223,7 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 	// Don't set globals when we use the router in tests.
 	// In practice, setting them globally only makes sense for module development.
-	// In tests, the error handler is wired locally via errorHandlingExporter above.
+	// In tests, the error handler is wired locally via errorLoggingExporter above.
 	if config.MemoryExporter == nil {
 		otel.SetTracerProvider(tp)
 		otel.SetErrorHandler(otel.ErrorHandlerFunc(errHandler(config)))
