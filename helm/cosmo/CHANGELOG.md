@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.17.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.16.0...helm-cosmo@0.17.0) (2026-03-07)
+
+
+### Features
+
+* add sso cookie domain to helm values ([#2444](https://github.com/wundergraph/cosmo/issues/2444)) ([bba8703](https://github.com/wundergraph/cosmo/commit/bba87034a165c20a3d0b84a5ac1da35eaef3fe91))
+* **keycloak:** move to official images ([#2561](https://github.com/wundergraph/cosmo/issues/2561)) ([8e81d6b](https://github.com/wundergraph/cosmo/commit/8e81d6b0159d62f1e85a369165036c8a4c14fbd7))
+
+
+### Bug Fixes
+
+* **helm:** exclude commonLabels from immutable selector matchLabels ([#2571](https://github.com/wundergraph/cosmo/issues/2571)) ([5758b4f](https://github.com/wundergraph/cosmo/commit/5758b4fc73f26ee18dbfda64b979d8025029711a))
+
 ## [0.16.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo@0.15.0...helm-cosmo@0.16.0) (2025-12-10)
 
 
