@@ -115,7 +115,34 @@ require.Equal(t, "employees", metrics[0].Labels["subgraph"])
 
 Tests known to be flaky use the `TestFlaky` prefix (e.g., `TestFlakyNatsEvents`). CI runs these with `test_retry_count=3` and a separate `-run '^TestFlaky'` pass. Once the root cause is fixed, move tests back to their non-flaky parent function.
 
-### 6. Buffered channels in worker pools: prevent goroutine leaks on context cancellation
+### 6. Periodic exporters: wait for ALL expected items, not just one
+
+**Problem:** When testing a periodic exporter (e.g., metrics log exporter with a 90ms interval), waiting for a single item to appear then asserting all items are present races — the exporter may not have exported everything in one cycle.
+
+**Fix:** Use `require.Eventually` to wait for ALL expected items to appear, not just one sentinel value.
+
+```go
+// WRONG — only waits for one metric, then asserts all are present
+require.Eventually(t, func() bool {
+    return findMetricLog(logs, "router.http.requests") != nil
+}, 5*time.Second, 100*time.Millisecond)
+for _, m := range scopeMetric.Metrics {
+    require.NotNil(t, findMetricLog(logs, m.Name)) // may fail for other metrics
+}
+
+// RIGHT — waits for every expected item
+require.Eventually(t, func() bool {
+    logs := observer.FilterMessage("Metric").All()
+    for _, m := range scopeMetric.Metrics {
+        if findMetricLog(logs, m.Name) == nil {
+            return false
+        }
+    }
+    return true
+}, 5*time.Second, 100*time.Millisecond)
+```
+
+### 7. Buffered channels in worker pools: prevent goroutine leaks on context cancellation
 
 **Problem:** When a worker pool uses an unbuffered completion channel and the main goroutine exits early (e.g., via context cancellation), workers block forever on sends, leaking goroutines and potentially crashing the process.
 
