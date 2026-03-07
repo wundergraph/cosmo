@@ -175,12 +175,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resolveCtx.InitialPayload = reqCtx.operation.initialPayload
 	resolveCtx.Extensions = reqCtx.operation.extensions
 	resolveCtx.ExecutionOptions = reqCtx.operation.executionOptions
-	resolveCtx.ExecutionOptions.Caching = resolve.CachingOptions{
-		EnableL1Cache:         h.entityCachingL1Enabled,
-		EnableL2Cache:         h.entityCachingL2Enabled,
-		EnableCacheAnalytics:  h.entityCachingAnalyticsEnabled,
-		L2CacheKeyInterceptor: h.buildL2CacheKeyInterceptor(reqCtx),
-	}
+	resolveCtx.ExecutionOptions.Caching = h.cachingOptions(reqCtx)
 
 	if h.headerPropagation != nil {
 		resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
@@ -556,6 +551,15 @@ func (h *GraphQLHandler) recordEntityCacheMetrics(resolveCtx *resolve.Context) {
 	ctx := resolveCtx.Context()
 	for _, m := range h.entityCacheMetrics {
 		m.RecordSnapshot(ctx, snapshot)
+	}
+}
+
+func (h *GraphQLHandler) cachingOptions(reqCtx *requestContext) resolve.CachingOptions {
+	return resolve.CachingOptions{
+		EnableL1Cache:         h.entityCachingL1Enabled,
+		EnableL2Cache:         h.entityCachingL2Enabled,
+		EnableCacheAnalytics:  h.entityCachingAnalyticsEnabled,
+		L2CacheKeyInterceptor: h.buildL2CacheKeyInterceptor(reqCtx),
 	}
 }
 

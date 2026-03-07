@@ -67,10 +67,9 @@ func (c *RedisEntityCache) Delete(ctx context.Context, keys []string) error {
 	if len(keys) == 0 {
 		return nil
 	}
-	pipe := c.client.Pipeline()
-	for _, k := range keys {
-		pipe.Del(ctx, c.keyPrefix+":"+k)
+	prefixedKeys := make([]string, len(keys))
+	for i, k := range keys {
+		prefixedKeys[i] = c.keyPrefix + ":" + k
 	}
-	_, err := pipe.Exec(ctx)
-	return err
+	return c.client.Del(ctx, prefixedKeys...).Err()
 }

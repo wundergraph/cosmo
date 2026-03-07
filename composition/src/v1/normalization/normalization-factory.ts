@@ -432,10 +432,6 @@ export class NormalizationFactory {
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
   entityCacheConfigByTypeName = new Map<string, { maxAgeSeconds: number; includeHeaders: boolean; partialCacheLoad: boolean; shadowMode: boolean }>();
-  entityCacheDirectiveTypeNames = new Set<string>();
-  queryCacheFieldData: Array<{ fieldName: string; parentTypeName: string; maxAgeSeconds: number; includeHeaders: boolean; shadowMode: boolean }> = [];
-  cachePopulateFieldData: Array<{ fieldName: string; parentTypeName: string; maxAgeSeconds?: number }> = [];
-  cacheInvalidateFieldData: Array<{ fieldName: string; parentTypeName: string }> = [];
   errors = new Array<Error>();
   entityDataByTypeName = new Map<string, EntityData>();
   entityInterfaceDataByTypeName = new Map<string, EntityInterfaceSubgraphData>();

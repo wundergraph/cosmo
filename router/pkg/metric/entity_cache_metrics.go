@@ -2,6 +2,7 @@ package metric
 
 import (
 	"context"
+	"slices"
 
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -58,7 +59,7 @@ func NewEntityCacheMetrics(
 
 	return &EntityCacheMetrics{
 		instruments:    instruments,
-		baseAttributes: baseAttributes,
+		baseAttributes: slices.Clone(baseAttributes),
 	}, nil
 }
 
@@ -122,6 +123,10 @@ func setupEntityCacheInstruments(m otelmetric.Meter) (*entityCacheInstruments, e
 	}, nil
 }
 
+func (m *EntityCacheMetrics) attrs(extra ...attribute.KeyValue) otelmetric.MeasurementOption {
+	return otelmetric.WithAttributes(slices.Concat(m.baseAttributes, extra)...)
+}
+
 func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolve.CacheAnalyticsSnapshot) {
 	for _, event := range snapshot.L1Reads {
 		cacheType := cacheTypeFromEntityType(event.EntityType)
@@ -145,42 +150,23 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 
 	for range snapshot.L1Writes {
 		m.instruments.keysStats.Add(ctx, 1,
-			otelmetric.WithAttributes(
-				append(m.baseAttributes,
-					attrKeyOperation.String("added"),
-					attrKeyCacheLevel.String("l1"),
-				)...,
-			),
+			m.attrs(attrKeyOperation.String("added"), attrKeyCacheLevel.String("l1")),
 		)
 	}
 
 	for range snapshot.L2Writes {
 		m.instruments.keysStats.Add(ctx, 1,
-			otelmetric.WithAttributes(
-				append(m.baseAttributes,
-					attrKeyOperation.String("added"),
-					attrKeyCacheLevel.String("l2"),
-				)...,
-			),
+			m.attrs(attrKeyOperation.String("added"), attrKeyCacheLevel.String("l2")),
 		)
 		m.instruments.populations.Add(ctx, 1,
-			otelmetric.WithAttributes(
-				append(m.baseAttributes,
-					attrKeySource.String("query"),
-				)...,
-			),
+			m.attrs(attrKeySource.String("query")),
 		)
 	}
 
 	for _, event := range snapshot.FetchTimings {
 		if event.Source == resolve.FieldSourceL2 {
 			m.instruments.latency.Record(ctx, float64(event.DurationMs),
-				otelmetric.WithAttributes(
-					append(m.baseAttributes,
-						attrKeyCacheLevel.String("l2"),
-						attrKeyOperation.String("get"),
-					)...,
-				),
+				m.attrs(attrKeyCacheLevel.String("l2"), attrKeyOperation.String("get")),
 			)
 		}
 	}
@@ -188,11 +174,7 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 	for _, event := range snapshot.ShadowComparisons {
 		if !event.IsFresh {
 			m.instruments.shadowStaleness.Add(ctx, 1,
-				otelmetric.WithAttributes(
-					append(m.baseAttributes,
-						attrKeyCacheType.String(cacheTypeFromEntityType(event.EntityType)),
-					)...,
-				),
+				m.attrs(attrKeyCacheType.String(cacheTypeFromEntityType(event.EntityType))),
 			)
 		}
 	}
@@ -200,11 +182,7 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 	for _, event := range snapshot.MutationEvents {
 		if event.HadCachedValue {
 			m.instruments.invalidations.Add(ctx, 1,
-				otelmetric.WithAttributes(
-					append(m.baseAttributes,
-						attrKeySource.String("mutation"),
-					)...,
-				),
+				m.attrs(attrKeySource.String("mutation")),
 			)
 		}
 	}
@@ -219,12 +197,6 @@ func cacheTypeFromEntityType(entityType string) string {
 
 func (m *EntityCacheMetrics) recordRequestStat(ctx context.Context, typ, cacheLevel, cacheType string) {
 	m.instruments.requestsStats.Add(ctx, 1,
-		otelmetric.WithAttributes(
-			append(m.baseAttributes,
-				attrKeyType.String(typ),
-				attrKeyCacheLevel.String(cacheLevel),
-				attrKeyCacheType.String(cacheType),
-			)...,
-		),
+		m.attrs(attrKeyType.String(typ), attrKeyCacheLevel.String(cacheLevel), attrKeyCacheType.String(cacheType)),
 	)
 }

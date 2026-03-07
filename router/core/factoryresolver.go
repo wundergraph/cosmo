@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 	"time"
 
@@ -560,15 +559,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 }
 
 func (l *Loader) subgraphName(subgraphs []*nodev1.Subgraph, dataSourceID string) string {
-	i := slices.IndexFunc(subgraphs, func(s *nodev1.Subgraph) bool {
-		return s.Id == dataSourceID
-	})
-
-	if i != -1 {
-		return subgraphs[i].Name
-	}
-
-	return ""
+	return subgraphNameByID(subgraphs, dataSourceID)
 }
 
 func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraphName string) *plan.DataSourceMetadata {
@@ -767,19 +758,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 }
 
 func (l *Loader) resolveEntityCacheName(subgraphName, typeName string) string {
-	if l.entityCachingConfig == nil {
-		return "default"
-	}
-	for _, sg := range l.entityCachingConfig.Subgraphs {
-		if sg.Name == subgraphName {
-			for _, e := range sg.Entities {
-				if e.Type == typeName && e.CacheName != "" {
-					return e.CacheName
-				}
-			}
-		}
-	}
-	return "default"
+	return resolveEntityCacheName(l.entityCachingConfig, subgraphName, typeName)
 }
 
 func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfiguration) bool {
