@@ -45,12 +45,9 @@ describe('Fetch schema', () => {
 
     const tmp = join(tmpdir(), `router-schema-${Date.now()}.graphql`);
     try {
-      const command = await program.parseAsync(
-        ['fetch-schema', 'mygraph', '-o', tmp],
-        {
-          from: 'user',
-        }
-      );
+      const command = await program.parseAsync(['fetch-schema', 'mygraph', '-o', tmp], {
+        from: 'user',
+      });
 
       const content = readFileSync(tmp, 'utf8');
       expect(content).toBe(routerSdl);
@@ -73,12 +70,9 @@ describe('Fetch schema', () => {
 
     const tmp = join(tmpdir(), `client-schema-${Date.now()}.graphql`);
     try {
-      const command = await program.parseAsync(
-        ['fetch-schema', 'mygraph', '-o', tmp, '--client-schema'],
-        {
-          from: 'user',
-        }
-      );
+      const command = await program.parseAsync(['fetch-schema', 'mygraph', '-o', tmp, '--client-schema'], {
+        from: 'user',
+      });
 
       const content = readFileSync(tmp, 'utf8');
       expect(content).toBe(clientSdl);

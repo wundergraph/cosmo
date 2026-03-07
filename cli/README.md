@@ -12,11 +12,11 @@
 
 With `wgc`, you can:
 
-* Create and manage **federated GraphQL APIs** and **subgraphs**
-* Perform **schema checks** and **composition validations**
-* Generate and deploy **router configurations**
-* Integrate with **CI/CD pipelines** for automated workflows
-* Manage **namespaces**, **API keys**, and more
+- Create and manage **federated GraphQL APIs** and **subgraphs**
+- Perform **schema checks** and **composition validations**
+- Generate and deploy **router configurations**
+- Integrate with **CI/CD pipelines** for automated workflows
+- Manage **namespaces**, **API keys**, and more
 
 Whether you're building monolithic or federated GraphQL architectures, `wgc` provides the tools to manage your development and deployment processes.
 
@@ -24,12 +24,12 @@ Whether you're building monolithic or federated GraphQL architectures, `wgc` pro
 
 ## 🧰 Cosmo Features
 
-* **Federation Support**: Compatible with GraphQL Federation v1 and v2
-* **Schema Registry**: Centralized management of your GraphQL schemas with versioning and change tracking
-* **Composition Checks**: Automated validation to ensure subgraphs compose correctly without breaking changes
-* **Router Configuration**: Generate and manage router configurations for efficient query planning and execution
-* **Observability**: Integrated with OpenTelemetry and Prometheus for metrics, tracing, and monitoring
-* **Access Control**: Fine-grained access controls with support for OIDC, RBAC, and SCIM
+- **Federation Support**: Compatible with GraphQL Federation v1 and v2
+- **Schema Registry**: Centralized management of your GraphQL schemas with versioning and change tracking
+- **Composition Checks**: Automated validation to ensure subgraphs compose correctly without breaking changes
+- **Router Configuration**: Generate and manage router configurations for efficient query planning and execution
+- **Observability**: Integrated with OpenTelemetry and Prometheus for metrics, tracing, and monitoring
+- **Access Control**: Fine-grained access controls with support for OIDC, RBAC, and SCIM
 
 ---
 
@@ -37,7 +37,7 @@ Whether you're building monolithic or federated GraphQL architectures, `wgc` pro
 
 ### Prerequisites
 
-* [Node.js](https://nodejs.org/) v20 LTS or higher
+- [Node.js](https://nodejs.org/) v20 LTS or higher
 
 ### Install via npm
 
@@ -83,8 +83,8 @@ chmod +x start-subgraphs.sh
 
 Verify the subgraphs are running:
 
-* [Posts Subgraph](http://localhost:4001/graphql)
-* [Users Subgraph](http://localhost:4002/graphql)
+- [Posts Subgraph](http://localhost:4001/graphql)
+- [Users Subgraph](http://localhost:4002/graphql)
 
 ### 4. Generate Router Configuration
 
@@ -137,9 +137,9 @@ query {
 
 ## 📚 Documentation
 
-* **CLI Reference**: [https://cosmo-docs.wundergraph.com/cli](https://cosmo-docs.wundergraph.com/cli)
-* **Zero to Federation Tutorial**: [https://cosmo-docs.wundergraph.com/tutorial/from-zero-to-federation-in-5-steps-using-cosmo](https://cosmo-docs.wundergraph.com/tutorial/from-zero-to-federation-in-5-steps-using-cosmo)
-* **Full Documentation**: [https://cosmo-docs.wundergraph.com/](https://cosmo-docs.wundergraph.com/)
+- **CLI Reference**: [https://cosmo-docs.wundergraph.com/cli](https://cosmo-docs.wundergraph.com/cli)
+- **Zero to Federation Tutorial**: [https://cosmo-docs.wundergraph.com/tutorial/from-zero-to-federation-in-5-steps-using-cosmo](https://cosmo-docs.wundergraph.com/tutorial/from-zero-to-federation-in-5-steps-using-cosmo)
+- **Full Documentation**: [https://cosmo-docs.wundergraph.com/](https://cosmo-docs.wundergraph.com/)
 
 ---
 
@@ -147,11 +147,11 @@ query {
 
 WunderGraph Cosmo is a comprehensive, open-source platform for managing GraphQL APIs at scale. It offers:
 
-* **Schema Registry**: Centralized schema management with versioning and validation
-* **Cosmo Studio**: A web interface for exploring schemas, monitoring performance, and managing access
-* **Cosmo Router**: A high-performance, Go-based router supporting federation, subscriptions, and more
-* **Observability**: Built-in support for OpenTelemetry and Prometheus
-* **Security**: Fine-grained access controls with OIDC, RBAC, and SCIM support
+- **Schema Registry**: Centralized schema management with versioning and validation
+- **Cosmo Studio**: A web interface for exploring schemas, monitoring performance, and managing access
+- **Cosmo Router**: A high-performance, Go-based router supporting federation, subscriptions, and more
+- **Observability**: Built-in support for OpenTelemetry and Prometheus
+- **Security**: Fine-grained access controls with OIDC, RBAC, and SCIM support
 
 Cosmo can be deployed on-premises, in the cloud, or used as a managed service.
 
@@ -159,31 +159,31 @@ Cosmo can be deployed on-premises, in the cloud, or used as a managed service.
 
 ## 🧪 Example Commands
 
-* **Create Namespace**:
+- **Create Namespace**:
 
 ```bash
 npx wgc namespace create production
 ```
 
-* **Create Federated Graph**:
+- **Create Federated Graph**:
 
 ```bash
 npx wgc federated-graph create main -r http://router.example.com/graphql -n production
 ```
 
-* **Create Subgraph**:
+- **Create Subgraph**:
 
 ```bash
 npx wgc subgraph create products --routing-url http://localhost:4001/graphql
 ```
 
-* **Check Subgraph Schema Changes**:
+- **Check Subgraph Schema Changes**:
 
 ```bash
 npx wgc subgraph check products -n production --schema ./schemas/products.graphql
 ```
 
-* **Generate Router Configuration locally**:
+- **Generate Router Configuration locally**:
 
 Composition Configuration (graph.yaml):
 
@@ -202,7 +202,7 @@ Generate CMD:
 npx wgc router compose -i graph.yaml -o config.json
 ```
 
-* **Run Router**:
+- **Run Router**:
 
 ```bash
 docker run \
@@ -223,9 +223,9 @@ docker run \
 
 ## 🔗 Related Projects
 
-* **Cosmo Demo**: [https://github.com/wundergraph/cosmo-demo](https://github.com/wundergraph/cosmo-demo)
-* **Cosmo GitHub Repository**: [https://github.com/wundergraph/cosmo](https://github.com/wundergraph/cosmo)
-* **WunderGraph Website**: [https://wundergraph.com](https://wundergraph.com)
+- **Cosmo Demo**: [https://github.com/wundergraph/cosmo-demo](https://github.com/wundergraph/cosmo-demo)
+- **Cosmo GitHub Repository**: [https://github.com/wundergraph/cosmo](https://github.com/wundergraph/cosmo)
+- **WunderGraph Website**: [https://wundergraph.com](https://wundergraph.com)
 
 ---
 
@@ -271,8 +271,8 @@ This project is licensed under the [Apache 2.0 License](https://github.com/wunde
 
 ## 📬 Support & Community
 
-* **Discord**: Join our [Discord community](https://wundergraph.com/discord) for support and discussions
-* **GitHub Issues**: Report issues or request features on our [GitHub repository](https://github.com/wundergraph/cosmo/issues)
+- **Discord**: Join our [Discord community](https://wundergraph.com/discord) for support and discussions
+- **GitHub Issues**: Report issues or request features on our [GitHub repository](https://github.com/wundergraph/cosmo/issues)
 
 ---
 
