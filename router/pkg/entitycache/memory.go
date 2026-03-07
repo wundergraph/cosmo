@@ -31,12 +31,13 @@ func (c *MemoryEntityCache) Get(_ context.Context, keys []string) ([]*resolve.Ca
 	now := time.Now()
 	entries := make([]*resolve.CacheEntry, len(keys))
 	c.mu.RLock()
+	defer c.mu.RUnlock()
 	for i, k := range keys {
 		e, ok := c.entries[k]
 		if !ok || (!e.expiresAt.IsZero() && now.After(e.expiresAt)) {
 			continue
 		}
-		remainingTTL := time.Duration(0)
+		var remainingTTL time.Duration
 		if !e.expiresAt.IsZero() {
 			remainingTTL = time.Until(e.expiresAt)
 		}
@@ -46,7 +47,6 @@ func (c *MemoryEntityCache) Get(_ context.Context, keys []string) ([]*resolve.Ca
 			RemainingTTL: remainingTTL,
 		}
 	}
-	c.mu.RUnlock()
 	return entries, nil
 }
 
@@ -59,13 +59,13 @@ func (c *MemoryEntityCache) Set(_ context.Context, entries []*resolve.CacheEntry
 		expiresAt = time.Now().Add(ttl)
 	}
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	for _, entry := range entries {
 		if entry == nil {
 			continue
 		}
 		c.entries[entry.Key] = &cacheEntry{value: entry.Value, expiresAt: expiresAt}
 	}
-	c.mu.Unlock()
 	return nil
 }
 
@@ -74,10 +74,10 @@ func (c *MemoryEntityCache) Delete(_ context.Context, keys []string) error {
 		return nil
 	}
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	for _, k := range keys {
 		delete(c.entries, k)
 	}
-	c.mu.Unlock()
 	return nil
 }
 
