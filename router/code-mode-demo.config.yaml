@@ -1,0 +1,28 @@
+# Configuration for running the router with MCP Code Mode enabled.
+# Usage: CONFIG_PATH=code-mode-demo.config.yaml go run cmd/router/main.go
+
+version: "1"
+
+mcp:
+  enabled: true
+  server:
+    listen_addr: "localhost:5025"
+  graph_name: "mygraph"
+  router_url: "http://localhost:3002/graphql"
+
+  code_mode:
+    enabled: true
+    server:
+      listen_addr: "localhost:5027"
+    require_mutation_approval: false
+    sandbox:
+      timeout: "30s"
+      max_memory_mb: 32
+      max_output_size_bytes: 1048576
+    query_generation:
+      enabled: true
+      endpoint: "http://localhost:5030"
+      auth:
+        type: "static"
+        static_token: ""
+      timeout: "120s"

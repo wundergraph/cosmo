@@ -88,6 +88,7 @@ type GraphQLSchemaServer struct {
 	requestTimeout            time.Duration
 	routerGraphQLEndpoint     string
 	httpServer                *server.StreamableHTTPServer
+	rawHTTPServer             *http.Server
 	excludeMutations          bool
 	enableArbitraryOperations bool
 	exposeSchema              bool
@@ -352,6 +353,8 @@ func (s *GraphQLSchemaServer) Serve() (*server.StreamableHTTPServer, error) {
 
 	s.logger.Info("MCP server started", logger...)
 
+	s.rawHTTPServer = httpServer
+
 	go func() {
 		defer s.logger.Info("MCP server stopped")
 
@@ -404,18 +407,18 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 
 // Stop gracefully shuts down the MCP server
 func (s *GraphQLSchemaServer) Stop(ctx context.Context) error {
-	if s.httpServer == nil {
+	if s.rawHTTPServer == nil {
 		return fmt.Errorf("server is not started")
 	}
 
 	s.logger.Debug("shutting down MCP server")
 
-	// Create a shutdown context with timeout
-	shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	if err := s.httpServer.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("failed to gracefully shutdown MCP server: %w", err)
+	// Attempt graceful shutdown which waits for active connections to drain.
+	// If the context deadline is exceeded (e.g. long-lived SSE connections),
+	// force-close the server to avoid hanging the router shutdown.
+	if err := s.rawHTTPServer.Shutdown(ctx); err != nil {
+		s.logger.Warn("Graceful MCP server shutdown failed, forcing close", zap.Error(err))
+		return s.rawHTTPServer.Close()
 	}
 
 	return nil

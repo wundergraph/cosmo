@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -48,6 +49,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
+	"github.com/wundergraph/cosmo/router/pkg/sandbox"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
@@ -798,7 +800,7 @@ func (r *Router) NewServer(ctx context.Context) (Server, error) {
 
 // bootstrap initializes the Router. It is called by Start() and NewServer().
 // It should only be called once for a Router instance.
-func (r *Router) bootstrap(ctx context.Context) error {
+func (r *Router) bootstrap(ctx context.Context) (bootstrapErr error) {
 	if !r.bootstrapped.CompareAndSwap(false, true) {
 		return fmt.Errorf("router is already bootstrapped")
 	}
@@ -990,6 +992,71 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		}
 
 		r.mcpServer = mcpss
+	}
+
+	if r.mcp.CodeMode.Enabled {
+		codeModeGraphQLEndpoint := r.graphqlEndpointURL
+		if r.mcp.RouterURL != "" {
+			codeModeGraphQLEndpoint = r.mcp.RouterURL
+		}
+
+		var corsConfig *cors.Config
+		if r.corsOptions != nil && r.corsOptions.Enabled {
+			cfg := *r.corsOptions
+			// Keep user-configured origins; only ensure MCP-required methods and headers are present
+			for _, m := range []string{"GET", "POST", "DELETE", "OPTIONS"} {
+				if !slices.Contains(cfg.AllowMethods, m) {
+					cfg.AllowMethods = append(cfg.AllowMethods, m)
+				}
+			}
+			for _, h := range []string{"Content-Type", "Accept", "Authorization", "Last-Event-ID", "Mcp-Protocol-Version", "Mcp-Session-Id"} {
+				if !slices.Contains(cfg.AllowHeaders, h) {
+					cfg.AllowHeaders = append(cfg.AllowHeaders, h)
+				}
+			}
+			corsConfig = &cfg
+		}
+
+		codeModeCfg := mcpserver.CodeModeServerConfig{
+			ListenAddr:              r.mcp.CodeMode.Server.ListenAddr,
+			RequireMutationApproval: r.mcp.CodeMode.RequireMutationApproval,
+			SandboxConfig: sandbox.ExecutionConfig{
+				Timeout:        r.mcp.CodeMode.Sandbox.Timeout,
+				MaxMemoryMB:    r.mcp.CodeMode.Sandbox.MaxMemoryMB,
+				MaxFuel:        r.mcp.CodeMode.Sandbox.MaxFuel,
+				MaxInputBytes:  r.mcp.CodeMode.Sandbox.MaxInputSizeBytes,
+				MaxOutputBytes: r.mcp.CodeMode.Sandbox.MaxOutputSizeBytes,
+			},
+			QueryGeneration:       r.mcp.CodeMode.QueryGeneration,
+			Logger:                r.logger.With(zap.String("component", "mcp-code-mode")),
+			RouterGraphQLEndpoint: codeModeGraphQLEndpoint,
+			Stateless:             true,
+			CorsConfig:            corsConfig,
+		}
+
+		codeModeSrv, err := mcpserver.NewCodeModeServer(codeModeCfg)
+		if err != nil {
+			return fmt.Errorf("failed to create Code Mode MCP server: %w", err)
+		}
+
+		if err := codeModeSrv.Start(); err != nil {
+			if stopErr := codeModeSrv.Stop(ctx); stopErr != nil {
+				r.logger.Warn("Failed to stop Code Mode MCP server during error cleanup", zap.Error(stopErr))
+			}
+			return fmt.Errorf("failed to start Code Mode MCP server: %w", err)
+		}
+
+		r.codeModeServer = codeModeSrv
+
+		// Clean up the code mode server if a later bootstrap step fails
+		defer func() {
+			if bootstrapErr != nil && r.codeModeServer != nil {
+				if stopErr := r.codeModeServer.Stop(context.Background()); stopErr != nil {
+					r.logger.Warn("Failed to stop Code Mode MCP server during bootstrap cleanup", zap.Error(stopErr))
+				}
+				r.codeModeServer = nil
+			}
+		}()
 	}
 
 	if r.connectRPC.Enabled {
@@ -1575,6 +1642,14 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		wg.Go(func() {
 			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
+			}
+		})
+	}
+
+	if r.codeModeServer != nil {
+		wg.Go(func() {
+			if subErr := r.codeModeServer.Stop(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown Code Mode MCP server: %w", subErr))
 			}
 		})
 	}

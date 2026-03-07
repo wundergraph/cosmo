@@ -2439,6 +2439,146 @@
           "type": "boolean",
           "default": false,
           "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
+        },
+        "code_mode": {
+          "type": "object",
+          "description": "Configuration for Code Mode. When enabled, provides a separate MCP server with search and execute tools that allow AI agents to explore the schema and run arbitrary JavaScript programs with GraphQL access.",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable Code Mode. When true, a separate MCP server is started with search_schema and execute tools."
+            },
+            "server": {
+              "type": "object",
+              "description": "Server configuration for the Code Mode MCP server.",
+              "additionalProperties": false,
+              "properties": {
+                "listen_addr": {
+                  "type": "string",
+                  "description": "The address on which the Code Mode MCP server listens.",
+                  "default": "localhost:5027",
+                  "format": "hostname-port"
+                }
+              }
+            },
+            "require_mutation_approval": {
+              "type": "boolean",
+              "default": true,
+              "description": "When enabled, mutations executed via the sandbox require human approval through the MCP elicitation protocol."
+            },
+            "sandbox": {
+              "type": "object",
+              "description": "Configuration for the JavaScript sandbox used by the execute tool.",
+              "additionalProperties": false,
+              "properties": {
+                "timeout": {
+                  "type": "string",
+                  "default": "5s",
+                  "format": "go-duration",
+                  "description": "Maximum execution time for sandbox scripts."
+                },
+                "max_memory_mb": {
+                  "type": "integer",
+                  "default": 16,
+                  "minimum": 1,
+                  "description": "Maximum memory in MB available to the sandbox runtime."
+                },
+                "max_fuel": {
+                  "type": "integer",
+                  "default": 10000000,
+                  "minimum": 1,
+                  "description": "Maximum CPU fuel for sandbox execution."
+                },
+                "max_input_size_bytes": {
+                  "type": "integer",
+                  "default": 65536,
+                  "minimum": 1,
+                  "description": "Maximum size in bytes of the sandbox input code."
+                },
+                "max_output_size_bytes": {
+                  "type": "integer",
+                  "default": 1048576,
+                  "minimum": 1,
+                  "description": "Maximum size in bytes of the sandbox output."
+                }
+              }
+            },
+            "query_generation": {
+              "type": "object",
+              "description": "Configuration for the query generation service (Yoko) used to generate GraphQL queries from natural language.",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable query generation. When true, the execute tool can generate queries from natural language prompts."
+                },
+                "endpoint": {
+                  "type": "string",
+                  "description": "URL of the query generation service endpoint.",
+                  "format": "url"
+                },
+                "auth": {
+                  "type": "object",
+                  "description": "Authentication configuration for the query generation service.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["static", "cosmo"],
+                      "default": "static",
+                      "description": "Authentication type. 'static' uses a fixed token, 'cosmo' uses the Cosmo platform token."
+                    },
+                    "static_token": {
+                      "type": "string",
+                      "description": "Static authentication token for the query generation service."
+                    },
+                    "token_endpoint": {
+                      "type": "string",
+                      "description": "Token endpoint URL for client credentials auth flow.",
+                      "format": "url"
+                    },
+                    "client_id": {
+                      "type": "string",
+                      "description": "Client ID for client credentials auth flow."
+                    },
+                    "client_secret": {
+                      "type": "string",
+                      "description": "Client secret for client credentials auth flow."
+                    }
+                  },
+                  "allOf": [
+                    {
+                      "if": {
+                        "properties": { "type": { "const": "static" } },
+                        "required": ["type"]
+                      },
+                      "then": {
+                        "required": ["static_token"]
+                      }
+                    },
+                    {
+                      "if": {
+                        "properties": { "type": { "const": "cosmo" } },
+                        "required": ["type"]
+                      },
+                      "then": {
+                        "required": ["token_endpoint", "client_id", "client_secret"]
+                      }
+                    }
+                  ]
+                },
+                "timeout": {
+                  "type": "string",
+                  "default": "10s",
+                  "format": "go-duration",
+                  "description": "Timeout for query generation requests."
+                }
+              }
+            }
+          }
         }
       }
     },

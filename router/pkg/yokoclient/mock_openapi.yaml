@@ -1,0 +1,101 @@
+openapi: "3.0.3"
+info:
+  title: Yoko Query Generation API
+  description: REST API for generating GraphQL queries from natural language prompts.
+  version: "1.0.0"
+servers:
+  - url: https://yoko.example.com
+    description: Production
+paths:
+  /v1/generate:
+    post:
+      operationId: generateQueries
+      summary: Generate GraphQL queries from a natural language prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRequest'
+      responses:
+        '200':
+          description: Successfully generated queries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerateResponse'
+        '400':
+          description: Bad request or could not generate query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+      security:
+        - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    GenerateRequest:
+      type: object
+      required:
+        - prompt
+        - schema_hash
+      properties:
+        prompt:
+          type: string
+          description: Natural language description of the desired query
+          example: "Find all users who signed up in the last 30 days"
+        schema_hash:
+          type: string
+          description: Hash of the current supergraph schema
+          example: "abc123"
+    GenerateResponse:
+      type: object
+      required:
+        - queries
+      properties:
+        queries:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/QueryResult'
+    QueryResult:
+      type: object
+      required:
+        - query
+        - description
+      properties:
+        query:
+          type: string
+          description: The generated GraphQL query
+          example: "query RecentUsers($since: DateTime!) { users(filter: { createdAt: { gte: $since } }) { id name email } }"
+        variables:
+          type: object
+          additionalProperties: true
+          description: Default variables for the query
+        description:
+          type: string
+          description: Human-readable description of what the query does
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: string
+          description: Additional error details

@@ -1,6 +1,9 @@
 /router
 __debug_bin
 __schemas/config.json
+__schemas/code-mode-config.json
+__schemas/code-mode-schema.graphql
+/yoko-mock
 access.log
 config.yaml
 
