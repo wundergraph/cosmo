@@ -26,6 +26,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/schemaloader"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astprinter"
 )
 
@@ -110,6 +111,7 @@ type GraphQLSchemaServer struct {
 	oauthConfig               *config.MCPOAuthConfiguration
 	serverBaseURL             string
 	authMiddleware            *MCPAuthMiddleware
+	scopeExtractor            *ScopeExtractor
 }
 
 type graphqlRequest struct {
@@ -525,6 +527,10 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 	// Compute per-tool scope requirements from @requiresScopes directives
 	if len(fieldConfigs) > 0 {
 		s.operationsManager.ComputeToolScopes(fieldConfigs)
+		// Store the extractor for runtime scope checking in execute_graphql
+		s.scopeExtractor = NewScopeExtractor(fieldConfigs, schema)
+	} else {
+		s.scopeExtractor = nil
 	}
 
 	s.server.RemoveTools(s.registeredTools...)
@@ -979,6 +985,32 @@ func (s *GraphQLSchemaServer) handleExecuteGraphQL() func(ctx context.Context, r
 
 		if input.Query == "" {
 			return nil, fmt.Errorf("input validation failed: query is required")
+		}
+
+		// Runtime scope checking: parse the query and check @requiresScopes
+		if s.scopeExtractor != nil {
+			opDoc, report := astparser.ParseGraphqlDocumentString(input.Query)
+			if !report.HasErrors() {
+				fieldReqs := s.scopeExtractor.ExtractScopesForOperation(&opDoc)
+				if len(fieldReqs) > 0 {
+					combinedScopes := s.scopeExtractor.ComputeCombinedScopes(fieldReqs)
+					if len(combinedScopes) > 0 {
+						tokenScopes := extractScopesFromContext(ctx)
+						if !SatisfiesAnyGroup(tokenScopes, combinedScopes) {
+							includeExisting := s.oauthConfig != nil && s.oauthConfig.ScopeChallengeIncludeTokenScopes
+							challengeScopes := BestScopeChallengeWithExisting(tokenScopes, combinedScopes, includeExisting)
+							return &mcp.CallToolResult{
+								Content: []mcp.Content{&mcp.TextContent{
+									Text: fmt.Sprintf("Insufficient scopes for this operation. Required: %s. "+
+										"Your token is missing scopes needed to access one or more fields in the query.",
+										strings.Join(challengeScopes, " ")),
+								}},
+								IsError: true,
+							}, nil
+						}
+					}
+				}
+			}
 		}
 
 		return s.executeGraphQLQuery(ctx, input.Query, input.Variables)

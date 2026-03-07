@@ -369,3 +369,13 @@ func GetClaimsFromContext(ctx context.Context) (authentication.Claims, bool) {
 	claims, ok := ctx.Value(userClaimsContextKey).(authentication.Claims)
 	return claims, ok
 }
+
+// extractScopesFromContext extracts OAuth scopes from the authenticated claims in context.
+// Returns an empty slice if no claims or no scopes are present.
+func extractScopesFromContext(ctx context.Context) []string {
+	claims, ok := GetClaimsFromContext(ctx)
+	if !ok {
+		return []string{}
+	}
+	return extractScopes(claims)
+}
