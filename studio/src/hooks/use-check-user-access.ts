@@ -8,30 +8,38 @@ import { useUser } from "@/hooks/use-user";
  */
 export function useCheckUserAccess() {
   const user = useUser();
-  return useCallback(({ organizationId, rolesToBe }: {
-    organizationId?: string;
-    rolesToBe: OrganizationRole[];
-  }) => {
-    const org = organizationId
-      ? user?.organizations.find((o) => o.id === organizationId)
-      : user?.currentOrganization;
+  return useCallback(
+    ({
+      organizationId,
+      rolesToBe,
+    }: {
+      organizationId?: string;
+      rolesToBe: OrganizationRole[];
+    }) => {
+      const org = organizationId
+        ? user?.organizations.find((o) => o.id === organizationId)
+        : user?.currentOrganization;
 
-    if (!org?.groups) {
-      return false;
-    }
+      if (!org?.groups) {
+        return false;
+      }
 
-    if (!rolesToBe || rolesToBe.length === 0) {
-      // We expect at least one role to be given, if no role is given, we don't need to perform any check
-      return true;
-    }
-
-    const roles = new Set(org.groups.flatMap((g) => g.rules?.map((r) => r.role) ?? []));
-    for (const role of rolesToBe) {
-      if (roles.has(role)) {
+      if (!rolesToBe || rolesToBe.length === 0) {
+        // We expect at least one role to be given, if no role is given, we don't need to perform any check
         return true;
       }
-    }
 
-    return false;
-  }, [user]);
+      const roles = new Set(
+        org.groups.flatMap((g) => g.rules?.map((r) => r.role) ?? []),
+      );
+      for (const role of rolesToBe) {
+        if (roles.has(role)) {
+          return true;
+        }
+      }
+
+      return false;
+    },
+    [user],
+  );
 }

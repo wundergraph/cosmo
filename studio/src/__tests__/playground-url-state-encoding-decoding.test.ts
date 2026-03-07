@@ -2,7 +2,10 @@ import { compressToEncodedURIComponent } from "lz-string";
 import { describe, expect, test, vi } from "vitest";
 import { PlaygroundUrlState, TabState } from "../components/playground/types";
 import { PLAYGROUND_STATE_QUERY_PARAM } from "../lib/constants";
-import { decompressState, extractStateFromUrl } from "../lib/playground-url-state-decoding";
+import {
+  decompressState,
+  extractStateFromUrl,
+} from "../lib/playground-url-state-decoding";
 import { buildStateToShare } from "../lib/playground-url-state-encoding";
 
 describe("buildStateToShare", () => {
@@ -62,7 +65,9 @@ describe("buildStateToShare", () => {
 
 describe("createCompressedStateUrl", () => {
   test("returns valid URL with compressed query param", async () => {
-    const { createCompressedStateUrl } = await import("../lib/playground-url-state-encoding");
+    const { createCompressedStateUrl } = await import(
+      "../lib/playground-url-state-encoding"
+    );
 
     const state = { operation: "query { test }" };
     const BASE_URL = "https://my.studio.dev";
@@ -78,13 +83,14 @@ describe("createCompressedStateUrl", () => {
   });
 
   test("throws error if compression fails", async () => {
-     // ensure a fresh module state
+    // ensure a fresh module state
     vi.resetModules();
 
     // Mock lz-string's compression to simulate a failure
     // Note: doMock must be followed by re-import
     vi.doMock("lz-string", async () => {
-      const actual = await vi.importActual<typeof import("lz-string")>("lz-string");
+      const actual =
+        await vi.importActual<typeof import("lz-string")>("lz-string");
       return {
         ...actual,
         compressToEncodedURIComponent: () => "",
@@ -92,7 +98,9 @@ describe("createCompressedStateUrl", () => {
     });
 
     // Re-import the module after mocking to ensure mock is applied
-    const { createCompressedStateUrl } = await import("../lib/playground-url-state-encoding");
+    const { createCompressedStateUrl } = await import(
+      "../lib/playground-url-state-encoding"
+    );
 
     expect(() => {
       createCompressedStateUrl({ operation: "query { fail }" });
@@ -107,7 +115,9 @@ describe("decompressState", () => {
       variables: '{ "foo": "bar" }',
     };
 
-    const compressed = compressToEncodedURIComponent(JSON.stringify(originalState));
+    const compressed = compressToEncodedURIComponent(
+      JSON.stringify(originalState),
+    );
     const result = decompressState(compressed);
 
     expect(result).toEqual(originalState);
@@ -116,18 +126,21 @@ describe("decompressState", () => {
   test("throws error if decompressFromEncodedURIComponent fails", async () => {
     // ensure a fresh module state
     vi.resetModules();
-  
+
     vi.doMock("lz-string", async () => {
-      const actual = await vi.importActual<typeof import("lz-string")>("lz-string");
+      const actual =
+        await vi.importActual<typeof import("lz-string")>("lz-string");
       return {
         ...actual,
         decompressFromEncodedURIComponent: () => null, // simulate failure
       };
     });
-  
+
     // re-import after mock is applied
-    const { decompressState } = await import("../lib/playground-url-state-decoding");
-  
+    const { decompressState } = await import(
+      "../lib/playground-url-state-decoding"
+    );
+
     expect(() => {
       decompressState("invalid-compressed-string");
     }).toThrow("Failed to decompress playground state");
@@ -136,15 +149,17 @@ describe("decompressState", () => {
   test("throws error if schema is invalid", async () => {
     // ensure a fresh module state
     vi.resetModules();
-  
+
     // missing required "operation" field
     const badState = { foo: "bar" };
     const compressed = compressToEncodedURIComponent(JSON.stringify(badState));
-  
+
     // re-import decompressState after module reset
     // Note: lz-string doesn't need to be mocked here
-    const { decompressState } = await import("../lib/playground-url-state-decoding");
-  
+    const { decompressState } = await import(
+      "../lib/playground-url-state-decoding"
+    );
+
     expect(() => {
       decompressState(compressed);
     }).toThrow("Failed to decompress playground state");

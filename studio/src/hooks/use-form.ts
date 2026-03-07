@@ -10,7 +10,7 @@ export interface UseZodForm<TFieldValues extends FieldValues = FieldValues>
 }
 
 export const useZodForm = <TFieldValues extends FieldValues = FieldValues>(
-  props: UseZodForm<TFieldValues>
+  props: UseZodForm<TFieldValues>,
 ) => {
   const { schema, ...formProps } = props;
   return useForm<TFieldValues>({
