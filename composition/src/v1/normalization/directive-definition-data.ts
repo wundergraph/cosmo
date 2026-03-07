@@ -6,6 +6,8 @@ import {
   AS,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
+  CACHE_INVALIDATE,
+  CACHE_POPULATE,
   CHANNEL,
   CHANNELS,
   COMPOSE_DIRECTIVE,
@@ -23,35 +25,42 @@ import {
   EDFS_NATS_REQUEST,
   EDFS_NATS_STREAM_CONFIGURATION,
   EDFS_NATS_SUBSCRIBE,
+  ENTITY_CACHE,
   EDFS_REDIS_PUBLISH,
   EDFS_REDIS_SUBSCRIBE,
   ENUM_UPPER,
   ENUM_VALUE_UPPER,
   EXTENDS,
   EXTERNAL,
+  FIELD,
   FIELD_DEFINITION_UPPER,
   FIELDS,
   FOR,
   FROM,
   IMPORT,
   INACCESSIBLE,
+  INCLUDE_HEADERS,
   INPUT_FIELD_DEFINITION_UPPER,
   INPUT_OBJECT_UPPER,
   INT_SCALAR,
   INTERFACE_OBJECT,
   INTERFACE_UPPER,
+  IS,
   KEY,
   LEVELS,
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
+  MAX_AGE,
   NAME,
   OBJECT_UPPER,
   ONE_OF,
   OVERRIDE,
+  PARTIAL_CACHE_LOAD,
   PROPAGATE,
   PROVIDER_ID,
   PROVIDES,
+  QUERY_CACHE,
   REASON,
   REQUIRE_FETCH_REASONS,
   REQUIRES,
@@ -62,6 +71,7 @@ import {
   SCOPE_SCALAR,
   SCOPES,
   SEMANTIC_NON_NULL,
+  SHADOW_MODE,
   SHAREABLE,
   SPECIFIED_BY,
   STREAM_CONFIGURATION,
@@ -78,11 +88,14 @@ import {
 } from '../../utils/string-constants';
 import {
   AUTHENTICATED_DEFINITION,
+  CACHE_INVALIDATE_DEFINITION,
+  CACHE_POPULATE_DEFINITION,
   COMPOSE_DIRECTIVE_DEFINITION,
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
   CONFIGURE_DESCRIPTION_DEFINITION,
   CONNECT_FIELD_RESOLVER_DEFINITION,
   DEPRECATED_DEFINITION,
+  ENTITY_CACHE_DEFINITION,
   EDFS_KAFKA_PUBLISH_DEFINITION,
   EDFS_KAFKA_SUBSCRIBE_DEFINITION,
   EDFS_NATS_PUBLISH_DEFINITION,
@@ -94,11 +107,13 @@ import {
   EXTERNAL_DEFINITION,
   INACCESSIBLE_DEFINITION,
   INTERFACE_OBJECT_DEFINITION,
+  IS_DEFINITION,
   KEY_DEFINITION,
   LINK_DEFINITION,
   ONE_OF_DEFINITION,
   OVERRIDE_DEFINITION,
   PROVIDES_DEFINITION,
+  QUERY_CACHE_DEFINITION,
   REQUIRE_FETCH_REASONS_DEFINITION,
   REQUIRES_DEFINITION,
   REQUIRES_SCOPES_DEFINITION,
@@ -108,7 +123,7 @@ import {
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
 } from '../constants/directive-definitions';
-import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from '../constants/type-nodes';
+import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_INT_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from '../constants/type-nodes';
 
 // Note that arguments with default values are classed as optional and should be placed into `optionalArgumentNames`.
 
@@ -823,4 +838,126 @@ export const TAG_DEFINITION_DATA: DirectiveDefinitionData = {
   node: TAG_DEFINITION,
   optionalArgumentNames: new Set<string>(),
   requiredArgumentNames: new Set<string>([NAME]),
+};
+
+export const CACHE_INVALIDATE_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: CACHE_INVALIDATE,
+  node: CACHE_INVALIDATE_DEFINITION,
+  optionalArgumentNames: new Set<string>(),
+  requiredArgumentNames: new Set<string>(),
+};
+
+export const CACHE_POPULATE_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      MAX_AGE,
+      {
+        name: MAX_AGE,
+        typeNode: stringToNamedTypeNode(INT_SCALAR),
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: CACHE_POPULATE,
+  node: CACHE_POPULATE_DEFINITION,
+  optionalArgumentNames: new Set<string>([MAX_AGE]),
+  requiredArgumentNames: new Set<string>(),
+};
+
+export const ENTITY_CACHE_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      MAX_AGE,
+      {
+        name: MAX_AGE,
+        typeNode: REQUIRED_INT_TYPE_NODE,
+      },
+    ],
+    [
+      INCLUDE_HEADERS,
+      {
+        name: INCLUDE_HEADERS,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+      },
+    ],
+    [
+      PARTIAL_CACHE_LOAD,
+      {
+        name: PARTIAL_CACHE_LOAD,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+      },
+    ],
+    [
+      SHADOW_MODE,
+      {
+        name: SHADOW_MODE,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([OBJECT_UPPER]),
+  name: ENTITY_CACHE,
+  node: ENTITY_CACHE_DEFINITION,
+  optionalArgumentNames: new Set<string>([INCLUDE_HEADERS, PARTIAL_CACHE_LOAD, SHADOW_MODE]),
+  requiredArgumentNames: new Set<string>([MAX_AGE]),
+};
+
+export const IS_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      FIELD,
+      {
+        name: FIELD,
+        typeNode: REQUIRED_STRING_TYPE_NODE,
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([ARGUMENT_DEFINITION_UPPER]),
+  name: IS,
+  node: IS_DEFINITION,
+  optionalArgumentNames: new Set<string>(),
+  requiredArgumentNames: new Set<string>([FIELD]),
+};
+
+export const QUERY_CACHE_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      MAX_AGE,
+      {
+        name: MAX_AGE,
+        typeNode: REQUIRED_INT_TYPE_NODE,
+      },
+    ],
+    [
+      INCLUDE_HEADERS,
+      {
+        name: INCLUDE_HEADERS,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+      },
+    ],
+    [
+      SHADOW_MODE,
+      {
+        name: SHADOW_MODE,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+        defaultValue: { kind: Kind.BOOLEAN, value: false },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: QUERY_CACHE,
+  node: QUERY_CACHE_DEFINITION,
+  optionalArgumentNames: new Set<string>([INCLUDE_HEADERS, SHADOW_MODE]),
+  requiredArgumentNames: new Set<string>([MAX_AGE]),
 };

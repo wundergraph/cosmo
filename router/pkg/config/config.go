@@ -944,6 +944,51 @@ type AutomaticPersistedQueriesConfig struct {
 	Storage AutomaticPersistedQueriesStorageConfig `yaml:"storage"`
 }
 
+type EntityCachingConfiguration struct {
+	Enabled            bool                          `yaml:"enabled" envDefault:"false" env:"ENTITY_CACHING_ENABLED"`
+	GlobalCacheKeyPrefix string                      `yaml:"global_cache_key_prefix,omitempty" env:"ENTITY_CACHING_GLOBAL_CACHE_KEY_PREFIX"`
+	L1                 EntityCachingL1Configuration  `yaml:"l1"`
+	L2                 EntityCachingL2Configuration  `yaml:"l2"`
+	Analytics          EntityCachingAnalyticsConfig  `yaml:"analytics"`
+	Subgraphs          []EntityCachingSubgraphConfig `yaml:"subgraphs,omitempty"`
+}
+
+type EntityCachingL1Configuration struct {
+	Enabled bool `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_L1_ENABLED"`
+}
+
+type EntityCachingL2Configuration struct {
+	Enabled        bool                               `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_L2_ENABLED"`
+	Storage        EntityCachingL2StorageConfig        `yaml:"storage"`
+	CircuitBreaker EntityCachingCircuitBreakerConfig   `yaml:"circuit_breaker"`
+}
+
+type EntityCachingL2StorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"ENTITY_CACHING_L2_STORAGE_PROVIDER_ID"`
+	KeyPrefix  string `yaml:"key_prefix,omitempty" envDefault:"cosmo_entity_cache" env:"ENTITY_CACHING_L2_STORAGE_KEY_PREFIX"`
+}
+
+type EntityCachingCircuitBreakerConfig struct {
+	Enabled          bool          `yaml:"enabled" envDefault:"false" env:"ENTITY_CACHING_L2_CIRCUIT_BREAKER_ENABLED"`
+	FailureThreshold int           `yaml:"failure_threshold" envDefault:"5" env:"ENTITY_CACHING_L2_CIRCUIT_BREAKER_FAILURE_THRESHOLD"`
+	CooldownPeriod   time.Duration `yaml:"cooldown_period" envDefault:"10s" env:"ENTITY_CACHING_L2_CIRCUIT_BREAKER_COOLDOWN_PERIOD"`
+}
+
+type EntityCachingAnalyticsConfig struct {
+	Enabled        bool `yaml:"enabled" envDefault:"false" env:"ENTITY_CACHING_ANALYTICS_ENABLED"`
+	HashEntityKeys bool `yaml:"hash_entity_keys" envDefault:"false" env:"ENTITY_CACHING_ANALYTICS_HASH_ENTITY_KEYS"`
+}
+
+type EntityCachingSubgraphConfig struct {
+	Name     string                      `yaml:"name"`
+	Entities []EntityCachingEntityConfig `yaml:"entities,omitempty"`
+}
+
+type EntityCachingEntityConfig struct {
+	Type      string `yaml:"type"`
+	CacheName string `yaml:"cache_name,omitempty" envDefault:"default"`
+}
+
 type AccessLogsConfig struct {
 	Enabled       bool                      `yaml:"enabled" env:"ACCESS_LOGS_ENABLED" envDefault:"true"`
 	Level         string                    `yaml:"level" env:"ACCESS_LOGS_LEVEL" envDefault:"info"`
@@ -1168,6 +1213,7 @@ type Config struct {
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
 
 	StorageProviders               StorageProviders                `yaml:"storage_providers"`
+	EntityCaching                  EntityCachingConfiguration      `yaml:"entity_caching,omitempty"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
 	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`

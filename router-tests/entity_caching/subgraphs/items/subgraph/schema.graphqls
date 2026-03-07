@@ -1,0 +1,44 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: ["@key"]
+  )
+
+directive @entityCache(
+  maxAge: Int!
+  includeHeaders: Boolean = false
+  partialCacheLoad: Boolean = false
+  shadowMode: Boolean = false
+) on OBJECT
+
+directive @queryCache(
+  maxAge: Int!
+  includeHeaders: Boolean = false
+  shadowMode: Boolean = false
+) on FIELD_DEFINITION
+
+directive @cacheInvalidate on FIELD_DEFINITION
+
+directive @cachePopulate(maxAge: Int) on FIELD_DEFINITION
+
+type Query {
+  item(id: ID!): Item @queryCache(maxAge: 300)
+  items: [Item!]! @queryCache(maxAge: 300)
+}
+
+type Mutation {
+  updateItem(id: ID!, name: String!): Item @cacheInvalidate
+  deleteItem(id: ID!): Item @cacheInvalidate
+  createItem(name: String!, category: String!): Item! @cachePopulate(maxAge: 60)
+}
+
+type Subscription {
+  itemUpdated: Item @cacheInvalidate
+  itemCreated: Item @cachePopulate
+}
+
+type Item @key(fields: "id") @entityCache(maxAge: 300) {
+  id: ID!
+  name: String!
+  category: String!
+}

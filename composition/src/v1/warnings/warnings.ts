@@ -187,6 +187,24 @@ export function singleSubgraphInputFieldOneOfWarning({
   });
 }
 
+export function incompleteQueryCacheKeyMappingWarning(
+  subgraphName: string,
+  fieldCoords: string,
+  entityType: string,
+  unmappedKeyField: string,
+): Warning {
+  return new Warning({
+    message:
+      `Field "${fieldCoords}" has @queryCache returning "${entityType}" but @key field "${unmappedKeyField}"` +
+      ` cannot be mapped to any argument. Cache reads are disabled for this field` +
+      ` (cache writes/population still work). Add an argument named "${unmappedKeyField}"` +
+      ` or use @is(field: "${unmappedKeyField}") to enable cache reads.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
 export function singleFederatedInputFieldOneOfWarning({
   fieldName,
   typeName,

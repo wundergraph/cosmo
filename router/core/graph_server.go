@@ -23,6 +23,7 @@ import (
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -102,7 +103,11 @@ type (
 		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
-		headerPropagation       *HeaderPropagation
+		headerPropagation          *HeaderPropagation
+		entityCacheInstances       map[string]resolve.LoaderCache
+		entityCacheKeyInterceptors []EntityCacheKeyInterceptor
+		otlpEntityCacheMetrics     *rmetric.EntityCacheMetrics
+		promEntityCacheMetrics     *rmetric.EntityCacheMetrics
 	}
 )
 
@@ -191,9 +196,17 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
 		},
-		storageProviders:  &r.storageProviders,
-		headerPropagation: r.headerPropagation,
+		storageProviders:           &r.storageProviders,
+		headerPropagation:          r.headerPropagation,
+		entityCacheKeyInterceptors: r.entityCacheKeyInterceptors,
 	}
+
+	entityCacheInstances, err := r.buildEntityCacheInstances()
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("failed to build entity cache instances: %w", err)
+	}
+	s.entityCacheInstances = entityCacheInstances
 
 	baseOtelAttributes := []attribute.KeyValue{
 		otel.WgRouterVersion.String(Version),
@@ -247,6 +260,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	if err := s.setupEngineStatistics(mappedMetricAttributes); err != nil {
 		return nil, fmt.Errorf("failed to setup engine statistics: %w", err)
+	}
+
+	if err := s.setupEntityCacheMetrics(mappedMetricAttributes); err != nil {
+		return nil, fmt.Errorf("failed to setup entity cache metrics: %w", err)
 	}
 
 	if s.registrationInfo != nil {
@@ -536,6 +553,25 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 	)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *graphServer) setupEntityCacheMetrics(baseAttributes []attribute.KeyValue) error {
+	if !s.entityCachingConfig.Enabled || !s.entityCachingConfig.Analytics.Enabled {
+		return nil
+	}
+
+	var err error
+	s.otlpEntityCacheMetrics, err = rmetric.NewEntityCacheMetrics(baseAttributes, s.otlpMeterProvider)
+	if err != nil {
+		return fmt.Errorf("failed to create entity cache metrics for OTLP: %w", err)
+	}
+
+	s.promEntityCacheMetrics, err = rmetric.NewEntityCacheMetrics(baseAttributes, s.promMeterProvider)
+	if err != nil {
+		return fmt.Errorf("failed to create entity cache metrics for Prometheus: %w", err)
 	}
 
 	return nil
@@ -1294,6 +1330,8 @@ func (s *graphServer) buildGraphMux(
 			HeartbeatInterval:              s.subscriptionHeartbeatInterval,
 			PluginsEnabled:                 s.plugins.Enabled,
 			InstanceData:                   s.instanceData,
+			EntityCacheInstances:           s.entityCacheInstances,
+			EntityCachingConfig:            &s.entityCachingConfig,
 		},
 	)
 	if err != nil {
@@ -1469,6 +1507,20 @@ func (s *graphServer) buildGraphMux(
 	if s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled {
 		handlerOpts.ApolloSubscriptionMultipartPrintBoundary = s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled
 	}
+
+	handlerOpts.EntityCachingL1Enabled = s.entityCachingConfig.Enabled && s.entityCachingConfig.L1.Enabled
+	handlerOpts.EntityCachingL2Enabled = s.entityCachingConfig.Enabled && s.entityCachingConfig.L2.Enabled
+	handlerOpts.EntityCachingAnalyticsEnabled = s.entityCachingConfig.Enabled && s.entityCachingConfig.Analytics.Enabled
+	handlerOpts.EntityCacheKeyInterceptors = s.entityCacheKeyInterceptors
+
+	var entityCacheMetricsList []*rmetric.EntityCacheMetrics
+	if s.otlpEntityCacheMetrics != nil {
+		entityCacheMetricsList = append(entityCacheMetricsList, s.otlpEntityCacheMetrics)
+	}
+	if s.promEntityCacheMetrics != nil {
+		entityCacheMetricsList = append(entityCacheMetricsList, s.promEntityCacheMetrics)
+	}
+	handlerOpts.EntityCacheMetrics = entityCacheMetricsList
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
 	executor.Resolver.SetAsyncErrorWriter(graphqlHandler)

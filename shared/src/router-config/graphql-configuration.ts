@@ -3,9 +3,14 @@ import {
   ArgumentConfiguration,
   ArgumentSource,
   AuthorizationConfiguration,
+  CacheInvalidateConfiguration,
+  CachePopulateConfiguration,
   DataSourceCustomEvents,
   EngineEventConfiguration,
+  EntityCacheConfiguration,
+  EntityCacheFieldMapping,
   EntityInterfaceConfiguration,
+  EntityKeyMapping,
   EventType,
   FieldConfiguration,
   FieldCoordinates,
@@ -15,6 +20,7 @@ import {
   NatsStreamConfiguration,
   RedisEventConfiguration,
   RequiredField,
+  RootFieldCacheConfiguration,
   Scopes,
   SubscriptionFieldCondition,
   SubscriptionFilterCondition,
@@ -41,6 +47,10 @@ export type DataSourceConfiguration = {
   requires: RequiredField[];
   entityInterfaces: EntityInterfaceConfiguration[];
   interfaceObjects: EntityInterfaceConfiguration[];
+  entityCacheConfigurations: EntityCacheConfiguration[];
+  rootFieldCacheConfigurations: RootFieldCacheConfiguration[];
+  cachePopulateConfigurations: CachePopulateConfiguration[];
+  cacheInvalidateConfigurations: CacheInvalidateConfiguration[];
 };
 
 function generateFieldSetConditions(requiredField: RequiredFieldConfiguration): Array<FieldSetCondition> | undefined {
@@ -122,6 +132,10 @@ export function configurationDatasToDataSourceConfiguration(
     requires: [],
     entityInterfaces: [],
     interfaceObjects: [],
+    entityCacheConfigurations: [],
+    rootFieldCacheConfigurations: [],
+    cachePopulateConfigurations: [],
+    cacheInvalidateConfigurations: [],
   };
   for (const data of dataByTypeName.values()) {
     const typeName = data.typeName;
@@ -214,6 +228,67 @@ export function configurationDatasToDataSourceConfiguration(
     output.events.nats.push(...natsEventConfigurations);
     output.events.kafka.push(...kafkaEventConfigurations);
     output.events.redis.push(...redisEventConfigurations);
+    if (data.entityCacheConfigurations) {
+      for (const ec of data.entityCacheConfigurations) {
+        output.entityCacheConfigurations.push(
+          new EntityCacheConfiguration({
+            typeName: ec.typeName,
+            maxAgeSeconds: BigInt(ec.maxAgeSeconds),
+            includeHeaders: ec.includeHeaders,
+            partialCacheLoad: ec.partialCacheLoad,
+            shadowMode: ec.shadowMode,
+          }),
+        );
+      }
+    }
+    if (data.rootFieldCacheConfigurations) {
+      for (const rfc of data.rootFieldCacheConfigurations) {
+        output.rootFieldCacheConfigurations.push(
+          new RootFieldCacheConfiguration({
+            fieldName: rfc.fieldName,
+            maxAgeSeconds: BigInt(rfc.maxAgeSeconds),
+            includeHeaders: rfc.includeHeaders,
+            shadowMode: rfc.shadowMode,
+            entityTypeName: rfc.entityTypeName,
+            entityKeyMappings: rfc.entityKeyMappings.map(
+              (m) =>
+                new EntityKeyMapping({
+                  entityTypeName: m.entityTypeName,
+                  fieldMappings: m.fieldMappings.map(
+                    (fm) =>
+                      new EntityCacheFieldMapping({
+                        entityKeyField: fm.entityKeyField,
+                        argumentPath: fm.argumentPath,
+                      }),
+                  ),
+                }),
+            ),
+          }),
+        );
+      }
+    }
+    if (data.cachePopulateConfigurations) {
+      for (const cp of data.cachePopulateConfigurations) {
+        output.cachePopulateConfigurations.push(
+          new CachePopulateConfiguration({
+            fieldName: cp.fieldName,
+            operationType: cp.operationType,
+            maxAgeSeconds: cp.maxAgeSeconds == null ? undefined : BigInt(cp.maxAgeSeconds),
+          }),
+        );
+      }
+    }
+    if (data.cacheInvalidateConfigurations) {
+      for (const ci of data.cacheInvalidateConfigurations) {
+        output.cacheInvalidateConfigurations.push(
+          new CacheInvalidateConfiguration({
+            fieldName: ci.fieldName,
+            operationType: ci.operationType,
+            entityTypeName: ci.entityTypeName,
+          }),
+        );
+      }
+    }
   }
   return output;
 }

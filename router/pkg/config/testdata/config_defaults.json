@@ -503,6 +503,30 @@
     "Redis": null,
     "FileSystem": null
   },
+  "EntityCaching": {
+    "Enabled": false,
+    "GlobalCacheKeyPrefix": "",
+    "L1": {
+      "Enabled": true
+    },
+    "L2": {
+      "Enabled": true,
+      "Storage": {
+        "ProviderID": "",
+        "KeyPrefix": "cosmo_entity_cache"
+      },
+      "CircuitBreaker": {
+        "Enabled": false,
+        "FailureThreshold": 5,
+        "CooldownPeriod": 10000000000
+      }
+    },
+    "Analytics": {
+      "Enabled": false,
+      "HashEntityKeys": false
+    },
+    "Subgraphs": null
+  },
   "ExecutionConfig": {
     "File": {
       "Path": "",
