@@ -35,7 +35,7 @@ func TestEntityCaching(t *testing.T) {
 			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
 			detailsAfterFirst := counters.details.Load()
-			require.GreaterOrEqual(t, detailsAfterFirst, int64(1))
+			require.Equal(t, int64(1), detailsAfterFirst)
 
 			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
@@ -43,7 +43,7 @@ func TestEntityCaching(t *testing.T) {
 			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res2.Body)
 
 			// Details subgraph should NOT be called again (cache hit)
-			require.Equal(t, detailsAfterFirst, counters.details.Load())
+			require.Equal(t, int64(1), counters.details.Load())
 		})
 	})
 
@@ -69,7 +69,7 @@ func TestEntityCaching(t *testing.T) {
 			require.JSONEq(t, `{"data":{"item":{"id":"2","name":"Gadget","description":"A high-tech gadget with many features"}}}`, res2.Body)
 
 			// Both entities should produce cache entries
-			require.Greater(t, cache.Len(), 0)
+			require.Equal(t, 2, cache.Len())
 
 			// Re-fetch id:"1" — verify response correctness
 			res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -97,13 +97,13 @@ func TestEntityCaching(t *testing.T) {
 			require.Contains(t, res.Body, `"rating"`)
 
 			detailsAfterFirst := counters.details.Load()
-			require.GreaterOrEqual(t, detailsAfterFirst, int64(1))
+			require.Equal(t, int64(1), detailsAfterFirst)
 
 			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ items { id description rating } }`,
 			})
 			require.Equal(t, res.Body, res2.Body)
-			require.Equal(t, detailsAfterFirst, counters.details.Load())
+			require.Equal(t, int64(1), counters.details.Load())
 		})
 	})
 
@@ -124,7 +124,7 @@ func TestEntityCaching(t *testing.T) {
 				Query: `{ item(id: "1") { id description } }`,
 			})
 
-			require.Greater(t, cache.Len(), 0)
+			require.Equal(t, 1, cache.Len())
 		})
 	})
 
@@ -144,13 +144,13 @@ func TestEntityCaching(t *testing.T) {
 				Query: `{ item(id: "1") { id name description } }`,
 			})
 			detailsFirst := counters.details.Load()
-			require.GreaterOrEqual(t, detailsFirst, int64(1))
+			require.Equal(t, int64(1), detailsFirst)
 
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
 			// Details subgraph called again (no caching)
-			require.Greater(t, counters.details.Load(), detailsFirst)
+			require.Equal(t, int64(2), counters.details.Load())
 		})
 	})
 
@@ -170,14 +170,14 @@ func TestEntityCaching(t *testing.T) {
 				Query: `{ item(id: "1") { id description } }`,
 			})
 			detailsAfterFirst := counters.details.Load()
-			require.GreaterOrEqual(t, detailsAfterFirst, int64(1))
+			require.Equal(t, int64(1), detailsAfterFirst)
 
 			// Fetch available (from inventory subgraph)
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id available } }`,
 			})
 			inventoryAfterFirst := counters.inventory.Load()
-			require.GreaterOrEqual(t, inventoryAfterFirst, int64(1))
+			require.Equal(t, int64(1), inventoryAfterFirst)
 
 			// Re-fetch both: should be cached
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -244,8 +244,8 @@ func TestEntityCaching(t *testing.T) {
 				Query: `{ item(id: "1") { id name description } }`,
 			})
 			// Shadow mode: subgraph ALWAYS called, but cache is populated
-			require.Greater(t, counters.details.Load(), detailsFirst)
-			require.Greater(t, cache.Len(), 0)
+			require.Equal(t, detailsFirst+1, counters.details.Load())
+			require.Equal(t, 1, cache.Len())
 		})
 	})
 
@@ -275,7 +275,7 @@ func TestEntityCaching(t *testing.T) {
 			})
 
 			// Details subgraph should be called for the non-cached entities
-			require.Greater(t, counters.details.Load(), detailsAfterWarm)
+			require.Equal(t, detailsAfterWarm+1, counters.details.Load())
 		})
 	})
 
@@ -311,7 +311,7 @@ func TestEntityCaching(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id description } }`,
 			})
-			require.Greater(t, counters.details.Load(), detailsAfterFirst)
+			require.Equal(t, detailsAfterFirst+1, counters.details.Load())
 		})
 	})
 
@@ -344,7 +344,7 @@ func TestEntityCaching(t *testing.T) {
 				Query: `{ item(id: "1") { id description } }`,
 			})
 
-			require.Greater(t, customCache.Len(), 0)
+			require.Equal(t, 1, customCache.Len())
 		})
 	})
 
@@ -387,7 +387,7 @@ func TestEntityCaching(t *testing.T) {
 				Header: map[string][]string{"X-Tenant": {"B"}},
 			})
 			detailsAfterB := counters.details.Load()
-			require.Greater(t, detailsAfterB, detailsAfterA)
+			require.Equal(t, detailsAfterA+1, detailsAfterB)
 
 			// Request with header A again — should hit
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -447,17 +447,17 @@ func TestEntityCaching(t *testing.T) {
 			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
 			detailsAfterFirst := counters.details.Load()
-			require.GreaterOrEqual(t, detailsAfterFirst, int64(1))
+			require.Equal(t, int64(1), detailsAfterFirst)
 
 			// Cache should have entries from entity resolution
-			require.Greater(t, cache.Len(), 0)
+			require.Equal(t, 1, cache.Len())
 
 			// Same query — entity cache hit
 			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
 			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res2.Body)
-			require.Equal(t, detailsAfterFirst, counters.details.Load())
+			require.Equal(t, int64(1), counters.details.Load())
 		})
 	})
 
@@ -480,17 +480,17 @@ func TestEntityCaching(t *testing.T) {
 			require.Contains(t, res.Body, `"description"`)
 
 			detailsAfterFirst := counters.details.Load()
-			require.GreaterOrEqual(t, detailsAfterFirst, int64(1))
+			require.Equal(t, int64(1), detailsAfterFirst)
 
-			// Cache should have entries
-			require.Greater(t, cache.Len(), 0)
+			// Cache should have entries (5 items in dataset)
+			require.Equal(t, 5, cache.Len())
 
 			// Same query — entity cache hit
 			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ items { id name description } }`,
 			})
 			require.Equal(t, res.Body, res2.Body)
-			require.Equal(t, detailsAfterFirst, counters.details.Load())
+			require.Equal(t, int64(1), counters.details.Load())
 		})
 	})
 
@@ -514,7 +514,7 @@ func TestEntityCaching(t *testing.T) {
 			})
 
 			// Different args = different cache keys, both hit items subgraph
-			require.GreaterOrEqual(t, counters.items.Load(), int64(2))
+			require.Equal(t, int64(2), counters.items.Load())
 		})
 	})
 
@@ -541,7 +541,7 @@ func TestEntityCaching(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name } }`,
 			})
-			require.Greater(t, counters.items.Load(), itemsFirst)
+			require.Equal(t, itemsFirst+1, counters.items.Load())
 		})
 	})
 
@@ -577,7 +577,7 @@ func TestEntityCaching(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.Greater(t, counters.details.Load(), detailsAfterWarm)
+			require.Equal(t, detailsAfterWarm+1, counters.details.Load())
 		})
 	})
 
@@ -685,7 +685,7 @@ func TestEntityCaching(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.Greater(t, counters.details.Load(), detailsAfterWarm)
+			require.Equal(t, detailsAfterWarm+1, counters.details.Load())
 		})
 	})
 
@@ -729,7 +729,7 @@ func TestEntityCaching(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, 5*time.Second)
 
 			// @cachePopulate should have written the entity data to L2 cache
-			require.Greater(t, cache.Len(), 0)
+			require.Equal(t, 1, cache.Len())
 		})
 	})
 
@@ -775,7 +775,7 @@ func TestEntityCaching(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.Greater(t, counters.details.Load(), detailsAfterWarm+1)
+			require.Equal(t, detailsAfterWarm+2, counters.details.Load())
 		})
 	})
 
