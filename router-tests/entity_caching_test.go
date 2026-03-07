@@ -186,7 +186,7 @@ func TestEntityCaching(t *testing.T) {
 			require.Contains(t, res.Body, `"products"`)
 
 			// The custom cache should have entries (Employee on products routed to "custom")
-			require.Greater(t, customCache.Len(), 0)
+			require.Equal(t, 1, customCache.Len())
 		})
 	})
 
@@ -218,7 +218,7 @@ func TestEntityCaching(t *testing.T) {
 
 			// Second request: in shadow mode, subgraph ALWAYS called
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: crossSubgraphQuery})
-			require.Greater(t, xEnv.SubgraphRequestCount.Products.Load(), productsFirst)
+			require.Equal(t, productsFirst+1, xEnv.SubgraphRequestCount.Products.Load())
 		})
 	})
 
@@ -258,7 +258,7 @@ func TestEntityCaching(t *testing.T) {
 
 			// Second request: products subgraph called again (no caching)
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: crossSubgraphQuery})
-			require.Greater(t, xEnv.SubgraphRequestCount.Products.Load(), productsFirst)
+			require.Equal(t, productsFirst+1, xEnv.SubgraphRequestCount.Products.Load())
 		})
 	})
 
@@ -277,7 +277,7 @@ func TestEntityCaching(t *testing.T) {
 			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: crossSubgraphQuery})
 
 			// After first request, cache should have entries
-			require.Greater(t, cache.Len(), 0)
+			require.Equal(t, 1, cache.Len())
 		})
 	})
 }
