@@ -1,0 +1,18 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: ["@key"]
+  )
+
+directive @entityCache(
+  maxAge: Int!
+  includeHeaders: Boolean = false
+  partialCacheLoad: Boolean = false
+  shadowMode: Boolean = false
+) on OBJECT
+
+type Item @key(fields: "id") @entityCache(maxAge: 300) {
+  id: ID!
+  available: Boolean!
+  count: Int!
+}

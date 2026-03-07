@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strings"
 	"time"
 
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -36,8 +37,9 @@ type Loader struct {
 	resolver          FactoryResolver
 	subscriptionHooks subscriptionHooks
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
-	includeInfo bool
-	logger      *zap.Logger
+	includeInfo        bool
+	logger             *zap.Logger
+	entityCachingConfig *config.EntityCachingConfiguration
 }
 
 type InstanceData struct {
@@ -340,6 +342,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 
 	for _, in := range engineConfig.DatasourceConfigurations {
 		var out plan.DataSource
+		dataSourceName := l.subgraphName(subgraphs, in.Id)
 
 		switch in.Kind {
 		case nodev1.DataSourceKind_STATIC:
@@ -351,7 +354,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 			out, err = plan.NewDataSourceConfiguration[staticdatasource.Configuration](
 				in.Id,
 				factory,
-				l.dataSourceMetaData(in),
+				l.dataSourceMetaData(in, dataSourceName),
 				staticdatasource.Configuration{
 					Data: config.LoadStringVariable(in.CustomStatic.Data),
 				},
@@ -474,8 +477,6 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				return nil, providers, fmt.Errorf("error creating custom configuration for data source %s: %w", in.Id, err)
 			}
 
-			dataSourceName := l.subgraphName(subgraphs, in.Id)
-
 			factory, err := l.resolver.ResolveGraphqlFactory(dataSourceName)
 			if err != nil {
 				return nil, providers, err
@@ -485,7 +486,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 				in.Id,
 				dataSourceName,
 				factory,
-				l.dataSourceMetaData(in),
+				l.dataSourceMetaData(in, dataSourceName),
 				customConfiguration,
 			)
 			if err != nil {
@@ -495,7 +496,7 @@ func (l *Loader) Load(engineConfig *nodev1.EngineConfiguration, subgraphs []*nod
 		case nodev1.DataSourceKind_PUBSUB:
 			pubSubDS = append(pubSubDS, pubsub.DataSourceConfigurationWithMetadata{
 				Configuration: in,
-				Metadata:      l.dataSourceMetaData(in),
+				Metadata:      l.dataSourceMetaData(in, dataSourceName),
 			})
 		default:
 			return nil, providers, fmt.Errorf("unknown data source type %q", in.Kind)
@@ -570,7 +571,7 @@ func (l *Loader) subgraphName(subgraphs []*nodev1.Subgraph, dataSourceID string)
 	return ""
 }
 
-func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.DataSourceMetadata {
+func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraphName string) *plan.DataSourceMetadata {
 	var d plan.DirectiveConfigurations = make([]plan.DirectiveConfiguration, 0, len(in.Directives))
 
 	out := &plan.DataSourceMetadata{
@@ -665,7 +666,120 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		})
 	}
 
+	// Entity caching configurations
+	for _, ec := range in.EntityCacheConfigurations {
+		cacheName := l.resolveEntityCacheName(subgraphName, ec.TypeName)
+		out.FederationMetaData.EntityCaching = append(out.FederationMetaData.EntityCaching, plan.EntityCacheConfiguration{
+			TypeName:                    ec.TypeName,
+			CacheName:                   cacheName,
+			TTL:                         time.Duration(ec.MaxAgeSeconds) * time.Second,
+			IncludeSubgraphHeaderPrefix: ec.IncludeHeaders,
+			EnablePartialCacheLoad:      ec.PartialCacheLoad,
+			ShadowMode:                  ec.ShadowMode,
+			HashAnalyticsKeys:           l.entityCachingConfig != nil && l.entityCachingConfig.Analytics.HashEntityKeys,
+		})
+	}
+
+	// Root field cache configurations
+	for _, rfc := range in.RootFieldCacheConfigurations {
+		cacheName := l.resolveEntityCacheName(subgraphName, rfc.EntityTypeName)
+		var mappings []plan.EntityKeyMapping
+		for _, m := range rfc.EntityKeyMappings {
+			var fieldMappings []plan.FieldMapping
+			for _, fm := range m.FieldMappings {
+				fieldMappings = append(fieldMappings, plan.FieldMapping{
+					EntityKeyField: fm.EntityKeyField,
+					ArgumentPath:   fm.ArgumentPath,
+				})
+			}
+			mappings = append(mappings, plan.EntityKeyMapping{
+				EntityTypeName: m.EntityTypeName,
+				FieldMappings:  fieldMappings,
+			})
+		}
+		out.FederationMetaData.RootFieldCaching = append(out.FederationMetaData.RootFieldCaching, plan.RootFieldCacheConfiguration{
+			TypeName:                    rfc.EntityTypeName,
+			FieldName:                   rfc.FieldName,
+			CacheName:                   cacheName,
+			TTL:                         time.Duration(rfc.MaxAgeSeconds) * time.Second,
+			IncludeSubgraphHeaderPrefix: rfc.IncludeHeaders,
+			ShadowMode:                  rfc.ShadowMode,
+			EntityKeyMappings:           mappings,
+		})
+	}
+
+	// Mutation/subscription cache populate
+	for _, cp := range in.CachePopulateConfigurations {
+		if strings.EqualFold(cp.OperationType, "subscription") {
+			for _, ec := range in.EntityCacheConfigurations {
+				ttl := time.Duration(ec.MaxAgeSeconds) * time.Second
+				if cp.MaxAgeSeconds != nil {
+					ttl = time.Duration(*cp.MaxAgeSeconds) * time.Second
+				}
+				cacheName := l.resolveEntityCacheName(subgraphName, ec.TypeName)
+				out.FederationMetaData.SubscriptionEntityPopulation = append(
+					out.FederationMetaData.SubscriptionEntityPopulation,
+					plan.SubscriptionEntityPopulationConfiguration{
+						TypeName:                    ec.TypeName,
+						CacheName:                   cacheName,
+						TTL:                         ttl,
+						IncludeSubgraphHeaderPrefix: ec.IncludeHeaders,
+					},
+				)
+			}
+		} else {
+			out.FederationMetaData.MutationFieldCaching = append(out.FederationMetaData.MutationFieldCaching, plan.MutationFieldCacheConfiguration{
+				FieldName:                     cp.FieldName,
+				EnableEntityL2CachePopulation: true,
+			})
+		}
+	}
+
+	// Mutation/subscription cache invalidation
+	for _, ci := range in.CacheInvalidateConfigurations {
+		if strings.EqualFold(ci.OperationType, "subscription") {
+			cacheName := l.resolveEntityCacheName(subgraphName, ci.EntityTypeName)
+			var includeHeaders bool
+			for _, ec := range in.EntityCacheConfigurations {
+				if ec.TypeName == ci.EntityTypeName {
+					includeHeaders = ec.IncludeHeaders
+					break
+				}
+			}
+			out.FederationMetaData.SubscriptionEntityPopulation = append(
+				out.FederationMetaData.SubscriptionEntityPopulation,
+				plan.SubscriptionEntityPopulationConfiguration{
+					TypeName:                    ci.EntityTypeName,
+					CacheName:                   cacheName,
+					IncludeSubgraphHeaderPrefix: includeHeaders,
+					EnableInvalidationOnKeyOnly: true,
+				},
+			)
+		} else {
+			out.FederationMetaData.MutationCacheInvalidation = append(out.FederationMetaData.MutationCacheInvalidation, plan.MutationCacheInvalidationConfiguration{
+				FieldName:      ci.FieldName,
+				EntityTypeName: ci.EntityTypeName,
+			})
+		}
+	}
+
 	return out
+}
+
+func (l *Loader) resolveEntityCacheName(subgraphName, typeName string) string {
+	if l.entityCachingConfig == nil {
+		return "default"
+	}
+	for _, sg := range l.entityCachingConfig.Subgraphs {
+		if sg.Name == subgraphName {
+			for _, e := range sg.Entities {
+				if e.Type == typeName && e.CacheName != "" {
+					return e.CacheName
+				}
+			}
+		}
+	}
+	return "default"
 }
 
 func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfiguration) bool {

@@ -196,6 +196,7 @@ func optionsFromResources(logger *zap.Logger, config *config.Config, reloadPersi
 		WithApolloCompatibilityFlagsConfig(config.ApolloCompatibilityFlags),
 		WithApolloRouterCompatibilityFlags(config.ApolloRouterCompatibilityFlags),
 		WithStorageProviders(config.StorageProviders),
+		WithEntityCaching(config.EntityCaching),
 		WithGraphQLPath(config.GraphQLPath),
 		WithModulesConfig(config.Modules),
 		WithGracePeriod(config.GracePeriod),

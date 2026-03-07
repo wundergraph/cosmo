@@ -92,4 +92,47 @@ export type ConfigurationData = {
   keys?: RequiredFieldConfiguration[];
   requireFetchReasonsFieldNames?: Array<FieldName>;
   requires?: RequiredFieldConfiguration[];
+  entityCacheConfigurations?: EntityCacheConfig[];
+  rootFieldCacheConfigurations?: RootFieldCacheConfig[];
+  cachePopulateConfigurations?: CachePopulateConfig[];
+  cacheInvalidateConfigurations?: CacheInvalidateConfig[];
+};
+
+export type EntityCacheConfig = {
+  typeName: string;
+  maxAgeSeconds: number;
+  includeHeaders: boolean;
+  partialCacheLoad: boolean;
+  shadowMode: boolean;
+};
+
+export type RootFieldCacheConfig = {
+  fieldName: string;
+  maxAgeSeconds: number;
+  includeHeaders: boolean;
+  shadowMode: boolean;
+  entityTypeName: string;
+  entityKeyMappings: EntityKeyMappingConfig[];
+};
+
+export type EntityKeyMappingConfig = {
+  entityTypeName: string;
+  fieldMappings: FieldMappingConfig[];
+};
+
+export type FieldMappingConfig = {
+  entityKeyField: string;
+  argumentPath: string[];
+};
+
+export type CachePopulateConfig = {
+  fieldName: string;
+  operationType: string;
+  maxAgeSeconds?: number;
+};
+
+export type CacheInvalidateConfig = {
+  fieldName: string;
+  operationType: string;
+  entityTypeName: string;
 };

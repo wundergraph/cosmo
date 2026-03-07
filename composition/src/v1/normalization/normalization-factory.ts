@@ -165,6 +165,20 @@ import {
   unknownTypeInFieldSetErrorMessage,
   unparsableFieldSetErrorMessage,
   unparsableFieldSetSelectionErrorMessage,
+  entityCacheWithoutKeyErrorMessage,
+  queryCacheOnNonQueryFieldErrorMessage,
+  queryCacheOnNonEntityReturnTypeErrorMessage,
+  queryCacheReturnTypeWithoutEntityCacheErrorMessage,
+  maxAgeNotPositiveIntegerErrorMessage,
+  isWithoutQueryCacheErrorMessage,
+  isReferencesUnknownKeyFieldErrorMessage,
+  duplicateKeyFieldMappingErrorMessage,
+  redundantIsDirectiveErrorMessage,
+  cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage,
+  cacheInvalidateOnNonEntityReturnTypeErrorMessage,
+  cachePopulateOnNonMutationSubscriptionFieldErrorMessage,
+  cachePopulateOnNonEntityReturnTypeErrorMessage,
+  cacheInvalidateAndPopulateMutualExclusionErrorMessage,
 } from '../../errors/errors';
 import {
   DEPENDENCIES_BY_DIRECTIVE_NAME,
@@ -174,10 +188,16 @@ import {
 } from '../constants/strings';
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
+  CacheInvalidateConfig,
+  CachePopulateConfig,
   ConfigurationData,
+  EntityCacheConfig,
+  EntityKeyMappingConfig,
   EventConfiguration,
+  FieldMappingConfig,
   NatsEventType,
   RequiredFieldConfiguration,
+  RootFieldCacheConfig,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import { recordSubgraphName } from '../subgraph/subgraph';
@@ -188,6 +208,7 @@ import {
   fieldAlreadyProvidedWarning,
   invalidExternalFieldWarning,
   invalidOverrideTargetSubgraphNameWarning,
+  incompleteQueryCacheKeyMappingWarning,
   nonExternalConditionalFieldWarning,
   singleSubgraphInputFieldOneOfWarning,
   unimplementedInterfaceOutputTypeWarning,
@@ -257,6 +278,8 @@ import {
   ARGUMENT,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
+  CACHE_INVALIDATE,
+  CACHE_POPULATE,
   CHANNEL,
   CHANNELS,
   CONFIGURE_DESCRIPTION,
@@ -271,6 +294,7 @@ import {
   EDFS_NATS_STREAM_CONFIGURATION,
   EDFS_NATS_SUBSCRIBE,
   EDFS_PUBLISH_RESULT,
+  ENTITY_CACHE,
   EDFS_REDIS_PUBLISH,
   EDFS_REDIS_SUBSCRIBE,
   ENTITIES_FIELD,
@@ -283,15 +307,19 @@ import {
   FLOAT_SCALAR,
   HYPHEN_JOIN,
   ID_SCALAR,
+  FIELD,
   INACCESSIBLE,
+  INCLUDE_HEADERS,
   INHERITABLE_DIRECTIVE_NAMES,
   INPUT_FIELD,
   INT_SCALAR,
   INTERFACE_OBJECT,
+  IS,
   KEY,
   LEVELS,
   LINK_IMPORT,
   LINK_PURPOSE,
+  MAX_AGE,
   MUTATION,
   NON_NULLABLE_BOOLEAN,
   NON_NULLABLE_EDFS_PUBLISH_EVENT_RESULT,
@@ -301,6 +329,7 @@ import {
   ONE_OF,
   OPERATION_TO_DEFAULT,
   OVERRIDE,
+  PARTIAL_CACHE_LOAD,
   PROPAGATE,
   PROVIDER_ID,
   PROVIDER_TYPE_KAFKA,
@@ -308,6 +337,7 @@ import {
   PROVIDER_TYPE_REDIS,
   PUBLISH,
   QUERY,
+  QUERY_CACHE,
   REQUEST,
   REQUIRE_FETCH_REASONS,
   REQUIRES_SCOPES,
@@ -319,6 +349,7 @@ import {
   SECURITY,
   SEMANTIC_NON_NULL,
   SERVICE_FIELD,
+  SHADOW_MODE,
   SHAREABLE,
   STREAM_CONFIGURATION,
   STREAM_NAME,
@@ -400,6 +431,11 @@ export class NormalizationFactory {
   directiveDefinitionDataByName = initializeDirectiveDefinitionDatas();
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
+  entityCacheConfigByTypeName = new Map<string, { maxAgeSeconds: number; includeHeaders: boolean; partialCacheLoad: boolean; shadowMode: boolean }>();
+  entityCacheDirectiveTypeNames = new Set<string>();
+  queryCacheFieldData: Array<{ fieldName: string; parentTypeName: string; maxAgeSeconds: number; includeHeaders: boolean; shadowMode: boolean }> = [];
+  cachePopulateFieldData: Array<{ fieldName: string; parentTypeName: string; maxAgeSeconds?: number }> = [];
+  cacheInvalidateFieldData: Array<{ fieldName: string; parentTypeName: string }> = [];
   errors = new Array<Error>();
   entityDataByTypeName = new Map<string, EntityData>();
   entityInterfaceDataByTypeName = new Map<string, EntityInterfaceSubgraphData>();
@@ -3161,6 +3197,440 @@ export class NormalizationFactory {
     }
   }
 
+  validateAndExtractEntityCachingConfigs() {
+    const entityCacheConfigs: EntityCacheConfig[] = [];
+    const rootFieldCacheConfigs: RootFieldCacheConfig[] = [];
+    const cachePopulateConfigs: CachePopulateConfig[] = [];
+    const cacheInvalidateConfigs: CacheInvalidateConfig[] = [];
+
+    // Phase 1: Extract @entityCache from object types
+    for (const [typeName, parentData] of this.parentDefinitionDataByTypeName) {
+      if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+        continue;
+      }
+      const entityCacheDirectives = parentData.directivesByName.get(ENTITY_CACHE);
+      if (!entityCacheDirectives || entityCacheDirectives.length < 1) {
+        continue;
+      }
+      // Rule 1: Must have @key
+      if (!this.keyFieldSetDatasByTypeName.has(typeName)) {
+        this.errors.push(
+          invalidDirectiveError(ENTITY_CACHE, typeName, '1st', [entityCacheWithoutKeyErrorMessage(typeName)]),
+        );
+        continue;
+      }
+      // Extract arguments from the first directive node
+      const directive = entityCacheDirectives[0];
+      let maxAgeSeconds = 0;
+      let includeHeaders = false;
+      let partialCacheLoad = false;
+      let shadowMode = false;
+      if (directive.arguments) {
+        for (const arg of directive.arguments) {
+          switch (arg.name.value) {
+            case MAX_AGE:
+              maxAgeSeconds = (arg.value as IntValueNode).kind === Kind.INT ? parseInt((arg.value as IntValueNode).value, 10) : 0;
+              break;
+            case INCLUDE_HEADERS:
+              includeHeaders = arg.value.kind === Kind.BOOLEAN && arg.value.value;
+              break;
+            case PARTIAL_CACHE_LOAD:
+              partialCacheLoad = arg.value.kind === Kind.BOOLEAN && arg.value.value;
+              break;
+            case SHADOW_MODE:
+              shadowMode = arg.value.kind === Kind.BOOLEAN && arg.value.value;
+              break;
+          }
+        }
+      }
+      // Rule 3: maxAge must be positive
+      if (maxAgeSeconds <= 0) {
+        this.errors.push(
+          invalidDirectiveError(ENTITY_CACHE, typeName, '1st', [
+            maxAgeNotPositiveIntegerErrorMessage(ENTITY_CACHE, maxAgeSeconds),
+          ]),
+        );
+        continue;
+      }
+      const config: EntityCacheConfig = { typeName, maxAgeSeconds, includeHeaders, partialCacheLoad, shadowMode };
+      entityCacheConfigs.push(config);
+      this.entityCacheConfigByTypeName.set(typeName, config);
+    }
+
+    // Phase 2: Process fields on Query, Mutation, Subscription types
+    for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
+      if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
+        continue;
+      }
+      const operationType = this.getOperationTypeNodeForRootTypeName(parentTypeName);
+      if (!operationType) {
+        continue;
+      }
+      const isQuery = operationType === OperationTypeNode.QUERY;
+      const isMutationOrSubscription =
+        operationType === OperationTypeNode.MUTATION || operationType === OperationTypeNode.SUBSCRIPTION;
+      const operationTypeString =
+        operationType === OperationTypeNode.MUTATION ? 'Mutation' : 'Subscription';
+
+      for (const [fieldName, fieldData] of parentData.fieldDataByName) {
+        const fieldCoords = `${parentTypeName}.${fieldName}`;
+        const hasQueryCache = fieldData.directivesByName.has(QUERY_CACHE);
+        const hasCacheInvalidate = fieldData.directivesByName.has(CACHE_INVALIDATE);
+        const hasCachePopulate = fieldData.directivesByName.has(CACHE_POPULATE);
+
+        // Rule 16/19: Mutual exclusion
+        if (hasCacheInvalidate && hasCachePopulate) {
+          this.errors.push(
+            invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, '1st', [
+              cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords),
+            ]),
+          );
+          continue;
+        }
+
+        // Process @queryCache
+        if (hasQueryCache) {
+          // Rule 4: Only on Query fields
+          if (!isQuery) {
+            this.errors.push(
+              invalidDirectiveError(QUERY_CACHE, fieldCoords, '1st', [
+                queryCacheOnNonQueryFieldErrorMessage(fieldCoords),
+              ]),
+            );
+            continue;
+          }
+          const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+          // Rule 5: Return type must be entity
+          if (!this.keyFieldSetDatasByTypeName.has(returnTypeName)) {
+            this.errors.push(
+              invalidDirectiveError(QUERY_CACHE, fieldCoords, '1st', [
+                queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+              ]),
+            );
+            continue;
+          }
+          // Rule 6: Return entity must have @entityCache
+          if (!this.entityCacheConfigByTypeName.has(returnTypeName)) {
+            this.errors.push(
+              invalidDirectiveError(QUERY_CACHE, fieldCoords, '1st', [
+                queryCacheReturnTypeWithoutEntityCacheErrorMessage(fieldCoords, returnTypeName),
+              ]),
+            );
+            continue;
+          }
+          // Extract @queryCache arguments
+          const queryCacheDirectives = fieldData.directivesByName.get(QUERY_CACHE)!;
+          let maxAgeSeconds = 0;
+          let includeHeaders = false;
+          let shadowModeValue = false;
+          if (queryCacheDirectives[0].arguments) {
+            for (const arg of queryCacheDirectives[0].arguments) {
+              switch (arg.name.value) {
+                case MAX_AGE:
+                  maxAgeSeconds = arg.value.kind === Kind.INT ? parseInt((arg.value as IntValueNode).value, 10) : 0;
+                  break;
+                case INCLUDE_HEADERS:
+                  includeHeaders = arg.value.kind === Kind.BOOLEAN && arg.value.value;
+                  break;
+                case SHADOW_MODE:
+                  shadowModeValue = arg.value.kind === Kind.BOOLEAN && arg.value.value;
+                  break;
+              }
+            }
+          }
+          // Rule 9: maxAge must be positive
+          if (maxAgeSeconds <= 0) {
+            this.errors.push(
+              invalidDirectiveError(QUERY_CACHE, fieldCoords, '1st', [
+                maxAgeNotPositiveIntegerErrorMessage(QUERY_CACHE, maxAgeSeconds),
+              ]),
+            );
+            continue;
+          }
+
+          // Build argument-to-key mappings
+          const isListReturn = this.isListType(fieldData.node.type);
+          const keyFieldSets = this.keyFieldSetDatasByTypeName.get(returnTypeName);
+          const keyFields = this.extractKeyFieldNames(keyFieldSets);
+          const { mappings, unmappedKeyField } = this.buildArgumentKeyMappings(
+            fieldData, fieldCoords, returnTypeName, keyFields, isListReturn,
+          );
+
+          // Rule 7: Incomplete mapping warning (non-list only)
+          if (unmappedKeyField && !isListReturn) {
+            this.warnings.push(
+              incompleteQueryCacheKeyMappingWarning(this.subgraphName, fieldCoords, returnTypeName, unmappedKeyField),
+            );
+          }
+
+          rootFieldCacheConfigs.push({
+            fieldName,
+            maxAgeSeconds,
+            includeHeaders,
+            shadowMode: shadowModeValue,
+            entityTypeName: returnTypeName,
+            entityKeyMappings: mappings,
+          });
+        }
+
+        // Process @cacheInvalidate
+        if (hasCacheInvalidate) {
+          // Rule 14: Only on Mutation/Subscription
+          if (!isMutationOrSubscription) {
+            this.errors.push(
+              invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, '1st', [
+                cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
+              ]),
+            );
+            continue;
+          }
+          const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+          // Rule 15: Return type must be entity with @entityCache
+          if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
+            this.errors.push(
+              invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, '1st', [
+                cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+              ]),
+            );
+            continue;
+          }
+          cacheInvalidateConfigs.push({
+            fieldName,
+            operationType: operationTypeString,
+            entityTypeName: returnTypeName,
+          });
+        }
+
+        // Process @cachePopulate
+        if (hasCachePopulate) {
+          // Rule 17: Only on Mutation/Subscription
+          if (!isMutationOrSubscription) {
+            this.errors.push(
+              invalidDirectiveError(CACHE_POPULATE, fieldCoords, '1st', [
+                cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords),
+              ]),
+            );
+            continue;
+          }
+          const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
+          // Rule 18: Return type must be entity with @entityCache
+          if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
+            this.errors.push(
+              invalidDirectiveError(CACHE_POPULATE, fieldCoords, '1st', [
+                cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
+              ]),
+            );
+            continue;
+          }
+          // Extract optional maxAge argument
+          let maxAgeSeconds: number | undefined;
+          const cachePopulateDirectives = fieldData.directivesByName.get(CACHE_POPULATE)!;
+          if (cachePopulateDirectives[0].arguments) {
+            for (const arg of cachePopulateDirectives[0].arguments) {
+              if (arg.name.value === MAX_AGE && arg.value.kind === Kind.INT) {
+                const parsed = parseInt((arg.value as IntValueNode).value, 10);
+                // Rule 20: maxAge must be positive if provided
+                if (parsed <= 0) {
+                  this.errors.push(
+                    invalidDirectiveError(CACHE_POPULATE, fieldCoords, '1st', [
+                      maxAgeNotPositiveIntegerErrorMessage(CACHE_POPULATE, parsed),
+                    ]),
+                  );
+                } else {
+                  maxAgeSeconds = parsed;
+                }
+              }
+            }
+          }
+          cachePopulateConfigs.push({
+            fieldName,
+            operationType: operationTypeString,
+            maxAgeSeconds,
+          });
+        }
+
+        // Validate @is on arguments (Rules 10-13)
+        for (const [argumentName, argumentData] of fieldData.argumentDataByName) {
+          const isDirectives = argumentData.directivesByName.get(IS);
+          if (!isDirectives || isDirectives.length < 1) {
+            continue;
+          }
+          // Rule 10: @is only makes sense with @queryCache
+          if (!hasQueryCache) {
+            this.errors.push(
+              invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, '1st', [
+                isWithoutQueryCacheErrorMessage(argumentName, fieldCoords),
+              ]),
+            );
+          }
+        }
+      }
+    }
+
+    // Phase 3: Attach configs to ConfigurationData
+    // Group by the entity type's configuration data entry
+    if (entityCacheConfigs.length > 0 || rootFieldCacheConfigs.length > 0 ||
+        cachePopulateConfigs.length > 0 || cacheInvalidateConfigs.length > 0) {
+      // Attach to the first available root type configuration data
+      // Entity cache configs go to the type they're defined on
+      for (const ec of entityCacheConfigs) {
+        const configData = this.configurationDataByTypeName.get(ec.typeName);
+        if (configData) {
+          if (!configData.entityCacheConfigurations) {
+            configData.entityCacheConfigurations = [];
+          }
+          configData.entityCacheConfigurations.push(ec);
+        }
+      }
+      // Root field, populate, and invalidate configs go to the root type (Query/Mutation/Subscription)
+      for (const rfc of rootFieldCacheConfigs) {
+        const configData = this.configurationDataByTypeName.get(QUERY);
+        if (configData) {
+          if (!configData.rootFieldCacheConfigurations) {
+            configData.rootFieldCacheConfigurations = [];
+          }
+          configData.rootFieldCacheConfigurations.push(rfc);
+        }
+      }
+      for (const cp of cachePopulateConfigs) {
+        const parentType = cp.operationType;
+        const configData = this.configurationDataByTypeName.get(parentType);
+        if (configData) {
+          if (!configData.cachePopulateConfigurations) {
+            configData.cachePopulateConfigurations = [];
+          }
+          configData.cachePopulateConfigurations.push(cp);
+        }
+      }
+      for (const ci of cacheInvalidateConfigs) {
+        const parentType = ci.operationType;
+        const configData = this.configurationDataByTypeName.get(parentType);
+        if (configData) {
+          if (!configData.cacheInvalidateConfigurations) {
+            configData.cacheInvalidateConfigurations = [];
+          }
+          configData.cacheInvalidateConfigurations.push(ci);
+        }
+      }
+    }
+  }
+
+  isListType(typeNode: TypeNode): boolean {
+    if (typeNode.kind === Kind.LIST_TYPE) {
+      return true;
+    }
+    if (typeNode.kind === Kind.NON_NULL_TYPE) {
+      return this.isListType(typeNode.type);
+    }
+    return false;
+  }
+
+  extractKeyFieldNames(keyFieldSets: Map<string, KeyFieldSetData> | undefined): Set<string> {
+    const keyFields = new Set<string>();
+    if (!keyFieldSets) {
+      return keyFields;
+    }
+    // Extract top-level field names from @key(fields: "...") selection sets
+    for (const { normalizedFieldSet } of keyFieldSets.values()) {
+      // normalizedFieldSet is like "id" or "id name" (space-separated top-level fields)
+      for (const field of normalizedFieldSet.split(/\s+/)) {
+        if (field && !field.includes('{')) {
+          keyFields.add(field);
+        }
+      }
+    }
+    return keyFields;
+  }
+
+  buildArgumentKeyMappings(
+    fieldData: FieldData,
+    fieldCoords: string,
+    entityTypeName: string,
+    keyFields: Set<string>,
+    isListReturn: boolean,
+  ): { mappings: EntityKeyMappingConfig[]; unmappedKeyField: string | undefined } {
+    if (isListReturn || keyFields.size === 0) {
+      return { mappings: [], unmappedKeyField: undefined };
+    }
+
+    const fieldMappings: FieldMappingConfig[] = [];
+    const mappedKeyFields = new Set<string>();
+
+    for (const [argumentName, argumentData] of fieldData.argumentDataByName) {
+      const isDirectives = argumentData.directivesByName.get(IS);
+      if (isDirectives && isDirectives.length > 0) {
+        // Extract @is(field: "...") value
+        const isDirective = isDirectives[0];
+        let isFieldValue: string | undefined;
+        if (isDirective.arguments) {
+          for (const arg of isDirective.arguments) {
+            if (arg.name.value === FIELD && arg.value.kind === Kind.STRING) {
+              isFieldValue = (arg.value as StringValueNode).value;
+            }
+          }
+        }
+        if (isFieldValue) {
+          // Rule 13: Redundant @is if argument name matches key field
+          if (isFieldValue === argumentName) {
+            this.errors.push(
+              invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, '1st', [
+                redundantIsDirectiveErrorMessage(argumentName, fieldCoords),
+              ]),
+            );
+            continue;
+          }
+          // Rule 11: @is field must reference a @key field
+          if (!keyFields.has(isFieldValue)) {
+            this.errors.push(
+              invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, '1st', [
+                isReferencesUnknownKeyFieldErrorMessage(isFieldValue, argumentName, fieldCoords, entityTypeName),
+              ]),
+            );
+            continue;
+          }
+          // Rule 12: Duplicate key field mapping
+          if (mappedKeyFields.has(isFieldValue)) {
+            this.errors.push(
+              invalidDirectiveError(IS, `${fieldCoords}(${argumentName}: ...)`, '1st', [
+                duplicateKeyFieldMappingErrorMessage(fieldCoords, isFieldValue),
+              ]),
+            );
+            continue;
+          }
+          mappedKeyFields.add(isFieldValue);
+          fieldMappings.push({ entityKeyField: isFieldValue, argumentPath: [argumentName] });
+        }
+      } else if (keyFields.has(argumentName)) {
+        // Auto-mapping: argument name matches a @key field
+        if (mappedKeyFields.has(argumentName)) {
+          this.errors.push(
+            invalidDirectiveError(QUERY_CACHE, fieldCoords, '1st', [
+              duplicateKeyFieldMappingErrorMessage(fieldCoords, argumentName),
+            ]),
+          );
+          continue;
+        }
+        mappedKeyFields.add(argumentName);
+        fieldMappings.push({ entityKeyField: argumentName, argumentPath: [argumentName] });
+      }
+    }
+
+    // Check for unmapped key fields
+    let unmappedKeyField: string | undefined;
+    for (const keyField of keyFields) {
+      if (!mappedKeyFields.has(keyField)) {
+        unmappedKeyField = keyField;
+        break;
+      }
+    }
+
+    const mappings: EntityKeyMappingConfig[] = fieldMappings.length > 0
+      ? [{ entityTypeName, fieldMappings }]
+      : [];
+
+    return { mappings, unmappedKeyField };
+  }
+
   getValidFlattenedDirectiveArray(
     directivesByName: Map<string, ConstDirectiveNode[]>,
     directiveCoords: string,
@@ -3745,6 +4215,8 @@ export class NormalizationFactory {
     this.addValidConditionalFieldSetConfigurations();
     // this is where @key configurations are added to the ConfigurationData
     this.addValidKeyFieldSetConfigurations();
+    // Extract and validate entity caching directives
+    this.validateAndExtractEntityCachingConfigs();
     // Check that explicitly defined operations types are valid objects and that their fields are also valid
     for (const operationType of Object.values(OperationTypeNode)) {
       const operationTypeNode = this.schemaData.operationTypes.get(operationType);

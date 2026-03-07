@@ -19,6 +19,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
@@ -81,6 +82,12 @@ type HandlerOptions struct {
 
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
+
+	EntityCachingL1Enabled        bool
+	EntityCachingL2Enabled        bool
+	EntityCachingAnalyticsEnabled bool
+	EntityCacheKeyInterceptors    []EntityCacheKeyInterceptor
+	EntityCacheMetrics            []*rmetric.EntityCacheMetrics
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -101,6 +108,11 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
 		headerPropagation:                        opts.HeaderPropagation,
+		entityCachingL1Enabled:                   opts.EntityCachingL1Enabled,
+		entityCachingL2Enabled:                   opts.EntityCachingL2Enabled,
+		entityCachingAnalyticsEnabled:            opts.EntityCachingAnalyticsEnabled,
+		entityCacheKeyInterceptors:               opts.EntityCacheKeyInterceptors,
+		entityCacheMetrics:                       opts.EntityCacheMetrics,
 	}
 	return graphQLHandler
 }
@@ -132,6 +144,12 @@ type GraphQLHandler struct {
 	enableResponseHeaderPropagation bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
+
+	entityCachingL1Enabled        bool
+	entityCachingL2Enabled        bool
+	entityCachingAnalyticsEnabled bool
+	entityCacheKeyInterceptors    []EntityCacheKeyInterceptor
+	entityCacheMetrics            []*rmetric.EntityCacheMetrics
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -157,6 +175,12 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resolveCtx.InitialPayload = reqCtx.operation.initialPayload
 	resolveCtx.Extensions = reqCtx.operation.extensions
 	resolveCtx.ExecutionOptions = reqCtx.operation.executionOptions
+	resolveCtx.ExecutionOptions.Caching = resolve.CachingOptions{
+		EnableL1Cache:         h.entityCachingL1Enabled,
+		EnableL2Cache:         h.entityCachingL2Enabled,
+		EnableCacheAnalytics:  h.entityCachingAnalyticsEnabled,
+		L2CacheKeyInterceptor: h.buildL2CacheKeyInterceptor(reqCtx),
+	}
 
 	if h.headerPropagation != nil {
 		resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
@@ -231,6 +255,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
+		h.recordEntityCacheMetrics(resolveCtx)
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter
@@ -520,5 +545,29 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 		} else {
 			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
 		}
+	}
+}
+
+func (h *GraphQLHandler) recordEntityCacheMetrics(resolveCtx *resolve.Context) {
+	if len(h.entityCacheMetrics) == 0 {
+		return
+	}
+	snapshot := resolveCtx.GetCacheStats()
+	ctx := resolveCtx.Context()
+	for _, m := range h.entityCacheMetrics {
+		m.RecordSnapshot(ctx, snapshot)
+	}
+}
+
+func (h *GraphQLHandler) buildL2CacheKeyInterceptor(reqCtx *requestContext) resolve.L2CacheKeyInterceptor {
+	if len(h.entityCacheKeyInterceptors) == 0 {
+		return nil
+	}
+	return func(ctx context.Context, key string, info resolve.L2CacheKeyInterceptorInfo) string {
+		keys := [][]byte{[]byte(key)}
+		for _, interceptor := range h.entityCacheKeyInterceptors {
+			keys = interceptor.OnEntityCacheKeys(keys, reqCtx)
+		}
+		return string(keys[0])
 	}
 }

@@ -42,6 +42,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
+	"github.com/wundergraph/cosmo/router/pkg/entitycache"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -54,6 +55,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
@@ -714,6 +716,10 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.subscriptionHooks.onReceiveEvents.handlers = append(r.subscriptionHooks.onReceiveEvents.handlers, handler.OnReceiveEvents)
 		}
 
+		if interceptor, ok := moduleInstance.(EntityCacheKeyInterceptor); ok {
+			r.entityCacheKeyInterceptors = append(r.entityCacheKeyInterceptors, interceptor)
+		}
+
 		r.modules = append(r.modules, moduleInstance)
 
 		r.logger.Info("Module registered",
@@ -1267,6 +1273,65 @@ func (r *Router) buildClients() error {
 	}
 
 	return nil
+}
+
+// buildEntityCacheInstances creates Redis-backed LoaderCache instances from storage providers
+// based on the entity caching configuration. If pre-seeded instances are set (via WithEntityCacheInstances),
+// those are returned directly.
+func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, error) {
+	if r.entityCacheInstances != nil {
+		return r.entityCacheInstances, nil
+	}
+	if !r.entityCachingConfig.Enabled || !r.entityCachingConfig.L2.Enabled {
+		return nil, nil
+	}
+
+	caches := make(map[string]resolve.LoaderCache)
+	keyPrefix := r.entityCachingConfig.L2.Storage.KeyPrefix
+
+	// Build default cache from l2.storage.provider_id
+	defaultProviderID := r.entityCachingConfig.L2.Storage.ProviderID
+	if defaultProviderID != "" {
+		client, err := r.findRedisClient(defaultProviderID)
+		if err != nil {
+			return nil, fmt.Errorf("entity caching default provider: %w", err)
+		}
+		caches["default"] = entitycache.NewRedisEntityCache(client, keyPrefix)
+	}
+
+	// Build per-subgraph caches from subgraphs[].entities[].cache_name
+	for _, sg := range r.entityCachingConfig.Subgraphs {
+		for _, entity := range sg.Entities {
+			cacheName := entity.CacheName
+			if cacheName == "" || cacheName == "default" {
+				continue
+			}
+			if _, exists := caches[cacheName]; exists {
+				continue
+			}
+			client, err := r.findRedisClient(cacheName)
+			if err != nil {
+				return nil, fmt.Errorf("entity caching provider %q for %s.%s: %w",
+					cacheName, sg.Name, entity.Type, err)
+			}
+			caches[cacheName] = entitycache.NewRedisEntityCache(client, keyPrefix)
+		}
+	}
+
+	return caches, nil
+}
+
+func (r *Router) findRedisClient(providerID string) (rd.RDCloser, error) {
+	for _, provider := range r.storageProviders.Redis {
+		if provider.ID == providerID {
+			return rd.NewRedisCloser(&rd.RedisCloserOptions{
+				Logger:         r.logger,
+				URLs:           provider.URLs,
+				ClusterEnabled: provider.ClusterEnabled,
+			})
+		}
+	}
+	return nil, fmt.Errorf("redis provider %q not found in storage_providers", providerID)
 }
 
 // Start starts the router. It does block until the router has been initialized. After that the server is listening
@@ -2212,6 +2277,18 @@ func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlag
 func WithStorageProviders(cfg config.StorageProviders) Option {
 	return func(r *Router) {
 		r.storageProviders = cfg
+	}
+}
+
+func WithEntityCaching(cfg config.EntityCachingConfiguration) Option {
+	return func(r *Router) {
+		r.entityCachingConfig = cfg
+	}
+}
+
+func WithEntityCacheInstances(caches map[string]resolve.LoaderCache) Option {
+	return func(r *Router) {
+		r.entityCacheInstances = caches
 	}
 }
 

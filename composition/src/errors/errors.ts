@@ -1694,3 +1694,78 @@ export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOf
       `".`,
   );
 }
+
+// Entity caching directive error messages
+
+export function entityCacheWithoutKeyErrorMessage(typeName: string): string {
+  return `Type "${typeName}" has @entityCache but no @key directive.`;
+}
+
+export function queryCacheOnNonQueryFieldErrorMessage(fieldCoords: string): string {
+  return `@queryCache is only valid on Query fields, found on "${fieldCoords}".`;
+}
+
+export function queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
+  return (
+    `Field "${fieldCoords}" has @queryCache but returns non-entity type "${returnType}".` +
+    ` @queryCache requires the return type to be an entity with @key.`
+  );
+}
+
+export function queryCacheReturnTypeWithoutEntityCacheErrorMessage(fieldCoords: string, returnType: string): string {
+  return `Field "${fieldCoords}" returns entity type "${returnType}" which does not have @entityCache.`;
+}
+
+export function maxAgeNotPositiveIntegerErrorMessage(directiveName: string, value: number): string {
+  return `@${directiveName} maxAge must be a positive integer, got "${value}".`;
+}
+
+export function isWithoutQueryCacheErrorMessage(argumentName: string, fieldCoords: string): string {
+  return `@is on argument "${argumentName}" of field "${fieldCoords}" has no effect without @queryCache.`;
+}
+
+export function isReferencesUnknownKeyFieldErrorMessage(
+  isField: string,
+  argumentName: string,
+  fieldCoords: string,
+  entityType: string,
+): string {
+  return (
+    `@is(field: "${isField}") on argument "${argumentName}" of field "${fieldCoords}"` +
+    ` references unknown @key field "${isField}" on type "${entityType}".`
+  );
+}
+
+export function duplicateKeyFieldMappingErrorMessage(fieldCoords: string, keyField: string): string {
+  return `Multiple arguments on field "${fieldCoords}" map to @key field "${keyField}".`;
+}
+
+export function redundantIsDirectiveErrorMessage(argumentName: string, fieldCoords: string): string {
+  return (
+    `Argument "${argumentName}" on field "${fieldCoords}" already matches @key field "${argumentName}" by name` +
+    ` — @is is redundant.`
+  );
+}
+
+export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
+  return `@cacheInvalidate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
+}
+
+export function cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
+  return `Field "${fieldCoords}" has @cacheInvalidate but returns non-entity type "${returnType}".`;
+}
+
+export function cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
+  return `@cachePopulate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
+}
+
+export function cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
+  return `Field "${fieldCoords}" has @cachePopulate but returns non-entity type "${returnType}".`;
+}
+
+export function cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords: string): string {
+  return (
+    `Field "${fieldCoords}" has both @cacheInvalidate and @cachePopulate.` +
+    ` A field must use one or the other, not both.`
+  );
+}
