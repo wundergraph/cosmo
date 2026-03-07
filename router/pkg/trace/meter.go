@@ -169,7 +169,14 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 		// Either memory exporter or the configured exporters are used.
 		if config.MemoryExporter != nil {
-			opts = append(opts, sdktrace.WithSyncer(config.MemoryExporter))
+			exporter := config.MemoryExporter
+			if config.Config.TestErrorHandler != nil {
+				exporter = &errorLoggingExporter{
+					wrapped: exporter,
+					handler: config.Config.TestErrorHandler,
+				}
+			}
+			opts = append(opts, sdktrace.WithSyncer(exporter))
 		} else {
 			for _, exp := range config.Config.Exporters {
 				if exp.Disabled {
@@ -217,9 +224,8 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 	// In practice, setting it globally only makes sense for module development.
 	if config.MemoryExporter == nil {
 		otel.SetTracerProvider(tp)
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(errHandler(config)))
 	}
-
-	otel.SetErrorHandler(otel.ErrorHandlerFunc(errHandler(config)))
 
 	return tp, nil
 }
