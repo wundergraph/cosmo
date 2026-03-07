@@ -782,6 +782,9 @@ func TestReceiveHook(t *testing.T) {
 // Flaky due to a data race in graphql-go-tools/v2 resolve.go (trigger.subscriptionIds
 // read vs handleAddSubscription write). Tracked upstream.
 func TestFlakyReceiveHookConcurrentHandlers(t *testing.T) {
+	if raceDetectorEnabled {
+		t.Skip("Skipping: known data race in graphql-go-tools/v2 resolve.go (trigger.subscriptionIds vs handleAddSubscription)")
+	}
 	t.Parallel()
 
 	const Timeout = time.Second * 10
