@@ -3,6 +3,7 @@ import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   COMPOSITION_VERSION,
   ConfigurationData,
+  Costs,
   FieldConfiguration,
   ROOT_TYPE_NAMES,
   ROUTER_COMPATIBILITY_VERSIONS,
@@ -18,11 +19,14 @@ import { PartialMessage } from '@bufbuild/protobuf';
 import {
   ConfigurationVariable,
   ConfigurationVariableKind,
+  CostConfiguration,
   DataSourceConfiguration,
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
   DataSourceKind,
   EngineConfiguration,
+  FieldListSizeConfiguration,
+  FieldWeightConfiguration,
   GraphQLSubscriptionConfiguration,
   GRPCConfiguration,
   GRPCMapping,
@@ -35,6 +39,25 @@ import {
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
 import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
+
+function costsToCostConfiguration(costs: Costs): CostConfiguration | undefined {
+  const hasDirectiveArgWeights =
+    costs.directiveArgumentWeights && Object.keys(costs.directiveArgumentWeights).length > 0;
+  if (
+    costs.fieldWeights.size === 0 &&
+    costs.listSizes.size === 0 &&
+    Object.keys(costs.typeWeights).length === 0 &&
+    !hasDirectiveArgWeights
+  ) {
+    return undefined;
+  }
+  return new CostConfiguration({
+    fieldWeights: [...costs.fieldWeights.values()].map((fw) => new FieldWeightConfiguration(fw)),
+    listSizes: [...costs.listSizes.values()].map((ls) => new FieldListSizeConfiguration(ls)),
+    typeWeights: costs.typeWeights,
+    directiveArgumentWeights: costs.directiveArgumentWeights ?? {},
+  });
+}
 
 export interface Input {
   federatedClientSDL: string;
@@ -76,6 +99,7 @@ export interface ComposedSubgraph {
   configurationDataByTypeName?: Map<TypeName, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
+  costs?: Costs;
 }
 
 export interface ComposedSubgraphPlugin {
@@ -92,6 +116,7 @@ export interface ComposedSubgraphPlugin {
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
   imageReference?: ImageReference;
+  costs?: Costs;
 }
 
 export interface ComposedSubgraphGRPC {
@@ -106,6 +131,7 @@ export interface ComposedSubgraphGRPC {
   configurationDataByTypeName?: Map<TypeName, ConfigurationData>;
   // The normalized GraphQL schema for the subgraph
   schema?: GraphQLSchema;
+  costs?: Costs;
 }
 
 export const internString = (config: EngineConfiguration, str: string): InternedString => {
@@ -276,6 +302,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       // https://github.com/wundergraph/cosmo/blob/main/router/core/router.go#L342
       id: subgraph.id,
       childNodes,
+      costConfiguration: subgraph.costs ? costsToCostConfiguration(subgraph.costs) : undefined,
       customEvents,
       customGraphql,
       directives: [],

@@ -1694,3 +1694,84 @@ export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOf
       `".`,
   );
 }
+
+export function listSizeInvalidSlicingArgumentErrorMessage(directiveCoords: string, argumentName: string): string {
+  return ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" does not reference a defined argument on this field.`;
+}
+
+export function listSizeSlicingArgumentNotIntErrorMessage(
+  directiveCoords: string,
+  argumentName: string,
+  actualType: string,
+): string {
+  return (
+    ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" references an argument of type` +
+    ` "${actualType}", but slicing arguments must be of type "Int" or "Int!".`
+  );
+}
+
+export function listSizeSizedFieldNotFoundErrorMessage(
+  directiveCoords: string,
+  fieldName: string,
+  returnTypeName: string,
+): string {
+  return ` The "sizedFields" value "${fieldName}" on "${directiveCoords}" does not reference a defined field on the return type "${returnTypeName}".`;
+}
+
+export function listSizeSizedFieldNotListErrorMessage(
+  directiveCoords: string,
+  fieldName: string,
+  returnTypeName: string,
+  fieldReturnType: string,
+): string {
+  return (
+    ` The "sizedFields" value "${fieldName}" on "${directiveCoords}" references field "${returnTypeName}.${fieldName}",` +
+    ` which returns type "${fieldReturnType}". Sized fields must return a list type.`
+  );
+}
+
+export function listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(
+  directiveCoords: string,
+  returnType: string,
+): string {
+  return (
+    ` The "@listSize" directive on "${directiveCoords}" is invalid because the field returns type "${returnType}",` +
+    ` which is not a list type, and no "sizedFields" argument is provided.`
+  );
+}
+
+export function listSizeSizedFieldsInvalidReturnTypeErrorMessage(
+  directiveCoords: string,
+  returnTypeName: string,
+): string {
+  return (
+    ` The "sizedFields" argument on "${directiveCoords}" is invalid because` +
+    ` the return type "${returnTypeName}" is not an object or interface type.`
+  );
+}
+
+export function listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords: string): string {
+  return (
+    ` The "@listSize" directive on "${directiveCoords}" defines both "assumedSize" and "slicingArguments".` +
+    ` When both are used, "requireOneSlicingArgument" must be set to false.`
+  );
+}
+
+export function listSizeAssumedSizeSlicingArgDefaultErrorMessage(
+  directiveCoords: string,
+  slicingArgName: string,
+): string {
+  return (
+    ` The "@listSize" directive on "${directiveCoords}" defines both "assumedSize" and "slicingArguments",` +
+    ` but slicing argument "${slicingArgName}" has a default value. When "assumedSize" is used as a fallback` +
+    ` for missing slicing arguments, none of the slicing arguments may have default values.`
+  );
+}
+
+export function costOnInterfaceFieldErrorMessage(directiveCoords: string): string {
+  return (
+    ` The "@cost" directive at "${directiveCoords}" is not permitted on fields or arguments of an interface type.` +
+    ` The cost of an interface field is derived from the costs of the corresponding fields` +
+    ` on the concrete types that implement the interface.`
+  );
+}

@@ -2,6 +2,7 @@ import { Kind } from 'graphql';
 import { DirectiveName } from '../types/types';
 
 export const AS = 'as';
+export const ASSUMED_SIZE = 'assumedSize';
 export const AND_UPPER = 'AND';
 export const ANY_SCALAR = '_Any';
 export const ARGUMENT = 'argument';
@@ -19,6 +20,7 @@ export const CONSUMER_INACTIVE_THRESHOLD = 'consumerInactiveThreshold';
 export const CONSUMER_NAME = 'consumerName';
 export const CONNECT_FIELD_RESOLVER = 'connect__fieldResolver';
 export const CONTEXT = 'context';
+export const COST = 'cost';
 export const DEFAULT = 'default';
 export const DEFAULT_EDFS_PROVIDER_ID = 'default';
 export const DEFAULT_MUTATION = 'Mutation';
@@ -81,6 +83,7 @@ export const KEY = 'key';
 export const LEFT_PARENTHESIS = '(';
 export const LEVELS = 'levels';
 export const LINK = 'link';
+export const LIST_SIZE = 'listSize';
 export const LINK_IMPORT = 'link__Import';
 export const LINK_PURPOSE = 'link__Purpose';
 export const LIST = 'list';
@@ -120,6 +123,7 @@ export const QUOTATION_JOIN = `", "`;
 export const REASON = 'reason';
 export const REQUEST = 'request';
 export const REQUIRE_FETCH_REASONS = 'openfed__requireFetchReasons';
+export const REQUIRE_ONE_SLICING_ARGUMENT = 'requireOneSlicingArgument';
 export const REQUIRES = 'requires';
 export const REQUIRES_SCOPES = 'requiresScopes';
 export const RESOLVABLE = 'resolvable';
@@ -135,6 +139,8 @@ export const SEMANTIC_NON_NULL = 'semanticNonNull';
 export const SERVICE_OBJECT = '_Service';
 export const SERVICE_FIELD = '_service';
 export const SHAREABLE = 'shareable';
+export const SIZED_FIELDS = 'sizedFields';
+export const SLICING_ARGUMENTS = 'slicingArguments';
 export const SPECIFIED_BY = 'specifiedBy';
 export const STREAM_CONFIGURATION = 'streamConfiguration';
 export const STREAM_NAME = 'streamName';
@@ -159,6 +165,7 @@ export const UNION_UPPER = 'UNION';
 export const URL_LOWER = 'url';
 export const VALUES = 'values';
 export const VARIABLE_DEFINITION_UPPER = 'VARIABLE_DEFINITION';
+export const WEIGHT = 'weight';
 
 export const EXECUTABLE_DIRECTIVE_LOCATIONS = new Set<string>([
   FIELD_UPPER,

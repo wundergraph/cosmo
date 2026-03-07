@@ -95,21 +95,21 @@ func sortModules(modules []ModuleInfo) []ModuleInfo {
 
 // Module Interfaces
 
-// RouterMiddlewareHandler allows you to add a middleware to the router.
+// RouterMiddlewareHandler allows you to add middleware to the router.
 // The middleware is called for every request. It allows you to modify the request before it is processed by the router.
 // The same semantics of http.Handler apply here. Don't manipulate / consume the body of the request unless
-// you know what you are doing. If you consume the body of the request it will not be available for the next handler.
+// you know what you are doing. If you consume the body of the request, it will not be available for the next handler.
 type RouterMiddlewareHandler interface {
 	// Middleware is the middleware handler
 	Middleware(ctx RequestContext, next http.Handler)
 }
 
 // RouterOnRequestHandler allows you to add middleware that runs before most internal router logic.
-// This runs after the creation of the request context and the creatio of the recovery handler.
-// This hook is useful if you want to do some custom logic before tracing or authentication, for example
-// if you want to manipulate the bearer auth headers or add a header on a condition that can be logged by tracing.
+// This runs after the creation of the request context and the creation of the recovery handler.
+// This hook is useful if you want to do some custom logic before tracing or authentication, for example,
+// if you want to manipulate the bearer auth headers or add a header on a condition that tracing can log.
 // The same semantics of http.Handler apply here. Don't manipulate / consume the body of the request unless
-// you know what you are doing. If you consume the body of the request it will not be available for the next handler.
+// you know what you are doing. If you consume the body of the request, it will not be available for the next handler.
 type RouterOnRequestHandler interface {
 	RouterOnRequest(ctx RequestContext, next http.Handler)
 }
@@ -118,7 +118,7 @@ type RouterOnRequestHandler interface {
 // The handler is called before the request is sent to the origin. All origin handlers are called sequentially.
 // It allows you to modify the request before it is sent or return a custom response. The same semantics of http.RoundTripper apply here.
 // Don't manipulate / consume the body of the request unless you know what you are doing.
-// If you consume the body of the request it will not be available for the next handler.
+// If you consume the body of the request, it will not be available for the next handler.
 type EnginePreOriginHandler interface {
 	// OnOriginRequest is called before the request is sent to the origin
 	// Might be called multiple times if there are multiple origins
@@ -127,8 +127,8 @@ type EnginePreOriginHandler interface {
 
 // EnginePostOriginHandler allows you to add a handler to the router engine origin requests.
 // The handler is called after the response was received from the origin. All origin handlers are called sequentially.
-// It allows you to return a custom response to the client. If your return nil as response, the next handler is called.
-// The same semantics of http.RoundTripper apply here. In order to modify the response, you have to return a new response.
+// It allows you to return a custom response to the client. If you return a nil response, the next handler is called.
+// The same semantics of http.RoundTripper apply here. To modify the response, you have to return a new response.
 type EnginePostOriginHandler interface {
 	// OnOriginResponse is called after the request is sent to the origin.
 	// Might be called multiple times if there are multiple origins
@@ -144,8 +144,8 @@ type TracePropagationProvider interface {
 }
 
 // Provisioner is called before the server starts
-// It allows you to initialize your module e.g. create a database connection
-// or load a configuration file
+// It allows you to initialize your module, e.g., create a database connection
+// or load a configuration file.
 type Provisioner interface {
 	// Provision is called before the server starts
 	Provision(*ModuleContext) error

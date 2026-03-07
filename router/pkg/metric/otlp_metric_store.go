@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"errors"
+
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.uber.org/zap"
@@ -141,6 +142,18 @@ func (h *OtlpMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 
 func (h *OtlpMetricStore) MeasureSchemaFieldUsage(_ context.Context, _ int64, _ ...otelmetric.AddOption) {
 	// Do not record schema usage in OpenTelemetry
+}
+
+func (h *OtlpMetricStore) MeasureOperationCostEstimated(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.int64Histograms[OperationCostEstimatedHistogram]; ok {
+		c.Record(ctx, cost, opts...)
+	}
+}
+
+func (h *OtlpMetricStore) MeasureOperationCostActual(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.int64Histograms[OperationCostActualHistogram]; ok {
+		c.Record(ctx, cost, opts...)
+	}
 }
 
 func (h *OtlpMetricStore) Flush(ctx context.Context) error {

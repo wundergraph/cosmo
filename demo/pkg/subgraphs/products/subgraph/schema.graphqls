@@ -1,16 +1,19 @@
 extend schema
 @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
 
+directive @cost(weight: Int!) on ARGUMENT_DEFINITION | ENUM | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | OBJECT | SCALAR
+directive @listSize( assumedSize: Int, slicingArguments: [String!], sizedFields: [String!], requireOneSlicingArgument: Boolean = true ) on FIELD_DEFINITION
+
 schema {
   query: Queries
   mutation: Mutation
 }
 
 type Queries {
-  productTypes: [Products!]!
+  productTypes: [Products!]! @listSize(assumedSize: 50)
   topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
   factTypes: [TopSecretFactType!]
-  sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @shareable
+  sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @listSize(slicingArguments: ["numOfA"]) @shareable
 }
 
 type Mutation {
@@ -38,7 +41,7 @@ interface TopSecretFact @authenticated {
   factType: TopSecretFactType
 }
 
-scalar FactContent @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
+scalar FactContent @cost(weight: 10) @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
 
 type DirectiveFact implements TopSecretFact @authenticated {
   title: String!
@@ -81,7 +84,7 @@ type Consultancy @key(fields: "upc") {
   name: ProductName!
 }
 
-type Cosmo @key(fields: "upc") {
+type Cosmo @key(fields: "upc") @cost(weight: 8) {
   upc: ID!
   name: ProductName!
   repositoryURL: String!

@@ -65,6 +65,10 @@
         "EngineStats": {
           "Subscriptions": true
         },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false
+        },
         "CircuitBreaker": false,
         "Streams": false,
         "ExcludeMetrics": null,
@@ -97,6 +101,10 @@
         "Streams": false,
         "EngineStats": {
           "Subscriptions": true
+        },
+        "CostStats": {
+          "EstimatedEnabled": false,
+          "ActualEnabled": false
         },
         "CircuitBreaker": false,
         "ExcludeMetrics": null,
@@ -783,6 +791,13 @@
         "IgnorePersistedOperations": true
       },
       "IgnoreIntrospection": false
+    },
+    "CostControl": {
+      "Enabled": true,
+      "Mode": "enforce",
+      "MaxEstimatedLimit": 1000,
+      "EstimatedListSize": 10,
+      "ExposeHeaders": false
     },
     "DepthLimit": null,
     "ParserLimits": {

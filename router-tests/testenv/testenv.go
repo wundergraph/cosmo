@@ -285,6 +285,8 @@ type MetricOptions struct {
 	EnablePrometheusCircuitBreakerMetrics bool
 	EnablePrometheusStreamMetrics         bool
 	LogExporter                           MetricsLogExporterOptions
+	OTLPCostStats                         config.CostStats
+	PrometheusCostStats                   config.CostStats
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -1592,6 +1594,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 				Subscription: testConfig.MetricOptions.PrometheusEngineStatsOptions.EnableSubscription,
 			},
 			CircuitBreaker:       testConfig.MetricOptions.EnablePrometheusCircuitBreakerMetrics,
+			CostStats:            testConfig.MetricOptions.PrometheusCostStats,
 			ExcludeMetrics:       testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetrics,
 			ExcludeMetricLabels:  testConfig.MetricOptions.MetricExclusions.ExcludedPrometheusMetricLabels,
 			Streams:              testConfig.MetricOptions.EnablePrometheusStreamMetrics,
@@ -1620,6 +1623,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 						Subscriptions: testConfig.MetricOptions.OTLPEngineStatsOptions.EnableSubscription,
 					},
 					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
+					CostStats:           testConfig.MetricOptions.OTLPCostStats,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
 					LogExporter: config.MetricsLogExporter{
