@@ -1,6 +1,8 @@
 package integration
 
 import (
+	integration "github.com/wundergraph/cosmo/router-tests"
+
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -50,7 +52,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
 					})
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 				})
 			})
 
@@ -112,7 +114,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
 					})
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 				})
 			})
 		})
@@ -146,7 +148,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
 					})
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 				})
 			})
 
@@ -231,7 +233,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
 					})
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 				})
 			})
 
@@ -265,7 +267,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
 					})
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 				})
 			})
 
@@ -376,7 +378,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
 					})
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 				})
 			})
 		})
@@ -412,7 +414,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
 					})
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 				})
 			})
 
@@ -449,7 +451,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
 					})
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 				})
 			})
 		})
@@ -495,7 +497,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
 					})
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 				})
 			})
 		})
@@ -539,7 +541,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query { employees { id } }`,
 					})
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 				})
 			})
 		})
@@ -560,11 +562,11 @@ func TestSubgraphMTLS(t *testing.T) {
 				RouterOptions: []core.Option{
 					core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						All: config.GlobalSubgraphRequestRule{
-							RequestTimeout: ToPtr(30 * time.Second),
+							RequestTimeout: integration.ToPtr(30 * time.Second),
 						},
 						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 							"employees": {
-								RequestTimeout: ToPtr(5 * time.Second),
+								RequestTimeout: integration.ToPtr(5 * time.Second),
 							},
 						},
 					})),
@@ -578,7 +580,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.JSONEq(t, employeesIDData, res.Body)
+				require.JSONEq(t, integration.EmployeesIDData, res.Body)
 			})
 		})
 
@@ -595,7 +597,7 @@ func TestSubgraphMTLS(t *testing.T) {
 					core.WithSubgraphTransportOptions(core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 							"employees": {
-								RequestTimeout: ToPtr(5 * time.Second),
+								RequestTimeout: integration.ToPtr(5 * time.Second),
 							},
 						},
 					})),
@@ -613,7 +615,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.JSONEq(t, employeesIDData, res.Body)
+				require.JSONEq(t, integration.EmployeesIDData, res.Body)
 			})
 		})
 	})
@@ -671,7 +673,7 @@ func TestSubgraphMTLSEnvVarConfig(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 		})
 	})
 
@@ -699,7 +701,7 @@ func TestSubgraphMTLSEnvVarConfig(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 		})
 	})
 
@@ -728,7 +730,7 @@ func TestSubgraphMTLSEnvVarConfig(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 		})
 	})
 
@@ -767,7 +769,7 @@ func TestSubgraphMTLSEnvVarConfig(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 		})
 	})
 }

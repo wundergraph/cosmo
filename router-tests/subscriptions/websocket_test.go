@@ -1,6 +1,8 @@
 package integration
 
 import (
+	integration "github.com/wundergraph/cosmo/router-tests"
+
 	"crypto/sha256"
 	"encoding/json"
 	"errors"
@@ -127,9 +129,9 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         integration.JwksName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -184,9 +186,9 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         integration.JwksName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -241,9 +243,9 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         integration.JwksName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -280,16 +282,14 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			go func() {
-				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-				// Trigger the subscription via NATS
-				subject := xEnv.GetPubSubName("employeeUpdated.3")
-				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NatsConnectionDefault.Publish(subject, message)
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
-			}()
+			// Wait for the subscription to be registered and a trigger to be created in the engine.
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
+			// Publish with retry: the first NATS message may be lost because the
+			// subscription pipeline isn't fully wired up yet. NATSPublishUntilReceived
+			// retries until the engine's MessagesSent counter increments.
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
@@ -299,7 +299,7 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, `[{"message":"Unauthorized to load field 'Subscription.employeeUpdated.startDate', Reason: not authenticated.","path":["employeeUpdated","startDate"],"extensions":{"code":"UNAUTHORIZED_FIELD_OR_TYPE"}}]`, string(res.Payload))
 
 			require.NoError(t, conn.Close())
-			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.WaitForSubscriptionCount(0, time.Second*15)
 		})
 	})
 	t.Run("subscription with authorization reject", func(t *testing.T) {
@@ -307,9 +307,9 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         integration.JwksName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -345,16 +345,12 @@ func TestWebSockets(t *testing.T) {
 				Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } startDate }}"}`),
 			})
 			require.NoError(t, err)
-			go func() {
-				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-				// Trigger the subscription via NATS
-				subject := xEnv.GetPubSubName("employeeUpdated.3")
-				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NatsConnectionDefault.Publish(subject, message)
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
-			}()
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
+			// Trigger the subscription via NATS (with retry to handle NATS SUB buffering race)
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
+
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
 			require.NoError(t, err)
@@ -363,7 +359,7 @@ func TestWebSockets(t *testing.T) {
 			require.Equal(t, `[{"message":"Unauthorized"}]`, string(res.Payload))
 
 			require.NoError(t, conn.Close())
-			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.WaitForSubscriptionCount(0, time.Second*15)
 		})
 	})
 	t.Run("subscription with authorization via initial payload with reject", func(t *testing.T) {
@@ -372,7 +368,7 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
 			TokenDecoder: tokenDecoder,
 			Key:          "Authorization",
@@ -413,16 +409,11 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			go func() {
-				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-				// Trigger the subscription via NATS
-				subject := xEnv.GetPubSubName("employeeUpdated.3")
-				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NatsConnectionDefault.Publish(subject, message)
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
-			}()
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
+			// Trigger the subscription via NATS (with retry to handle NATS SUB buffering race)
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
@@ -432,7 +423,7 @@ func TestWebSockets(t *testing.T) {
 			require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3}}}`, string(res.Payload))
 
 			require.NoError(t, conn.Close())
-			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.WaitForSubscriptionCount(0, time.Second*15)
 		})
 	})
 	t.Run("subscription with authorization via initial payload no token with reject", func(t *testing.T) {
@@ -441,7 +432,7 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
 			TokenDecoder: tokenDecoder,
 			Key:          "Authorization",
@@ -497,7 +488,7 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 		authOptions := authentication.WebsocketInitialPayloadAuthenticatorOptions{
 			TokenDecoder: tokenDecoder,
 			Key:          "Authorization",
@@ -574,19 +565,11 @@ func TestWebSockets(t *testing.T) {
 			})
 			require.NoError(t, err)
 
-			var done atomic.Bool
-			go func() {
-				defer done.Store(true)
-				xEnv.WaitForSubscriptionCount(1, time.Second*5)
-				// Trigger the subscription via NATS
-				subject := xEnv.GetPubSubName("employeeUpdated.3")
-				message := []byte(`{"id":3,"__typename": "Employee"}`)
-				err := xEnv.NatsConnectionDefault.Publish(subject, message)
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
-			}()
-			require.Eventually(t, done.Load, time.Second*5, time.Millisecond*100)
+			xEnv.WaitForSubscriptionCount(1, time.Second*15)
+			xEnv.WaitForTriggerCount(1, time.Second*15)
+			// Trigger the subscription via NATS (with retry to handle NATS SUB buffering race)
+			subject := xEnv.GetPubSubName("employeeUpdated.3")
+			xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 
 			var res testenv.WebSocketMessage
 			err = testenv.WSReadJSON(t, conn, &res)
@@ -596,7 +579,7 @@ func TestWebSockets(t *testing.T) {
 			require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3}}}`, string(res.Payload))
 			require.NoError(t, conn.Close())
 
-			xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			xEnv.WaitForSubscriptionCount(0, time.Second*15)
 		})
 	})
 	t.Run("subscription", func(t *testing.T) {
@@ -905,9 +888,9 @@ func TestWebSockets(t *testing.T) {
 		authServer, err := jwks.NewServer(t)
 		require.NoError(t, err)
 		t.Cleanup(authServer.Close)
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{toJWKSConfig(authServer.JWKSURL(), time.Second*5)})
 		authOptions := authentication.HttpHeaderAuthenticatorOptions{
-			Name:         JwksName,
+			Name:         integration.JwksName,
 			TokenDecoder: tokenDecoder,
 		}
 		authenticator, err := authentication.NewHttpHeaderAuthenticator(authOptions)
@@ -1828,6 +1811,7 @@ func TestWebSockets(t *testing.T) {
 			require.NoError(t, err)
 
 			xEnv.WaitForSubscriptionCount(2, time.Second*5)
+			xEnv.WaitForTriggerCount(2, time.Second*5)
 
 			wg := sync.WaitGroup{}
 			wg.Add(1)
@@ -1902,12 +1886,8 @@ func TestWebSockets(t *testing.T) {
 			}()
 
 			go func() {
-				time.Sleep(time.Millisecond * 100)
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-				time.Sleep(time.Millisecond * 100)
-				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*5)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*5)
 			}()
 
 			wg.Wait()
@@ -3065,5 +3045,13 @@ func handleCountEmpSubscription(t *testing.T, wsWriteCh chan<- wsJSONMessage, ws
 		} else {
 			t.Log("Closed websocket connection")
 		}
+	}
+}
+
+func toJWKSConfig(url string, refresh time.Duration, allowedAlgorithms ...string) authentication.JWKSConfig {
+	return authentication.JWKSConfig{
+		URL:               url,
+		RefreshInterval:   refresh,
+		AllowedAlgorithms: allowedAlgorithms,
 	}
 }

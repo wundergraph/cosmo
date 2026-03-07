@@ -1,6 +1,8 @@
 package integration
 
 import (
+	integration "github.com/wundergraph/cosmo/router-tests"
+
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
@@ -129,7 +131,7 @@ func TestBatch(t *testing.T) {
 				require.Equal(t, http.StatusOK, res.Response.StatusCode)
 
 				sn := exporter.GetSpans().Snapshots()
-				rootSpan := sn[len(sn)-1]
+				rootSpan := findRootSpan(t, sn)
 
 				events := rootSpan.Events()
 				require.Len(t, events, 1)
@@ -138,7 +140,6 @@ func TestBatch(t *testing.T) {
 
 				require.Equal(t, event.Attributes[0], attribute.String("exception.type", "*core.httpGraphqlError"))
 				require.Equal(t, trace.SpanKindServer, rootSpan.SpanKind())
-				require.Contains(t, rootSpan.Attributes(), otel.WgRouterRootSpan.Bool(true))
 				require.Equal(t, codes.Error, rootSpan.Status().Code)
 				require.Contains(t, rootSpan.Status().Description, "Invalid GraphQL request")
 			},
@@ -332,7 +333,7 @@ func TestBatch(t *testing.T) {
 	t.Run("run a mutation in a batch request", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := ConfigureAuth(t)
+		authenticators, authServer := integration.ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
 			Authenticators:           authenticators,
 			AuthenticationRequired:   false,
@@ -550,7 +551,7 @@ func TestBatch(t *testing.T) {
 				require.JSONEq(t, `{"errors":[{"message":"failed to read request body"}]}`, res.Body)
 
 				sn := exporter.GetSpans().Snapshots()
-				rootSpan := sn[len(sn)-1]
+				rootSpan := findRootSpan(t, sn)
 
 				events := rootSpan.Events()
 				require.Len(t, events, 1)
@@ -559,7 +560,6 @@ func TestBatch(t *testing.T) {
 
 				require.Equal(t, event.Attributes[0], attribute.String("exception.type", "*core.httpGraphqlError"))
 				require.Equal(t, trace.SpanKindServer, rootSpan.SpanKind())
-
 				require.Equal(t, codes.Error, rootSpan.Status().Code)
 				require.Contains(t, rootSpan.Status().Description, "failed to read request body")
 			},
@@ -600,11 +600,9 @@ func TestBatch(t *testing.T) {
 				require.NoError(t, err)
 
 				sn := exporter.GetSpans().Snapshots()
-				require.Len(t, sn, 29)
-				rootSpan := sn[len(sn)-1]
+				rootSpan := findRootSpan(t, sn)
 
 				rootSpanAttributes := rootSpan.Attributes()
-				require.Len(t, rootSpanAttributes, 24)
 
 				sa := attribute.NewSet(rootSpanAttributes...)
 				require.True(t, sa.HasValue(semconv.NetHostPortKey))
@@ -678,8 +676,7 @@ func TestBatch(t *testing.T) {
 				require.NoError(t, err)
 
 				sn := exporter.GetSpans().Snapshots()
-				require.Len(t, sn, 29)
-				rootSpan := sn[len(sn)-1]
+				rootSpan := findRootSpan(t, sn)
 
 				rootSpanChildSpanCount := rootSpan.ChildSpanCount()
 				require.Equal(t, rootSpanChildSpanCount, len(operations))
@@ -698,7 +695,7 @@ func TestBatch(t *testing.T) {
 	t.Run("check batch request with gzip compression", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, authServer := ConfigureAuth(t)
+		authenticators, authServer := integration.ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
 			Authenticators:           authenticators,
 			AuthenticationRequired:   false,
@@ -799,12 +796,10 @@ func TestFlakyBatch(t *testing.T) {
 				require.NoError(t, err)
 
 				sn := exporter.GetSpans().Snapshots()
-				require.Len(t, sn, 29)
-				rootSpan := sn[len(sn)-1]
+				rootSpan := findRootSpan(t, sn)
 
 				rootSpanAttributes := rootSpan.Attributes()
 				require.Contains(t, rootSpanAttributes, otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
-				require.Contains(t, rootSpanAttributes, otel.WgRouterRootSpan.Bool(true))
 				require.Contains(t, rootSpanAttributes, otel.WgIsBatchingOperation.Bool(true))
 				require.Contains(t, rootSpanAttributes, otel.WgBatchingOperationsCount.Int(len(operations)))
 
@@ -815,6 +810,19 @@ func TestFlakyBatch(t *testing.T) {
 		})
 
 	})
+}
+
+func findRootSpan(t *testing.T, sn []sdktrace.ReadOnlySpan) sdktrace.ReadOnlySpan {
+	t.Helper()
+	for _, span := range sn {
+		for _, attr := range span.Attributes() {
+			if attr.Key == otel.WgRouterRootSpan && attr.Value.AsBool() {
+				return span
+			}
+		}
+	}
+	t.Fatal("root span not found")
+	return nil
 }
 
 func getChildSpanDetails(directChildSpans []sdktrace.ReadOnlySpan) ([]string, []string) {

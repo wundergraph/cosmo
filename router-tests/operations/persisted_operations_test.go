@@ -17,17 +17,13 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// cacheHashNotStored is a constant representing a non-existent entry in Persisted Queries Cache
-// of the testenv. All the pre-stored persistent entries used in testing are located here:
-// ./testenv/testdata/cdn/organization/graph/operations/my-client
-const cacheHashNotStored = "0000000000000000000000000000000000000000000000000000000000000000"
 
 func TestPersistedOperationNotFound(t *testing.T) {
 	t.Parallel()
 
 	testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + cacheHashNotStored + `"}}`),
+			Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "0000000000000000000000000000000000000000000000000000000000000000"}}`),
 		})
 		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 		require.Equal(t, `{"errors":[{"message":"PersistedQueryNotFound","extensions":{"code":"PERSISTED_QUERY_NOT_FOUND"}}]}`, res.Body)

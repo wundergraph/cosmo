@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -289,12 +290,10 @@ func TestSingleFlight(t *testing.T) {
 
 			// Wait for all subscriptions to be established before triggering
 			go func() {
-				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*5)
+				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
+				xEnv.WaitForTriggerCount(1, time.Second*15)
 				// Trigger the subscription via NATS to get updates for all subscriptions
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
 			for i := int64(0); i < numOfOperations; i++ {
@@ -373,12 +372,10 @@ func TestSingleFlight(t *testing.T) {
 
 			// Wait for all subscriptions to be established before triggering
 			go func() {
-				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*5)
+				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
+				xEnv.WaitForTriggerCount(1, time.Second*15)
 				// Trigger the subscription via NATS to get updates for all subscriptions
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
 			for i := int64(0); i < numOfOperations; i++ {
@@ -467,12 +464,10 @@ func TestSingleFlight(t *testing.T) {
 
 			// Wait for all subscriptions to be established before triggering
 			go func() {
-				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*5)
+				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
+				xEnv.WaitForTriggerCount(1, time.Second*15)
 				// Trigger the subscription via NATS to get updates for all subscriptions
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
 			}()
 
 			for i := int64(0); i < numOfOperations; i++ {
@@ -561,14 +556,24 @@ func TestSingleFlight(t *testing.T) {
 			)
 			done.Add(int(numOfOperations))
 
-			// Wait for all subscriptions to be established before triggering
+			// Continuously publish until all consumers have received their message.
+			// NATSPublishUntilMinMessagesSent is insufficient here because cumulative
+			// MessagesSent can reach 10 before all 10 consumers are served (retries
+			// deliver to already-served consumers, inflating the count).
+			publishCtx, publishCancel := context.WithCancel(xEnv.Context)
 			go func() {
-				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*5)
-				// Trigger the subscription via NATS to get updates for all subscriptions
-				err := xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
-				require.NoError(t, err)
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
+				xEnv.WaitForSubscriptionCount(uint64(numOfOperations), time.Second*15)
+				xEnv.WaitForTriggerCount(uint64(numOfOperations), time.Second*15)
+				for {
+					select {
+					case <-publishCtx.Done():
+						return
+					default:
+					}
+					_ = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename": "Employee"}`))
+					_ = xEnv.NatsConnectionDefault.Flush()
+					time.Sleep(500 * time.Millisecond)
+				}
 			}()
 
 			for i := int64(0); i < numOfOperations; i++ {
@@ -601,25 +606,29 @@ func TestSingleFlight(t *testing.T) {
 					})
 					require.NoError(t, err)
 
-					// Read the complete message
-					var complete testenv.WebSocketMessage
-					err = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
-					require.NoError(t, err)
-					err = testenv.WSReadJSON(t, conn, &complete)
-					require.NoError(t, err)
-					require.Equal(t, "complete", complete.Type)
-					require.Equal(t, "1", complete.ID)
+					// Read messages until we get "complete", draining any extra
+					// "next" messages that may arrive from publish retries
+					for {
+						var reply testenv.WebSocketMessage
+						err = conn.SetReadDeadline(time.Now().Add(2 * time.Second))
+						require.NoError(t, err)
+						err = testenv.WSReadJSON(t, conn, &reply)
+						require.NoError(t, err)
+						if reply.Type == "complete" {
+							require.Equal(t, "1", reply.ID)
+							break
+						}
+					}
 				}(i)
 			}
 			done.Wait()
+			publishCancel()
 			xEnv.WaitForSubscriptionCount(0, time.Second*5)
 
 			// We expect no request de-duplication because different headers must not be de-duplicated
-			// This subscription involves multiple subgraphs:
-			// - employees subgraph: provides the subscription root and id field
-			// - family subgraph: provides details.forename and details.surname fields
+			// Publish retries may increase the count, so check >= not ==
 			actualSubgraphRequests := xEnv.SubgraphRequestCount.Global.Load()
-			require.Equal(t, numOfOperations, actualSubgraphRequests)
+			require.GreaterOrEqual(t, actualSubgraphRequests, numOfOperations)
 		})
 	})
 	t.Run("mutation with multiple subgraphs deduplication", func(t *testing.T) {

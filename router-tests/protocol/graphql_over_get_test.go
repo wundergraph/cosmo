@@ -82,7 +82,7 @@ func TestOperationsOverGET(t *testing.T) {
 				OperationName: []byte(`Find`),
 				Query:         `query Find($criteria: SearchInput!) {findEmployees(criteria: $criteria){id details {forename surname}}}`,
 				Variables:     []byte(`{"criteria":{   "nationality":"GERMAN"}  }   `),
-				Extensions:    []byte(`{"persistedQuery": {"version": true, "sha256Hash": "` + cacheHashNotStored + `"}}`),
+				Extensions:    []byte(`{"persistedQuery": {"version": true, "sha256Hash": "0000000000000000000000000000000000000000000000000000000000000000"}}`),
 			})
 			require.NoError(t, err)
 			require.Equal(t, http.StatusBadRequest, res.Response.StatusCode)

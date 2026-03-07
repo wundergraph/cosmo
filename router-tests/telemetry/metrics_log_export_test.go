@@ -42,12 +42,6 @@ func TestMetricsLogExporter(t *testing.T) {
 			})
 			require.Equal(t, 200, res.Response.StatusCode)
 
-			// Wait for the debug exporter to log router.http.requests
-			require.Eventually(t, func() bool {
-				metricLogs := xEnv.Observer().FilterMessage("Metric").All()
-				return findMetricLog(metricLogs, "router.http.requests") != nil
-			}, 5*time.Second, 100*time.Millisecond)
-
 			// Collect actual metrics from the ManualReader
 			rm := metricdata.ResourceMetrics{}
 			err := metricReader.Collect(t.Context(), &rm)
@@ -55,6 +49,19 @@ func TestMetricsLogExporter(t *testing.T) {
 
 			scopeMetric := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.NotNil(t, scopeMetric)
+
+			// Wait for ALL scope metrics to appear in logs (not just one).
+			// The log exporter runs on a 90ms interval, so metrics may arrive
+			// across multiple export cycles.
+			require.Eventually(t, func() bool {
+				metricLogs := xEnv.Observer().FilterMessage("Metric").All()
+				for _, m := range scopeMetric.Metrics {
+					if findMetricLog(metricLogs, m.Name) == nil {
+						return false
+					}
+				}
+				return true
+			}, 5*time.Second, 100*time.Millisecond)
 
 			metricLogs := xEnv.Observer().FilterMessage("Metric").All()
 

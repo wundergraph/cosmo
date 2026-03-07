@@ -1,11 +1,14 @@
 package integration
 
 import (
+	integration "github.com/wundergraph/cosmo/router-tests"
+
 	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -29,7 +32,6 @@ import (
 
 func TestPrometheus(t *testing.T) {
 	t.Parallel()
-	const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 	const employeesTagData = `{"data":{"employees":[{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""},{"tag":""}]}}`
 
 	t.Run("Collect and export OTEL metrics to Prometheus from named operation", func(t *testing.T) {
@@ -47,7 +49,7 @@ func TestPrometheus(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -59,111 +61,111 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestTotalMetrics[1].Label)
 
@@ -174,95 +176,95 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestsInFlightMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestsInFlightMetrics[1].Label)
 
@@ -273,111 +275,111 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestDurationMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestDurationMetrics[1].Label)
 
@@ -388,111 +390,111 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, responseContentLengthMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, responseContentLengthMetrics[1].Label)
 
@@ -503,52 +505,52 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_engine_plan_cache_hit"),
-					Value: PointerOf("false"),
+					Name:  integration.ToPtr("wg_engine_plan_cache_hit"),
+					Value: integration.ToPtr("false"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, planningTimeMetrics[0].Label)
 
@@ -594,7 +596,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				Query: `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -613,127 +615,127 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("custom2"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom2"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("custom2"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom2"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestTotalMetrics[1].Label)
 
@@ -744,107 +746,107 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestsInFlightMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("custom2"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom2"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestsInFlightMetrics[1].Label)
 
@@ -855,127 +857,127 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("custom2"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom2"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestDurationMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("custom2"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom2"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestDurationMetrics[1].Label)
 
@@ -986,127 +988,127 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("custom2"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom2"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, responseContentLengthMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("custom2"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom2"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, responseContentLengthMetrics[1].Label)
 
@@ -1143,7 +1145,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				Query: `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -1162,119 +1164,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestTotalMetrics[1].Label)
 
@@ -1285,103 +1287,103 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestsInFlightMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestsInFlightMetrics[1].Label)
 
@@ -1392,119 +1394,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestDurationMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestDurationMetrics[1].Label)
 
@@ -1515,119 +1517,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, responseContentLengthMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("custom"),
-					Value: PointerOf("value"),
+					Name:  integration.ToPtr("custom"),
+					Value: integration.ToPtr("value"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, responseContentLengthMetrics[1].Label)
 
@@ -1673,112 +1675,112 @@ func TestPrometheus(t *testing.T) {
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, totalRequestErrorsMetric[0].Label)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("403"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("403"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("3"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("3"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("products"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("products"),
 				},
 			}, totalRequestErrorsMetric[1].Label)
 		})
@@ -1855,239 +1857,239 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("error_codes"),
-					Value: PointerOf("UNAUTHORIZED"),
+					Name:  integration.ToPtr("error_codes"),
+					Value: integration.ToPtr("UNAUTHORIZED"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, totalRequestErrorsMetric[0].Label)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("error_codes"),
-					Value: PointerOf("YOUR_ERROR_CODE"),
+					Name:  integration.ToPtr("error_codes"),
+					Value: integration.ToPtr("YOUR_ERROR_CODE"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, totalRequestErrorsMetric[1].Label)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("error_codes"),
-					Value: PointerOf("UNAUTHORIZED"),
+					Name:  integration.ToPtr("error_codes"),
+					Value: integration.ToPtr("UNAUTHORIZED"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("403"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("403"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("3"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("3"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("products"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("products"),
 				},
 			}, totalRequestErrorsMetric[2].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("error_codes"),
-					Value: PointerOf("YOUR_ERROR_CODE"),
+					Name:  integration.ToPtr("error_codes"),
+					Value: integration.ToPtr("YOUR_ERROR_CODE"),
 				},
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("403"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("403"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("3"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("3"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("products"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("products"),
 				},
 			}, totalRequestErrorsMetric[3].Label)
 		})
@@ -2111,7 +2113,7 @@ func TestPrometheus(t *testing.T) {
 					"X-Feature-Flag": {"myff"},
 				},
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -2123,119 +2125,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_feature_flag"),
-					Value: PointerOf("myff"),
+					Name:  integration.ToPtr("wg_feature_flag"),
+					Value: integration.ToPtr("myff"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_feature_flag"),
-					Value: PointerOf("myff"),
+					Name:  integration.ToPtr("wg_feature_flag"),
+					Value: integration.ToPtr("myff"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestTotalMetrics[1].Label)
 
@@ -2246,103 +2248,103 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_feature_flag"),
-					Value: PointerOf("myff"),
+					Name:  integration.ToPtr("wg_feature_flag"),
+					Value: integration.ToPtr("myff"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestsInFlightMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_feature_flag"),
-					Value: PointerOf("myff"),
+					Name:  integration.ToPtr("wg_feature_flag"),
+					Value: integration.ToPtr("myff"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestsInFlightMetrics[1].Label)
 
@@ -2353,119 +2355,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_feature_flag"),
-					Value: PointerOf("myff"),
+					Name:  integration.ToPtr("wg_feature_flag"),
+					Value: integration.ToPtr("myff"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestDurationMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_feature_flag"),
-					Value: PointerOf("myff"),
+					Name:  integration.ToPtr("wg_feature_flag"),
+					Value: integration.ToPtr("myff"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestDurationMetrics[1].Label)
 
@@ -2476,119 +2478,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_feature_flag"),
-					Value: PointerOf("myff"),
+					Name:  integration.ToPtr("wg_feature_flag"),
+					Value: integration.ToPtr("myff"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, responseContentLengthMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_feature_flag"),
-					Value: PointerOf("myff"),
+					Name:  integration.ToPtr("wg_feature_flag"),
+					Value: integration.ToPtr("myff"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, responseContentLengthMetrics[1].Label)
 		})
@@ -2614,7 +2616,7 @@ func TestPrometheus(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			mfFull, err = promRegistryFull.Gather()
 			require.NoError(t, err)
@@ -2626,111 +2628,111 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("http_status_code"),
-					Value: PointerOf("200"),
+					Name:  integration.ToPtr("http_status_code"),
+					Value: integration.ToPtr("200"),
 				},
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestTotalMetrics[1].Label)
 
@@ -2741,95 +2743,95 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestsInFlightMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_name"),
-					Value: PointerOf("unknown"),
+					Name:  integration.ToPtr("wg_client_name"),
+					Value: integration.ToPtr("unknown"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestsInFlightMetrics[1].Label)
 		})
@@ -2856,7 +2858,7 @@ func TestPrometheus(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			mfFiltered, err = promRegistryFiltered.Gather()
 			require.NoError(t, err)
@@ -2875,79 +2877,79 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}, requestsInFlightMetricsFiltered[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.prometheus"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_client_version"),
-					Value: PointerOf("missing"),
+					Name:  integration.ToPtr("wg_client_version"),
+					Value: integration.ToPtr("missing"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_operation_name"),
-					Value: PointerOf("myQuery"),
+					Name:  integration.ToPtr("wg_operation_name"),
+					Value: integration.ToPtr("myQuery"),
 				},
 				{
-					Name:  PointerOf("wg_operation_protocol"),
-					Value: PointerOf("http"),
+					Name:  integration.ToPtr("wg_operation_protocol"),
+					Value: integration.ToPtr("http"),
 				},
 				{
-					Name:  PointerOf("wg_operation_type"),
-					Value: PointerOf("query"),
+					Name:  integration.ToPtr("wg_operation_type"),
+					Value: integration.ToPtr("query"),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_id"),
-					Value: PointerOf("0"),
+					Name:  integration.ToPtr("wg_subgraph_id"),
+					Value: integration.ToPtr("0"),
 				},
 				{
-					Name:  PointerOf("wg_subgraph_name"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("wg_subgraph_name"),
+					Value: integration.ToPtr("employees"),
 				},
 			}, requestsInFlightMetricsFiltered[1].Label)
 
@@ -2982,7 +2984,7 @@ func TestPrometheus(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			mfFiltered, err = promRegistryFiltered.Gather()
 			require.NoError(t, err)
@@ -2994,8 +2996,8 @@ func TestPrometheus(t *testing.T) {
 
 			for _, metric := range requestsInFlightMetricsFiltered {
 				for _, label := range metric.Label {
-					require.NotEqual(t, PointerOf("otel_scope_name"), label.Name, "otel_scope_name should not be present")
-					require.NotEqual(t, PointerOf("otel_scope_version"), label.Name, "otel_scope_version should not be present")
+					require.NotEqual(t, integration.ToPtr("otel_scope_name"), label.Name, "otel_scope_name should not be present")
+					require.NotEqual(t, integration.ToPtr("otel_scope_version"), label.Name, "otel_scope_version should not be present")
 				}
 			}
 		})
@@ -3024,28 +3026,28 @@ func TestPrometheus(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			baseAttributes := []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.cache"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.cache"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}
 
@@ -3055,13 +3057,13 @@ func TestPrometheus(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { tag } }`,
@@ -3081,20 +3083,20 @@ func TestPrometheus(t *testing.T) {
 			cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}), cacheMaxCostExecution[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostExecution[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}), cacheMaxCostNormalization[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostNormalization[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}), cacheMaxCostValidation[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostValidation[0].GetGauge().GetValue())
 
@@ -3106,57 +3108,57 @@ func TestPrometheus(t *testing.T) {
 			cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("hits"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("hits"),
 			}), cacheRequestExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("misses"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("misses"),
 			}), cacheRequestExecutionStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("hits"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("hits"),
 			}), cacheRequestNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("misses"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("misses"),
 			}), cacheRequestNormalizationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("hits"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("hits"),
 			}), cacheRequestValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("misses"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("misses"),
 			}), cacheRequestValidationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestValidationStats[0].GetCounter().GetValue())
@@ -3169,68 +3171,68 @@ func TestPrometheus(t *testing.T) {
 			cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheCostExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostExecutionStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheCostNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheCostValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostValidationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostValidationStats[0].GetCounter().GetValue())
@@ -3243,27 +3245,27 @@ func TestPrometheus(t *testing.T) {
 			cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheKeyExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheKeyExecutionStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("updated"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("updated"),
 			}), cacheKeyExecutionStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyExecutionStats[0].GetCounter().GetValue())
@@ -3271,27 +3273,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyExecutionStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheKeyNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheKeyNormalizationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("updated"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("updated"),
 			}), cacheKeyNormalizationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyNormalizationStats[0].GetCounter().GetValue())
@@ -3299,27 +3301,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyNormalizationStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheKeyValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheKeyValidationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("updated"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("updated"),
 			}), cacheKeyValidationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyValidationStats[0].GetCounter().GetValue())
@@ -3351,28 +3353,28 @@ func TestPrometheus(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			baseAttributes := []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.cache"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.cache"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}
 
@@ -3382,13 +3384,13 @@ func TestPrometheus(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { tag } }`,
@@ -3408,20 +3410,20 @@ func TestPrometheus(t *testing.T) {
 			cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}), cacheMaxCostExecution[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostExecution[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}), cacheMaxCostNormalization[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostNormalization[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}), cacheMaxCostValidation[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostValidation[0].GetGauge().GetValue())
 
@@ -3433,57 +3435,57 @@ func TestPrometheus(t *testing.T) {
 			cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("hits"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("hits"),
 			}), cacheRequestExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("misses"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("misses"),
 			}), cacheRequestExecutionStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("hits"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("hits"),
 			}), cacheRequestNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("misses"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("misses"),
 			}), cacheRequestNormalizationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("hits"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("hits"),
 			}), cacheRequestValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("misses"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("misses"),
 			}), cacheRequestValidationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestValidationStats[0].GetCounter().GetValue())
@@ -3496,68 +3498,68 @@ func TestPrometheus(t *testing.T) {
 			cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheCostExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostExecutionStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheCostNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheCostValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostValidationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostValidationStats[0].GetCounter().GetValue())
@@ -3570,27 +3572,27 @@ func TestPrometheus(t *testing.T) {
 			cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheKeyExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheKeyExecutionStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("updated"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("updated"),
 			}), cacheKeyExecutionStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyExecutionStats[0].GetCounter().GetValue())
@@ -3598,27 +3600,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyExecutionStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheKeyNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheKeyNormalizationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("updated"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("updated"),
 			}), cacheKeyNormalizationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyNormalizationStats[0].GetCounter().GetValue())
@@ -3626,27 +3628,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyNormalizationStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheKeyValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheKeyValidationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("updated"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("updated"),
 			}), cacheKeyValidationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyValidationStats[0].GetCounter().GetValue())
@@ -3681,28 +3683,28 @@ func TestPrometheus(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			baseAttributes := []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.cache"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.cache"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}
 
@@ -3712,13 +3714,13 @@ func TestPrometheus(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { tag } }`,
@@ -3739,20 +3741,20 @@ func TestPrometheus(t *testing.T) {
 			cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}), cacheMaxCostExecution[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostExecution[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}), cacheMaxCostNormalization[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostNormalization[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}), cacheMaxCostValidation[0].Label)
 			require.Equal(t, float64(baseCost), cacheMaxCostValidation[0].GetGauge().GetValue())
 
@@ -3764,57 +3766,57 @@ func TestPrometheus(t *testing.T) {
 			cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("hits"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("hits"),
 			}), cacheRequestExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("misses"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("misses"),
 			}), cacheRequestExecutionStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("hits"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("hits"),
 			}), cacheRequestNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("misses"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("misses"),
 			}), cacheRequestNormalizationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("hits"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("hits"),
 			}), cacheRequestValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("type"),
-				Value: PointerOf("misses"),
+				Name:  integration.ToPtr("type"),
+				Value: integration.ToPtr("misses"),
 			}), cacheRequestValidationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestValidationStats[0].GetCounter().GetValue())
@@ -3827,68 +3829,68 @@ func TestPrometheus(t *testing.T) {
 			cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheCostExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostExecutionStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheCostNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheCostValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheCostValidationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostValidationStats[0].GetCounter().GetValue())
@@ -3901,27 +3903,27 @@ func TestPrometheus(t *testing.T) {
 			cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheKeyExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheKeyExecutionStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("plan"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("updated"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("updated"),
 			}), cacheKeyExecutionStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyExecutionStats[0].GetCounter().GetValue())
@@ -3929,27 +3931,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyExecutionStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheKeyNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheKeyNormalizationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("query_normalization"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("updated"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("updated"),
 			}), cacheKeyNormalizationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyNormalizationStats[0].GetCounter().GetValue())
@@ -3957,27 +3959,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyNormalizationStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("added"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("added"),
 			}), cacheKeyValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("evicted"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("evicted"),
 			}), cacheKeyValidationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("cache_type"),
-				Value: PointerOf("validation"),
+				Name:  integration.ToPtr("cache_type"),
+				Value: integration.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  PointerOf("operation"),
-				Value: PointerOf("updated"),
+				Name:  integration.ToPtr("operation"),
+				Value: integration.ToPtr("updated"),
 			}), cacheKeyValidationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyValidationStats[0].GetCounter().GetValue())
@@ -4004,28 +4006,28 @@ func TestPrometheus(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			baseAttributes := []*io_prometheus_client.LabelPair{
 				{
-					Name:  PointerOf("otel_scope_name"),
-					Value: PointerOf("cosmo.router.engine"),
+					Name:  integration.ToPtr("otel_scope_name"),
+					Value: integration.ToPtr("cosmo.router.engine"),
 				},
 				{
-					Name:  PointerOf("otel_scope_version"),
-					Value: PointerOf("0.0.1"),
+					Name:  integration.ToPtr("otel_scope_version"),
+					Value: integration.ToPtr("0.0.1"),
 				},
 				{
-					Name:  PointerOf("wg_federated_graph_id"),
-					Value: PointerOf("graph"),
+					Name:  integration.ToPtr("wg_federated_graph_id"),
+					Value: integration.ToPtr("graph"),
 				},
 				{
-					Name:  PointerOf("wg_router_cluster_name"),
-					Value: PointerOf(""),
+					Name:  integration.ToPtr("wg_router_cluster_name"),
+					Value: integration.ToPtr(""),
 				},
 				{
-					Name:  PointerOf("wg_router_config_version"),
-					Value: PointerOf(xEnv.RouterConfigVersionMain()),
+					Name:  integration.ToPtr("wg_router_config_version"),
+					Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  PointerOf("wg_router_version"),
-					Value: PointerOf("dev"),
+					Name:  integration.ToPtr("wg_router_version"),
+					Value: integration.ToPtr("dev"),
 				},
 			}
 
@@ -4118,7 +4120,7 @@ func TestPrometheus(t *testing.T) {
 		const claimKey = "customKey"
 		const claimVal = "customClaimValue"
 
-		authenticators, authServer := ConfigureAuth(t)
+		authenticators, authServer := integration.ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
 			Authenticators:           authenticators,
 			AuthenticationRequired:   true,
@@ -4161,7 +4163,7 @@ func TestPrometheus(t *testing.T) {
 				Header: header,
 				Query:  `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -4174,13 +4176,13 @@ func TestPrometheus(t *testing.T) {
 			require.Len(t, requestTotalMetrics[1].Label, 15)
 
 			require.Contains(t, requestTotalMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf(claimKey),
-				Value: PointerOf(claimVal),
+				Name:  integration.ToPtr(claimKey),
+				Value: integration.ToPtr(claimVal),
 			})
 
 			require.Contains(t, requestTotalMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf(claimKey),
-				Value: PointerOf(claimVal),
+				Name:  integration.ToPtr(claimKey),
+				Value: integration.ToPtr(claimVal),
 			})
 
 			requestsInFlight := findMetricFamilyByName(mf, "router_http_requests_in_flight")
@@ -4192,13 +4194,13 @@ func TestPrometheus(t *testing.T) {
 
 			// the request toward the subgraph has no authorization header
 			require.NotContains(t, requestsInFlightMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf(claimKey),
-				Value: PointerOf(claimVal),
+				Name:  integration.ToPtr(claimKey),
+				Value: integration.ToPtr(claimVal),
 			})
 
 			require.Contains(t, requestsInFlightMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf(claimKey),
-				Value: PointerOf(claimVal),
+				Name:  integration.ToPtr(claimKey),
+				Value: integration.ToPtr(claimVal),
 			})
 
 			requestDuration := findMetricFamilyByName(mf, "router_http_request_duration_milliseconds")
@@ -4209,13 +4211,13 @@ func TestPrometheus(t *testing.T) {
 			require.Len(t, requestDurationMetrics[1].Label, 15)
 
 			require.Contains(t, requestDurationMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf(claimKey),
-				Value: PointerOf(claimVal),
+				Name:  integration.ToPtr(claimKey),
+				Value: integration.ToPtr(claimVal),
 			})
 
 			require.Contains(t, requestDurationMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf(claimKey),
-				Value: PointerOf(claimVal),
+				Name:  integration.ToPtr(claimKey),
+				Value: integration.ToPtr(claimVal),
 			})
 
 			responseContentLength := findMetricFamilyByName(mf, "router_http_response_content_length_total")
@@ -4226,13 +4228,13 @@ func TestPrometheus(t *testing.T) {
 			require.Len(t, responseContentLengthMetrics[1].Label, 15)
 
 			require.Contains(t, responseContentLengthMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf(claimKey),
-				Value: PointerOf(claimVal),
+				Name:  integration.ToPtr(claimKey),
+				Value: integration.ToPtr(claimVal),
 			})
 
 			require.Contains(t, responseContentLengthMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  PointerOf(claimKey),
-				Value: PointerOf(claimVal),
+				Name:  integration.ToPtr(claimKey),
+				Value: integration.ToPtr(claimVal),
 			})
 
 		})
@@ -4241,7 +4243,7 @@ func TestPrometheus(t *testing.T) {
 	t.Run("Authentication failure records correct HTTP status code in metrics", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := ConfigureAuth(t)
+		authenticators, _ := integration.ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
 			Authenticators:         authenticators,
 			AuthenticationRequired: true,
@@ -4343,111 +4345,111 @@ func TestPrometheusWithModule(t *testing.T) {
 
 		require.Equal(t, []*io_prometheus_client.LabelPair{
 			{
-				Name:  PointerOf("http_status_code"),
-				Value: PointerOf("200"),
+				Name:  integration.ToPtr("http_status_code"),
+				Value: integration.ToPtr("200"),
 			},
 			{
-				Name:  PointerOf("otel_scope_name"),
-				Value: PointerOf("cosmo.router.prometheus"),
+				Name:  integration.ToPtr("otel_scope_name"),
+				Value: integration.ToPtr("cosmo.router.prometheus"),
 			},
 			{
-				Name:  PointerOf("otel_scope_version"),
-				Value: PointerOf("0.0.1"),
+				Name:  integration.ToPtr("otel_scope_version"),
+				Value: integration.ToPtr("0.0.1"),
 			},
 			{
-				Name:  PointerOf("wg_client_name"),
-				Value: PointerOf("unknown"),
+				Name:  integration.ToPtr("wg_client_name"),
+				Value: integration.ToPtr("unknown"),
 			},
 			{
-				Name:  PointerOf("wg_client_version"),
-				Value: PointerOf("missing"),
+				Name:  integration.ToPtr("wg_client_version"),
+				Value: integration.ToPtr("missing"),
 			},
 			{
-				Name:  PointerOf("wg_federated_graph_id"),
-				Value: PointerOf("graph"),
+				Name:  integration.ToPtr("wg_federated_graph_id"),
+				Value: integration.ToPtr("graph"),
 			},
 			{
-				Name:  PointerOf("wg_operation_name"),
-				Value: PointerOf("MyQuery"),
+				Name:  integration.ToPtr("wg_operation_name"),
+				Value: integration.ToPtr("MyQuery"),
 			},
 			{
-				Name:  PointerOf("wg_operation_protocol"),
-				Value: PointerOf("http"),
+				Name:  integration.ToPtr("wg_operation_protocol"),
+				Value: integration.ToPtr("http"),
 			},
 			{
-				Name:  PointerOf("wg_operation_type"),
-				Value: PointerOf("query"),
+				Name:  integration.ToPtr("wg_operation_type"),
+				Value: integration.ToPtr("query"),
 			},
 			{
-				Name:  PointerOf("wg_router_cluster_name"),
-				Value: PointerOf(""),
+				Name:  integration.ToPtr("wg_router_cluster_name"),
+				Value: integration.ToPtr(""),
 			},
 			{
-				Name:  PointerOf("wg_router_config_version"),
-				Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				Name:  integration.ToPtr("wg_router_config_version"),
+				Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 			},
 			{
-				Name:  PointerOf("wg_router_version"),
-				Value: PointerOf("dev"),
+				Name:  integration.ToPtr("wg_router_version"),
+				Value: integration.ToPtr("dev"),
 			},
 		}, requestDurationMetrics[0].Label)
 
 		require.Equal(t, []*io_prometheus_client.LabelPair{
 			{
-				Name:  PointerOf("http_status_code"),
-				Value: PointerOf("200"),
+				Name:  integration.ToPtr("http_status_code"),
+				Value: integration.ToPtr("200"),
 			},
 			{
-				Name:  PointerOf("otel_scope_name"),
-				Value: PointerOf("cosmo.router.prometheus"),
+				Name:  integration.ToPtr("otel_scope_name"),
+				Value: integration.ToPtr("cosmo.router.prometheus"),
 			},
 			{
-				Name:  PointerOf("otel_scope_version"),
-				Value: PointerOf("0.0.1"),
+				Name:  integration.ToPtr("otel_scope_version"),
+				Value: integration.ToPtr("0.0.1"),
 			},
 			{
-				Name:  PointerOf("wg_client_name"),
-				Value: PointerOf("unknown"),
+				Name:  integration.ToPtr("wg_client_name"),
+				Value: integration.ToPtr("unknown"),
 			},
 			{
-				Name:  PointerOf("wg_client_version"),
-				Value: PointerOf("missing"),
+				Name:  integration.ToPtr("wg_client_version"),
+				Value: integration.ToPtr("missing"),
 			},
 			{
-				Name:  PointerOf("wg_federated_graph_id"),
-				Value: PointerOf("graph"),
+				Name:  integration.ToPtr("wg_federated_graph_id"),
+				Value: integration.ToPtr("graph"),
 			},
 			{
-				Name:  PointerOf("wg_operation_name"),
-				Value: PointerOf("MyQuery"),
+				Name:  integration.ToPtr("wg_operation_name"),
+				Value: integration.ToPtr("MyQuery"),
 			},
 			{
-				Name:  PointerOf("wg_operation_protocol"),
-				Value: PointerOf("http"),
+				Name:  integration.ToPtr("wg_operation_protocol"),
+				Value: integration.ToPtr("http"),
 			},
 			{
-				Name:  PointerOf("wg_operation_type"),
-				Value: PointerOf("query"),
+				Name:  integration.ToPtr("wg_operation_type"),
+				Value: integration.ToPtr("query"),
 			},
 			{
-				Name:  PointerOf("wg_router_cluster_name"),
-				Value: PointerOf(""),
+				Name:  integration.ToPtr("wg_router_cluster_name"),
+				Value: integration.ToPtr(""),
 			},
 			{
-				Name:  PointerOf("wg_router_config_version"),
-				Value: PointerOf(xEnv.RouterConfigVersionMain()),
+				Name:  integration.ToPtr("wg_router_config_version"),
+				Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 			},
 			{
-				Name:  PointerOf("wg_router_version"),
-				Value: PointerOf("dev"),
+				Name:  integration.ToPtr("wg_router_version"),
+				Value: integration.ToPtr("dev"),
 			},
 			{
-				Name:  PointerOf("wg_subgraph_id"),
-				Value: PointerOf("0"),
+				Name:  integration.ToPtr("wg_subgraph_id"),
+				Value: integration.ToPtr("0"),
 			},
 			{
-				Name:  PointerOf("wg_subgraph_name"),
-				Value: PointerOf("employees"),
+				Name:  integration.ToPtr("wg_subgraph_name"),
+				Value: integration.ToPtr("employees"),
 			},
 		}, requestDurationMetrics[1].Label)
 	})
@@ -4467,7 +4469,7 @@ func TestPrometheusWithModule(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -4557,12 +4559,12 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 
 				expected := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 				}
 				require.Equal(t, expected, connectionTotal.Label)
@@ -4578,20 +4580,20 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_address"),
-						Value: PointerOf("127.0.0.1"),
+						Name:  integration.ToPtr("server_address"),
+						Value: integration.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_port"),
-						Value: PointerOf(getPort(metricDataPoint1)),
+						Name:  integration.ToPtr("server_port"),
+						Value: integration.ToPtr(getPort(metricDataPoint1)),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -4600,20 +4602,20 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_address"),
-						Value: PointerOf("127.0.0.1"),
+						Name:  integration.ToPtr("server_address"),
+						Value: integration.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_port"),
-						Value: PointerOf(getPort(metricDataPoint2)),
+						Name:  integration.ToPtr("server_port"),
+						Value: integration.ToPtr(getPort(metricDataPoint2)),
 					},
 				}
 				require.Equal(t, expected2, metricDataPoint2.Label)
@@ -4624,32 +4626,38 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				metrics := metricFamily.GetMetric()
 				require.Len(t, metrics, 2)
 
+				// Sort by wg_subgraph_name for deterministic assertion order
+				sort.Slice(metrics, func(i, j int) bool {
+					return metrics[i].Label[len(metrics[i].Label)-1].GetValue() <
+						metrics[j].Label[len(metrics[j].Label)-1].GetValue()
+				})
+
 				metricDataPoint1 := metrics[0]
 				require.Greater(t, *metricDataPoint1.Histogram.SampleSum, 0.0)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_address"),
-						Value: PointerOf("127.0.0.1"),
+						Name:  integration.ToPtr("server_address"),
+						Value: integration.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_port"),
-						Value: PointerOf(getPort(metricDataPoint1)),
+						Name:  integration.ToPtr("server_port"),
+						Value: integration.ToPtr(getPort(metricDataPoint1)),
 					},
 					{
-						Name:  PointerOf("wg_http_client_reused_connection"),
-						Value: PointerOf("false"),
+						Name:  integration.ToPtr("wg_http_client_reused_connection"),
+						Value: integration.ToPtr("false"),
 					},
 					{
-						Name:  PointerOf("wg_subgraph_name"),
-						Value: PointerOf("employees"),
+						Name:  integration.ToPtr("wg_subgraph_name"),
+						Value: integration.ToPtr("availability"),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -4658,28 +4666,28 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint2.Histogram.SampleSum, 0.0)
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_address"),
-						Value: PointerOf("127.0.0.1"),
+						Name:  integration.ToPtr("server_address"),
+						Value: integration.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_port"),
-						Value: PointerOf(getPort(metricDataPoint2)),
+						Name:  integration.ToPtr("server_port"),
+						Value: integration.ToPtr(getPort(metricDataPoint2)),
 					},
 					{
-						Name:  PointerOf("wg_http_client_reused_connection"),
-						Value: PointerOf("false"),
+						Name:  integration.ToPtr("wg_http_client_reused_connection"),
+						Value: integration.ToPtr("false"),
 					},
 					{
-						Name:  PointerOf("wg_subgraph_name"),
-						Value: PointerOf("availability"),
+						Name:  integration.ToPtr("wg_subgraph_name"),
+						Value: integration.ToPtr("employees"),
 					},
 				}
 				require.Equal(t, expected2, metricDataPoint2.Label)
@@ -4696,11 +4704,11 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: PointerOf(200 * time.Millisecond),
+				RequestTimeout: integration.ToPtr(200 * time.Millisecond),
 			},
 			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"availability": {
-					RequestTimeout: PointerOf(300 * time.Millisecond),
+					RequestTimeout: integration.ToPtr(300 * time.Millisecond),
 				},
 			},
 		}
@@ -4736,12 +4744,12 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Equal(t, float64(1024), *metricDataPoint1.Gauge.Value)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -4750,16 +4758,16 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Equal(t, float64(1024), *metricDataPoint2.Gauge.Value)
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 					{
-						Name:  PointerOf("wg_subgraph_name"),
-						Value: PointerOf("availability"),
+						Name:  integration.ToPtr("wg_subgraph_name"),
+						Value: integration.ToPtr("availability"),
 					},
 				}
 				require.Equal(t, expected2, metricDataPoint2.Label)
@@ -4775,20 +4783,20 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_address"),
-						Value: PointerOf("127.0.0.1"),
+						Name:  integration.ToPtr("server_address"),
+						Value: integration.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_port"),
-						Value: PointerOf(getPort(metricDataPoint1)),
+						Name:  integration.ToPtr("server_port"),
+						Value: integration.ToPtr(getPort(metricDataPoint1)),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -4797,24 +4805,24 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_address"),
-						Value: PointerOf("127.0.0.1"),
+						Name:  integration.ToPtr("server_address"),
+						Value: integration.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_port"),
-						Value: PointerOf(getPort(metricDataPoint2)),
+						Name:  integration.ToPtr("server_port"),
+						Value: integration.ToPtr(getPort(metricDataPoint2)),
 					},
 					{
-						Name:  PointerOf("wg_subgraph_name"),
-						Value: PointerOf("availability"),
+						Name:  integration.ToPtr("wg_subgraph_name"),
+						Value: integration.ToPtr("availability"),
 					},
 				}
 				require.Equal(t, expected2, metricDataPoint2.Label)
@@ -4851,8 +4859,8 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.NoError(t, err)
 
 				expected := &io_prometheus_client.LabelPair{
-					Name:  PointerOf("custom_subgraph"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("custom_subgraph"),
+					Value: integration.ToPtr("employees"),
 				}
 
 				requestsInFlight := findMetricFamilyByName(metricFamily, "router_http_requests_in_flight")
@@ -4897,8 +4905,8 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.NoError(t, err)
 
 				expected := &io_prometheus_client.LabelPair{
-					Name:  PointerOf("custom_subgraph"),
-					Value: PointerOf("employees"),
+					Name:  integration.ToPtr("custom_subgraph"),
+					Value: integration.ToPtr("employees"),
 				}
 
 				requestsInFlight := findMetricFamilyByName(metricFamily, "router_http_requests_in_flight")
@@ -4966,12 +4974,12 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 
 				expected := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 				}
 				require.Equal(t, expected, connectionTotal.Label)
@@ -4987,20 +4995,20 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_address"),
-						Value: PointerOf("127.0.0.1"),
+						Name:  integration.ToPtr("server_address"),
+						Value: integration.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_port"),
-						Value: PointerOf(getPort(metricDataPoint1)),
+						Name:  integration.ToPtr("server_port"),
+						Value: integration.ToPtr(getPort(metricDataPoint1)),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -5015,28 +5023,28 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Histogram.SampleSum, 0.0)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  PointerOf("otel_scope_name"),
-						Value: PointerOf("cosmo.router.connections.prometheus"),
+						Name:  integration.ToPtr("otel_scope_name"),
+						Value: integration.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  PointerOf("otel_scope_version"),
-						Value: PointerOf("0.0.1"),
+						Name:  integration.ToPtr("otel_scope_version"),
+						Value: integration.ToPtr("0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_address"),
-						Value: PointerOf("127.0.0.1"),
+						Name:  integration.ToPtr("server_address"),
+						Value: integration.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  PointerOf("server_port"),
-						Value: PointerOf(getPort(metricDataPoint1)),
+						Name:  integration.ToPtr("server_port"),
+						Value: integration.ToPtr(getPort(metricDataPoint1)),
 					},
 					{
-						Name:  PointerOf("wg_http_client_reused_connection"),
-						Value: PointerOf("false"),
+						Name:  integration.ToPtr("wg_http_client_reused_connection"),
+						Value: integration.ToPtr("false"),
 					},
 					{
-						Name:  PointerOf("wg_subgraph_name"),
-						Value: PointerOf("employees"),
+						Name:  integration.ToPtr("wg_subgraph_name"),
+						Value: integration.ToPtr("employees"),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -5099,38 +5107,38 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					require.Len(t, requestTotalMetrics, 2)
 
 					metricsLabels := []*io_prometheus_client.LabelPair{
-						{Name: PointerOf("http_status_code"), Value: PointerOf("200")},
-						{Name: PointerOf("otel_scope_name"), Value: PointerOf("cosmo.router.prometheus")},
-						{Name: PointerOf("otel_scope_version"), Value: PointerOf("0.0.1")},
-						{Name: PointerOf("wg_client_name"), Value: PointerOf("unknown")},
-						{Name: PointerOf("wg_client_version"), Value: PointerOf("missing")},
-						{Name: PointerOf("wg_federated_graph_id"), Value: PointerOf("graph")},
+						{Name: integration.ToPtr("http_status_code"), Value: integration.ToPtr("200")},
+						{Name: integration.ToPtr("otel_scope_name"), Value: integration.ToPtr("cosmo.router.prometheus")},
+						{Name: integration.ToPtr("otel_scope_version"), Value: integration.ToPtr("0.0.1")},
+						{Name: integration.ToPtr("wg_client_name"), Value: integration.ToPtr("unknown")},
+						{Name: integration.ToPtr("wg_client_version"), Value: integration.ToPtr("missing")},
+						{Name: integration.ToPtr("wg_federated_graph_id"), Value: integration.ToPtr("graph")},
 					}
 
 					if usingCustomExporter == UseCloudExporter {
 						metricsLabels = append(metricsLabels, &io_prometheus_client.LabelPair{
-							Name:  PointerOf("wg_operation_name"),
-							Value: PointerOf("myQuery"),
+							Name:  integration.ToPtr("wg_operation_name"),
+							Value: integration.ToPtr("myQuery"),
 						})
 					}
 
 					metricsLabels = append(metricsLabels,
-						&io_prometheus_client.LabelPair{Name: PointerOf("wg_operation_protocol"), Value: PointerOf("http")},
-						&io_prometheus_client.LabelPair{Name: PointerOf("wg_operation_type"), Value: PointerOf("query")},
-						&io_prometheus_client.LabelPair{Name: PointerOf("wg_router_cluster_name"), Value: PointerOf("")},
+						&io_prometheus_client.LabelPair{Name: integration.ToPtr("wg_operation_protocol"), Value: integration.ToPtr("http")},
+						&io_prometheus_client.LabelPair{Name: integration.ToPtr("wg_operation_type"), Value: integration.ToPtr("query")},
+						&io_prometheus_client.LabelPair{Name: integration.ToPtr("wg_router_cluster_name"), Value: integration.ToPtr("")},
 					)
 
 					if usingCustomExporter != UseCustomExporterOnly {
 						metricsLabels = append(metricsLabels,
 							&io_prometheus_client.LabelPair{
-								Name:  PointerOf("wg_router_config_version"),
-								Value: PointerOf(xEnv.RouterConfigVersionMain()),
+								Name:  integration.ToPtr("wg_router_config_version"),
+								Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 							},
 						)
 					}
 
 					metricsLabels = append(metricsLabels,
-						&io_prometheus_client.LabelPair{Name: PointerOf("wg_router_version"), Value: PointerOf("dev")},
+						&io_prometheus_client.LabelPair{Name: integration.ToPtr("wg_router_version"), Value: integration.ToPtr("dev")},
 					)
 
 					require.Equal(t, metricsLabels, requestTotalMetrics[0].Label)
@@ -5169,7 +5177,7 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 							"X-Feature-Flag": {"myff"},
 						},
 					})
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, integration.EmployeesIDData, res.Body)
 
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
@@ -5181,72 +5189,72 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 
 					attributes := []*io_prometheus_client.LabelPair{
 						{
-							Name:  PointerOf("http_status_code"),
-							Value: PointerOf("200"),
+							Name:  integration.ToPtr("http_status_code"),
+							Value: integration.ToPtr("200"),
 						},
 						{
-							Name:  PointerOf("otel_scope_name"),
-							Value: PointerOf("cosmo.router.prometheus"),
+							Name:  integration.ToPtr("otel_scope_name"),
+							Value: integration.ToPtr("cosmo.router.prometheus"),
 						},
 						{
-							Name:  PointerOf("otel_scope_version"),
-							Value: PointerOf("0.0.1"),
+							Name:  integration.ToPtr("otel_scope_version"),
+							Value: integration.ToPtr("0.0.1"),
 						},
 						{
-							Name:  PointerOf("wg_client_name"),
-							Value: PointerOf("unknown"),
+							Name:  integration.ToPtr("wg_client_name"),
+							Value: integration.ToPtr("unknown"),
 						},
 						{
-							Name:  PointerOf("wg_client_version"),
-							Value: PointerOf("missing"),
+							Name:  integration.ToPtr("wg_client_version"),
+							Value: integration.ToPtr("missing"),
 						},
 						{
-							Name:  PointerOf("wg_feature_flag"),
-							Value: PointerOf("myff"),
+							Name:  integration.ToPtr("wg_feature_flag"),
+							Value: integration.ToPtr("myff"),
 						},
 						{
-							Name:  PointerOf("wg_federated_graph_id"),
-							Value: PointerOf("graph"),
+							Name:  integration.ToPtr("wg_federated_graph_id"),
+							Value: integration.ToPtr("graph"),
 						},
 					}
 
 					if usingCustomExporter == UseCloudExporter {
 						attributes = append(attributes,
 							&io_prometheus_client.LabelPair{
-								Name:  PointerOf("wg_operation_name"),
-								Value: PointerOf("myQuery"),
+								Name:  integration.ToPtr("wg_operation_name"),
+								Value: integration.ToPtr("myQuery"),
 							},
 						)
 					}
 
 					attributes = append(attributes,
 						&io_prometheus_client.LabelPair{
-							Name:  PointerOf("wg_operation_protocol"),
-							Value: PointerOf("http"),
+							Name:  integration.ToPtr("wg_operation_protocol"),
+							Value: integration.ToPtr("http"),
 						},
 						&io_prometheus_client.LabelPair{
-							Name:  PointerOf("wg_operation_type"),
-							Value: PointerOf("query"),
+							Name:  integration.ToPtr("wg_operation_type"),
+							Value: integration.ToPtr("query"),
 						},
 						&io_prometheus_client.LabelPair{
-							Name:  PointerOf("wg_router_cluster_name"),
-							Value: PointerOf(""),
+							Name:  integration.ToPtr("wg_router_cluster_name"),
+							Value: integration.ToPtr(""),
 						},
 					)
 
 					if usingCustomExporter != UseCustomExporterOnly {
 						attributes = append(attributes,
 							&io_prometheus_client.LabelPair{
-								Name:  PointerOf("wg_router_config_version"),
-								Value: PointerOf(xEnv.RouterConfigVersionMyFF()),
+								Name:  integration.ToPtr("wg_router_config_version"),
+								Value: integration.ToPtr(xEnv.RouterConfigVersionMyFF()),
 							},
 						)
 					}
 
 					attributes = append(attributes,
 						&io_prometheus_client.LabelPair{
-							Name:  PointerOf("wg_router_version"),
-							Value: PointerOf("dev"),
+							Name:  integration.ToPtr("wg_router_version"),
+							Value: integration.ToPtr("dev"),
 						},
 					)
 
@@ -5286,36 +5294,36 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
 					baseAttributes := []*io_prometheus_client.LabelPair{
 						{
-							Name:  PointerOf("otel_scope_name"),
-							Value: PointerOf("cosmo.router.engine"),
+							Name:  integration.ToPtr("otel_scope_name"),
+							Value: integration.ToPtr("cosmo.router.engine"),
 						},
 						{
-							Name:  PointerOf("otel_scope_version"),
-							Value: PointerOf("0.0.1"),
+							Name:  integration.ToPtr("otel_scope_version"),
+							Value: integration.ToPtr("0.0.1"),
 						},
 						{
-							Name:  PointerOf("wg_federated_graph_id"),
-							Value: PointerOf("graph"),
+							Name:  integration.ToPtr("wg_federated_graph_id"),
+							Value: integration.ToPtr("graph"),
 						},
 						{
-							Name:  PointerOf("wg_router_cluster_name"),
-							Value: PointerOf(""),
+							Name:  integration.ToPtr("wg_router_cluster_name"),
+							Value: integration.ToPtr(""),
 						},
 					}
 
 					if usingCustomExporter != UseCustomExporterOnly {
 						baseAttributes = append(baseAttributes,
 							&io_prometheus_client.LabelPair{
-								Name:  PointerOf("wg_router_config_version"),
-								Value: PointerOf(xEnv.RouterConfigVersionMain()),
+								Name:  integration.ToPtr("wg_router_config_version"),
+								Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 							},
 						)
 					}
 
 					baseAttributes = append(baseAttributes,
 						&io_prometheus_client.LabelPair{
-							Name:  PointerOf("wg_router_version"),
-							Value: PointerOf("dev"),
+							Name:  integration.ToPtr("wg_router_version"),
+							Value: integration.ToPtr("dev"),
 						},
 					)
 
@@ -5424,36 +5432,36 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					baseAttributes := func() []*io_prometheus_client.LabelPair {
 						attributes := []*io_prometheus_client.LabelPair{
 							{
-								Name:  PointerOf("otel_scope_name"),
-								Value: PointerOf("cosmo.router.cache"),
+								Name:  integration.ToPtr("otel_scope_name"),
+								Value: integration.ToPtr("cosmo.router.cache"),
 							},
 							{
-								Name:  PointerOf("otel_scope_version"),
-								Value: PointerOf("0.0.1"),
+								Name:  integration.ToPtr("otel_scope_version"),
+								Value: integration.ToPtr("0.0.1"),
 							},
 							{
-								Name:  PointerOf("wg_federated_graph_id"),
-								Value: PointerOf("graph"),
+								Name:  integration.ToPtr("wg_federated_graph_id"),
+								Value: integration.ToPtr("graph"),
 							},
 							{
-								Name:  PointerOf("wg_router_cluster_name"),
-								Value: PointerOf(""),
+								Name:  integration.ToPtr("wg_router_cluster_name"),
+								Value: integration.ToPtr(""),
 							},
 						}
 
 						if usingCustomExporter != UseCustomExporterOnly {
 							attributes = append(attributes,
 								&io_prometheus_client.LabelPair{
-									Name:  PointerOf("wg_router_config_version"),
-									Value: PointerOf(xEnv.RouterConfigVersionMain()),
+									Name:  integration.ToPtr("wg_router_config_version"),
+									Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
 								},
 							)
 						}
 
 						attributes = append(attributes,
 							&io_prometheus_client.LabelPair{
-								Name:  PointerOf("wg_router_version"),
-								Value: PointerOf("dev"),
+								Name:  integration.ToPtr("wg_router_version"),
+								Value: integration.ToPtr("dev"),
 							},
 						)
 
@@ -5486,18 +5494,18 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("plan"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("plan"),
 					}), cacheMaxCostExecution[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("query_normalization"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("query_normalization"),
 					}), cacheMaxCostNormalization[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("validation"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("validation"),
 					}), cacheMaxCostValidation[0].Label)
 
 					// Check the cache request stats
@@ -5508,51 +5516,51 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("plan"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("type"),
-						Value: PointerOf("hits"),
+						Name:  integration.ToPtr("type"),
+						Value: integration.ToPtr("hits"),
 					}), cacheRequestExecutionStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("plan"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("type"),
-						Value: PointerOf("misses"),
+						Name:  integration.ToPtr("type"),
+						Value: integration.ToPtr("misses"),
 					}), cacheRequestExecutionStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("query_normalization"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("type"),
-						Value: PointerOf("hits"),
+						Name:  integration.ToPtr("type"),
+						Value: integration.ToPtr("hits"),
 					}), cacheRequestNormalizationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("query_normalization"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("type"),
-						Value: PointerOf("misses"),
+						Name:  integration.ToPtr("type"),
+						Value: integration.ToPtr("misses"),
 					}), cacheRequestNormalizationStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("validation"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("type"),
-						Value: PointerOf("hits"),
+						Name:  integration.ToPtr("type"),
+						Value: integration.ToPtr("hits"),
 					}), cacheRequestValidationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("validation"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("type"),
-						Value: PointerOf("misses"),
+						Name:  integration.ToPtr("type"),
+						Value: integration.ToPtr("misses"),
 					}), cacheRequestValidationStats[1].Label)
 
 					// Cache cost stats
@@ -5562,59 +5570,59 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("plan"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("added"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("added"),
 					}), cacheCostExecutionStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("plan"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("evicted"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("evicted"),
 					}), cacheCostExecutionStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("query_normalization"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("added"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("added"),
 					}), cacheCostNormalizationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("query_normalization"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("evicted"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("evicted"),
 					}), cacheCostNormalizationStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("query_normalization"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("evicted"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("evicted"),
 					}), cacheCostNormalizationStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("validation"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("added"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("added"),
 					}), cacheCostValidationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("validation"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("evicted"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("evicted"),
 					}), cacheCostValidationStats[1].Label)
 
 					// cache Key stats
@@ -5624,75 +5632,75 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("plan"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("added"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("added"),
 					}), cacheKeyExecutionStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("plan"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("evicted"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("evicted"),
 					}), cacheKeyExecutionStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("plan"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("updated"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("updated"),
 					}), cacheKeyExecutionStats[2].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("query_normalization"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("added"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("added"),
 					}), cacheKeyNormalizationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("query_normalization"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("evicted"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("evicted"),
 					}), cacheKeyNormalizationStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("query_normalization"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("updated"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("updated"),
 					}), cacheKeyNormalizationStats[2].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("validation"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("added"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("added"),
 					}), cacheKeyValidationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("validation"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("evicted"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("evicted"),
 					}), cacheKeyValidationStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("cache_type"),
-						Value: PointerOf("validation"),
+						Name:  integration.ToPtr("cache_type"),
+						Value: integration.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  PointerOf("operation"),
-						Value: PointerOf("updated"),
+						Name:  integration.ToPtr("operation"),
+						Value: integration.ToPtr("updated"),
 					}), cacheKeyValidationStats[2].Label)
 
 				})
@@ -5756,6 +5764,3 @@ func findEngineMetrics(mf []*io_prometheus_client.MetricFamily) []*io_prometheus
 	return findMetricsWithPrefix(mf, "router_engine_")
 }
 
-func PointerOf[T any](t T) *T {
-	return &t
-}

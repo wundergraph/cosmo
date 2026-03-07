@@ -1,6 +1,8 @@
-package integration
+package integration // trigger CI 2
 
 import (
+	integration "github.com/wundergraph/cosmo/router-tests"
+
 	"bytes"
 	"context"
 	"encoding/json"
@@ -31,7 +33,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-const employeesIDData = `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`
 
 func normalizeJSON(tb testing.TB, data []byte) []byte {
 	buf := new(bytes.Buffer)
@@ -48,7 +49,7 @@ func TestSimpleQuery(t *testing.T) {
 			Query: `query { employees { id } }`,
 		})
 		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
-		require.JSONEq(t, employeesIDData, res.Body)
+		require.JSONEq(t, integration.EmployeesIDData, res.Body)
 	})
 }
 
@@ -263,7 +264,7 @@ func TestContentTypes(t *testing.T) {
 
 			body, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
-			require.JSONEq(t, employeesIDData, string(body))
+			require.JSONEq(t, integration.EmployeesIDData, string(body))
 
 		}
 	})
@@ -1008,7 +1009,7 @@ func TestAnonymousQuery(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 		})
 
 		t.Run("sequence of queries with different count of variables", func(t *testing.T) {
@@ -1160,7 +1161,7 @@ func TestOperationSelection(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
-			require.JSONEq(t, employeesIDData, res.Body)
+			require.JSONEq(t, integration.EmployeesIDData, res.Body)
 		})
 	})
 
@@ -1183,7 +1184,7 @@ func TestOperationSelection(t *testing.T) {
 				Query:         `{ employees { id } }`,
 				OperationName: []byte(`null`),
 			})
-			require.Equal(t, employeesIDData, res.Body)
+			require.Equal(t, integration.EmployeesIDData, res.Body)
 		})
 	})
 
@@ -1218,7 +1219,7 @@ func TestOperationSelection(t *testing.T) {
 					Query:         `query A { employees { id } } query B { employees { id details { forename surname } } }`,
 					OperationName: []byte(`"A"`),
 				})
-				require.Equal(t, employeesIDData, res.Body)
+				require.Equal(t, integration.EmployeesIDData, res.Body)
 			})
 		})
 

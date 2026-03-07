@@ -119,6 +119,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				clientRunCh := make(chan error)
 				go func() { clientRunCh <- client.Run() }()
 				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
+				xEnv.WaitForTriggerCount(1, WaitTimeout)
 
 				events.ProduceKafkaMessage(t, xEnv, time.Second, topic, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
@@ -310,13 +311,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
+				xEnv.WaitForTriggerCount(1, WaitTimeout)
 
 				// Send a mutation to trigger the first subscription
-				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename":"Employee"}`))
-				require.NoError(t, err)
-
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename":"Employee"}`), 1, WaitTimeout)
 
 				testenv.AwaitChannelWithT(t, WaitTimeout, subscriptionArgsCh, func(t *testing.T, args subscriptionArgs) {
 					require.NoError(t, args.errValue)
@@ -454,6 +452,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				go func() { runCh <- client.Run() }()
 
 				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
+				xEnv.WaitForTriggerCount(1, WaitTimeout)
 				events.ProduceRedisMessage(t, xEnv, topic, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 				testenv.AwaitChannelWithT(t, WaitTimeout, subscriptionArgsCh, func(t *testing.T, args subscriptionArgs) {
