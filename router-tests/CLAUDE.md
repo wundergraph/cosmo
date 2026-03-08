@@ -142,7 +142,25 @@ require.Eventually(t, func() bool {
 }, 5*time.Second, 100*time.Millisecond)
 ```
 
-### 7. Buffered channels in worker pools: prevent goroutine leaks on context cancellation
+### 7. Async hook invocation: poll before asserting counts
+
+**Problem:** Module hooks (e.g., `OnStartSubscription`) may fire asynchronously after `WaitForSubscriptionCount` returns. Asserting `HookCallCount` immediately can see `0` because the hook hasn't executed yet.
+
+**Fix:** Use `require.Eventually` to poll for the expected hook count before asserting.
+
+```go
+// WRONG — hook may not have fired yet
+xEnv.WaitForSubscriptionCount(1, timeout)
+assert.Equal(t, int32(1), customModule.HookCallCount.Load()) // may be 0
+
+// RIGHT — poll until hook fires
+xEnv.WaitForSubscriptionCount(1, timeout)
+require.Eventually(t, func() bool {
+    return customModule.HookCallCount.Load() >= 1
+}, time.Second*10, time.Millisecond*50)
+```
+
+### 8. Buffered channels in worker pools: prevent goroutine leaks on context cancellation
 
 **Problem:** When a worker pool uses an unbuffered completion channel and the main goroutine exits early (e.g., via context cancellation), workers block forever on sends, leaking goroutines and potentially crashing the process.
 
@@ -173,4 +191,4 @@ itemCompleted := make(chan struct{}, workerCount)
 | `ToPtr` | `utils.go` | Generic pointer helper |
 | `EmployeesIDData` | `utils.go` | Standard expected response constant |
 
-<!-- CI stability run: 10 of 50 -->
+<!-- CI stability run: 1 of 50 -->
