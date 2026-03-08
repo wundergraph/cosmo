@@ -24,3 +24,7 @@ go.work.sum
 
 # Mise local config
 **/mise.local.toml
+
+# Code review pipeline data (large, fetched via download.sh)
+/codereview/input/
+/codereview/output/
