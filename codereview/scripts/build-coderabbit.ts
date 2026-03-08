@@ -115,7 +115,8 @@ async function main() {
       const botSnippet = t.bot_comment
         .replace(/^_[^_]+_\s*(\|\s*_[^_]+_\s*)?/gm, "")
         .replace(/<details>[\s\S]*?<\/details>/g, "")
-        .replace(/<[^>]+>/g, "")
+        .replace(/<[^>]*>/g, "")
+        .replace(/[<>]/g, "")
         .trim()
         .split("\n")
         .map((l) => l.trim())

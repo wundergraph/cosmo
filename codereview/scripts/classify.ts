@@ -105,7 +105,13 @@ ${e.body.slice(0, 500)}`,
     return entries.map((e) => ({ ...e, category: "unknown", actionability: "medium", domain_specificity: "low" }));
   }
 
-  const classifications: Array<{ category: string; actionability: string; domain_specificity: string }> = JSON.parse(jsonMatch[0]);
+  let classifications: Array<{ category: string; actionability: string; domain_specificity: string }>;
+  try {
+    classifications = JSON.parse(jsonMatch[0]);
+  } catch {
+    console.error("Failed to parse classification JSON:", jsonMatch[0].slice(0, 200));
+    return entries.map((e) => ({ ...e, category: "unknown", actionability: "medium", domain_specificity: "low" }));
+  }
 
   return entries.map((e, i) => ({
     ...e,

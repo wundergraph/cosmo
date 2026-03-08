@@ -2,7 +2,7 @@
 
 ## Goal
 
-Extract actionable knowledge from ~239 historical PRs (wundergraph/cosmo) and build artifacts that improve future LLM-driven code reviews. The approach uses **few-shot learning + synthesized guidelines** rather than fine-tuning -- cheaper, more transparent, and easier to iterate.
+Extract actionable knowledge from ~500 historical PRs (wundergraph/cosmo) and build artifacts that improve future LLM-driven code reviews. The approach uses **few-shot learning + synthesized guidelines** rather than fine-tuning -- cheaper, more transparent, and easier to iterate.
 
 ## Core Principle: Human Signal Over Bot Signal
 
@@ -237,7 +237,7 @@ When new PRs are downloaded via `download.sh`:
 
 ## Key Constraints
 
-1. **No fine-tuning.** Few-shot + guidelines is cheaper, more transparent, and iteratable. 756 human comments is too small for meaningful fine-tuning gains over good prompting.
+1. **No fine-tuning.** Few-shot + guidelines is cheaper, more transparent, and iteratable. 1,358 human comments is too small for meaningful fine-tuning gains over good prompting.
 
 2. **Keep examples short.** Trim diff hunks to 5-15 relevant lines. Long hunks waste context window and dilute the signal.
 

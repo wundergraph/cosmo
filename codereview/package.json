@@ -13,7 +13,7 @@
     "build:antipatterns": "bun run scripts/build-antipatterns.ts",
     "extract:full": "bun run scripts/extract.ts --full",
     "pipeline": "bun run extract && bun run filter && bun run build:profiles",
-    "pipeline:full": "bun run extract && bun run filter && bun run build:profiles && bun run build:guidelines && bun run build:coderabbit",
+    "pipeline:full": "bun run extract && bun run filter && bun run build:profiles && bun run build:guidelines && bun run build:antipatterns && bun run build:coderabbit",
     "pipeline:rebuild": "bun run extract:full && bun run filter && bun run build:profiles && bun run build:guidelines && bun run build:coderabbit"
   },
   "dependencies": {

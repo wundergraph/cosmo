@@ -102,7 +102,7 @@ reviews:
     - "Consider the implications of returning a non-cloned slice from MutableEvent.GetData()." — rejected: "It's intentional like this and part of the hook interface design. A `MutableEvent` is designed to be mutable, while a `Event` is immutable. Since `Eve" (#2273)
     - "Cycle detection only checks direct cycles, missing transitive dependencies." — rejected: "Take a look at `01-basic-validation.test.ts`. There is a test that actually already checks this behavior. The visitor will visit every field with argu" (#2290)
     - "Verify that NetworkError is thrown for authentication failures." — rejected: "Incorrect: https://github.com/keycloak/keycloak/blob/26.2.5/js/libs/keycloak-admin-client/src/utils/fetchWithError.ts#L25" (#2354)
-    - "Fix the incorrect sync.WaitGroup usage." — rejected: "The code compiles and tests pass successfully The wg variable is of type errgroup.Group from golang.org/x/sync/errgroup, not sync.WaitGroup errgroup" (#2379)
+    - "Fix the incorrect sync.WaitGroup usage." — rejected: "The code compiles and tests pass successfully. The wg variable is of type errgroup.Group from golang.org/x/sync/errgroup, not sync.WaitGroup." (#2379)
     - "`GraphQL Federation `@requires` directive field set syntax inline fragments abstract types specification`" — rejected: "I know, this is temporary. The implementation for the abstract types is quite complex and I decided to implement this in multiple iterations." (#2439)
     - "`Apollo Federation `@requires` directive schema composition behavior`" — rejected: "`@requires` fields are resolved by a different RPC. Therefore it doesn't make sense to include the field in the entity message. RPCs that resolve the " (#2439)
     - "`js-yaml: ">=4.1.1"` is out of scope for CVE-2026-25896 and uses an unbounded range." — rejected: "Incorrect finding, this just adds trailing comma (`,`) since other elements are added after it." (#2552)
@@ -235,4 +235,3 @@ reviews:
         - @Noroth (28 review comments in cli)
         - @StarpTech (27 review comments in cli)
         Format: "**Expert review recommended**: @username - [brief reason]"
-

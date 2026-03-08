@@ -130,7 +130,13 @@ Comment: ${entry.body.slice(0, 200)}`,
     });
 
     const text = response.content[0].type === "text" ? response.content[0].text : "[]";
-    const indices: number[] = JSON.parse(text.match(/\[[\d,\s]*\]/)?.[0] ?? "[]");
+    let indices: number[];
+    try {
+      indices = JSON.parse(text.match(/\[[\d,\s]*\]/)?.[0] ?? "[]");
+    } catch {
+      console.warn(`Failed to parse LLM response for category "${category}", taking first 3`);
+      indices = items.slice(0, 3).map((_, i) => i);
+    }
 
     for (const idx of indices) {
       if (idx >= 0 && idx < items.length) {

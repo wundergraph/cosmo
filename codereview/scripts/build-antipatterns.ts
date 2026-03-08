@@ -213,7 +213,7 @@ function inferSubsystem(filePath: string): string {
 function extractBotCategory(body: string): string {
   // CodeRabbit uses prefixes like "_⚠️ Potential issue_", "_🛠️ Refactor suggestion_"
   const categoryMatch = body.match(/^_([^_]+)_\s*\|\s*_([^_]+)_/);
-  if (categoryMatch) return categoryMatch[1].replace(/[⚠️🛠️💡]/g, "").trim();
+  if (categoryMatch) return categoryMatch[1].replace(/⚠️|🛠️|💡/g, "").trim();
 
   if (body.includes("Potential issue")) return "Potential issue";
   if (body.includes("Refactor suggestion")) return "Refactor suggestion";
@@ -291,10 +291,12 @@ async function main() {
   };
 
   console.log(`\nClassified ${stats.total} CodeRabbit comment threads:`);
-  console.log(`  Accepted: ${stats.accepted} (${((stats.accepted / stats.total) * 100).toFixed(1)}%)`);
-  console.log(`  Rejected: ${stats.rejected} (${((stats.rejected / stats.total) * 100).toFixed(1)}%)`);
-  console.log(`  Ignored:  ${stats.ignored} (${((stats.ignored / stats.total) * 100).toFixed(1)}%)`);
-  console.log(`  Unclear:  ${stats.unclear} (${((stats.unclear / stats.total) * 100).toFixed(1)}%)`);
+  if (stats.total > 0) {
+    console.log(`  Accepted: ${stats.accepted} (${((stats.accepted / stats.total) * 100).toFixed(1)}%)`);
+    console.log(`  Rejected: ${stats.rejected} (${((stats.rejected / stats.total) * 100).toFixed(1)}%)`);
+    console.log(`  Ignored:  ${stats.ignored} (${((stats.ignored / stats.total) * 100).toFixed(1)}%)`);
+    console.log(`  Unclear:  ${stats.unclear} (${((stats.unclear / stats.total) * 100).toFixed(1)}%)`);
+  }
 
   await writeFile(ANTI_PATTERNS_JSON, JSON.stringify(classified, null, 2) + "\n");
 
