@@ -4,20 +4,16 @@
   "type": "module",
   "scripts": {
     "extract": "bun run scripts/extract.ts",
-    "classify": "bun run scripts/classify.ts",
-    "filter": "bun run scripts/filter.ts",
-    "build:guidelines": "bun run scripts/build-guidelines.ts",
-    "build:examples": "bun run scripts/build-examples.ts",
-    "build:profiles": "bun run scripts/build-profiles.ts",
-    "build:coderabbit": "bun run scripts/build-coderabbit.ts",
-    "build:antipatterns": "bun run scripts/build-antipatterns.ts",
     "extract:full": "bun run scripts/extract.ts --full",
-    "pipeline": "bun run extract && bun run filter && bun run build:profiles",
-    "pipeline:full": "bun run extract && bun run filter && bun run build:profiles && bun run build:guidelines && bun run build:antipatterns && bun run build:coderabbit",
-    "pipeline:rebuild": "bun run extract:full && bun run filter && bun run build:profiles && bun run build:guidelines && bun run build:coderabbit"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.39.0"
+    "filter": "bun run scripts/filter.ts",
+    "build:profiles": "bun run scripts/build-profiles.ts",
+    "build:guidelines": "bun run scripts/build-guidelines.ts",
+    "build:antipatterns": "bun run scripts/build-antipatterns.ts",
+    "build:coderabbit": "bun run scripts/build-coderabbit.ts",
+    "build:claude-md": "bun run scripts/build-claude-md.ts",
+    "evaluate": "bun run scripts/evaluate.ts",
+    "pipeline": "bun run extract && bun run filter && bun run build:profiles && bun run build:antipatterns && bun run build:coderabbit && bun run build:claude-md",
+    "pipeline:full": "bun run extract:full && bun run filter && bun run build:profiles && bun run build:antipatterns && bun run build:coderabbit && bun run build:claude-md"
   },
   "devDependencies": {
     "@types/bun": "latest",

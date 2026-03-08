@@ -1,10 +1,9 @@
 /**
- * Build review guidelines from gold set comments.
- * Uses Claude CLI to synthesize recurring patterns into actionable rules,
- * producing both global guidelines and per-subsystem path instructions.
+ * Synthesize review guidelines from gold set comments using Claude CLI.
+ * Writes directly to standards/*.md (the source of truth).
  *
  * Reads output/gold_set.jsonl
- * Writes output/guidelines.md and output/path_instructions.json
+ * Writes standards/_global.md and standards/{subsystem}.md
  *
  * Usage: bun run scripts/build-guidelines.ts [--dry-run]
  */
@@ -14,8 +13,7 @@ import { $ } from "bun";
 
 const OUTPUT_DIR = join(import.meta.dir, "../output");
 const INPUT_FILE = join(OUTPUT_DIR, "gold_set.jsonl");
-const GUIDELINES_FILE = join(OUTPUT_DIR, "guidelines.md");
-const PATH_INSTRUCTIONS_FILE = join(OUTPUT_DIR, "path_instructions.json");
+const STANDARDS_DIR = join(import.meta.dir, "../../standards");
 
 interface GoldSetEntry {
   pr_number: number;
@@ -53,31 +51,52 @@ async function claudeCli(prompt: string): Promise<string> {
   }
 }
 
-const GLOBAL_SYSTEM = `Your task: read the code review comments below and output a markdown guidelines document. Output ONLY the markdown document, nothing else — no preamble, no commentary, no meta-analysis.
+const GLOBAL_SYSTEM = `Your task: read the code review comments below and output review guidelines as a markdown bullet list. Output ONLY the bullet list — no preamble, no headers, no commentary.
 
 The project is wundergraph/cosmo, a GraphQL federation router platform (Go + TypeScript).
 
-Document format:
-- Start with a one-paragraph intro: "These guidelines are derived from [N] code review comments by the cosmo team..."
-- Then category sections with ## headers, ordered by importance
-- Each guideline is a bullet: concrete, actionable, 1-2 sentences
+Rules:
+- Each guideline is a bullet starting with "- "
+- Concrete, actionable, 1-2 sentences each
 - Cite PR numbers, e.g. (#2334)
 - Deduplicate: merge comments that say the same thing
 - Focus on domain-specific patterns, not generic advice
 - Skip cosmetic/nit comments
+- Group related guidelines under ## headers (Error Handling, GraphQL Federation, Go Code Quality, Testing, Configuration, PubSub, Authentication, Database, Proto, Performance)
 - Maximum 40 guidelines total`;
 
 const PATH_SYSTEM = `You are writing subsystem-specific code review instructions for wundergraph/cosmo.
 
-You will receive code review comments for a specific subsystem. Distill them into 5-10 focused review rules specific to that subsystem.
+You will receive code review comments for a specific subsystem. Distill them into 5-15 focused review rules specific to that subsystem.
 
-Output ONLY a bullet list of rules (no headers, no intro). Each rule should be:
+Output ONLY a bullet list of rules (no headers, no intro, no preamble). Each rule should be:
+- A bullet starting with "- "
 - Concrete and actionable (not vague)
 - Specific to this subsystem's patterns
 - 1 sentence each
 - Cite PR numbers where helpful, e.g. (#2334)
 
 Do not repeat generic advice like "write tests" or "handle errors" unless there's a specific pattern unique to this subsystem.`;
+
+const SUBSYSTEM_PATHS: Record<string, string> = {
+  router: "router/**",
+  controlplane: "controlplane/**",
+  studio: "studio/**",
+  cli: "cli/**",
+  composition: "composition/**",
+  connect: "connect/**",
+};
+
+const SUBSYSTEM_TITLES: Record<string, string> = {
+  router: "Router Standards",
+  controlplane: "Controlplane Standards",
+  studio: "Studio Standards",
+  cli: "CLI Standards",
+  composition: "Composition Standards",
+  connect: "Connect Standards",
+};
+
+const MIN_COMMENTS = 10;
 
 async function main() {
   const args = process.argv.slice(2);
@@ -110,26 +129,16 @@ async function main() {
 
   const globalPrompt = `${GLOBAL_SYSTEM}\n\n---\n\nHere are ${entries.length} code review comments from wundergraph/cosmo human reviewers. Synthesize into guidelines.\n\n${allCommentsSummary}`;
   const guidelines = await claudeCli(globalPrompt);
-  await writeFile(GUIDELINES_FILE, guidelines + "\n");
-  console.log(`Wrote global guidelines to ${GUIDELINES_FILE}`);
 
-  // Step 2: Generate per-subsystem path instructions
-  const pathInstructions: Record<string, { path: string; instructions: string }> = {};
-  const MIN_COMMENTS = 10;
+  const globalFile = join(STANDARDS_DIR, "_global.md");
+  await writeFile(globalFile, `---\npath: "**"\n---\n\n# Global Standards\n\n${guidelines}\n`);
+  console.log(`Wrote ${globalFile}`);
 
-  const subsystemPaths: Record<string, string> = {
-    router: "router/**",
-    controlplane: "controlplane/**",
-    studio: "studio/**",
-    cli: "cli/**",
-    composition: "composition/**",
-    connect: "connect/**",
-  };
-
+  // Step 2: Generate per-subsystem standards
   for (const [subsystem, comments] of bySubsystem) {
-    if (comments.length < MIN_COMMENTS || !subsystemPaths[subsystem]) continue;
+    if (comments.length < MIN_COMMENTS || !SUBSYSTEM_PATHS[subsystem]) continue;
 
-    console.log(`Generating path instructions for ${subsystem} (${comments.length} comments)...`);
+    console.log(`Generating standards for ${subsystem} (${comments.length} comments)...`);
 
     const commentsSummary = comments
       .map((c) => `- PR #${c.pr_number} [${c.file}] (${c.author}): ${c.body.slice(0, 250)}`)
@@ -137,15 +146,15 @@ async function main() {
 
     const prompt = `${PATH_SYSTEM}\n\n---\n\nSubsystem: ${subsystem}\nComments:\n${commentsSummary}`;
     const instructions = await claudeCli(prompt);
-    pathInstructions[subsystem] = {
-      path: subsystemPaths[subsystem],
-      instructions,
-    };
+
+    const title = SUBSYSTEM_TITLES[subsystem] ?? `${subsystem} Standards`;
+    const path = SUBSYSTEM_PATHS[subsystem];
+    const stdFile = join(STANDARDS_DIR, `${subsystem}.md`);
+    await writeFile(stdFile, `---\npath: "${path}"\n---\n\n# ${title}\n\n${instructions}\n`);
+    console.log(`Wrote ${stdFile}`);
   }
 
-  await writeFile(PATH_INSTRUCTIONS_FILE, JSON.stringify(pathInstructions, null, 2) + "\n");
-  console.log(`Wrote path instructions for ${Object.keys(pathInstructions).length} subsystems to ${PATH_INSTRUCTIONS_FILE}`);
-
+  console.log("\nDone. Run 'bun run build:coderabbit && bun run build:claude-md' to regenerate configs.");
 }
 
 main().catch(console.error);
