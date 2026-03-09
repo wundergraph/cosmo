@@ -28,12 +28,12 @@ Go tests run with CWD set to the package directory, so use simple relative paths
 
 | Location | Contents | Used By |
 |----------|----------|---------|
-| `operations/testdata/` | Query plan fixtures, introspection schemas | operations |
+| `operations/testdata/` | Query plan fixtures, introspection schemas, cache warmup fixtures | operations |
 | `protocol/testdata/` | Router configs, query fixtures, MCP operations, tracing | protocol |
 | `fuzzquery/testdata/` | Fuzz corpus | fuzzquery |
 | `testdata/tls/` | TLS certificates (shared) | security, events |
 | `testdata/connectrpc/` | Generated protobuf client stubs (Go package) | connectrpc |
-| `testenv/testdata/` | Embedded router configs, cache warmup fixtures, CDN | all (via testenv) |
+| `testenv/testdata/` | Embedded router configs, CDN | all (via testenv) |
 
 ## Test Synchronization Architecture
 
