@@ -20,7 +20,6 @@ export type JsonOutputDescriptor = {
   };
   traffic?: {
     success: boolean;
-    isLinkedToTargetSubgraph: boolean;
     message: string;
   };
   changes?: {
@@ -39,7 +38,6 @@ export type JsonOutputDescriptor = {
   };
   graphPrune?: {
     success: boolean;
-    isLinkedToTargetSubgraph: boolean;
     errors: GraphPruningIssue[];
     warnings: GraphPruningIssue[];
   };
@@ -96,16 +94,15 @@ export class JsonOutputBuilder {
     return this;
   }
 
-  setTraffic(success: boolean, isLinkedToTargetSubgraph: boolean, message: string): this {
-    this.data.traffic = { success, isLinkedToTargetSubgraph, message };
+  setTraffic(success: boolean, message: string): this {
+    this.data.traffic = { success, message };
     return this;
   }
 
-  markTrafficLinkedFailed(isLinked: boolean, fallbackMessage: string): this {
+  markTrafficLinkedFailed(fallbackMessage: string): this {
     this.data.traffic = {
       ...this.data.traffic,
       success: false,
-      isLinkedToTargetSubgraph: isLinked,
       message: this.data.traffic?.message ?? fallbackMessage,
     };
     return this;
@@ -177,7 +174,6 @@ export class JsonOutputBuilder {
     this.data.graphPrune = {
       ...this.data.graphPrune,
       success: false,
-      isLinkedToTargetSubgraph: this.data.graphPrune?.isLinkedToTargetSubgraph ?? false,
       errors: [...(this.data.graphPrune?.errors ?? []), ...errors],
       warnings: [...(this.data.graphPrune?.warnings ?? [])],
     };
@@ -188,18 +184,16 @@ export class JsonOutputBuilder {
     this.data.graphPrune = {
       ...this.data.graphPrune,
       success: false,
-      isLinkedToTargetSubgraph: this.data.graphPrune?.isLinkedToTargetSubgraph ?? false,
       errors: [...(this.data.graphPrune?.errors ?? [])],
       warnings: [...(this.data.graphPrune?.warnings ?? []), ...warnings],
     };
     return this;
   }
 
-  markGraphPruneLinkedFailed(isLinked: boolean): this {
+  markGraphPruneLinkedFailed(): this {
     this.data.graphPrune = {
       ...this.data.graphPrune,
       success: false,
-      isLinkedToTargetSubgraph: isLinked,
       errors: [...(this.data.graphPrune?.errors ?? [])],
       warnings: [...(this.data.graphPrune?.warnings ?? [])],
     };

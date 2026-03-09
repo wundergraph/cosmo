@@ -80,23 +80,22 @@ describe('JsonOutputBuilder', () => {
   describe('traffic', () => {
     it('setTraffic replaces traffic', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
-      b.setTraffic(true, false, 'ok');
-      expect(b.build().traffic).toEqual({ success: true, isLinkedToTargetSubgraph: false, message: 'ok' });
+      b.setTraffic(true, 'ok');
+      expect(b.build().traffic).toEqual({ success: true, message: 'ok' });
     });
 
     it('markTrafficLinkedFailed uses fallback when no prior message', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
-      b.markTrafficLinkedFailed(true, 'fallback');
+      b.markTrafficLinkedFailed('fallback');
       expect(b.build().traffic).toMatchObject({
         success: false,
-        isLinkedToTargetSubgraph: true,
         message: 'fallback',
       });
     });
 
     it('markTrafficLinkedFailed preserves prior message', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
-      b.setTraffic(true, false, 'prior').markTrafficLinkedFailed(true, 'fallback');
+      b.setTraffic(true, 'prior').markTrafficLinkedFailed('fallback');
       expect(b.build().traffic?.message).toBe('prior');
     });
   });
@@ -213,12 +212,11 @@ describe('JsonOutputBuilder', () => {
       expect(gp.warnings).toHaveLength(1);
     });
 
-    it('markGraphPruneLinkedFailed sets isLinkedToTargetSubgraph', () => {
+    it('markGraphPruneLinkedFailed marks failure', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
-      b.markGraphPruneLinkedFailed(true);
+      b.markGraphPruneLinkedFailed();
       const gp = b.build().graphPrune!;
       expect(gp.success).toBe(false);
-      expect(gp.isLinkedToTargetSubgraph).toBe(true);
     });
   });
 

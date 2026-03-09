@@ -26,7 +26,7 @@ const handleTrafficCheck = (
     // because no operations were affected by the change
     const success = compositionErrors.length === 0 && lintErrors.length === 0 && graphPruneErrors.length === 0;
     const message = 'No operations were affected by this schema change.';
-    jsonBuilder.setTraffic(true, false, message);
+    jsonBuilder.setTraffic(true, message);
     if (!shouldOutputJson) {
       console.log(message);
     }
@@ -37,7 +37,7 @@ const handleTrafficCheck = (
     // This is also a success because changes to these operations were marked as safe
     const success = compositionErrors.length === 0 && lintErrors.length === 0 && graphPruneErrors.length === 0;
     const message = `${totalOperations} operations were considered safe due to overrides.`;
-    jsonBuilder.setTraffic(true, false, message);
+    jsonBuilder.setTraffic(true, message);
     if (!shouldOutputJson) {
       console.log(message);
     }
@@ -74,7 +74,7 @@ const handleTrafficCheck = (
         `Found client activity between ${new Date(firstSeenAt).toLocaleString()} and ${new Date(lastSeenAt).toLocaleString()}.`,
       );
     }
-    jsonBuilder.setTraffic(false, false, jsonMessage.join(' '));
+    jsonBuilder.setTraffic(false, jsonMessage.join(' '));
     if (!shouldOutputJson) {
       console.log(warningMessage.join(''));
     }
@@ -84,7 +84,7 @@ const handleTrafficCheck = (
     }`;
   } else {
     // Operations exist but no breaking changes — traffic check passed
-    jsonBuilder.setTraffic(true, false, `${totalOperations} operations checked, no breaking changes detected.`);
+    jsonBuilder.setTraffic(true, `${totalOperations} operations checked, no breaking changes detected.`);
   }
 
   return { success, finalStatement };
@@ -251,11 +251,11 @@ const handleLinkedCheckFailures = (
   if (response.isLinkedTrafficCheckFailed) {
     const message = 'The target subgraph check has failed because of client traffic issues.';
     additionalStatement += `\n\n ${message}`;
-    jsonBuilder.markTrafficLinkedFailed(response.isLinkedTrafficCheckFailed, message);
+    jsonBuilder.markTrafficLinkedFailed(message);
   }
 
   if (response.isLinkedPruningCheckFailed) {
-    jsonBuilder.markGraphPruneLinkedFailed(response.isLinkedPruningCheckFailed);
+    jsonBuilder.markGraphPruneLinkedFailed();
     additionalStatement += `\n\n The target subgraph check has failed because of graph pruning issues.`;
   }
 

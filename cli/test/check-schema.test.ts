@@ -573,7 +573,6 @@ describe('json output', () => {
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
     expect(output.traffic?.success).toBe(true);
-    expect(output.traffic?.isLinkedToTargetSubgraph).toBe(false);
   });
 
   test('all operations safe outputs JSON with success status', async () => {
@@ -791,7 +790,7 @@ describe('json output', () => {
     expect(Array.isArray(output.graphPrune?.warnings)).toBe(true);
   });
 
-  test('linked traffic check failure outputs JSON with traffic.isLinkedToTargetSubgraph true', async () => {
+  test('linked traffic check failure outputs JSON with traffic.success false', async () => {
     await runCheck(
       {
         response: { code: EnumStatusCode.OK },
@@ -804,11 +803,10 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('error');
-    expect(output.traffic?.isLinkedToTargetSubgraph).toBe(true);
     expect(output.traffic?.success).toBe(false);
   });
 
-  test('linked pruning check failure outputs JSON with graphPrune.isLinkedToTargetSubgraph true', async () => {
+  test('linked pruning check failure outputs JSON with graphPrune.success false', async () => {
     await runCheck(
       {
         response: { code: EnumStatusCode.OK },
@@ -821,7 +819,6 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('error');
-    expect(output.graphPrune?.isLinkedToTargetSubgraph).toBe(true);
     expect(output.graphPrune?.success).toBe(false);
   });
 
