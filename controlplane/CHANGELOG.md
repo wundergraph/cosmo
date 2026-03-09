@@ -4,6 +4,28 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.197.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.196.0...controlplane@0.197.0) (2026-03-07)
+
+### Bug Fixes
+
+* formatting drift + CI improvements ([#2599](https://github.com/wundergraph/cosmo/issues/2599)) ([dc6dc2d](https://github.com/wundergraph/cosmo/commit/dc6dc2df088a392e01d0582c8e3dcf82a21666cf)) (@comatory)
+
+### Features
+
+* improve invitation handling ([#2581](https://github.com/wundergraph/cosmo/issues/2581)) ([d5b3b45](https://github.com/wundergraph/cosmo/commit/d5b3b45b83355aaadf2557f2455b81c050348b93)) (@wilsonrivera)
+
+# [0.196.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.195.0...controlplane@0.196.0) (2026-03-05)
+
+### Features
+
+* add format script + optional git hooks ([#2579](https://github.com/wundergraph/cosmo/issues/2579)) ([edabd2b](https://github.com/wundergraph/cosmo/commit/edabd2bd8f775c5717ca785f16616cff6f7ae039)) (@comatory)
+
+# [0.195.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.194.0...controlplane@0.195.0) (2026-03-04)
+
+### Features
+
+* add support for federated graph schema changes ([#2566](https://github.com/wundergraph/cosmo/issues/2566)) ([2f0a666](https://github.com/wundergraph/cosmo/commit/2f0a666d8c82d649707e57f6ccd085197e485da5)) (@JivusAyrus)
+
 # [0.194.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.193.1...controlplane@0.194.0) (2026-03-04)
 
 ### Features

@@ -505,9 +505,27 @@ export class OrganizationRepository {
         organizationId: input.organizationID,
         active: true,
       })
+      .onConflictDoNothing()
       .returning()
       .execute();
-    return insertedMember[0];
+
+    if (insertedMember.length > 0) {
+      // The user wasn't part of the organization, so
+      return insertedMember[0];
+    }
+
+    const existingMember = await this.db
+      .select()
+      .from(organizationsMembers)
+      .where(
+        and(
+          eq(organizationsMembers.organizationId, input.organizationID),
+          eq(organizationsMembers.userId, input.userID),
+        ),
+      )
+      .execute();
+
+    return existingMember[0];
   }
 
   public setOrganizationMemberActive(input: { id: string; organizationId: string; active: boolean }) {
