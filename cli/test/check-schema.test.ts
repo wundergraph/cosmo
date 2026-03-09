@@ -872,9 +872,9 @@ describe('json output', () => {
     expect(output.traffic).toBeUndefined();
   });
 
-  test('skip-traffic-check with operationUsageStats sets traffic message when no breaking changes', async () => {
-    // When the server returns operationUsageStats with clientTrafficCheckSkipped: true,
-    // traffic.message should reflect no breaking changes found
+  test('skip-traffic-check with operationUsageStats omits traffic from JSON when no breaking changes', async () => {
+    // When clientTrafficCheckSkipped: true and no breaking changes, traffic should be absent —
+    // consistent with stdout which also prints nothing in this case
     await runCheck(
       {
         response: { code: EnumStatusCode.OK },
@@ -892,8 +892,7 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
-    expect(output.traffic?.message).toContain('5 operations checked');
-    expect(output.traffic?.message).not.toContain('client activity between');
+    expect(output.traffic).toBeUndefined();
   });
 
   test('ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL outputs JSON with error status and details', async () => {
