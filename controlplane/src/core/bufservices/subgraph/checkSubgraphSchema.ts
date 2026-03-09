@@ -7,6 +7,7 @@ import {
   CheckSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { GraphQLSchema, parse } from 'graphql';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -191,7 +192,7 @@ export function checkSubgraphSchema(
     const subgraphName = subgraph?.name || req.subgraphName;
     const ignoreExternalKeysFeature = await orgRepo.getFeature({
       organizationId: authContext.organizationId,
-      featureId: 'composition-ignore-external-keys',
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
     const federatedGraphs = await fedGraphRepo.bySubgraphLabels({

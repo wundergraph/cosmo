@@ -10,6 +10,7 @@ import {
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
@@ -212,7 +213,7 @@ export function createFederatedGraph(
 
     const ignoreExternalKeysFeature = await orgRepo.getFeature({
       organizationId: authContext.organizationId,
-      featureId: 'composition-ignore-external-keys',
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];

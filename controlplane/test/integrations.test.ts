@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../src/types/index.js';
 import { createNamespace, resolvabilitySDLOne, resolvabilitySDLTwo, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -322,7 +323,7 @@ describe('Federated Graph', (ctx) => {
 
     const { client: featureClient, server: featureServer } = await SetupTest({
       dbname,
-      enabledFeatures: ['composition-ignore-external-keys'],
+      enabledFeatures: [COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID],
     });
     const featureNamespace = genID('namespace').toLowerCase();
     const featureLabel = genUniqueLabel();

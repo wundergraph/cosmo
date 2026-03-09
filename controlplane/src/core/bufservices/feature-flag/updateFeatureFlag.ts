@@ -9,7 +9,7 @@ import {
   UpdateFeatureFlagRequest,
   UpdateFeatureFlagResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { FederatedGraphDTO } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, FederatedGraphDTO } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -163,7 +163,7 @@ export function updateFeatureFlag(
 
     const ignoreExternalKeysFeature = await orgRepo.getFeature({
       organizationId: authContext.organizationId,
-      featureId: 'composition-ignore-external-keys',
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];

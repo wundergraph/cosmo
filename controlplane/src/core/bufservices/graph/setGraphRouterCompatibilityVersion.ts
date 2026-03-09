@@ -6,6 +6,7 @@ import {
   SetGraphRouterCompatibilityVersionResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ROUTER_COMPATIBILITY_VERSIONS, SupportedRouterCompatibilityVersion } from '@wundergraph/composition';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -114,7 +115,7 @@ export function setGraphRouterCompatibilityVersion(
 
     const ignoreExternalKeysFeature = await orgRepo.getFeature({
       organizationId: authContext.organizationId,
-      featureId: 'composition-ignore-external-keys',
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
     await opts.db.transaction(async (tx) => {

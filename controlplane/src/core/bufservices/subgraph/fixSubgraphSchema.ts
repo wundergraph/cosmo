@@ -6,6 +6,7 @@ import {
   FixSubgraphSchemaRequest,
   FixSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { Composer } from '../../composition/composer.js';
 import { buildSchema } from '../../composition/composition.js';
 import { OpenAIGraphql } from '../../openai-graphql/index.js';
@@ -112,7 +113,7 @@ export function fixSubgraphSchema(
     });
     const ignoreExternalKeysFeature = await orgRepo.getFeature({
       organizationId: authContext.organizationId,
-      featureId: 'composition-ignore-external-keys',
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
     if (!feature?.enabled) {

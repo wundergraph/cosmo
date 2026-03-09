@@ -27,6 +27,7 @@ import {
 } from '../../db/schema.js';
 import {
   CheckedSubgraphDTO,
+  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
   FederatedGraphDTO,
   Label,
   NamespaceDTO,
@@ -753,7 +754,7 @@ export class SchemaCheckRepository {
     });
     const ignoreExternalKeysFeature = await orgRepo.getFeature({
       organizationId,
-      featureId: 'composition-ignore-external-keys',
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
     const limit = changeRetention?.limit ?? defaultRetentionLimitInDays;
