@@ -142,7 +142,7 @@ export const LineChartComponent = ({
     <ResponsiveContainer width="100%" height={chartHeight} className={className}>
       <LineChart data={data}>
         {cartesianGrid && (
-          <CartesianGrid color="currenColor" strokeWidth="0.2" vertical={false} strokeDasharray="3 1" />
+          <CartesianGrid color="currentColor" strokeWidth="0.2" vertical={false} strokeDasharray="3 1" />
         )}
         <Line dot={false} type="monotone" dataKey="value" strokeWidth="2" />
         <XAxis
