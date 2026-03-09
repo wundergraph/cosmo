@@ -97,10 +97,10 @@ var (
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
 
-	// RouterTestsDir is the absolute path to the router-tests directory,
-	// derived from this source file's location. Use this instead of relying
-	// on os.Chdir or CWD assumptions.
-	RouterTestsDir string
+	// routerTestsDir is the absolute path to the router-tests directory,
+	// derived from this source file's location. Used internally by testexec.go
+	// to locate the router binary.
+	routerTestsDir string
 
 	DemoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
 	DemoKafkaProviders = []string{myKafkaProviderID}
@@ -110,17 +110,8 @@ var (
 func init() {
 	freeport.SetLogLevel(freeport.ERROR)
 
-	// Derive RouterTestsDir from this source file's location.
-	// testenv/ is a direct child of router-tests/, so we go up one level.
 	_, thisFile, _, _ := runtime.Caller(0)
-	RouterTestsDir = filepath.Dir(filepath.Dir(thisFile))
-}
-
-// ResolvePath resolves a path relative to the router-tests directory to an
-// absolute path. Use this for any filesystem path that will be resolved at
-// runtime by the router process (e.g., TLS certs, plugin dirs, testdata).
-func ResolvePath(rel string) string {
-	return filepath.Join(RouterTestsDir, rel)
+	routerTestsDir = filepath.Dir(filepath.Dir(thisFile))
 }
 
 // Run runs the test and fails the test if an error occurs
@@ -1494,7 +1485,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	if testConfig.MCP.Enabled {
-		mcpOperationsPath := ResolvePath("protocol/testdata/mcp_operations")
+		mcpOperationsPath := "testdata/mcp_operations"
 		if testConfig.MCPOperationsPath != "" {
 			mcpOperationsPath = testConfig.MCPOperationsPath
 		}

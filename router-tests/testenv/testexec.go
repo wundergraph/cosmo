@@ -80,7 +80,7 @@ func buildRouterBin(t *testing.T, ctx context.Context) {
 	buildOnce.Do(func() {
 		t.Log("Building router binary...")
 
-		rDir := filepath.Join(RouterTestsDir, "..", "router")
+		rDir := filepath.Join(routerTestsDir, "..", "router")
 		cmd := exec.Command("make", "build-race")
 		cmd.Dir = rDir
 		err := runCmdWithLogs(t, ctx, cmd, true, nil) // Run the build command

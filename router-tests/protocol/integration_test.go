@@ -1099,7 +1099,7 @@ func TestTracing(t *testing.T) {
 	}, func(t *testing.T, xEnv *testenv.Environment) {
 		g := goldie.New(
 			t,
-			goldie.WithFixtureDir(testenv.ResolvePath("protocol/testdata")),
+			goldie.WithFixtureDir("testdata"),
 			goldie.WithNameSuffix(".json"),
 			goldie.WithDiffEngine(goldie.ClassicDiff),
 		)
@@ -1252,7 +1252,7 @@ func TestOperationSelection(t *testing.T) {
 func TestTestdataQueries(t *testing.T) {
 	t.Parallel()
 
-	testDir := testenv.ResolvePath("protocol/testdata/queries")
+	testDir := "testdata/queries"
 	entries, err := os.ReadDir(testDir)
 	require.NoError(t, err)
 	for _, entry := range entries {
@@ -1269,7 +1269,7 @@ func TestTestdataQueries(t *testing.T) {
 
 			g := goldie.New(
 				t,
-				goldie.WithFixtureDir(testenv.ResolvePath("protocol/testdata/queries")),
+				goldie.WithFixtureDir("testdata/queries"),
 				goldie.WithNameSuffix(".json"),
 				goldie.WithDiffEngine(goldie.ClassicDiff),
 			)

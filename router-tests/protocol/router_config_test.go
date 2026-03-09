@@ -3,7 +3,6 @@ package integration
 import (
 	"testing"
 
-	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
@@ -15,7 +14,7 @@ import (
 func TestRouterConfigParsing(t *testing.T) {
 	t.Parallel()
 
-	routerConfig, err := execution_config.FromFile(testenv.ResolvePath("protocol/testdata/routerConfig.json"))
+	routerConfig, err := execution_config.FromFile("testdata/routerConfig.json")
 	require.NoError(t, err)
 
 	assert.Equal(t, routerConfig.Version, "96f0fab1-d0a4-4fc1-801d-59f684f8315d")
@@ -85,7 +84,7 @@ func TestRouterConfigParsing(t *testing.T) {
 func TestRouterConfigParsingOfUnknownProperties(t *testing.T) {
 	t.Parallel()
 
-	routerConfig, err := execution_config.FromFile(testenv.ResolvePath("protocol/testdata/routerConfigWithUnknownProperties.json"))
+	routerConfig, err := execution_config.FromFile("testdata/routerConfigWithUnknownProperties.json")
 	require.NoError(t, err)
 
 	assert.Equal(t, routerConfig.Version, "96f0fab1-d0a4-4fc1-801d-59f684f8315d")

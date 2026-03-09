@@ -21,8 +21,8 @@ func TestOCIPlugin_PullAndRun(t *testing.T) {
 
 	registryHost := startTestOCIRegistry(t)
 
-	projectsBinary := testenv.ResolvePath(fmt.Sprintf("../router/plugins/projects/bin/%s_%s", runtime.GOOS, runtime.GOARCH))
-	coursesBinary := testenv.ResolvePath(fmt.Sprintf("../router/plugins/courses/bin/%s_%s", runtime.GOOS, runtime.GOARCH))
+	projectsBinary := fmt.Sprintf("../router/plugins/projects/bin/%s_%s", runtime.GOOS, runtime.GOARCH)
+	coursesBinary := fmt.Sprintf("../router/plugins/courses/bin/%s_%s", runtime.GOOS, runtime.GOARCH)
 
 	buildAndPushPluginImage(t, registryHost, "test-org/projects", "v1", projectsBinary)
 	buildAndPushPluginImage(t, registryHost, "test-org/courses", "v1", coursesBinary)
@@ -68,8 +68,8 @@ func TestOCIPlugin_Restart(t *testing.T) {
 
 	registryHost := startTestOCIRegistry(t)
 
-	projectsBinary := testenv.ResolvePath(fmt.Sprintf("../router/plugins/projects/bin/%s_%s", runtime.GOOS, runtime.GOARCH))
-	coursesBinary := testenv.ResolvePath(fmt.Sprintf("../router/plugins/courses/bin/%s_%s", runtime.GOOS, runtime.GOARCH))
+	projectsBinary := fmt.Sprintf("../router/plugins/projects/bin/%s_%s", runtime.GOOS, runtime.GOARCH)
+	coursesBinary := fmt.Sprintf("../router/plugins/courses/bin/%s_%s", runtime.GOOS, runtime.GOARCH)
 
 	buildAndPushPluginImage(t, registryHost, "test-org/projects", "v1", projectsBinary)
 	buildAndPushPluginImage(t, registryHost, "test-org/courses", "v1", coursesBinary)

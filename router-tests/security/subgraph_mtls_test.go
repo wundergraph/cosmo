@@ -139,8 +139,8 @@ func TestSubgraphMTLS(t *testing.T) {
 						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 							All: config.TLSClientCertConfiguration{
 								InsecureSkipCaVerification: true,
-								CertFile:                   testenv.ResolvePath("testdata/tls/cert.pem"),
-								KeyFile:                    testenv.ResolvePath("testdata/tls/key.pem"),
+								CertFile:                   "../testdata/tls/cert.pem",
+								KeyFile:                    "../testdata/tls/key.pem",
 							},
 						}),
 					},
@@ -190,8 +190,8 @@ func TestSubgraphMTLS(t *testing.T) {
 						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 							All: config.TLSClientCertConfiguration{
 								InsecureSkipCaVerification: true,
-								CertFile:                   testenv.ResolvePath("testdata/tls/cert-2.pem"),
-								KeyFile:                    testenv.ResolvePath("testdata/tls/key-2.pem"),
+								CertFile:                   "../testdata/tls/cert-2.pem",
+								KeyFile:                    "../testdata/tls/key-2.pem",
 							},
 						}),
 					},
@@ -223,8 +223,8 @@ func TestSubgraphMTLS(t *testing.T) {
 							Subgraphs: map[string]config.TLSClientCertConfiguration{
 								"employees": {
 									InsecureSkipCaVerification: true,
-									CertFile:                   testenv.ResolvePath("testdata/tls/cert.pem"),
-									KeyFile:                    testenv.ResolvePath("testdata/tls/key.pem"),
+									CertFile:                   "../testdata/tls/cert.pem",
+									KeyFile:                    "../testdata/tls/key.pem",
 								},
 							},
 						}),
@@ -251,14 +251,14 @@ func TestSubgraphMTLS(t *testing.T) {
 						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 							All: config.TLSClientCertConfiguration{
 								InsecureSkipCaVerification: true,
-								CertFile:                   testenv.ResolvePath("testdata/tls/cert-2.pem"),
-								KeyFile:                    testenv.ResolvePath("testdata/tls/key-2.pem"),
+								CertFile:                   "../testdata/tls/cert-2.pem",
+								KeyFile:                    "../testdata/tls/key-2.pem",
 							},
 							Subgraphs: map[string]config.TLSClientCertConfiguration{
 								"employees": {
 									InsecureSkipCaVerification: true,
-									CertFile:                   testenv.ResolvePath("testdata/tls/cert.pem"),
-									KeyFile:                    testenv.ResolvePath("testdata/tls/key.pem"),
+									CertFile:                   "../testdata/tls/cert.pem",
+									KeyFile:                    "../testdata/tls/key.pem",
 								},
 							},
 						}),
@@ -286,14 +286,14 @@ func TestSubgraphMTLS(t *testing.T) {
 						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 							All: config.TLSClientCertConfiguration{
 								InsecureSkipCaVerification: true,
-								CertFile:                   testenv.ResolvePath("testdata/tls/cert.pem"),
-								KeyFile:                    testenv.ResolvePath("testdata/tls/key.pem"),
+								CertFile:                   "../testdata/tls/cert.pem",
+								KeyFile:                    "../testdata/tls/key.pem",
 							},
 							Subgraphs: map[string]config.TLSClientCertConfiguration{
 								"employees": {
 									InsecureSkipCaVerification: true,
-									CertFile:                   testenv.ResolvePath("testdata/tls/cert-2.pem"),
-									KeyFile:                    testenv.ResolvePath("testdata/tls/key-2.pem"),
+									CertFile:                   "../testdata/tls/cert-2.pem",
+									KeyFile:                    "../testdata/tls/key-2.pem",
 								},
 							},
 						}),
@@ -324,8 +324,8 @@ func TestSubgraphMTLS(t *testing.T) {
 						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 							All: config.TLSClientCertConfiguration{
 								InsecureSkipCaVerification: true,
-								CertFile:                   testenv.ResolvePath("testdata/tls/cert.pem"),
-								KeyFile:                    testenv.ResolvePath("testdata/tls/key.pem"),
+								CertFile:                   "../testdata/tls/cert.pem",
+								KeyFile:                    "../testdata/tls/key.pem",
 							},
 							Subgraphs: map[string]config.TLSClientCertConfiguration{
 								"employees": {
@@ -472,7 +472,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
 				require.NoError(t, err)
 
-				caPool := loadSubgraphMTLSCACertPool(t, testenv.ResolvePath("testdata/tls/cert.pem"))
+				caPool := loadSubgraphMTLSCACertPool(t, "../testdata/tls/cert.pem")
 
 				testenv.Run(t, &testenv.Config{
 					Subgraphs: testenv.SubgraphsConfig{
@@ -488,8 +488,8 @@ func TestSubgraphMTLS(t *testing.T) {
 						core.WithSubgraphTLSConfiguration(config.ClientTLSConfiguration{
 							All: config.TLSClientCertConfiguration{
 								CaFile:   certPath,
-								CertFile: testenv.ResolvePath("testdata/tls/cert.pem"),
-								KeyFile:  testenv.ResolvePath("testdata/tls/key.pem"),
+								CertFile: "../testdata/tls/cert.pem",
+								KeyFile:  "../testdata/tls/key.pem",
 							},
 						}),
 					},
@@ -514,7 +514,7 @@ func TestSubgraphMTLS(t *testing.T) {
 				serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
 				require.NoError(t, err)
 
-				caPool := loadSubgraphMTLSCACertPool(t, testenv.ResolvePath("testdata/tls/cert.pem"))
+				caPool := loadSubgraphMTLSCACertPool(t, "../testdata/tls/cert.pem")
 
 				testenv.Run(t, &testenv.Config{
 					Subgraphs: testenv.SubgraphsConfig{
@@ -531,8 +531,8 @@ func TestSubgraphMTLS(t *testing.T) {
 							Subgraphs: map[string]config.TLSClientCertConfiguration{
 								"employees": {
 									CaFile:   certPath,
-									CertFile: testenv.ResolvePath("testdata/tls/cert.pem"),
-									KeyFile:  testenv.ResolvePath("testdata/tls/key.pem"),
+									CertFile: "../testdata/tls/cert.pem",
+									KeyFile:  "../testdata/tls/key.pem",
 								},
 							},
 						}),
@@ -605,8 +605,8 @@ func TestSubgraphMTLS(t *testing.T) {
 						Subgraphs: map[string]config.TLSClientCertConfiguration{
 							"employees": {
 								InsecureSkipCaVerification: true,
-								CertFile:                   testenv.ResolvePath("testdata/tls/cert.pem"),
-								KeyFile:                    testenv.ResolvePath("testdata/tls/key.pem"),
+								CertFile:                   "../testdata/tls/cert.pem",
+								KeyFile:                    "../testdata/tls/key.pem",
 							},
 						},
 					}),
@@ -637,21 +637,21 @@ func TestSubgraphMTLSEnvVarConfig(t *testing.T) {
 		})
 
 		t.Run("CertFile and KeyFile set via env vars", func(t *testing.T) {
-			t.Setenv("TLS_CLIENT_ALL_CERT_FILE", testenv.ResolvePath("testdata/tls/cert.pem"))
-			t.Setenv("TLS_CLIENT_ALL_KEY_FILE", testenv.ResolvePath("testdata/tls/key.pem"))
+			t.Setenv("TLS_CLIENT_ALL_CERT_FILE", "../testdata/tls/cert.pem")
+			t.Setenv("TLS_CLIENT_ALL_KEY_FILE", "../testdata/tls/key.pem")
 
 			cfg := loadConfigFromEnv(t)
 
-			require.Equal(t, testenv.ResolvePath("testdata/tls/cert.pem"), cfg.TLS.Client.All.CertFile)
-			require.Equal(t, testenv.ResolvePath("testdata/tls/key.pem"), cfg.TLS.Client.All.KeyFile)
+			require.Equal(t, "../testdata/tls/cert.pem", cfg.TLS.Client.All.CertFile)
+			require.Equal(t, "../testdata/tls/key.pem", cfg.TLS.Client.All.KeyFile)
 		})
 
 		t.Run("CaFile set via env var", func(t *testing.T) {
-			t.Setenv("TLS_CLIENT_ALL_CA_FILE", testenv.ResolvePath("testdata/tls/cert.pem"))
+			t.Setenv("TLS_CLIENT_ALL_CA_FILE", "../testdata/tls/cert.pem")
 
 			cfg := loadConfigFromEnv(t)
 
-			require.Equal(t, testenv.ResolvePath("testdata/tls/cert.pem"), cfg.TLS.Client.All.CaFile)
+			require.Equal(t, "../testdata/tls/cert.pem", cfg.TLS.Client.All.CaFile)
 		})
 	})
 
@@ -679,14 +679,14 @@ func TestSubgraphMTLSEnvVarConfig(t *testing.T) {
 
 	t.Run("Router presents client certificate to mTLS subgraph via env vars", func(t *testing.T) {
 		t.Setenv("TLS_CLIENT_ALL_INSECURE_SKIP_CA_VERIFICATION", "true")
-		t.Setenv("TLS_CLIENT_ALL_CERT_FILE", testenv.ResolvePath("testdata/tls/cert.pem"))
-		t.Setenv("TLS_CLIENT_ALL_KEY_FILE", testenv.ResolvePath("testdata/tls/key.pem"))
+		t.Setenv("TLS_CLIENT_ALL_CERT_FILE", "../testdata/tls/cert.pem")
+		t.Setenv("TLS_CLIENT_ALL_KEY_FILE", "../testdata/tls/key.pem")
 
 		cfg := loadConfigFromEnv(t)
 
 		require.True(t, cfg.TLS.Client.All.InsecureSkipCaVerification)
-		require.Equal(t, testenv.ResolvePath("testdata/tls/cert.pem"), cfg.TLS.Client.All.CertFile)
-		require.Equal(t, testenv.ResolvePath("testdata/tls/key.pem"), cfg.TLS.Client.All.KeyFile)
+		require.Equal(t, "../testdata/tls/cert.pem", cfg.TLS.Client.All.CertFile)
+		require.Equal(t, "../testdata/tls/key.pem", cfg.TLS.Client.All.KeyFile)
 
 		testenv.Run(t, &testenv.Config{
 			Subgraphs: testenv.SubgraphsConfig{
@@ -739,17 +739,17 @@ func TestSubgraphMTLSEnvVarConfig(t *testing.T) {
 		serverCert, err := tls.LoadX509KeyPair(certPath, keyPath)
 		require.NoError(t, err)
 
-		caPool := loadSubgraphMTLSCACertPool(t, testenv.ResolvePath("testdata/tls/cert.pem"))
+		caPool := loadSubgraphMTLSCACertPool(t, "../testdata/tls/cert.pem")
 
 		t.Setenv("TLS_CLIENT_ALL_CA_FILE", certPath)
-		t.Setenv("TLS_CLIENT_ALL_CERT_FILE", testenv.ResolvePath("testdata/tls/cert.pem"))
-		t.Setenv("TLS_CLIENT_ALL_KEY_FILE", testenv.ResolvePath("testdata/tls/key.pem"))
+		t.Setenv("TLS_CLIENT_ALL_CERT_FILE", "../testdata/tls/cert.pem")
+		t.Setenv("TLS_CLIENT_ALL_KEY_FILE", "../testdata/tls/key.pem")
 
 		cfg := loadConfigFromEnv(t)
 
 		require.Equal(t, certPath, cfg.TLS.Client.All.CaFile)
-		require.Equal(t, testenv.ResolvePath("testdata/tls/cert.pem"), cfg.TLS.Client.All.CertFile)
-		require.Equal(t, testenv.ResolvePath("testdata/tls/key.pem"), cfg.TLS.Client.All.KeyFile)
+		require.Equal(t, "../testdata/tls/cert.pem", cfg.TLS.Client.All.CertFile)
+		require.Equal(t, "../testdata/tls/key.pem", cfg.TLS.Client.All.KeyFile)
 		require.False(t, cfg.TLS.Client.All.InsecureSkipCaVerification)
 
 		testenv.Run(t, &testenv.Config{
@@ -810,7 +810,7 @@ func subgraphMTLSServerConfig(t *testing.T, requireClientCert bool) *tls.Config 
 	t.Helper()
 	cfg := &tls.Config{}
 	if requireClientCert {
-		caPool := loadSubgraphMTLSCACertPool(t, testenv.ResolvePath("testdata/tls/cert.pem"))
+		caPool := loadSubgraphMTLSCACertPool(t, "../testdata/tls/cert.pem")
 		cfg.ClientCAs = caPool
 		cfg.ClientAuth = tls.RequireAndVerifyClientCert
 	}

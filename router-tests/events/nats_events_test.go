@@ -273,8 +273,8 @@ func TestNatsEvents(t *testing.T) {
 				EnableNats: true,
 				TLSConfig: &core.TlsConfig{
 					Enabled:  true,
-					CertFile: testenv.ResolvePath("testdata/tls/cert.pem"),
-					KeyFile:  testenv.ResolvePath("testdata/tls/key.pem"),
+					CertFile: "../testdata/tls/cert.pem",
+					KeyFile:  "../testdata/tls/key.pem",
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {
 

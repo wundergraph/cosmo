@@ -118,7 +118,7 @@ func TestIntrospection(t *testing.T) {
 
 	g := goldie.New(
 		t,
-		goldie.WithFixtureDir(testenv.ResolvePath("operations/testdata/introspection")),
+		goldie.WithFixtureDir("testdata/introspection"),
 		goldie.WithNameSuffix(".json"),
 		goldie.WithDiffEngine(goldie.ClassicDiff),
 	)

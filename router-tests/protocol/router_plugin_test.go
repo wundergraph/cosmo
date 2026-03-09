@@ -51,7 +51,7 @@ func TestRouterPlugin(t *testing.T) {
 			RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
 			Plugins: testenv.PluginConfig{
 				Enabled: false,
-				Path:    testenv.ResolvePath("../router/plugins"),
+				Path:    "../../router/plugins",
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			response1 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -76,7 +76,7 @@ func TestRouterPlugin(t *testing.T) {
 			},
 			Plugins: testenv.PluginConfig{
 				Enabled: true,
-				Path:    testenv.ResolvePath("../router/plugins"),
+				Path:    "../../router/plugins",
 			},
 		},
 			func(t *testing.T, xEnv *testenv.Environment) {
@@ -113,7 +113,7 @@ func TestRouterPlugin(t *testing.T) {
 			},
 			Plugins: testenv.PluginConfig{
 				Enabled: true,
-				Path:    testenv.ResolvePath("../router/plugins"),
+				Path:    "../../router/plugins",
 			},
 		},
 			func(t *testing.T, xEnv *testenv.Environment) {
@@ -155,7 +155,7 @@ func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
 				Plugins: testenv.PluginConfig{
 					Enabled: true,
-					Path:    testenv.ResolvePath("../router/plugins"),
+					Path:    "../../router/plugins",
 				},
 			},
 			func(t *testing.T, xEnv *testenv.Environment) {
@@ -192,7 +192,7 @@ func TestVerifyTelemetryForRouterPluginRequests(t *testing.T) {
 				RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
 				Plugins: testenv.PluginConfig{
 					Enabled: true,
-					Path:    testenv.ResolvePath("../router/plugins"),
+					Path:    "../../router/plugins",
 				},
 			},
 			func(t *testing.T, xEnv *testenv.Environment) {
@@ -480,7 +480,7 @@ func TestRouterPluginRequests(t *testing.T) {
 		RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
 		Plugins: testenv.PluginConfig{
 			Enabled: true,
-			Path:    testenv.ResolvePath("../router/plugins"),
+			Path:    "../../router/plugins",
 		},
 	},
 		func(t *testing.T, xEnv *testenv.Environment) {
