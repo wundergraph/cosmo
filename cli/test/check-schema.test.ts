@@ -44,7 +44,14 @@ function resetVcsConfig() {
 
 async function runCheck(
   response: PartialMessage<CheckSubgraphSchemaResponse>,
-  opts: { limit?: number | string; schema?: string | null; delete?: boolean; json?: boolean; outFile?: string } = {},
+  opts: {
+    limit?: number | string;
+    schema?: string | null;
+    delete?: boolean;
+    json?: boolean;
+    outFile?: string;
+    skipTrafficCheck?: boolean;
+  } = {},
 ): Promise<void> {
   const schema = 'schema' in opts ? opts.schema : 'test/fixtures/schema.graphql';
   const args = ['check', 'wg.orders'];
@@ -62,6 +69,9 @@ async function runCheck(
   }
   if (opts.outFile !== undefined) {
     args.push('--out', opts.outFile);
+  }
+  if (opts.skipTrafficCheck) {
+    args.push('--skip-traffic-check');
   }
 
   const client: Client = {
@@ -202,6 +212,45 @@ describe('stdout', () => {
 
     expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/2.*operations impacted\./);
     expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/1.*operations marked safe due to overrides\./);
+  });
+
+  test('breaking changes logs client activity timestamps when traffic check not skipped', async () => {
+    await expect(
+      runCheck({
+        response: { code: EnumStatusCode.OK },
+        breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
+        operationUsageStats: {
+          totalOperations: 3,
+          safeOperations: 0,
+          firstSeenAt: '2024-01-01T00:00:00Z',
+          lastSeenAt: '2024-01-02T00:00:00Z',
+        },
+        clientTrafficCheckSkipped: false,
+      }),
+    ).rejects.toThrow();
+
+    expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/Found client activity between/);
+  });
+
+  test('breaking changes does not log client activity timestamps when skip-traffic-check is used', async () => {
+    await expect(
+      runCheck(
+        {
+          response: { code: EnumStatusCode.OK },
+          breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
+          operationUsageStats: {
+            totalOperations: 3,
+            safeOperations: 0,
+            firstSeenAt: '2024-01-01T00:00:00Z',
+            lastSeenAt: '2024-01-02T00:00:00Z',
+          },
+          clientTrafficCheckSkipped: true,
+        },
+        { skipTrafficCheck: true },
+      ),
+    ).rejects.toThrow();
+
+    expect(String(logSpy.mock.calls[1]?.[0])).not.toMatch(/Found client activity between/);
   });
 
   test('non-breaking changes succeeds and logs detected changes table', async () => {
@@ -543,6 +592,29 @@ describe('json output', () => {
     expect(output.traffic?.success).toBe(true);
   });
 
+  test('operations exist with no breaking changes outputs JSON with traffic.success true', async () => {
+    await runCheck(
+      {
+        response: { code: EnumStatusCode.OK },
+        nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
+        operationUsageStats: {
+          totalOperations: 5,
+          safeOperations: 2,
+          firstSeenAt: '2024-01-01T00:00:00Z',
+          lastSeenAt: '2024-01-02T00:00:00Z',
+        },
+        clientTrafficCheckSkipped: false,
+      },
+      { json: true },
+    );
+
+    const output = getJsonOutput(logSpy);
+    expect(output.status).toBe('success');
+    expect(output.traffic).toBeDefined();
+    expect(output.traffic?.success).toBe(true);
+    expect(output.traffic?.message).toContain('5 operations checked');
+  });
+
   test('breaking changes outputs JSON with error status and breaking changes array', async () => {
     await runCheck(
       {
@@ -792,6 +864,47 @@ describe('json output', () => {
     const output = getJsonOutput(logSpy);
     expect(output.exceededRowLimit).toBe(true);
     expect(output.rowLimit).toBe(50);
+  });
+
+  test('skip-traffic-check with no operationUsageStats omits traffic from JSON output', async () => {
+    // When no operationUsageStats is returned (server omits it when traffic check is skipped),
+    // the traffic field should be absent from JSON output entirely
+    await runCheck(
+      {
+        response: { code: EnumStatusCode.OK },
+        // No changes, no operationUsageStats — clean check with traffic check skipped
+      },
+      { json: true, skipTrafficCheck: true },
+    );
+
+    const output = getJsonOutput(logSpy);
+    expect(output.status).toBe('success');
+    expect(output.traffic).toBeUndefined();
+  });
+
+  test('skip-traffic-check with operationUsageStats sets traffic.success true when no breaking changes', async () => {
+    // When the server returns operationUsageStats with clientTrafficCheckSkipped: true,
+    // traffic.success should still be true if there are no breaking changes
+    await runCheck(
+      {
+        response: { code: EnumStatusCode.OK },
+        nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
+        operationUsageStats: {
+          totalOperations: 5,
+          safeOperations: 0,
+          firstSeenAt: '2024-01-01T00:00:00Z',
+          lastSeenAt: '2024-01-02T00:00:00Z',
+        },
+        clientTrafficCheckSkipped: true,
+      },
+      { json: true, skipTrafficCheck: true },
+    );
+
+    const output = getJsonOutput(logSpy);
+    expect(output.status).toBe('success');
+    expect(output.traffic).toBeDefined();
+    expect(output.traffic?.success).toBe(true);
+    expect(output.traffic?.message).not.toContain('client activity between');
   });
 
   test('ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL outputs JSON with error status and details', async () => {

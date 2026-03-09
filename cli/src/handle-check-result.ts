@@ -244,8 +244,6 @@ const handleTrafficCheck = (
   jsonBuilder: JsonOutputBuilder,
   shouldOutputJson: boolean,
 ): { success: boolean; finalStatement: string } => {
-  jsonBuilder.setTraffic(false, false, '');
-
   const { clientTrafficCheckSkipped, compositionErrors, lintErrors, graphPruneErrors, breakingChanges } = response;
   const { totalOperations, safeOperations, firstSeenAt, lastSeenAt } = operationUsageStats;
 
@@ -285,17 +283,24 @@ const handleTrafficCheck = (
     jsonBuilder.setOperationUsageStats(operationUsageStats);
 
     const warningMessage = [logSymbols.warning, ` Found ${pc.bold(breakingChanges.length)} breaking changes.`];
+    const jsonMessage = [`Found ${breakingChanges.length} breaking changes.`];
     if (totalOperations > 0) {
       warningMessage.push(`${pc.bold(totalOperations - safeOperations)} operations impacted.`);
+      jsonMessage.push(`${totalOperations - safeOperations} operations impacted.`);
     }
     if (safeOperations > 0) {
       warningMessage.push(`In addition, ${safeOperations} operations marked safe due to overrides.`);
+      jsonMessage.push(`In addition, ${safeOperations} operations marked safe due to overrides.`);
     }
     if (!clientTrafficCheckSkipped) {
       warningMessage.push(
         `\nFound client activity between ${pc.underline(new Date(firstSeenAt).toLocaleString())} and ${pc.underline(new Date(lastSeenAt).toLocaleString())}.`,
       );
+      jsonMessage.push(
+        `Found client activity between ${new Date(firstSeenAt).toLocaleString()} and ${new Date(lastSeenAt).toLocaleString()}.`,
+      );
     }
+    jsonBuilder.setTraffic(false, false, jsonMessage.join(' '));
     if (!shouldOutputJson) {
       console.log(warningMessage.join(''));
     }
@@ -303,6 +308,9 @@ const handleTrafficCheck = (
     finalStatement = `This check has encountered ${pc.bold(`${breakingChanges.length}`)} breaking changes${
       clientTrafficCheckSkipped ? `.` : ` that would break operations from existing client traffic.`
     }`;
+  } else {
+    // Operations exist but no breaking changes — traffic check passed
+    jsonBuilder.setTraffic(true, false, `${totalOperations} operations checked, no breaking changes detected.`);
   }
 
   return { success, finalStatement };
