@@ -1333,7 +1333,7 @@ export class SchemaCheckRepository {
         lintIssues: check.lintIssues,
         pruneIssues: check.pruneIssues,
         newSchemaSDL: check.newSchemaSDL,
-        isDeleted: false,
+        isDeleted: check.newSchemaSDL === '',
       })),
       affectedGraphs: federatedGraphs,
       composedGraphs,
