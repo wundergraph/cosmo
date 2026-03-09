@@ -37,6 +37,7 @@ service ProjectsService {
   rpc QuerySearchProjects(QuerySearchProjectsRequest) returns (QuerySearchProjectsResponse) {}
   rpc QueryTasks(QueryTasksRequest) returns (QueryTasksResponse) {}
   rpc QueryTasksByPriority(QueryTasksByPriorityRequest) returns (QueryTasksByPriorityResponse) {}
+  rpc RequireEmployeeTaggedProjectSummaryById(RequireEmployeeTaggedProjectSummaryByIdRequest) returns (RequireEmployeeTaggedProjectSummaryByIdResponse) {}
   rpc ResolveEmployeeAverageTaskCompletionDays(ResolveEmployeeAverageTaskCompletionDaysRequest) returns (ResolveEmployeeAverageTaskCompletionDaysResponse) {}
   rpc ResolveEmployeeCurrentWorkload(ResolveEmployeeCurrentWorkloadRequest) returns (ResolveEmployeeCurrentWorkloadResponse) {}
   rpc ResolveMilestoneDaysUntilDue(ResolveMilestoneDaysUntilDueRequest) returns (ResolveMilestoneDaysUntilDueResponse) {}
@@ -761,6 +762,29 @@ message ResolveEmployeeAverageTaskCompletionDaysResult {
 
 message ResolveEmployeeAverageTaskCompletionDaysResponse {
   repeated ResolveEmployeeAverageTaskCompletionDaysResult result = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdRequest {
+  // RequireEmployeeTaggedProjectSummaryByIdContext provides the context for the required fields method RequireEmployeeTaggedProjectSummaryById.
+  repeated RequireEmployeeTaggedProjectSummaryByIdContext context = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeTaggedProjectSummaryByIdFields fields = 2;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdResponse {
+  // RequireEmployeeTaggedProjectSummaryByIdResult provides the result for the required fields method RequireEmployeeTaggedProjectSummaryById.
+  repeated RequireEmployeeTaggedProjectSummaryByIdResult result = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdResult {
+  string tagged_project_summary = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdFields {
+  string tag = 1;
 }
 
 message Project {

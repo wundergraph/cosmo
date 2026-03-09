@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -484,6 +485,55 @@ func (p *ProjectsService) LookupEmployeeById(ctx context.Context, req *service.L
 	}
 
 	return &service.LookupEmployeeByIdResponse{Result: result}, nil
+}
+
+// RequireEmployeeTaggedProjectSummaryById implements projects.ProjectsServiceServer.
+// It resolves the taggedProjectSummary field on Employee, which requires the `tag` field
+// from the employees subgraph via @requires(fields: "tag").
+func (p *ProjectsService) RequireEmployeeTaggedProjectSummaryById(_ context.Context, req *service.RequireEmployeeTaggedProjectSummaryByIdRequest) (*service.RequireEmployeeTaggedProjectSummaryByIdResponse, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	result := make([]*service.RequireEmployeeTaggedProjectSummaryByIdResult, 0, len(req.Context))
+
+	for _, ctx := range req.Context {
+		id, err := strconv.ParseInt(ctx.Key.Id, 10, 32)
+		if err != nil {
+			result = append(result, &service.RequireEmployeeTaggedProjectSummaryByIdResult{
+				TaggedProjectSummary: ctx.Fields.Tag,
+			})
+			continue
+		}
+
+		var tags []string
+		emp := data.GetEmployeeByID(int32(id))
+		if emp != nil && emp.Projects != nil && emp.Projects.List != nil {
+			seen := make(map[string]struct{})
+			for _, project := range emp.Projects.List.Items {
+				if project.Tags == nil || project.Tags.List == nil {
+					continue
+				}
+				for _, tag := range project.Tags.List.Items {
+					if _, ok := seen[tag]; !ok {
+						seen[tag] = struct{}{}
+						tags = append(tags, tag)
+					}
+				}
+			}
+		}
+
+		var summary string
+		if len(tags) > 0 {
+			summary = fmt.Sprintf("project tags: [%s]", strings.Join(tags, ", "))
+		} else {
+			summary = "project has no tags"
+		}
+		result = append(result, &service.RequireEmployeeTaggedProjectSummaryByIdResult{
+			TaggedProjectSummary: summary,
+		})
+	}
+
+	return &service.RequireEmployeeTaggedProjectSummaryByIdResponse{Result: result}, nil
 }
 
 // LookupProjectById implements projects.ProjectsServiceServer.
