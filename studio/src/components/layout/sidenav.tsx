@@ -49,7 +49,7 @@ const MobileNav = () => {
         <nav className="grid grid-flow-row auto-rows-max items-center justify-center space-y-2 text-center text-sm">
           <Link href="/account/invitations" className="flex items-center justify-center gap-x-2">
             Invitations
-            {user?.invitations?.length && (
+            {typeof user?.invitations?.length === 'number' && user?.invitations?.length > 0 && (
               <div className="relative">
                 <div aria-hidden="true" className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400" />
                 <div aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-400" />
