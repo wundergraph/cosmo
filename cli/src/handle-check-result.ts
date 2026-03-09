@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import type {
   CheckSubgraphSchemaResponse,
@@ -59,9 +60,11 @@ export type JsonOutputDescriptor = {
 
 class JsonOutputBuilder {
   private readonly data: JsonOutputDescriptor;
+  private readonly outFile?: string;
 
-  constructor(code: EnumStatusCode, rowLimit: number) {
+  constructor(code: EnumStatusCode, rowLimit: number, outFile?: string) {
     this.data = { status: 'error', code, rowLimit };
+    this.outFile = outFile;
   }
 
   setUrl(url: string): this {
@@ -221,6 +224,16 @@ class JsonOutputBuilder {
 
   build(): JsonOutputDescriptor {
     return this.data;
+  }
+
+  async write(): Promise<void> {
+    const output = this.build();
+
+    if (this.outFile) {
+      await writeFile(this.outFile, JSON.stringify(output, null, 2));
+    } else {
+      console.log(output);
+    }
   }
 }
 
@@ -621,16 +634,18 @@ const handleOkResult = ({
   return { success };
 };
 
-export const handleCheckResult = ({
+export const handleCheckResult = async ({
   response,
   rowLimit,
   shouldOutputJson,
+  outFile,
 }: {
   response: CheckSubgraphSchemaResponse;
   rowLimit: number;
   shouldOutputJson?: boolean;
-}): boolean => {
-  const jsonBuilder = new JsonOutputBuilder(EnumStatusCode.ERR, rowLimit);
+  outFile?: string;
+}): Promise<boolean> => {
+  const jsonBuilder = new JsonOutputBuilder(EnumStatusCode.ERR, rowLimit, outFile);
 
   let studioCheckDestination = '';
   if (response.checkId && response.checkedFederatedGraphs.length > 0) {
@@ -645,19 +660,19 @@ export const handleCheckResult = ({
     case EnumStatusCode.OK: {
       const { success } = handleOkResult({ response, jsonBuilder, rowLimit, shouldOutputJson, studioCheckDestination });
       if (shouldOutputJson) {
-        console.log(JSON.stringify(jsonBuilder.build()));
+        await jsonBuilder.write();
       }
       return success;
     }
     case EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL: {
       const message = 'Error: Proposal match failed';
       if (shouldOutputJson) {
-        jsonBuilder
+        await jsonBuilder
           .setCode(EnumStatusCode.ERR_SCHEMA_MISMATCH_WITH_APPROVED_PROPOSAL)
           .setDetails(response.proposalMatchMessage)
           .setMessage(message)
-          .setStatus(false);
-        console.log(JSON.stringify(jsonBuilder.build()));
+          .setStatus(false)
+          .write();
       } else {
         console.log(pc.red(message));
         console.log(pc.red(response.proposalMatchMessage));
@@ -674,12 +689,12 @@ export const handleCheckResult = ({
       const message =
         'Check has failed early because the schema could not be built. Please ensure that the schema is valid GraphQL and try again.';
       if (shouldOutputJson) {
-        jsonBuilder
+        await jsonBuilder
           .setCode(EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA)
           .setDetails(response.response?.details)
           .setMessage(message)
-          .setStatus(false);
-        console.log(JSON.stringify(jsonBuilder.build()));
+          .setStatus(false)
+          .write();
         return false;
       } else {
         console.log('\n' + message);
@@ -693,11 +708,12 @@ export const handleCheckResult = ({
     default: {
       const message = 'Failed to perform the check operation.';
       if (shouldOutputJson) {
-        jsonBuilder
+        await jsonBuilder
           .setCode(EnumStatusCode.ERR)
           .setMessage(message)
           .setDetails(response.response?.details)
-          .setStatus(false);
+          .setStatus(false)
+          .write();
         console.log(JSON.stringify(jsonBuilder.build()));
         return false;
       } else {

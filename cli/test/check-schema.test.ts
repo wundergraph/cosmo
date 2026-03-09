@@ -1,6 +1,9 @@
-import { beforeEach, afterEach, describe, expect, test, vi, type MockInstance } from 'vitest';
-import { type PartialMessage } from '@bufbuild/protobuf';
+import { readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { Command } from 'commander';
+import { beforeEach, afterEach, describe, expect, onTestFinished, test, vi, type MockInstance } from 'vitest';
+import { type PartialMessage } from '@bufbuild/protobuf';
 import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { CheckSubgraphSchemaResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -41,7 +44,7 @@ function resetVcsConfig() {
 
 async function runCheck(
   response: PartialMessage<CheckSubgraphSchemaResponse>,
-  opts: { limit?: number | string; schema?: string | null; delete?: boolean; json?: boolean } = {},
+  opts: { limit?: number | string; schema?: string | null; delete?: boolean; json?: boolean; outFile?: string } = {},
 ): Promise<void> {
   const schema = 'schema' in opts ? opts.schema : 'test/fixtures/schema.graphql';
   const args = ['check', 'wg.orders'];
@@ -57,6 +60,9 @@ async function runCheck(
   if (opts.json) {
     args.push('--json');
   }
+  if (opts.outFile !== undefined) {
+    args.push('--out', opts.outFile);
+  }
 
   const client: Client = {
     platform: createPromiseClient(PlatformService, createMockTransport(response)),
@@ -68,6 +74,9 @@ async function runCheck(
 
 function getJsonOutput(logSpy: MockInstance<typeof console.log>): JsonOutputDescriptor {
   const call = logSpy.mock.calls.find(([arg]) => {
+    if (arg !== null && typeof arg === 'object') {
+      return true;
+    }
     try {
       JSON.parse(String(arg));
       return true;
@@ -78,7 +87,8 @@ function getJsonOutput(logSpy: MockInstance<typeof console.log>): JsonOutputDesc
   if (!call) {
     throw new Error('No JSON output found in console.log calls');
   }
-  return JSON.parse(String(call[0]));
+  const arg = call[0];
+  return typeof arg === 'string' ? JSON.parse(arg) : (arg as JsonOutputDescriptor);
 }
 
 describe('stdout', () => {
@@ -825,5 +835,50 @@ describe('json output', () => {
     expect(output.status).toBe('error');
     expect(output.message).toContain('Failed to perform the check operation');
     expect(output.details).toBe('Internal server error');
+  });
+
+  test('--out writes JSON to file instead of console', async () => {
+    const tmpFile = join(tmpdir(), `cosmo-check-test-${Date.now()}.json`);
+    onTestFinished(() => rmSync(tmpFile, { force: true }));
+
+    await runCheck({ response: { code: EnumStatusCode.OK } }, { json: true, outFile: tmpFile });
+
+    const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonOutputDescriptor;
+    expect(written.status).toBe('success');
+    expect(logSpy).not.toHaveBeenCalledWith(expect.objectContaining({ status: expect.any(String) }));
+  });
+
+  test('--out writes pretty-printed JSON to file', async () => {
+    const tmpFile = join(tmpdir(), `cosmo-check-test-${Date.now()}.json`);
+    onTestFinished(() => rmSync(tmpFile, { force: true }));
+
+    await runCheck({ response: { code: EnumStatusCode.OK } }, { json: true, outFile: tmpFile });
+
+    const raw = readFileSync(tmpFile, 'utf8');
+    expect(raw).toContain('\n');
+  });
+
+  test('--out with error status writes error JSON to file', async () => {
+    const tmpFile = join(tmpdir(), `cosmo-check-test-${Date.now()}.json`);
+    onTestFinished(() => rmSync(tmpFile, { force: true }));
+
+    await runCheck(
+      { response: { code: EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA, details: 'Syntax error' } },
+      { json: true, outFile: tmpFile },
+    );
+
+    const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonOutputDescriptor;
+    expect(written.status).toBe('error');
+    expect(written.details).toBe('Syntax error');
+  });
+
+  test('--out without --json implicitly enables JSON output', async () => {
+    const tmpFile = join(tmpdir(), `cosmo-check-test-${Date.now()}.json`);
+    onTestFinished(() => rmSync(tmpFile, { force: true }));
+
+    await runCheck({ response: { code: EnumStatusCode.OK } }, { outFile: tmpFile });
+
+    const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonOutputDescriptor;
+    expect(written.status).toBe('success');
   });
 });
