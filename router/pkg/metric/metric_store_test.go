@@ -190,7 +190,7 @@ func TestOperationCostMetrics(t *testing.T) {
 			}
 		}
 
-		// Verify all three metrics were found and are Int64 histograms
+		// Verify metrics were found and are Int64 histograms
 		require.True(t, foundEstimated, "estimated cost metric not found")
 		require.True(t, foundActual, "actual cost metric not found")
 

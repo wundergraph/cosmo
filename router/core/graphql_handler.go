@@ -230,13 +230,13 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				// actualListSizes is populated by the resolver after resolution completes,
 				// and we need to set headers before actual write happens in the same resolver.
 				pw.costHeaderSetter = func(actualListSizes map[string]int) {
-					w.Header().Set(CostEstimatedHeader, strconv.Itoa(reqCtx.operation.costEstimated))
+					pw.writer.Header().Set(CostEstimatedHeader, strconv.Itoa(reqCtx.operation.costEstimated))
 					if actualListSizes != nil {
 						if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
 							actual := costCalc.ActualCost(reqCtx.operation.planConfig, actualListSizes)
 							reqCtx.operation.costActual = actual
 							reqCtx.operation.costActualSet = true
-							w.Header().Set(CostActualHeader, strconv.Itoa(actual))
+							pw.writer.Header().Set(CostActualHeader, strconv.Itoa(actual))
 						}
 					}
 				}
