@@ -657,7 +657,9 @@
           "ID": "default",
           "URL": "nats://localhost:4222",
           "Authentication": null,
-          "DeleteDurableConsumersOnShutdown": false
+          "Consumers": {
+            "DeleteOnShutdown": false
+          }
         },
         {
           "ID": "my-nats",
@@ -669,7 +671,9 @@
             },
             "Token": null
           },
-          "DeleteDurableConsumersOnShutdown": false
+          "Consumers": {
+            "DeleteOnShutdown": false
+          }
         }
       ],
       "Kafka": [
