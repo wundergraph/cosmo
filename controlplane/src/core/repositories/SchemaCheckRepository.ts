@@ -825,6 +825,7 @@ export class SchemaCheckRepository {
         try {
           // Here we check if the schema is valid as a subgraph SDL
           const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion, {
+            disableResolvabilityValidation: false,
             ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           });
           if (!result.success) {
@@ -1116,6 +1117,7 @@ export class SchemaCheckRepository {
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
       compositionOptions: {
+        disableResolvabilityValidation: false,
         ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
       },
       inputSubgraphs: checkSubgraphs,
