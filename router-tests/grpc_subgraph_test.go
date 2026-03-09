@@ -144,7 +144,7 @@ func TestGRPCSubgraph(t *testing.T) {
 				query: `
 				query {
 					nodesById(id: 1) {
-                        __typename
+			            __typename
 						... on Project {
 							id
 						}
@@ -263,6 +263,26 @@ func TestGRPCSubgraph(t *testing.T) {
 				name:     "query project with normal and recursive field resolver and aliases and multiple levels of recursion and aliases",
 				query:    `{ project(id: 2) { id name urgent: topPriorityItem(category: "task") { __typename } nextDeadline: criticalDeadline(withinDays: 10000) { __typename } subsub: subProjects { id name status otherSubs: subProjects { id name } } } }`,
 				expected: `{"data":{"project":{"id":"2","name":"Microservices Revolution","urgent":{"__typename":"Task"},"nextDeadline":{"__typename":"Milestone"},"subsub":[{"id":"4","name":"DevOps Transformation","status":"PLANNING","otherSubs":[{"id":"1","name":"Cloud Migration Overhaul"}]},{"id":"5","name":"Security Overhaul","status":"ON_HOLD","otherSubs":[{"id":"2","name":"Microservices Revolution"}]}]}}}`,
+			},
+			{
+				name:     "query project resources with complex types inside inline fragments",
+				query:    `query { projectResources(projectId: "1") { ... on Milestone { id name dependencies { id name } } ... on Task { id name subtasks { id name } } } }`,
+				expected: `{"data":{"projectResources":[{},{},{},{},{"id":"1","name":"Infrastructure Assessment","dependencies":[]},{"id":"2","name":"Cloud Environment Setup","dependencies":[{"id":"1","name":"Infrastructure Assessment"},{"id":"","name":""}]},{"id":"3","name":"Application Migration","dependencies":[{"id":"2","name":"Cloud Environment Setup"},{"id":"","name":""}]},{"id":"1","name":"Current Infrastructure Audit","subtasks":[{"id":"1a","name":"Server Inventory"},{"id":"1b","name":"Database Inventory"},{"id":"","name":""}]},{"id":"2","name":"Cloud Provider Selection","subtasks":null},{"id":"3","name":"Network Setup","subtasks":[{"id":"3a","name":"VPC Configuration"},{"id":"3b","name":"Security Groups"},{"id":"","name":""}]},{"id":"14","name":"Database Migration","subtasks":[]}]}}`,
+			},
+			{
+				name:     "query non-existent project returns null without invoking field resolvers",
+				query:    `{ project(id: 999) { id name topPriorityItem(category: "task") { __typename } criticalDeadline(withinDays: 10000) { __typename } } }`,
+				expected: `{"data":{"project":null}}`,
+			},
+			{
+				name:     "query non-existent project returns null without invoking recursive field resolvers",
+				query:    `{ project(id: 999) { id name subProjects { id name status subProjects { id name } } } }`,
+				expected: `{"data":{"project":null}}`,
+			},
+			{
+				name:     "query non-existent project returns null without invoking nested field resolvers with aliases",
+				query:    `{ project(id: 999) { id name urgent: topPriorityItem(category: "task") { __typename } nextDeadline: criticalDeadline(withinDays: 10000) { __typename } subsub: subProjects { id name status otherSubs: subProjects { id name } } } }`,
+				expected: `{"data":{"project":null}}`,
 			},
 		}
 		testenv.Run(t, &testenv.Config{

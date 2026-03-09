@@ -1,4 +1,4 @@
-import { expect, test } from "vitest";
+import { expect, test } from 'vitest';
 import {
   extractVariablesFromGraphQL,
   getDeprecatedTypes,
@@ -6,8 +6,8 @@ import {
   getTypeCounts,
   parseSchema,
   getParsedTypes,
-} from "../lib/schema-helpers";
-import { parse } from "graphql";
+} from '../lib/schema-helpers';
+import { parse } from 'graphql';
 
 const schema = `
 type Query {
@@ -51,7 +51,7 @@ type Staff {
 }
 `;
 
-test("return the correct types with deprecated fields or args", () => {
+test('return the correct types with deprecated fields or args', () => {
   const result = parseSchema(schema);
 
   expect(result).not.toBeNull();
@@ -62,13 +62,13 @@ test("return the correct types with deprecated fields or args", () => {
   expect(totalDeprecatedNodesCount).toEqual(2);
   expect(deprecated.length).toEqual(2);
   expect(deprecated[0].fields?.length).toEqual(1);
-  expect(deprecated[0].fields?.[0]?.name).toEqual("teammates");
+  expect(deprecated[0].fields?.[0]?.name).toEqual('teammates');
   expect(deprecated[1].fields?.length).toEqual(1);
-  expect(deprecated[1].fields?.[0]?.name).toEqual("fullName");
-  expect(deprecated[1].fields?.[0]?.deprecationReason).toEqual("Please use first and last name instead");
+  expect(deprecated[1].fields?.[0]?.name).toEqual('fullName');
+  expect(deprecated[1].fields?.[0]?.deprecationReason).toEqual('Please use first and last name instead');
 });
 
-test("that authentication types are read correctly", async () => {
+test('that authentication types are read correctly', async () => {
   const result = await parseSchema(schema);
 
   expect(result).not.toBeNull();
@@ -79,27 +79,30 @@ test("that authentication types are read correctly", async () => {
   expect(totalAuthenticatedNodesCount).toEqual(4);
   expect(authenticatedTypes.length).toEqual(3);
   expect(authenticatedTypes[0].fields?.length).toEqual(1);
-  expect(authenticatedTypes[0].fields?.[0]?.name).toEqual("firstName");
-  expect(authenticatedTypes[1].name).toEqual("Role");
+  expect(authenticatedTypes[0].fields?.[0]?.name).toEqual('firstName');
+  expect(authenticatedTypes[1].name).toEqual('Role');
   expect(authenticatedTypes[2].fields?.length).toEqual(2);
-  expect(authenticatedTypes[2].fields?.[0]?.name).toEqual("role");
-  expect(authenticatedTypes[2].fields?.[1]?.name).toEqual("email");
-  expect(authenticatedTypes[2].fields?.[1]?.requiresScopes).toStrictEqual([["read:profile", "read:email"], ["read:all"]]);
+  expect(authenticatedTypes[2].fields?.[0]?.name).toEqual('role');
+  expect(authenticatedTypes[2].fields?.[1]?.name).toEqual('email');
+  expect(authenticatedTypes[2].fields?.[1]?.requiresScopes).toStrictEqual([
+    ['read:profile', 'read:email'],
+    ['read:all'],
+  ]);
 });
 
-test("returns correct type counts", () => {
+test('returns correct type counts', () => {
   const result = parseSchema(schema);
 
   expect(result).not.toBeNull();
 
   const counts = getTypeCounts(result!.ast);
 
-  expect(counts["query"]).toEqual(3);
-  expect(counts["objects"]).toEqual(2);
-  expect(counts["enums"]).toEqual(2);
+  expect(counts['query']).toEqual(3);
+  expect(counts['objects']).toEqual(2);
+  expect(counts['enums']).toEqual(2);
 });
 
-test("returns empty if no variables are present", () => {
+test('returns empty if no variables are present', () => {
   const result = parseSchema(schema);
   expect(result).not.toBeNull();
 
@@ -115,7 +118,7 @@ test("returns empty if no variables are present", () => {
   expect(variables).toMatchObject({});
 });
 
-test("returns multiple variables", () => {
+test('returns multiple variables', () => {
   const result = parseSchema(schema);
   expect(result).not.toBeNull();
 
@@ -133,13 +136,13 @@ test("returns multiple variables", () => {
     criteria: {
       age: 0,
       nested: {
-        department: "ENGINEERING",
+        department: 'ENGINEERING',
       },
     },
   });
 });
 
-test("returns multiple variables with defaults", () => {
+test('returns multiple variables with defaults', () => {
   const result = parseSchema(schema);
   expect(result).not.toBeNull();
 
@@ -158,7 +161,7 @@ test("returns multiple variables with defaults", () => {
     criteria: {
       age: 12,
       nested: {
-        department: "ENGINEERING",
+        department: 'ENGINEERING',
       },
       hasPets: true,
     },
@@ -166,7 +169,7 @@ test("returns multiple variables with defaults", () => {
   });
 });
 
-test("returns nested variables", () => {
+test('returns nested variables', () => {
   const result = parseSchema(schema);
   expect(result).not.toBeNull();
 
@@ -181,7 +184,7 @@ test("returns nested variables", () => {
     criteria: {
       age: 0,
       nested: {
-        department: "ENGINEERING",
+        department: 'ENGINEERING',
       },
     },
   });

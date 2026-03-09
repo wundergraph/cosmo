@@ -1,6 +1,6 @@
 {
   "name": "studio",
-  "version": "0.158.0",
+  "version": "0.161.0",
   "private": true,
   "license": "Apache-2.0",
   "description": "WunderGraph Cosmo Studio",
@@ -17,7 +17,8 @@
     "lint": "next lint",
     "test": "vitest run --reporter=default --reporter=hanging-process",
     "test:coverage": "vitest run --reporter=default --reporter=hanging-process --coverage",
-    "lint:fix": "next lint --fix",
+    "lint:fix": "next lint --fix && pnpm format",
+    "format": "prettier -w .",
     "preinstall": "npx only-allow pnpm",
     "postinstall": "pnpm run copy-monaco",
     "postversion": "name=$(jq -r .name package.json); version=$(jq -r .version package.json); gh workflow run image-release.yml -F name=$name -F workingDirectory=studio -F tag=$version -F dockerContext=."

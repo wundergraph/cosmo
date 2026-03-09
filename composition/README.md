@@ -2,7 +2,7 @@
 
 [![npm version](https://badge.fury.io/js/%40wundergraph%2Fcomposition.svg)](https://badge.fury.io/js/%40wundergraph%2Fcomposition)
 
-The WunderGraph composition library facilitates the federation of multiple subgraph schemas into a 
+The WunderGraph composition library facilitates the federation of multiple subgraph schemas into a
 single federated GraphQL schema.
 
 ### Prerequisites
@@ -53,29 +53,31 @@ const subgraphB: Subgraph = {
 
 ### FederationResult
 
-The `federateSubgraphs` function returns `FederationResult`, which is a union of `FederationResultSuccess` and 
+The `federateSubgraphs` function returns `FederationResult`, which is a union of `FederationResultSuccess` and
 `FederationResultFailure`. Both types in the union always define the following mutual properties:
 
 | property | Description                            | type           |
-|----------|----------------------------------------|----------------|
+| -------- | -------------------------------------- | -------------- |
 | success  | assertion of composition success       | boolean        |
 | warnings | array of composition warnings (if any) | Array<Warning> |
 
 #### FederationResultSuccess
+
 If federation was successful, the return type is `FederationResultSuccess`.
 
-| property             | Description                                                 | type                  |
-|----------------------|-------------------------------------------------------------|-----------------------|
-| federatedGraphAST    | an AST object representation of the federated graph sdl     | graphql.DocumentNode  |
-| federatedGraphSchema | a schema object representation of the federated graph sdl   | graphql.GraphQLSchema |
-| success              | assertion that composition was successful                   | true                  |
-| warnings             | array of composition warnings (if any)                      | Array<Warning>        |
+| property             | Description                                               | type                  |
+| -------------------- | --------------------------------------------------------- | --------------------- |
+| federatedGraphAST    | an AST object representation of the federated graph sdl   | graphql.DocumentNode  |
+| federatedGraphSchema | a schema object representation of the federated graph sdl | graphql.GraphQLSchema |
+| success              | assertion that composition was successful                 | true                  |
+| warnings             | array of composition warnings (if any)                    | Array<Warning>        |
 
 #### FederationResultFailure
+
 If federation was unsuccessful, the return type is `FederationResultFailure`.
 
 | property | Description                                 | type           |
-|----------|---------------------------------------------|----------------|
+| -------- | ------------------------------------------- | -------------- |
 | errors   | array of composition errors                 | Array<Error>   |
 | success  | assertion that composition was unsuccessful | false          |
 | warnings | array of composition warnings (if any)      | Array<Warning> |
@@ -112,9 +114,10 @@ for (const warning of result.warnings) {
 ### Errors
 
 Errors can happen in three main stages:
+
 1. While validating the subgraph metadata, e.g., validating that each `Subgraph` object has a unique name.
 2. During the normalization process, which prepares the subgraph for federation.
-(if this stage fails, federation will not be attempted)
+   (if this stage fails, federation will not be attempted)
 3. During the federation process itself.
 
 All errors will be appended to the `FederationResultFailure.errors` array.
@@ -127,7 +130,7 @@ This is easily achieved by passing string representation of the subgraph SDL to 
 An example is shown below:
 
 ```typescript
-import { Subgraph } from '@wundergraph/composition'
+import { Subgraph } from '@wundergraph/composition';
 import { parse } from 'graphql';
 
 const subgraphA: Subgraph = {
@@ -148,13 +151,15 @@ const subgraphA: Subgraph = {
 ### Subgraph Properties
 
 | property    | Description                               | type                 |
-|-------------|-------------------------------------------|----------------------|
+| ----------- | ----------------------------------------- | -------------------- |
 | name        | unique name of the subgraph               | string               |
 | url         | unique endpoint for the subgraph          | string               |
 | definitions | an AST representation of the subgraph SDL | graphql.DocumentNode |
 
 ### Contributing
+
 When adding or changing error, please ensure GraphQL types begin with a capital letter for clarity:
+
 - Enum
 - Input Object
 - Interface

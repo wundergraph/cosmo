@@ -77,6 +77,19 @@ export const SeverityDropdown = ({
   );
 };
 
+const findRuleByName = (
+  rules: LintConfig[],
+  candidateName: string,
+): LintConfig | undefined => rules.find((l) => l.ruleName === candidateName);
+
+const ruleHasErrorSeverity = (rules: LintConfig[], name: string): boolean =>
+  findRuleByName(rules, name)?.severityLevel === LintSeverity.error;
+
+const setDropdownValueForRule = (
+  rules: LintConfig[],
+  name: string,
+): "error" | "warn" => (ruleHasErrorSeverity(rules, name) ? "error" : "warn");
+
 export const LinterConfig = ({
   data,
   refetch,
@@ -85,7 +98,9 @@ export const LinterConfig = ({
   refetch: () => void;
 }) => {
   const checkUserAccess = useCheckUserAccess();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const { mutate: configureLintRules, isPending: isConfiguring } = useMutation(
     configureNamespaceLintConfig,
@@ -99,6 +114,28 @@ export const LinterConfig = ({
     data.configs,
   );
   const countByCategory = countLintConfigsByCategory(data.configs);
+
+  const handleRuleSeverityDropdownChange = (name: string, value: string) => {
+    setSelectedLintRules((prevState) => {
+      const index = prevState.findIndex((rule) => rule.ruleName === name);
+      if (index === -1) {
+        return prevState;
+      }
+
+      const updatedRule = new LintConfig({
+        ...prevState[index],
+        severityLevel:
+          value === "error" ? LintSeverity.error : LintSeverity.warn,
+      });
+
+      const newRules = [
+        ...prevState.slice(0, index),
+        updatedRule,
+        ...prevState.slice(index + 1),
+      ];
+      return newRules;
+    });
+  };
 
   useEffect(() => {
     setLinterEnabled(data.linterEnabled);
@@ -117,7 +154,9 @@ export const LinterConfig = ({
         <Switch
           checked={linterEnabled}
           disabled={
-            !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+            !checkUserAccess({
+              rolesToBe: ["organization-admin", "organization-developer"],
+            })
           }
           onCheckedChange={(checked) => {
             setLinterEnabled(checked);
@@ -182,7 +221,9 @@ export const LinterConfig = ({
               isLoading={isConfiguring}
               disabled={
                 !data.linterEnabled ||
-                !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+                !checkUserAccess({
+                  rolesToBe: ["organization-admin", "organization-developer"],
+                })
               }
               onClick={() => {
                 configureLintRules(
@@ -262,7 +303,12 @@ export const LinterConfig = ({
                                   (l) => l.ruleName === rule.name,
                                 )}
                                 disabled={
-                                  !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+                                  !checkUserAccess({
+                                    rolesToBe: [
+                                      "organization-admin",
+                                      "organization-developer",
+                                    ],
+                                  })
                                 }
                                 onCheckedChange={(checked) => {
                                   if (checked) {
@@ -297,31 +343,20 @@ export const LinterConfig = ({
 
                             <div className="ml-8 md:ml-0">
                               <SeverityDropdown
-                                value={
-                                  selectedLintRules.find(
-                                    (l) => l.ruleName === rule.name,
-                                  )?.severityLevel === LintSeverity.error
-                                    ? "error"
-                                    : "warn"
+                                value={setDropdownValueForRule(
+                                  selectedLintRules,
+                                  rule.name,
+                                )}
+                                onChange={(value) =>
+                                  handleRuleSeverityDropdownChange(
+                                    rule.name,
+                                    value,
+                                  )
                                 }
-                                onChange={(value) => {
-                                  setSelectedLintRules(
-                                    selectedLintRules.map((l) => {
-                                      if (l.ruleName === rule.name) {
-                                        return {
-                                          ...l,
-                                          severityLevel:
-                                            value === "error"
-                                              ? LintSeverity.error
-                                              : LintSeverity.warn,
-                                        } as LintConfig;
-                                      } else {
-                                        return l;
-                                      }
-                                    }),
-                                  );
-                                }}
-                                disabled={!data.linterEnabled}
+                                disabled={
+                                  !data.linterEnabled ||
+                                  !findRuleByName(selectedLintRules, rule.name)
+                                }
                               />
                             </div>
                           </div>

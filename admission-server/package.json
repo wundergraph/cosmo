@@ -6,7 +6,8 @@
   ],
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "rm -rf dist && tsc"
+    "build": "rm -rf dist && tsc",
+    "format": "prettier -w -c ."
   },
   "dependencies": {
     "@hono/node-server": "1.13.7",

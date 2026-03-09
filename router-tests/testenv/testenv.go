@@ -58,6 +58,7 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/service"
 	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router/core"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -89,6 +90,8 @@ var (
 	ConfigWithEdfsRedisJSONTemplate string
 	//go:embed testdata/configWithPlugins.json
 	ConfigWithPluginsJSONTemplate string
+	//go:embed testdata/configWithOCIPlugins.json
+	ConfigWithOCIPluginsJSONTemplate string
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
 
@@ -260,6 +263,13 @@ type EngineStatOptions struct {
 	EnableSubscription bool
 }
 
+type MetricsLogExporterOptions struct {
+	Enabled        bool
+	ExcludeMetrics []*regexp.Regexp
+	IncludeMetrics []*regexp.Regexp
+	ExportInterval time.Duration
+}
+
 type MetricOptions struct {
 	MetricExclusions                      MetricExclusions
 	EnableRuntimeMetrics                  bool
@@ -274,6 +284,7 @@ type MetricOptions struct {
 	EnablePrometheusConnectionMetrics     bool
 	EnablePrometheusCircuitBreakerMetrics bool
 	EnablePrometheusStreamMetrics         bool
+	LogExporter                           MetricsLogExporterOptions
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -352,8 +363,9 @@ type Config struct {
 }
 
 type PluginConfig struct {
-	Path    string
-	Enabled bool
+	Path        string
+	Enabled     bool
+	RegistryURL string // for OCI plugin tests
 }
 
 type CacheMetricsAssertions struct {
@@ -1481,10 +1493,19 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
 
-	routerOpts = append(routerOpts, core.WithPlugins(config.PluginsConfiguration{
+	pluginsCfg := config.PluginsConfiguration{
 		Path:    testConfig.Plugins.Path,
 		Enabled: testConfig.Plugins.Enabled,
-	}))
+	}
+	if testConfig.Plugins.RegistryURL != "" {
+		if strings.HasPrefix(testConfig.Plugins.RegistryURL, "http://") || strings.HasPrefix(testConfig.Plugins.RegistryURL, "https://") {
+			return nil, fmt.Errorf("RegistryURL must be a host-only OCI registry address (no http:// or https:// scheme), got %q", testConfig.Plugins.RegistryURL)
+		}
+		pluginsCfg.Registry = config.PluginRegistryConfiguration{
+			URL: testConfig.Plugins.RegistryURL,
+		}
+	}
+	routerOpts = append(routerOpts, core.WithPlugins(pluginsCfg))
 
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true
@@ -1511,6 +1532,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		})
 
 		c.TestMemoryExporter = testConfig.TraceExporter
+		c.TestErrorHandler = rtrace.NewOtelErrorHandler(testConfig.Logger)
 
 		routerOpts = append(routerOpts,
 			core.WithTracing(c),
@@ -1600,12 +1622,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
+					LogExporter: config.MetricsLogExporter{
+						Enabled:        testConfig.MetricOptions.LogExporter.Enabled,
+						ExcludeMetrics: testConfig.MetricOptions.LogExporter.ExcludeMetrics,
+						IncludeMetrics: testConfig.MetricOptions.LogExporter.IncludeMetrics,
+					},
 				},
 			},
 		})
 
 		c.Prometheus = prometheusConfig
 		c.OpenTelemetry.TestReader = testConfig.MetricReader
+		c.OpenTelemetry.LogExporter.ExportInterval = testConfig.MetricOptions.LogExporter.ExportInterval
 		c.IsUsingCloudExporter = !testConfig.DisableSimulateCloudExporter
 
 		routerOpts = append(routerOpts, core.WithMetrics(c))

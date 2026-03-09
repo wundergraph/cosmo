@@ -66,8 +66,12 @@ jobs:
       - name: Generate email templates
         run: pnpm run --filter ./controlplane/emails build
 
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
+      - name: Lint & format
+        run: pnpm run --filter ./controlplane/ lint:fix
+
+      - uses: ./.github/actions/git-dirty-check
+        with:
+          package-name: controlplane
 
       - name: Build
         run: pnpm run --filter ./controlplane --filter ./connect --filter ./shared --filter ./composition --filter ./protographic build
