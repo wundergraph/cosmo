@@ -27,7 +27,7 @@ export type FeatureIds =
   | 'cache-warmer'
   | 'proposals'
   | 'plugins'
-  | typeof COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID
+  | 'composition-ignore-external-keys' // COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID
   | 'subgraph-check-extensions';
 
 export type Features = {
