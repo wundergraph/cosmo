@@ -1,12 +1,9 @@
 /**
  * This lib focuses on deserialization logic for sharing state
  */
-import {
-  PlaygroundStateSchema,
-  PlaygroundUrlState,
-} from "../components/playground/types";
-import { decompressFromEncodedURIComponent } from "lz-string";
-import { PLAYGROUND_STATE_QUERY_PARAM } from "./constants";
+import { PlaygroundStateSchema, PlaygroundUrlState } from '../components/playground/types';
+import { decompressFromEncodedURIComponent } from 'lz-string';
+import { PLAYGROUND_STATE_QUERY_PARAM } from './constants';
 
 /**
  * Decompresses a URL-safe string into a playground state object
@@ -15,13 +12,11 @@ import { PLAYGROUND_STATE_QUERY_PARAM } from "./constants";
  * @returns The decompressed and validated playground state
  * @throws Error if decompression fails or validation fails
  */
-export const decompressState = (
-  compressedState: string,
-): PlaygroundUrlState => {
+export const decompressState = (compressedState: string): PlaygroundUrlState => {
   const decompressed = decompressFromEncodedURIComponent(compressedState);
 
   if (!decompressed) {
-    throw new Error("Failed to decompress playground state");
+    throw new Error('Failed to decompress playground state');
   }
 
   const parsedState = JSON.parse(decompressed);
@@ -29,13 +24,11 @@ export const decompressState = (
   const result = PlaygroundStateSchema.safeParse(parsedState);
 
   if (!result.success) {
-    throw new Error(
-      `Invalid playground state: ${result.error.errors.map((e) => e.toString()).join("\n")}`,
-    );
+    throw new Error(`Invalid playground state: ${result.error.errors.map((e) => e.toString()).join('\n')}`);
   }
 
-  if (process.env.NODE_ENV === "development") {
-    console.log("[Playground] decompressed state:", result.data);
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[Playground] decompressed state:', result.data);
   }
 
   return result.data;

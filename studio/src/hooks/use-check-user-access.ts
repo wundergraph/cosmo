@@ -1,6 +1,6 @@
-import { OrganizationRole } from "@/lib/constants";
-import { useCallback } from "react";
-import { useUser } from "@/hooks/use-user";
+import { OrganizationRole } from '@/lib/constants';
+import { useCallback } from 'react';
+import { useUser } from '@/hooks/use-user';
 
 /**
  * Returns a callback that can be uses to determine whether the authenticated users has at least one of the
@@ -9,16 +9,8 @@ import { useUser } from "@/hooks/use-user";
 export function useCheckUserAccess() {
   const user = useUser();
   return useCallback(
-    ({
-      organizationId,
-      rolesToBe,
-    }: {
-      organizationId?: string;
-      rolesToBe: OrganizationRole[];
-    }) => {
-      const org = organizationId
-        ? user?.organizations.find((o) => o.id === organizationId)
-        : user?.currentOrganization;
+    ({ organizationId, rolesToBe }: { organizationId?: string; rolesToBe: OrganizationRole[] }) => {
+      const org = organizationId ? user?.organizations.find((o) => o.id === organizationId) : user?.currentOrganization;
 
       if (!org?.groups) {
         return false;
@@ -29,9 +21,7 @@ export function useCheckUserAccess() {
         return true;
       }
 
-      const roles = new Set(
-        org.groups.flatMap((g) => g.rules?.map((r) => r.role) ?? []),
-      );
+      const roles = new Set(org.groups.flatMap((g) => g.rules?.map((r) => r.role) ?? []));
       for (const role of rolesToBe) {
         if (roles.has(role)) {
           return true;

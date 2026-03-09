@@ -5,12 +5,12 @@ import {
   PreOperationUrlState,
   TabsState,
   TabState,
-} from "@/components/playground/types";
-import { useToast } from "@/components/ui/use-toast";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { extractStateFromUrl } from "@/lib/playground-url-state-decoding";
-import { useRouter } from "next/router";
-import { useContext, useEffect, useState } from "react";
+} from '@/components/playground/types';
+import { useToast } from '@/components/ui/use-toast';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { extractStateFromUrl } from '@/lib/playground-url-state-decoding';
+import { useRouter } from 'next/router';
+import { useContext, useEffect, useState } from 'react';
 
 type ScriptData = {
   id?: string;
@@ -51,33 +51,20 @@ export const useHydratePlaygroundStateFromUrl = (
 
   const [, setScriptsTabState] = useLocalStorage<{
     [key: string]: Record<string, any>;
-  }>("playground:script:tabState", {});
-  const [, setPreFlightSelected] = useLocalStorage<any>(
-    "playground:pre-flight:selected",
-    null,
-  );
+  }>('playground:script:tabState', {});
+  const [, setPreFlightSelected] = useLocalStorage<any>('playground:pre-flight:selected', null);
   // todo: add sharing of pre-flight enabled state
-  const [, setPreFlightEnabled] = useLocalStorage<any>(
-    "playground:pre-flight:enabled",
-    null,
-  );
-  const [, setPreOpSelected] = useLocalStorage<ScriptData | null>(
-    "playground:pre-operation:selected",
-    null,
-  );
-  const [, setPostOpSelected] = useLocalStorage<ScriptData | null>(
-    "playground:post-operation:selected",
-    null,
-  );
+  const [, setPreFlightEnabled] = useLocalStorage<any>('playground:pre-flight:enabled', null);
+  const [, setPreOpSelected] = useLocalStorage<ScriptData | null>('playground:pre-operation:selected', null);
+  const [, setPostOpSelected] = useLocalStorage<ScriptData | null>('playground:post-operation:selected', null);
 
-  const [pendingHydrationState, setPendingHydrationState] =
-    useState<PlaygroundUrlState | null>(null);
+  const [pendingHydrationState, setPendingHydrationState] = useState<PlaygroundUrlState | null>(null);
 
   // On mount: extract and clear URL state
   useEffect(() => {
     const { playgroundUrlState, ...query } = router.query;
     try {
-      if (playgroundUrlState && typeof playgroundUrlState === "string") {
+      if (playgroundUrlState && typeof playgroundUrlState === 'string') {
         const state = extractStateFromUrl();
         if (!state) {
           setIsHydrated(true);
@@ -90,17 +77,13 @@ export const useHydratePlaygroundStateFromUrl = (
         return;
       }
     } catch (err) {
-      if (process.env.NODE_ENV === "development") {
-        console.error(
-          "[Playground] Error extracting state from URL:",
-          (err as Error)?.message,
-        );
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[Playground] Error extracting state from URL:', (err as Error)?.message);
       }
       toast({
-        title: "Unable to Load Shared Playground State",
-        description:
-          "The shared URL may be incorrect. Please double-check and try again.",
-        variant: "destructive",
+        title: 'Unable to Load Shared Playground State',
+        description: 'The shared URL may be incorrect. Please double-check and try again.',
+        variant: 'destructive',
       });
       setIsHydrated(true);
     } finally {
@@ -122,12 +105,12 @@ export const useHydratePlaygroundStateFromUrl = (
       updated[newTabId] = { ...(updated[newTabId] || {}) };
 
       if (preOperation) {
-        updated[newTabId]["pre-operation"] = preOperation;
+        updated[newTabId]['pre-operation'] = preOperation;
         setPreOpSelected(preOperation);
       }
 
       if (postOperation) {
-        updated[newTabId]["post-operation"] = postOperation;
+        updated[newTabId]['post-operation'] = postOperation;
         setPostOpSelected(postOperation);
       }
 
@@ -140,12 +123,12 @@ export const useHydratePlaygroundStateFromUrl = (
     const newTabId = crypto.randomUUID();
     const newTab: TabState = {
       id: newTabId,
-      title: "", // GraphiQL will set this automatically
+      title: '', // GraphiQL will set this automatically
       query: state.operation,
-      variables: state.variables || "",
-      headers: state.headers || "",
-      hash: "",
-      operationName: "", // GraphiQL will set this automatically
+      variables: state.variables || '',
+      headers: state.headers || '',
+      hash: '',
+      operationName: '', // GraphiQL will set this automatically
       response: null,
     };
 
@@ -165,17 +148,13 @@ export const useHydratePlaygroundStateFromUrl = (
     // Once that's completed, we can hydrate the state from URL
     // For hydration, we avoid making changes into the active tab index.
     // We instead created a new tab and updated the PlaygroundContext.tabsState
-    if (
-      !isGraphiqlRendered ||
-      tabsState.tabs.length === 0 ||
-      !pendingHydrationState
-    ) {
+    if (!isGraphiqlRendered || tabsState.tabs.length === 0 || !pendingHydrationState) {
       return;
     }
 
     const newTabId = addNewTabForHydration(pendingHydrationState);
-    if (process.env.NODE_ENV === "development") {
-      console.info("[Playground] New tab added for hydration: ", newTabId);
+    if (process.env.NODE_ENV === 'development') {
+      console.info('[Playground] New tab added for hydration: ', newTabId);
     }
 
     // Set the state for the new tab
@@ -192,15 +171,8 @@ export const useHydratePlaygroundStateFromUrl = (
       setPreFlightSelected(pendingHydrationState.preFlight);
     }
 
-    if (
-      pendingHydrationState.preOperation ||
-      pendingHydrationState.postOperation
-    ) {
-      setOperationScripts(
-        pendingHydrationState.preOperation,
-        pendingHydrationState.postOperation,
-        newTabId,
-      );
+    if (pendingHydrationState.preOperation || pendingHydrationState.postOperation) {
+      setOperationScripts(pendingHydrationState.preOperation, pendingHydrationState.postOperation, newTabId);
     }
 
     setIsHydrated(true);

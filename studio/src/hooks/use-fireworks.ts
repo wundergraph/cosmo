@@ -1,5 +1,5 @@
-import confetti from "canvas-confetti";
-import React from "react";
+import confetti from 'canvas-confetti';
+import React from 'react';
 
 const fireworks = () => {
   const duration = 2 * 1000;
