@@ -32,9 +32,9 @@ type Adapter interface {
 // Ensure ProviderAdapter implements ProviderSubscriptionHooks
 var _ datasource.Adapter = (*ProviderAdapter)(nil)
 
-type trackedConsumer struct {
-	streamName   string
-	consumerName string
+type consumerConfig struct {
+	deleteOnShutdown bool
+	trackedConsumers sync.Map // used as a set, key = consumer name, value = stream name
 }
 
 // ProviderAdapter implements the AdapterInterface for NATS pub/sub
@@ -51,10 +51,7 @@ type ProviderAdapter struct {
 	opts              []nats.Option
 	flushTimeout      time.Duration
 	streamMetricStore metric.StreamMetricStore
-
-	deleteConsumersOnShutdown bool
-	trackedConsumersMu        sync.Mutex
-	trackedConsumers          []trackedConsumer
+	consumerConfig    consumerConfig
 }
 
 // getInstanceIdentifier returns an identifier for the current instance.
@@ -125,13 +122,9 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, cfg datasource.Subscrip
 			return datasource.NewError(fmt.Sprintf(`failed to create or update consumer for stream "%s"`, subConf.StreamConfiguration.StreamName), err)
 		}
 
-		if p.deleteConsumersOnShutdown {
-			p.trackedConsumersMu.Lock()
-			p.trackedConsumers = append(p.trackedConsumers, trackedConsumer{
-				streamName:   subConf.StreamConfiguration.StreamName,
-				consumerName: durableConsumerName,
-			})
-			p.trackedConsumersMu.Unlock()
+		// Track newly created durable consumer so we can later delete them, if it's necessary.
+		if p.consumerConfig.deleteOnShutdown {
+			p.consumerConfig.trackedConsumers.Store(durableConsumerName, subConf.StreamConfiguration.StreamName)
 		}
 
 		p.closeWg.Add(1)
@@ -401,21 +394,32 @@ func (p *ProviderAdapter) Shutdown(ctx context.Context) error {
 
 	var shutdownErr error
 
-	// Delete durable consumers before closing the connection — the JetStream
-	// API requires an open connection to reach the NATS server.
-	if p.deleteConsumersOnShutdown && p.js != nil {
-		p.trackedConsumersMu.Lock()
-		consumers := p.trackedConsumers
-		p.trackedConsumersMu.Unlock()
-		for _, tc := range consumers {
-			if err := p.js.DeleteConsumer(ctx, tc.streamName, tc.consumerName); err != nil {
+	// Delete durable consumers before closing the connection.
+	if p.consumerConfig.deleteOnShutdown && p.js != nil {
+		p.consumerConfig.trackedConsumers.Range(func(key, value any) bool {
+			consumerName, ok := key.(string)
+			if !ok {
+				// skip this odd element, should not happen in reality
+				return true
+			}
+
+			streamName, ok := value.(string)
+			if !ok {
+				// skip this odd element, should not happen in reality
+				return true
+			}
+
+			err := p.js.DeleteConsumer(ctx, streamName, consumerName)
+			if err != nil {
 				p.logger.Warn("failed to delete durable consumer on shutdown",
-					zap.String("stream", tc.streamName),
-					zap.String("consumer", tc.consumerName),
+					zap.String("stream", streamName),
+					zap.String("consumer", consumerName),
 					zap.Error(err),
 				)
 			}
-		}
+
+			return true
+		})
 	}
 
 	fErr := p.flush(ctx)
@@ -457,17 +461,19 @@ func NewAdapter(ctx context.Context, logger *zap.Logger, url string, opts []nats
 	ctx, cancelFunc := context.WithCancel(ctx)
 
 	return &ProviderAdapter{
-		ctx:                       ctx,
-		cancel:                    cancelFunc,
-		logger:                    logger.With(zap.String("pubsub", "nats")),
-		closeWg:                   sync.WaitGroup{},
-		hostName:                  hostName,
-		routerListenAddr:          routerListenAddr,
-		url:                       url,
-		opts:                      opts,
-		flushTimeout:              10 * time.Second,
-		streamMetricStore:         store,
-		deleteConsumersOnShutdown: deleteConsumersOnShutdown,
+		ctx:               ctx,
+		cancel:            cancelFunc,
+		logger:            logger.With(zap.String("pubsub", "nats")),
+		closeWg:           sync.WaitGroup{},
+		hostName:          hostName,
+		routerListenAddr:  routerListenAddr,
+		url:               url,
+		opts:              opts,
+		flushTimeout:      10 * time.Second,
+		streamMetricStore: store,
+		consumerConfig: consumerConfig{
+			deleteOnShutdown: deleteConsumersOnShutdown,
+		},
 	}, nil
 }
 
