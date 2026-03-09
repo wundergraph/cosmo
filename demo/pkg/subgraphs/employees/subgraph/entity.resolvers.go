@@ -36,6 +36,7 @@ func (r *entityResolver) FindEmployeeByID(ctx context.Context, id int) (*model.E
 				Details:   employee.Details,
 				ID:        employee.ID,
 				Tag:       employee.Tag,
+				Expertise: employee.Expertise,
 				Role:      employee.Role,
 				Notes:     employee.Notes,
 				StartDate: employee.StartDate,

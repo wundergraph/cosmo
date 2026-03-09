@@ -523,16 +523,16 @@ func (p *ProjectsService) RequireEmployeeTaggedProjectSummaryById(_ context.Cont
 			}
 		}
 
-		employeeTag := ctx.GetFields().GetTag()
-		if employeeTag == "" {
-			employeeTag = "none"
+		employeeExpertise := ctx.GetFields().GetExpertise()
+		if employeeExpertise == "" {
+			employeeExpertise = "none"
 		}
 
 		var summary string
 		if len(projectTags) > 0 {
-			summary = fmt.Sprintf("employee tag: %s, project tags: [%s]", employeeTag, strings.Join(projectTags, ", "))
+			summary = fmt.Sprintf("expertise: %s, project tags: [%s]", employeeExpertise, strings.Join(projectTags, ", "))
 		} else {
-			summary = fmt.Sprintf("employee tag: %s, project has no tags", employeeTag)
+			summary = fmt.Sprintf("expertise: %s, project has no tags", employeeExpertise)
 		}
 		result = append(result, &service.RequireEmployeeTaggedProjectSummaryByIdResult{
 			TaggedProjectSummary: summary,

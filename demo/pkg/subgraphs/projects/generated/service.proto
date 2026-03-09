@@ -784,7 +784,7 @@ message RequireEmployeeTaggedProjectSummaryByIdResult {
 }
 
 message RequireEmployeeTaggedProjectSummaryByIdFields {
-  string tag = 1;
+  string expertise = 1;
 }
 
 message Project {
