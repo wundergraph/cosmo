@@ -3,6 +3,8 @@ import { JWTPayload } from 'jose';
 import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch, ProposalOrigin } from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 
+export const COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID = 'composition-ignore-external-keys';
+
 export type FeatureIds =
   | 'users'
   | 'federated-graphs'

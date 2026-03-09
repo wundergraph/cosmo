@@ -126,8 +126,8 @@ export function moveSubgraph(
             },
             opts.chClient!,
             {
-              ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
               disableResolvabilityValidation: req.disableResolvabilityValidation,
+              ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
             },
           );
 

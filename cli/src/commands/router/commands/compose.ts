@@ -209,8 +209,8 @@ export default (opts: BaseCommandOptions) => {
         };
       }),
       {
-        ignoreExternalKeys: options.ignoreExternalKeys,
         disableResolvabilityValidation: options.disableResolvabilityValidation,
+        ignoreExternalKeys: options.ignoreExternalKeys,
       },
     );
 
@@ -592,8 +592,8 @@ async function buildFeatureFlagsConfig(
         definitions: parse(s.sdl),
       })),
       {
-        ignoreExternalKeys: options.ignoreExternalKeys,
         disableResolvabilityValidation: options.disableResolvabilityValidation,
+        ignoreExternalKeys: options.ignoreExternalKeys,
       },
     );
 

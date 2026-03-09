@@ -117,8 +117,8 @@ export function checkFederatedGraph(
       })),
       federatedGraph.routerCompatibilityVersion,
       {
-        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
       },
     );
 

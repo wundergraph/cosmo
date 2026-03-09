@@ -3877,7 +3877,7 @@ export class NormalizationFactory {
   }
 }
 
-export function batchNormalize({ subgraphs, options }: BatchNormalizeParams): BatchNormalizationResult {
+export function batchNormalize({ options, subgraphs }: BatchNormalizeParams): BatchNormalizationResult {
   const authorizationDataByParentTypeName = new Map<TypeName, AuthorizationData>();
   const concreteTypeNamesByAbstractTypeName = new Map<TypeName, Set<TypeName>>();
   const entityDataByTypeName = new Map<TypeName, EntityData>();
@@ -3910,7 +3910,7 @@ export function batchNormalize({ subgraphs, options }: BatchNormalizeParams): Ba
       document: subgraph.definitions,
       internalGraph,
       options,
-      subgraphName: subgraph.name,
+      subgraphName,
     });
     if (normalizationResult.warnings.length > 0) {
       warnings.push(...normalizationResult.warnings);

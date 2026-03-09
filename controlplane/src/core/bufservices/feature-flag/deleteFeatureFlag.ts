@@ -144,8 +144,8 @@ export function deleteFeatureFlag(
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
         compositionOptions: {
-          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           disableResolvabilityValidation: req.disableResolvabilityValidation,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
         federatedGraphs,
       });

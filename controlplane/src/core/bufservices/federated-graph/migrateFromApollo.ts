@@ -162,8 +162,8 @@ export function migrateFromApollo(
         },
         chClient: opts.chClient!,
         compositionOptions: {
-          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           disableResolvabilityValidation: true,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
       });
     });

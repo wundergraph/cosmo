@@ -170,8 +170,8 @@ export function updateContract(
       blobStorage: opts.blobStorage,
       chClient: opts.chClient!,
       compositionOptions: {
-        ignoreExternalKeys,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
+        ignoreExternalKeys,
       },
       federatedGraphs: [
         {

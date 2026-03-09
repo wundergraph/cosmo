@@ -179,8 +179,8 @@ export function fixSubgraphSchema(
       subgraph.namespaceId,
       newSchemaSDL,
       {
-        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
       },
     );
 
