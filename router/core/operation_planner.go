@@ -2,7 +2,9 @@ package core
 
 import (
 	"errors"
+	"go.uber.org/zap"
 	"strconv"
+	"time"
 
 	"golang.org/x/sync/singleflight"
 
@@ -22,14 +24,20 @@ type planWithMetaData struct {
 	typeFieldUsageInfo                []*graphqlschemausage.TypeFieldUsageInfo
 	argumentUsageInfo                 []*graphqlmetricsv1.ArgumentUsageInfo
 	content                           string
+	operationName                     string
+	planningDuration                  time.Duration
 }
 
 type OperationPlanner struct {
-	sf               singleflight.Group
-	planCache        ExecutionPlanCache[uint64, *planWithMetaData]
-	executor         *Executor
-	trackUsageInfo   bool
-	operationContent bool
+	sf             singleflight.Group
+	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
+	expensiveCache *expensivePlanCache
+	executor       *Executor
+	trackUsageInfo bool
+	useFallback    bool
+	logger         *zap.Logger
+
+	threshold time.Duration
 }
 
 type operationPlannerOpts struct {
@@ -47,17 +55,35 @@ type ExecutionPlanCache[K any, V any] interface {
 	Close()
 }
 
-func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], storeContent bool) *OperationPlanner {
-	return &OperationPlanner{
-		planCache:        planCache,
-		executor:         executor,
-		trackUsageInfo:   executor.TrackUsageInfo,
-		operationContent: storeContent,
+func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], inMemoryPlanCacheFallback bool, expensiveCacheSize int, threshold time.Duration) *OperationPlanner {
+	p := &OperationPlanner{
+		logger:         logger,
+		planCache:      planCache,
+		executor:       executor,
+		trackUsageInfo: executor.TrackUsageInfo,
+		useFallback:    inMemoryPlanCacheFallback,
 	}
+
+	if inMemoryPlanCacheFallback {
+		p.expensiveCache = newExpensivePlanCache(expensiveCacheSize)
+		p.threshold = threshold
+	}
+
+	return p
 }
 
-func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlannerOpts) (*planWithMetaData, error) {
-	doc, report := astparser.ParseGraphqlDocumentString(ctx.content)
+// Close releases expensive cache resources.
+func (p *OperationPlanner) Close() {
+	if !p.useFallback {
+		return
+	}
+	p.expensiveCache.Close()
+}
+
+// planOperation performs the core planning work: parse, plan, and postprocess.
+// This is the single source of truth for query planning logic.
+func (p *OperationPlanner) planOperation(content string, name string, includeQueryPlan bool) (*planWithMetaData, error) {
+	doc, report := astparser.ParseGraphqlDocumentString(content)
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
@@ -67,16 +93,11 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlan
 		return nil, err
 	}
 
-	var (
-		preparedPlan plan.Plan
-	)
-
-	// create and postprocess the plan
-	// planning uses the router schema
-	if ctx.executionOptions.IncludeQueryPlanInResponse {
-		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report, plan.IncludeQueryPlanInResponse())
+	var preparedPlan plan.Plan
+	if includeQueryPlan {
+		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, name, &report, plan.IncludeQueryPlanInResponse())
 	} else {
-		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report)
+		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, name, &report)
 	}
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
@@ -84,19 +105,28 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlan
 	post := postprocess.NewProcessor(postprocess.CollectDataSourceInfo())
 	post.Process(preparedPlan)
 
-	out := &planWithMetaData{
+	return &planWithMetaData{
 		preparedPlan:      preparedPlan,
 		operationDocument: &doc,
 		schemaDocument:    p.executor.RouterSchema,
+	}, nil
+}
+
+func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlannerOpts) (*planWithMetaData, error) {
+	out, err := p.planOperation(ctx.content, ctx.name, ctx.executionOptions.IncludeQueryPlanInResponse)
+	if err != nil {
+		return nil, err
 	}
+
+	out.operationName = ctx.name
 
 	if opts.operationContent {
 		out.content = ctx.Content()
 	}
 
 	if p.trackUsageInfo {
-		out.typeFieldUsageInfo = graphqlschemausage.GetTypeFieldUsageInfo(preparedPlan)
-		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(&doc, p.executor.RouterSchema, ctx.variables, preparedPlan, ctx.remapVariables)
+		out.typeFieldUsageInfo = graphqlschemausage.GetTypeFieldUsageInfo(out.preparedPlan)
+		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(out.operationDocument, p.executor.RouterSchema, ctx.variables, out.preparedPlan, ctx.remapVariables)
 		if err != nil {
 			return nil, err
 		}
@@ -139,19 +169,32 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 	// try to get a prepared plan for this operation ID from the cache
 	cachedPlan, ok := p.planCache.Get(operationID)
 	if ok && cachedPlan != nil {
-		// re-use a prepared plan
+		// re-use a prepared plan from the main cache
 		opContext.preparedPlan = cachedPlan
 		opContext.planCacheHit = true
+	} else if p.useFallback {
+		if cachedPlan, ok = p.expensiveCache.Get(operationID); ok {
+			// found in the expensive query cache — re-use and re-insert into main cache
+			opContext.preparedPlan = cachedPlan
+			opContext.planCacheHit = true
+			p.planCache.Set(operationID, cachedPlan, 1)
+		}
 	} else {
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID
 		operationIDStr := strconv.FormatUint(operationID, 10)
 		sharedPreparedPlan, err, _ := p.sf.Do(operationIDStr, func() (interface{}, error) {
-			prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: p.operationContent})
+			start := time.Now()
+			prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: p.useFallback})
 			if err != nil {
 				return nil, err
 			}
+			prepared.planningDuration = time.Since(start)
+
 			p.planCache.Set(operationID, prepared, 1)
+			if p.useFallback && p.threshold > 0 && prepared.planningDuration >= p.threshold && prepared.content != "" {
+				p.expensiveCache.Set(operationID, prepared, prepared.planningDuration)
+			}
 			return prepared, nil
 		})
 		if err != nil {

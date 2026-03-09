@@ -544,6 +544,7 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 type graphMux struct {
 	mux *chi.Mux
 
+	operationPlanner            *OperationPlanner
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache          *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -581,6 +582,15 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			NumCounters:        srv.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
 			IgnoreInternalCost: true,
 			BufferItems:        64,
+		}
+		if srv.cacheWarmup != nil && srv.cacheWarmup.Enabled && srv.cacheWarmup.InMemoryFallback {
+			planCacheConfig.OnEvict = func(item *ristretto.Item[*planWithMetaData]) {
+				if s.operationPlanner != nil && s.operationPlanner.expensiveCache != nil {
+					if s.operationPlanner.threshold > 0 && item.Value.planningDuration >= s.operationPlanner.threshold && item.Value.content != "" {
+						s.operationPlanner.expensiveCache.Set(item.Key, item.Value, item.Value.planningDuration)
+					}
+				}
+			}
 		}
 		s.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
 		if err != nil {
@@ -782,6 +792,9 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 }
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
+	if s.operationPlanner != nil {
+		s.operationPlanner.Close()
+	}
 	s.planCache.Close()
 	s.persistedOperationCache.Close()
 	s.normalizationCache.Close()
@@ -1332,7 +1345,15 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
 	})
 
-	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled())
+	operationPlanner := NewOperationPlanner(
+		s.logger,
+		executor,
+		gm.planCache,
+		opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled(),
+		int(s.engineExecutionConfiguration.ExpensiveQueryCacheSize),
+		s.engineExecutionConfiguration.ExpensiveQueryThreshold,
+	)
+	gm.operationPlanner = operationPlanner
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
@@ -1392,6 +1413,7 @@ func (s *graphServer) buildGraphMux(
 			// and then reset the plan cache to the new plan cache for this start afterwards.
 			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
 			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setExpensiveCacheForFF(opts.FeatureFlagName, operationPlanner.expensiveCache)
 		case s.cacheWarmup.Source.CdnSource.Enabled:
 			if s.graphApiToken == "" {
 				return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
@@ -1402,6 +1424,7 @@ func (s *graphServer) buildGraphMux(
 			if s.cacheWarmup.InMemoryFallback {
 				warmupConfig.FallbackSource = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
 				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setExpensiveCacheForFF(opts.FeatureFlagName, operationPlanner.expensiveCache)
 			}
 			cdnSource, err := NewCDNSource(s.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
