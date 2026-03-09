@@ -1359,6 +1359,18 @@ func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, er
 		}
 	}
 
+	// Wrap caches with circuit breaker if enabled
+	cbCfg := r.entityCachingConfig.L2.CircuitBreaker
+	if cbCfg.Enabled {
+		for name, cache := range caches {
+			caches[name] = entitycache.NewCircuitBreakerCache(cache, entitycache.CircuitBreakerConfig{
+				Enabled:          true,
+				FailureThreshold: cbCfg.FailureThreshold,
+				CooldownPeriod:   cbCfg.CooldownPeriod,
+			})
+		}
+	}
+
 	return caches, nil
 }
 

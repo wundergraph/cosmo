@@ -601,6 +601,44 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
+	t.Run("l1_deduplication", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions: []core.Option{
+				core.WithEntityCaching(config.EntityCachingConfiguration{
+					Enabled: true,
+					L1: config.EntityCachingL1Configuration{
+						Enabled: true,
+					},
+					L2: config.EntityCachingL2Configuration{
+						Enabled: false,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Query the same entity via two aliases in a single request.
+			// L1 per-request cache should deduplicate the _entities call
+			// so the details subgraph is called only once for item "1".
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{
+					a: item(id: "1") { id name description }
+					b: item(id: "1") { id name description }
+				}`,
+			})
+			require.Contains(t, res.Body, `"a"`)
+			require.Contains(t, res.Body, `"b"`)
+			require.Contains(t, res.Body, `"Widget"`)
+
+			// Details subgraph should be called only once (L1 deduplication)
+			require.Equal(t, int64(1), counters.details.Load())
+		})
+	})
+
 	t.Run("circuit_breaker_fallback", func(t *testing.T) {
 		t.Parallel()
 

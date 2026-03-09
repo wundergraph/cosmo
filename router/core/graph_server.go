@@ -1512,6 +1512,7 @@ func (s *graphServer) buildGraphMux(
 	handlerOpts.EntityCachingL1Enabled = s.entityCachingConfig.Enabled && s.entityCachingConfig.L1.Enabled
 	handlerOpts.EntityCachingL2Enabled = s.entityCachingConfig.Enabled && s.entityCachingConfig.L2.Enabled
 	handlerOpts.EntityCachingAnalyticsEnabled = s.entityCachingConfig.Enabled && s.entityCachingConfig.Analytics.Enabled
+	handlerOpts.EntityCachingGlobalKeyPrefix = s.entityCachingConfig.GlobalCacheKeyPrefix
 	handlerOpts.EntityCacheKeyInterceptors = s.entityCacheKeyInterceptors
 
 	var entityCacheMetricsList []*rmetric.EntityCacheMetrics
