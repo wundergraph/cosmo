@@ -88,6 +88,7 @@ var Employees = []*model.Employee{
 			Title:        []string{"Co-founder", "Tech Lead"},
 		},
 		Notes:     strPtr("Dustin notes resolved by employees"),
+		Tag:       "developer",
 		StartDate: "July 2022",
 		UpdatedAt: "2021-09-01T00:00:00Z",
 	},
