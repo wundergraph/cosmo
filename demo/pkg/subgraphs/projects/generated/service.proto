@@ -764,7 +764,6 @@ message ResolveEmployeeAverageTaskCompletionDaysResponse {
 }
 
 message Project {
-  reserved 20 to 25;
   string id = 1;
   string name = 2;
   google.protobuf.StringValue description = 3;
@@ -787,7 +786,6 @@ message Project {
 }
 
 message Milestone {
-  reserved 12 to 13;
   string id = 1;
   string project_id = 2;
   string name = 3;
@@ -824,7 +822,6 @@ message Task {
 }
 
 message Employee {
-  reserved 8 to 9;
   int32 id = 1;
   ListOfProject projects = 2;
   repeated Task assigned_tasks = 3;
