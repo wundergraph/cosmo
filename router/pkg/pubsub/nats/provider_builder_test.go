@@ -67,6 +67,65 @@ func TestBuildNatsOptions(t *testing.T) {
 	})
 }
 
+func TestBuildNatsOptionsWithTLS(t *testing.T) {
+	t.Run("insecure skip verify", func(t *testing.T) {
+		cfg := config.NatsEventSource{
+			ID:  "test-nats",
+			URL: "nats://localhost:4222",
+			TLS: &config.NatsTLSConfiguration{
+				InsecureSkipVerify: true,
+			},
+		}
+		logger := zaptest.NewLogger(t)
+
+		opts, err := buildNatsOptions(cfg, logger)
+		require.NoError(t, err)
+		require.Greater(t, len(opts), 7) // base options + TLS option
+	})
+
+	t.Run("missing ca file returns error", func(t *testing.T) {
+		cfg := config.NatsEventSource{
+			ID:  "test-nats",
+			URL: "nats://localhost:4222",
+			TLS: &config.NatsTLSConfiguration{
+				CaFile: "/nonexistent/ca.pem",
+			},
+		}
+		logger := zaptest.NewLogger(t)
+
+		_, err := buildNatsOptions(cfg, logger)
+		require.ErrorContains(t, err, "failed to read CA file")
+	})
+
+	t.Run("cert file without key file returns error", func(t *testing.T) {
+		cfg := config.NatsEventSource{
+			ID:  "test-nats",
+			URL: "nats://localhost:4222",
+			TLS: &config.NatsTLSConfiguration{
+				CertFile: "/tmp/client.crt",
+			},
+		}
+		logger := zaptest.NewLogger(t)
+
+		_, err := buildNatsOptions(cfg, logger)
+		require.ErrorContains(t, err, "both cert_file and key_file must be provided")
+	})
+
+	t.Run("key file without cert file returns error", func(t *testing.T) {
+		cfg := config.NatsEventSource{
+			ID:  "test-nats",
+			URL: "nats://localhost:4222",
+			TLS: &config.NatsTLSConfiguration{
+				KeyFile: "/tmp/client.key",
+			},
+		}
+		logger := zaptest.NewLogger(t)
+
+		_, err := buildNatsOptions(cfg, logger)
+		require.ErrorContains(t, err, "both cert_file and key_file must be provided")
+	})
+}
+
 func TestPubSubProviderBuilderFactory(t *testing.T) {
 	t.Run("creates provider with configured adapters", func(t *testing.T) {
 		providerId := "test-provider"

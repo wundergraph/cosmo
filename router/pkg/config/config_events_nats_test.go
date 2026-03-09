@@ -103,3 +103,75 @@ events:
 	_, err := LoadConfig([]string{f})
 	require.NoError(t, err)
 }
+
+func TestValidNatsTLSInsecureSkipVerify(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+        tls:
+          insecure_skip_verify: true
+
+`)
+
+	_, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+}
+
+func TestValidNatsTLSWithFilePaths(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+        tls:
+          ca_file: "/tmp/ca.pem"
+          cert_file: "/tmp/client.crt"
+          key_file: "/tmp/client.key"
+
+`)
+
+	_, err := LoadConfig([]string{f})
+	require.NoError(t, err)
+}
+
+func TestInvalidNatsTLSUnknownField(t *testing.T) {
+	t.Parallel()
+
+	f := createTempFileFromFixture(t, `
+version: "1"
+
+graph:
+  token: "token"
+
+events:
+  providers:
+    nats:
+      - id: default
+        url: "nats://localhost:4222"
+        tls:
+          unknown_field: true
+
+`)
+
+	_, err := LoadConfig([]string{f})
+	require.ErrorContains(t, err, "errors while loading config files: router config validation error for")
+	require.ErrorContains(t, err, "additional properties 'unknown_field' not allowed")
+}
