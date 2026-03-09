@@ -146,6 +146,8 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 	// if we have tracing enabled or want to include a query plan in the response we always prepare a new plan
 	// this is because in case of tracing, we're writing trace data to the plan
 	// in case of including the query plan, we don't want to cache this additional overhead
+	opContext.expensiveCacheEnabled = p.useFallback
+
 	skipCache := options.TraceOptions.Enable || options.ExecutionOptions.IncludeQueryPlanInResponse
 
 	if skipCache {
@@ -176,10 +178,12 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		if cachedPlan, ok = p.expensiveCache.Get(operationID); ok {
 			// found in the expensive query cache — re-use and re-insert into main cache
 			opContext.preparedPlan = cachedPlan
-			opContext.planCacheHit = true
+			opContext.expensivePlanCacheHit = true
 			p.planCache.Set(operationID, cachedPlan, 1)
 		}
-	} else {
+	}
+
+	if opContext.preparedPlan == nil {
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID
 		operationIDStr := strconv.FormatUint(operationID, 10)

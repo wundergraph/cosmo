@@ -1089,10 +1089,16 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	setTelemetryAttributes(planCtx, requestContext, expr.BucketPlanningTime)
 
 	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
+	if requestContext.operation.expensiveCacheEnabled {
+		enginePlanSpan.SetAttributes(otel.WgEngineExpensivePlanCacheHit.Bool(requestContext.operation.expensivePlanCacheHit))
+	}
 	enginePlanSpan.End()
 
 	planningAttrs := *requestContext.telemetry.AcquireAttributes()
 	planningAttrs = append(planningAttrs, otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
+	if requestContext.operation.expensiveCacheEnabled {
+		planningAttrs = append(planningAttrs, otel.WgEngineExpensivePlanCacheHit.Bool(requestContext.operation.expensivePlanCacheHit))
+	}
 	planningAttrs = append(planningAttrs, requestContext.telemetry.metricAttrs...)
 
 	httpOperation.operationMetrics.routerMetrics.MetricStore().MeasureOperationPlanningTime(

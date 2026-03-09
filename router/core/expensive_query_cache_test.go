@@ -143,3 +143,133 @@ func TestExpensivePlanCache_Close(t *testing.T) {
 	require.False(t, ok)
 }
 
+func TestExpensivePlanCache_SetAfterClose(t *testing.T) {
+	c := newExpensivePlanCache(10)
+	c.Close()
+
+	// Set after Close should not panic
+	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
+
+	_, ok := c.Get(1)
+	require.False(t, ok)
+}
+
+func TestExpensivePlanCache_IterValuesEmpty(t *testing.T) {
+	c := newExpensivePlanCache(10)
+
+	count := 0
+	c.IterValues(func(v *planWithMetaData) bool {
+		count++
+		return false
+	})
+	require.Equal(t, 0, count)
+}
+
+func TestExpensivePlanCache_IterValuesAfterClose(t *testing.T) {
+	c := newExpensivePlanCache(10)
+	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
+	c.Close()
+
+	count := 0
+	c.IterValues(func(v *planWithMetaData) bool {
+		count++
+		return false
+	})
+	require.Equal(t, 0, count)
+}
+
+func TestExpensivePlanCache_EqualDurationNotEvicted(t *testing.T) {
+	c := newExpensivePlanCache(2)
+
+	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
+	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
+
+	// Same duration as minimum (10ms) — should NOT evict (requires strictly greater)
+	c.Set(3, &planWithMetaData{content: "q3"}, 10*time.Millisecond)
+
+	_, ok := c.Get(3)
+	require.False(t, ok, "entry with equal duration should not replace minimum")
+	_, ok = c.Get(1)
+	require.True(t, ok)
+	_, ok = c.Get(2)
+	require.True(t, ok)
+}
+
+func TestExpensivePlanCache_MaxSizeOne(t *testing.T) {
+	c := newExpensivePlanCache(1)
+
+	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
+	got, ok := c.Get(1)
+	require.True(t, ok)
+	require.Equal(t, "q1", got.content)
+
+	// Adding a more expensive entry should evict the only entry
+	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
+	_, ok = c.Get(1)
+	require.False(t, ok)
+	got, ok = c.Get(2)
+	require.True(t, ok)
+	require.Equal(t, "q2", got.content)
+
+	// Adding a cheaper entry should be rejected
+	c.Set(3, &planWithMetaData{content: "q3"}, 5*time.Millisecond)
+	_, ok = c.Get(3)
+	require.False(t, ok)
+	_, ok = c.Get(2)
+	require.True(t, ok)
+}
+
+func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
+	c := newExpensivePlanCache(100)
+	done := make(chan struct{})
+
+	// Concurrent writers — each goroutine writes to its own key range
+	for i := 0; i < 10; i++ {
+		go func(id int) {
+			defer func() { done <- struct{}{} }()
+			for j := 0; j < 100; j++ {
+				key := uint64(id*100 + j)
+				c.Set(key, &planWithMetaData{content: "q"}, time.Duration(j)*time.Millisecond)
+			}
+		}(i)
+	}
+
+	// Concurrent readers
+	for i := 0; i < 10; i++ {
+		go func(id int) {
+			defer func() { done <- struct{}{} }()
+			for j := 0; j < 100; j++ {
+				c.Get(uint64(id*100 + j))
+			}
+		}(i)
+	}
+
+	// Concurrent iterators
+	for i := 0; i < 5; i++ {
+		go func() {
+			defer func() { done <- struct{}{} }()
+			c.IterValues(func(v *planWithMetaData) bool {
+				return false
+			})
+		}()
+	}
+
+	// Wait for all goroutines
+	for i := 0; i < 25; i++ {
+		<-done
+	}
+
+	// Cache should be at capacity and all entries should be retrievable
+	count := 0
+	c.IterValues(func(v *planWithMetaData) bool {
+		count++
+		return false
+	})
+	require.Equal(t, 100, count, "cache should be at max capacity")
+
+	// Every entry in the cache should be gettable
+	c.IterValues(func(v *planWithMetaData) bool {
+		require.Equal(t, "q", v.content)
+		return false
+	})
+}

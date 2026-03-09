@@ -43,6 +43,10 @@ func (c *expensivePlanCache) Set(key uint64, plan *planWithMetaData, duration ti
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.entries == nil {
+		return
+	}
+
 	// If key already exists, update it
 	if _, ok := c.entries[key]; ok {
 		c.entries[key] = &expensivePlanEntry{plan: plan, duration: duration}

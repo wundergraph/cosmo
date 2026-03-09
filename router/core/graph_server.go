@@ -1381,19 +1381,23 @@ func (s *graphServer) buildGraphMux(
 		}
 
 		warmupConfig.AfterOperation = func(item *CacheWarmupOperationPlanResult) {
+			attrs := []attribute.KeyValue{
+				otel.WgOperationName.String(item.OperationName),
+				otel.WgClientName.String(item.ClientName),
+				otel.WgClientVersion.String(item.ClientVersion),
+				otel.WgFeatureFlag.String(opts.FeatureFlagName),
+				otel.WgOperationHash.String(item.OperationHash),
+				otel.WgOperationType.String(item.OperationType),
+				otel.WgEnginePlanCacheHit.Bool(false),
+			}
+			if operationPlanner.useFallback {
+				attrs = append(attrs, otel.WgEngineExpensivePlanCacheHit.Bool(false))
+			}
 			gm.metricStore.MeasureOperationPlanningTime(ctx,
 				item.PlanningTime,
 				nil,
 				otelmetric.WithAttributes(
-					append([]attribute.KeyValue{
-						otel.WgOperationName.String(item.OperationName),
-						otel.WgClientName.String(item.ClientName),
-						otel.WgClientVersion.String(item.ClientVersion),
-						otel.WgFeatureFlag.String(opts.FeatureFlagName),
-						otel.WgOperationHash.String(item.OperationHash),
-						otel.WgOperationType.String(item.OperationType),
-						otel.WgEnginePlanCacheHit.Bool(false),
-					}, baseMetricAttributes...)...,
+					append(attrs, baseMetricAttributes...)...,
 				),
 			)
 		}
