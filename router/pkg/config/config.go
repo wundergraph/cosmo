@@ -975,8 +975,26 @@ type EntityCachingCircuitBreakerConfig struct {
 }
 
 type EntityCachingAnalyticsConfig struct {
-	Enabled        bool `yaml:"enabled" envDefault:"false" env:"ENTITY_CACHING_ANALYTICS_ENABLED"`
-	HashEntityKeys bool `yaml:"hash_entity_keys" envDefault:"false" env:"ENTITY_CACHING_ANALYTICS_HASH_ENTITY_KEYS"`
+	Enabled        bool                              `yaml:"enabled" envDefault:"false" env:"ENTITY_CACHING_ANALYTICS_ENABLED"`
+	HashEntityKeys bool                              `yaml:"hash_entity_keys" envDefault:"false" env:"ENTITY_CACHING_ANALYTICS_HASH_ENTITY_KEYS"`
+	DetailLevel    string                            `yaml:"detail_level" envDefault:"standard" env:"ENTITY_CACHING_ANALYTICS_DETAIL_LEVEL"`
+	Export         EntityCachingAnalyticsExportConfig `yaml:"export"`
+}
+
+type EntityCachingAnalyticsExportConfig struct {
+	Enabled   bool          `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_ANALYTICS_EXPORT_ENABLED"`
+	Endpoint  string        `yaml:"endpoint" env:"ENTITY_CACHING_ANALYTICS_EXPORT_ENDPOINT"`
+	BatchSize int           `yaml:"batch_size" envDefault:"1024" env:"ENTITY_CACHING_ANALYTICS_EXPORT_BATCH_SIZE"`
+	QueueSize int           `yaml:"queue_size" envDefault:"10240" env:"ENTITY_CACHING_ANALYTICS_EXPORT_QUEUE_SIZE"`
+	Interval  time.Duration `yaml:"interval" envDefault:"10s" env:"ENTITY_CACHING_ANALYTICS_EXPORT_INTERVAL"`
+	Retry     EntityCachingAnalyticsRetryConfig `yaml:"retry"`
+}
+
+type EntityCachingAnalyticsRetryConfig struct {
+	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_ANALYTICS_EXPORT_RETRY_ENABLED"`
+	MaxRetries  int           `yaml:"max_retries" envDefault:"5" env:"ENTITY_CACHING_ANALYTICS_EXPORT_RETRY_MAX_RETRIES"`
+	MaxDuration time.Duration `yaml:"max_duration" envDefault:"10s" env:"ENTITY_CACHING_ANALYTICS_EXPORT_RETRY_MAX_DURATION"`
+	Interval    time.Duration `yaml:"interval" envDefault:"5s" env:"ENTITY_CACHING_ANALYTICS_EXPORT_RETRY_INTERVAL"`
 }
 
 type EntityCachingSubgraphConfig struct {

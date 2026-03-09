@@ -24,6 +24,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
 
+	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/entityanalytics/v1/entityanalyticsv1connect"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
@@ -31,6 +32,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
+	"github.com/wundergraph/cosmo/router/internal/entityanalytics"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
@@ -892,6 +894,45 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}
 
+	// Create entity analytics exporter
+	if r.entityCachingConfig.Enabled && r.entityCachingConfig.Analytics.Enabled && r.entityCachingConfig.Analytics.Export.Enabled {
+		endpoint := r.entityCachingConfig.Analytics.Export.Endpoint
+		if endpoint == "" && r.graphqlMetricsConfig != nil {
+			endpoint = r.graphqlMetricsConfig.CollectorEndpoint
+		}
+		if endpoint != "" {
+			client := entityanalyticsv1connect.NewEntityAnalyticsServiceClient(
+				http.DefaultClient,
+				endpoint,
+				connect.WithSendGzip(),
+			)
+			exportCfg := r.entityCachingConfig.Analytics.Export
+			settings := &exporter.ExporterSettings{
+				BatchSize:     exportCfg.BatchSize,
+				QueueSize:     exportCfg.QueueSize,
+				Interval:      exportCfg.Interval,
+				ExportTimeout: exportCfg.Interval,
+				RetryOptions: exporter.RetryOptions{
+					Enabled:     exportCfg.Retry.Enabled,
+					MaxRetry:    exportCfg.Retry.MaxRetries,
+					MaxDuration: exportCfg.Retry.MaxDuration,
+					Interval:    exportCfg.Retry.Interval,
+				},
+			}
+			eae, err := entityanalytics.NewEntityAnalyticsExporter(
+				r.logger,
+				client,
+				r.graphApiToken,
+				settings,
+			)
+			if err != nil {
+				return fmt.Errorf("failed to create entity analytics exporter: %w", err)
+			}
+			r.entityAnalyticsExporter = eae
+			r.logger.Info("Entity analytics export enabled")
+		}
+	}
+
 	// Create Prometheus metrics exporter for schema field usage
 	// Note: This is separate from the Prometheus meter provider which handles OTEL metrics
 	// This exporter is specifically for schema field usage tracking via the Prometheus sink
@@ -1655,6 +1696,14 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		wg.Go(func() {
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
+			}
+		})
+	}
+
+	if r.entityAnalyticsExporter != nil {
+		wg.Go(func() {
+			if subErr := r.entityAnalyticsExporter.Shutdown(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown entity analytics exporter: %w", subErr))
 			}
 		})
 	}

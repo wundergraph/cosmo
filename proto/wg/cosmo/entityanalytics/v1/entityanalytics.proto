@@ -1,0 +1,147 @@
+// https://protobuf.dev/programming-guides/style/
+
+syntax = "proto3";
+
+package wg.cosmo.entityanalytics.v1;
+
+service EntityAnalyticsService {
+  rpc PublishEntityAnalytics(PublishEntityAnalyticsRequest)
+      returns (PublishEntityAnalyticsResponse) {}
+}
+
+message PublishEntityAnalyticsRequest {
+  repeated EntityAnalyticsAggregation aggregations = 1;
+}
+
+message PublishEntityAnalyticsResponse {}
+
+message EntityAnalyticsAggregation {
+  EntityAnalyticsInfo analytics = 1;
+  uint64 request_count = 2;
+}
+
+// One record per request, aggregated before export.
+message EntityAnalyticsInfo {
+  OperationInfo operation = 1;
+  ClientInfo client = 2;
+  SchemaInfo schema = 3;
+  repeated EntityTypeAnalytics entity_types = 4;
+  RequestSummary summary = 5;
+}
+
+message OperationInfo {
+  string hash = 1;
+  string name = 2;
+  OperationType type = 3;
+}
+
+enum OperationType {
+  QUERY = 0;
+  MUTATION = 1;
+  SUBSCRIPTION = 2;
+}
+
+message ClientInfo {
+  string name = 1;
+  string version = 2;
+}
+
+message SchemaInfo {
+  string version = 1;
+}
+
+// Analytics for a single entity type within a single request.
+message EntityTypeAnalytics {
+  string entity_type = 1;
+  string subgraph_id = 2;
+
+  CacheStats cache = 3;
+  EntityBehavior behavior = 4;
+  FetchPerformance fetch = 5;
+  MutationImpact mutation_impact = 6;
+  ShadowAnalysis shadow = 7;
+  HeaderImpact header_impact = 8;
+  repeated SubgraphError errors = 9;
+}
+
+message CacheStats {
+  uint32 l1_hits = 1;
+  uint32 l1_misses = 2;
+  uint32 l2_hits = 3;
+  uint32 l2_misses = 4;
+  uint32 l2_writes = 5;
+  uint32 invalidations = 6;
+  uint32 populations = 7;
+  uint64 cached_bytes_served = 8;
+  double avg_cache_age_ms = 9;
+}
+
+// Field-level stability data derived from EntityFieldHash events.
+message EntityBehavior {
+  uint32 instance_count = 1;
+  uint32 unique_keys = 2;
+  repeated FieldSnapshot field_snapshots = 3;
+}
+
+message FieldSnapshot {
+  string field_name = 1;
+  uint64 field_hash = 2;
+  FieldSource source = 3;
+}
+
+enum FieldSource {
+  SUBGRAPH = 0;
+  L1_CACHE = 1;
+  L2_CACHE = 2;
+}
+
+message FetchPerformance {
+  double subgraph_latency_ms = 1;
+  double l2_latency_ms = 2;
+  uint32 subgraph_item_count = 3;
+  uint32 cached_item_count = 4;
+  int32 http_status_code = 5;
+  uint64 response_bytes = 6;
+  double ttfb_ms = 7;
+  double latency_saved_ms = 8;
+  uint32 subgraph_errors = 9;
+}
+
+message MutationImpact {
+  string mutation_field = 1;
+  bool had_cached_value = 2;
+  bool entity_changed = 3;
+  uint64 cached_hash = 4;
+  uint64 fresh_hash = 5;
+}
+
+message ShadowAnalysis {
+  uint32 comparisons = 1;
+  uint32 fresh_count = 2;
+  uint32 stale_count = 3;
+  double avg_cache_age_at_stale_ms = 4;
+  double configured_ttl_ms = 5;
+}
+
+message HeaderImpact {
+  uint32 distinct_header_variants = 1;
+}
+
+message SubgraphError {
+  string message = 1;
+  string code = 2;
+}
+
+message RequestSummary {
+  uint32 total_entities_resolved = 1;
+  uint32 total_cache_hits = 2;
+  uint32 total_cache_misses = 3;
+  uint32 subgraph_fetches_avoided = 4;
+  double total_l2_latency_ms = 5;
+  double total_subgraph_latency_ms = 6;
+  uint64 total_cached_bytes = 7;
+  uint64 total_fetched_bytes = 8;
+  bool had_errors = 9;
+  double total_latency_saved_ms = 10;
+  uint32 total_subgraph_errors = 11;
+}
