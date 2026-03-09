@@ -124,6 +124,21 @@ func TestBuildNatsOptionsWithTLS(t *testing.T) {
 		_, err := buildNatsOptions(cfg, logger)
 		require.ErrorContains(t, err, "both cert_file and key_file must be provided")
 	})
+
+	t.Run("mtls without ca file returns error", func(t *testing.T) {
+		cfg := config.NatsEventSource{
+			ID:  "test-nats",
+			URL: "nats://localhost:4222",
+			TLS: &config.NatsTLSConfiguration{
+				CertFile: "/tmp/client.crt",
+				KeyFile:  "/tmp/client.key",
+			},
+		}
+		logger := zaptest.NewLogger(t)
+
+		_, err := buildNatsOptions(cfg, logger)
+		require.ErrorContains(t, err, "ca_file is required when mTLS credentials are configured")
+	})
 }
 
 func TestPubSubProviderBuilderFactory(t *testing.T) {
