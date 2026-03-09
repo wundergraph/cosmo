@@ -3322,6 +3322,7 @@
         },
         "expensive_query_cache_size": {
           "type": "integer",
+          "minimum": 1,
           "default": 100,
           "description": "The maximum number of entries in the expensive query plan cache. Expensive queries are protected from TinyLFU eviction in the main plan cache."
         },

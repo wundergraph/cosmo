@@ -79,7 +79,7 @@ func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache Execu
 
 // Close releases expensive cache resources.
 func (p *OperationPlanner) Close() {
-	if !p.useFallback {
+	if p == nil || !p.useFallback {
 		return
 	}
 	p.expensiveCache.Close()
