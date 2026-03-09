@@ -145,6 +145,38 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
+		t.Run("Should fail on startup when cost control mode is invalid", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.FailsOnStartup(t, &testenv.Config{
+				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
+					cfg.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              "invalid",
+						EstimatedListSize: 5,
+					}
+				},
+			}, func(t *testing.T, err error) {
+				require.ErrorContains(t, err, `cost control mode "invalid" is invalid`)
+			})
+		})
+
+		t.Run("Should fail on startup when enforce mode is set without max_estimated_limit", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.FailsOnStartup(t, &testenv.Config{
+				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
+					cfg.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						EstimatedListSize: 5,
+					}
+				},
+			}, func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "cost control mode is 'enforce' but 'max_estimated_limit' is not set")
+			})
+		})
+
 		t.Run("disabled cost control does not block queries", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -183,30 +215,6 @@ func TestOperationCost(t *testing.T) {
 				// employee: @cost(weight: 5), argument id: @cost(weight: 2), Details: 1 = 8
 				require.Equal(t, "8", res.Response.Header.Get(core.CostEstimatedHeader))
 				require.Equal(t, "8", res.Response.Header.Get(core.CostActualHeader))
-			})
-		})
-
-		t.Run("enforce mode with zero estimated limit does not block", func(t *testing.T) {
-			t.Parallel()
-			testenv.Run(t, &testenv.Config{
-				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
-					securityConfiguration.CostControl = &config.CostControl{
-						Enabled:           true,
-						Mode:              config.CostControlModeEnforce,
-						MaxEstimatedLimit: 0, // Zero limit means no enforcement
-						EstimatedListSize: 10,
-						ExposeHeaders:     true,
-					}
-				},
-			}, func(t *testing.T, xEnv *testenv.Environment) {
-				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-					Query: `{ teammates(team: ENGINEERING) { id details { forename } } }`,
-				})
-				require.Contains(t, res.Body, `"data":`)
-
-				// teammates has no @listSize, uses EstimatedListSize(10)
-				require.Equal(t, "21", res.Response.Header.Get(core.CostEstimatedHeader))
-				require.Equal(t, "15", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 
@@ -462,6 +470,7 @@ func TestOperationCost(t *testing.T) {
 				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
 					cfg.CostControl = &config.CostControl{
 						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
 						EstimatedListSize: 10,
 					}
 				},

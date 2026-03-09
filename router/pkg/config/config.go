@@ -525,11 +525,11 @@ type CostControl struct {
 
 	// MaxEstimatedLimit is the maximum allowed estimated cost for a query.
 	// Requires Mode set to "enforce". Operations exceeding this limit are rejected.
-	MaxEstimatedLimit int `yaml:"max_estimated_limit,omitempty" envDefault:"0" env:"MAX_ESTIMATED_LIMIT"`
+	MaxEstimatedLimit int `yaml:"max_estimated_limit,omitempty" env:"MAX_ESTIMATED_LIMIT"`
 
 	// EstimatedListSize is the default assumed size for list fields when no @listSize directive
 	// nor slicing argument is provided. Used as a multiplier for estimated cost calculation.
-	EstimatedListSize int `yaml:"estimated_list_size,omitempty" envDefault:"0" env:"ESTIMATED_LIST_SIZE"`
+	EstimatedListSize int `yaml:"estimated_list_size,omitempty" env:"ESTIMATED_LIST_SIZE"`
 
 	// ExposeHeaders adds X-WG-Cost-* response headers.
 	ExposeHeaders bool `yaml:"expose_headers,omitempty" envDefault:"false" env:"EXPOSE_HEADERS"`

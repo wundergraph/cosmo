@@ -527,6 +527,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 	}
 
 	if ca := r.securityConfiguration.CostControl; ca != nil && ca.Enabled {
+		if ca.Mode != config.CostControlModeMeasure && ca.Mode != config.CostControlModeEnforce {
+			return nil, fmt.Errorf("cost control mode %q is invalid. Valid values are %q and %q", ca.Mode, config.CostControlModeMeasure, config.CostControlModeEnforce)
+		}
+		if ca.Mode == config.CostControlModeEnforce && ca.MaxEstimatedLimit <= 0 {
+			return nil, errors.New("cost control mode is 'enforce' but 'max_estimated_limit' is not set. Please provide a positive value for 'security.cost_control.max_estimated_limit'")
+		}
 		if ca.EstimatedListSize <= 0 {
 			return nil, errors.New("cost control is enabled but 'estimated_list_size' is not set. Please provide a positive value for 'security.cost_control.estimated_list_size'")
 		}
