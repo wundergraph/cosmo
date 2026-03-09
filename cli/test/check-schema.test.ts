@@ -542,11 +542,10 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
-    expect(output.proposals?.success).toBe(true);
     expect(output.proposals?.message).toContain('no changes');
   });
 
-  test('proposal match warning outputs JSON with proposals.success false', async () => {
+  test('proposal match warning outputs JSON with proposals message', async () => {
     await runCheck(
       {
         response: { code: EnumStatusCode.OK },
@@ -556,7 +555,6 @@ describe('json output', () => {
     );
 
     const output = getJsonOutput(logSpy);
-    expect(output.proposals?.success).toBe(false);
     expect(output.proposals?.message).toBe('Schema does not match approved proposal');
   });
 
@@ -572,7 +570,7 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
-    expect(output.traffic?.success).toBe(true);
+    expect(output.traffic?.message).toBe('No operations were affected by this schema change.');
   });
 
   test('all operations safe outputs JSON with success status', async () => {
@@ -588,10 +586,10 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
-    expect(output.traffic?.success).toBe(true);
+    expect(output.traffic?.message).toBe('5 operations were considered safe due to overrides.');
   });
 
-  test('operations exist with no breaking changes outputs JSON with traffic.success true', async () => {
+  test('operations exist with no breaking changes outputs JSON with traffic message', async () => {
     await runCheck(
       {
         response: { code: EnumStatusCode.OK },
@@ -609,8 +607,6 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
-    expect(output.traffic).toBeDefined();
-    expect(output.traffic?.success).toBe(true);
     expect(output.traffic?.message).toContain('5 operations checked');
   });
 
@@ -667,7 +663,6 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('error');
-    expect(output.composition?.success).toBe(false);
     expect(output.composition).toBeDefined();
     expect(Array.isArray(output.composition?.errors)).toBe(true);
     expect(Array.isArray(output.composition?.warnings)).toBe(true);
@@ -711,7 +706,6 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('error');
-    expect(output.lint?.success).toBe(false);
     expect(output.lint).toBeDefined();
     expect(Array.isArray(output.lint?.errors)).toBe(true);
     expect(Array.isArray(output.lint?.warnings)).toBe(true);
@@ -760,7 +754,6 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('error');
-    expect(output.graphPrune?.success).toBe(false);
     expect(Array.isArray(output.graphPrune?.errors)).toBe(true);
     expect(Array.isArray(output.graphPrune?.warnings)).toBe(true);
   });
@@ -790,7 +783,7 @@ describe('json output', () => {
     expect(Array.isArray(output.graphPrune?.warnings)).toBe(true);
   });
 
-  test('linked traffic check failure outputs JSON with traffic.success false', async () => {
+  test('linked traffic check failure outputs JSON with error status and traffic message', async () => {
     await runCheck(
       {
         response: { code: EnumStatusCode.OK },
@@ -803,10 +796,10 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('error');
-    expect(output.traffic?.success).toBe(false);
+    expect(output.traffic?.message).toBe('No operations were affected by this schema change.');
   });
 
-  test('linked pruning check failure outputs JSON with graphPrune.success false', async () => {
+  test('linked pruning check failure outputs JSON with error status and graphPrune defined', async () => {
     await runCheck(
       {
         response: { code: EnumStatusCode.OK },
@@ -819,10 +812,10 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('error');
-    expect(output.graphPrune?.success).toBe(false);
+    expect(output.graphPrune).toBeDefined();
   });
 
-  test('extension check error outputs JSON with extensions.success false', async () => {
+  test('extension check error outputs JSON with extensions message', async () => {
     await runCheck(
       {
         response: { code: EnumStatusCode.OK },
@@ -835,7 +828,7 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('error');
-    expect(output.extensions?.success).toBe(false);
+    expect(output.extensions?.message).toContain('Extension validation failed');
   });
 
   test('row limit exceeded outputs JSON with exceededRowLimit true', async () => {
@@ -879,9 +872,9 @@ describe('json output', () => {
     expect(output.traffic).toBeUndefined();
   });
 
-  test('skip-traffic-check with operationUsageStats sets traffic.success true when no breaking changes', async () => {
+  test('skip-traffic-check with operationUsageStats sets traffic message when no breaking changes', async () => {
     // When the server returns operationUsageStats with clientTrafficCheckSkipped: true,
-    // traffic.success should still be true if there are no breaking changes
+    // traffic.message should reflect no breaking changes found
     await runCheck(
       {
         response: { code: EnumStatusCode.OK },
@@ -899,8 +892,7 @@ describe('json output', () => {
 
     const output = getJsonOutput(logSpy);
     expect(output.status).toBe('success');
-    expect(output.traffic).toBeDefined();
-    expect(output.traffic?.success).toBe(true);
+    expect(output.traffic?.message).toContain('5 operations checked');
     expect(output.traffic?.message).not.toContain('client activity between');
   });
 

@@ -60,42 +60,41 @@ describe('JsonOutputBuilder', () => {
   describe('proposals', () => {
     it('setProposals overwrites existing proposals', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
-      b.setProposals(true, 'first').setProposals(false, 'second');
-      expect(b.build().proposals).toEqual({ success: false, message: 'second' });
+      b.setProposals('first').setProposals('second');
+      expect(b.build().proposals).toEqual({ message: 'second' });
     });
 
     it('initProposals does not overwrite if already set', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
-      b.setProposals(true, 'original').initProposals(false, 'ignored');
-      expect(b.build().proposals).toEqual({ success: true, message: 'original' });
+      b.setProposals('original').initProposals('ignored');
+      expect(b.build().proposals).toEqual({ message: 'original' });
     });
 
     it('initProposals sets value when not set', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
-      b.initProposals(true, 'new');
-      expect(b.build().proposals).toEqual({ success: true, message: 'new' });
+      b.initProposals('new');
+      expect(b.build().proposals).toEqual({ message: 'new' });
     });
   });
 
   describe('traffic', () => {
     it('setTraffic replaces traffic', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
-      b.setTraffic(true, 'ok');
-      expect(b.build().traffic).toEqual({ success: true, message: 'ok' });
+      b.setTraffic('ok');
+      expect(b.build().traffic).toEqual({ message: 'ok' });
     });
 
     it('markTrafficLinkedFailed uses fallback when no prior message', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
       b.markTrafficLinkedFailed('fallback');
       expect(b.build().traffic).toMatchObject({
-        success: false,
         message: 'fallback',
       });
     });
 
     it('markTrafficLinkedFailed preserves prior message', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
-      b.setTraffic(true, 'prior').markTrafficLinkedFailed('fallback');
+      b.setTraffic('prior').markTrafficLinkedFailed('fallback');
       expect(b.build().traffic?.message).toBe('prior');
     });
   });
@@ -140,20 +139,18 @@ describe('JsonOutputBuilder', () => {
     const err = { message: 'compose error', federatedGraphName: 'g', namespace: 'ns' } as any;
     const warn = { message: 'compose warning', federatedGraphName: 'g', namespace: 'ns' } as any;
 
-    it('addCompositionErrors sets success false and accumulates', () => {
+    it('addCompositionErrors accumulates', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
       b.addCompositionErrors([err]).addCompositionErrors([err]);
       const comp = b.build().composition!;
-      expect(comp.success).toBe(false);
       expect(comp.errors).toHaveLength(2);
       expect(comp.warnings).toHaveLength(0);
     });
 
-    it('addCompositionWarnings sets success false and accumulates', () => {
+    it('addCompositionWarnings accumulates', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
       b.addCompositionWarnings([warn]).addCompositionWarnings([warn]);
       const comp = b.build().composition!;
-      expect(comp.success).toBe(false);
       expect(comp.warnings).toHaveLength(2);
       expect(comp.errors).toHaveLength(0);
     });
@@ -163,19 +160,17 @@ describe('JsonOutputBuilder', () => {
     const lintErr = { message: 'lint error', lintRuleType: 'RULE_A', issueLocation: { line: 1, column: 1 } } as any;
     const lintWarn = { message: 'lint warn', lintRuleType: 'RULE_B', issueLocation: { line: 2, column: 1 } } as any;
 
-    it('addLintErrors accumulates and marks failure', () => {
+    it('addLintErrors accumulates', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
       b.addLintErrors([lintErr]).addLintErrors([lintErr]);
       const lint = b.build().lint!;
-      expect(lint.success).toBe(false);
       expect(lint.errors).toHaveLength(2);
     });
 
-    it('addLintWarnings accumulates and marks failure', () => {
+    it('addLintWarnings accumulates', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
       b.addLintWarnings([lintWarn]);
       const lint = b.build().lint!;
-      expect(lint.success).toBe(false);
       expect(lint.warnings).toHaveLength(1);
     });
   });
@@ -199,7 +194,6 @@ describe('JsonOutputBuilder', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
       b.addGraphPruneErrors([pruneErr]).addGraphPruneErrors([pruneErr]);
       const gp = b.build().graphPrune!;
-      expect(gp.success).toBe(false);
       expect(gp.errors).toHaveLength(2);
       expect(gp.warnings).toHaveLength(0);
     });
@@ -208,23 +202,24 @@ describe('JsonOutputBuilder', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
       b.addGraphPruneWarnings([pruneWarn]);
       const gp = b.build().graphPrune!;
-      expect(gp.success).toBe(false);
       expect(gp.warnings).toHaveLength(1);
     });
 
-    it('markGraphPruneLinkedFailed marks failure', () => {
+    it('markGraphPruneLinkedFailed initializes graphPrune', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
       b.markGraphPruneLinkedFailed();
       const gp = b.build().graphPrune!;
-      expect(gp.success).toBe(false);
+      expect(gp).toBeDefined();
+      expect(gp.errors).toHaveLength(0);
+      expect(gp.warnings).toHaveLength(0);
     });
   });
 
   describe('extensions / exceededRowLimit / operationUsageStats', () => {
-    it('setExtensionError sets failure and message', () => {
+    it('setExtensionError sets message', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
       b.setExtensionError('bad extension');
-      expect(b.build().extensions).toEqual({ success: false, message: 'bad extension' });
+      expect(b.build().extensions).toEqual({ message: 'bad extension' });
     });
 
     it('setExceededRowLimit stores the flag', () => {

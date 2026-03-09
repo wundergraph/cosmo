@@ -26,7 +26,7 @@ const handleTrafficCheck = (
     // because no operations were affected by the change
     const success = compositionErrors.length === 0 && lintErrors.length === 0 && graphPruneErrors.length === 0;
     const message = 'No operations were affected by this schema change.';
-    jsonBuilder.setTraffic(true, message);
+    jsonBuilder.setTraffic(message);
     if (!shouldOutputJson) {
       console.log(message);
     }
@@ -37,7 +37,7 @@ const handleTrafficCheck = (
     // This is also a success because changes to these operations were marked as safe
     const success = compositionErrors.length === 0 && lintErrors.length === 0 && graphPruneErrors.length === 0;
     const message = `${totalOperations} operations were considered safe due to overrides.`;
-    jsonBuilder.setTraffic(true, message);
+    jsonBuilder.setTraffic(message);
     if (!shouldOutputJson) {
       console.log(message);
     }
@@ -74,7 +74,7 @@ const handleTrafficCheck = (
         `Found client activity between ${new Date(firstSeenAt).toLocaleString()} and ${new Date(lastSeenAt).toLocaleString()}.`,
       );
     }
-    jsonBuilder.setTraffic(false, jsonMessage.join(' '));
+    jsonBuilder.setTraffic(jsonMessage.join(' '));
     if (!shouldOutputJson) {
       console.log(warningMessage.join(''));
     }
@@ -84,7 +84,7 @@ const handleTrafficCheck = (
     }`;
   } else {
     // Operations exist but no breaking changes — traffic check passed
-    jsonBuilder.setTraffic(true, `${totalOperations} operations checked, no breaking changes detected.`);
+    jsonBuilder.setTraffic(`${totalOperations} operations checked, no breaking changes detected.`);
   }
 
   return { success, finalStatement };
@@ -280,7 +280,7 @@ const handleOkResult = ({
 
   // Proposal match warning — always build json, conditionally print
   if (response.proposalMatchMessage) {
-    jsonBuilder.setProposals(false, response.proposalMatchMessage);
+    jsonBuilder.setProposals(response.proposalMatchMessage);
     if (!shouldOutputJson) {
       console.log(pc.yellow(`Warning: Proposal match failed`));
       console.log(pc.yellow(response.proposalMatchMessage));
@@ -299,7 +299,7 @@ const handleOkResult = ({
     (response.isCheckExtensionSkipped ?? true);
 
   if (hasNoIssues) {
-    jsonBuilder.initProposals(true, 'Detected no changes. Detected no lint issues. Detected no graph pruning issues.');
+    jsonBuilder.initProposals('Detected no changes. Detected no lint issues. Detected no graph pruning issues.');
     jsonBuilder.setStatus(true);
     if (!shouldOutputJson) {
       console.log(

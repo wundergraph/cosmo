@@ -15,11 +15,9 @@ export type JsonOutputDescriptor = {
   message?: string;
   url?: string;
   proposals?: {
-    success: boolean;
     message: string;
   };
   traffic?: {
-    success: boolean;
     message: string;
   };
   changes?: {
@@ -27,22 +25,18 @@ export type JsonOutputDescriptor = {
     nonBreaking: SchemaChange[];
   };
   composition?: {
-    success: boolean;
     errors: CompositionError[];
     warnings: CompositionError[];
   };
   lint?: {
-    success: boolean;
     errors: LintIssue[];
     warnings: LintIssue[];
   };
   graphPrune?: {
-    success: boolean;
     errors: GraphPruningIssue[];
     warnings: GraphPruningIssue[];
   };
   extensions?: {
-    success: boolean;
     message: string;
   };
   exceededRowLimit?: boolean;
@@ -84,25 +78,23 @@ export class JsonOutputBuilder {
     return this;
   }
 
-  setProposals(success: boolean, message: string): this {
-    this.data.proposals = { success, message };
+  setProposals(message: string): this {
+    this.data.proposals = { message };
     return this;
   }
 
-  initProposals(success: boolean, message: string): this {
-    this.data.proposals ??= { success, message };
+  initProposals(message: string): this {
+    this.data.proposals ??= { message };
     return this;
   }
 
-  setTraffic(success: boolean, message: string): this {
-    this.data.traffic = { success, message };
+  setTraffic(message: string): this {
+    this.data.traffic = { message };
     return this;
   }
 
   markTrafficLinkedFailed(fallbackMessage: string): this {
     this.data.traffic = {
-      ...this.data.traffic,
-      success: false,
       message: this.data.traffic?.message ?? fallbackMessage,
     };
     return this;
@@ -132,8 +124,6 @@ export class JsonOutputBuilder {
 
   addCompositionErrors(errors: CompositionError[]): this {
     this.data.composition = {
-      ...this.data.composition,
-      success: false,
       errors: [...(this.data.composition?.errors ?? []), ...errors],
       warnings: [...(this.data.composition?.warnings ?? [])],
     };
@@ -142,8 +132,6 @@ export class JsonOutputBuilder {
 
   addCompositionWarnings(warnings: CompositionError[]): this {
     this.data.composition = {
-      ...this.data.composition,
-      success: false,
       errors: [...(this.data.composition?.errors ?? [])],
       warnings: [...(this.data.composition?.warnings ?? []), ...warnings],
     };
@@ -152,8 +140,6 @@ export class JsonOutputBuilder {
 
   addLintErrors(errors: LintIssue[]): this {
     this.data.lint = {
-      ...this.data.lint,
-      success: false,
       errors: [...(this.data.lint?.errors ?? []), ...errors],
       warnings: [...(this.data.lint?.warnings ?? [])],
     };
@@ -162,8 +148,6 @@ export class JsonOutputBuilder {
 
   addLintWarnings(warnings: LintIssue[]): this {
     this.data.lint = {
-      ...this.data.lint,
-      success: false,
       errors: [...(this.data.lint?.errors ?? [])],
       warnings: [...(this.data.lint?.warnings ?? []), ...warnings],
     };
@@ -172,8 +156,6 @@ export class JsonOutputBuilder {
 
   addGraphPruneErrors(errors: GraphPruningIssue[]): this {
     this.data.graphPrune = {
-      ...this.data.graphPrune,
-      success: false,
       errors: [...(this.data.graphPrune?.errors ?? []), ...errors],
       warnings: [...(this.data.graphPrune?.warnings ?? [])],
     };
@@ -182,8 +164,6 @@ export class JsonOutputBuilder {
 
   addGraphPruneWarnings(warnings: GraphPruningIssue[]): this {
     this.data.graphPrune = {
-      ...this.data.graphPrune,
-      success: false,
       errors: [...(this.data.graphPrune?.errors ?? [])],
       warnings: [...(this.data.graphPrune?.warnings ?? []), ...warnings],
     };
@@ -192,8 +172,6 @@ export class JsonOutputBuilder {
 
   markGraphPruneLinkedFailed(): this {
     this.data.graphPrune = {
-      ...this.data.graphPrune,
-      success: false,
       errors: [...(this.data.graphPrune?.errors ?? [])],
       warnings: [...(this.data.graphPrune?.warnings ?? [])],
     };
@@ -201,7 +179,7 @@ export class JsonOutputBuilder {
   }
 
   setExtensionError(message: string): this {
-    this.data.extensions = { ...this.data.extensions, success: false, message };
+    this.data.extensions = { message };
     return this;
   }
 
