@@ -69,10 +69,13 @@ export function publishFederatedSubgraph(
       throw new UnauthorizedError();
     }
 
-    const ignoreExternalKeysFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-    });
+    const ignoreExternalKeys =
+      (
+        await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+        })
+      )?.enabled ?? false;
 
     const subgraphSchemaSDL = req.schema;
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -103,10 +106,13 @@ export function publishFederatedSubgraph(
        * If no federated graphs have yet been created, the subgraph will be validated against the latest router
        * compatibility version.
        */
-      // Here we check if the schema is valid as a subgraph SDL
-      const result = buildSchema(subgraphSchemaSDL, true, routerCompatibilityVersion, {
-        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-      });
+      /* Here we check if the schema is valid as a subgraph SDL
+       * `buildSchema` only calls normalization in isolation.
+       * The `disableResolvabilityChecks` flag is only used in the federation step.
+       * The `ignoreExternalKeys` flag is propagated in normalization but only used in the federation step.
+       * Consequently, there is currently no reason to propagate the options within `buildSchema`.
+       */
+      const result = buildSchema(subgraphSchemaSDL, true, routerCompatibilityVersion);
       if (!result.success) {
         return {
           response: {
@@ -445,7 +451,7 @@ export function publishFederatedSubgraph(
           organizationId: authContext.organizationId,
           featureId: 'plugins',
         });
-        const limit = feature?.limit === -1 ? 0 : (feature?.limit ?? 0);
+        const limit = feature?.limit === -1 ? 0 : feature?.limit ?? 0;
         if (count >= limit) {
           return {
             response: {
@@ -596,7 +602,7 @@ export function publishFederatedSubgraph(
         },
         opts.chClient!,
         {
-          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+          ignoreExternalKeys,
           disableResolvabilityValidation: req.disableResolvabilityValidation,
         },
       );

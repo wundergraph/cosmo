@@ -190,10 +190,13 @@ export function checkSubgraphSchema(
     }
 
     const subgraphName = subgraph?.name || req.subgraphName;
-    const ignoreExternalKeysFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-    });
+    const ignoreExternalKeys =
+      (
+        await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+        })
+      )?.enabled ?? false;
 
     const federatedGraphs = await fedGraphRepo.bySubgraphLabels({
       labels: subgraph ? subgraph.labels : req.labels,
@@ -210,11 +213,13 @@ export function checkSubgraphSchema(
     let newGraphQLSchema: GraphQLSchema | undefined;
     if (newSchemaSDL) {
       try {
-        // Here we check if the schema is valid as a subgraph SDL
-        const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion, {
-          disableResolvabilityValidation: req.disableResolvabilityValidation,
-          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-        });
+        /* Here we check if the schema is valid as a subgraph SDL
+         * `buildSchema` only calls normalization in isolation.
+         * The `disableResolvabilityChecks` flag is only used in the federation step.
+         * The `ignoreExternalKeys` flag is propagated in normalization but only used in the federation step.
+         * Consequently, there is currently no reason to propagate the options within `buildSchema`.
+         */
+        const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion);
         if (!result.success) {
           return {
             response: {
@@ -291,7 +296,7 @@ export function checkSubgraphSchema(
       newGraphQLSchema,
       compositionOptions: {
         disableResolvabilityValidation: req.disableResolvabilityValidation,
-        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        ignoreExternalKeys,
       },
       webhookService,
     });
@@ -462,7 +467,7 @@ export function checkSubgraphSchema(
         newGraphQLSchema: targetNewGraphQLSchema,
         compositionOptions: {
           disableResolvabilityValidation: req.disableResolvabilityValidation,
-          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+          ignoreExternalKeys,
         },
         webhookService,
       });

@@ -76,10 +76,13 @@ export function publishMonograph(
     let isV2Graph: boolean | undefined;
 
     try {
-      // Here we check if the schema is valid as a subgraph SDL
-      const result = buildSchema(subgraphSchemaSDL, true, graph.routerCompatibilityVersion, {
-        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
-      });
+      /* Here we check if the schema is valid as a subgraph SDL
+       * `buildSchema` only calls normalization in isolation.
+       * The `disableResolvabilityChecks` flag is only used in the federation step.
+       * The `ignoreExternalKeys` flag is propagated in normalization but only used in the federation step.
+       * Consequently, there is currently no reason to propagate the options within `buildSchema`.
+       */
+      const result = buildSchema(subgraphSchemaSDL, true, graph.routerCompatibilityVersion);
       if (!result.success) {
         return {
           response: {
