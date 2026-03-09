@@ -58,6 +58,7 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/service"
 	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router/core"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -1531,6 +1532,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		})
 
 		c.TestMemoryExporter = testConfig.TraceExporter
+		c.TestErrorHandler = rtrace.NewOtelErrorHandler(testConfig.Logger)
 
 		routerOpts = append(routerOpts,
 			core.WithTracing(c),

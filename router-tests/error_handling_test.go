@@ -1820,6 +1820,118 @@ func TestErrorLocations(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("OmitLocations strips locations while preserving extensions", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("passthrough mode", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+					cfg.Enabled = true
+					cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+					cfg.OmitLocations = true
+					cfg.OmitExtensions = false
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.WriteHeader(http.StatusOK)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]}`))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } notes } }`,
+				})
+				require.JSONEq(t, `{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED","statusCode":200}}],"data":{"employees":null}}`, res.Body)
+			})
+		})
+
+		t.Run("wrapped mode", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+					cfg.Enabled = true
+					cfg.Mode = config.SubgraphErrorPropagationModeWrapped
+					cfg.OmitLocations = true
+					cfg.OmitExtensions = false
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.WriteHeader(http.StatusOK)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Unauthorized","locations":[{"line":1,"column":1}],"extensions":{"code":"UNAUTHORIZED"}}]}`))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } notes } }`,
+				})
+				require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"Unauthorized","extensions":{"code":"UNAUTHORIZED"}}],"statusCode":200}}],"data":{"employees":null}}`, res.Body)
+			})
+		})
+
+		t.Run("passthrough mode with multiple errors", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+					cfg.Enabled = true
+					cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+					cfg.OmitLocations = true
+					cfg.OmitExtensions = false
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.WriteHeader(http.StatusOK)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Error 1","locations":[{"line":1,"column":5}],"extensions":{"code":"ERR1"}},{"message":"Error 2","extensions":{"code":"ERR2"}},{"message":"Error 3","locations":[{"line":3,"column":10}],"extensions":{"code":"ERR3"}}]}`))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } notes } }`,
+				})
+				require.JSONEq(t, `{"errors":[{"message":"Error 1","extensions":{"code":"ERR1","statusCode":200}},{"message":"Error 2","extensions":{"code":"ERR2","statusCode":200}},{"message":"Error 3","extensions":{"code":"ERR3","statusCode":200}}],"data":{"employees":null}}`, res.Body)
+			})
+		})
+
+		t.Run("wrapped mode with multiple errors", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+					cfg.Enabled = true
+					cfg.Mode = config.SubgraphErrorPropagationModeWrapped
+					cfg.OmitLocations = true
+					cfg.OmitExtensions = false
+				},
+				Subgraphs: testenv.SubgraphsConfig{
+					Employees: testenv.SubgraphConfig{
+						Middleware: func(handler http.Handler) http.Handler {
+							return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+								w.WriteHeader(http.StatusOK)
+								_, _ = w.Write([]byte(`{"errors":[{"message":"Error 1","locations":[{"line":1,"column":5}],"extensions":{"code":"ERR1"}},{"message":"Error 2","extensions":{"code":"ERR2"}},{"message":"Error 3","locations":[{"line":3,"column":10}],"extensions":{"code":"ERR3"}}]}`))
+							})
+						},
+					},
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employees { id details { forename surname } notes } }`,
+				})
+				require.JSONEq(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees'.","extensions":{"errors":[{"message":"Error 1","extensions":{"code":"ERR1"}},{"message":"Error 2","extensions":{"code":"ERR2"}},{"message":"Error 3","extensions":{"code":"ERR3"}}],"statusCode":200}}],"data":{"employees":null}}`, res.Body)
+			})
+		})
+	})
 }
 
 func TestSSEErrorResponseWriteFailures(t *testing.T) {

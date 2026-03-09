@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.197.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.196.0...controlplane@0.197.0) (2026-03-07)
+
+### Bug Fixes
+
+* formatting drift + CI improvements ([#2599](https://github.com/wundergraph/cosmo/issues/2599)) ([dc6dc2d](https://github.com/wundergraph/cosmo/commit/dc6dc2df088a392e01d0582c8e3dcf82a21666cf)) (@comatory)
+
+### Features
+
+* improve invitation handling ([#2581](https://github.com/wundergraph/cosmo/issues/2581)) ([d5b3b45](https://github.com/wundergraph/cosmo/commit/d5b3b45b83355aaadf2557f2455b81c050348b93)) (@wilsonrivera)
+
 # [0.196.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.195.0...controlplane@0.196.0) (2026-03-05)
 
 ### Features
