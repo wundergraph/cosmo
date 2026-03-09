@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -19,11 +20,14 @@ type expensivePlanCache struct {
 	maxSize int
 }
 
-func newExpensivePlanCache(maxSize int) *expensivePlanCache {
+func newExpensivePlanCache(maxSize int) (*expensivePlanCache, error) {
+	if maxSize < 1 {
+		return nil, fmt.Errorf("expensive query cache size must be at least 1, got %d", maxSize)
+	}
 	return &expensivePlanCache{
 		entries: make(map[uint64]*expensivePlanEntry, maxSize),
 		maxSize: maxSize,
-	}
+	}, nil
 }
 
 func (c *expensivePlanCache) Get(key uint64) (*planWithMetaData, bool) {

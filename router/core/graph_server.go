@@ -1345,7 +1345,7 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
 	})
 
-	operationPlanner := NewOperationPlanner(
+	operationPlanner, err := NewOperationPlanner(
 		s.logger,
 		executor,
 		gm.planCache,
@@ -1353,6 +1353,9 @@ func (s *graphServer) buildGraphMux(
 		int(s.engineExecutionConfiguration.ExpensiveQueryCacheSize),
 		s.engineExecutionConfiguration.ExpensiveQueryThreshold,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create operation planner: %w", err)
+	}
 	gm.operationPlanner = operationPlanner
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
@@ -1385,7 +1388,6 @@ func (s *graphServer) buildGraphMux(
 				otel.WgOperationName.String(item.OperationName),
 				otel.WgClientName.String(item.ClientName),
 				otel.WgClientVersion.String(item.ClientVersion),
-				otel.WgFeatureFlag.String(opts.FeatureFlagName),
 				otel.WgOperationHash.String(item.OperationHash),
 				otel.WgOperationType.String(item.OperationType),
 				otel.WgEnginePlanCacheHit.Bool(false),

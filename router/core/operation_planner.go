@@ -2,9 +2,10 @@ package core
 
 import (
 	"errors"
-	"go.uber.org/zap"
 	"strconv"
 	"time"
+
+	"go.uber.org/zap"
 
 	"golang.org/x/sync/singleflight"
 
@@ -55,7 +56,7 @@ type ExecutionPlanCache[K any, V any] interface {
 	Close()
 }
 
-func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], inMemoryPlanCacheFallback bool, expensiveCacheSize int, threshold time.Duration) *OperationPlanner {
+func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], inMemoryPlanCacheFallback bool, expensiveCacheSize int, threshold time.Duration) (*OperationPlanner, error) {
 	p := &OperationPlanner{
 		logger:         logger,
 		planCache:      planCache,
@@ -65,11 +66,15 @@ func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache Execu
 	}
 
 	if inMemoryPlanCacheFallback {
-		p.expensiveCache = newExpensivePlanCache(expensiveCacheSize)
+		var err error
+		p.expensiveCache, err = newExpensivePlanCache(expensiveCacheSize)
+		if err != nil {
+			return nil, err
+		}
 		p.threshold = threshold
 	}
 
-	return p
+	return p, nil
 }
 
 // Close releases expensive cache resources.

@@ -8,7 +8,8 @@ import (
 )
 
 func TestExpensivePlanCache_GetSet(t *testing.T) {
-	c := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10)
+	require.NoError(t, err)
 
 	plan1 := &planWithMetaData{content: "query { a }"}
 	plan2 := &planWithMetaData{content: "query { b }"}
@@ -36,7 +37,8 @@ func TestExpensivePlanCache_GetSet(t *testing.T) {
 }
 
 func TestExpensivePlanCache_BoundedSize(t *testing.T) {
-	c := newExpensivePlanCache(3)
+	c, err := newExpensivePlanCache(3)
+	require.NoError(t, err)
 
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
 	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
@@ -59,7 +61,8 @@ func TestExpensivePlanCache_BoundedSize(t *testing.T) {
 }
 
 func TestExpensivePlanCache_BoundedSize_SkipsCheaper(t *testing.T) {
-	c := newExpensivePlanCache(3)
+	c, err := newExpensivePlanCache(3)
+	require.NoError(t, err)
 
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Second)
 	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Second)
@@ -81,7 +84,8 @@ func TestExpensivePlanCache_BoundedSize_SkipsCheaper(t *testing.T) {
 }
 
 func TestExpensivePlanCache_UpdateExisting(t *testing.T) {
-	c := newExpensivePlanCache(2)
+	c, err := newExpensivePlanCache(2)
+	require.NoError(t, err)
 
 	plan1 := &planWithMetaData{content: "q1"}
 	plan1Updated := &planWithMetaData{content: "q1-updated"}
@@ -102,7 +106,8 @@ func TestExpensivePlanCache_UpdateExisting(t *testing.T) {
 }
 
 func TestExpensivePlanCache_IterValues(t *testing.T) {
-	c := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10)
+	require.NoError(t, err)
 
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
 	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
@@ -118,7 +123,8 @@ func TestExpensivePlanCache_IterValues(t *testing.T) {
 }
 
 func TestExpensivePlanCache_IterValues_EarlyStop(t *testing.T) {
-	c := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10)
+	require.NoError(t, err)
 
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
 	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
@@ -133,7 +139,8 @@ func TestExpensivePlanCache_IterValues_EarlyStop(t *testing.T) {
 }
 
 func TestExpensivePlanCache_Close(t *testing.T) {
-	c := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10)
+	require.NoError(t, err)
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
 
 	c.Close()
@@ -144,7 +151,8 @@ func TestExpensivePlanCache_Close(t *testing.T) {
 }
 
 func TestExpensivePlanCache_SetAfterClose(t *testing.T) {
-	c := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10)
+	require.NoError(t, err)
 	c.Close()
 
 	// Set after Close should not panic
@@ -155,7 +163,8 @@ func TestExpensivePlanCache_SetAfterClose(t *testing.T) {
 }
 
 func TestExpensivePlanCache_IterValuesEmpty(t *testing.T) {
-	c := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10)
+	require.NoError(t, err)
 
 	count := 0
 	c.IterValues(func(v *planWithMetaData) bool {
@@ -166,7 +175,8 @@ func TestExpensivePlanCache_IterValuesEmpty(t *testing.T) {
 }
 
 func TestExpensivePlanCache_IterValuesAfterClose(t *testing.T) {
-	c := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10)
+	require.NoError(t, err)
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
 	c.Close()
 
@@ -179,7 +189,8 @@ func TestExpensivePlanCache_IterValuesAfterClose(t *testing.T) {
 }
 
 func TestExpensivePlanCache_EqualDurationNotEvicted(t *testing.T) {
-	c := newExpensivePlanCache(2)
+	c, err := newExpensivePlanCache(2)
+	require.NoError(t, err)
 
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
 	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
@@ -196,7 +207,8 @@ func TestExpensivePlanCache_EqualDurationNotEvicted(t *testing.T) {
 }
 
 func TestExpensivePlanCache_MaxSizeOne(t *testing.T) {
-	c := newExpensivePlanCache(1)
+	c, err := newExpensivePlanCache(1)
+	require.NoError(t, err)
 
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
 	got, ok := c.Get(1)
@@ -220,7 +232,8 @@ func TestExpensivePlanCache_MaxSizeOne(t *testing.T) {
 }
 
 func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
-	c := newExpensivePlanCache(100)
+	c, err := newExpensivePlanCache(100)
+	require.NoError(t, err)
 	done := make(chan struct{})
 
 	// Concurrent writers — each goroutine writes to its own key range
@@ -272,4 +285,12 @@ func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
 		require.Equal(t, "q", v.content)
 		return false
 	})
+}
+
+func TestExpensivePlanCache_InvalidSize(t *testing.T) {
+	_, err := newExpensivePlanCache(0)
+	require.Error(t, err)
+
+	_, err = newExpensivePlanCache(-1)
+	require.Error(t, err)
 }
