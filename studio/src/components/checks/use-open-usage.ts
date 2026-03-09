@@ -1,21 +1,15 @@
-import { useToast } from "../ui/use-toast";
-import { useRouter } from "next/router";
-import { formatISO, subHours } from "date-fns";
+import { useToast } from '../ui/use-toast';
+import { useRouter } from 'next/router';
+import { formatISO, subHours } from 'date-fns';
 
-export const useOpenUsage = ({
-  trafficCheckDays,
-  createdAt,
-}: {
-  trafficCheckDays?: number;
-  createdAt?: string;
-}) => {
+export const useOpenUsage = ({ trafficCheckDays, createdAt }: { trafficCheckDays?: number; createdAt?: string }) => {
   const router = useRouter();
   const { toast } = useToast();
 
   const openUsage = (changeType: string, path?: string) => {
     if (!path) {
       toast({
-        description: "Not enough data to fetch usage for this change",
+        description: 'Not enough data to fetch usage for this change',
         duration: 2000,
       });
       return;
@@ -25,15 +19,9 @@ export const useOpenUsage = ({
       showUsage: path,
     };
 
-    if (
-      [
-        "UNION_MEMBER_REMOVED",
-        "ENUM_VALUE_ADDED",
-        "ENUM_VALUE_REMOVED",
-      ].includes(changeType)
-    ) {
+    if (['UNION_MEMBER_REMOVED', 'ENUM_VALUE_ADDED', 'ENUM_VALUE_REMOVED'].includes(changeType)) {
       query.isNamedType = true;
-      query.showUsage = path.split(".")[0];
+      query.showUsage = path.split('.')[0];
     }
 
     if (trafficCheckDays && createdAt) {
