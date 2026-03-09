@@ -65,6 +65,7 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 var ErrEnvironmentClosed = errors.New("test environment closed")
@@ -1531,6 +1532,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		})
 
 		c.TestMemoryExporter = testConfig.TraceExporter
+		c.TestErrorHandler = rtrace.NewOtelErrorHandler(testConfig.Logger)
 
 		routerOpts = append(routerOpts,
 			core.WithTracing(c),

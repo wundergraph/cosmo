@@ -3,8 +3,6 @@ import { JWTPayload } from 'jose';
 import { DBSubgraphType, GraphPruningRuleEnum, OrganizationRole, ProposalMatch, ProposalOrigin } from '../db/models.js';
 import { RBACEvaluator } from '../core/services/RBACEvaluator.js';
 
-export const COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID = 'composition-ignore-external-keys';
-
 export type FeatureIds =
   | 'users'
   | 'federated-graphs'
@@ -16,19 +14,19 @@ export type FeatureIds =
   | 'requests'
   | 'feature-flags'
   // Boolean features
-  | 'rbac'
-  | 'sso'
-  | 'security'
-  | 'support'
   | 'ai'
-  | 'oidc'
-  | 'scim'
-  | 'field-pruning-grace-period'
   | 'cache-warmer'
-  | 'proposals'
-  | 'plugins'
   | 'composition-ignore-external-keys' // COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID
-  | 'subgraph-check-extensions';
+  | 'field-pruning-grace-period'
+  | 'oidc'
+  | 'plugins'
+  | 'proposals'
+  | 'rbac'
+  | 'scim'
+  | 'security'
+  | 'sso'
+  | 'subgraph-check-extensions'
+  | 'support';
 
 export type Features = {
   [key in FeatureIds]: Feature;

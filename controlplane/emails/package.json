@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "email dev --dir src --port 3400",
-    "build": "email export --dir src --outDir ../src/templates/emails --pretty && pnpm run --filter ../ lint:fix",
+    "build": "email export --dir src --outDir ../src/templates/emails --pretty",
     "format": "prettier -w .",
-    "lint:fix": "pnpm format"
+    "lint:fix": "eslint --cache --fix --ext .ts,.tsx,.mjs,.cjs . && pnpm format"
   },
   "author": {
     "name": "WunderGraph Maintainers",
