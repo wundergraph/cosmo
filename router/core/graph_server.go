@@ -35,6 +35,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/internal/entityanalytics"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/expr"
@@ -1521,6 +1522,12 @@ func (s *graphServer) buildGraphMux(
 		entityCacheMetricsList = append(entityCacheMetricsList, s.promEntityCacheMetrics)
 	}
 	handlerOpts.EntityCacheMetrics = entityCacheMetricsList
+
+	if s.entityAnalyticsExporter != nil {
+		handlerOpts.EntityAnalyticsExporter = s.entityAnalyticsExporter
+		handlerOpts.EntityAnalyticsDetailLevel = entityanalytics.ParseDetailLevel(s.entityCachingConfig.Analytics.DetailLevel)
+		handlerOpts.RouterConfigVersion = opts.RouterConfigVersion
+	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
 	executor.Resolver.SetAsyncErrorWriter(graphqlHandler)

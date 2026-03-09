@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 
+	entityanalyticsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/entityanalytics/v1"
+	"github.com/wundergraph/cosmo/router/internal/entityanalytics"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
@@ -83,11 +85,14 @@ type HandlerOptions struct {
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
 
-	EntityCachingL1Enabled        bool
-	EntityCachingL2Enabled        bool
-	EntityCachingAnalyticsEnabled bool
-	EntityCacheKeyInterceptors    []EntityCacheKeyInterceptor
-	EntityCacheMetrics            []*rmetric.EntityCacheMetrics
+	EntityCachingL1Enabled          bool
+	EntityCachingL2Enabled          bool
+	EntityCachingAnalyticsEnabled   bool
+	EntityCacheKeyInterceptors      []EntityCacheKeyInterceptor
+	EntityCacheMetrics              []*rmetric.EntityCacheMetrics
+	EntityAnalyticsExporter         *entityanalytics.EntityAnalyticsExporter
+	EntityAnalyticsDetailLevel      entityanalytics.DetailLevel
+	RouterConfigVersion             string
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -113,6 +118,9 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		entityCachingAnalyticsEnabled:            opts.EntityCachingAnalyticsEnabled,
 		entityCacheKeyInterceptors:               opts.EntityCacheKeyInterceptors,
 		entityCacheMetrics:                       opts.EntityCacheMetrics,
+		entityAnalyticsExporter:                  opts.EntityAnalyticsExporter,
+		entityAnalyticsDetailLevel:               opts.EntityAnalyticsDetailLevel,
+		routerConfigVersion:                      opts.RouterConfigVersion,
 	}
 	return graphQLHandler
 }
@@ -145,11 +153,14 @@ type GraphQLHandler struct {
 
 	apolloSubscriptionMultipartPrintBoundary bool
 
-	entityCachingL1Enabled        bool
-	entityCachingL2Enabled        bool
-	entityCachingAnalyticsEnabled bool
-	entityCacheKeyInterceptors    []EntityCacheKeyInterceptor
-	entityCacheMetrics            []*rmetric.EntityCacheMetrics
+	entityCachingL1Enabled          bool
+	entityCachingL2Enabled          bool
+	entityCachingAnalyticsEnabled   bool
+	entityCacheKeyInterceptors      []EntityCacheKeyInterceptor
+	entityCacheMetrics              []*rmetric.EntityCacheMetrics
+	entityAnalyticsExporter         *entityanalytics.EntityAnalyticsExporter
+	entityAnalyticsDetailLevel      entityanalytics.DetailLevel
+	routerConfigVersion             string
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -250,7 +261,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
-		h.recordEntityCacheMetrics(resolveCtx)
+		h.recordEntityCacheAndAnalytics(resolveCtx, reqCtx)
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter
@@ -543,14 +554,41 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 	}
 }
 
-func (h *GraphQLHandler) recordEntityCacheMetrics(resolveCtx *resolve.Context) {
-	if len(h.entityCacheMetrics) == 0 {
+func (h *GraphQLHandler) recordEntityCacheAndAnalytics(resolveCtx *resolve.Context, reqCtx *requestContext) {
+	hasMetrics := len(h.entityCacheMetrics) > 0
+	hasAnalytics := h.entityAnalyticsExporter != nil
+	if !hasMetrics && !hasAnalytics {
 		return
 	}
 	snapshot := resolveCtx.GetCacheStats()
-	ctx := resolveCtx.Context()
-	for _, m := range h.entityCacheMetrics {
-		m.RecordSnapshot(ctx, snapshot)
+	if hasMetrics {
+		ctx := resolveCtx.Context()
+		for _, m := range h.entityCacheMetrics {
+			m.RecordSnapshot(ctx, snapshot)
+		}
+	}
+	if hasAnalytics {
+		meta := entityanalytics.OperationMeta{
+			Hash:          reqCtx.operation.HashString(),
+			Name:          reqCtx.operation.name,
+			Type:          toEntityAnalyticsOpType(reqCtx.operation.opType),
+			ClientName:    reqCtx.operation.clientInfo.Name,
+			ClientVersion: reqCtx.operation.clientInfo.Version,
+			SchemaVersion: h.routerConfigVersion,
+		}
+		info := entityanalytics.BuildEntityAnalyticsInfo(snapshot, meta, h.entityAnalyticsDetailLevel)
+		h.entityAnalyticsExporter.RecordAnalytics(info, false)
+	}
+}
+
+func toEntityAnalyticsOpType(opType OperationType) entityanalyticsv1.OperationType {
+	switch opType {
+	case OperationTypeMutation:
+		return entityanalyticsv1.OperationType_MUTATION
+	case OperationTypeSubscription:
+		return entityanalyticsv1.OperationType_SUBSCRIPTION
+	default:
+		return entityanalyticsv1.OperationType_QUERY
 	}
 }
 
