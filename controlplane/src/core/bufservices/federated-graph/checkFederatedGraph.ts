@@ -9,9 +9,11 @@ import {
   Subgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { parse } from 'graphql';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { composeSubgraphs } from '../../composition/composition.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
@@ -38,6 +40,7 @@ export function checkFederatedGraph(
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     req.namespace = req.namespace || DefaultNamespace;
 
@@ -100,6 +103,11 @@ export function checkFederatedGraph(
       type: convertToSubgraphType(s.type),
     }));
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
+
     const result = composeSubgraphs(
       subgraphsUsedForComposition.map((s) => ({
         id: s.id,
@@ -109,7 +117,7 @@ export function checkFederatedGraph(
       })),
       federatedGraph.routerCompatibilityVersion,
       {
-        // @TODO ignoreExternalKeys: ?,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       },
     );

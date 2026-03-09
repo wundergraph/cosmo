@@ -6,6 +6,7 @@ import {
   FixSubgraphSchemaRequest,
   FixSubgraphSchemaResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { Composer } from '../../composition/composer.js';
 import { buildSchema } from '../../composition/composition.js';
 import { OpenAIGraphql } from '../../openai-graphql/index.js';
@@ -110,6 +111,10 @@ export function fixSubgraphSchema(
       organizationId: authContext.organizationId,
       featureId: 'ai',
     });
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
 
     if (!feature?.enabled) {
       return {
@@ -129,7 +134,12 @@ export function fixSubgraphSchema(
         labels: subgraph.labels,
         namespaceId: namespace.id,
       });
-      // Here we check if the schema is valid as a subgraph
+      /* Here we check if the schema is valid as a subgraph SDL
+       * `buildSchema` only calls normalization in isolation.
+       * The `disableResolvabilityChecks` flag is only used in the federation step.
+       * The `ignoreExternalKeys` flag is propagated in normalization but only used in the federation step.
+       * Consequently, there is currently no reason to propagate the options within `buildSchema`.
+       */
       const result = buildSchema(
         newSchemaSDL,
         true,
@@ -169,7 +179,7 @@ export function fixSubgraphSchema(
       subgraph.namespaceId,
       newSchemaSDL,
       {
-        // @TODO ignoreExternalKeys: ?,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       },
     );

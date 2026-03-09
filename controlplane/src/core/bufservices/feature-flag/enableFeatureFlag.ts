@@ -9,10 +9,12 @@ import {
   EnableFeatureFlagRequest,
   EnableFeatureFlagResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
@@ -31,6 +33,7 @@ export function enableFeatureFlag(
 
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const auditLogRepo = new AuditLogRepository(opts.db);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
@@ -103,6 +106,10 @@ export function enableFeatureFlag(
       // fetch the federated graphs based on the state that has just been set for the feature flag above
       excludeDisabled: req.enabled,
     });
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
@@ -120,7 +127,7 @@ export function enableFeatureFlag(
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
         compositionOptions: {
-          // @TODO ignoreExternalKeys: ?,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           disableResolvabilityValidation: req.disableResolvabilityValidation,
         },
         federatedGraphs,

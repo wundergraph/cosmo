@@ -9,10 +9,12 @@ import {
   UpdateContractRequest,
   UpdateContractResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError, isValidSchemaTags } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
@@ -33,6 +35,7 @@ export function updateContract(
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const contractRepo = new ContractRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const auditLogRepo = new AuditLogRepository(opts.db);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
@@ -116,6 +119,14 @@ export function updateContract(
       };
     }
 
+    const ignoreExternalKeys =
+      (
+        await orgRepo.getFeature({
+          organizationId: authContext.organizationId,
+          featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+        })
+      )?.enabled ?? false;
+
     const updatedContractDetails = await contractRepo.update({
       id: graph.contract.id,
       excludeTags: req.excludeTags,
@@ -141,7 +152,7 @@ export function updateContract(
       labelMatchers: [],
       chClient: opts.chClient!,
       compositionOptions: {
-        // @TODO ignoreExternalKeys: ?,
+        ignoreExternalKeys,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       },
     });
@@ -159,7 +170,7 @@ export function updateContract(
       blobStorage: opts.blobStorage,
       chClient: opts.chClient!,
       compositionOptions: {
-        // @TODO ignoreExternalKeys: ?,
+        ignoreExternalKeys,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       },
       federatedGraphs: [

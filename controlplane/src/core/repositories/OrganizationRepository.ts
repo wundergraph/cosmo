@@ -26,6 +26,7 @@ import {
   users,
 } from '../../db/schema.js';
 import {
+  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
   Feature,
   FeatureIds,
   OrganizationDTO,
@@ -1396,6 +1397,7 @@ export class OrganizationRepository {
       scim: false,
       'cache-warmer': false,
       proposals: false,
+      [COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID]: false,
       'subgraph-check-extensions': false,
     };
 
