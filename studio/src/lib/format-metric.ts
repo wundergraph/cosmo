@@ -1,18 +1,15 @@
-import { formatNumber } from "./format-number";
+import { formatNumber } from './format-number';
 
-export const formatMetric = (
-  number: number,
-  options?: Intl.NumberFormatOptions,
-) => {
+export const formatMetric = (number: number, options?: Intl.NumberFormatOptions) => {
   if (number === 0) {
-    return "0";
+    return '0';
   }
 
   if (number <= 1000) {
     return formatNumber(number, options);
   }
 
-  const suffixes = ["", "K", "M", "B", "T"];
+  const suffixes = ['', 'K', 'M', 'B', 'T'];
   const suffixIndex = Math.floor(Math.log10(Math.abs(number)) / 3);
   const formattedNumber = number / Math.pow(10, suffixIndex * 3);
 
@@ -23,26 +20,23 @@ export const formatMetric = (
   );
 };
 
-export const formatDurationMetric = (
-  number: number,
-  options?: Intl.NumberFormatOptions,
-) => {
+export const formatDurationMetric = (number: number, options?: Intl.NumberFormatOptions) => {
   if (number === 0) {
-    return "0";
+    return '0';
   }
 
-  let unit = "millisecond";
+  let unit = 'millisecond';
   let formattedNumber = number;
   if (number >= 60 * 1000) {
-    unit = "minute";
+    unit = 'minute';
     formattedNumber = number / (60 * 1000);
   } else if (number >= 1000) {
-    unit = "second";
+    unit = 'second';
     formattedNumber = number / 1000;
   }
 
   const _options: Intl.NumberFormatOptions = {
-    style: "unit",
+    style: 'unit',
     unit,
     ...options,
   };
@@ -50,13 +44,10 @@ export const formatDurationMetric = (
   return formatNumber(formattedNumber, _options);
 };
 
-export const formatPercentMetric = (
-  number: number,
-  options?: Intl.NumberFormatOptions,
-) => {
+export const formatPercentMetric = (number: number, options?: Intl.NumberFormatOptions) => {
   const _options: Intl.NumberFormatOptions = {
-    style: "unit",
-    unit: "percent",
+    style: 'unit',
+    unit: 'percent',
     maximumFractionDigits: 2,
     ...options,
   };
