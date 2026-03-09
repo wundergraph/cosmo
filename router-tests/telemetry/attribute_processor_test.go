@@ -1,6 +1,8 @@
 package telemetry
 
 import (
+	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/attribute"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.uber.org/zap/zapcore"
 )
@@ -184,6 +187,27 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 		})
 	})
 
+	t.Run("invalid UTF-8 export error logs config hint", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			TraceExporter: &invalidUTF8Exporter{},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.ErrorLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `query { employees { id } }`,
+			})
+			require.Equal(t, 200, res.Response.StatusCode)
+
+			logs := xEnv.Observer().FilterMessageSnippet("sanitize_utf8").All()
+			require.NotEmpty(t, logs)
+			require.Equal(t, "otel error: traces export: string field contains invalid UTF-8: Enable 'telemetry.tracing.sanitize_utf8.enabled' in your config to sanitize invalid UTF-8 attributes.", logs[0].Message)
+		})
+	})
+
 	t.Run("IPAnonymization hashes IP attributes", func(t *testing.T) {
 		t.Parallel()
 
@@ -219,4 +243,21 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			require.Positive(t, hashedIPCount)
 		})
 	})
+}
+
+// errInvalidUTF8 mimics google.golang.org/protobuf/internal/impl.errInvalidUTF8
+// so that errors.As can match it via the invalidUTF8Error interface used in the router.
+type errInvalidUTF8 struct{}
+
+func (errInvalidUTF8) Error() string     { return "string field contains invalid UTF-8" }
+func (errInvalidUTF8) InvalidUTF8() bool { return true }
+
+type invalidUTF8Exporter struct{}
+
+func (e *invalidUTF8Exporter) ExportSpans(_ context.Context, _ []sdktrace.ReadOnlySpan) error {
+	return fmt.Errorf("traces export: %w", errInvalidUTF8{})
+}
+
+func (e *invalidUTF8Exporter) Shutdown(_ context.Context) error {
+	return nil
 }
