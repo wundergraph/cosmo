@@ -152,8 +152,8 @@ export function updateContract(
       labelMatchers: [],
       chClient: opts.chClient!,
       compositionOptions: {
-        ignoreExternalKeys,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
+        ignoreExternalKeys,
       },
     });
 
