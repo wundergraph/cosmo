@@ -211,6 +211,7 @@ export function checkSubgraphSchema(
       try {
         // Here we check if the schema is valid as a subgraph SDL
         const result = buildSchema(newSchemaSDL, true, routerCompatibilityVersion, {
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
           ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         });
         if (!result.success) {
