@@ -288,7 +288,7 @@ func TestGRPCSubgraph(t *testing.T) {
 			{
 				name:     "query employee @requires field resolved with tag from employees subgraph",
 				query:    `{ employee(id: 1) { id taggedProjectSummary } }`,
-				expected: `{"data":{"employee":{"id":1,"taggedProjectSummary":"project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]"}}}`,
+				expected: `{"data":{"employee":{"id":1,"taggedProjectSummary":"employee tag: , project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]"}}}`,
 			},
 			{
 				name:     "query non-existent employee with @requires field returns null",

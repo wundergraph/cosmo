@@ -499,13 +499,10 @@ func (p *ProjectsService) RequireEmployeeTaggedProjectSummaryById(_ context.Cont
 	for _, ctx := range req.Context {
 		id, err := strconv.ParseInt(ctx.Key.Id, 10, 32)
 		if err != nil {
-			result = append(result, &service.RequireEmployeeTaggedProjectSummaryByIdResult{
-				TaggedProjectSummary: ctx.Fields.Tag,
-			})
-			continue
+			return nil, fmt.Errorf("failed to parse employee id %q: %w", ctx.Key.Id, err)
 		}
 
-		var tags []string
+		var projectTags []string
 		emp := data.GetEmployeeByID(int32(id))
 		if emp != nil && emp.Projects != nil && emp.Projects.List != nil {
 			seen := make(map[string]struct{})
@@ -516,17 +513,17 @@ func (p *ProjectsService) RequireEmployeeTaggedProjectSummaryById(_ context.Cont
 				for _, tag := range project.Tags.List.Items {
 					if _, ok := seen[tag]; !ok {
 						seen[tag] = struct{}{}
-						tags = append(tags, tag)
+						projectTags = append(projectTags, tag)
 					}
 				}
 			}
 		}
 
 		var summary string
-		if len(tags) > 0 {
-			summary = fmt.Sprintf("project tags: [%s]", strings.Join(tags, ", "))
+		if len(projectTags) > 0 {
+			summary = fmt.Sprintf("employee tag: %s, project tags: [%s]", ctx.Fields.Tag, strings.Join(projectTags, ", "))
 		} else {
-			summary = "project has no tags"
+			summary = fmt.Sprintf("employee tag: %s, project has no tags", ctx.Fields.Tag)
 		}
 		result = append(result, &service.RequireEmployeeTaggedProjectSummaryByIdResult{
 			TaggedProjectSummary: summary,
