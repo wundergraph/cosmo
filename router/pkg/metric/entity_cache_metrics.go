@@ -21,7 +21,8 @@ const (
 	entityCacheLatencyKey         = entityCacheMetricBase + "latency"
 	entityCacheInvalidationsKey   = entityCacheMetricBase + "invalidations"
 	entityCachePopulationsKey     = entityCacheMetricBase + "populations"
-	entityCacheShadowStalenessKey = entityCacheMetricBase + "shadow.staleness"
+	entityCacheShadowStalenessKey    = entityCacheMetricBase + "shadow.staleness"
+	entityCacheOperationErrorsKey   = entityCacheMetricBase + "operation_errors"
 )
 
 var (
@@ -30,6 +31,8 @@ var (
 	attrKeyCacheType  = attribute.Key("cache_type")
 	attrKeyOperation  = attribute.Key("operation")
 	attrKeySource     = attribute.Key("source")
+	attrKeyCacheName  = attribute.Key("cache_name")
+	attrKeyEntityType = attribute.Key("entity_type")
 )
 
 type entityCacheInstruments struct {
@@ -39,6 +42,7 @@ type entityCacheInstruments struct {
 	invalidations   otelmetric.Int64Counter
 	populations     otelmetric.Int64Counter
 	shadowStaleness otelmetric.Int64Counter
+	operationErrors otelmetric.Int64Counter
 }
 
 type EntityCacheMetrics struct {
@@ -113,6 +117,14 @@ func setupEntityCacheInstruments(m otelmetric.Meter) (*entityCacheInstruments, e
 		return nil, err
 	}
 
+	operationErrors, err := m.Int64Counter(
+		entityCacheOperationErrorsKey,
+		otelmetric.WithDescription("Cache operation errors (get/set/delete failures)"),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	return &entityCacheInstruments{
 		requestsStats:   requestsStats,
 		keysStats:       keysStats,
@@ -120,6 +132,7 @@ func setupEntityCacheInstruments(m otelmetric.Meter) (*entityCacheInstruments, e
 		invalidations:   invalidations,
 		populations:     populations,
 		shadowStaleness: shadowStaleness,
+		operationErrors: operationErrors,
 	}, nil
 }
 
@@ -185,6 +198,16 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 				m.attrs(attrKeySource.String("mutation")),
 			)
 		}
+	}
+
+	for _, opErr := range snapshot.CacheOpErrors {
+		m.instruments.operationErrors.Add(ctx, 1,
+			m.attrs(
+				attrKeyOperation.String(opErr.Operation),
+				attrKeyCacheName.String(opErr.CacheName),
+				attrKeyEntityType.String(opErr.EntityType),
+			),
+		)
 	}
 }
 

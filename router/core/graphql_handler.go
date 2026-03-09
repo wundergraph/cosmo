@@ -88,6 +88,7 @@ type HandlerOptions struct {
 	EntityCachingL1Enabled          bool
 	EntityCachingL2Enabled          bool
 	EntityCachingAnalyticsEnabled   bool
+	EntityCachingGlobalKeyPrefix    string
 	EntityCacheKeyInterceptors      []EntityCacheKeyInterceptor
 	EntityCacheMetrics              []*rmetric.EntityCacheMetrics
 	EntityAnalyticsExporter         *entityanalytics.EntityAnalyticsExporter
@@ -116,6 +117,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		entityCachingL1Enabled:                   opts.EntityCachingL1Enabled,
 		entityCachingL2Enabled:                   opts.EntityCachingL2Enabled,
 		entityCachingAnalyticsEnabled:            opts.EntityCachingAnalyticsEnabled,
+		entityCachingGlobalKeyPrefix:             opts.EntityCachingGlobalKeyPrefix,
 		entityCacheKeyInterceptors:               opts.EntityCacheKeyInterceptors,
 		entityCacheMetrics:                       opts.EntityCacheMetrics,
 		entityAnalyticsExporter:                  opts.EntityAnalyticsExporter,
@@ -156,6 +158,7 @@ type GraphQLHandler struct {
 	entityCachingL1Enabled          bool
 	entityCachingL2Enabled          bool
 	entityCachingAnalyticsEnabled   bool
+	entityCachingGlobalKeyPrefix    string
 	entityCacheKeyInterceptors      []EntityCacheKeyInterceptor
 	entityCacheMetrics              []*rmetric.EntityCacheMetrics
 	entityAnalyticsExporter         *entityanalytics.EntityAnalyticsExporter
@@ -597,6 +600,7 @@ func (h *GraphQLHandler) cachingOptions(reqCtx *requestContext) resolve.CachingO
 		EnableL1Cache:         h.entityCachingL1Enabled,
 		EnableL2Cache:         h.entityCachingL2Enabled,
 		EnableCacheAnalytics:  h.entityCachingAnalyticsEnabled,
+		GlobalCacheKeyPrefix:  h.entityCachingGlobalKeyPrefix,
 		L2CacheKeyInterceptor: h.buildL2CacheKeyInterceptor(reqCtx),
 	}
 }

@@ -1,7 +1,6 @@
 package entity_caching
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -28,7 +27,7 @@ func TestRedis(t *testing.T) {
 		t.Parallel()
 
 		cache, _ := newTestRedisCache(t)
-		ctx := context.Background()
+		ctx := t.Context()
 
 		// Get miss
 		entries, err := cache.Get(ctx, []string{"key1"})
@@ -55,7 +54,7 @@ func TestRedis(t *testing.T) {
 		t.Parallel()
 
 		cache, _ := newTestRedisCache(t)
-		ctx := context.Background()
+		ctx := t.Context()
 
 		// Batch Set
 		err := cache.Set(ctx, []*resolve.CacheEntry{
@@ -82,7 +81,7 @@ func TestRedis(t *testing.T) {
 		t.Parallel()
 
 		cache, mr := newTestRedisCache(t)
-		ctx := context.Background()
+		ctx := t.Context()
 
 		err := cache.Set(ctx, []*resolve.CacheEntry{
 			{Key: "expiring", Value: []byte(`{"ttl":"test"}`)},
@@ -107,7 +106,7 @@ func TestRedis(t *testing.T) {
 		t.Parallel()
 
 		cache, _ := newTestRedisCache(t)
-		ctx := context.Background()
+		ctx := t.Context()
 
 		// Set entries
 		err := cache.Set(ctx, []*resolve.CacheEntry{
