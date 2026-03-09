@@ -22,7 +22,9 @@ Shared test helpers live in `utils.go` (root package) and `testenv/` (test envir
 
 ### Testdata Layout
 
-Each subdirectory keeps its own `testdata/` for test fixtures specific to that area. Shared testdata (e.g., TLS certificates used by both `security/` and `events/`) lives in `testdata/` at the router-tests root and is referenced via `../testdata/`. Similarly, `testenv/testdata/` is referenced via `../testenv/testdata/` from subdirectories.
+Each subdirectory keeps its own `testdata/` for test fixtures specific to that area. Shared testdata (e.g., TLS certificates used by both `security/` and `events/`) lives in `testdata/` at the router-tests root.
+
+All filesystem paths that the router resolves at runtime must be absolute. Use `testenv.ResolvePath("relative/to/router-tests")` to convert paths relative to the router-tests root into absolute paths. This replaces the old `os.Chdir("..")` pattern — subdirectories no longer need `main_test.go` files.
 
 | Location | Contents | Used By |
 |----------|----------|---------|

@@ -217,7 +217,7 @@ func TestMCP(t *testing.T) {
 
 			t.Run("Tool name collision with built-in tool uses prefixed name when OmitToolNamePrefix is enabled", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
-					MCPOperationsPath: "testdata/mcp_operations_collision",
+					MCPOperationsPath: testenv.ResolvePath("protocol/testdata/mcp_operations_collision"),
 					MCP: config.MCPConfiguration{
 						Enabled:            true,
 						OmitToolNamePrefix: true,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"go.uber.org/zap"
 )
@@ -37,7 +38,7 @@ func TestConnectRPC_ServerLifecycle_StartStopReload(t *testing.T) {
 
 	t.Run("stop without start returns error", func(t *testing.T) {
 		server, err := connectrpc.NewServer(connectrpc.ServerConfig{
-			ServicesDir:     "../../router/pkg/connectrpc/testdata/services",
+			ServicesDir:     testenv.ResolvePath("../router/pkg/connectrpc/testdata/services"),
 			GraphQLEndpoint: "http://localhost:4000/graphql",
 			Logger:          zap.NewNop(),
 		})

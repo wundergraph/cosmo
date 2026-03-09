@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"go.uber.org/zap"
 )
@@ -95,7 +96,7 @@ func NewTestConnectRPCServer(t *testing.T, opts ConnectRPCServerOptions) *TestCo
 
 	// Set defaults
 	if opts.ServicesDir == "" {
-		opts.ServicesDir = "../../router/pkg/connectrpc/testdata/services"
+		opts.ServicesDir = testenv.ResolvePath("../router/pkg/connectrpc/testdata/services")
 	}
 	if opts.ListenAddr == "" {
 		opts.ListenAddr = "localhost:0"

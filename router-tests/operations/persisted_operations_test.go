@@ -339,7 +339,7 @@ func TestPersistedOperationsCacheMixedCallsWithSafeList(t *testing.T) {
 					FileSystem: []config.FileSystemStorageProvider{
 						{
 							ID:   "fs-cdn",
-							Path: "../testenv/testdata/cdn/organization/graph/operations",
+							Path: testenv.ResolvePath("testenv/testdata/cdn/organization/graph/operations"),
 						},
 					},
 				}),

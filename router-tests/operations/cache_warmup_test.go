@@ -63,7 +63,7 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 						Source: config.CacheWarmupSource{
 							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "../testenv/testdata/cache_warmup/simple",
+								Path: testenv.ResolvePath("testenv/testdata/cache_warmup/simple"),
 							},
 						},
 					}),
@@ -137,7 +137,7 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 						Source: config.CacheWarmupSource{
 							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "../testenv/testdata/cache_warmup/simple",
+								Path: testenv.ResolvePath("testenv/testdata/cache_warmup/simple"),
 							},
 						},
 					}),
@@ -205,7 +205,7 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 						Source: config.CacheWarmupSource{
 							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "../testenv/testdata/cache_warmup/invalid",
+								Path: testenv.ResolvePath("testenv/testdata/cache_warmup/invalid"),
 							},
 						},
 					}),
@@ -235,7 +235,7 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 						Source: config.CacheWarmupSource{
 							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "../testenv/testdata/cache_warmup/json",
+								Path: testenv.ResolvePath("testenv/testdata/cache_warmup/json"),
 							},
 						},
 					}),
@@ -293,7 +293,7 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 						Source: config.CacheWarmupSource{
 							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "../testenv/testdata/cache_warmup/json_po",
+								Path: testenv.ResolvePath("testenv/testdata/cache_warmup/json_po"),
 							},
 						},
 					}),
@@ -335,7 +335,7 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 						Source: config.CacheWarmupSource{
 							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "../testenv/testdata/cache_warmup/json_po_with_passed_query",
+								Path: testenv.ResolvePath("testenv/testdata/cache_warmup/json_po_with_passed_query"),
 							},
 						},
 					}),
@@ -370,7 +370,7 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 						Source: config.CacheWarmupSource{
 							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "../testenv/testdata/cache_warmup/json_po",
+								Path: testenv.ResolvePath("testenv/testdata/cache_warmup/json_po"),
 							},
 						},
 					}),
@@ -405,7 +405,7 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 						Source: config.CacheWarmupSource{
 							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "../testenv/testdata/cache_warmup/json_po_multi_operations",
+								Path: testenv.ResolvePath("testenv/testdata/cache_warmup/json_po_multi_operations"),
 							},
 						},
 					}),
@@ -448,7 +448,7 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 						Source: config.CacheWarmupSource{
 							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "../testenv/testdata/cache_warmup/json_po_multi_operations",
+								Path: testenv.ResolvePath("testenv/testdata/cache_warmup/json_po_multi_operations"),
 							},
 						},
 					}),
@@ -514,7 +514,7 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 						Source: config.CacheWarmupSource{
 							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "../testenv/testdata/cache_warmup/rate_limit",
+								Path: testenv.ResolvePath("testenv/testdata/cache_warmup/rate_limit"),
 							},
 						},
 						Workers:        4,
@@ -555,7 +555,7 @@ func TestCacheWarmup(t *testing.T) {
 						Enabled: true,
 						Source: config.CacheWarmupSource{
 							Filesystem: &config.CacheWarmupFileSystemSource{
-								Path: "../testenv/testdata/cache_warmup/simple",
+								Path: testenv.ResolvePath("testenv/testdata/cache_warmup/simple"),
 							},
 						},
 						Workers:        2,
@@ -590,7 +590,7 @@ func TestCacheWarmup(t *testing.T) {
 	t.Run("cache warmup tests for cdn", func(t *testing.T) {
 		t.Parallel()
 
-		// keep in sync with ../testenv/testdata/cache_warmup/cdn/operation.json
+		// keep in sync with testenv/testdata/cache_warmup/cdn/operation.json
 		cdnOperationCount := int64(5)
 		cdnPOCount := int64(1)
 		cdnPOCountWithQuery := int64(1)
@@ -857,7 +857,7 @@ func TestCacheWarmup(t *testing.T) {
 					Enabled: true,
 					Source: config.CacheWarmupSource{
 						Filesystem: &config.CacheWarmupFileSystemSource{
-							Path: "../testenv/testdata/cache_warmup/single",
+							Path: testenv.ResolvePath("testenv/testdata/cache_warmup/single"),
 						},
 					},
 				}),

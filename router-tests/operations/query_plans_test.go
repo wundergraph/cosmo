@@ -30,7 +30,7 @@ func TestQueryPlans(t *testing.T) {
 
 	g := goldie.New(
 		t,
-		goldie.WithFixtureDir("testdata/fixtures/query_plans"),
+		goldie.WithFixtureDir(testenv.ResolvePath("operations/testdata/fixtures/query_plans")),
 		goldie.WithNameSuffix(".json"),
 		goldie.WithDiffEngine(goldie.ClassicDiff),
 	)
