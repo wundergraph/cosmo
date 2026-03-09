@@ -542,6 +542,201 @@ func TestOperationCost(t *testing.T) {
 		})
 	})
 
+	t.Run("plan cache hit", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("second identical request must return same cost as first (cache miss vs hit)", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				query := testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				}
+
+				// 1st request – plan cache MISS
+				res1 := xEnv.MakeGraphQLRequestOK(query)
+				require.Contains(t, res1.Body, `"data":`)
+
+				estimated1 := res1.Response.Header.Get(core.CostEstimatedHeader)
+				actual1 := res1.Response.Header.Get(core.CostActualHeader)
+				require.NotEmpty(t, estimated1, "first request should have estimated cost header")
+				require.NotEmpty(t, actual1, "first request should have actual cost header")
+
+				// 2nd request – plan cache HIT
+				res2 := xEnv.MakeGraphQLRequestOK(query)
+				require.Contains(t, res2.Body, `"data":`)
+
+				estimated2 := res2.Response.Header.Get(core.CostEstimatedHeader)
+				actual2 := res2.Response.Header.Get(core.CostActualHeader)
+				require.NotEmpty(t, estimated2, "second request should have estimated cost header")
+				require.NotEmpty(t, actual2, "second request should have actual cost header")
+
+				require.Equal(t, estimated1, estimated2,
+					"estimated cost differs between cache miss (%s) and cache hit (%s) ",
+					estimated1, estimated2)
+				require.Equal(t, actual1, actual2,
+					"actual cost differs between cache miss (%s) and cache hit (%s) ",
+					actual1, actual2)
+			})
+		})
+
+		t.Run("2nd request with different argument must return same cost as 1st", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// 1st request – plan cache MISS
+				query1 := testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				}
+				res1 := xEnv.MakeGraphQLRequestOK(query1)
+				require.Contains(t, res1.Body, `"data":`)
+
+				estimated1 := res1.Response.Header.Get(core.CostEstimatedHeader)
+				actual1 := res1.Response.Header.Get(core.CostActualHeader)
+				require.NotEmpty(t, estimated1, "first request should have estimated cost header")
+				require.NotEmpty(t, actual1, "first request should have actual cost header")
+
+				// 2nd request – plan cache HIT
+				query2 := testenv.GraphQLRequest{
+					Query: `{ employee(id:2) { id details { forename surname } } }`,
+				}
+				res2 := xEnv.MakeGraphQLRequestOK(query2)
+				require.Contains(t, res2.Body, `"data":`)
+
+				estimated2 := res2.Response.Header.Get(core.CostEstimatedHeader)
+				actual2 := res2.Response.Header.Get(core.CostActualHeader)
+				require.NotEmpty(t, estimated2, "second request should have estimated cost header")
+				require.NotEmpty(t, actual2, "second request should have actual cost header")
+
+				require.Equal(t, estimated1, estimated2,
+					"estimated cost differs between cache miss (%s) and cache hit (%s) ",
+					estimated1, estimated2)
+				require.Equal(t, actual1, actual2,
+					"actual cost differs between cache miss (%s) and cache hit (%s) ",
+					actual1, actual2)
+			})
+		})
+
+		t.Run("enforce mode rejects over-limit queries on cache hit", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 9,
+						EstimatedListSize: 5,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				query := testenv.GraphQLRequest{
+					// employees has @listSize(assumedSize: 50), estimated = 50*2 = 100 > limit 9
+					Query: `{ employees { id details { forename surname } } }`,
+				}
+
+				// 1st request – cache miss – should be blocked (cost 100 > limit 9)
+				res1, err := xEnv.MakeGraphQLRequest(query)
+				require.NoError(t, err)
+				require.Equal(t, 400, res1.Response.StatusCode, "1st request (cache miss) should be rejected")
+				require.Contains(t, res1.Body, "exceeds the maximum allowed limit")
+
+				estimated1 := res1.Response.Header.Get(core.CostEstimatedHeader)
+				require.Equal(t, "100", estimated1)
+
+				// 2nd request – cache hit – should also be blocked with same cost.
+				res2, err := xEnv.MakeGraphQLRequest(query)
+				require.NoError(t, err)
+
+				estimated2 := res2.Response.Header.Get(core.CostEstimatedHeader)
+				require.Equal(t, "100", estimated2,
+					"estimated cost on cache hit (%s) differs from cache miss (%s)",
+					estimated2, estimated1)
+				require.Equal(t, 400, res2.Response.StatusCode,
+					"second request (cache hit) should also be rejected but was allowed")
+				require.Contains(t, res2.Body, "exceeds the maximum allowed limit")
+			})
+		})
+
+		t.Run("cost metrics are consistent across cache miss and hit", func(t *testing.T) {
+			t.Parallel()
+
+			metricReader := sdkmetric.NewManualReader()
+
+			testenv.Run(t, &testenv.Config{
+				MetricReader: metricReader,
+				MetricOptions: testenv.MetricOptions{
+					OTLPCostStats: config.CostStats{
+						EstimatedEnabled: true,
+						ActualEnabled:    true,
+					},
+				},
+				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
+					cfg.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						EstimatedListSize: 10,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				query := testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				}
+
+				// Fire the same query 3 times: 1 cache miss + 2 cache hits
+				for i := 0; i < 3; i++ {
+					res := xEnv.MakeGraphQLRequestOK(query)
+					require.Contains(t, res.Body, `"data":`)
+				}
+
+				var rm metricdata.ResourceMetrics
+				err := metricReader.Collect(context.Background(), &rm)
+				require.NoError(t, err)
+
+				var estimatedHistogram metricdata.Histogram[int64]
+				var foundEstimated bool
+
+				for _, scopeMetric := range rm.ScopeMetrics {
+					for _, m := range scopeMetric.Metrics {
+						if m.Name == metric.OperationCostEstimatedHistogram {
+							estimatedHistogram, foundEstimated = m.Data.(metricdata.Histogram[int64])
+						}
+					}
+				}
+				require.True(t, foundEstimated, "estimated cost metric should exist")
+
+				// Sum all recorded estimated costs across data points.
+				var totalCount uint64
+				var totalSum int64
+				for _, dp := range estimatedHistogram.DataPoints {
+					totalCount += dp.Count
+					totalSum += dp.Sum
+				}
+
+				require.Equal(t, uint64(3), totalCount, "should have 3 cost recordings (1 miss + 2 hits)")
+
+				// employee(id:1) cost = 8 per request.  3 requests = 24.
+				require.Equal(t, int64(24), totalSum, "total estimated cost sum should be 3×8=24")
+			})
+		})
+	})
+
 	t.Run("response headers", func(t *testing.T) {
 		t.Parallel()
 

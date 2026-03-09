@@ -62,9 +62,6 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlan
 		return nil, &reportError{report: &report}
 	}
 
-	// Store plan config to access it from the operationContext.ComputeEstimatedCost()
-	ctx.planConfig = p.executor.PlanConfig
-
 	planner, err := plan.NewPlanner(p.executor.PlanConfig)
 	if err != nil {
 		return nil, err
@@ -120,6 +117,9 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 	// this is because in case of tracing, we're writing trace data to the plan
 	// in case of including the query plan, we don't want to cache this additional overhead
 	skipCache := options.TraceOptions.Enable || options.ExecutionOptions.IncludeQueryPlanInResponse
+
+	// Store plan config regardless of cache to enable costs calculation.
+	opContext.planConfig = p.executor.PlanConfig
 
 	if skipCache {
 		prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: false})
