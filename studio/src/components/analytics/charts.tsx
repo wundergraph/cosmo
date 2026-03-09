@@ -86,7 +86,7 @@ export const BarChartComponent = ({
   return (
     <ResponsiveContainer width="100%" height={chartHeight} className="-ml-6">
       <BarChart data={data}>
-        <CartesianGrid color="currenColor" strokeWidth="0.2" vertical={false} strokeDasharray="3 1" />
+        <CartesianGrid color="currentColor" strokeWidth="0.2" vertical={false} strokeDasharray="3 1" />
         <Bar dataKey="value" fill="indianred" barSize={12} />
         <XAxis
           dataKey="timestamp"

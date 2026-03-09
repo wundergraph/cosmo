@@ -99,7 +99,7 @@ const FeatureFlagOverview = ({
           description={
             <>
               None of the feature subgraphs which are part of this feature flag are published. Please publish the
-              feature subgraphs using the command below. Publish the feature subgraphs using the below command.
+              feature subgraphs using the command below.
             </>
           }
           actions={
