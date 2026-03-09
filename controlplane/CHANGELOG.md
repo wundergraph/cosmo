@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.198.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.197.0...controlplane@0.198.0) (2026-03-09)
+
+### Features
+
+* add ignore external keys feature ([#2616](https://github.com/wundergraph/cosmo/issues/2616)) ([f29f5aa](https://github.com/wundergraph/cosmo/commit/f29f5aa3b93dfd5332de9aaeed066e86b86bb624)) (@Aenimus)
+
 # [0.197.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.196.0...controlplane@0.197.0) (2026-03-07)
 
 ### Bug Fixes
