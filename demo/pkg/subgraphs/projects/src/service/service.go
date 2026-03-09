@@ -497,9 +497,13 @@ func (p *ProjectsService) RequireEmployeeTaggedProjectSummaryById(_ context.Cont
 	result := make([]*service.RequireEmployeeTaggedProjectSummaryByIdResult, 0, len(req.Context))
 
 	for _, ctx := range req.Context {
-		id, err := strconv.ParseInt(ctx.Key.Id, 10, 32)
+		keyID := ctx.GetKey().GetId()
+		if keyID == "" {
+			return nil, status.Errorf(codes.InvalidArgument, "missing employee id")
+		}
+		id, err := strconv.ParseInt(keyID, 10, 32)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse employee id %q: %w", ctx.Key.Id, err)
+			return nil, status.Errorf(codes.InvalidArgument, "invalid employee id %q: %v", keyID, err)
 		}
 
 		var projectTags []string
@@ -519,7 +523,7 @@ func (p *ProjectsService) RequireEmployeeTaggedProjectSummaryById(_ context.Cont
 			}
 		}
 
-		employeeTag := ctx.Fields.Tag
+		employeeTag := ctx.GetFields().GetTag()
 		if employeeTag == "" {
 			employeeTag = "none"
 		}
