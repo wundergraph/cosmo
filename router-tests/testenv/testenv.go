@@ -92,8 +92,6 @@ var (
 	ConfigWithEdfsRedisJSONTemplate string
 	//go:embed testdata/configWithPlugins.json
 	ConfigWithPluginsJSONTemplate string
-	//go:embed testdata/configWithOCIPlugins.json
-	ConfigWithOCIPluginsJSONTemplate string
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
 
