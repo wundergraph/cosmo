@@ -637,7 +637,6 @@ type operationContext struct {
 	variablesRemappingCacheHit     bool
 
 	// Costs related fields used as a cache through the lifetime of operation.
-	// Do we want to store some kind of cost_result code here?
 	costEstimated    int  // populated after planning
 	costActual       int  // populated after execution
 	costEstimatedSet bool // set to true when costEstimated is populated

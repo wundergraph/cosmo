@@ -267,6 +267,56 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
+		t.Run("type weight from correct subgraph used when entity spans multiple subgraphs", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						MaxEstimatedLimit: 100000,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Query 1: weight from both subgraphs is applied
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ products { ... on Cosmo { upc repositoryURL engineers { id } } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+
+				// The Cosmo type has @cost(weight: 5) in employees and @cost(weight: 8) in products.
+				// When a field is planned across multiple data sources, type weights are summed
+				// (not merged) because resolving from two subgraphs means more work for the router.
+				//
+				// products field (abstract, both DSes): fieldCost = 5 + 8 = 13
+				// engineers (list, EstimatedListSize=10): (0 + 1) × 10 = 10
+				// upc, repositoryURL, id: 0 (scalars)
+				// total: (10 + 13) × 10 = 230
+				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
+				require.NotEmpty(t, estimated, "estimated cost header should be present")
+				require.Equal(t, "230", estimated)
+
+				actual := res.Response.Header.Get(core.CostActualHeader)
+				require.NotEmpty(t, actual, "actual cost header should be present")
+				require.Equal(t, "45", actual)
+
+				// Query 2: only employees-subgraph fields — Cosmo @cost(weight: 5) from employees applies
+				res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ products { ... on Cosmo { upc engineers { id } } } }`,
+				})
+				require.Contains(t, res2.Body, `"data":`)
+				estimated2 := res2.Response.Header.Get(core.CostEstimatedHeader)
+				// employees-only: weight 5 applies from employees subgraph only
+				require.Equal(t, "150", estimated2)
+
+				actual2 := res.Response.Header.Get(core.CostActualHeader)
+				require.NotEmpty(t, actual2, "actual cost header should be present")
+				require.Equal(t, "45", actual2)
+			})
+		})
+
 		t.Run("slicingArguments controls list size estimation", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{

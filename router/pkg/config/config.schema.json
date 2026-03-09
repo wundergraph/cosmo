@@ -3144,7 +3144,7 @@
             },
             "expose_headers": {
               "type": "boolean",
-              "description": "Enable costs reponse headers for estimated and actuals operation costs."
+              "description": "Enable costs response headers for estimated and actuals operation costs."
             }
           }
         },
