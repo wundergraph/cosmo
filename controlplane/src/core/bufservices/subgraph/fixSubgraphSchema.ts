@@ -111,13 +111,10 @@ export function fixSubgraphSchema(
       organizationId: authContext.organizationId,
       featureId: 'ai',
     });
-    const ignoreExternalKeys =
-      (
-        await orgRepo.getFeature({
-          organizationId: authContext.organizationId,
-          featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-        })
-      )?.enabled ?? false;
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
 
     if (!feature?.enabled) {
       return {
@@ -137,7 +134,12 @@ export function fixSubgraphSchema(
         labels: subgraph.labels,
         namespaceId: namespace.id,
       });
-      // Here we check if the schema is valid as a subgraph
+      /* Here we check if the schema is valid as a subgraph SDL
+       * `buildSchema` only calls normalization in isolation.
+       * The `disableResolvabilityChecks` flag is only used in the federation step.
+       * The `ignoreExternalKeys` flag is propagated in normalization but only used in the federation step.
+       * Consequently, there is currently no reason to propagate the options within `buildSchema`.
+       */
       const result = buildSchema(
         newSchemaSDL,
         true,
@@ -148,9 +150,6 @@ export function fixSubgraphSchema(
          * compatibility version.
          */
         getFederatedGraphRouterCompatibilityVersion(federatedGraphs),
-        {
-          ignoreExternalKeys,
-        },
       );
       if (!result.success) {
         return {
@@ -180,7 +179,7 @@ export function fixSubgraphSchema(
       subgraph.namespaceId,
       newSchemaSDL,
       {
-        ignoreExternalKeys,
+        ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         disableResolvabilityValidation: req.disableResolvabilityValidation,
       },
     );

@@ -69,13 +69,10 @@ export function publishFederatedSubgraph(
       throw new UnauthorizedError();
     }
 
-    const ignoreExternalKeys =
-      (
-        await orgRepo.getFeature({
-          organizationId: authContext.organizationId,
-          featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-        })
-      )?.enabled ?? false;
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
 
     const subgraphSchemaSDL = req.schema;
     const namespace = await namespaceRepo.byName(req.namespace);
@@ -451,7 +448,7 @@ export function publishFederatedSubgraph(
           organizationId: authContext.organizationId,
           featureId: 'plugins',
         });
-        const limit = feature?.limit === -1 ? 0 : feature?.limit ?? 0;
+        const limit = feature?.limit === -1 ? 0 : (feature?.limit ?? 0);
         if (count >= limit) {
           return {
             response: {
@@ -602,7 +599,7 @@ export function publishFederatedSubgraph(
         },
         opts.chClient!,
         {
-          ignoreExternalKeys,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
           disableResolvabilityValidation: req.disableResolvabilityValidation,
         },
       );

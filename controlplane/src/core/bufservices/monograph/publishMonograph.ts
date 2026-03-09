@@ -6,9 +6,7 @@ import {
   PublishMonographRequest,
   PublishMonographResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
-import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -35,11 +33,9 @@ export function publishMonograph(
       opts.logger,
       opts.billingDefaultPlanId,
     );
-    const auditLogRepo = new AuditLogRepository(opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
-    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     if (authContext.organizationDeactivated) {
       throw new UnauthorizedError();
@@ -68,10 +64,6 @@ export function publishMonograph(
     }
 
     const subgraphSchemaSDL = req.schema;
-    const ignoreExternalKeysFeature = await orgRepo.getFeature({
-      organizationId: authContext.organizationId,
-      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
-    });
 
     let isV2Graph: boolean | undefined;
 
@@ -192,6 +184,7 @@ export function publishMonograph(
       // Best effort approach. This way of counting tokens is not accurate.
       subgraphSchemaSDL.length <= 10_000
     ) {
+      const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
       const feature = await orgRepo.getFeature({
         organizationId: authContext.organizationId,
         featureId: 'ai',
