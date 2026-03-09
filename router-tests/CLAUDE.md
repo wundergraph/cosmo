@@ -20,7 +20,18 @@ Tests are organized into subdirectories by functional area. New test files added
 
 Shared test helpers live in `utils.go` (root package) and `testenv/` (test environment setup). Subdirectories import shared helpers via `integration "github.com/wundergraph/cosmo/router-tests"`.
 
-Each subdirectory has a `main_test.go` with `TestMain` that calls `os.Chdir("..")` so relative `testdata/` paths resolve correctly from the router-tests root.
+### Testdata Layout
+
+Each subdirectory keeps its own `testdata/` for test fixtures specific to that area. Shared testdata (e.g., TLS certificates used by both `security/` and `events/`) lives in `testdata/` at the router-tests root and is referenced via `../testdata/`. Similarly, `testenv/testdata/` is referenced via `../testenv/testdata/` from subdirectories.
+
+| Location | Contents | Used By |
+|----------|----------|---------|
+| `operations/testdata/` | Query plan fixtures, introspection schemas | operations |
+| `protocol/testdata/` | Router configs, query fixtures, MCP operations, tracing | protocol |
+| `fuzzquery/testdata/` | Fuzz corpus | fuzzquery |
+| `testdata/tls/` | TLS certificates (shared) | security, events |
+| `testdata/connectrpc/` | Generated protobuf client stubs (Go package) | connectrpc |
+| `testenv/testdata/` | Embedded router configs, cache warmup fixtures, CDN | all (via testenv) |
 
 ## Test Synchronization Architecture
 

@@ -6,7 +6,5 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// Change to router-tests root so relative testdata paths resolve correctly
-	os.Chdir("..")
 	os.Exit(m.Run())
 }
