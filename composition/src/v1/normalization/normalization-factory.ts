@@ -1144,7 +1144,8 @@ export class NormalizationFactory {
     return output;
   }
 
-  // returns true if the directive is custom; otherwise, false
+  // extracts cost weights from @cost directives applied to arguments of directive definitions.
+  // It works on nodes of this kind: "directive @myDirective(arg1: Int @cost(weight: 5)) on FIELD"
   extractDirectiveArgumentCosts(node: DirectiveDefinitionNode) {
     if (!node.arguments) {
       return;
@@ -1171,6 +1172,7 @@ export class NormalizationFactory {
     }
   }
 
+  // returns true if the directive is custom; otherwise, false
   addDirectiveDefinitionDataByNode(node: DirectiveDefinitionNode): boolean {
     const name = node.name.value;
     if (this.definedDirectiveNames.has(name)) {
@@ -2414,10 +2416,10 @@ export class NormalizationFactory {
           errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
           break;
         }
-        const fieldCoord = `${typeName}.${data.name}`;
+        const fieldCoords = `${typeName}.${data.name}`;
         const fieldWeight = getValueOrDefault(
           this.costs.fieldWeights,
-          fieldCoord,
+          fieldCoords,
           (): FieldWeightConfiguration => ({
             typeName,
             fieldName: data.name,
@@ -2597,8 +2599,8 @@ export class NormalizationFactory {
         }
       }
     }
-    const fieldCoord = `${typeName}.${data.name}`;
-    this.costs.listSizes.set(fieldCoord, listSizeConfig);
+    const fieldCoords = `${typeName}.${data.name}`;
+    this.costs.listSizes.set(fieldCoords, listSizeConfig);
   }
 
   extractRequiredScopes({ directiveCoords, orScopes, requiredScopes }: HandleRequiresScopesDirectiveParams) {

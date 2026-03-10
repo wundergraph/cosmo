@@ -15,6 +15,8 @@ import {
 } from '../schema-building/types';
 import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
 
+// Properties are sorted alphabetically, optionals are last.
+
 export type Subgraph = {
   definitions: DocumentNode;
   name: SubgraphName;
@@ -27,8 +29,8 @@ export type SubgraphConfig = {
   isVersionTwo: boolean;
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   schema: GraphQLSchema;
-  schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
   costs?: Costs;
+  schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
 };
 
 export type InternalSubgraph = {
@@ -45,7 +47,7 @@ export type InternalSubgraph = {
   parentDefinitionDataByTypeName: Map<TypeName, ParentDefinitionData>;
   persistedDirectiveDefinitionDataByDirectiveName: Map<DirectiveName, PersistedDirectiveDefinitionData>;
   schema: GraphQLSchema;
-  schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
-  costs?: Costs;
   url: string;
+  costs?: Costs;
+  schemaNode?: SchemaDefinitionNode | SchemaExtensionNode;
 };

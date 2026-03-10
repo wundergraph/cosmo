@@ -48,7 +48,13 @@ import {
 } from '../utils/types';
 import { isFieldData } from '../schema-building/utils';
 import { printTypeNode } from '@graphql-tools/merge';
-import { type NodeType, type TypeName } from '../types/types';
+import {
+  type ArgumentName,
+  type DirectiveArgumentCoords,
+  type FieldName,
+  type NodeType,
+  type TypeName
+} from '../types/types';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
 
@@ -315,7 +321,7 @@ export function duplicateDirectiveArgumentDefinitionsErrorMessage(argumentNames:
 export function invalidArgumentValueErrorMessage(
   value: string,
   hostName: string,
-  argumentName: string,
+  argumentName: ArgumentName,
   expectedTypeString: string,
 ): string {
   return ` The value "${value}" provided to argument "${hostName}(${argumentName}: ...)" is not a valid "${expectedTypeString}" type.`;
@@ -1699,14 +1705,14 @@ export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOf
   );
 }
 
-export function listSizeInvalidSlicingArgumentErrorMessage(directiveCoords: string, argumentName: string): string {
+export function listSizeInvalidSlicingArgumentErrorMessage(directiveCoords: DirectiveArgumentCoords, argumentName: ArgumentName): string {
   return ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" does not reference a defined argument on this field.`;
 }
 
 export function listSizeSlicingArgumentNotIntErrorMessage(
-  directiveCoords: string,
-  argumentName: string,
-  actualType: string,
+  directiveCoords: DirectiveArgumentCoords,
+  argumentName: ArgumentName,
+  actualType: TypeName,
 ): string {
   return (
     ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" references an argument of type` +
@@ -1715,18 +1721,18 @@ export function listSizeSlicingArgumentNotIntErrorMessage(
 }
 
 export function listSizeSizedFieldNotFoundErrorMessage(
-  directiveCoords: string,
-  fieldName: string,
-  returnTypeName: string,
+  directiveCoords: DirectiveArgumentCoords,
+  fieldName: FieldName,
+  returnTypeName: TypeName,
 ): string {
   return ` The "sizedFields" value "${fieldName}" on "${directiveCoords}" does not reference a defined field on the return type "${returnTypeName}".`;
 }
 
 export function listSizeSizedFieldNotListErrorMessage(
-  directiveCoords: string,
-  fieldName: string,
-  returnTypeName: string,
-  fieldReturnType: string,
+  directiveCoords: DirectiveArgumentCoords,
+  fieldName: FieldName,
+  returnTypeName: TypeName,
+  fieldReturnType: TypeName,
 ): string {
   return (
     ` The "sizedFields" value "${fieldName}" on "${directiveCoords}" references field "${returnTypeName}.${fieldName}",` +
@@ -1735,8 +1741,8 @@ export function listSizeSizedFieldNotListErrorMessage(
 }
 
 export function listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(
-  directiveCoords: string,
-  returnType: string,
+  directiveCoords: DirectiveArgumentCoords,
+  returnType: TypeName,
 ): string {
   return (
     ` The "@listSize" directive on "${directiveCoords}" is invalid because the field returns type "${returnType}",` +
@@ -1745,8 +1751,8 @@ export function listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(
 }
 
 export function listSizeSizedFieldsInvalidReturnTypeErrorMessage(
-  directiveCoords: string,
-  returnTypeName: string,
+  directiveCoords: DirectiveArgumentCoords,
+  returnTypeName: TypeName,
 ): string {
   return (
     ` The "sizedFields" argument on "${directiveCoords}" is invalid because` +
@@ -1754,7 +1760,7 @@ export function listSizeSizedFieldsInvalidReturnTypeErrorMessage(
   );
 }
 
-export function listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords: string): string {
+export function listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords: DirectiveArgumentCoords): string {
   return (
     ` The "@listSize" directive on "${directiveCoords}" defines both "assumedSize" and "slicingArguments".` +
     ` When both are used, "requireOneSlicingArgument" must be set to false.`
@@ -1762,8 +1768,8 @@ export function listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(direc
 }
 
 export function listSizeAssumedSizeSlicingArgDefaultErrorMessage(
-  directiveCoords: string,
-  slicingArgName: string,
+  directiveCoords: DirectiveArgumentCoords,
+  slicingArgName: ArgumentName,
 ): string {
   return (
     ` The "@listSize" directive on "${directiveCoords}" defines both "assumedSize" and "slicingArguments",` +
@@ -1772,7 +1778,7 @@ export function listSizeAssumedSizeSlicingArgDefaultErrorMessage(
   );
 }
 
-export function costOnInterfaceFieldErrorMessage(directiveCoords: string): string {
+export function costOnInterfaceFieldErrorMessage(directiveCoords: DirectiveArgumentCoords): string {
   return (
     ` The "@cost" directive at "${directiveCoords}" is not permitted on fields or arguments of an interface type.` +
     ` The cost of an interface field is derived from the costs of the corresponding fields` +
