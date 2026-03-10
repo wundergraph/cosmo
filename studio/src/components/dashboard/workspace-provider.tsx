@@ -89,15 +89,15 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
   );
 
   const setNamespaceCallback = useCallback(
-    (ns: string, applyRouteParams: boolean) => {
-      if (!ns || namespace === ns || !namespaces.some((ns) => ns.toLowerCase() === ns.toLowerCase())) {
+    (newNs: string, applyRouteParams: boolean) => {
+      if (!newNs || namespace === newNs || !namespaces.some((ns) => ns.toLowerCase() === newNs.toLowerCase())) {
         return;
       }
 
-      setNamespace(ns);
-      setStoredNamespace(ns);
+      setNamespace(newNs);
+      setStoredNamespace(newNs);
       if (applyRouteParams) {
-        applyParams({ namespace: ns });
+        applyParams({ namespace: newNs });
       }
     },
     [namespace, namespaces, setStoredNamespace, applyParams],
