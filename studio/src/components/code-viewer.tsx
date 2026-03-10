@@ -119,7 +119,7 @@ export const CodeViewer = ({
               allLines.length > 10
                 ? allLines.length > 100
                   ? allLines.length > 1000
-                    ? 'w-72'
+                    ? 'w-[72px]'
                     : 'w-16'
                   : 'w-12'
                 : 'w-8';
