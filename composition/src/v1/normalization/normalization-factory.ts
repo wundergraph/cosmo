@@ -2484,96 +2484,99 @@ export class NormalizationFactory {
 
     for (const argumentNode of args) {
       const argumentName = argumentNode.name.value;
-
       // type validation handled upstream
-      if (argumentName === ASSUMED_SIZE && argumentNode.value.kind === Kind.INT) {
-        listSizeConfig.assumedSize = parseInt((argumentNode.value as IntValueNode).value, 10);
-      }
-      if (argumentName === REQUIRE_ONE_SLICING_ARGUMENT && argumentNode.value.kind === Kind.BOOLEAN) {
-        listSizeConfig.requireOneSlicingArgument = argumentNode.value.value;
-      }
+      switch (argumentName) {
+        case ASSUMED_SIZE:
+          if (argumentNode.value.kind === Kind.INT) {
+            listSizeConfig.assumedSize = parseInt((argumentNode.value as IntValueNode).value, 10);
+          }
+          break;
+        case REQUIRE_ONE_SLICING_ARGUMENT:
+          if (argumentNode.value.kind === Kind.BOOLEAN) {
+            listSizeConfig.requireOneSlicingArgument = argumentNode.value.value;
+          }
+          break;
+        case SLICING_ARGUMENTS:
+          let argumentValues: ReadonlyArray<ValueNode>;
+          if (argumentNode.value.kind === Kind.LIST) {
+            argumentValues = (argumentNode.value as ListValueNode).values;
+          } else if (argumentNode.value.kind === Kind.STRING) {
+            argumentValues = [argumentNode.value];
+          } else {
+            continue;
+          }
+          if (!listSizeConfig.slicingArguments) {
+            listSizeConfig.slicingArguments = [];
+          }
+          for (const valueNode of argumentValues) {
+            if (valueNode.kind !== Kind.STRING) {
+              continue;
+            }
 
-      if (argumentName === SLICING_ARGUMENTS) {
-        let stringValues: readonly ValueNode[];
-        if (argumentNode.value.kind === Kind.LIST) {
-          stringValues = (argumentNode.value as ListValueNode).values;
-        } else if (argumentNode.value.kind === Kind.STRING) {
-          stringValues = [argumentNode.value];
-        } else {
-          continue;
-        }
-        if (!listSizeConfig.slicingArguments) {
-          listSizeConfig.slicingArguments = [];
-        }
-        for (const valueNode of stringValues) {
-          if (valueNode.kind !== Kind.STRING) {
-            continue;
-          }
+            const slicingArgName = (valueNode as StringValueNode).value;
+            const argData = data.argumentDataByName.get(slicingArgName);
+            if (!argData) {
+              errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, slicingArgName));
+              continue;
+            }
 
-          const slicingArgName = (valueNode as StringValueNode).value;
-          const argData = data.argumentDataByName.get(slicingArgName);
-          if (!argData) {
-            errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, slicingArgName));
-            continue;
-          }
+            const unwrappedType = argData.type.kind === Kind.NON_NULL_TYPE ? argData.type.type : argData.type;
+            if (unwrappedType.kind === Kind.LIST_TYPE || argData.namedTypeName !== INT_SCALAR) {
+              errorMessages.push(
+                listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgName, printTypeNode(argData.type)),
+              );
+              continue;
+            }
 
-          const unwrappedType = argData.type.kind === Kind.NON_NULL_TYPE ? argData.type.type : argData.type;
-          if (unwrappedType.kind === Kind.LIST_TYPE || argData.namedTypeName !== INT_SCALAR) {
-            errorMessages.push(
-              listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgName, printTypeNode(argData.type)),
-            );
+            listSizeConfig.slicingArguments.push(slicingArgName);
+          }
+          break;
+        case SIZED_FIELDS:
+          let fieldValues: ReadonlyArray<ValueNode>;
+          if (argumentNode.value.kind === Kind.LIST) {
+            fieldValues = (argumentNode.value as ListValueNode).values;
+          } else if (argumentNode.value.kind === Kind.STRING) {
+            fieldValues = [argumentNode.value];
+          } else {
             continue;
           }
-
-          listSizeConfig.slicingArguments.push(slicingArgName);
-        }
-      }
-
-      if (argumentName === SIZED_FIELDS) {
-        let stringValues: readonly ValueNode[];
-        if (argumentNode.value.kind === Kind.LIST) {
-          stringValues = (argumentNode.value as ListValueNode).values;
-        } else if (argumentNode.value.kind === Kind.STRING) {
-          stringValues = [argumentNode.value];
-        } else {
-          continue;
-        }
-        if (stringValues.length < 1) {
-          continue;
-        }
-        hasSizedFields = true;
-        if (!listSizeConfig.sizedFields) {
-          listSizeConfig.sizedFields = [];
-        }
-        const returnTypeName = data.namedTypeName;
-        const returnTypeData = this.parentDefinitionDataByTypeName.get(returnTypeName);
-        if (!returnTypeData || !isParentDataCompositeOutputType(returnTypeData)) {
-          errorMessages.push(listSizeSizedFieldsInvalidReturnTypeErrorMessage(directiveCoords, returnTypeName));
-          continue;
-        }
-        for (const valueNode of stringValues) {
-          if (valueNode.kind !== Kind.STRING) {
+          if (fieldValues.length < 1) {
             continue;
           }
-          const sizedFieldName = (valueNode as StringValueNode).value;
-          const fieldData = returnTypeData.fieldDataByName.get(sizedFieldName);
-          if (!fieldData) {
-            errorMessages.push(listSizeSizedFieldNotFoundErrorMessage(directiveCoords, sizedFieldName, returnTypeName));
+          hasSizedFields = true;
+          if (!listSizeConfig.sizedFields) {
+            listSizeConfig.sizedFields = [];
+          }
+          const returnTypeName = data.namedTypeName;
+          const returnTypeData = this.parentDefinitionDataByTypeName.get(returnTypeName);
+          if (!returnTypeData || !isParentDataCompositeOutputType(returnTypeData)) {
+            errorMessages.push(listSizeSizedFieldsInvalidReturnTypeErrorMessage(directiveCoords, returnTypeName));
             continue;
           }
-          if (!isTypeNodeListType(fieldData.type)) {
-            errorMessages.push(
-              listSizeSizedFieldNotListErrorMessage(
-                directiveCoords,
-                sizedFieldName,
-                returnTypeName,
-                printTypeNode(fieldData.type),
-              ),
-            );
-            continue;
+          for (const valueNode of fieldValues) {
+            if (valueNode.kind !== Kind.STRING) {
+              continue;
+            }
+            const sizedFieldName = (valueNode as StringValueNode).value;
+            const fieldData = returnTypeData.fieldDataByName.get(sizedFieldName);
+            if (!fieldData) {
+              errorMessages.push(listSizeSizedFieldNotFoundErrorMessage(directiveCoords, sizedFieldName, returnTypeName));
+              continue;
+            }
+            if (!isTypeNodeListType(fieldData.type)) {
+              errorMessages.push(
+                listSizeSizedFieldNotListErrorMessage(
+                  directiveCoords,
+                  sizedFieldName,
+                  returnTypeName,
+                  printTypeNode(fieldData.type),
+                ),
+              );
+              continue;
+            }
+            listSizeConfig.sizedFields.push(sizedFieldName);
           }
-          listSizeConfig.sizedFields.push(sizedFieldName);
-        }
+          break;
       }
     }
 
