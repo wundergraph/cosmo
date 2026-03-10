@@ -3,7 +3,7 @@ import {
   type DirectiveArgumentCoords,
   type FieldCoords,
   type FieldName,
-  type TypeName
+  type TypeName,
 } from '../types/types';
 
 export type NatsEventType = 'subscribe' | 'publish' | 'request';

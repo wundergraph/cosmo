@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { parse, ROUTER_COMPATIBILITY_VERSION_ONE, Subgraph } from '../../../src';
+import { parse, ROUTER_COMPATIBILITY_VERSION_ONE, type Subgraph } from '../../../src';
 import { COST_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {
   federateSubgraphsSuccess,

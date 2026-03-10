@@ -25,7 +25,7 @@ import {
   type TypeDefinitionNode,
   type TypeExtensionNode,
   type TypeNode,
-  ValueNode,
+  type ValueNode,
   visit,
 } from 'graphql';
 import {
@@ -184,13 +184,13 @@ import {
 } from '../constants/strings';
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
-  ConfigurationData,
-  Costs,
-  EventConfiguration,
-  FieldListSizeConfiguration,
-  FieldWeightConfiguration,
-  NatsEventType,
-  RequiredFieldConfiguration,
+  type ConfigurationData,
+  type Costs,
+  type EventConfiguration,
+  type FieldListSizeConfiguration,
+  type FieldWeightConfiguration,
+  type NatsEventType,
+  type RequiredFieldConfiguration,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import { recordSubgraphName } from '../subgraph/subgraph';
@@ -370,19 +370,19 @@ import {
   numberToOrdinal,
 } from '../../utils/utils';
 import {
-  AddInputValueDataByNodeParams,
-  ConditionalFieldSetValidationResult,
-  ExtractArgumentDataResult,
-  FieldSetData,
-  FieldSetParentResult,
-  HandleCostDirectiveParams,
-  HandleListSizeDirectiveParams,
-  HandleOverrideDirectiveParams,
-  HandleRequiresScopesDirectiveParams,
-  HandleSemanticNonNullDirectiveParams,
-  KeyFieldSetData,
-  UpsertInputObjectResult,
-  ValidateDirectiveParams,
+  type AddInputValueDataByNodeParams,
+  type ConditionalFieldSetValidationResult,
+  type ExtractArgumentDataResult,
+  type FieldSetData,
+  type FieldSetParentResult,
+  type HandleCostDirectiveParams,
+  type HandleListSizeDirectiveParams,
+  type HandleOverrideDirectiveParams,
+  type HandleRequiresScopesDirectiveParams,
+  type HandleSemanticNonNullDirectiveParams,
+  type KeyFieldSetData,
+  type UpsertInputObjectResult,
+  type ValidateDirectiveParams,
 } from './types';
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
 import { type ImplementationErrors, type InvalidFieldImplementation } from '../../utils/types';
@@ -2560,7 +2560,9 @@ export class NormalizationFactory {
             const sizedFieldName = (valueNode as StringValueNode).value;
             const fieldData = returnTypeData.fieldDataByName.get(sizedFieldName);
             if (!fieldData) {
-              errorMessages.push(listSizeSizedFieldNotFoundErrorMessage(directiveCoords, sizedFieldName, returnTypeName));
+              errorMessages.push(
+                listSizeSizedFieldNotFoundErrorMessage(directiveCoords, sizedFieldName, returnTypeName),
+              );
               continue;
             }
             if (!isTypeNodeListType(fieldData.type)) {

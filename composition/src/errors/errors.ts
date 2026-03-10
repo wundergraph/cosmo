@@ -53,7 +53,7 @@ import {
   type DirectiveArgumentCoords,
   type FieldName,
   type NodeType,
-  type TypeName
+  type TypeName,
 } from '../types/types';
 
 export const minimumSubgraphRequirementError = new Error('At least one subgraph is required for federation.');
@@ -1705,7 +1705,10 @@ export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOf
   );
 }
 
-export function listSizeInvalidSlicingArgumentErrorMessage(directiveCoords: DirectiveArgumentCoords, argumentName: ArgumentName): string {
+export function listSizeInvalidSlicingArgumentErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  argumentName: ArgumentName,
+): string {
   return ` The "slicingArguments" value "${argumentName}" on "${directiveCoords}" does not reference a defined argument on this field.`;
 }
 
@@ -1760,7 +1763,9 @@ export function listSizeSizedFieldsInvalidReturnTypeErrorMessage(
   );
 }
 
-export function listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords: DirectiveArgumentCoords): string {
+export function listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+): string {
   return (
     ` The "@listSize" directive on "${directiveCoords}" defines both "assumedSize" and "slicingArguments".` +
     ` When both are used, "requireOneSlicingArgument" must be set to false.`

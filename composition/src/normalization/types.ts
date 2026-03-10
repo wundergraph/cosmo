@@ -7,7 +7,7 @@ import {
   type SchemaDefinitionNode,
   type SchemaExtensionNode,
 } from 'graphql';
-import { type ConfigurationData, Costs } from '../router-configuration/types';
+import { type ConfigurationData, type Costs } from '../router-configuration/types';
 import {
   type AuthorizationData,
   type ConditionalFieldData,
