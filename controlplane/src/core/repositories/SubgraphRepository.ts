@@ -2318,7 +2318,7 @@ export class SubgraphRepository {
       inspectedOperations,
     });
 
-    if (subgraph && sceResult?.lintIssuesBySubgraph) {
+    if (sceResult?.lintIssuesBySubgraph) {
       const sceLintIssues = sceResult.lintIssuesBySubgraph.get(subgraph?.name ?? subgraphName);
 
       if (sceLintIssues && sceLintIssues.length > 0) {
