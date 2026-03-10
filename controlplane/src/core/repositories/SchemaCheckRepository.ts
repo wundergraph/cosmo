@@ -1344,7 +1344,7 @@ export class SchemaCheckRepository {
       subgraphs: [...checkSubgraphs.entries()].map(([subgraphName, { subgraph, ...check }]) => ({
         id: subgraph?.id ?? '',
         name: subgraphName,
-        labels: subgraph?.labels ?? [],
+        labels: subgraph?.labels ?? check.labels ?? [],
         schemaSDL: subgraph?.schemaSDL ?? '',
         schemaChanges: check.schemaChanges,
         lintIssues: check.lintIssues,
@@ -1361,8 +1361,14 @@ export class SchemaCheckRepository {
       for (const [subgraphName, check] of checkSubgraphs.entries()) {
         const sceLintIssues = sceResult.lintIssuesBySubgraph.get(subgraphName);
         if (sceLintIssues && sceLintIssues.length > 0) {
+          const sceLintWarnings = sceLintIssues.filter((issue) => issue.severity === LintSeverity.warn);
+          const sceLintErrors = sceLintIssues.filter((issue) => issue.severity === LintSeverity.error);
+
           check.lintIssues.warnings.push(...sceLintIssues.filter((issue) => issue.severity === LintSeverity.warn));
           check.lintIssues.errors.push(...sceLintIssues.filter((issue) => issue.severity === LintSeverity.error));
+
+          lintWarnings.push(...sceLintWarnings.map((issue) => new LintIssue({ ...issue, subgraphName })));
+          lintErrors.push(...sceLintErrors.map((issue) => new LintIssue({ ...issue, subgraphName })));
 
           // Then, we need to add the overwritten lint issues
           await schemaLintRepo.addSchemaCheckLintIssues({
