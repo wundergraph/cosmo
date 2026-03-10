@@ -3,7 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { FederatedGraphSchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import {
+  CheckOperationUsageStats,
+  CompositionError,
+  FederatedGraphSchemaChange,
+  GraphPruningIssue,
+  LintIssue,
+  SchemaChange,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JsonOutputBuilder } from '../src/json-output-builder.js';
 import type { JsonOutputDescriptor } from '../src/json-output-builder.js';
 
@@ -101,18 +108,18 @@ describe('JsonOutputBuilder', () => {
   });
 
   describe('schema changes', () => {
-    const change = {
+    const change = new SchemaChange({
       changeType: 'FIELD_REMOVED',
       message: 'field removed',
       path: 'Query.foo',
       isBreaking: true,
-    } as any;
-    const nonChange = {
+    });
+    const nonChange = new SchemaChange({
       changeType: 'FIELD_ADDED',
       message: 'field added',
       path: 'Query.bar',
       isBreaking: false,
-    } as any;
+    });
 
     it('addBreakingChanges accumulates changes', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
@@ -137,8 +144,18 @@ describe('JsonOutputBuilder', () => {
   });
 
   describe('composition', () => {
-    const err = { message: 'compose error', federatedGraphName: 'g', namespace: 'ns' } as any;
-    const warn = { message: 'compose warning', federatedGraphName: 'g', namespace: 'ns' } as any;
+    const err = new CompositionError({
+      message: 'compose error',
+      federatedGraphName: 'g',
+      namespace: 'ns',
+      featureFlag: '',
+    });
+    const warn = new CompositionError({
+      message: 'compose warning',
+      federatedGraphName: 'g',
+      namespace: 'ns',
+      featureFlag: '',
+    });
 
     it('addCompositionErrors accumulates', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
@@ -158,8 +175,8 @@ describe('JsonOutputBuilder', () => {
   });
 
   describe('lint', () => {
-    const lintErr = { message: 'lint error', lintRuleType: 'RULE_A', issueLocation: { line: 1, column: 1 } } as any;
-    const lintWarn = { message: 'lint warn', lintRuleType: 'RULE_B', issueLocation: { line: 2, column: 1 } } as any;
+    const lintErr = new LintIssue({ message: 'lint error', lintRuleType: 'RULE_A' });
+    const lintWarn = new LintIssue({ message: 'lint warn', lintRuleType: 'RULE_B' });
 
     it('addLintErrors accumulates', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
@@ -177,19 +194,18 @@ describe('JsonOutputBuilder', () => {
   });
 
   describe('graphPrune', () => {
-    const pruneErr = {
+    const pruneErr = new GraphPruningIssue({
       message: 'prune error',
       graphPruningRuleType: 'RULE',
       federatedGraphName: 'g',
       fieldPath: 'f',
-      issueLocation: { line: 1 },
-    } as any;
-    const pruneWarn = {
+    });
+    const pruneWarn = new GraphPruningIssue({
       message: 'prune warn',
       graphPruningRuleType: 'RULE',
       federatedGraphName: 'g',
       fieldPath: 'f',
-    } as any;
+    });
 
     it('addGraphPruneErrors accumulates', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
@@ -261,8 +277,8 @@ describe('JsonOutputBuilder', () => {
     });
 
     it('setOperationUsageStats does not overwrite if already set', () => {
-      const stats1 = { totalOperations: 5 } as any;
-      const stats2 = { totalOperations: 99 } as any;
+      const stats1 = new CheckOperationUsageStats({ totalOperations: 5 });
+      const stats2 = new CheckOperationUsageStats({ totalOperations: 99 });
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
       b.setOperationUsageStats(stats1).setOperationUsageStats(stats2);
       expect(b.build().operationUsageStats?.totalOperations).toBe(5);
