@@ -345,6 +345,47 @@ describe('@cost directive tests', () => {
         ),
       );
     });
+
+    describe('per-subgraph cost isolation tests', () => {
+      test('that the same field with @cost in two subgraphs produces separate cost configs', () => {
+        const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+          [subgraphAWithCostOnSharedField, subgraphBWithCostOnSharedField],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+
+        const costsA = subgraphConfigBySubgraphName.get('subgraph-cost-shared-a')?.costs;
+        const costsB = subgraphConfigBySubgraphName.get('subgraph-cost-shared-b')?.costs;
+
+        expect(costsA?.fieldWeights.get('User.name')).toEqual({
+          typeName: 'User',
+          fieldName: 'name',
+          weight: 10,
+        });
+        expect(costsB?.fieldWeights.get('User.name')).toEqual({
+          typeName: 'User',
+          fieldName: 'name',
+          weight: 20,
+        });
+      });
+
+      test('that fields unique to each subgraph only appear in their respective cost configs', () => {
+        const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+          [subgraphAWithCostOnSharedField, subgraphBWithCostOnSharedField],
+          ROUTER_COMPATIBILITY_VERSION_ONE,
+        );
+
+        const costsA = subgraphConfigBySubgraphName.get('subgraph-cost-shared-a')?.costs;
+        const costsB = subgraphConfigBySubgraphName.get('subgraph-cost-shared-b')?.costs;
+
+        // subgraph-a owns Query.user (weight: 5); subgraph-b should not have it
+        expect(costsA?.fieldWeights.get('Query.user')?.weight).toBe(5);
+        expect(costsB?.fieldWeights.get('Query.user')).toBeUndefined();
+
+        // subgraph-b owns User.age (weight: 3); subgraph-a should not have it
+        expect(costsB?.fieldWeights.get('User.age')?.weight).toBe(3);
+        expect(costsA?.fieldWeights.get('User.age')).toBeUndefined();
+      });
+    });
   });
 
   describe('validation tests', () => {
@@ -861,6 +902,35 @@ const subgraphWithCostOnExtensionType: Subgraph = {
 
     extend type User @cost(weight: 50) {
       name: String!
+    }
+  `),
+};
+
+// subgraph-a: owns the User entity and Query.user; both define User.name as shareable
+const subgraphAWithCostOnSharedField: Subgraph = {
+  name: 'subgraph-cost-shared-a',
+  url: '',
+  definitions: parse(`
+    type Query {
+      user(id: ID!): User @cost(weight: 5)
+    }
+
+    type User @key(fields: "id") {
+      id: ID!
+      name: String! @shareable @cost(weight: 10)
+    }
+  `),
+};
+
+// subgraph-b: extends User, also provides User.name (shareable) with a different weight
+const subgraphBWithCostOnSharedField: Subgraph = {
+  name: 'subgraph-cost-shared-b',
+  url: '',
+  definitions: parse(`
+    type User @key(fields: "id") {
+      id: ID!
+      name: String! @shareable @cost(weight: 20)
+      age: Int! @cost(weight: 3)
     }
   `),
 };
