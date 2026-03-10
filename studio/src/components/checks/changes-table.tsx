@@ -1,40 +1,26 @@
-import { cn } from "@/lib/utils";
-import {
-  BarChartIcon,
-  CheckIcon,
-  Cross1Icon,
-  GlobeIcon,
-} from "@radix-ui/react-icons";
-import { useQueryClient } from "@tanstack/react-query";
-import { createConnectQueryKey, useMutation } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { cn } from '@/lib/utils';
+import { BarChartIcon, CheckIcon, Cross1Icon, GlobeIcon } from '@radix-ui/react-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   createOperationOverrides,
   getCheckOperations,
   removeOperationOverrides,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { SchemaChange } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { useContext } from "react";
-import { GraphContext } from "../layout/graph-layout";
-import { Button } from "../ui/button";
-import { Switch } from "../ui/switch";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "../ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { useToast } from "../ui/use-toast";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
-import { useOpenUsage } from "./use-open-usage";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { SchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useContext } from 'react';
+import { GraphContext } from '../layout/graph-layout';
+import { Button } from '../ui/button';
+import { Switch } from '../ui/switch';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '../ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { useToast } from '../ui/use-toast';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { useOpenUsage } from './use-open-usage';
 
 export const ChangesTable = ({
   changes,
@@ -63,9 +49,7 @@ export const ChangesTable = ({
             <TableHead className="w-[200px]">Change</TableHead>
             <TableHead>Description</TableHead>
             {changes[0].subgraphName && <TableHead>Subgraph</TableHead>}
-            {operationHash && !hasIgnoreAll && (
-              <TableHead>Overrides</TableHead>
-            )}
+            {operationHash && !hasIgnoreAll && <TableHead>Overrides</TableHead>}
             <TableHead className="w-2/12 2xl:w-1/12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -113,13 +97,13 @@ const Row = ({
 }) => {
   const router = useRouter();
   const { toast } = useToast();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
   const graphContext = useContext(GraphContext);
-  const pageNumber = router.query.page
-    ? parseInt(router.query.page as string)
-    : 1;
-  const limit = Number.parseInt((router.query.pageSize as string) || "10");
+  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
+  const limit = Number.parseInt((router.query.pageSize as string) || '10');
 
   const client = useQueryClient();
 
@@ -136,61 +120,47 @@ const Row = ({
     });
   };
 
-  const { mutate: createOverrides, isPending: creatingOverrides } = useMutation(
-    createOperationOverrides,
-    {
-      onSuccess: (d) => {
-        if (d.response?.code === EnumStatusCode.OK) {
-          invalidateCheckOperations();
-        } else {
-          toast({
-            description:
-              d.response?.details ??
-              "Could not update overrides. Please try again.",
-            duration: 3000,
-          });
-        }
-      },
-      onError: () => {
+  const { mutate: createOverrides, isPending: creatingOverrides } = useMutation(createOperationOverrides, {
+    onSuccess: (d) => {
+      if (d.response?.code === EnumStatusCode.OK) {
+        invalidateCheckOperations();
+      } else {
         toast({
-          description: "Could not update overrides. Please try again.",
+          description: d.response?.details ?? 'Could not update overrides. Please try again.',
           duration: 3000,
         });
-      },
+      }
     },
-  );
+    onError: () => {
+      toast({
+        description: 'Could not update overrides. Please try again.',
+        duration: 3000,
+      });
+    },
+  });
 
-  const { mutate: removeOverrides, isPending: removingOverrides } = useMutation(
-    removeOperationOverrides,
-    {
-      onSuccess: (d) => {
-        if (d.response?.code === EnumStatusCode.OK) {
-          invalidateCheckOperations();
-        } else {
-          toast({
-            description:
-              d.response?.details ??
-              "Could not remove override. Please try again.",
-            duration: 3000,
-          });
-        }
-      },
-      onError: () => {
+  const { mutate: removeOverrides, isPending: removingOverrides } = useMutation(removeOperationOverrides, {
+    onSuccess: (d) => {
+      if (d.response?.code === EnumStatusCode.OK) {
+        invalidateCheckOperations();
+      } else {
         toast({
-          description: "Could not remove override. Please try again.",
+          description: d.response?.details ?? 'Could not remove override. Please try again.',
           duration: 3000,
         });
-      },
+      }
     },
-  );
+    onError: () => {
+      toast({
+        description: 'Could not remove override. Please try again.',
+        duration: 3000,
+      });
+    },
+  });
 
   return (
     <TableRow key={changeType + message} className="group">
-      <TableCell
-        className={cn(
-          isBreaking ? "text-destructive" : "text-muted-foreground",
-        )}
-      >
+      <TableCell className={cn(isBreaking ? 'text-destructive' : 'text-muted-foreground')}>
         <div className="flex items-center gap-2">
           {isBreaking ? <Cross1Icon /> : <CheckIcon />}
           <span className="block w-[160px] truncate" title={changeType}>
@@ -211,28 +181,28 @@ const Row = ({
                   onCheckedChange={() =>
                     hasOverride
                       ? removeOverrides({
-                        graphName: graphContext?.graph?.name,
-                        namespace: graphContext?.graph?.namespace,
-                        operationHash,
-                        changes: [
-                          {
-                            changeType,
-                            path,
-                          },
-                        ],
-                      })
+                          graphName: graphContext?.graph?.name,
+                          namespace: graphContext?.graph?.namespace,
+                          operationHash,
+                          changes: [
+                            {
+                              changeType,
+                              path,
+                            },
+                          ],
+                        })
                       : createOverrides({
-                        graphName: graphContext?.graph?.name,
-                        namespace: graphContext?.graph?.namespace,
-                        operationHash,
-                        operationName,
-                        changes: [
-                          {
-                            changeType,
-                            path,
-                          },
-                        ],
-                      })
+                          graphName: graphContext?.graph?.name,
+                          namespace: graphContext?.graph?.namespace,
+                          operationHash,
+                          operationName,
+                          changes: [
+                            {
+                              changeType,
+                              path,
+                            },
+                          ],
+                        })
                   }
                 />
               </div>
@@ -240,13 +210,11 @@ const Row = ({
             <TooltipContent>
               {hasOverride ? (
                 <>
-                  Override active: future checks will <strong>not</strong>{" "}
-                  treat this change to {path} as breaking for this operation.
+                  Override active: future checks will <strong>not</strong> treat this change to {path} as breaking for
+                  this operation.
                 </>
               ) : (
-                <>
-                  Toggle to prevent future checks from treating this change to {path} as breaking for this operation.
-                </>
+                <>Toggle to prevent future checks from treating this change to {path} as breaking for this operation.</>
               )}
             </TooltipContent>
           </Tooltip>
@@ -256,26 +224,20 @@ const Row = ({
         <div className="flex items-center gap-x-2">
           <Tooltip delayDuration={100}>
             <TooltipTrigger asChild>
-              <Button
-                disabled={!path}
-                variant="ghost"
-                size="icon-sm"
-                asChild
-                className="table-action"
-              >
+              <Button disabled={!path} variant="ghost" size="icon-sm" asChild className="table-action">
                 <Link
                   href={
                     path
                       ? {
-                        pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
-                        query: {
-                          organizationSlug,
-                          namespace,
-                          slug: router.query.slug,
-                          typename: path?.split(".")?.[0],
-                        },
-                      }
-                      : "#"
+                          pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
+                          query: {
+                            organizationSlug,
+                            namespace,
+                            slug: router.query.slug,
+                            typename: path?.split('.')?.[0],
+                          },
+                        }
+                      : '#'
                   }
                 >
                   <GlobeIcon />
@@ -283,9 +245,7 @@ const Row = ({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {path
-                ? "Open in Explorer"
-                : "Cannot open in explorer. Path to type unavailable"}
+              {path ? 'Open in Explorer' : 'Cannot open in explorer. Path to type unavailable'}
             </TooltipContent>
           </Tooltip>
 

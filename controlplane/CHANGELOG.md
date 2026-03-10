@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.200.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.199.0...controlplane@0.200.0) (2026-03-10)
+
+### Features
+
+* **keycloak:** update to 26.5.4 ([#2612](https://github.com/wundergraph/cosmo/issues/2612)) ([47a0fb5](https://github.com/wundergraph/cosmo/commit/47a0fb5ce166d2e489b8214fcd7da2e6c0b7f11d)) (@pepol)
+
+# [0.199.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.198.0...controlplane@0.199.0) (2026-03-10)
+
+### Features
+
+* add composition options ([#2595](https://github.com/wundergraph/cosmo/issues/2595)) ([1cba9ab](https://github.com/wundergraph/cosmo/commit/1cba9ab997a64e8bea18a7f6f01507f2ec2dd82b)) (@Aenimus)
+
 # [0.198.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.197.0...controlplane@0.198.0) (2026-03-09)
 
 ### Features

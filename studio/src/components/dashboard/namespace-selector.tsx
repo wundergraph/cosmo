@@ -1,15 +1,15 @@
-import { CommandItem, CommandGroup, CommandSeparator } from "@/components/ui/command";
-import { Popover, PopoverTrigger } from "@/components/ui/popover";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useRouter } from "next/router";
-import { useMemo, useState } from "react";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
-import * as React from "react";
-import { CheckIcon, CaretSortIcon } from "@radix-ui/react-icons";
-import { docsBaseURL } from "@/lib/constants";
-import { WorkspaceCommandWrapper } from "./workspace-command-wrapper"
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { CommandItem, CommandGroup, CommandSeparator } from '@/components/ui/command';
+import { Popover, PopoverTrigger } from '@/components/ui/popover';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { useRouter } from 'next/router';
+import { useMemo, useState } from 'react';
+import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import * as React from 'react';
+import { CheckIcon, CaretSortIcon } from '@radix-ui/react-icons';
+import { docsBaseURL } from '@/lib/constants';
+import { WorkspaceCommandWrapper } from './workspace-command-wrapper';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
 interface NamespaceSelectorProps {
   isViewingGraphOrSubgraph: boolean;
@@ -24,23 +24,15 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
   const pathname = useMemo(
-    () => router.pathname.split('/').length === 3 ? router.pathname : '/[organizationSlug]/graphs',
-    [router.pathname]
+    () => (router.pathname.split('/').length === 3 ? router.pathname : '/[organizationSlug]/graphs'),
+    [router.pathname],
   );
 
   const namespaces = Array.from(namespaceByName.keys());
   if (isLoading) {
     return (
-      <span
-        className="flex justify-start items-center text-primary text-sm bg-primary/15 rounded-lg flex-shrink-0 animate-pulse px-3 py-1.5 gap-x-4"
-      >
-        <span
-          className={cn(
-            truncateNamespace && "max-w-[180px] lg:max-w-xs truncate"
-          )}
-        >
-          {namespace.name}
-        </span>
+      <span className="flex flex-shrink-0 animate-pulse items-center justify-start gap-x-4 rounded-lg bg-primary/15 px-3 py-1.5 text-sm text-primary">
+        <span className={cn(truncateNamespace && 'max-w-[180px] truncate lg:max-w-xs')}>{namespace.name}</span>
         <CaretSortIcon className="h-4 w-4 flex-shrink-0 opacity-50" />
       </span>
     );
@@ -56,14 +48,14 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
               query: { organizationSlug, namespace: namespace.name },
             }}
             className={cn(
-              "bg-primary/15 hover:bg-primary/30 text-primary transition-colors duration-150 pl-3 pr-2 py-1.5 rounded-l-lg text-sm flex-shrink-0",
-              truncateNamespace && "max-w-[180px] lg:max-w-xs truncate"
+              'flex-shrink-0 rounded-l-lg bg-primary/15 py-1.5 pl-3 pr-2 text-sm text-primary transition-colors duration-150 hover:bg-primary/30',
+              truncateNamespace && 'max-w-[180px] truncate lg:max-w-xs',
             )}
             onClick={() => setNamespace(namespace.name, false)}
           >
             {namespace.name}
           </Link>
-          <div className="w-[1px] h-8 bg-primary/30" />
+          <div className="h-8 w-[1px] bg-primary/30" />
         </>
       )}
       <Popover
@@ -81,18 +73,14 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
           <button
             type="button"
             className={cn(
-              "bg-primary/15 hover:bg-primary/30 text-primary transition-colors duration-150 text-sm flex-shrink-0 border-none outline-none",
+              'flex-shrink-0 border-none bg-primary/15 text-sm text-primary outline-none transition-colors duration-150 hover:bg-primary/30',
               isViewingGraphOrSubgraph
-                ? "rounded-r-lg pl-2 pr-3 py-2"
-                : "flex justify-start items-center gap-4 rounded-lg px-3 py-1.5",
+                ? 'rounded-r-lg py-2 pl-2 pr-3'
+                : 'flex items-center justify-start gap-4 rounded-lg px-3 py-1.5',
             )}
           >
             {!isViewingGraphOrSubgraph && (
-              <span
-                className={cn(truncateNamespace && "max-w-[180px] lg:max-w-xs truncate")}
-              >
-                {namespace.name}
-              </span>
+              <span className={cn(truncateNamespace && 'max-w-[180px] truncate lg:max-w-xs')}>{namespace.name}</span>
             )}
             <CaretSortIcon className="h-4 w-4 flex-shrink-0 opacity-50" />
           </button>
@@ -110,12 +98,8 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
           <div className="max-w-xs p-2 ">
             <p>Namespaces</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Easily switch between namespaces. Learn more{" "}
-              <Link
-                target="_blank"
-                className="text-primary"
-                href={`${docsBaseURL}/cli/essentials#namespaces`}
-              >
+              Easily switch between namespaces. Learn more{' '}
+              <Link target="_blank" className="text-primary" href={`${docsBaseURL}/cli/essentials#namespaces`}>
                 here.
               </Link>
             </p>
@@ -127,7 +111,7 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
                 {namespaces.map((ns) => (
                   <CommandItem
                     key={`namespace-${ns}`}
-                    className="cursor-pointer pl-4 gap-2 justify-between w-full"
+                    className="w-full cursor-pointer justify-between gap-2 pl-4"
                     value={ns}
                     onSelect={() => {
                       router.push({
@@ -137,14 +121,12 @@ export function NamespaceSelector({ isViewingGraphOrSubgraph, truncateNamespace 
 
                       setOpen(false);
                       setNamespace(ns, false);
-                    }}>
+                    }}
+                  >
                     {ns}
 
                     <CheckIcon
-                      className={cn(
-                        'w-4 h-4 flex-shrink-0',
-                        ns === namespace.name ? 'opacity-100' : 'opacity-0'
-                      )}
+                      className={cn('h-4 w-4 flex-shrink-0', ns === namespace.name ? 'opacity-100' : 'opacity-0')}
                     />
                   </CommandItem>
                 ))}

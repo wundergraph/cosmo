@@ -58,7 +58,6 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/service"
 	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router/core"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -66,6 +65,7 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 var ErrEnvironmentClosed = errors.New("test environment closed")
@@ -2923,7 +2923,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, nats
 	}
 	natsPubSubByProviderID := make(map[string]pubsubNats.Adapter, len(DemoNatsProviders))
 	for _, sourceName := range DemoNatsProviders {
-		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", datasource.ProviderOpts{
+		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", false, datasource.ProviderOpts{
 			StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
 		})
 		require.NoError(t, err)

@@ -9,6 +9,7 @@ import {
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { PublicError, UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { ContractRepository } from '../../repositories/ContractRepository.js';
@@ -16,14 +17,7 @@ import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepos
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import {
-  enrichLogger,
-  getLogger,
-  handleError,
-  isValidGraphName,
-  isValidSchemaTags,
-  newCompositionOptions,
-} from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidGraphName, isValidSchemaTags } from '../../util.js';
 
 export function createContract(
   opts: RouterOptions,
@@ -110,6 +104,10 @@ export function createContract(
       const feature = await orgRepo.getFeature({
         organizationId: authContext.organizationId,
         featureId: 'federated-graphs',
+      });
+      const ignoreExternalKeysFeature = await orgRepo.getFeature({
+        organizationId: authContext.organizationId,
+        featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
       });
 
       const limit = feature?.limit === -1 ? undefined : feature?.limit;
@@ -204,7 +202,10 @@ export function createContract(
         },
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
-        compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+        compositionOptions: {
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+        },
         federatedGraphs: [{ ...contractGraph, contract }],
       });
 
