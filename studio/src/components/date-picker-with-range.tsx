@@ -1,33 +1,27 @@
-import { Button, ButtonProps } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import useWindowSize from "@/hooks/use-window-size";
-import { formatDate } from "@/lib/format-date";
-import { cn } from "@/lib/utils";
-import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
-import { addDays, addYears, subHours, subYears } from "date-fns";
-import { useCallback, useEffect, useState } from "react";
-import { Input } from "./ui/input";
+import { Button, ButtonProps } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import useWindowSize from '@/hooks/use-window-size';
+import { formatDate } from '@/lib/format-date';
+import { cn } from '@/lib/utils';
+import CalendarIcon from '@heroicons/react/24/outline/CalendarIcon';
+import { addDays, addYears, subHours, subYears } from 'date-fns';
+import { useCallback, useEffect, useState } from 'react';
+import { Input } from './ui/input';
 
 const ranges = {
-  1: "Last hour",
-  4: "Last 4 hours",
-  24: "Last day",
-  72: "Last 3 days",
-  168: "Last week",
-  720: "Last month",
+  1: 'Last hour',
+  4: 'Last 4 hours',
+  24: 'Last day',
+  72: 'Last 3 days',
+  168: 'Last week',
+  720: 'Last month',
 } as const;
 
 export type Range = keyof typeof ranges;
 
 export const getRange = (range?: string | number): Range => {
-  return range && Number(range) in ranges
-    ? (Number(range) as Range)
-    : defaultRange;
+  return range && Number(range) in ranges ? (Number(range) as Range) : defaultRange;
 };
 
 const defaultRange = 24;
@@ -37,40 +31,21 @@ export type DateRange = {
   end?: Date;
 };
 
-const getFromDate = (from: Date, time = "00:00") => {
-  const [hours, minutes] = time.split(":").map((str) => parseInt(str, 10));
-  return new Date(
-    from.getFullYear(),
-    from.getMonth(),
-    from.getDate(),
-    hours,
-    minutes,
-  );
+const getFromDate = (from: Date, time = '00:00') => {
+  const [hours, minutes] = time.split(':').map((str) => parseInt(str, 10));
+  return new Date(from.getFullYear(), from.getMonth(), from.getDate(), hours, minutes);
 };
 
-const getToDate = (to: Date, time = "23:59") => {
-  const [hours, minutes] = time.split(":").map((str) => parseInt(str, 10));
-  return new Date(
-    to.getFullYear(),
-    to.getMonth(),
-    to.getDate(),
-    hours,
-    minutes,
-  );
+const getToDate = (to: Date, time = '23:59') => {
+  const [hours, minutes] = time.split(':').map((str) => parseInt(str, 10));
+  return new Date(to.getFullYear(), to.getMonth(), to.getDate(), hours, minutes);
 };
 
 const getFormattedTime = (date: Date) => {
-  return (
-    date.getHours().toString().padStart(2, "0") +
-    ":" +
-    date.getMinutes().toString().padStart(2, "0")
-  );
+  return date.getHours().toString().padStart(2, '0') + ':' + date.getMinutes().toString().padStart(2, '0');
 };
 
-export type DateRangePickerChangeHandler = (newVal: {
-  dateRange?: DateRange;
-  range?: Range;
-}) => void;
+export type DateRangePickerChangeHandler = (newVal: { dateRange?: DateRange; range?: Range }) => void;
 
 export function DatePickerWithRange({
   range,
@@ -78,27 +53,27 @@ export function DatePickerWithRange({
   onChange,
   onCancel,
   className,
-  align = "start",
+  align = 'start',
   size,
   calendarDaysLimit,
-}: Omit<React.HTMLAttributes<HTMLDivElement>, "onChange"> & {
+}: Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & {
   range?: Range;
   dateRange: DateRange;
   onChange: DateRangePickerChangeHandler;
   onCancel?: () => void;
-  align?: "start" | "center" | "end";
-  size?: ButtonProps["size"];
+  align?: 'start' | 'center' | 'end';
+  size?: ButtonProps['size'];
   calendarDaysLimit: number;
 }) {
   const { isMobile } = useWindowSize();
 
   const [selected, setSelectedDateRange] = useState(dateRange);
   const [selectedRange, setSelectedRange] = useState(range);
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
 
-  const setTime = (field: "start" | "end", time: string) => {
-    if (field === "start") {
+  const setTime = (field: 'start' | 'end', time: string) => {
+    if (field === 'start') {
       setStartTime(time);
     } else {
       setEndTime(time);
@@ -113,7 +88,7 @@ export function DatePickerWithRange({
     setSelectedRange(range);
     if (!range) {
       setStartTime(getFormattedTime(dateRange.start));
-      setEndTime(dateRange.end ? getFormattedTime(dateRange.end) : "");
+      setEndTime(dateRange.end ? getFormattedTime(dateRange.end) : '');
     } else {
       const end = new Date();
       setStartTime(getFormattedTime(subHours(end, range)));
@@ -147,13 +122,8 @@ export function DatePickerWithRange({
 
   const getValue = (): DateRange => {
     return {
-      start: getFromDate(
-        selected.start,
-        startTime === "" ? "00:00" : startTime,
-      ),
-      end:
-        selected?.end &&
-        getToDate(selected.end, endTime === "" ? "23:59" : endTime),
+      start: getFromDate(selected.start, startTime === '' ? '00:00' : startTime),
+      end: selected?.end && getToDate(selected.end, endTime === '' ? '23:59' : endTime),
     };
   };
 
@@ -169,14 +139,12 @@ export function DatePickerWithRange({
   };
 
   const handleTimeChange =
-    (field: "start" | "end"): React.ChangeEventHandler<HTMLInputElement> =>
+    (field: 'start' | 'end'): React.ChangeEventHandler<HTMLInputElement> =>
     (e) => {
       const time = e.target.value;
       setTime(field, time);
-      if (time) {
-        // if time is set, then we need to reset the range to 'custom'
-        setSelectedRange(undefined);
-      }
+      // any manual edit makes this a custom range, including clearing the field
+      setSelectedRange(undefined);
     };
 
   return (
@@ -190,12 +158,12 @@ export function DatePickerWithRange({
       <PopoverTrigger asChild>
         <Button
           id="date"
-          variant={"outline"}
+          variant={'outline'}
           size={size}
           className={cn(
-            "w-[220px] justify-start px-2.5 text-left font-normal",
+            'w-[220px] justify-start px-2.5 text-left font-normal',
             className,
-            !selected && "text-muted-foreground",
+            !selected && 'text-muted-foreground',
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
@@ -225,7 +193,7 @@ export function DatePickerWithRange({
                 <Button
                   variant="ghost"
                   className="w-full justify-start"
-                  data-active={selectedRange === Number(id) ? "" : undefined}
+                  data-active={selectedRange === Number(id) ? '' : undefined}
                   onClick={() => onRangeClick(Number(id) as Range)}
                   disabled={calendarDaysLimit * 24 < Number(id)}
                 >
@@ -237,11 +205,11 @@ export function DatePickerWithRange({
               <Button
                 variant="ghost"
                 className="w-full justify-start"
-                data-active={!selectedRange ? "" : undefined}
+                data-active={!selectedRange ? '' : undefined}
                 onClick={() => {
                   setSelectedRange(undefined);
-                  setStartTime("00:00");
-                  setEndTime("23:59");
+                  setStartTime('00:00');
+                  setEndTime('23:59');
                 }}
               >
                 Custom
@@ -259,8 +227,8 @@ export function DatePickerWithRange({
               }}
               onSelect={(range, day) => {
                 if (range) {
-                  setStartTime(range.from ? "00:00" : "");
-                  setEndTime(range.to ? "23:59" : "");
+                  setStartTime(range.from ? '00:00' : '');
+                  setEndTime(range.to ? '23:59' : '');
 
                   if (selected?.start && selected?.end) {
                     setSelectedDateRange({ start: day, end: undefined });
@@ -292,23 +260,13 @@ export function DatePickerWithRange({
               <p>
                 <label>
                   Start time
-                  <Input
-                    className="mt-1"
-                    type="time"
-                    value={startTime}
-                    onChange={handleTimeChange("start")}
-                  />
+                  <Input className="mt-1" type="time" value={startTime} onChange={handleTimeChange('start')} />
                 </label>
               </p>
               <p>
                 <label>
                   End time
-                  <Input
-                    className="mt-1"
-                    type="time"
-                    value={endTime}
-                    onChange={handleTimeChange("end")}
-                  />
+                  <Input className="mt-1" type="time" value={endTime} onChange={handleTimeChange('end')} />
                 </label>
               </p>
             </div>
