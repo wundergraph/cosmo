@@ -1,12 +1,12 @@
 import {
   getLeastRestrictiveMergedTypeNode,
-  GetMergedTypeFailure,
-  GetMergedTypeSuccess,
+  type GetMergedTypeFailure,
+  type GetMergedTypeSuccess,
   getMostRestrictiveMergedTypeNode,
   getMutableTypeNode,
   maximumTypeNestingExceededError,
 } from '../../src';
-import { Kind, TypeNode } from 'graphql';
+import { Kind, type TypeNode } from 'graphql';
 import { describe, expect, test } from 'vitest';
 import { stringToTypeNode } from './utils/utils';
 

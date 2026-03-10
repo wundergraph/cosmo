@@ -171,6 +171,7 @@ export default (opts: BaseCommandOptions) => {
     '--disable-resolvability-validation',
     'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
   );
+  command.option('--ignore-external-keys', 'This flag ignores errors related to true external entity keys.');
 
   command.action(async (options) => {
     const inputFile = resolve(options.input);
@@ -207,7 +208,10 @@ export default (opts: BaseCommandOptions) => {
           definitions: parse(s.sdl),
         };
       }),
-      options.disableResolvabilityValidation,
+      {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        ignoreExternalKeys: options.ignoreExternalKeys,
+      },
     );
 
     if (!result.success) {
@@ -587,7 +591,10 @@ async function buildFeatureFlagsConfig(
         url: normalizeURL(s.routingUrl),
         definitions: parse(s.sdl),
       })),
-      options.disableResolvabilityValidation,
+      {
+        disableResolvabilityValidation: options.disableResolvabilityValidation,
+        ignoreExternalKeys: options.ignoreExternalKeys,
+      },
     );
 
     if (!featureResult.success) {
