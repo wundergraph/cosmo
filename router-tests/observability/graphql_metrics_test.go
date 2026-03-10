@@ -1,7 +1,7 @@
 package integration
 
 import (
-	integration "github.com/wundergraph/cosmo/router-tests"
+	routertests "github.com/wundergraph/cosmo/router-tests"
 
 	"compress/gzip"
 	"io"
@@ -59,12 +59,12 @@ func TestGraphQLMetrics(t *testing.T) {
 		res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { employees { id } }`,
 		})
-		require.Equal(t, integration.EmployeesIDData, res.Body)
+		require.Equal(t, routertests.EmployeesIDData, res.Body)
 
 		res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 			Query: `query { employees { id } }`,
 		})
-		require.Equal(t, integration.EmployeesIDData, res.Body)
+		require.Equal(t, routertests.EmployeesIDData, res.Body)
 	})
 
 	select {

@@ -1,7 +1,7 @@
 package integration
 
 import (
-	integration "github.com/wundergraph/cosmo/router-tests"
+	routertests "github.com/wundergraph/cosmo/router-tests"
 
 	"bytes"
 	"encoding/json"
@@ -256,7 +256,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
-			require.Equal(t, integration.EmployeesIDData, res.Body)
+			require.Equal(t, routertests.EmployeesIDData, res.Body)
 			data, err := os.ReadFile(fp)
 			require.NoError(t, err)
 
@@ -359,7 +359,7 @@ func TestAccessLogsFileOutput(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
 				})
-				require.JSONEq(t, integration.EmployeesIDData, res.Body)
+				require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 				data, err := os.ReadFile(fp)
 				require.NoError(t, err)
 
@@ -403,7 +403,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
 			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
@@ -439,7 +439,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ employees { id } }`,
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
 			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
@@ -537,7 +537,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				Query:  `query employees { employees { id } }`,
 				Header: map[string][]string{"service-name": {"service-name"}},
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
 			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
@@ -598,7 +598,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query employees { employees { id } }`,
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
 			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
@@ -643,7 +643,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query employees { employees { id } }`,
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 			logEntries := xEnv.Observer().All()
 			require.Len(t, logEntries, 6)
 			requestLog := xEnv.Observer().FilterMessage("/graphql")
@@ -1281,7 +1281,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
 				})
-				require.JSONEq(t, integration.EmployeesIDData, res.Body)
+				require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
 				require.Len(t, logEntries, 7)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
@@ -1332,7 +1332,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
 				})
-				require.JSONEq(t, integration.EmployeesIDData, res.Body)
+				require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
 				require.Len(t, logEntries, 7)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
@@ -1437,7 +1437,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					Query:  `query employees { employees { id } }`,
 					Header: map[string][]string{"service-name": {"service-name"}},
 				})
-				require.JSONEq(t, integration.EmployeesIDData, res.Body)
+				require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
 				require.Len(t, logEntries, 7)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
@@ -1524,7 +1524,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					Query:  `query employees { employees { id } }`,
 					Header: map[string][]string{"service-name": {"service-name"}},
 				})
-				require.JSONEq(t, integration.EmployeesIDData, res.Body)
+				require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 				logEntries := xEnv.Observer().All()
 				require.Len(t, logEntries, 7)
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
@@ -2002,7 +2002,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						Query:  `query employees { employees { id } }`,
 						Header: map[string][]string{"service-name": {"service-name"}},
 					})
-					require.JSONEq(t, integration.EmployeesIDData, res.Body)
+					require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 					requestLog := xEnv.Observer().FilterMessage("/graphql")
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
@@ -2056,7 +2056,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						Header:        map[string][]string{"graphql-client-name": {"my-client"}},
 					})
 					require.NoError(t, err)
-					require.JSONEq(t, integration.EmployeesIDData, res.Body)
+					require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 
 					requestLog := xEnv.Observer().FilterMessage("/graphql")
 					requestLogAll := requestLog.All()
@@ -2092,7 +2092,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 						Query: `query employees { employees { id } }`,
 					})
-					require.JSONEq(t, integration.EmployeesIDData, res.Body)
+					require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 
 					requestLog := xEnv.Observer().FilterMessage("/graphql")
 					requestLogAll := requestLog.All()
@@ -2130,7 +2130,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						Header:        map[string][]string{"graphql-client-name": {"my-client"}},
 					})
 					require.NoError(t, err)
-					require.JSONEq(t, integration.EmployeesIDData, res.Body)
+					require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 
 					requestLog := xEnv.Observer().FilterMessage("/graphql")
 					requestLogAll := requestLog.All()
@@ -2285,7 +2285,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 							"X-Feature-Flag": {"myff"},
 						},
 					})
-					require.JSONEq(t, integration.EmployeesIDData, res.Body)
+					require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 					requestLog := xEnv.Observer().FilterMessage("/graphql")
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
@@ -2349,7 +2349,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						Query:  `query employees { employees { id } }`,
 						Header: map[string][]string{"service-name": {"service-name"}},
 					})
-					require.JSONEq(t, integration.EmployeesIDData, res.Body)
+					require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 					requestLog := xEnv.Observer().FilterMessage("/graphql")
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
@@ -2552,7 +2552,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						Query:  `query employees { employees { id } }`,
 						Header: map[string][]string{"service-name": {"service-name"}},
 					})
-					require.JSONEq(t, integration.EmployeesIDData, res.Body)
+					require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 					requestLog := xEnv.Observer().FilterMessage("/graphql")
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
@@ -2744,7 +2744,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						Query:  `query employees { employees { id } }`,
 						Header: map[string][]string{"service-name": {"service-name"}},
 					})
-					require.JSONEq(t, integration.EmployeesIDData, res.Body)
+					require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 					requestLog := xEnv.Observer().FilterMessage("/graphql")
 					requestLogAll := requestLog.All()
 					requestContext := requestLogAll[0].ContextMap()
@@ -3623,7 +3623,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
 				})
-				require.JSONEq(t, integration.EmployeesIDData, res.Body)
+				require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, 1, requestLog.Len())
@@ -3652,7 +3652,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
 				})
-				require.JSONEq(t, integration.EmployeesIDData, res.Body)
+				require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 
 				requestLog := logObserver.FilterMessage("/graphql")
 				// Should be filtered out because InfoLevel < WarnLevel
@@ -3964,7 +3964,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `{ employees { id } }`,
 				})
-				require.JSONEq(t, integration.EmployeesIDData, res.Body)
+				require.JSONEq(t, routertests.EmployeesIDData, res.Body)
 
 				requestLog := xEnv.Observer().FilterMessage("/graphql")
 				require.Equal(t, 1, requestLog.Len())

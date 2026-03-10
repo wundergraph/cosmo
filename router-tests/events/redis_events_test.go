@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/wundergraph/cosmo/router/core"
 
 	"github.com/hasura/go-graphql-client"
@@ -19,35 +18,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-const RedisWaitTimeout = time.Second * 30
-
-func assertRedisLineEquals(t *testing.T, reader *bufio.Reader, expected string) {
-	t.Helper()
-	line := testenv.ReadSSELine(t, reader)
-	assert.Equal(t, expected, line)
-}
-
-func assertRedisMultipartPrefix(t *testing.T, reader *bufio.Reader) {
-	t.Helper()
-	assertRedisLineEquals(t, reader, "")
-	assertRedisLineEquals(t, reader, "--graphql")
-	assertRedisLineEquals(t, reader, "Content-Type: application/json")
-	assertRedisLineEquals(t, reader, "")
-}
-
-func assertRedisMultipartValueEventually(t *testing.T, reader *bufio.Reader, expected string) {
-	t.Helper()
-	assert.Eventually(t, func() bool {
-		assertRedisMultipartPrefix(t, reader)
-		line, _, err := reader.ReadLine()
-		assert.NoError(t, err)
-		if string(line) == "{}" {
-			return false
-		}
-		assert.Equal(t, expected, string(line))
-		return true
-	}, RedisWaitTimeout, time.Millisecond*100)
-}
 
 type subscriptionArgs struct {
 	dataValue []byte
@@ -98,18 +68,18 @@ func TestRedisEvents(t *testing.T) {
 			}()
 
 			// Wait for the subscription to be started
-			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
-			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			// produce a message (retry until subscription pipeline is confirmed active)
-			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, EventWaitTimeout)
 
 			// process the message
 			select {
 			case subscriptionArgs := <-subscriptionArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for first message error")
 			}
 
@@ -120,7 +90,7 @@ func TestRedisEvents(t *testing.T) {
 			select {
 			case err := <-runCh:
 				require.NoError(t, err)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client to close")
 			}
 		})
@@ -165,16 +135,16 @@ func TestRedisEvents(t *testing.T) {
 			}()
 
 			// Wait for the subscription to be started before producing a message
-			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
-			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			// Warm-up: confirm the subscription pipeline is fully active
-			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, EventWaitTimeout)
 			select {
 			case subscriptionArgs := <-subscriptionArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for warm-up message")
 			}
 
@@ -186,7 +156,7 @@ func TestRedisEvents(t *testing.T) {
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, subscriptionArgs.errValue, &gqlErr)
 				require.Equal(t, "Invalid message received", gqlErr[0].Message)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for first message error")
 			}
 
@@ -195,7 +165,7 @@ func TestRedisEvents(t *testing.T) {
 			case subscriptionArgs := <-subscriptionArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for first message error")
 			}
 
@@ -206,7 +176,7 @@ func TestRedisEvents(t *testing.T) {
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, subscriptionArgs.errValue, &gqlErr)
 				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdates.id'.", gqlErr[0].Message)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for first message error")
 			}
 
@@ -216,7 +186,7 @@ func TestRedisEvents(t *testing.T) {
 			case subscriptionArgs := <-subscriptionArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for first message error")
 			}
 
@@ -227,7 +197,7 @@ func TestRedisEvents(t *testing.T) {
 			select {
 			case err := <-runCh:
 				require.NoError(t, err)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client to close")
 			}
 		})
@@ -279,18 +249,18 @@ func TestRedisEvents(t *testing.T) {
 			}()
 
 			// Wait for the subscription to be started
-			xEnv.WaitForSubscriptionCount(2, RedisWaitTimeout)
-			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(2, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			// produce a message (retry until subscription pipeline is confirmed active)
-			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, EventWaitTimeout)
 
 			// read the message from the first subscription
 			select {
 			case subscriptionArgs := <-subscriptionOneArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for first message error")
 			}
 
@@ -299,7 +269,7 @@ func TestRedisEvents(t *testing.T) {
 			case subscriptionArgs := <-subscriptionTwoArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for second message error")
 			}
 
@@ -310,7 +280,7 @@ func TestRedisEvents(t *testing.T) {
 			select {
 			case err := <-runCh:
 				require.NoError(t, err)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client to close")
 			}
 		})
@@ -361,18 +331,18 @@ func TestRedisEvents(t *testing.T) {
 			}()
 
 			// Wait for the subscription to be started
-			xEnv.WaitForSubscriptionCount(2, RedisWaitTimeout)
-			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(2, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			// produce a message (retry until subscription pipeline is confirmed active)
-			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, EventWaitTimeout)
 
 			// read the message from the first subscription
 			select {
 			case subscriptionArgs := <-subscriptionOneArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for first message error")
 			}
 
@@ -381,7 +351,7 @@ func TestRedisEvents(t *testing.T) {
 			case subscriptionArgs := <-subscriptionTwoArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for second message error")
 			}
 
@@ -393,7 +363,7 @@ func TestRedisEvents(t *testing.T) {
 			case subscriptionArgs := <-subscriptionOneArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(subscriptionArgs.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for first message error")
 			}
 
@@ -402,7 +372,7 @@ func TestRedisEvents(t *testing.T) {
 			case subscriptionArgs := <-subscriptionTwoArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":2,"details":{"forename":"Dustin","surname":"Deus"}}}`, string(subscriptionArgs.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for second message error")
 			}
 
@@ -413,7 +383,7 @@ func TestRedisEvents(t *testing.T) {
 			select {
 			case err := <-runCh:
 				require.NoError(t, err)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client to close")
 			}
 		})
@@ -459,18 +429,18 @@ func TestRedisEvents(t *testing.T) {
 			}()
 
 			// Wait for the subscription to be started
-			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
-			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			// produce a message (retry until subscription pipeline is confirmed active)
-			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, EventWaitTimeout)
 
 			// read the message from the subscription
 			select {
 			case subscriptionArgs := <-subscriptionOneArgsCh:
 				require.NoError(t, subscriptionArgs.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(subscriptionArgs.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for first message error")
 			}
 
@@ -481,7 +451,7 @@ func TestRedisEvents(t *testing.T) {
 			select {
 			case err := <-runCh:
 				require.NoError(t, err)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client to close")
 			}
 		})
@@ -518,18 +488,18 @@ func TestRedisEvents(t *testing.T) {
 				reader := bufio.NewReader(resp.Body)
 
 				// Wait for the subscription to be started
-				xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
-				xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+				xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+				xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 				// produce a message (retry until subscription pipeline is confirmed active)
-				xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, RedisWaitTimeout)
+				xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`, EventWaitTimeout)
 				// read the message from the subscription
-				assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+				assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 
 				// produce a message (pipeline already active, direct produce is safe)
 				events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 				// read the message from the subscription
-				assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
+				assertMultipartValueEventually(t, reader, "{\"payload\":{\"data\":{\"employeeUpdates\":{\"id\":1,\"details\":{\"forename\":\"Jens\",\"surname\":\"Neuse\"}}}}}")
 			})
 		})
 
@@ -558,7 +528,7 @@ func TestRedisEvents(t *testing.T) {
 				defer resp.Body.Close()
 				reader := bufio.NewReader(resp.Body)
 
-				assertRedisMultipartValueEventually(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
+				assertMultipartValueEventually(t, reader, "{\"payload\":{\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}}")
 			})
 		})
 	})
@@ -599,12 +569,12 @@ func TestRedisEvents(t *testing.T) {
 			}()
 
 			// Wait for the subscription to be started
-			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
-			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			// produce a message so that the subscription is triggered
 			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-			xEnv.WaitForMessagesSent(1, RedisWaitTimeout)
+			xEnv.WaitForMessagesSent(1, EventWaitTimeout)
 
 			// get the client response
 			var clientRet struct {
@@ -613,7 +583,7 @@ func TestRedisEvents(t *testing.T) {
 			}
 			select {
 			case clientRet = <-clientRetCh:
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
 			defer func() {
@@ -670,8 +640,8 @@ func TestRedisEvents(t *testing.T) {
 			data := testenv.ReadSSEField(t, reader)
 			require.Equal(t, "data: {\"errors\":[{\"message\":\"operation type 'subscription' is blocked\"}]}", data)
 
-			xEnv.WaitForSubscriptionCount(0, RedisWaitTimeout)
-			xEnv.WaitForConnectionCount(0, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(0, EventWaitTimeout)
+			xEnv.WaitForConnectionCount(0, EventWaitTimeout)
 		})
 	})
 
@@ -709,8 +679,8 @@ func TestRedisEvents(t *testing.T) {
 			var msg testenv.WebSocketMessage
 			var payload subscriptionPayload
 
-			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
-			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			const MsgCount = 12
 
@@ -726,7 +696,7 @@ func TestRedisEvents(t *testing.T) {
 			}
 
 			// Warm-up: confirm the subscription pipeline is fully active with a matching ID
-			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id":1}`, RedisWaitTimeout)
+			xEnv.RedisPublishUntilReceived(topics[0], `{"__typename":"Employee","id":1}`, EventWaitTimeout)
 			gErr := testenv.WSReadJSON(t, conn, &msg)
 			require.NoError(t, gErr)
 			require.Equal(t, "1", msg.ID)
@@ -780,7 +750,7 @@ func TestRedisEvents(t *testing.T) {
 			select {
 			case m := <-msgCh:
 				require.JSONEq(t, `{"id":3,"update":{"name":"name test"}}`, m.Payload)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
 		})
@@ -839,12 +809,12 @@ func TestRedisEvents(t *testing.T) {
 			}()
 
 			// Wait for the subscription to be started
-			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
-			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			// produce a message so that the subscription is triggered
 			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
-			xEnv.WaitForMessagesSent(1, RedisWaitTimeout)
+			xEnv.WaitForMessagesSent(1, EventWaitTimeout)
 
 			// get the client response
 			var clientRet struct {
@@ -853,7 +823,7 @@ func TestRedisEvents(t *testing.T) {
 			}
 			select {
 			case clientRet = <-clientRetCh:
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
 			defer func() {
@@ -914,8 +884,8 @@ func TestRedisEvents(t *testing.T) {
 			}()
 
 			// Wait for the subscription to be started
-			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
-			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			// produce an invalid message
 			events.ProduceRedisMessage(t, xEnv, topics[0], `{asas`)
@@ -925,7 +895,7 @@ func TestRedisEvents(t *testing.T) {
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, args.errValue, &gqlErr)
 				require.Equal(t, "Invalid message received", gqlErr[0].Message)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
 
@@ -936,7 +906,7 @@ func TestRedisEvents(t *testing.T) {
 			case args := <-subscriptionOneArgsCh:
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
 
@@ -948,7 +918,7 @@ func TestRedisEvents(t *testing.T) {
 				var gqlErr graphql.Errors
 				require.ErrorAs(t, args.errValue, &gqlErr)
 				require.Equal(t, "Cannot return null for non-nullable field 'Subscription.employeeUpdates.id'.", gqlErr[0].Message)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
 
@@ -959,7 +929,7 @@ func TestRedisEvents(t *testing.T) {
 			case args := <-subscriptionOneArgsCh:
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
 
@@ -968,7 +938,7 @@ func TestRedisEvents(t *testing.T) {
 			select {
 			case err := <-clientRunCh:
 				require.NoError(t, err)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
 		})
@@ -1023,8 +993,8 @@ func TestRedisClusterEvents(t *testing.T) {
 			}()
 
 			// Wait for the subscription to be started
-			xEnv.WaitForSubscriptionCount(1, RedisWaitTimeout)
-			xEnv.WaitForTriggerCount(1, RedisWaitTimeout)
+			xEnv.WaitForSubscriptionCount(1, EventWaitTimeout)
+			xEnv.WaitForTriggerCount(1, EventWaitTimeout)
 
 			// produce a message
 			events.ProduceRedisMessage(t, xEnv, topics[0], `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
@@ -1034,7 +1004,7 @@ func TestRedisClusterEvents(t *testing.T) {
 			case args := <-subscriptionOneArgsCh:
 				require.NoError(t, args.errValue)
 				require.JSONEq(t, `{"employeeUpdates":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}`, string(args.dataValue))
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
 
@@ -1045,7 +1015,7 @@ func TestRedisClusterEvents(t *testing.T) {
 			select {
 			case err := <-clientRunCh:
 				require.NoError(t, err)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
 		})
@@ -1075,7 +1045,7 @@ func TestRedisClusterEvents(t *testing.T) {
 			select {
 			case m := <-msgCh:
 				require.JSONEq(t, `{"id":3,"update":{"name":"name test"}}`, m.Payload)
-			case <-time.After(RedisWaitTimeout):
+			case <-time.After(EventWaitTimeout):
 				t.Fatal("timeout waiting for client response")
 			}
 		})

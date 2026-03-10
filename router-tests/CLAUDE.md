@@ -18,7 +18,7 @@ Tests are organized into subdirectories by functional area. New test files added
 | `modules/` | Custom router modules |
 | `fuzzquery/` | Fuzz testing for query parsing |
 
-Shared test helpers live in `utils.go` (root package) and `testenv/` (test environment setup). Subdirectories import shared helpers via `integration "github.com/wundergraph/cosmo/router-tests"`.
+Shared test helpers live in `utils.go` (root package) and `testenv/` (test environment setup). Subdirectories import shared helpers via `routertests "github.com/wundergraph/cosmo/router-tests"`.
 
 ### Testdata Layout
 
