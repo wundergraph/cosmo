@@ -11,7 +11,7 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	integration "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router-tests/events"
 	"github.com/wundergraph/cosmo/router-tests/jwks"
 	stream_receive "github.com/wundergraph/cosmo/router-tests/modules/stream-receive"
@@ -344,7 +344,7 @@ func TestReceiveHook(t *testing.T) {
 
 		JwksName := "my-jwks-server"
 
-		tokenDecoder, _ := authentication.NewJwksTokenDecoder(integration.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{{
+		tokenDecoder, _ := authentication.NewJwksTokenDecoder(testutils.NewContextWithCancel(t), zap.NewNop(), []authentication.JWKSConfig{{
 			URL:             authServer.JWKSURL(),
 			RefreshInterval: time.Second * 5,
 		}})

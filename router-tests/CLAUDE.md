@@ -18,7 +18,7 @@ Tests are organized into subdirectories by functional area. New test files added
 | `modules/` | Custom router modules |
 | `fuzzquery/` | Fuzz testing for query parsing |
 
-Shared test helpers live in `utils.go` (root package) and `testenv/` (test environment setup). Subdirectories import shared helpers via `routertests "github.com/wundergraph/cosmo/router-tests"`.
+Shared test helpers live in `testutils/` and `testenv/` (test environment setup). Subdirectories import shared helpers via `"github.com/wundergraph/cosmo/router-tests/testutils"`.
 
 ### Testdata Layout
 
@@ -200,8 +200,8 @@ itemCompleted := make(chan struct{}, workerCount)
 | `WaitForSubscriptionCount` | `testenv/testenv.go` | Wait for subscription count to reach exact value (predicate-based) |
 | `WaitForTriggerCount` | `testenv/testenv.go` | Wait for trigger count to reach at least N (predicate-based) |
 | `WaitForMessagesSent` | `testenv/testenv.go` | Wait for MessagesSent to reach at least N (predicate-based) |
-| `ConfigureAuth` | `utils.go` | Set up JWKS auth for tests |
-| `ToPtr` | `utils.go` | Generic pointer helper |
-| `EmployeesIDData` | `utils.go` | Standard expected response constant |
+| `ConfigureAuth` | `testutils/utils.go` | Set up JWKS auth for tests |
+| `ToPtr` | `testutils/utils.go` | Generic pointer helper |
+| `EmployeesIDData` | `testutils/utils.go` | Standard expected response constant |
 
 <!-- CI stability run: 10 of 10 -->

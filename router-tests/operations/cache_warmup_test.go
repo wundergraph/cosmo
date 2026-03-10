@@ -1,7 +1,7 @@
 package integration
 
 import (
-	integration "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 
 	"context"
 	"encoding/json"
@@ -49,7 +49,7 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.JSONEq(t, integration.EmployeesIDData, res.Body)
+				require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 			})
 		})
 		t.Run("cache warmup enabled", func(t *testing.T) {
@@ -82,11 +82,11 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, integration.EmployeesIDData, res.Body)
+				require.Equal(t, testutils.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, integration.EmployeesIDData, res.Body)
+				require.Equal(t, testutils.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id details { forename } } }`,
 				})
@@ -156,11 +156,11 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, integration.EmployeesIDData, res.Body)
+				require.Equal(t, testutils.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, integration.EmployeesIDData, res.Body)
+				require.Equal(t, testutils.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id details { forename } } }`,
 				})
@@ -224,7 +224,7 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, integration.EmployeesIDData, res.Body)
+				require.Equal(t, testutils.EmployeesIDData, res.Body)
 			})
 		})
 		t.Run("cache warmup json", func(t *testing.T) {
@@ -578,11 +578,11 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, integration.EmployeesIDData, res.Body)
+				require.Equal(t, testutils.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, integration.EmployeesIDData, res.Body)
+				require.Equal(t, testutils.EmployeesIDData, res.Body)
 			})
 		})
 	})
@@ -640,7 +640,7 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.JSONEq(t, integration.EmployeesIDData, res.Body)
+				require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 			})
 		})
 
@@ -676,7 +676,7 @@ func TestCacheWarmup(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id } }`,
 				})
-				require.Equal(t, integration.EmployeesIDData, res.Body)
+				require.Equal(t, testutils.EmployeesIDData, res.Body)
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: `query { employees { id details { forename } } }`,
 				})
@@ -880,7 +880,7 @@ func TestCacheWarmup(t *testing.T) {
 				Query: `query { employees { id } }`,
 			})
 			require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
-			require.Equal(t, integration.EmployeesIDData, res.Body)
+			require.Equal(t, testutils.EmployeesIDData, res.Body)
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
@@ -892,7 +892,7 @@ func TestCacheWarmup(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, rm.ScopeMetrics, 2)
 
-			metricScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			metricScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.NotNil(t, metricScope)
 
 			require.Len(t, metricScope.Metrics, 7)
@@ -942,7 +942,7 @@ func TestCacheWarmup(t *testing.T) {
 				},
 			}
 
-			m := *integration.GetMetricByName(metricScope, "router.graphql.operation.planning_time")
+			m := *testutils.GetMetricByName(metricScope, "router.graphql.operation.planning_time")
 
 			// One when warming up the operation and one when executing the operation
 			require.Len(t, m.Data.(metricdata.Histogram[float64]).DataPoints, 2)
@@ -1001,7 +1001,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			})
 			require.Equal(t, 200, res.Response.StatusCode)
 			require.Equal(t, xEnv.RouterConfigVersionMain(), res.Response.Header.Get("X-Router-Config-Version"))
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 
 			// Wait for the config poller to be ready
@@ -1015,7 +1015,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 			})
 			require.Equal(t, 200, res.Response.StatusCode)
 			require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 			require.Equal(t, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
 
 		})

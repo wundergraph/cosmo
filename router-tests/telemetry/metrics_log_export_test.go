@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	integration "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -47,7 +47,7 @@ func TestMetricsLogExporter(t *testing.T) {
 			err := metricReader.Collect(t.Context(), &rm)
 			require.NoError(t, err)
 
-			scopeMetric := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.NotNil(t, scopeMetric)
 
 			// Wait for ALL scope metrics to appear in logs (not just one).
@@ -145,7 +145,7 @@ func TestMetricsLogExporter(t *testing.T) {
 			err := metricReader.Collect(t.Context(), &rm)
 			require.NoError(t, err)
 
-			scopeMetric := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.NotNil(t, scopeMetric)
 
 			requestsMetric := findMetricByName(scopeMetric.Metrics, "router.http.requests")
@@ -210,7 +210,7 @@ func TestMetricsLogExporter(t *testing.T) {
 			err := metricReader.Collect(t.Context(), &rm)
 			require.NoError(t, err)
 
-			scopeMetric := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.NotNil(t, scopeMetric)
 
 			durationMetric := findMetricByName(scopeMetric.Metrics, "router.http.request.duration_milliseconds")

@@ -1,7 +1,7 @@
 package integration
 
 import (
-	integration "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 
 	"crypto/tls"
 	"crypto/x509"
@@ -60,10 +60,10 @@ func TestTLS(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			require.Contains(t, res.Proto, "HTTP/2")
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 		})
 	})
 
@@ -104,7 +104,7 @@ func TestTLS(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 		})
 	})
 
@@ -244,7 +244,7 @@ func TestMTLS(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 		})
 	})
 
@@ -264,7 +264,7 @@ func TestMTLS(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 		})
 	})
 
@@ -287,7 +287,7 @@ func TestMTLS(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			// No client certificate
 			client := &http.Client{
@@ -395,7 +395,7 @@ func TestMTLS(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query { employees { id } }`,
 			})
-			require.JSONEq(t, integration.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 		})
 	})
 }

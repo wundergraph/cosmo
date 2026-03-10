@@ -1,7 +1,7 @@
 package integration
 
 import (
-	routertests "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 
 	"context"
 	"encoding/json"
@@ -49,7 +49,7 @@ func TestPrometheus(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -61,111 +61,111 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestTotalMetrics[1].Label)
 
@@ -176,95 +176,95 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestsInFlightMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestsInFlightMetrics[1].Label)
 
@@ -275,111 +275,111 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestDurationMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestDurationMetrics[1].Label)
 
@@ -390,111 +390,111 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, responseContentLengthMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, responseContentLengthMetrics[1].Label)
 
@@ -505,52 +505,52 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_engine_plan_cache_hit"),
-					Value: routertests.ToPtr("false"),
+					Name:  testutils.ToPtr("wg_engine_plan_cache_hit"),
+					Value: testutils.ToPtr("false"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, planningTimeMetrics[0].Label)
 
@@ -596,7 +596,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				Query: `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -615,127 +615,127 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("custom2"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom2"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("custom2"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom2"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestTotalMetrics[1].Label)
 
@@ -746,107 +746,107 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestsInFlightMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("custom2"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom2"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestsInFlightMetrics[1].Label)
 
@@ -857,127 +857,127 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("custom2"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom2"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestDurationMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("custom2"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom2"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestDurationMetrics[1].Label)
 
@@ -988,127 +988,127 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("custom2"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom2"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, responseContentLengthMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("custom2"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom2"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, responseContentLengthMetrics[1].Label)
 
@@ -1145,7 +1145,7 @@ func TestPrometheus(t *testing.T) {
 				},
 				Query: `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -1164,119 +1164,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestTotalMetrics[1].Label)
 
@@ -1287,103 +1287,103 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestsInFlightMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestsInFlightMetrics[1].Label)
 
@@ -1394,119 +1394,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestDurationMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestDurationMetrics[1].Label)
 
@@ -1517,119 +1517,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, responseContentLengthMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("custom"),
-					Value: routertests.ToPtr("value"),
+					Name:  testutils.ToPtr("custom"),
+					Value: testutils.ToPtr("value"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, responseContentLengthMetrics[1].Label)
 
@@ -1675,112 +1675,112 @@ func TestPrometheus(t *testing.T) {
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, totalRequestErrorsMetric[0].Label)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("403"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("403"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("3"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("3"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("products"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("products"),
 				},
 			}, totalRequestErrorsMetric[1].Label)
 		})
@@ -1857,239 +1857,239 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("error_codes"),
-					Value: routertests.ToPtr("UNAUTHORIZED"),
+					Name:  testutils.ToPtr("error_codes"),
+					Value: testutils.ToPtr("UNAUTHORIZED"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, totalRequestErrorsMetric[0].Label)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("error_codes"),
-					Value: routertests.ToPtr("YOUR_ERROR_CODE"),
+					Name:  testutils.ToPtr("error_codes"),
+					Value: testutils.ToPtr("YOUR_ERROR_CODE"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, totalRequestErrorsMetric[1].Label)
 
 			// Error metric for the subgraph error
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("error_codes"),
-					Value: routertests.ToPtr("UNAUTHORIZED"),
+					Name:  testutils.ToPtr("error_codes"),
+					Value: testutils.ToPtr("UNAUTHORIZED"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("403"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("403"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("3"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("3"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("products"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("products"),
 				},
 			}, totalRequestErrorsMetric[2].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("error_codes"),
-					Value: routertests.ToPtr("YOUR_ERROR_CODE"),
+					Name:  testutils.ToPtr("error_codes"),
+					Value: testutils.ToPtr("YOUR_ERROR_CODE"),
 				},
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("403"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("403"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("3"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("3"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("products"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("products"),
 				},
 			}, totalRequestErrorsMetric[3].Label)
 		})
@@ -2113,7 +2113,7 @@ func TestPrometheus(t *testing.T) {
 					"X-Feature-Flag": {"myff"},
 				},
 			})
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -2125,119 +2125,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_feature_flag"),
-					Value: routertests.ToPtr("myff"),
+					Name:  testutils.ToPtr("wg_feature_flag"),
+					Value: testutils.ToPtr("myff"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMyFF()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_feature_flag"),
-					Value: routertests.ToPtr("myff"),
+					Name:  testutils.ToPtr("wg_feature_flag"),
+					Value: testutils.ToPtr("myff"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMyFF()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestTotalMetrics[1].Label)
 
@@ -2248,103 +2248,103 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_feature_flag"),
-					Value: routertests.ToPtr("myff"),
+					Name:  testutils.ToPtr("wg_feature_flag"),
+					Value: testutils.ToPtr("myff"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMyFF()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestsInFlightMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_feature_flag"),
-					Value: routertests.ToPtr("myff"),
+					Name:  testutils.ToPtr("wg_feature_flag"),
+					Value: testutils.ToPtr("myff"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMyFF()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestsInFlightMetrics[1].Label)
 
@@ -2355,119 +2355,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_feature_flag"),
-					Value: routertests.ToPtr("myff"),
+					Name:  testutils.ToPtr("wg_feature_flag"),
+					Value: testutils.ToPtr("myff"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMyFF()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestDurationMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_feature_flag"),
-					Value: routertests.ToPtr("myff"),
+					Name:  testutils.ToPtr("wg_feature_flag"),
+					Value: testutils.ToPtr("myff"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMyFF()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestDurationMetrics[1].Label)
 
@@ -2478,119 +2478,119 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_feature_flag"),
-					Value: routertests.ToPtr("myff"),
+					Name:  testutils.ToPtr("wg_feature_flag"),
+					Value: testutils.ToPtr("myff"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMyFF()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, responseContentLengthMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_feature_flag"),
-					Value: routertests.ToPtr("myff"),
+					Name:  testutils.ToPtr("wg_feature_flag"),
+					Value: testutils.ToPtr("myff"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMyFF()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMyFF()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, responseContentLengthMetrics[1].Label)
 		})
@@ -2616,7 +2616,7 @@ func TestPrometheus(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			mfFull, err = promRegistryFull.Gather()
 			require.NoError(t, err)
@@ -2628,111 +2628,111 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestTotalMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("http_status_code"),
-					Value: routertests.ToPtr("200"),
+					Name:  testutils.ToPtr("http_status_code"),
+					Value: testutils.ToPtr("200"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestTotalMetrics[1].Label)
 
@@ -2743,95 +2743,95 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestsInFlightMetrics[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_name"),
-					Value: routertests.ToPtr("unknown"),
+					Name:  testutils.ToPtr("wg_client_name"),
+					Value: testutils.ToPtr("unknown"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestsInFlightMetrics[1].Label)
 		})
@@ -2858,7 +2858,7 @@ func TestPrometheus(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			mfFiltered, err = promRegistryFiltered.Gather()
 			require.NoError(t, err)
@@ -2877,79 +2877,79 @@ func TestPrometheus(t *testing.T) {
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}, requestsInFlightMetricsFiltered[0].Label)
 
 			require.Equal(t, []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.prometheus"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.prometheus"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_client_version"),
-					Value: routertests.ToPtr("missing"),
+					Name:  testutils.ToPtr("wg_client_version"),
+					Value: testutils.ToPtr("missing"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_name"),
-					Value: routertests.ToPtr("myQuery"),
+					Name:  testutils.ToPtr("wg_operation_name"),
+					Value: testutils.ToPtr("myQuery"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_protocol"),
-					Value: routertests.ToPtr("http"),
+					Name:  testutils.ToPtr("wg_operation_protocol"),
+					Value: testutils.ToPtr("http"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_operation_type"),
-					Value: routertests.ToPtr("query"),
+					Name:  testutils.ToPtr("wg_operation_type"),
+					Value: testutils.ToPtr("query"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_id"),
-					Value: routertests.ToPtr("0"),
+					Name:  testutils.ToPtr("wg_subgraph_id"),
+					Value: testutils.ToPtr("0"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_subgraph_name"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("wg_subgraph_name"),
+					Value: testutils.ToPtr("employees"),
 				},
 			}, requestsInFlightMetricsFiltered[1].Label)
 
@@ -2984,7 +2984,7 @@ func TestPrometheus(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			mfFiltered, err = promRegistryFiltered.Gather()
 			require.NoError(t, err)
@@ -2996,8 +2996,8 @@ func TestPrometheus(t *testing.T) {
 
 			for _, metric := range requestsInFlightMetricsFiltered {
 				for _, label := range metric.Label {
-					require.NotEqual(t, routertests.ToPtr("otel_scope_name"), label.Name, "otel_scope_name should not be present")
-					require.NotEqual(t, routertests.ToPtr("otel_scope_version"), label.Name, "otel_scope_version should not be present")
+					require.NotEqual(t, testutils.ToPtr("otel_scope_name"), label.Name, "otel_scope_name should not be present")
+					require.NotEqual(t, testutils.ToPtr("otel_scope_version"), label.Name, "otel_scope_version should not be present")
 				}
 			}
 		})
@@ -3026,28 +3026,28 @@ func TestPrometheus(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			baseAttributes := []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.cache"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.cache"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}
 
@@ -3057,13 +3057,13 @@ func TestPrometheus(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { tag } }`,
@@ -3083,20 +3083,20 @@ func TestPrometheus(t *testing.T) {
 			cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}), cacheMaxCostExecution[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostExecution[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}), cacheMaxCostNormalization[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostNormalization[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}), cacheMaxCostValidation[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostValidation[0].GetGauge().GetValue())
 
@@ -3108,57 +3108,57 @@ func TestPrometheus(t *testing.T) {
 			cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("hits"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("hits"),
 			}), cacheRequestExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("misses"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("misses"),
 			}), cacheRequestExecutionStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("hits"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("hits"),
 			}), cacheRequestNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("misses"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("misses"),
 			}), cacheRequestNormalizationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("hits"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("hits"),
 			}), cacheRequestValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("misses"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("misses"),
 			}), cacheRequestValidationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestValidationStats[0].GetCounter().GetValue())
@@ -3171,68 +3171,68 @@ func TestPrometheus(t *testing.T) {
 			cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheCostExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostExecutionStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheCostNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheCostValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostValidationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostValidationStats[0].GetCounter().GetValue())
@@ -3245,27 +3245,27 @@ func TestPrometheus(t *testing.T) {
 			cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheKeyExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheKeyExecutionStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("updated"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("updated"),
 			}), cacheKeyExecutionStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyExecutionStats[0].GetCounter().GetValue())
@@ -3273,27 +3273,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyExecutionStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheKeyNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheKeyNormalizationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("updated"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("updated"),
 			}), cacheKeyNormalizationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyNormalizationStats[0].GetCounter().GetValue())
@@ -3301,27 +3301,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyNormalizationStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheKeyValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheKeyValidationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("updated"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("updated"),
 			}), cacheKeyValidationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyValidationStats[0].GetCounter().GetValue())
@@ -3353,28 +3353,28 @@ func TestPrometheus(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			baseAttributes := []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.cache"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.cache"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}
 
@@ -3384,13 +3384,13 @@ func TestPrometheus(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { tag } }`,
@@ -3410,20 +3410,20 @@ func TestPrometheus(t *testing.T) {
 			cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}), cacheMaxCostExecution[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostExecution[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}), cacheMaxCostNormalization[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostNormalization[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}), cacheMaxCostValidation[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostValidation[0].GetGauge().GetValue())
 
@@ -3435,57 +3435,57 @@ func TestPrometheus(t *testing.T) {
 			cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("hits"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("hits"),
 			}), cacheRequestExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("misses"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("misses"),
 			}), cacheRequestExecutionStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("hits"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("hits"),
 			}), cacheRequestNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("misses"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("misses"),
 			}), cacheRequestNormalizationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("hits"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("hits"),
 			}), cacheRequestValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("misses"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("misses"),
 			}), cacheRequestValidationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestValidationStats[0].GetCounter().GetValue())
@@ -3498,68 +3498,68 @@ func TestPrometheus(t *testing.T) {
 			cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheCostExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostExecutionStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheCostNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheCostValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostValidationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostValidationStats[0].GetCounter().GetValue())
@@ -3572,27 +3572,27 @@ func TestPrometheus(t *testing.T) {
 			cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheKeyExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheKeyExecutionStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("updated"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("updated"),
 			}), cacheKeyExecutionStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyExecutionStats[0].GetCounter().GetValue())
@@ -3600,27 +3600,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyExecutionStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheKeyNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheKeyNormalizationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("updated"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("updated"),
 			}), cacheKeyNormalizationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyNormalizationStats[0].GetCounter().GetValue())
@@ -3628,27 +3628,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyNormalizationStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheKeyValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheKeyValidationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("updated"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("updated"),
 			}), cacheKeyValidationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyValidationStats[0].GetCounter().GetValue())
@@ -3683,28 +3683,28 @@ func TestPrometheus(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			baseAttributes := []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.cache"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.cache"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}
 
@@ -3714,13 +3714,13 @@ func TestPrometheus(t *testing.T) {
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
 
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { tag } }`,
@@ -3741,20 +3741,20 @@ func TestPrometheus(t *testing.T) {
 			cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}), cacheMaxCostExecution[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostExecution[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}), cacheMaxCostNormalization[0].Label)
 			require.Equal(t, float64(1024), cacheMaxCostNormalization[0].GetGauge().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}), cacheMaxCostValidation[0].Label)
 			require.Equal(t, float64(baseCost), cacheMaxCostValidation[0].GetGauge().GetValue())
 
@@ -3766,57 +3766,57 @@ func TestPrometheus(t *testing.T) {
 			cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("hits"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("hits"),
 			}), cacheRequestExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("misses"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("misses"),
 			}), cacheRequestExecutionStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("hits"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("hits"),
 			}), cacheRequestNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("misses"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("misses"),
 			}), cacheRequestNormalizationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(2), cacheRequestNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("hits"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("hits"),
 			}), cacheRequestValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("type"),
-				Value: routertests.ToPtr("misses"),
+				Name:  testutils.ToPtr("type"),
+				Value: testutils.ToPtr("misses"),
 			}), cacheRequestValidationStats[1].Label)
 
 			require.Equal(t, float64(1), cacheRequestValidationStats[0].GetCounter().GetValue())
@@ -3829,68 +3829,68 @@ func TestPrometheus(t *testing.T) {
 			cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheCostExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostExecutionStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostExecutionStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostExecutionStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheCostNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostNormalizationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostNormalizationStats[0].GetCounter().GetValue())
 			require.Equal(t, float64(0), cacheCostNormalizationStats[1].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheCostValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheCostValidationStats[1].Label)
 
 			require.Equal(t, float64(baseCost*2), cacheCostValidationStats[0].GetCounter().GetValue())
@@ -3903,27 +3903,27 @@ func TestPrometheus(t *testing.T) {
 			cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheKeyExecutionStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheKeyExecutionStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("plan"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("plan"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("updated"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("updated"),
 			}), cacheKeyExecutionStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyExecutionStats[0].GetCounter().GetValue())
@@ -3931,27 +3931,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyExecutionStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheKeyNormalizationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheKeyNormalizationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("query_normalization"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("query_normalization"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("updated"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("updated"),
 			}), cacheKeyNormalizationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyNormalizationStats[0].GetCounter().GetValue())
@@ -3959,27 +3959,27 @@ func TestPrometheus(t *testing.T) {
 			require.Equal(t, float64(0), cacheKeyNormalizationStats[2].GetCounter().GetValue())
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("added"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("added"),
 			}), cacheKeyValidationStats[0].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("evicted"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("evicted"),
 			}), cacheKeyValidationStats[1].Label)
 
 			require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("cache_type"),
-				Value: routertests.ToPtr("validation"),
+				Name:  testutils.ToPtr("cache_type"),
+				Value: testutils.ToPtr("validation"),
 			}, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr("operation"),
-				Value: routertests.ToPtr("updated"),
+				Name:  testutils.ToPtr("operation"),
+				Value: testutils.ToPtr("updated"),
 			}), cacheKeyValidationStats[2].Label)
 
 			require.Equal(t, float64(2), cacheKeyValidationStats[0].GetCounter().GetValue())
@@ -4006,28 +4006,28 @@ func TestPrometheus(t *testing.T) {
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			baseAttributes := []*io_prometheus_client.LabelPair{
 				{
-					Name:  routertests.ToPtr("otel_scope_name"),
-					Value: routertests.ToPtr("cosmo.router.engine"),
+					Name:  testutils.ToPtr("otel_scope_name"),
+					Value: testutils.ToPtr("cosmo.router.engine"),
 				},
 				{
-					Name:  routertests.ToPtr("otel_scope_version"),
-					Value: routertests.ToPtr("0.0.1"),
+					Name:  testutils.ToPtr("otel_scope_version"),
+					Value: testutils.ToPtr("0.0.1"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_federated_graph_id"),
-					Value: routertests.ToPtr("graph"),
+					Name:  testutils.ToPtr("wg_federated_graph_id"),
+					Value: testutils.ToPtr("graph"),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_cluster_name"),
-					Value: routertests.ToPtr(""),
+					Name:  testutils.ToPtr("wg_router_cluster_name"),
+					Value: testutils.ToPtr(""),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_config_version"),
-					Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+					Name:  testutils.ToPtr("wg_router_config_version"),
+					Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 				},
 				{
-					Name:  routertests.ToPtr("wg_router_version"),
-					Value: routertests.ToPtr("dev"),
+					Name:  testutils.ToPtr("wg_router_version"),
+					Value: testutils.ToPtr("dev"),
 				},
 			}
 
@@ -4120,7 +4120,7 @@ func TestPrometheus(t *testing.T) {
 		const claimKey = "customKey"
 		const claimVal = "customClaimValue"
 
-		authenticators, authServer := routertests.ConfigureAuth(t)
+		authenticators, authServer := testutils.ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
 			Authenticators:           authenticators,
 			AuthenticationRequired:   true,
@@ -4163,7 +4163,7 @@ func TestPrometheus(t *testing.T) {
 				Header: header,
 				Query:  `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -4176,13 +4176,13 @@ func TestPrometheus(t *testing.T) {
 			require.Len(t, requestTotalMetrics[1].Label, 15)
 
 			require.Contains(t, requestTotalMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr(claimKey),
-				Value: routertests.ToPtr(claimVal),
+				Name:  testutils.ToPtr(claimKey),
+				Value: testutils.ToPtr(claimVal),
 			})
 
 			require.Contains(t, requestTotalMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr(claimKey),
-				Value: routertests.ToPtr(claimVal),
+				Name:  testutils.ToPtr(claimKey),
+				Value: testutils.ToPtr(claimVal),
 			})
 
 			requestsInFlight := findMetricFamilyByName(mf, "router_http_requests_in_flight")
@@ -4194,13 +4194,13 @@ func TestPrometheus(t *testing.T) {
 
 			// the request toward the subgraph has no authorization header
 			require.NotContains(t, requestsInFlightMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr(claimKey),
-				Value: routertests.ToPtr(claimVal),
+				Name:  testutils.ToPtr(claimKey),
+				Value: testutils.ToPtr(claimVal),
 			})
 
 			require.Contains(t, requestsInFlightMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr(claimKey),
-				Value: routertests.ToPtr(claimVal),
+				Name:  testutils.ToPtr(claimKey),
+				Value: testutils.ToPtr(claimVal),
 			})
 
 			requestDuration := findMetricFamilyByName(mf, "router_http_request_duration_milliseconds")
@@ -4211,13 +4211,13 @@ func TestPrometheus(t *testing.T) {
 			require.Len(t, requestDurationMetrics[1].Label, 15)
 
 			require.Contains(t, requestDurationMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr(claimKey),
-				Value: routertests.ToPtr(claimVal),
+				Name:  testutils.ToPtr(claimKey),
+				Value: testutils.ToPtr(claimVal),
 			})
 
 			require.Contains(t, requestDurationMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr(claimKey),
-				Value: routertests.ToPtr(claimVal),
+				Name:  testutils.ToPtr(claimKey),
+				Value: testutils.ToPtr(claimVal),
 			})
 
 			responseContentLength := findMetricFamilyByName(mf, "router_http_response_content_length_total")
@@ -4228,13 +4228,13 @@ func TestPrometheus(t *testing.T) {
 			require.Len(t, responseContentLengthMetrics[1].Label, 15)
 
 			require.Contains(t, responseContentLengthMetrics[0].Label, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr(claimKey),
-				Value: routertests.ToPtr(claimVal),
+				Name:  testutils.ToPtr(claimKey),
+				Value: testutils.ToPtr(claimVal),
 			})
 
 			require.Contains(t, responseContentLengthMetrics[1].Label, &io_prometheus_client.LabelPair{
-				Name:  routertests.ToPtr(claimKey),
-				Value: routertests.ToPtr(claimVal),
+				Name:  testutils.ToPtr(claimKey),
+				Value: testutils.ToPtr(claimVal),
 			})
 
 		})
@@ -4243,7 +4243,7 @@ func TestPrometheus(t *testing.T) {
 	t.Run("Authentication failure records correct HTTP status code in metrics", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := routertests.ConfigureAuth(t)
+		authenticators, _ := testutils.ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
 			Authenticators:         authenticators,
 			AuthenticationRequired: true,
@@ -4345,111 +4345,111 @@ func TestPrometheusWithModule(t *testing.T) {
 
 		require.Equal(t, []*io_prometheus_client.LabelPair{
 			{
-				Name:  routertests.ToPtr("http_status_code"),
-				Value: routertests.ToPtr("200"),
+				Name:  testutils.ToPtr("http_status_code"),
+				Value: testutils.ToPtr("200"),
 			},
 			{
-				Name:  routertests.ToPtr("otel_scope_name"),
-				Value: routertests.ToPtr("cosmo.router.prometheus"),
+				Name:  testutils.ToPtr("otel_scope_name"),
+				Value: testutils.ToPtr("cosmo.router.prometheus"),
 			},
 			{
-				Name:  routertests.ToPtr("otel_scope_version"),
-				Value: routertests.ToPtr("0.0.1"),
+				Name:  testutils.ToPtr("otel_scope_version"),
+				Value: testutils.ToPtr("0.0.1"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_client_name"),
-				Value: routertests.ToPtr("unknown"),
+				Name:  testutils.ToPtr("wg_client_name"),
+				Value: testutils.ToPtr("unknown"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_client_version"),
-				Value: routertests.ToPtr("missing"),
+				Name:  testutils.ToPtr("wg_client_version"),
+				Value: testutils.ToPtr("missing"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_federated_graph_id"),
-				Value: routertests.ToPtr("graph"),
+				Name:  testutils.ToPtr("wg_federated_graph_id"),
+				Value: testutils.ToPtr("graph"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_operation_name"),
-				Value: routertests.ToPtr("MyQuery"),
+				Name:  testutils.ToPtr("wg_operation_name"),
+				Value: testutils.ToPtr("MyQuery"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_operation_protocol"),
-				Value: routertests.ToPtr("http"),
+				Name:  testutils.ToPtr("wg_operation_protocol"),
+				Value: testutils.ToPtr("http"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_operation_type"),
-				Value: routertests.ToPtr("query"),
+				Name:  testutils.ToPtr("wg_operation_type"),
+				Value: testutils.ToPtr("query"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_router_cluster_name"),
-				Value: routertests.ToPtr(""),
+				Name:  testutils.ToPtr("wg_router_cluster_name"),
+				Value: testutils.ToPtr(""),
 			},
 			{
-				Name:  routertests.ToPtr("wg_router_config_version"),
-				Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+				Name:  testutils.ToPtr("wg_router_config_version"),
+				Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 			},
 			{
-				Name:  routertests.ToPtr("wg_router_version"),
-				Value: routertests.ToPtr("dev"),
+				Name:  testutils.ToPtr("wg_router_version"),
+				Value: testutils.ToPtr("dev"),
 			},
 		}, requestDurationMetrics[0].Label)
 
 		require.Equal(t, []*io_prometheus_client.LabelPair{
 			{
-				Name:  routertests.ToPtr("http_status_code"),
-				Value: routertests.ToPtr("200"),
+				Name:  testutils.ToPtr("http_status_code"),
+				Value: testutils.ToPtr("200"),
 			},
 			{
-				Name:  routertests.ToPtr("otel_scope_name"),
-				Value: routertests.ToPtr("cosmo.router.prometheus"),
+				Name:  testutils.ToPtr("otel_scope_name"),
+				Value: testutils.ToPtr("cosmo.router.prometheus"),
 			},
 			{
-				Name:  routertests.ToPtr("otel_scope_version"),
-				Value: routertests.ToPtr("0.0.1"),
+				Name:  testutils.ToPtr("otel_scope_version"),
+				Value: testutils.ToPtr("0.0.1"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_client_name"),
-				Value: routertests.ToPtr("unknown"),
+				Name:  testutils.ToPtr("wg_client_name"),
+				Value: testutils.ToPtr("unknown"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_client_version"),
-				Value: routertests.ToPtr("missing"),
+				Name:  testutils.ToPtr("wg_client_version"),
+				Value: testutils.ToPtr("missing"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_federated_graph_id"),
-				Value: routertests.ToPtr("graph"),
+				Name:  testutils.ToPtr("wg_federated_graph_id"),
+				Value: testutils.ToPtr("graph"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_operation_name"),
-				Value: routertests.ToPtr("MyQuery"),
+				Name:  testutils.ToPtr("wg_operation_name"),
+				Value: testutils.ToPtr("MyQuery"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_operation_protocol"),
-				Value: routertests.ToPtr("http"),
+				Name:  testutils.ToPtr("wg_operation_protocol"),
+				Value: testutils.ToPtr("http"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_operation_type"),
-				Value: routertests.ToPtr("query"),
+				Name:  testutils.ToPtr("wg_operation_type"),
+				Value: testutils.ToPtr("query"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_router_cluster_name"),
-				Value: routertests.ToPtr(""),
+				Name:  testutils.ToPtr("wg_router_cluster_name"),
+				Value: testutils.ToPtr(""),
 			},
 			{
-				Name:  routertests.ToPtr("wg_router_config_version"),
-				Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+				Name:  testutils.ToPtr("wg_router_config_version"),
+				Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 			},
 			{
-				Name:  routertests.ToPtr("wg_router_version"),
-				Value: routertests.ToPtr("dev"),
+				Name:  testutils.ToPtr("wg_router_version"),
+				Value: testutils.ToPtr("dev"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_subgraph_id"),
-				Value: routertests.ToPtr("0"),
+				Name:  testutils.ToPtr("wg_subgraph_id"),
+				Value: testutils.ToPtr("0"),
 			},
 			{
-				Name:  routertests.ToPtr("wg_subgraph_name"),
-				Value: routertests.ToPtr("employees"),
+				Name:  testutils.ToPtr("wg_subgraph_name"),
+				Value: testutils.ToPtr("employees"),
 			},
 		}, requestDurationMetrics[1].Label)
 	})
@@ -4469,7 +4469,7 @@ func TestPrometheusWithModule(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `query myQuery { employees { id } }`,
 			})
-			require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+			require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 			mf, err := promRegistry.Gather()
 			require.NoError(t, err)
@@ -4559,12 +4559,12 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 
 				expected := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 				}
 				require.Equal(t, expected, connectionTotal.Label)
@@ -4580,20 +4580,20 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_address"),
-						Value: routertests.ToPtr("127.0.0.1"),
+						Name:  testutils.ToPtr("server_address"),
+						Value: testutils.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_port"),
-						Value: routertests.ToPtr(getPort(metricDataPoint1)),
+						Name:  testutils.ToPtr("server_port"),
+						Value: testutils.ToPtr(getPort(metricDataPoint1)),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -4602,20 +4602,20 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_address"),
-						Value: routertests.ToPtr("127.0.0.1"),
+						Name:  testutils.ToPtr("server_address"),
+						Value: testutils.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_port"),
-						Value: routertests.ToPtr(getPort(metricDataPoint2)),
+						Name:  testutils.ToPtr("server_port"),
+						Value: testutils.ToPtr(getPort(metricDataPoint2)),
 					},
 				}
 				require.Equal(t, expected2, metricDataPoint2.Label)
@@ -4636,28 +4636,28 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Histogram.SampleSum, 0.0)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_address"),
-						Value: routertests.ToPtr("127.0.0.1"),
+						Name:  testutils.ToPtr("server_address"),
+						Value: testutils.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_port"),
-						Value: routertests.ToPtr(getPort(metricDataPoint1)),
+						Name:  testutils.ToPtr("server_port"),
+						Value: testutils.ToPtr(getPort(metricDataPoint1)),
 					},
 					{
-						Name:  routertests.ToPtr("wg_http_client_reused_connection"),
-						Value: routertests.ToPtr("false"),
+						Name:  testutils.ToPtr("wg_http_client_reused_connection"),
+						Value: testutils.ToPtr("false"),
 					},
 					{
-						Name:  routertests.ToPtr("wg_subgraph_name"),
-						Value: routertests.ToPtr("availability"),
+						Name:  testutils.ToPtr("wg_subgraph_name"),
+						Value: testutils.ToPtr("availability"),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -4666,28 +4666,28 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint2.Histogram.SampleSum, 0.0)
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_address"),
-						Value: routertests.ToPtr("127.0.0.1"),
+						Name:  testutils.ToPtr("server_address"),
+						Value: testutils.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_port"),
-						Value: routertests.ToPtr(getPort(metricDataPoint2)),
+						Name:  testutils.ToPtr("server_port"),
+						Value: testutils.ToPtr(getPort(metricDataPoint2)),
 					},
 					{
-						Name:  routertests.ToPtr("wg_http_client_reused_connection"),
-						Value: routertests.ToPtr("false"),
+						Name:  testutils.ToPtr("wg_http_client_reused_connection"),
+						Value: testutils.ToPtr("false"),
 					},
 					{
-						Name:  routertests.ToPtr("wg_subgraph_name"),
-						Value: routertests.ToPtr("employees"),
+						Name:  testutils.ToPtr("wg_subgraph_name"),
+						Value: testutils.ToPtr("employees"),
 					},
 				}
 				require.Equal(t, expected2, metricDataPoint2.Label)
@@ -4704,11 +4704,11 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: routertests.ToPtr(200 * time.Millisecond),
+				RequestTimeout: testutils.ToPtr(200 * time.Millisecond),
 			},
 			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"availability": {
-					RequestTimeout: routertests.ToPtr(300 * time.Millisecond),
+					RequestTimeout: testutils.ToPtr(300 * time.Millisecond),
 				},
 			},
 		}
@@ -4744,12 +4744,12 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Equal(t, float64(1024), *metricDataPoint1.Gauge.Value)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -4758,16 +4758,16 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Equal(t, float64(1024), *metricDataPoint2.Gauge.Value)
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("wg_subgraph_name"),
-						Value: routertests.ToPtr("availability"),
+						Name:  testutils.ToPtr("wg_subgraph_name"),
+						Value: testutils.ToPtr("availability"),
 					},
 				}
 				require.Equal(t, expected2, metricDataPoint2.Label)
@@ -4783,20 +4783,20 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_address"),
-						Value: routertests.ToPtr("127.0.0.1"),
+						Name:  testutils.ToPtr("server_address"),
+						Value: testutils.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_port"),
-						Value: routertests.ToPtr(getPort(metricDataPoint1)),
+						Name:  testutils.ToPtr("server_port"),
+						Value: testutils.ToPtr(getPort(metricDataPoint1)),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -4805,24 +4805,24 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
 				expected2 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_address"),
-						Value: routertests.ToPtr("127.0.0.1"),
+						Name:  testutils.ToPtr("server_address"),
+						Value: testutils.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_port"),
-						Value: routertests.ToPtr(getPort(metricDataPoint2)),
+						Name:  testutils.ToPtr("server_port"),
+						Value: testutils.ToPtr(getPort(metricDataPoint2)),
 					},
 					{
-						Name:  routertests.ToPtr("wg_subgraph_name"),
-						Value: routertests.ToPtr("availability"),
+						Name:  testutils.ToPtr("wg_subgraph_name"),
+						Value: testutils.ToPtr("availability"),
 					},
 				}
 				require.Equal(t, expected2, metricDataPoint2.Label)
@@ -4859,8 +4859,8 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.NoError(t, err)
 
 				expected := &io_prometheus_client.LabelPair{
-					Name:  routertests.ToPtr("custom_subgraph"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("custom_subgraph"),
+					Value: testutils.ToPtr("employees"),
 				}
 
 				requestsInFlight := findMetricFamilyByName(metricFamily, "router_http_requests_in_flight")
@@ -4905,8 +4905,8 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.NoError(t, err)
 
 				expected := &io_prometheus_client.LabelPair{
-					Name:  routertests.ToPtr("custom_subgraph"),
-					Value: routertests.ToPtr("employees"),
+					Name:  testutils.ToPtr("custom_subgraph"),
+					Value: testutils.ToPtr("employees"),
 				}
 
 				requestsInFlight := findMetricFamilyByName(metricFamily, "router_http_requests_in_flight")
@@ -4974,12 +4974,12 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 
 				expected := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 				}
 				require.Equal(t, expected, connectionTotal.Label)
@@ -4995,20 +4995,20 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Gauge.Value, 0.0)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_address"),
-						Value: routertests.ToPtr("127.0.0.1"),
+						Name:  testutils.ToPtr("server_address"),
+						Value: testutils.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_port"),
-						Value: routertests.ToPtr(getPort(metricDataPoint1)),
+						Name:  testutils.ToPtr("server_port"),
+						Value: testutils.ToPtr(getPort(metricDataPoint1)),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -5023,28 +5023,28 @@ func TestFlakyPrometheusRouterConnectionMetrics(t *testing.T) {
 				require.Greater(t, *metricDataPoint1.Histogram.SampleSum, 0.0)
 				expected1 := []*io_prometheus_client.LabelPair{
 					{
-						Name:  routertests.ToPtr("otel_scope_name"),
-						Value: routertests.ToPtr("cosmo.router.connections.prometheus"),
+						Name:  testutils.ToPtr("otel_scope_name"),
+						Value: testutils.ToPtr("cosmo.router.connections.prometheus"),
 					},
 					{
-						Name:  routertests.ToPtr("otel_scope_version"),
-						Value: routertests.ToPtr("0.0.1"),
+						Name:  testutils.ToPtr("otel_scope_version"),
+						Value: testutils.ToPtr("0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_address"),
-						Value: routertests.ToPtr("127.0.0.1"),
+						Name:  testutils.ToPtr("server_address"),
+						Value: testutils.ToPtr("127.0.0.1"),
 					},
 					{
-						Name:  routertests.ToPtr("server_port"),
-						Value: routertests.ToPtr(getPort(metricDataPoint1)),
+						Name:  testutils.ToPtr("server_port"),
+						Value: testutils.ToPtr(getPort(metricDataPoint1)),
 					},
 					{
-						Name:  routertests.ToPtr("wg_http_client_reused_connection"),
-						Value: routertests.ToPtr("false"),
+						Name:  testutils.ToPtr("wg_http_client_reused_connection"),
+						Value: testutils.ToPtr("false"),
 					},
 					{
-						Name:  routertests.ToPtr("wg_subgraph_name"),
-						Value: routertests.ToPtr("employees"),
+						Name:  testutils.ToPtr("wg_subgraph_name"),
+						Value: testutils.ToPtr("employees"),
 					},
 				}
 				require.Equal(t, expected1, metricDataPoint1.Label)
@@ -5107,38 +5107,38 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					require.Len(t, requestTotalMetrics, 2)
 
 					metricsLabels := []*io_prometheus_client.LabelPair{
-						{Name: routertests.ToPtr("http_status_code"), Value: routertests.ToPtr("200")},
-						{Name: routertests.ToPtr("otel_scope_name"), Value: routertests.ToPtr("cosmo.router.prometheus")},
-						{Name: routertests.ToPtr("otel_scope_version"), Value: routertests.ToPtr("0.0.1")},
-						{Name: routertests.ToPtr("wg_client_name"), Value: routertests.ToPtr("unknown")},
-						{Name: routertests.ToPtr("wg_client_version"), Value: routertests.ToPtr("missing")},
-						{Name: routertests.ToPtr("wg_federated_graph_id"), Value: routertests.ToPtr("graph")},
+						{Name: testutils.ToPtr("http_status_code"), Value: testutils.ToPtr("200")},
+						{Name: testutils.ToPtr("otel_scope_name"), Value: testutils.ToPtr("cosmo.router.prometheus")},
+						{Name: testutils.ToPtr("otel_scope_version"), Value: testutils.ToPtr("0.0.1")},
+						{Name: testutils.ToPtr("wg_client_name"), Value: testutils.ToPtr("unknown")},
+						{Name: testutils.ToPtr("wg_client_version"), Value: testutils.ToPtr("missing")},
+						{Name: testutils.ToPtr("wg_federated_graph_id"), Value: testutils.ToPtr("graph")},
 					}
 
 					if usingCustomExporter == UseCloudExporter {
 						metricsLabels = append(metricsLabels, &io_prometheus_client.LabelPair{
-							Name:  routertests.ToPtr("wg_operation_name"),
-							Value: routertests.ToPtr("myQuery"),
+							Name:  testutils.ToPtr("wg_operation_name"),
+							Value: testutils.ToPtr("myQuery"),
 						})
 					}
 
 					metricsLabels = append(metricsLabels,
-						&io_prometheus_client.LabelPair{Name: routertests.ToPtr("wg_operation_protocol"), Value: routertests.ToPtr("http")},
-						&io_prometheus_client.LabelPair{Name: routertests.ToPtr("wg_operation_type"), Value: routertests.ToPtr("query")},
-						&io_prometheus_client.LabelPair{Name: routertests.ToPtr("wg_router_cluster_name"), Value: routertests.ToPtr("")},
+						&io_prometheus_client.LabelPair{Name: testutils.ToPtr("wg_operation_protocol"), Value: testutils.ToPtr("http")},
+						&io_prometheus_client.LabelPair{Name: testutils.ToPtr("wg_operation_type"), Value: testutils.ToPtr("query")},
+						&io_prometheus_client.LabelPair{Name: testutils.ToPtr("wg_router_cluster_name"), Value: testutils.ToPtr("")},
 					)
 
 					if usingCustomExporter != UseCustomExporterOnly {
 						metricsLabels = append(metricsLabels,
 							&io_prometheus_client.LabelPair{
-								Name:  routertests.ToPtr("wg_router_config_version"),
-								Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+								Name:  testutils.ToPtr("wg_router_config_version"),
+								Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 							},
 						)
 					}
 
 					metricsLabels = append(metricsLabels,
-						&io_prometheus_client.LabelPair{Name: routertests.ToPtr("wg_router_version"), Value: routertests.ToPtr("dev")},
+						&io_prometheus_client.LabelPair{Name: testutils.ToPtr("wg_router_version"), Value: testutils.ToPtr("dev")},
 					)
 
 					require.Equal(t, metricsLabels, requestTotalMetrics[0].Label)
@@ -5177,7 +5177,7 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 							"X-Feature-Flag": {"myff"},
 						},
 					})
-					require.JSONEq(t, routertests.EmployeesIDData, res.Body)
+					require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 
 					mf, err := promRegistry.Gather()
 					require.NoError(t, err)
@@ -5189,72 +5189,72 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 
 					attributes := []*io_prometheus_client.LabelPair{
 						{
-							Name:  routertests.ToPtr("http_status_code"),
-							Value: routertests.ToPtr("200"),
+							Name:  testutils.ToPtr("http_status_code"),
+							Value: testutils.ToPtr("200"),
 						},
 						{
-							Name:  routertests.ToPtr("otel_scope_name"),
-							Value: routertests.ToPtr("cosmo.router.prometheus"),
+							Name:  testutils.ToPtr("otel_scope_name"),
+							Value: testutils.ToPtr("cosmo.router.prometheus"),
 						},
 						{
-							Name:  routertests.ToPtr("otel_scope_version"),
-							Value: routertests.ToPtr("0.0.1"),
+							Name:  testutils.ToPtr("otel_scope_version"),
+							Value: testutils.ToPtr("0.0.1"),
 						},
 						{
-							Name:  routertests.ToPtr("wg_client_name"),
-							Value: routertests.ToPtr("unknown"),
+							Name:  testutils.ToPtr("wg_client_name"),
+							Value: testutils.ToPtr("unknown"),
 						},
 						{
-							Name:  routertests.ToPtr("wg_client_version"),
-							Value: routertests.ToPtr("missing"),
+							Name:  testutils.ToPtr("wg_client_version"),
+							Value: testutils.ToPtr("missing"),
 						},
 						{
-							Name:  routertests.ToPtr("wg_feature_flag"),
-							Value: routertests.ToPtr("myff"),
+							Name:  testutils.ToPtr("wg_feature_flag"),
+							Value: testutils.ToPtr("myff"),
 						},
 						{
-							Name:  routertests.ToPtr("wg_federated_graph_id"),
-							Value: routertests.ToPtr("graph"),
+							Name:  testutils.ToPtr("wg_federated_graph_id"),
+							Value: testutils.ToPtr("graph"),
 						},
 					}
 
 					if usingCustomExporter == UseCloudExporter {
 						attributes = append(attributes,
 							&io_prometheus_client.LabelPair{
-								Name:  routertests.ToPtr("wg_operation_name"),
-								Value: routertests.ToPtr("myQuery"),
+								Name:  testutils.ToPtr("wg_operation_name"),
+								Value: testutils.ToPtr("myQuery"),
 							},
 						)
 					}
 
 					attributes = append(attributes,
 						&io_prometheus_client.LabelPair{
-							Name:  routertests.ToPtr("wg_operation_protocol"),
-							Value: routertests.ToPtr("http"),
+							Name:  testutils.ToPtr("wg_operation_protocol"),
+							Value: testutils.ToPtr("http"),
 						},
 						&io_prometheus_client.LabelPair{
-							Name:  routertests.ToPtr("wg_operation_type"),
-							Value: routertests.ToPtr("query"),
+							Name:  testutils.ToPtr("wg_operation_type"),
+							Value: testutils.ToPtr("query"),
 						},
 						&io_prometheus_client.LabelPair{
-							Name:  routertests.ToPtr("wg_router_cluster_name"),
-							Value: routertests.ToPtr(""),
+							Name:  testutils.ToPtr("wg_router_cluster_name"),
+							Value: testutils.ToPtr(""),
 						},
 					)
 
 					if usingCustomExporter != UseCustomExporterOnly {
 						attributes = append(attributes,
 							&io_prometheus_client.LabelPair{
-								Name:  routertests.ToPtr("wg_router_config_version"),
-								Value: routertests.ToPtr(xEnv.RouterConfigVersionMyFF()),
+								Name:  testutils.ToPtr("wg_router_config_version"),
+								Value: testutils.ToPtr(xEnv.RouterConfigVersionMyFF()),
 							},
 						)
 					}
 
 					attributes = append(attributes,
 						&io_prometheus_client.LabelPair{
-							Name:  routertests.ToPtr("wg_router_version"),
-							Value: routertests.ToPtr("dev"),
+							Name:  testutils.ToPtr("wg_router_version"),
+							Value: testutils.ToPtr("dev"),
 						},
 					)
 
@@ -5294,36 +5294,36 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 				testenv.Run(t, cfg, func(t *testing.T, xEnv *testenv.Environment) {
 					baseAttributes := []*io_prometheus_client.LabelPair{
 						{
-							Name:  routertests.ToPtr("otel_scope_name"),
-							Value: routertests.ToPtr("cosmo.router.engine"),
+							Name:  testutils.ToPtr("otel_scope_name"),
+							Value: testutils.ToPtr("cosmo.router.engine"),
 						},
 						{
-							Name:  routertests.ToPtr("otel_scope_version"),
-							Value: routertests.ToPtr("0.0.1"),
+							Name:  testutils.ToPtr("otel_scope_version"),
+							Value: testutils.ToPtr("0.0.1"),
 						},
 						{
-							Name:  routertests.ToPtr("wg_federated_graph_id"),
-							Value: routertests.ToPtr("graph"),
+							Name:  testutils.ToPtr("wg_federated_graph_id"),
+							Value: testutils.ToPtr("graph"),
 						},
 						{
-							Name:  routertests.ToPtr("wg_router_cluster_name"),
-							Value: routertests.ToPtr(""),
+							Name:  testutils.ToPtr("wg_router_cluster_name"),
+							Value: testutils.ToPtr(""),
 						},
 					}
 
 					if usingCustomExporter != UseCustomExporterOnly {
 						baseAttributes = append(baseAttributes,
 							&io_prometheus_client.LabelPair{
-								Name:  routertests.ToPtr("wg_router_config_version"),
-								Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+								Name:  testutils.ToPtr("wg_router_config_version"),
+								Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 							},
 						)
 					}
 
 					baseAttributes = append(baseAttributes,
 						&io_prometheus_client.LabelPair{
-							Name:  routertests.ToPtr("wg_router_version"),
-							Value: routertests.ToPtr("dev"),
+							Name:  testutils.ToPtr("wg_router_version"),
+							Value: testutils.ToPtr("dev"),
 						},
 					)
 
@@ -5432,36 +5432,36 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					baseAttributes := func() []*io_prometheus_client.LabelPair {
 						attributes := []*io_prometheus_client.LabelPair{
 							{
-								Name:  routertests.ToPtr("otel_scope_name"),
-								Value: routertests.ToPtr("cosmo.router.cache"),
+								Name:  testutils.ToPtr("otel_scope_name"),
+								Value: testutils.ToPtr("cosmo.router.cache"),
 							},
 							{
-								Name:  routertests.ToPtr("otel_scope_version"),
-								Value: routertests.ToPtr("0.0.1"),
+								Name:  testutils.ToPtr("otel_scope_version"),
+								Value: testutils.ToPtr("0.0.1"),
 							},
 							{
-								Name:  routertests.ToPtr("wg_federated_graph_id"),
-								Value: routertests.ToPtr("graph"),
+								Name:  testutils.ToPtr("wg_federated_graph_id"),
+								Value: testutils.ToPtr("graph"),
 							},
 							{
-								Name:  routertests.ToPtr("wg_router_cluster_name"),
-								Value: routertests.ToPtr(""),
+								Name:  testutils.ToPtr("wg_router_cluster_name"),
+								Value: testutils.ToPtr(""),
 							},
 						}
 
 						if usingCustomExporter != UseCustomExporterOnly {
 							attributes = append(attributes,
 								&io_prometheus_client.LabelPair{
-									Name:  routertests.ToPtr("wg_router_config_version"),
-									Value: routertests.ToPtr(xEnv.RouterConfigVersionMain()),
+									Name:  testutils.ToPtr("wg_router_config_version"),
+									Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 								},
 							)
 						}
 
 						attributes = append(attributes,
 							&io_prometheus_client.LabelPair{
-								Name:  routertests.ToPtr("wg_router_version"),
-								Value: routertests.ToPtr("dev"),
+								Name:  testutils.ToPtr("wg_router_version"),
+								Value: testutils.ToPtr("dev"),
 							},
 						)
 
@@ -5494,18 +5494,18 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					cacheMaxCostValidation := findMetricsByLabel(cacheMaxCostMetricMf, "cache_type", "validation")
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("plan"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("plan"),
 					}), cacheMaxCostExecution[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("query_normalization"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("query_normalization"),
 					}), cacheMaxCostNormalization[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("validation"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("validation"),
 					}), cacheMaxCostValidation[0].Label)
 
 					// Check the cache request stats
@@ -5516,51 +5516,51 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					cacheRequestValidationStats := findMetricsByLabel(cacheRequestStatsMetricMf, "cache_type", "validation")
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("plan"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("type"),
-						Value: routertests.ToPtr("hits"),
+						Name:  testutils.ToPtr("type"),
+						Value: testutils.ToPtr("hits"),
 					}), cacheRequestExecutionStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("plan"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("type"),
-						Value: routertests.ToPtr("misses"),
+						Name:  testutils.ToPtr("type"),
+						Value: testutils.ToPtr("misses"),
 					}), cacheRequestExecutionStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("query_normalization"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("type"),
-						Value: routertests.ToPtr("hits"),
+						Name:  testutils.ToPtr("type"),
+						Value: testutils.ToPtr("hits"),
 					}), cacheRequestNormalizationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("query_normalization"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("type"),
-						Value: routertests.ToPtr("misses"),
+						Name:  testutils.ToPtr("type"),
+						Value: testutils.ToPtr("misses"),
 					}), cacheRequestNormalizationStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("validation"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("type"),
-						Value: routertests.ToPtr("hits"),
+						Name:  testutils.ToPtr("type"),
+						Value: testutils.ToPtr("hits"),
 					}), cacheRequestValidationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("validation"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("type"),
-						Value: routertests.ToPtr("misses"),
+						Name:  testutils.ToPtr("type"),
+						Value: testutils.ToPtr("misses"),
 					}), cacheRequestValidationStats[1].Label)
 
 					// Cache cost stats
@@ -5570,59 +5570,59 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					cacheCostValidationStats := findMetricsByLabel(cacheCostStatsMf, "cache_type", "validation")
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("plan"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("added"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("added"),
 					}), cacheCostExecutionStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("plan"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("evicted"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("evicted"),
 					}), cacheCostExecutionStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("query_normalization"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("added"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("added"),
 					}), cacheCostNormalizationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("query_normalization"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("evicted"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("evicted"),
 					}), cacheCostNormalizationStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("query_normalization"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("evicted"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("evicted"),
 					}), cacheCostNormalizationStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("validation"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("added"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("added"),
 					}), cacheCostValidationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("validation"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("evicted"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("evicted"),
 					}), cacheCostValidationStats[1].Label)
 
 					// cache Key stats
@@ -5632,75 +5632,75 @@ func TestExcludeAttributesWithCustomExporterPrometheus(t *testing.T) {
 					cacheKeyValidationStats := findMetricsByLabel(cacheKeyStatsMf, "cache_type", "validation")
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("plan"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("added"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("added"),
 					}), cacheKeyExecutionStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("plan"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("evicted"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("evicted"),
 					}), cacheKeyExecutionStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("plan"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("plan"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("updated"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("updated"),
 					}), cacheKeyExecutionStats[2].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("query_normalization"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("added"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("added"),
 					}), cacheKeyNormalizationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("query_normalization"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("evicted"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("evicted"),
 					}), cacheKeyNormalizationStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("query_normalization"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("query_normalization"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("updated"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("updated"),
 					}), cacheKeyNormalizationStats[2].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("validation"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("added"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("added"),
 					}), cacheKeyValidationStats[0].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("validation"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("evicted"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("evicted"),
 					}), cacheKeyValidationStats[1].Label)
 
 					require.ElementsMatch(t, append(baseAttributes, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("cache_type"),
-						Value: routertests.ToPtr("validation"),
+						Name:  testutils.ToPtr("cache_type"),
+						Value: testutils.ToPtr("validation"),
 					}, &io_prometheus_client.LabelPair{
-						Name:  routertests.ToPtr("operation"),
-						Value: routertests.ToPtr("updated"),
+						Name:  testutils.ToPtr("operation"),
+						Value: testutils.ToPtr("updated"),
 					}), cacheKeyValidationStats[2].Label)
 
 				})

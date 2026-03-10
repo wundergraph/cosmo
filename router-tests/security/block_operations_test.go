@@ -1,7 +1,7 @@
 package integration
 
 import (
-	integration "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 
 	"bytes"
 	"encoding/json"
@@ -151,7 +151,7 @@ func TestBlockOperations(t *testing.T) {
 		t.Run("should block operation by scope expression condition", func(t *testing.T) {
 			t.Parallel()
 
-			authenticators, authServer := integration.ConfigureAuth(t)
+			authenticators, authServer := testutils.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
 				Authenticators:           authenticators,
 				AuthenticationRequired:   false,
@@ -312,7 +312,7 @@ func TestBlockOperations(t *testing.T) {
 		t.Run("should block subscriptions by scope match expression", func(t *testing.T) {
 			t.Parallel()
 
-			authenticators, authServer := integration.ConfigureAuth(t)
+			authenticators, authServer := testutils.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
 				Authenticators:           authenticators,
 				AuthenticationRequired:   false,
@@ -411,7 +411,7 @@ func TestBlockOperations(t *testing.T) {
 		t.Run("should block subscriptions by scope match expression and from initial payload enabled", func(t *testing.T) {
 			t.Parallel()
 
-			authenticators, authServer := integration.ConfigureAuth(t)
+			authenticators, authServer := testutils.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
 				Authenticators:           authenticators,
 				AuthenticationRequired:   false,

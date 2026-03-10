@@ -1,7 +1,7 @@
 package integration
 
 import (
-	integration "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 
 	"context"
 	"net/http"
@@ -697,8 +697,8 @@ func TestCircuitBreaker(t *testing.T) {
 						},
 					}
 
-					scopeMetric := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-					shortCircuitActual := integration.GetMetricByName(scopeMetric, "router.circuit_breaker.short_circuits")
+					scopeMetric := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					shortCircuitActual := testutils.GetMetricByName(scopeMetric, "router.circuit_breaker.short_circuits")
 
 					switch d := shortCircuitActual.Data.(type) {
 					case metricdata.Sum[int64]:
@@ -773,28 +773,28 @@ func TestCircuitBreaker(t *testing.T) {
 
 					expected := []*io_prometheus_client.LabelPair{
 						{
-							Name:  integration.ToPtr("otel_scope_name"),
-							Value: integration.ToPtr("cosmo.router.prometheus"),
+							Name:  testutils.ToPtr("otel_scope_name"),
+							Value: testutils.ToPtr("cosmo.router.prometheus"),
 						},
 						{
-							Name:  integration.ToPtr("otel_scope_version"),
-							Value: integration.ToPtr("0.0.1"),
+							Name:  testutils.ToPtr("otel_scope_version"),
+							Value: testutils.ToPtr("0.0.1"),
 						},
 						{
-							Name:  integration.ToPtr("wg_federated_graph_id"),
-							Value: integration.ToPtr("graph"),
+							Name:  testutils.ToPtr("wg_federated_graph_id"),
+							Value: testutils.ToPtr("graph"),
 						},
 						{
-							Name:  integration.ToPtr("wg_router_cluster_name"),
-							Value: integration.ToPtr(""),
+							Name:  testutils.ToPtr("wg_router_cluster_name"),
+							Value: testutils.ToPtr(""),
 						},
 						{
-							Name:  integration.ToPtr("wg_router_config_version"),
-							Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
+							Name:  testutils.ToPtr("wg_router_config_version"),
+							Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 						},
 						{
-							Name:  integration.ToPtr("wg_router_version"),
-							Value: integration.ToPtr("dev"),
+							Name:  testutils.ToPtr("wg_router_version"),
+							Value: testutils.ToPtr("dev"),
 						},
 					}
 
@@ -876,8 +876,8 @@ func TestCircuitBreaker(t *testing.T) {
 						},
 					}
 
-					scopeMetric := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-					shortCircuitActual := integration.GetMetricByName(scopeMetric, "router.circuit_breaker.short_circuits")
+					scopeMetric := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					shortCircuitActual := testutils.GetMetricByName(scopeMetric, "router.circuit_breaker.short_circuits")
 					metricdatatest.AssertEqual(t, shortCircuitRequestsMetric, *shortCircuitActual, metricdatatest.IgnoreTimestamp())
 				})
 			})
@@ -936,32 +936,32 @@ func TestCircuitBreaker(t *testing.T) {
 
 					expected := []*io_prometheus_client.LabelPair{
 						{
-							Name:  integration.ToPtr("otel_scope_name"),
-							Value: integration.ToPtr("cosmo.router.prometheus"),
+							Name:  testutils.ToPtr("otel_scope_name"),
+							Value: testutils.ToPtr("cosmo.router.prometheus"),
 						},
 						{
-							Name:  integration.ToPtr("otel_scope_version"),
-							Value: integration.ToPtr("0.0.1"),
+							Name:  testutils.ToPtr("otel_scope_version"),
+							Value: testutils.ToPtr("0.0.1"),
 						},
 						{
-							Name:  integration.ToPtr("wg_federated_graph_id"),
-							Value: integration.ToPtr("graph"),
+							Name:  testutils.ToPtr("wg_federated_graph_id"),
+							Value: testutils.ToPtr("graph"),
 						},
 						{
-							Name:  integration.ToPtr("wg_router_cluster_name"),
-							Value: integration.ToPtr(""),
+							Name:  testutils.ToPtr("wg_router_cluster_name"),
+							Value: testutils.ToPtr(""),
 						},
 						{
-							Name:  integration.ToPtr("wg_router_config_version"),
-							Value: integration.ToPtr(xEnv.RouterConfigVersionMain()),
+							Name:  testutils.ToPtr("wg_router_config_version"),
+							Value: testutils.ToPtr(xEnv.RouterConfigVersionMain()),
 						},
 						{
-							Name:  integration.ToPtr("wg_router_version"),
-							Value: integration.ToPtr("dev"),
+							Name:  testutils.ToPtr("wg_router_version"),
+							Value: testutils.ToPtr("dev"),
 						},
 						{
-							Name:  integration.ToPtr("wg_subgraph_name"),
-							Value: integration.ToPtr(`["employees"]`),
+							Name:  testutils.ToPtr("wg_subgraph_name"),
+							Value: testutils.ToPtr(`["employees"]`),
 						},
 					}
 					require.Equal(t, expected, metricDataPoint.Label)
@@ -1028,7 +1028,7 @@ func TestCircuitBreaker(t *testing.T) {
 						// Ensure that the metric does not exist still, as it's only recorded when state is changed
 						rm := metricdata.ResourceMetrics{}
 						require.NoError(t, metricReader.Collect(context.Background(), &rm))
-						shortCircuitBeforeStatusChange := integration.GetMetricByName(integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
+						shortCircuitBeforeStatusChange := testutils.GetMetricByName(testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
 						require.Nil(t, shortCircuitBeforeStatusChange)
 					})
 
@@ -1040,7 +1040,7 @@ func TestCircuitBreaker(t *testing.T) {
 
 						rm := metricdata.ResourceMetrics{}
 						require.NoError(t, metricReader.Collect(context.Background(), &rm))
-						shortCircuitAfterStatusOpen := integration.GetMetricByName(integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
+						shortCircuitAfterStatusOpen := testutils.GetMetricByName(testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
 
 						shortCircuitRequestsMetric := metricdata.Metrics{
 							Name:        "router.circuit_breaker.state",
@@ -1073,7 +1073,7 @@ func TestCircuitBreaker(t *testing.T) {
 
 						rm := metricdata.ResourceMetrics{}
 						require.NoError(t, metricReader.Collect(context.Background(), &rm))
-						shortCircuitStatusAfterClosedAgain := integration.GetMetricByName(integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
+						shortCircuitStatusAfterClosedAgain := testutils.GetMetricByName(testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router"), "router.circuit_breaker.state")
 
 						shortCircuitRequestsMetric := metricdata.Metrics{
 							Name:        "router.circuit_breaker.state",
@@ -1171,13 +1171,13 @@ func TestCircuitBreaker(t *testing.T) {
 						require.Equal(t, float64(ShortCircuitOpened), *metricDataPoint.Gauge.Value)
 
 						expectedOpened := []*io_prometheus_client.LabelPair{
-							{Name: integration.ToPtr("otel_scope_name"), Value: integration.ToPtr("cosmo.router.prometheus")},
-							{Name: integration.ToPtr("otel_scope_version"), Value: integration.ToPtr("0.0.1")},
-							{Name: integration.ToPtr("wg_federated_graph_id"), Value: integration.ToPtr("graph")},
-							{Name: integration.ToPtr("wg_router_cluster_name"), Value: integration.ToPtr("")},
-							{Name: integration.ToPtr("wg_router_config_version"), Value: integration.ToPtr(xEnv.RouterConfigVersionMain())},
-							{Name: integration.ToPtr("wg_router_version"), Value: integration.ToPtr("dev")},
-							{Name: integration.ToPtr("wg_subgraph_name"), Value: integration.ToPtr(`["employees"]`)},
+							{Name: testutils.ToPtr("otel_scope_name"), Value: testutils.ToPtr("cosmo.router.prometheus")},
+							{Name: testutils.ToPtr("otel_scope_version"), Value: testutils.ToPtr("0.0.1")},
+							{Name: testutils.ToPtr("wg_federated_graph_id"), Value: testutils.ToPtr("graph")},
+							{Name: testutils.ToPtr("wg_router_cluster_name"), Value: testutils.ToPtr("")},
+							{Name: testutils.ToPtr("wg_router_config_version"), Value: testutils.ToPtr(xEnv.RouterConfigVersionMain())},
+							{Name: testutils.ToPtr("wg_router_version"), Value: testutils.ToPtr("dev")},
+							{Name: testutils.ToPtr("wg_subgraph_name"), Value: testutils.ToPtr(`["employees"]`)},
 						}
 						require.Equal(t, expectedOpened, metricDataPoint.Label)
 					})
@@ -1203,13 +1203,13 @@ func TestCircuitBreaker(t *testing.T) {
 						closedDataPoint := metrics[0]
 						require.Equal(t, float64(ShortCircuitClosed), *closedDataPoint.Gauge.Value)
 						expectedClosed := []*io_prometheus_client.LabelPair{
-							{Name: integration.ToPtr("otel_scope_name"), Value: integration.ToPtr("cosmo.router.prometheus")},
-							{Name: integration.ToPtr("otel_scope_version"), Value: integration.ToPtr("0.0.1")},
-							{Name: integration.ToPtr("wg_federated_graph_id"), Value: integration.ToPtr("graph")},
-							{Name: integration.ToPtr("wg_router_cluster_name"), Value: integration.ToPtr("")},
-							{Name: integration.ToPtr("wg_router_config_version"), Value: integration.ToPtr(xEnv.RouterConfigVersionMain())},
-							{Name: integration.ToPtr("wg_router_version"), Value: integration.ToPtr("dev")},
-							{Name: integration.ToPtr("wg_subgraph_name"), Value: integration.ToPtr(`["employees"]`)},
+							{Name: testutils.ToPtr("otel_scope_name"), Value: testutils.ToPtr("cosmo.router.prometheus")},
+							{Name: testutils.ToPtr("otel_scope_version"), Value: testutils.ToPtr("0.0.1")},
+							{Name: testutils.ToPtr("wg_federated_graph_id"), Value: testutils.ToPtr("graph")},
+							{Name: testutils.ToPtr("wg_router_cluster_name"), Value: testutils.ToPtr("")},
+							{Name: testutils.ToPtr("wg_router_config_version"), Value: testutils.ToPtr(xEnv.RouterConfigVersionMain())},
+							{Name: testutils.ToPtr("wg_router_version"), Value: testutils.ToPtr("dev")},
+							{Name: testutils.ToPtr("wg_subgraph_name"), Value: testutils.ToPtr(`["employees"]`)},
 						}
 						require.Equal(t, expectedClosed, closedDataPoint.Label)
 					})
@@ -1303,16 +1303,16 @@ func getTrafficConfigWithTimeout(breaker config.CircuitBreaker, timeout time.Dur
 				Enabled: false,
 			},
 			CircuitBreaker:         breaker,
-			RequestTimeout:         integration.ToPtr(timeout),
-			DialTimeout:            integration.ToPtr(timeout),
-			ResponseHeaderTimeout:  integration.ToPtr(timeout),
-			ExpectContinueTimeout:  integration.ToPtr(timeout),
-			TLSHandshakeTimeout:    integration.ToPtr(timeout),
-			KeepAliveIdleTimeout:   integration.ToPtr(timeout),
-			KeepAliveProbeInterval: integration.ToPtr(10 * time.Second),
-			MaxConnsPerHost:        integration.ToPtr(20),
-			MaxIdleConns:           integration.ToPtr(20),
-			MaxIdleConnsPerHost:    integration.ToPtr(20),
+			RequestTimeout:         testutils.ToPtr(timeout),
+			DialTimeout:            testutils.ToPtr(timeout),
+			ResponseHeaderTimeout:  testutils.ToPtr(timeout),
+			ExpectContinueTimeout:  testutils.ToPtr(timeout),
+			TLSHandshakeTimeout:    testutils.ToPtr(timeout),
+			KeepAliveIdleTimeout:   testutils.ToPtr(timeout),
+			KeepAliveProbeInterval: testutils.ToPtr(10 * time.Second),
+			MaxConnsPerHost:        testutils.ToPtr(20),
+			MaxIdleConns:           testutils.ToPtr(20),
+			MaxIdleConnsPerHost:    testutils.ToPtr(20),
 		},
 	}
 	return trafficConfig
