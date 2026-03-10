@@ -1,19 +1,19 @@
 import {
-  DirectiveDefinitionNode,
-  DocumentNode,
-  GraphQLSchema,
-  OperationTypeNode,
-  SchemaDefinitionNode,
-  SchemaExtensionNode,
+  type DirectiveDefinitionNode,
+  type DocumentNode,
+  type GraphQLSchema,
+  type OperationTypeNode,
+  type SchemaDefinitionNode,
+  type SchemaExtensionNode,
 } from 'graphql';
-import { ConfigurationData } from '../router-configuration/types';
+import { type ConfigurationData } from '../router-configuration/types';
 import {
-  ConditionalFieldData,
-  EntityInterfaceSubgraphData,
-  ParentDefinitionData,
-  PersistedDirectiveDefinitionData,
+  type ConditionalFieldData,
+  type EntityInterfaceSubgraphData,
+  type ParentDefinitionData,
+  type PersistedDirectiveDefinitionData,
 } from '../schema-building/types';
-import { DirectiveName, FieldName, SubgraphName, TypeName } from '../types/types';
+import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
 
 export type Subgraph = {
   definitions: DocumentNode;

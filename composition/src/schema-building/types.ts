@@ -1,31 +1,31 @@
 import {
-  ConstDirectiveNode,
-  ConstValueNode,
-  DirectiveDefinitionNode,
-  DocumentNode,
-  Kind,
-  NamedTypeNode,
-  OperationTypeDefinitionNode,
-  OperationTypeNode,
-  StringValueNode,
-  TypeNode,
+  type ConstDirectiveNode,
+  type ConstValueNode,
+  type DirectiveDefinitionNode,
+  type DocumentNode,
+  type Kind,
+  type NamedTypeNode,
+  type OperationTypeDefinitionNode,
+  type OperationTypeNode,
+  type StringValueNode,
+  type TypeNode,
 } from 'graphql';
 import {
-  MutableEnumNode,
-  MutableEnumValueNode,
-  MutableFieldNode,
-  MutableInputObjectNode,
-  MutableInputValueNode,
-  MutableInterfaceNode,
-  MutableObjectNode,
-  MutableScalarNode,
-  MutableTypeNode,
-  MutableUnionNode,
+  type MutableEnumNode,
+  type MutableEnumValueNode,
+  type MutableFieldNode,
+  type MutableInputObjectNode,
+  type MutableInputValueNode,
+  type MutableInterfaceNode,
+  type MutableObjectNode,
+  type MutableScalarNode,
+  type MutableTypeNode,
+  type MutableUnionNode,
 } from './ast';
-import { FieldSetConditionData } from '../router-configuration/types';
-import { KeyFieldSetData } from '../v1/normalization/types';
-import { InputNodeKind, OutputNodeKind } from '../utils/types';
-import { DirectiveName, FieldName, SubgraphName, TypeName } from '../types/types';
+import { type FieldSetConditionData } from '../router-configuration/types';
+import { type KeyFieldSetData } from '../v1/normalization/types';
+import { type InputNodeKind, type OutputNodeKind } from '../utils/types';
+import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
 
 export type ArgumentData = {
   name: string;
