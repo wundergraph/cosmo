@@ -1,6 +1,7 @@
 import type { UUID } from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
+  CompositionOptions,
   ContractTagOptions,
   FederationResult,
   FieldConfiguration,
@@ -28,7 +29,7 @@ import {
   RouterConfig,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { CompositionOptions, FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
+import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
 import { audiences, nowInSeconds, signJwtHS256 } from '../crypto/jwt.js';
 import { ContractRepository } from '../repositories/ContractRepository.js';

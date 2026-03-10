@@ -35,7 +35,7 @@ import 'core-js/modules/esnext.set.is-subset-of.v2';
 import 'core-js/modules/esnext.set.is-superset-of.v2';
 import type { CompositeOutputNodeKind } from '../../ast/utils';
 import { COMPOSITE_OUTPUT_NODE_KINDS } from '../constants/strings';
-import { SubgraphName, TypeName } from '../../types/types';
+import { type SubgraphName, type TypeName } from '../../types/types';
 
 export function subtractSet<T>(source: Set<T>, target: Set<T>) {
   for (const entry of source) {

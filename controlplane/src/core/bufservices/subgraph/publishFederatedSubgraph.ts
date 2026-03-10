@@ -8,6 +8,7 @@ import {
   SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
@@ -32,7 +33,6 @@ import {
   isValidGrpcNamingScheme,
   isValidLabels,
   isValidPluginVersion,
-  newCompositionOptions,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -69,6 +69,11 @@ export function publishFederatedSubgraph(
       throw new UnauthorizedError();
     }
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
+
     const subgraphSchemaSDL = req.schema;
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {
@@ -98,7 +103,12 @@ export function publishFederatedSubgraph(
        * If no federated graphs have yet been created, the subgraph will be validated against the latest router
        * compatibility version.
        */
-      // Here we check if the schema is valid as a subgraph SDL
+      /* Here we check if the schema is valid as a subgraph SDL
+       * `buildSchema` only calls normalization in isolation.
+       * The `disableResolvabilityChecks` flag is only used in the federation step.
+       * The `ignoreExternalKeys` flag is propagated in normalization but only used in the federation step.
+       * Consequently, there is currently no reason to propagate the options within `buildSchema`.
+       */
       const result = buildSchema(subgraphSchemaSDL, true, routerCompatibilityVersion);
       if (!result.success) {
         return {
@@ -588,7 +598,10 @@ export function publishFederatedSubgraph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
-        newCompositionOptions(req.disableResolvabilityValidation),
+        {
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        },
       );
 
     // if this subgraph is part of a proposal, mark the proposal subgraph as published

@@ -1,31 +1,28 @@
-import { useFeature } from "@/hooks/use-feature";
-import { useSessionStorage } from "@/hooks/use-session-storage";
-import { calURL } from "@/lib/constants";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { ParsedUrlQueryInput } from "querystring";
-import { BiAnalyse } from "react-icons/bi";
-import { BsQuestionCircle } from "react-icons/bs";
-import { IoBarcodeSharp } from "react-icons/io5";
-import { Button } from "../ui/button";
-import { Spacer } from "../ui/spacer";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
-import { Toolbar } from "../ui/toolbar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { useFeature } from '@/hooks/use-feature';
+import { useSessionStorage } from '@/hooks/use-session-storage';
+import { calURL } from '@/lib/constants';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { ParsedUrlQueryInput } from 'querystring';
+import { BiAnalyse } from 'react-icons/bi';
+import { BsQuestionCircle } from 'react-icons/bs';
+import { IoBarcodeSharp } from 'react-icons/io5';
+import { Button } from '../ui/button';
+import { Spacer } from '../ui/spacer';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import { Toolbar } from '../ui/toolbar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
 export const AnalyticsToolbar: React.FC<{
   tab: string;
   children?: React.ReactNode;
 }> = (props) => {
   const router = useRouter();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
   const query: ParsedUrlQueryInput = {
@@ -46,9 +43,7 @@ export const AnalyticsToolbar: React.FC<{
     query.dateRange = router.query.dateRange;
   }
 
-  const [tracesRoute, setTracesRoute] = useSessionStorage<
-    ParsedUrlQueryInput | undefined
-  >("analytics.route", query);
+  const [tracesRoute, setTracesRoute] = useSessionStorage<ParsedUrlQueryInput | undefined>('analytics.route', query);
 
   const isTracePage = router.query.traceID;
 
@@ -58,7 +53,7 @@ export const AnalyticsToolbar: React.FC<{
     }
   };
 
-  const retention = useFeature("analytics-retention");
+  const retention = useFeature('analytics-retention');
 
   return (
     <Toolbar>
@@ -67,8 +62,7 @@ export const AnalyticsToolbar: React.FC<{
           <TabsTrigger value="overview" asChild>
             <Link
               href={{
-                pathname:
-                  "/[organizationSlug]/[namespace]/graph/[slug]/analytics",
+                pathname: '/[organizationSlug]/[namespace]/graph/[slug]/analytics',
                 query: isTracePage ? tracesRoute : query,
               }}
               onClick={updateRoute}
@@ -81,8 +75,7 @@ export const AnalyticsToolbar: React.FC<{
           <TabsTrigger value="traces" asChild>
             <Link
               href={{
-                pathname:
-                  "/[organizationSlug]/[namespace]/graph/[slug]/analytics/traces",
+                pathname: '/[organizationSlug]/[namespace]/graph/[slug]/analytics/traces',
                 query: isTracePage ? tracesRoute : query,
               }}
               onClick={updateRoute}
