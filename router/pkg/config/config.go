@@ -616,10 +616,18 @@ type NatsAuthentication struct {
 	NatsTokenBasedAuthentication `yaml:"token,inline"`
 }
 
+type NatsTLSConfiguration struct {
+	InsecureSkipVerify bool   `yaml:"insecure_skip_verify,omitempty" envDefault:"false"`
+	CaFile             string `yaml:"ca_file,omitempty"`
+	CertFile           string `yaml:"cert_file,omitempty"`
+	KeyFile            string `yaml:"key_file,omitempty"`
+}
+
 type NatsEventSource struct {
-	ID             string              `yaml:"id,omitempty"`
-	URL            string              `yaml:"url,omitempty"`
-	Authentication *NatsAuthentication `yaml:"authentication,omitempty"`
+	ID             string                 `yaml:"id,omitempty"`
+	URL            string                 `yaml:"url,omitempty"`
+	Authentication *NatsAuthentication    `yaml:"authentication,omitempty"`
+	TLS            *NatsTLSConfiguration  `yaml:"tls,omitempty"`
 }
 
 func (n NatsEventSource) GetID() string {

@@ -2580,6 +2580,33 @@
                         }
                       }
                     ]
+                  },
+                  "tls": {
+                    "type": "object",
+                    "description": "TLS configuration for the NATS provider.",
+                    "additionalProperties": false,
+                    "properties": {
+                      "insecure_skip_verify": {
+                        "type": "boolean",
+                        "default": false,
+                        "description": "Skip server certificate verification. Not recommended for production use."
+                      },
+                      "ca_file": {
+                        "type": "string",
+                        "description": "Path to a custom CA certificate file (PEM) used to verify the server certificate.",
+                        "format": "file-path"
+                      },
+                      "cert_file": {
+                        "type": "string",
+                        "description": "Path to the client certificate file (PEM) for mTLS.",
+                        "format": "file-path"
+                      },
+                      "key_file": {
+                        "type": "string",
+                        "description": "Path to the client private key file (PEM) for mTLS.",
+                        "format": "file-path"
+                      }
+                    }
                   }
                 }
               }

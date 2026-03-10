@@ -2,8 +2,11 @@ package nats
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -112,6 +115,44 @@ func buildNatsOptions(eventSource config.NatsEventSource, logger *zap.Logger) ([
 		} else if eventSource.Authentication.UserInfo.Username != nil && eventSource.Authentication.UserInfo.Password != nil {
 			opts = append(opts, nats.UserInfo(*eventSource.Authentication.UserInfo.Username, *eventSource.Authentication.UserInfo.Password))
 		}
+	}
+
+	if eventSource.TLS != nil {
+		tlsCfg := &tls.Config{
+			InsecureSkipVerify: eventSource.TLS.InsecureSkipVerify,
+		}
+
+		if eventSource.TLS.InsecureSkipVerify {
+			logger.Warn("TLS InsecureSkipVerify is enabled for NATS provider. This is not recommended for production environments.", zap.String("provider_id", eventSource.ID))
+		}
+
+		if eventSource.TLS.CaFile != "" {
+			caPEM, err := os.ReadFile(eventSource.TLS.CaFile)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read CA file %q: %w", eventSource.TLS.CaFile, err)
+			}
+			pool := x509.NewCertPool()
+			if !pool.AppendCertsFromPEM(caPEM) {
+				return nil, fmt.Errorf("failed to parse CA certificate from %q", eventSource.TLS.CaFile)
+			}
+			tlsCfg.RootCAs = pool
+		}
+
+		if eventSource.TLS.CertFile != "" || eventSource.TLS.KeyFile != "" {
+			if eventSource.TLS.CertFile == "" || eventSource.TLS.KeyFile == "" {
+				return nil, fmt.Errorf("both cert_file and key_file must be provided for mTLS on NATS provider %q", eventSource.ID)
+			}
+			if eventSource.TLS.CaFile == "" {
+				return nil, fmt.Errorf("ca_file is required when mTLS credentials are configured for NATS provider %q", eventSource.ID)
+			}
+			cert, err := tls.LoadX509KeyPair(eventSource.TLS.CertFile, eventSource.TLS.KeyFile)
+			if err != nil {
+				return nil, fmt.Errorf("failed to load mTLS certificate/key for NATS provider %q: %w", eventSource.ID, err)
+			}
+			tlsCfg.Certificates = []tls.Certificate{cert}
+		}
+
+		opts = append(opts, nats.Secure(tlsCfg))
 	}
 
 	return opts, nil
