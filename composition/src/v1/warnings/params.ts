@@ -1,4 +1,4 @@
-import { FieldName, SubgraphName, TypeName } from '../../types/types';
+import { type FieldName, type SubgraphName, type TypeName } from '../../types/types';
 
 export type SingleSubgraphInputFieldOneOfWarningParams = {
   fieldName: FieldName;

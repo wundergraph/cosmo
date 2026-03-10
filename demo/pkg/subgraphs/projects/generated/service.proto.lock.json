@@ -351,13 +351,7 @@
         "resourceGroups": 16,
         "tasksByPhase": 17,
         "milestoneGroups": 18,
-        "priorityMatrix": 19,
-        "subProjects": 25,
-        "filteredTasks": 20,
-        "completionRate": 21,
-        "estimatedDaysRemaining": 22,
-        "criticalDeadline": 23,
-        "topPriorityItem": 24
+        "priorityMatrix": 19
       }
     },
     "Milestone": {
@@ -372,9 +366,7 @@
         "completionPercentage": 8,
         "dependencies": 9,
         "subtasks": 10,
-        "reviewers": 11,
-        "isAtRisk": 12,
-        "daysUntilDue": 13
+        "reviewers": 11
       }
     },
     "Task": {
@@ -395,10 +387,12 @@
         "subtasks": 14,
         "dependencies": 15,
         "attachmentUrls": 16,
-        "reviewerIds": 17,
-        "isBlocked": 18,
-        "totalEffort": 19
-      }
+        "reviewerIds": 17
+      },
+      "reservedNumbers": [
+        18,
+        19
+      ]
     },
     "Employee": {
       "fields": {
@@ -408,9 +402,7 @@
         "completedTasks": 4,
         "skills": 5,
         "certifications": 6,
-        "projectHistory": 7,
-        "currentWorkload": 8,
-        "averageTaskCompletionDays": 9
+        "projectHistory": 7
       }
     },
     "Product": {

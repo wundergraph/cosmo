@@ -491,8 +491,8 @@ importers:
         specifier: ^11.0.0
         version: 11.0.0(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
       '@keycloak/keycloak-admin-client':
-        specifier: 26.2.5
-        version: 26.2.5
+        specifier: 26.5.4
+        version: 26.5.4
       '@octokit/webhooks-types':
         specifier: ^7.6.1
         version: 7.6.1
@@ -509,8 +509,8 @@ importers:
         specifier: ^2.1.13
         version: 2.1.13(@tiptap/pm@2.1.13)
       '@wundergraph/composition':
-        specifier: 0.51.1
-        version: 0.51.1
+        specifier: workspace:*
+        version: link:../composition
       '@wundergraph/cosmo-connect':
         specifier: workspace:*
         version: link:../connect
@@ -4133,8 +4133,8 @@ packages:
   '@jspm/core@2.0.1':
     resolution: {integrity: sha512-Lg3PnLp0QXpxwLIAuuJboLeRaIhrgJjeuh797QADg3xz8wGLugQOS5DpsE8A6i6Adgzf+bacllkKZG3J0tGfDw==}
 
-  '@keycloak/keycloak-admin-client@26.2.5':
-    resolution: {integrity: sha512-glMBjQE0M8KOe9uZtdIl7kvHeBjfegZKxK8SzAZxekWvwsZ3Kt+XNd1kKW7NUxRdrs9EGtJLNUWX8vfaR+0Snw==}
+  '@keycloak/keycloak-admin-client@26.5.4':
+    resolution: {integrity: sha512-pVhr35J11tvKf9rPJLNZbpNVzVk8Ri5HGi2QGEGw119bSHoriOjmovpd7tJ6+yiYTk0uHKGP9IcBZtq4oRqDUw==}
     engines: {node: '>=18'}
 
   '@lerna-lite/cli@4.1.1':
@@ -7948,9 +7948,6 @@ packages:
   '@whatwg-node/promise-helpers@1.3.2':
     resolution: {integrity: sha512-Nst5JdK47VIl9UcGwtv2Rcgyn5lWtZ0/mhRQ4G8NN2isxpq2TO30iqHzmwoJycjWuyUfg3GFXqP/gFHXeV57IA==}
     engines: {node: '>=16.0.0'}
-
-  '@wundergraph/composition@0.51.1':
-    resolution: {integrity: sha512-mBOWdhPAok0xRtj7omBb5jjFsb0F+m5Y5ImT60s7R8sWPP4K3ucROwcmLUBbCW4PvmzLEsLVKuMnJsVtUdtVIQ==}
 
   '@xtuc/ieee754@1.2.0':
     resolution: {integrity: sha512-DX8nKgqcGwsc0eJSqYt5lwP4DH5FlHnmuWWBRy7X0NcaGR0ZtuyeESgMwTYVEtxmsNGY+qit4QYT/MIYTOTPeA==}
@@ -14271,10 +14268,6 @@ packages:
   uri-js@4.4.1:
     resolution: {integrity: sha512-7rKUyy33Q1yc98pQ1DAmLtwX109F7TIfWlW1Ydo8Wl1ii1SeHieeh0HHfPeL2fMXK6z0s8ecKs9frCuLJvndBg==}
 
-  url-join@5.0.0:
-    resolution: {integrity: sha512-n2huDr9h9yzd6exQVnH/jU5mr+Pfx08LRXXZhkLLetAMESRj+anQsTAh940iMrIetKAmry9coFuZQ2jY8/p3WA==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
-
   url-parse@1.5.10:
     resolution: {integrity: sha512-WypcfiRhfeUP9vvF0j6rw0J3hrWrw6iZv3+22h6iRMJ/8z1Tj6XfLP4DsUix5MhMPnXpiHDoKyoZ/bdCkwBCiQ==}
 
@@ -17977,10 +17970,9 @@ snapshots:
 
   '@jspm/core@2.0.1': {}
 
-  '@keycloak/keycloak-admin-client@26.2.5':
+  '@keycloak/keycloak-admin-client@26.5.4':
     dependencies:
       camelize-ts: 3.0.0
-      url-join: 5.0.0
       url-template: 3.1.1
 
   '@lerna-lite/cli@4.1.1(@lerna-lite/publish@4.1.1(@types/node@22.17.0)(babel-plugin-macros@3.1.0)(conventional-commits-filter@5.0.0)(typescript@5.5.2))(@lerna-lite/version@4.1.1(@lerna-lite/publish@4.1.1(@types/node@22.17.0)(babel-plugin-macros@3.1.0)(conventional-commits-filter@5.0.0)(typescript@5.5.2))(@types/node@22.17.0)(babel-plugin-macros@3.1.0)(conventional-commits-filter@5.0.0)(typescript@5.5.2))(@types/node@22.17.0)(babel-plugin-macros@3.1.0)(typescript@5.5.2)':
@@ -22810,16 +22802,6 @@ snapshots:
   '@whatwg-node/promise-helpers@1.3.2':
     dependencies:
       tslib: 2.8.1
-
-  '@wundergraph/composition@0.51.1':
-    dependencies:
-      '@graphql-tools/merge': 9.0.0(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
-      '@graphql-tools/schema': 10.0.0(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
-      '@graphql-tools/utils': 11.0.0(graphql@16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly))
-      core-js: 3.41.0
-      graphql: 16.9.0(patch_hash=hafdlc54qtxpqvetpefk646rly)
-      lodash: 4.17.21
-      pathe: 1.1.1
 
   '@xtuc/ieee754@1.2.0': {}
 
@@ -30273,8 +30255,6 @@ snapshots:
   uri-js@4.4.1:
     dependencies:
       punycode: 2.3.1
-
-  url-join@5.0.0: {}
 
   url-parse@1.5.10:
     dependencies:

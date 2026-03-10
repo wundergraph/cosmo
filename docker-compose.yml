@@ -23,7 +23,7 @@ services:
     build:
       context: keycloak
       dockerfile: Dockerfile
-    command: ['start-dev', '--import-realm', '--optimized']
+    command: ['start', '--import-realm', '--optimized']
     environment:
       KC_HEALTH_ENABLED: 'true'
       KC_METRICS_ENABLED: 'true'
@@ -34,6 +34,8 @@ services:
       KC_DB_URL_DATABASE: ${POSTGRES_DB_NAME:-keycloak}
       KC_DB_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
       KC_DB_USERNAME: ${POSTGRES_USER:-postgres}
+      KC_HTTP_ENABLED: 'true'
+      KC_HOSTNAME_STRICT: 'false'
     ports:
       - '8080:8080'
     volumes:
