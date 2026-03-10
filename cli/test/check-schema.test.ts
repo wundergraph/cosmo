@@ -726,27 +726,6 @@ describe('json output', () => {
     expect(output.traffic?.message).toBe('5 operations were considered safe due to overrides.');
   });
 
-  test('operations exist with no breaking changes outputs JSON with traffic message', async () => {
-    await runCheck(
-      {
-        response: { code: EnumStatusCode.OK },
-        nonBreakingChanges: [{ changeType: 'FIELD_ADDED', message: 'Field added', isBreaking: false }],
-        operationUsageStats: {
-          totalOperations: 5,
-          safeOperations: 2,
-          firstSeenAt: '2024-01-01T00:00:00Z',
-          lastSeenAt: '2024-01-02T00:00:00Z',
-        },
-        clientTrafficCheckSkipped: false,
-      },
-      { json: true },
-    );
-
-    const output = getJsonOutput(logSpy);
-    expect(output.status).toBe('success');
-    expect(output.traffic?.message).toContain('5 operations checked');
-  });
-
   test('breaking changes outputs JSON with error status and breaking changes array', async () => {
     await runCheck(
       {

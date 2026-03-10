@@ -92,9 +92,6 @@ const handleTrafficCheck = (
     finalStatement = `This check has encountered ${pc.bold(`${totalBreakingChanges}`)} breaking changes${
       clientTrafficCheckSkipped ? `.` : ` that would break operations from existing client traffic.`
     }`;
-  } else if (!clientTrafficCheckSkipped) {
-    // Operations exist but no breaking changes — traffic check passed
-    jsonBuilder.setTraffic(`${totalOperations} operations checked, no breaking changes detected.`);
   }
 
   return { success, finalStatement };
