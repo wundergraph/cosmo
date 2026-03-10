@@ -1,4 +1,4 @@
-import { ConstDirectiveNode, ConstValueNode, Kind, StringValueNode } from 'graphql';
+import { type ConstDirectiveNode, type ConstValueNode, Kind, type StringValueNode } from 'graphql';
 import {
   BOOLEAN_SCALAR,
   ENUM,
@@ -21,7 +21,7 @@ import {
 } from './string-constants';
 import { invalidKeyFatalError } from '../errors/errors';
 import { stringToNameNode } from '../ast/utils';
-import { AddMapEntriesParams, AddOptionalToSetParams, AddToSetParams } from './params';
+import { type AddMapEntriesParams, type AddOptionalToSetParams, type AddToSetParams } from './params';
 
 export function getOrThrowError<K, V>(map: Map<K, V>, key: K, mapName: string): V {
   const value = map.get(key);

@@ -1,4 +1,4 @@
-import { FieldCoords, FieldName, TypeName } from '../types/types';
+import { type FieldCoords, type FieldName, type TypeName } from '../types/types';
 
 export type NatsEventType = 'subscribe' | 'publish' | 'request';
 

@@ -1,6 +1,6 @@
-import { Edge, GraphNode } from '../../../graph-nodes';
-import { FieldName, NodeName, SelectionPath, TypeName } from '../../../types/types';
-import { NodeResolutionData } from '../../../node-resolution-data/node-resolution-data';
+import { type Edge, type GraphNode } from '../../../graph-nodes';
+import { type FieldName, type NodeName, type SelectionPath, type TypeName } from '../../../types/types';
+import { type NodeResolutionData } from '../../../node-resolution-data/node-resolution-data';
 
 export type RootFieldWalkerParams = {
   index: number;

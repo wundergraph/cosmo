@@ -1,14 +1,14 @@
 import {
-  GetNodeResolutionDataParams,
-  PropagateVisitedFieldParams,
-  PropagateVisitedSharedFieldParams,
-  RootFieldWalkerParams,
-  VisitEdgeParams,
-  VisitNodeParams,
-  VisitRootFieldEdgesParams,
+  type GetNodeResolutionDataParams,
+  type PropagateVisitedFieldParams,
+  type PropagateVisitedSharedFieldParams,
+  type RootFieldWalkerParams,
+  type VisitEdgeParams,
+  type VisitNodeParams,
+  type VisitRootFieldEdgesParams,
 } from './types/params';
 import { add, getValueOrDefault } from '../../../utils/utils';
-import { NodeName, SelectionPath, VisitNodeResult } from '../../types/types';
+import { type NodeName, type SelectionPath, type VisitNodeResult } from '../../types/types';
 import { NodeResolutionData } from '../../node-resolution-data/node-resolution-data';
 
 export class RootFieldWalker {

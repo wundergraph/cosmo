@@ -1,7 +1,7 @@
 /* directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE |
  FIELD_DEFINITION | INPUT_FIELD_DEFINITION
 */
-import { DEFAULT_DEPRECATION_REASON, DirectiveDefinitionNode, Kind } from 'graphql';
+import { DEFAULT_DEPRECATION_REASON, type DirectiveDefinitionNode, Kind } from 'graphql';
 import { stringArrayToNameNodeArray, stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
   ARGUMENT_DEFINITION_UPPER,

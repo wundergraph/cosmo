@@ -1,24 +1,21 @@
-import { OrganizationGroup } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import {
-  getOrganizationGroupMembers,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useQuery } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { EmptyState } from "@/components/empty-state";
-import { ExclamationTriangleIcon, UserIcon, KeyIcon } from "@heroicons/react/24/outline";
-import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
-import { useState } from "react";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs"
-import { formatDateTime } from "@/lib/format-date";
+import { OrganizationGroup } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { getOrganizationGroupMembers } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { useQuery } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { EmptyState } from '@/components/empty-state';
+import { ExclamationTriangleIcon, UserIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { Button } from '@/components/ui/button';
+import { Loader } from '@/components/ui/loader';
+import { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { formatDateTime } from '@/lib/format-date';
 
-export function GroupMembersSheet({ open, group, onOpenChange }: {
+export function GroupMembersSheet({
+  open,
+  group,
+  onOpenChange,
+}: {
   open: boolean;
   group: OrganizationGroup | undefined;
   onOpenChange(open: boolean): void;
@@ -27,8 +24,8 @@ export function GroupMembersSheet({ open, group, onOpenChange }: {
   const currentGroup = group || previousGroup;
   const { data, isLoading, error, refetch } = useQuery(
     getOrganizationGroupMembers,
-    { groupId: currentGroup?.groupId},
-    { enabled: open && !!group, }
+    { groupId: currentGroup?.groupId },
+    { enabled: open && !!group },
   );
 
   const onSheetOpenChange = (isOpen: boolean) => {
@@ -44,16 +41,12 @@ export function GroupMembersSheet({ open, group, onOpenChange }: {
       <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-xl">
         <SheetHeader>
           <SheetTitle>Members of &quot;{currentGroup?.name}&quot;</SheetTitle>
-          {currentGroup?.description && (
-            <SheetDescription>
-              {currentGroup.description}
-            </SheetDescription>
-          )}
+          {currentGroup?.description && <SheetDescription>{currentGroup.description}</SheetDescription>}
         </SheetHeader>
 
         <div className="mt-3">
           {isLoading ? (
-            <div className="flex h-[320px] md:h-[520px] w-full items-center justify-center rounded-md">
+            <div className="flex h-[320px] w-full items-center justify-center rounded-md md:h-[520px]">
               <Loader />
             </div>
           ) : (
@@ -62,7 +55,7 @@ export function GroupMembersSheet({ open, group, onOpenChange }: {
                 <EmptyState
                   icon={<ExclamationTriangleIcon />}
                   title="Could not retrieve the members for this group."
-                  description={data?.response?.details || error?.message || "Please try again"}
+                  description={data?.response?.details || error?.message || 'Please try again'}
                   actions={<Button onClick={() => refetch()}>Retry</Button>}
                 />
               ) : (
@@ -74,10 +67,10 @@ export function GroupMembersSheet({ open, group, onOpenChange }: {
 
                   <TabsContent value="members">
                     {data.members.length > 0 ? (
-                      <div className="rounded-md border border-border divide-y">
+                      <div className="divide-y rounded-md border border-border">
                         {data.members.map((member) => (
-                          <div key={`member-${member.id}`} className="px-4 py-2.5 space-y-1">
-                            <div className="truncate flex justify-start items-center gap-x-2">
+                          <div key={`member-${member.id}`} className="space-y-1 px-4 py-2.5">
+                            <div className="flex items-center justify-start gap-x-2 truncate">
                               <UserIcon className="size-4 shrink-0" />
                               <span className="flex-grow truncate">{member.email}</span>
                             </div>
@@ -88,19 +81,16 @@ export function GroupMembersSheet({ open, group, onOpenChange }: {
                         ))}
                       </div>
                     ) : (
-                      <EmptyState
-                        icon={<ExclamationTriangleIcon />}
-                        title="No member have been added to this group."
-                      />
+                      <EmptyState icon={<ExclamationTriangleIcon />} title="No member have been added to this group." />
                     )}
                   </TabsContent>
 
                   <TabsContent value="api-keys">
                     {data.apiKeys.length > 0 ? (
-                      <div className="rounded-md border border-border divide-y">
+                      <div className="divide-y rounded-md border border-border">
                         {data.apiKeys.map((key) => (
-                          <div key={`key-${key.id}`} className="px-4 py-2.5 space-y-1">
-                            <div className="truncate flex justify-start items-center gap-x-2">
+                          <div key={`key-${key.id}`} className="space-y-1 px-4 py-2.5">
+                            <div className="flex items-center justify-start gap-x-2 truncate">
                               <KeyIcon className="size-4 shrink-0" />
                               <span className="flex-grow truncate">{key.name}</span>
                             </div>

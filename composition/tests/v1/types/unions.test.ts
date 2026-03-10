@@ -5,10 +5,10 @@ import {
   noDefinedUnionMembersError,
   OBJECT,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
+  type Subgraph,
   subgraphValidationError,
   UNION,
-  UnionDefinitionData,
+  type UnionDefinitionData,
 } from '../../../src';
 import { parse } from 'graphql';
 import { describe, expect, test } from 'vitest';

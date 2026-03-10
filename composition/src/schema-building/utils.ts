@@ -1,50 +1,50 @@
 import {
-  BooleanValueNode,
-  ConstDirectiveNode,
-  ConstValueNode,
-  DefinitionNode,
-  DirectiveDefinitionNode,
-  EnumValueDefinitionNode,
-  EnumValueNode,
-  FieldDefinitionNode,
-  FloatValueNode,
-  InputValueDefinitionNode,
-  IntValueNode,
+  type BooleanValueNode,
+  type ConstDirectiveNode,
+  type ConstValueNode,
+  DEFAULT_DEPRECATION_REASON,
+  type DefinitionNode,
+  type DirectiveDefinitionNode,
+  type EnumValueDefinitionNode,
+  type EnumValueNode,
+  type FieldDefinitionNode,
+  type FloatValueNode,
+  type InputValueDefinitionNode,
+  type IntValueNode,
   Kind,
-  NullValueNode,
+  type NullValueNode,
   OperationTypeNode,
   print,
-  StringValueNode,
-  TypeNode,
+  type StringValueNode,
+  type TypeNode,
 } from 'graphql';
 import {
-  AuthorizationData,
-  ChildData,
-  CompositeOutputData,
-  ConditionalFieldData,
-  DefinitionData,
-  EnumValueData,
+  type AuthorizationData,
+  type ChildData,
+  type CompositeOutputData,
+  type ConditionalFieldData,
+  type DefinitionData,
   ExtensionType,
-  ExternalFieldData,
-  FieldData,
-  InputObjectDefinitionData,
-  InputValueData,
-  InterfaceDefinitionData,
-  NodeData,
-  ObjectDefinitionData,
-  ParentDefinitionData,
-  PersistedDirectiveDefinitionData,
-  PersistedDirectivesData,
-  SchemaData,
+  type ExternalFieldData,
+  type FieldData,
+  type InputObjectDefinitionData,
+  type InputValueData,
+  type InterfaceDefinitionData,
+  type NodeData,
+  type ObjectDefinitionData,
+  type ParentDefinitionData,
+  type PersistedDirectiveDefinitionData,
+  type PersistedDirectivesData,
+  type SchemaData,
 } from './types';
-import { MutableDefinitionNode, MutableFieldNode, MutableInputValueNode } from './ast';
-import { ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
+import { type MutableDefinitionNode, type MutableFieldNode, type MutableInputValueNode } from './ast';
+import { type ObjectTypeNode, setToNameNodeArray, stringToNameNode } from '../ast/utils';
 import {
   incompatibleInputValueDefaultValuesError,
   invalidRepeatedFederatedDirectiveErrorMessage,
   invalidRequiredInputValueError,
 } from '../errors/errors';
-import { SubscriptionFilterValue } from '../router-configuration/types';
+import { type SubscriptionFilterValue } from '../router-configuration/types';
 import {
   ARGUMENT,
   AUTHENTICATED,
@@ -58,7 +58,6 @@ import {
   INPUT_FIELD,
   INPUT_NODE_KINDS,
   INT_SCALAR,
-  KEY,
   MUTATION,
   OUTPUT_NODE_KINDS,
   PERSISTED_CLIENT_DIRECTIVES,
@@ -78,10 +77,9 @@ import {
   getEntriesNotInHashSet,
   getFirstEntry,
 } from '../utils/utils';
-import { InputNodeKind, InvalidRequiredInputValueData, OutputNodeKind } from '../utils/types';
+import { type InputNodeKind, type InvalidRequiredInputValueData, type OutputNodeKind } from '../utils/types';
 import { getDescriptionFromString } from '../v1/federation/utils';
-import { DirectiveName, FieldName, SubgraphName, TypeName } from '../types/types';
-import { DEFAULT_DEPRECATION_REASON } from 'graphql';
+import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
 
 export function newPersistedDirectivesData(): PersistedDirectivesData {
   return {

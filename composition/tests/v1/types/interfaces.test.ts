@@ -1,9 +1,9 @@
 import {
   duplicateFieldDefinitionError,
-  ImplementationErrors,
+  type ImplementationErrors,
   incompatibleFederatedFieldNamedTypeError,
   INTERFACE,
-  InvalidFieldImplementation,
+  type InvalidFieldImplementation,
   invalidImplementedTypeError,
   invalidInterfaceImplementationError,
   noBaseDefinitionForExtensionError,
@@ -13,7 +13,7 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
   selfImplementationError,
-  Subgraph,
+  type Subgraph,
   unimplementedInterfaceOutputTypeWarning,
 } from '../../../src';
 import { describe, expect, test } from 'vitest';
