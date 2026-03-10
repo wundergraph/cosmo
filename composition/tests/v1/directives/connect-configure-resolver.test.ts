@@ -3,14 +3,11 @@ import {
   CONNECT_FIELD_RESOLVER,
   CONTEXT,
   invalidDirectiveError,
-  NormalizationFailure,
-  NormalizationSuccess,
-  normalizeSubgraph,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
+  type Subgraph,
   undefinedRequiredArgumentsErrorMessage,
 } from '../../../src';
-import { parse, printSchema } from 'graphql';
+import { parse } from 'graphql';
 import {
   normalizeString,
   normalizeSubgraphFailure,
