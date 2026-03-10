@@ -143,10 +143,8 @@ export function DatePickerWithRange({
     (e) => {
       const time = e.target.value;
       setTime(field, time);
-      if (time) {
-        // if time is set, then we need to reset the range to 'custom'
-        setSelectedRange(undefined);
-      }
+      // any manual edit makes this a custom range, including clearing the field
+      setSelectedRange(undefined);
     };
 
   return (
