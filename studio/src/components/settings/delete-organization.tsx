@@ -1,31 +1,27 @@
-import { useContext, useState } from "react";
-import { SessionClientContext, UserContext } from "@/components/app-provider";
-import { z } from "zod";
-import { useZodForm } from "@/hooks/use-form";
-import { useToast } from "@/components/ui/use-toast";
-import { useMutation } from "@connectrpc/connect-query";
-import {
-  deleteOrganization,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
-import { useIsAdmin } from "@/hooks/use-is-admin";
+import { useContext, useState } from 'react';
+import { SessionClientContext, UserContext } from '@/components/app-provider';
+import { z } from 'zod';
+import { useZodForm } from '@/hooks/use-form';
+import { useToast } from '@/components/ui/use-toast';
+import { useMutation } from '@connectrpc/connect-query';
+import { deleteOrganization } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { useIsAdmin } from '@/hooks/use-is-admin';
 
 export const DeleteOrganization = () => {
   const user = useContext(UserContext);
   const sessionQueryClient = useContext(SessionClientContext);
   const [open, setOpen] = useState(false);
 
-  const hasActiveSubscription = (
-    !!user?.currentOrganization?.billing?.plan &&
-    user?.currentOrganization?.billing?.plan !== 'developer'
-  );
+  const hasActiveSubscription =
+    !!user?.currentOrganization?.billing?.plan && user?.currentOrganization?.billing?.plan !== 'developer';
 
   const isOrganizationAdmin = useIsAdmin();
   const canDeleteOrganization = !hasActiveSubscription && isOrganizationAdmin;
@@ -33,7 +29,7 @@ export const DeleteOrganization = () => {
   const regex = new RegExp(`^I want to delete the organization ${user?.currentOrganization.name}$`);
   const schema = z.object({
     organizationName: z.string().regex(regex, {
-      message: "Please enter the organization name as requested.",
+      message: 'Please enter the organization name as requested.',
     }),
   });
 
@@ -46,7 +42,7 @@ export const DeleteOrganization = () => {
     reset,
   } = useZodForm<DeleteOrgInput>({
     schema,
-    mode: "onChange",
+    mode: 'onChange',
   });
 
   const { toast } = useToast();
@@ -55,7 +51,7 @@ export const DeleteOrganization = () => {
     onSuccess: async (d) => {
       if (d.response?.code === EnumStatusCode.OK) {
         toast({
-          description: "Organization deletion queued successfully.",
+          description: 'Organization deletion queued successfully.',
           duration: 3000,
         });
 
@@ -68,7 +64,7 @@ export const DeleteOrganization = () => {
     },
     onError: (error) => {
       toast({
-        description: "Could not delete the organization. Please try again.",
+        description: 'Could not delete the organization. Please try again.',
         duration: 3000,
       });
       setOpen(false);
@@ -101,13 +97,10 @@ export const DeleteOrganization = () => {
             This action will queue the organization for deletion.
           </CardDescription>
         </div>
-        <Dialog
-          open={canDeleteOrganization && open}
-          onOpenChange={onOpenChange}
-        >
+        <Dialog open={canDeleteOrganization && open} onOpenChange={onOpenChange}>
           <DialogTrigger
             className={cn({
-              "cursor-not-allowed": !canDeleteOrganization,
+              'cursor-not-allowed': !canDeleteOrganization,
             })}
             asChild
           >
@@ -128,43 +121,32 @@ export const DeleteOrganization = () => {
             </DialogHeader>
             <form onSubmit={handleSubmit(handleDeleteOrg)} className="mt-2 space-y-3">
               <div>
-                Deleting the organization &quot;{user?.currentOrganization?.name}&quot; is a{" "}
-                permanent action that cannot be undone.
+                Deleting the organization &quot;{user?.currentOrganization?.name}&quot; is a permanent action that
+                cannot be undone.
               </div>
 
               <div>
-                Deleting the organization will also delete all related data, including graphs, subgraphs,{" "}
-                feature flags, members and API keys.
+                Deleting the organization will also delete all related data, including graphs, subgraphs, feature flags,
+                members and API keys.
               </div>
 
               <div className="flex flex-col gap-y-3">
                 <span>
                   To confirm, enter &quot;
-                  <span className="rounded-md border px-1 font-bold focus:outline-none bg-secondary text-secondary-foreground">
+                  <span className="rounded-md border bg-secondary px-1 font-bold text-secondary-foreground focus:outline-none">
                     I want to delete the organization {user?.currentOrganization.name}
-                  </span>&quot;
-                  in the box below:
-                </span>
-                <Input
-                  type="text"
-                  {...register("organizationName")}
-                  autoFocus={true}
-                />
-                {errors.organizationName && (
-                  <span className="px-2 text-xs text-destructive">
-                    {errors.organizationName.message}
                   </span>
+                  &quot; in the box below:
+                </span>
+                <Input type="text" {...register('organizationName')} autoFocus={true} />
+                {errors.organizationName && (
+                  <span className="px-2 text-xs text-destructive">{errors.organizationName.message}</span>
                 )}
                 <div className="mt-2 flex justify-end gap-x-4">
                   <Button variant="outline" onClick={() => onOpenChange(false)}>
                     Cancel
                   </Button>
-                  <Button
-                    variant="destructive"
-                    isLoading={isPending}
-                    type="submit"
-                    disabled={!isValid}
-                  >
+                  <Button variant="destructive" isLoading={isPending} type="submit" disabled={!isValid}>
                     Delete this organization
                   </Button>
                 </div>
@@ -179,8 +161,8 @@ export const DeleteOrganization = () => {
             <ExclamationTriangleIcon className="h-4 w-4" />
             <AlertTitle>Active subscription</AlertTitle>
             <AlertDescription>
-              An active subscription is associated with this organization. You
-              must cancel the subscription before deleting the organization.
+              An active subscription is associated with this organization. You must cancel the subscription before
+              deleting the organization.
             </AlertDescription>
           </Alert>
         </CardContent>
