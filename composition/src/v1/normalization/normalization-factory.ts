@@ -98,6 +98,8 @@ import {
   invalidDirectiveDefinitionLocationErrorMessage,
   invalidDirectiveError,
   invalidDirectiveLocationErrorMessage,
+  overrideOnKeyFieldErrorMessage,
+  overrideOnKeyFieldsError,
   invalidEdfsPublishResultObjectErrorMessage,
   invalidEventDirectiveError,
   invalidEventDrivenGraphError,
@@ -4047,6 +4049,42 @@ export function batchNormalize({ options, subgraphs }: BatchNormalizeParams): Ba
       duplicateOverriddenFieldErrorMessages.push(duplicateOverriddenFieldErrorMessage(fieldPath, sourceSubgraphNames));
     }
     allErrors.push(duplicateOverriddenFieldsError(duplicateOverriddenFieldErrorMessages));
+  }
+  // Check for @override on @key fields
+  const overrideOnKeyFieldErrorMessages: string[] = [];
+  for (const [sourceSubgraphName, internalSubgraph] of internalSubgraphBySubgraphName) {
+    const normalizationResult = internalSubgraph;
+    if (!normalizationResult.keyFieldNamesByParentTypeName) {
+      continue;
+    }
+    // Iterate through all types that have key fields in this subgraph
+    for (const [parentTypeName, keyFieldNames] of normalizationResult.keyFieldNamesByParentTypeName) {
+      // Check if any of these key fields are being overridden
+      for (const [targetSubgraphName, overridesData] of allOverridesByTargetSubgraphName) {
+        const overriddenFieldNames = overridesData.get(parentTypeName);
+        if (!overriddenFieldNames) {
+          continue;
+        }
+        // Check for intersection between key fields and overridden fields
+        for (const fieldName of keyFieldNames) {
+          if (overriddenFieldNames.has(fieldName)) {
+            const fieldPath = `${parentTypeName}.${fieldName}`;
+            // Find which subgraph is doing the override
+            const sourceSubgraphs = overrideSourceSubgraphNamesByFieldPath.get(fieldPath);
+            if (sourceSubgraphs) {
+              for (const overrideSourceSubgraph of sourceSubgraphs) {
+                overrideOnKeyFieldErrorMessages.push(
+                  overrideOnKeyFieldErrorMessage(fieldPath, overrideSourceSubgraph, targetSubgraphName),
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  if (overrideOnKeyFieldErrorMessages.length > 0) {
+    allErrors.push(overrideOnKeyFieldsError(overrideOnKeyFieldErrorMessages));
   }
   allErrors.push(...validationErrors);
   if (allErrors.length > 0) {

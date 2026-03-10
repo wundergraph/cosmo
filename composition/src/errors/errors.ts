@@ -843,6 +843,29 @@ export function duplicateOverriddenFieldsError(errorMessages: string[]): Error {
   );
 }
 
+export function overrideOnKeyFieldErrorMessage(
+  fieldPath: string,
+  sourceSubgraphName: string,
+  targetSubgraphName: string,
+): string {
+  return (
+    ` The field "${fieldPath}" in subgraph "${sourceSubgraphName}" declares an @override directive targeting subgraph "${targetSubgraphName}",` +
+    ` but "${fieldPath}" is part of an @key directive.`
+  );
+}
+
+export function overrideOnKeyFieldsError(errorMessages: string[]): Error {
+  return new Error(
+    `The "@override" directive cannot be used on fields that are part of an "@key" directive.` +
+      ` Overriding a key field causes query planner failures when the field is used in entity resolution.` +
+      ` The following field` +
+      (errorMessages.length > 1 ? 's violate' : ' violates') +
+      ` this constraint: "` +
+      errorMessages.join(QUOTATION_JOIN) +
+      `".\n`,
+  );
+}
+
 export function noFieldDefinitionsError(typeString: string, typeName: string): Error {
   return new Error(`The ${typeString} "${typeName}" is invalid because it does not define any fields.`);
 }

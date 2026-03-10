@@ -784,6 +784,44 @@ describe('@override directive tests', () => {
         ]),
       );
     });
+test('that an error is returned if @override is used on a @key field', () => {
+      const subgraphMonolith: Subgraph = {
+        name: 'monolith',
+        url: '',
+        definitions: parse(`
+          type Repository @key(fields: "databaseId") {
+            databaseId: Int!
+            name: String!
+          }
+          
+          type Query {
+            repository: Repository!
+          }
+        `),
+      };
+
+      const subgraphIssues: Subgraph = {
+        name: 'issues',
+        url: '',
+        definitions: parse(`
+          type Repository @key(fields: "databaseId") {
+            databaseId: Int! @override(from: "monolith")
+            issues: [Issue!]!
+          }
+          
+          type Issue {
+            id: ID!
+          }
+        `),
+      };
+
+      const { errors } = federateSubgraphsFailure([subgraphMonolith, subgraphIssues], ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors).toBeDefined();
+      expect(errors[0].message).toContain('@override');
+      expect(errors[0].message).toContain('@key');
+      expect(errors[0].message).toContain('Repository.databaseId');
+    });
   });
 });
 
