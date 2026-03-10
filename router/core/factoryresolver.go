@@ -732,7 +732,7 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 		}
 
 		if len(entity.RequiredFieldMappings) > 0 {
-			entityRPCConfig.RequiredFields = make(grpcdatasource.RequiredFieldsRPCMapping)
+			entityRPCConfig.RequiredFields = make(grpcdatasource.RequiredFieldsRPCMapping, len(entity.RequiredFieldMappings))
 			for _, requiredField := range entity.RequiredFieldMappings {
 				entityRPCConfig.RequiredFields[requiredField.FieldMapping.Original] = grpcdatasource.RequiredFieldsRPCTypeField{
 					TargetName: requiredField.FieldMapping.Mapped,
