@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { FederatedGraphSchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { JsonOutputBuilder } from '../src/json-output-builder.js';
 import type { JsonOutputDescriptor } from '../src/json-output-builder.js';
 
@@ -215,6 +216,37 @@ describe('JsonOutputBuilder', () => {
     });
   });
 
+  describe('composedSchemaBreakingChanges', () => {
+    const composedChange = new FederatedGraphSchemaChange({
+      changeType: 'FIELD_TYPE_CHANGED',
+      message: "Field 'User.username' changed type from 'String!' to 'String'",
+      path: 'User.username',
+      isBreaking: true,
+      federatedGraphName: 'demo-fed',
+    });
+
+    it('addComposedSchemaBreakingChanges initializes and accumulates', () => {
+      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      b.addComposedSchemaBreakingChanges([composedChange]).addComposedSchemaBreakingChanges([composedChange]);
+      expect(b.build().composedSchemaBreakingChanges).toHaveLength(2);
+    });
+
+    it('addComposedSchemaBreakingChanges preserves existing entries when called multiple times', () => {
+      const second = new FederatedGraphSchemaChange({ ...composedChange, federatedGraphName: 'other-fed' });
+      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      b.addComposedSchemaBreakingChanges([composedChange]).addComposedSchemaBreakingChanges([second]);
+      const result = b.build().composedSchemaBreakingChanges!;
+      expect(result).toHaveLength(2);
+      expect(result[0].federatedGraphName).toBe('demo-fed');
+      expect(result[1].federatedGraphName).toBe('other-fed');
+    });
+
+    it('composedSchemaBreakingChanges is absent when never set', () => {
+      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      expect(b.build().composedSchemaBreakingChanges).toBeUndefined();
+    });
+  });
+
   describe('extensions / exceededRowLimit / operationUsageStats', () => {
     it('setExtensionError sets message', () => {
       const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
@@ -273,7 +305,8 @@ describe('JsonOutputBuilder', () => {
         .setStatus(true)
         .setMessage('msg')
         .setDetails('det')
-        .setExceededRowLimit(false);
+        .setExceededRowLimit(false)
+        .addComposedSchemaBreakingChanges([]);
       expect(result).toBe(b);
     });
   });
