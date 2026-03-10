@@ -260,7 +260,7 @@ describe('stdout', () => {
       operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
     });
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected the following changes:'));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Detected the following subgraph schema changes:'));
     expect(process.exitCode).not.toBe(1);
   });
 
@@ -428,6 +428,143 @@ describe('stdout', () => {
     );
 
     expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Some results were truncated due to exceeding the limit of 50 rows.'),
+    );
+  });
+
+  test('composedSchemaBreakingChanges alone fails the check', async () => {
+    await expect(
+      runCheck({
+        response: { code: EnumStatusCode.OK },
+        composedSchemaBreakingChanges: [
+          {
+            changeType: 'FIELD_REMOVED',
+            message: 'Field removed at federated level',
+            federatedGraphName: 'my-graph',
+            isBreaking: true,
+          },
+        ],
+      }),
+    ).rejects.toThrow();
+
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining('Schema check failed'));
+  });
+
+  test('composedSchemaBreakingChanges logs federated graph breaking changes section', async () => {
+    await expect(
+      runCheck({
+        response: { code: EnumStatusCode.OK },
+        composedSchemaBreakingChanges: [
+          {
+            changeType: 'FIELD_REMOVED',
+            message: 'Field removed at federated level',
+            federatedGraphName: 'my-graph',
+            isBreaking: true,
+          },
+        ],
+      }),
+    ).rejects.toThrow();
+
+    expect(logSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Detected the following federated graph schema breaking changes:'),
+    );
+  });
+
+  test('composedSchemaBreakingChanges suppresses no-changes message', async () => {
+    await expect(
+      runCheck({
+        response: { code: EnumStatusCode.OK },
+        composedSchemaBreakingChanges: [
+          {
+            changeType: 'FIELD_REMOVED',
+            message: 'Field removed at federated level',
+            federatedGraphName: 'my-graph',
+            isBreaking: true,
+          },
+        ],
+      }),
+    ).rejects.toThrow();
+
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('Detected no changes.'));
+  });
+
+  test('combined breaking changes count in traffic warning includes composedSchemaBreakingChanges', async () => {
+    await expect(
+      runCheck({
+        response: { code: EnumStatusCode.OK },
+        breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
+        composedSchemaBreakingChanges: [
+          { changeType: 'TYPE_CHANGED', message: 'Type changed', federatedGraphName: 'my-graph', isBreaking: true },
+          {
+            changeType: 'FIELD_TYPE_CHANGED',
+            message: 'Field type changed',
+            federatedGraphName: 'my-graph',
+            isBreaking: true,
+          },
+        ],
+        operationUsageStats: {
+          totalOperations: 3,
+          safeOperations: 0,
+          firstSeenAt: '2024-01-01T00:00:00Z',
+          lastSeenAt: '2024-01-02T00:00:00Z',
+        },
+      }),
+    ).rejects.toThrow();
+
+    expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/Found .*3.* breaking changes\./);
+  });
+
+  test('composedSchemaBreakingChanges without subgraph breaking changes counts in traffic warning', async () => {
+    await expect(
+      runCheck({
+        response: { code: EnumStatusCode.OK },
+        composedSchemaBreakingChanges: [
+          { changeType: 'TYPE_CHANGED', message: 'Type changed', federatedGraphName: 'my-graph', isBreaking: true },
+          {
+            changeType: 'FIELD_TYPE_CHANGED',
+            message: 'Field type changed',
+            federatedGraphName: 'my-graph',
+            isBreaking: true,
+          },
+        ],
+        operationUsageStats: {
+          totalOperations: 3,
+          safeOperations: 0,
+          firstSeenAt: '2024-01-01T00:00:00Z',
+          lastSeenAt: '2024-01-02T00:00:00Z',
+        },
+      }),
+    ).rejects.toThrow();
+
+    expect(String(logSpy.mock.calls[1]?.[0])).toMatch(/Found .*2.* breaking changes\./);
+  });
+
+  test('row limit exceeded triggered by composedSchemaBreakingChanges count', async () => {
+    await expect(
+      runCheck(
+        {
+          response: { code: EnumStatusCode.OK },
+          composedSchemaBreakingChanges: [
+            { changeType: 'FIELD_REMOVED', message: 'Field removed', federatedGraphName: 'my-graph', isBreaking: true },
+          ],
+          counts: {
+            breakingChanges: 0,
+            nonBreakingChanges: 0,
+            compositionErrors: 0,
+            compositionWarnings: 0,
+            lintErrors: 0,
+            lintWarnings: 0,
+            graphPruneErrors: 0,
+            graphPruneWarnings: 0,
+            composedSchemaBreakingChanges: 60,
+          },
+        },
+        { limit: 50 },
+      ),
+    ).rejects.toThrow();
+
+    // Truncation message is appended to program.error() when check fails (success=false)
+    expect(stderrSpy).toHaveBeenCalledWith(
       expect.stringContaining('Some results were truncated due to exceeding the limit of 50 rows.'),
     );
   });
@@ -971,6 +1108,111 @@ describe('json output', () => {
     const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonOutputDescriptor;
     expect(written.status).toBe('error');
     expect(written.details).toBe('Syntax error');
+  });
+
+  test('composedSchemaBreakingChanges outputs JSON with error status and composedSchemaBreakingChanges array', async () => {
+    await runCheck(
+      {
+        response: { code: EnumStatusCode.OK },
+        composedSchemaBreakingChanges: [
+          {
+            changeType: 'FIELD_REMOVED',
+            message: 'Field removed at federated level',
+            federatedGraphName: 'my-graph',
+            isBreaking: true,
+          },
+        ],
+      },
+      { json: true },
+    );
+
+    const output = getJsonOutput(logSpy);
+    expect(output.status).toBe('error');
+    expect(Array.isArray(output.composedSchemaBreakingChanges)).toBe(true);
+    expect(output.composedSchemaBreakingChanges).toHaveLength(1);
+  });
+
+  test('composedSchemaBreakingChanges combined with subgraph breaking changes outputs combined count in traffic message', async () => {
+    await runCheck(
+      {
+        response: { code: EnumStatusCode.OK },
+        breakingChanges: [{ changeType: 'FIELD_REMOVED', message: 'Field removed', isBreaking: true }],
+        composedSchemaBreakingChanges: [
+          { changeType: 'TYPE_CHANGED', message: 'Type changed', federatedGraphName: 'my-graph', isBreaking: true },
+          {
+            changeType: 'FIELD_TYPE_CHANGED',
+            message: 'Field type changed',
+            federatedGraphName: 'my-graph',
+            isBreaking: true,
+          },
+        ],
+        operationUsageStats: {
+          totalOperations: 3,
+          safeOperations: 0,
+          firstSeenAt: '2024-01-01T00:00:00Z',
+          lastSeenAt: '2024-01-02T00:00:00Z',
+        },
+      },
+      { json: true },
+    );
+
+    const output = getJsonOutput(logSpy);
+    expect(output.status).toBe('error');
+    expect(output.traffic?.message).toContain('Found 3 breaking changes.');
+    expect(Array.isArray(output.composedSchemaBreakingChanges)).toBe(true);
+    expect(output.composedSchemaBreakingChanges).toHaveLength(2);
+  });
+
+  test('composedSchemaBreakingChanges without traffic outputs JSON with error status', async () => {
+    await runCheck(
+      {
+        response: { code: EnumStatusCode.OK },
+        composedSchemaBreakingChanges: [
+          {
+            changeType: 'FIELD_REMOVED',
+            message: 'Field removed at federated level',
+            federatedGraphName: 'my-graph',
+            isBreaking: true,
+          },
+          {
+            changeType: 'TYPE_REMOVED',
+            message: 'Type removed at federated level',
+            federatedGraphName: 'other-graph',
+            isBreaking: true,
+          },
+        ],
+      },
+      { json: true },
+    );
+
+    const output = getJsonOutput(logSpy);
+    expect(output.status).toBe('error');
+    expect(output.composedSchemaBreakingChanges).toHaveLength(2);
+    expect(output.traffic).toBeUndefined();
+  });
+
+  test('skip-traffic-check with composedSchemaBreakingChanges omits traffic and operationUsageStats from JSON', async () => {
+    await runCheck(
+      {
+        response: { code: EnumStatusCode.OK },
+        composedSchemaBreakingChanges: [
+          {
+            changeType: 'FIELD_TYPE_CHANGED',
+            message: 'Type changed',
+            federatedGraphName: 'demo-fed',
+            isBreaking: true,
+          },
+        ],
+        operationUsageStats: { totalOperations: 0, safeOperations: 0, firstSeenAt: '', lastSeenAt: '' },
+        clientTrafficCheckSkipped: true,
+      },
+      { json: true, skipTrafficCheck: true },
+    );
+
+    const output = getJsonOutput(logSpy);
+    expect(output.status).toBe('error');
+    expect(output.traffic).toBeUndefined();
+    expect(output.operationUsageStats).toBeUndefined();
   });
 
   test('--out without --json implicitly enables JSON output', async () => {

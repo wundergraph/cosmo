@@ -18,7 +18,14 @@ const handleTrafficCheck = (
   jsonBuilder: JsonOutputBuilder,
   shouldOutputJson: boolean,
 ): { success: boolean; finalStatement: string } => {
-  const { clientTrafficCheckSkipped, compositionErrors, lintErrors, graphPruneErrors, breakingChanges } = response;
+  const {
+    clientTrafficCheckSkipped,
+    compositionErrors,
+    lintErrors,
+    graphPruneErrors,
+    breakingChanges,
+    composedSchemaBreakingChanges,
+  } = response;
   const { totalOperations, safeOperations, firstSeenAt, lastSeenAt } = operationUsageStats;
 
   if (totalOperations === 0 && !clientTrafficCheckSkipped) {
@@ -47,17 +54,19 @@ const handleTrafficCheck = (
   // Composition and breaking errors are considered failures because operations were affected
   const success =
     breakingChanges.length === 0 &&
+    composedSchemaBreakingChanges.length === 0 &&
     compositionErrors.length === 0 &&
     lintErrors.length === 0 &&
     graphPruneErrors.length === 0;
   let finalStatement = '';
 
-  if (breakingChanges.length > 0) {
-    jsonBuilder.addBreakingChanges(breakingChanges);
-    jsonBuilder.setOperationUsageStats(operationUsageStats);
+  const totalBreakingChanges = breakingChanges.length + composedSchemaBreakingChanges.length;
 
-    const warningMessage = [logSymbols.warning, ` Found ${pc.bold(breakingChanges.length)} breaking changes.`];
-    const jsonMessage = [`Found ${breakingChanges.length} breaking changes.`];
+  if (breakingChanges.length > 0 || composedSchemaBreakingChanges.length > 0) {
+    jsonBuilder.addBreakingChanges(breakingChanges);
+
+    const warningMessage = [logSymbols.warning, ` Found ${pc.bold(totalBreakingChanges)} breaking changes.`];
+    const jsonMessage = [`Found ${totalBreakingChanges} breaking changes.`];
     if (totalOperations > 0) {
       warningMessage.push(`${pc.bold(totalOperations - safeOperations)} operations impacted.`);
       jsonMessage.push(`${totalOperations - safeOperations} operations impacted.`);
@@ -73,13 +82,14 @@ const handleTrafficCheck = (
       jsonMessage.push(
         `Found client activity between ${new Date(firstSeenAt).toLocaleString()} and ${new Date(lastSeenAt).toLocaleString()}.`,
       );
+      jsonBuilder.setTraffic(jsonMessage.join(' '));
+      jsonBuilder.setOperationUsageStats(operationUsageStats);
     }
-    jsonBuilder.setTraffic(jsonMessage.join(' '));
     if (!shouldOutputJson) {
       console.log(warningMessage.join(''));
     }
 
-    finalStatement = `This check has encountered ${pc.bold(`${breakingChanges.length}`)} breaking changes${
+    finalStatement = `This check has encountered ${pc.bold(`${totalBreakingChanges}`)} breaking changes${
       clientTrafficCheckSkipped ? `.` : ` that would break operations from existing client traffic.`
     }`;
   } else if (!clientTrafficCheckSkipped) {
@@ -106,7 +116,7 @@ const handleSchemaChanges = (
     return;
   }
 
-  console.log('\nDetected the following changes:');
+  console.log('\nDetected the following subgraph schema changes:');
   const changesTable = new Table({
     head: [pc.bold(pc.white('CHANGE')), pc.bold(pc.white('TYPE')), pc.bold(pc.white('DESCRIPTION'))],
     wordWrap: true,
@@ -118,6 +128,45 @@ const handleSchemaChanges = (
     changesTable.push([`${logSymbols.success} NON-BREAKING`, change.changeType, change.message]);
   }
   console.log(changesTable.toString());
+};
+
+const handleComposedSchemaBreakingChanges = (
+  response: CheckSubgraphSchemaResponse,
+  jsonBuilder: JsonOutputBuilder,
+  shouldOutputJson: boolean,
+): void => {
+  jsonBuilder.addComposedSchemaBreakingChanges(response.composedSchemaBreakingChanges);
+
+  if (shouldOutputJson) {
+    return;
+  }
+
+  const composedSchemaChangesTable = new Table({
+    head: [
+      pc.bold(pc.white('CHANGE')),
+      pc.bold(pc.white('TYPE')),
+      pc.bold(pc.white('FEDERATED_GRAPH')),
+      pc.bold(pc.white('DESCRIPTION')),
+    ],
+    wordWrap: true,
+  });
+
+  for (const change of response.composedSchemaBreakingChanges) {
+    composedSchemaChangesTable.push([
+      `${logSymbols.error} ${pc.red('BREAKING')}`,
+      change.changeType,
+      change.federatedGraphName,
+      change.message,
+    ]);
+  }
+
+  console.log(pc.red('\nDetected the following federated graph schema breaking changes:'));
+  console.log(
+    pc.dim(
+      'These breaking changes were detected in the composed federated graph schema after composition. They are not reported above because they only become visible when all subgraphs are composed together (e.g., field type or nullability conflicts between subgraphs).',
+    ),
+  );
+  console.log(composedSchemaChangesTable.toString());
 };
 
 const handleCompositionErrors = (
@@ -291,6 +340,7 @@ const handleOkResult = ({
   const hasNoIssues =
     response.nonBreakingChanges.length === 0 &&
     response.breakingChanges.length === 0 &&
+    response.composedSchemaBreakingChanges.length === 0 &&
     response.compositionErrors.length === 0 &&
     response.lintErrors.length === 0 &&
     response.lintWarnings.length === 0 &&
@@ -326,6 +376,11 @@ const handleOkResult = ({
   // Schema changes — build json always, build + print table only for text output
   if (response.nonBreakingChanges.length > 0 || response.breakingChanges.length > 0) {
     handleSchemaChanges(response, jsonBuilder, shouldOutputJson ?? false);
+  }
+
+  // Composed federated graph schema breaking changes
+  if (response.composedSchemaBreakingChanges.length > 0) {
+    handleComposedSchemaBreakingChanges(response, jsonBuilder, shouldOutputJson ?? false);
   }
 
   // Composition errors
@@ -370,7 +425,8 @@ const handleOkResult = ({
       response.counts.breakingChanges + response.counts.nonBreakingChanges > rowLimit ||
       response.counts.graphPruneErrors + response.counts.graphPruneWarnings > rowLimit ||
       response.counts.compositionErrors > rowLimit ||
-      response.counts.compositionWarnings > rowLimit;
+      response.counts.compositionWarnings > rowLimit ||
+      response.counts.composedSchemaBreakingChanges > rowLimit;
 
     jsonBuilder.setExceededRowLimit(hasExceeded);
 

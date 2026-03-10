@@ -3,6 +3,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import type {
   CheckOperationUsageStats,
   CompositionError,
+  FederatedGraphSchemaChange,
   GraphPruningIssue,
   LintIssue,
   SchemaChange,
@@ -36,6 +37,7 @@ export type JsonOutputDescriptor = {
     errors: GraphPruningIssue[];
     warnings: GraphPruningIssue[];
   };
+  composedSchemaBreakingChanges?: FederatedGraphSchemaChange[];
   extensions?: {
     message: string;
   };
@@ -175,6 +177,11 @@ export class JsonOutputBuilder {
       errors: [...(this.data.graphPrune?.errors ?? [])],
       warnings: [...(this.data.graphPrune?.warnings ?? [])],
     };
+    return this;
+  }
+
+  addComposedSchemaBreakingChanges(changes: FederatedGraphSchemaChange[]): this {
+    this.data.composedSchemaBreakingChanges = [...(this.data.composedSchemaBreakingChanges ?? []), ...changes];
     return this;
   }
 
