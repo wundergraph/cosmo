@@ -2588,7 +2588,7 @@
                     "properties": {
                       "delete_on_shutdown": {
                         "type": "boolean",
-                        "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down. Defaults to false.",
+                        "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down normally. Defaults to false.",
                         "default": false
                       }
                     }
