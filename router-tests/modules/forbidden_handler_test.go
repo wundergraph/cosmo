@@ -79,7 +79,7 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:                 forbiddenModuleOpts(),
+			RouterOptions:                  forbiddenModuleOpts(),
 			ModifySubgraphErrorPropagation: modifySubgraphErrorPropagation(),
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -101,7 +101,7 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:                 forbiddenModuleOpts(),
+			RouterOptions:                  forbiddenModuleOpts(),
 			ModifySubgraphErrorPropagation: modifySubgraphErrorPropagation(),
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -129,7 +129,7 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:                 forbiddenModuleOpts(),
+			RouterOptions:                  forbiddenModuleOpts(),
 			ModifySubgraphErrorPropagation: modifySubgraphErrorPropagation(),
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -157,7 +157,7 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:                 forbiddenModuleOpts(),
+			RouterOptions:                  forbiddenModuleOpts(),
 			ModifySubgraphErrorPropagation: modifySubgraphErrorPropagation(),
 			Subgraphs: testenv.SubgraphsConfig{
 				// Hobbies subgraph returns 403, employees subgraph works normally
@@ -183,7 +183,7 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:                 forbiddenModuleOpts(),
+			RouterOptions:                  forbiddenModuleOpts(),
 			ModifySubgraphErrorPropagation: modifySubgraphErrorPropagation(),
 			Subgraphs: testenv.SubgraphsConfig{
 				GlobalMiddleware: forbiddenMiddleware(),
@@ -203,7 +203,7 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:                 forbiddenModuleOpts(),
+			RouterOptions:                  forbiddenModuleOpts(),
 			ModifySubgraphErrorPropagation: modifySubgraphErrorPropagation(),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
@@ -220,7 +220,7 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:                 forbiddenModuleOpts(),
+			RouterOptions:                  forbiddenModuleOpts(),
 			ModifySubgraphErrorPropagation: modifySubgraphErrorPropagation(),
 			Subgraphs: testenv.SubgraphsConfig{
 				Employees: testenv.SubgraphConfig{
@@ -255,7 +255,7 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		var hobbiesCallCount atomic.Int32
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:                 forbiddenModuleOpts(),
+			RouterOptions:                  forbiddenModuleOpts(),
 			ModifySubgraphErrorPropagation: modifySubgraphErrorPropagation(),
 			Subgraphs: testenv.SubgraphsConfig{
 				// Employees is called first (root query) and returns 403.
@@ -290,7 +290,7 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		// works correctly for errors that are NOT forbidden (and thus flow through
 		// the normal pipeline without module interception).
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:                 forbiddenModuleOpts(),
+			RouterOptions: forbiddenModuleOpts(),
 			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
 				cfg.Enabled = true
 				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
@@ -335,7 +335,7 @@ func TestForbiddenHandlerModule(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
-			RouterOptions:                 forbiddenModuleOpts(),
+			RouterOptions:                  forbiddenModuleOpts(),
 			ModifySubgraphErrorPropagation: modifySubgraphErrorPropagation(),
 			Subgraphs: testenv.SubgraphsConfig{
 				// Hobbies subgraph returns HTTP 200 with a GraphQL error —
