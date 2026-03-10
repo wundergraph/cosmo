@@ -2412,7 +2412,11 @@ export class NormalizationFactory {
       case Kind.FIELD_DEFINITION: {
         const typeName = data.renamedParentTypeName || data.originalParentTypeName;
         const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
-        if (parentTypeData?.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+        if (!parentTypeData) {
+          // undefined types are handled elsewhere
+          break;
+        }
+        if (parentTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION) {
           errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
           break;
         }
@@ -2434,7 +2438,11 @@ export class NormalizationFactory {
         if (ivData.isArgument && ivData.fieldName) {
           const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
           const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
-          if (parentTypeData?.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+          if (!parentTypeData) {
+            // undefined types are handled elsewhere
+            break;
+          }
+          if (parentTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION) {
             errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
             break;
           }
