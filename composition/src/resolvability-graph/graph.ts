@@ -1,4 +1,4 @@
-import { Edge, EntityDataNode, GraphNode, GraphNodeOptions, RootNode } from './graph-nodes';
+import { Edge, EntityDataNode, GraphNode, type GraphNodeOptions, RootNode } from './graph-nodes';
 import {
   generateEntityResolvabilityErrors,
   generateRootResolvabilityErrors,
@@ -6,15 +6,29 @@ import {
   getMultipliedRelativeOriginPaths,
   newRootFieldData,
 } from './utils/utils';
-import { GraphFieldData, RootTypeName } from '../utils/types';
+import { type GraphFieldData, type RootTypeName } from '../utils/types';
 import { getFirstEntry, getOrThrowError, getValueOrDefault } from '../utils/utils';
-import { FieldName, NodeName, SelectionPath, SubgraphName, TypeName, ValidationResult } from './types/types';
-import { ConsolidateUnresolvablePathsParams, ValidateEntitiesParams, VisitEntityParams } from './types/params';
-import { NodeResolutionData } from './node-resolution-data/node-resolution-data';
+import {
+  type FieldName,
+  type NodeName,
+  type SelectionPath,
+  type SubgraphName,
+  type TypeName,
+  type ValidationResult,
+} from './types/types';
+import {
+  type ConsolidateUnresolvablePathsParams,
+  type ValidateEntitiesParams,
+  type VisitEntityParams,
+} from './types/params';
+import { type NodeResolutionData } from './node-resolution-data/node-resolution-data';
 import { LITERAL_PERIOD, NOT_APPLICABLE, ROOT_TYPE_NAMES } from './constants/string-constants';
 import { EntityWalker } from './walker/entity-walker/entity-walker';
 import { RootFieldWalker } from './walker/root-field-walkers/root-field-walker';
-import { EntityResolvabilityErrorsParams, EntitySharedRootFieldResolvabilityErrorsParams } from './utils/types/params';
+import {
+  type EntityResolvabilityErrorsParams,
+  type EntitySharedRootFieldResolvabilityErrorsParams,
+} from './utils/types/params';
 
 export class Graph {
   edgeId = -1;

@@ -1,4 +1,5 @@
 import {
+  CompositionOptions,
   ContractTagOptions,
   federateSubgraphs,
   federateSubgraphsContract,
@@ -10,7 +11,6 @@ import {
   Subgraph,
   SupportedRouterCompatibilityVersion,
 } from '@wundergraph/composition';
-import { CompositionOptions } from 'src/types/index.js';
 
 /**
  * Composes a list of subgraphs and returns the result for the base graph and its contract graphs
@@ -19,10 +19,10 @@ export function composeFederatedGraphWithPotentialContracts(
   subgraphs: Subgraph[],
   tagOptionsByContractName: Map<string, ContractTagOptions>,
   version: string,
-  compositionOptions?: CompositionOptions,
+  options?: CompositionOptions,
 ) {
   return federateSubgraphsWithContracts({
-    disableResolvabilityValidation: compositionOptions?.disableResolvabilityValidation,
+    options,
     subgraphs,
     tagOptionsByContractName,
     version: validateRouterCompatibilityVersion(version),
@@ -36,11 +36,11 @@ export function composeFederatedContract(
   subgraphs: Subgraph[],
   contractTagOptions: ContractTagOptions,
   version: string,
-  compositionOptions?: CompositionOptions,
+  options?: CompositionOptions,
 ) {
   return federateSubgraphsContract({
     contractTagOptions,
-    disableResolvabilityValidation: compositionOptions?.disableResolvabilityValidation,
+    options,
     subgraphs,
     version: validateRouterCompatibilityVersion(version),
   });
@@ -52,10 +52,10 @@ export function composeFederatedContract(
 export function composeSubgraphs(
   subgraphs: Subgraph[],
   version: string,
-  compositionOptions?: CompositionOptions,
+  options?: CompositionOptions,
 ): FederationResult {
   return federateSubgraphs({
-    disableResolvabilityValidation: compositionOptions?.disableResolvabilityValidation,
+    options,
     subgraphs,
     version: validateRouterCompatibilityVersion(version),
   });
@@ -64,8 +64,18 @@ export function composeSubgraphs(
 /**
  * Normalizes and builds a GraphQLSchema from a string. It is not the same as buildSchema from graphql-js.
  */
-export function buildSchema(schema: string, noLocation = true, version: string): NormalizationResult {
-  return normalizeSubgraphFromString(schema, noLocation, validateRouterCompatibilityVersion(version));
+export function buildSchema(
+  schema: string,
+  noLocation = true,
+  version: string,
+  options?: CompositionOptions,
+): NormalizationResult {
+  return normalizeSubgraphFromString({
+    noLocation,
+    options,
+    sdlString: schema,
+    version: validateRouterCompatibilityVersion(version),
+  });
 }
 
 function validateRouterCompatibilityVersion(version: string): SupportedRouterCompatibilityVersion {

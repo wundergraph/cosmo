@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.289.0](https://github.com/wundergraph/cosmo/compare/router@0.288.2...router@0.289.0) (2026-03-10)
+
+### Features
+
+* add composition options ([#2595](https://github.com/wundergraph/cosmo/issues/2595)) ([1cba9ab](https://github.com/wundergraph/cosmo/commit/1cba9ab997a64e8bea18a7f6f01507f2ec2dd82b)) (@Aenimus)
+
 ## [0.288.2](https://github.com/wundergraph/cosmo/compare/router@0.288.1...router@0.288.2) (2026-03-07)
 
 ### Bug Fixes

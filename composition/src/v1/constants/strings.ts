@@ -47,8 +47,8 @@ import {
   SUBSCRIPTION_FILTER_VALUE,
   UNION_UPPER,
 } from '../../utils/string-constants';
-import { DefinitionNode, Kind } from 'graphql';
-import { DirectiveName, FieldName, TypeName } from '../../types/types';
+import { type DefinitionNode, Kind } from 'graphql';
+import { type DirectiveName, type FieldName, type TypeName } from '../../types/types';
 import {
   EDFS_NATS_STREAM_CONFIGURATION_DEFINITION,
   FIELD_SET_SCALAR_DEFINITION,

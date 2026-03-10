@@ -1,17 +1,11 @@
-import React, { useContext } from "react";
-import { GraphContext } from "@/components/layout/graph-layout";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { Button } from "@/components/ui/button";
-import { Cross2Icon } from "@radix-ui/react-icons";
-import { DataTableFacetedFilter } from "@/components/analytics/data-table-faceted-filter";
+import React, { useContext } from 'react';
+import { GraphContext } from '@/components/layout/graph-layout';
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { Button } from '@/components/ui/button';
+import { Cross2Icon } from '@radix-ui/react-icons';
+import { DataTableFacetedFilter } from '@/components/analytics/data-table-faceted-filter';
 
-export function SelectedChecksFilters({
-    selectedSubgraphs
-} :
-  {
-    selectedSubgraphs: string[];
-  }
-) {
+export function SelectedChecksFilters({ selectedSubgraphs }: { selectedSubgraphs: string[] }) {
   const applyParams = useApplyParams();
   const { subgraphs = [] } = useContext(GraphContext) ?? {};
 
@@ -30,15 +24,17 @@ export function SelectedChecksFilters({
         <DataTableFacetedFilter
           id="subgraphs"
           title="Subgraphs"
-          selectedOptions={
-            selectedSubgraphs
-              .map((id) => subgraphs.find((sg) => sg.id === id)!)
-              .filter(Boolean)
-              .map((sg) => JSON.stringify({ label: sg.name, value: sg.id }))
-          }
+          selectedOptions={selectedSubgraphs
+            .map((id) => subgraphs.find((sg) => sg.id === id)!)
+            .filter(Boolean)
+            .map((sg) => JSON.stringify({ label: sg.name, value: sg.id }))}
           onSelect={(value) => {
             applyParams({
-              subgraphs: value?.map(JSON.parse).map((sg: { value: string; }) => sg.value).join(',') ?? null,
+              subgraphs:
+                value
+                  ?.map(JSON.parse)
+                  .map((sg: { value: string }) => sg.value)
+                  .join(',') ?? null,
             });
           }}
           options={subgraphOptions}

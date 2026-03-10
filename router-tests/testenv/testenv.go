@@ -58,7 +58,6 @@ import (
 	"github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects/src/service"
 	"github.com/wundergraph/cosmo/router-tests/freeport"
 	"github.com/wundergraph/cosmo/router/core"
-	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -66,6 +65,7 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 var ErrEnvironmentClosed = errors.New("test environment closed")
@@ -90,8 +90,6 @@ var (
 	ConfigWithEdfsRedisJSONTemplate string
 	//go:embed testdata/configWithPlugins.json
 	ConfigWithPluginsJSONTemplate string
-	//go:embed testdata/configWithOCIPlugins.json
-	ConfigWithOCIPluginsJSONTemplate string
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
 

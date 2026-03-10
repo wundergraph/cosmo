@@ -1,18 +1,9 @@
-import type { SyntheticEvent } from "react";
-import { Link } from "@/components/ui/link";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Alert } from "@/components/ui/alert";
+import type { SyntheticEvent } from 'react';
+import { Link } from '@/components/ui/link';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Alert } from '@/components/ui/alert';
 
 export const DeletePersistedOperationDialog = ({
   isOpen,
@@ -30,7 +21,7 @@ export const DeletePersistedOperationDialog = ({
   onClose?: () => void;
 }) => {
   const isPlural = operationNames.length > 1;
-  const pluralizedOperation = isPlural ? "operations" : "operation";
+  const pluralizedOperation = isPlural ? 'operations' : 'operation';
 
   return (
     <Dialog
@@ -47,18 +38,17 @@ export const DeletePersistedOperationDialog = ({
         </DialogHeader>
         {operationHasTraffic ? (
           <Alert variant="warn">
-            The {pluralizedOperation} {isPlural ? "are" : "is"}{" "}
-            <span className="font-semibold">receiving traffic</span>. Visit{" "}
+            The {pluralizedOperation} {isPlural ? 'are' : 'is'} <span className="font-semibold">receiving traffic</span>
+            . Visit{' '}
             <Link href={metricsLink} className="underline">
               metrics
-            </Link>{" "}
+            </Link>{' '}
             to learn more.
           </Alert>
         ) : (
           <Alert variant="warn">
-            If you are not sending us analytics, we{" "}
-            <span className="font-semibold">cannot guarantee</span> that that
-            existing clients won&#39;t break. If you are not sure, check the{" "}
+            If you are not sending us analytics, we <span className="font-semibold">cannot guarantee</span> that that
+            existing clients won&#39;t break. If you are not sure, check the{' '}
             <Link href={metricsLink} className="underline">
               metrics
             </Link>
@@ -68,22 +58,14 @@ export const DeletePersistedOperationDialog = ({
 
         <div className="flex flex-col gap-y-2">
           <p className="text-sm">
-            Are you sure you want to{" "}
-            <span className="font-semibold">
-              delete the following {pluralizedOperation}
-            </span>
+            Are you sure you want to <span className="font-semibold">delete the following {pluralizedOperation}</span>
             ?<br />
             <span className="mt-1 inline-block">
               <OperationLabel names={operationNames} />
             </span>
           </p>
         </div>
-        <Button
-          className="mt-2"
-          type="submit"
-          variant="destructive"
-          onClick={onSubmitButtonClick}
-        >
+        <Button className="mt-2" type="submit" variant="destructive" onClick={onSubmitButtonClick}>
           Delete
         </Button>
       </DialogContent>
@@ -94,14 +76,10 @@ export const DeletePersistedOperationDialog = ({
 const OperationLabel = ({ names }: { names: string[] }) => (
   <Tooltip>
     <TooltipTrigger asChild>
-      <code
-        className={
-          "inline-block max-w-2xl cursor-pointer overflow-hidden text-ellipsis align-middle"
-        }
-      >
-        {names.length > 4 ? names.slice(0, 4).join("\n") : names.join("\n")}
+      <code className={'inline-block max-w-2xl cursor-pointer overflow-hidden text-ellipsis align-middle'}>
+        {names.length > 4 ? names.slice(0, 4).join('\n') : names.join('\n')}
       </code>
     </TooltipTrigger>
-    <TooltipContent>{names.join(",")}</TooltipContent>
+    <TooltipContent>{names.join(',')}</TooltipContent>
   </Tooltip>
 );
