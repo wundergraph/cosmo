@@ -14189,7 +14189,7 @@ func (x *GetOrganizationBySlugResponse) GetOrganization() *Organization {
 	return nil
 }
 
-// *
+//*
 // Billing
 type GetBillingPlansRequest struct {
 	state         protoimpl.MessageState
@@ -14581,7 +14581,7 @@ func (x *UpgradePlanResponse) GetResponse() *Response {
 	return nil
 }
 
-// *
+//*
 // MetricsDashboard
 type GetGraphMetricsRequest struct {
 	state         protoimpl.MessageState

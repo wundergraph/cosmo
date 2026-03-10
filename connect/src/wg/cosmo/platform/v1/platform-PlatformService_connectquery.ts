@@ -2449,7 +2449,7 @@ export const configureSubgraphCheckExtensions = {
 } as const;
 
 /**
- *
+ * 
  * Billing
  * -----------------------------------------------------------------------------------------------------------------------------
  * Return the available billing plans

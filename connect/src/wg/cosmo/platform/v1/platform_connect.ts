@@ -1680,7 +1680,7 @@ export const PlatformService = {
       kind: MethodKind.Unary,
     },
     /**
-     *
+     * 
      * Billing
      * -----------------------------------------------------------------------------------------------------------------------------
      * Return the available billing plans
