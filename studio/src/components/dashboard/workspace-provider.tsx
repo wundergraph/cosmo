@@ -70,7 +70,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
     () =>
       isLoading
         ? new WorkspaceNamespace({ id: '', name: namespace, graphs: [] })
-        : (data?.namespaces.find((wns) => wns.name === namespace) ??
+        : (data?.namespaces.find((wns) => wns.name.toLowerCase() === namespace.toLowerCase()) ??
           new WorkspaceNamespace({
             id: '',
             name: DEFAULT_NAMESPACE_NAME,
