@@ -1,11 +1,6 @@
-import {
-  BaseEdge,
-  EdgeLabelRenderer,
-  EdgeProps,
-  getBezierPath,
-} from "reactflow";
-import { msToTime } from "@/lib/insights-helpers";
-import React from "react";
+import { BaseEdge, EdgeLabelRenderer, EdgeProps, getBezierPath } from 'reactflow';
+import { msToTime } from '@/lib/insights-helpers';
+import React from 'react';
 
 export default function SubgraphMetricsEdge({
   sourceX,
@@ -33,11 +28,11 @@ export default function SubgraphMetricsEdge({
       <EdgeLabelRenderer>
         <div
           style={{
-            position: "absolute",
+            position: 'absolute',
             transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            fontSize: "0.7rem",
-            pointerEvents: "all",
-            cursor: "pointer",
+            fontSize: '0.7rem',
+            pointerEvents: 'all',
+            cursor: 'pointer',
           }}
           className="nodrag nopan"
         >

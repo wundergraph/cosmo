@@ -1,4 +1,4 @@
-import { Kind, TypeNode } from 'graphql';
+import { Kind, type TypeNode } from 'graphql';
 import { stringToNamedTypeNode } from '../../ast/utils';
 import { FIELD_SET_SCALAR, STRING_SCALAR } from '../../utils/string-constants';
 

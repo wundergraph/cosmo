@@ -1,13 +1,11 @@
-import { useQuery } from "@connectrpc/connect-query";
-import {
-  getWorkspace,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import { WorkspaceNamespace } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useRouter } from "next/router";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { useQuery } from '@connectrpc/connect-query';
+import { getWorkspace } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
+import { WorkspaceNamespace } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { useRouter } from 'next/router';
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
 const DEFAULT_NAMESPACE_NAME = 'default';
 
@@ -27,7 +25,7 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
 
   // Initialize the namespace
   const namespaceParam = router.query.namespace as string;
-  const [storedNamespace, setStoredNamespace] = useLocalStorage("wg-namespace", DEFAULT_NAMESPACE_NAME);
+  const [storedNamespace, setStoredNamespace] = useLocalStorage('wg-namespace', DEFAULT_NAMESPACE_NAME);
   const [namespace, setNamespace] = useState(namespaceParam || storedNamespace || DEFAULT_NAMESPACE_NAME);
   const [namespaces, setNamespaces] = useState([DEFAULT_NAMESPACE_NAME]);
 
@@ -68,39 +66,42 @@ export function WorkspaceProvider({ children }: React.PropsWithChildren) {
   ]);
 
   // Memoize context components
-  const currentNamespace= useMemo(
-    () => isLoading
-      ? new WorkspaceNamespace({ id: '', name: namespace, graphs: [] })
-      : data?.namespaces.find((wns) => wns.name === namespace) ?? new WorkspaceNamespace({
-        id: '',
-        name: DEFAULT_NAMESPACE_NAME,
-        graphs: [],
-      }),
+  const currentNamespace = useMemo(
+    () =>
+      isLoading
+        ? new WorkspaceNamespace({ id: '', name: namespace, graphs: [] })
+        : (data?.namespaces.find((wns) => wns.name.toLowerCase() === namespace.toLowerCase()) ??
+          new WorkspaceNamespace({
+            id: '',
+            name: DEFAULT_NAMESPACE_NAME,
+            graphs: [],
+          })),
     [isLoading, data?.namespaces, namespace],
   );
 
   const namespaceByName = useMemo(
-    () => data?.namespaces.reduce(
-      (acc, wns) => {
+    () =>
+      data?.namespaces.reduce((acc, wns) => {
         acc.set(wns.name, wns);
         return acc;
-      },
-      new Map<string, WorkspaceNamespace>(),
-    ) ?? new Map<string, WorkspaceNamespace>(),
+      }, new Map<string, WorkspaceNamespace>()) ?? new Map<string, WorkspaceNamespace>(),
     [data?.namespaces],
   );
 
-  const setNamespaceCallback = useCallback((ns: string, applyRouteParams: boolean) => {
-    if (!ns || namespace === ns || !namespaces.some((ns) => ns.toLowerCase() === ns.toLowerCase())) {
-      return;
-    }
+  const setNamespaceCallback = useCallback(
+    (newNs: string, applyRouteParams: boolean) => {
+      if (!newNs || namespace === newNs || !namespaces.some((ns) => ns.toLowerCase() === newNs.toLowerCase())) {
+        return;
+      }
 
-    setNamespace(ns);
-    setStoredNamespace(ns);
-    if (applyRouteParams) {
-      applyParams({namespace: ns});
-    }
-  }, [namespace, namespaces, setStoredNamespace, applyParams]);
+      setNamespace(newNs);
+      setStoredNamespace(newNs);
+      if (applyRouteParams) {
+        applyParams({ namespace: newNs });
+      }
+    },
+    [namespace, namespaces, setStoredNamespace, applyParams],
+  );
 
   // Finally, render :)
   return (

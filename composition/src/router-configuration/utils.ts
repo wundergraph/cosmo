@@ -1,5 +1,5 @@
-import { ConfigurationData, FieldSetConditionData, FieldSetConditionDataParams } from './types';
-import { FieldName } from '../types/types';
+import { type ConfigurationData, type FieldSetConditionData, type FieldSetConditionDataParams } from './types';
+import { type FieldName } from '../types/types';
 
 export function newFieldSetConditionData({
   fieldCoordinatesPath,

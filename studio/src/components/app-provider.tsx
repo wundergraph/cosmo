@@ -1,22 +1,21 @@
-import { identify, resetTracking } from "@/lib/track";
-import { Transport } from "@connectrpc/connect";
-import { TransportProvider } from "@connectrpc/connect-query";
-import { createConnectTransport } from "@connectrpc/connect-web";
-import { QueryClient, useQuery, useQueryClient, } from "@tanstack/react-query";
-import { useRouter } from "next/router";
-import { ReactNode, createContext, useEffect, useState } from "react";
-import { useCookieOrganization } from "@/hooks/use-cookie-organization";
-import { setUser as setSentryUser } from "@sentry/nextjs";
-import { OrganizationRole } from "@/lib/constants";
-import { WorkspaceProvider } from "@/components/dashboard/workspace-provider";
+import { identify, resetTracking } from '@/lib/track';
+import { Transport } from '@connectrpc/connect';
+import { TransportProvider } from '@connectrpc/connect-query';
+import { createConnectTransport } from '@connectrpc/connect-web';
+import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/router';
+import { ReactNode, createContext, useEffect, useState } from 'react';
+import { useCookieOrganization } from '@/hooks/use-cookie-organization';
+import { setUser as setSentryUser } from '@sentry/nextjs';
+import { OrganizationRole } from '@/lib/constants';
+import { WorkspaceProvider } from '@/components/dashboard/workspace-provider';
 
 const sessionQueryClient = new QueryClient();
 
 export const UserContext = createContext<User | undefined>(undefined);
-export const SessionClientContext =
-  createContext<QueryClient>(sessionQueryClient);
+export const SessionClientContext = createContext<QueryClient>(sessionQueryClient);
 
-const publicPaths = ["/login", "/signup"];
+const publicPaths = ['/login', '/signup'];
 
 export interface User {
   id: string;
@@ -57,13 +56,7 @@ export interface Organization {
     email?: string;
   };
   subscription?: {
-    status:
-      | "active"
-      | "canceled"
-      | "trialing"
-      | "incomplete"
-      | "incomplete_expired"
-      | "past_due";
+    status: 'active' | 'canceled' | 'trialing' | 'incomplete' | 'incomplete_expired' | 'past_due';
     currentPeriodEnd: string;
     cancelAtPeriodEnd: boolean;
     trialEnd: string;
@@ -88,20 +81,17 @@ export interface Session {
 export class UnauthorizedError extends Error {
   constructor() {
     super();
-    this.name = "UnauthorizedError";
+    this.name = 'UnauthorizedError';
   }
 }
 
 const fetchSession = async () => {
   try {
-    const response = await fetch(
-      process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/session",
-      {
-        method: "GET",
-        mode: "cors",
-        credentials: "include",
-      },
-    );
+    const response = await fetch(process.env.NEXT_PUBLIC_COSMO_CP_URL + '/v1/auth/session', {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'include',
+    });
     if (response.status === 200) {
       const body = await response.json();
       return body;
@@ -125,8 +115,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // On initial load or page reload, the transport is set and available already.
   // So only when the transport changes again, we need to reset queries.
   // URL slug changes -> update cookie -> update verified slug -> changes transport -> updates reset counter -> resets queries
-  const [verifiedOrganizationSlug, setVerifiedOrganizationSlug] =
-    useState<string>();
+  const [verifiedOrganizationSlug, setVerifiedOrganizationSlug] = useState<string>();
   const [transport, setTransport] = useState<Transport>();
   const [queryResetCounter, setQueryResetCounter] = useState(-1);
   const queryClient = useQueryClient();
@@ -135,17 +124,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!router.isReady) return;
-    if (currentOrgSlug && typeof currentOrgSlug === "string") {
+    if (currentOrgSlug && typeof currentOrgSlug === 'string') {
       setOrgSlugCookie(currentOrgSlug);
     }
   }, [currentOrgSlug, router, setOrgSlugCookie]);
 
-  const { data, error, isFetching } = useQuery<
-    Session | null,
-    UnauthorizedError | Error
-  >(
+  const { data, error, isFetching } = useQuery<Session | null, UnauthorizedError | Error>(
     {
-      queryKey: ["user", router.asPath],
+      queryKey: ['user', router.asPath],
       queryFn: () => fetchSession(),
       retry(failureCount, error) {
         if (error instanceof UnauthorizedError) return false;
@@ -157,17 +143,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (isFetching || !router.isReady) return;
-    if (
-      error &&
-      error instanceof UnauthorizedError &&
-      !publicPaths.includes(router.pathname)
-    ) {
+    if (error && error instanceof UnauthorizedError && !publicPaths.includes(router.pathname)) {
       const redirectURL = `${process.env.NEXT_PUBLIC_COSMO_STUDIO_URL}${router.asPath}`;
       router.replace(`/login?redirectURL=${redirectURL}`);
     } else if (data && !error) {
-      const currentOrg = data.organizations.find(
-        (org) => org.slug === cookieOrgSlug,
-      );
+      const currentOrg = data.organizations.find((org) => org.slug === cookieOrgSlug);
 
       const organization = currentOrg || data.organizations[0];
 
@@ -205,20 +185,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       setVerifiedOrganizationSlug(organization.slug);
 
       if (
-        (router.pathname === "/" ||
-          router.pathname === "/login" ||
-          !currentOrg) &&
-        router.pathname !== "/account/invitations"
+        (router.pathname === '/' || router.pathname === '/login' || !currentOrg) &&
+        router.pathname !== '/account/invitations'
       ) {
-        const url = new URL(
-          window.location.origin + router.basePath + router.asPath,
-        );
+        const url = new URL(window.location.origin + router.basePath + router.asPath);
         const params = new URLSearchParams(url.search);
-        router.replace(
-          params.size !== 0
-            ? `/${organization.slug}?${params}`
-            : `/${organization.slug}`,
-        );
+        router.replace(params.size !== 0 ? `/${organization.slug}?${params}` : `/${organization.slug}`);
       }
     }
   }, [router, data, isFetching, error, cookieOrgSlug]);
@@ -233,12 +205,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       useHttpGet: true,
       interceptors: [
         (next) => async (req) => {
-          req.header.set("cosmo-org-slug", verifiedOrganizationSlug);
+          req.header.set('cosmo-org-slug', verifiedOrganizationSlug);
           return await next(req);
         },
       ],
       // Allow cookies to be sent to the server
-      credentials: "include",
+      credentials: 'include',
     });
 
     setTransport(newTransport);
@@ -263,9 +235,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return (
       <UserContext.Provider value={user}>
         <SessionClientContext.Provider value={sessionQueryClient}>
-          <WorkspaceProvider>
-            {children}
-          </WorkspaceProvider>
+          <WorkspaceProvider>{children}</WorkspaceProvider>
         </SessionClientContext.Provider>
       </UserContext.Provider>
     );
@@ -275,9 +245,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     <TransportProvider transport={transport}>
       <UserContext.Provider value={user}>
         <SessionClientContext.Provider value={sessionQueryClient}>
-          <WorkspaceProvider>
-            {children}
-          </WorkspaceProvider>
+          <WorkspaceProvider>{children}</WorkspaceProvider>
         </SessionClientContext.Provider>
       </UserContext.Provider>
     </TransportProvider>
