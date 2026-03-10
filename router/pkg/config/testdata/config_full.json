@@ -658,7 +658,9 @@
           "URL": "nats://localhost:4222",
           "Authentication": null,
           "Consumers": {
-            "DeleteOnShutdown": false
+            "Durable": {
+              "DeleteOnShutdown": false
+            }
           }
         },
         {
@@ -672,7 +674,9 @@
             "Token": null
           },
           "Consumers": {
-            "DeleteOnShutdown": false
+            "Durable": {
+              "DeleteOnShutdown": false
+            }
           }
         }
       ],

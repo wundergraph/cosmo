@@ -1213,7 +1213,7 @@ func TestNatsEvents(t *testing.T) {
 			},
 			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
 				for i := range cfg.Providers.Nats {
-					cfg.Providers.Nats[i].Consumers.DeleteOnShutdown = true
+					cfg.Providers.Nats[i].Consumers.Durable.DeleteOnShutdown = true
 				}
 			},
 		})

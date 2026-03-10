@@ -616,8 +616,12 @@ type NatsAuthentication struct {
 	NatsTokenBasedAuthentication `yaml:"token,inline"`
 }
 
-type NatsConsumersConfiguration struct {
+type NatsDurableConsumersConfiguration struct {
 	DeleteOnShutdown bool `yaml:"delete_on_shutdown" envDefault:"false"`
+}
+
+type NatsConsumersConfiguration struct {
+	Durable NatsDurableConsumersConfiguration `yaml:"durable,omitempty"`
 }
 
 type NatsEventSource struct {
