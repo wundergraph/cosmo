@@ -26,7 +26,8 @@ import {
 import Table from 'cli-table3';
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { BaseCommandOptions } from '../../../core/types/types.js';
-import { composeSubgraphs, introspectSubgraph } from '../../../utils.js';
+import { composeSubgraphs, introspectSubgraph, wrapText } from '../../../utils.js';
+import { TABLE_CONTENT_WIDTH } from '../../../wrap-text.js';
 
 const STATIC_SCHEMA_VERSION_ID = '00000000-0000-0000-0000-000000000000';
 
@@ -218,14 +219,13 @@ export default (opts: BaseCommandOptions) => {
       const compositionErrorsTable = new Table({
         head: [pc.bold(pc.white('ERROR_MESSAGE'))],
         colWidths: [120],
-        wordWrap: true,
       });
 
       console.log(
         pc.red(`We found composition errors, while composing.\n${pc.bold('Please check the errors below:')}`),
       );
       for (const compositionError of result.errors) {
-        compositionErrorsTable.push([compositionError.message]);
+        compositionErrorsTable.push([wrapText(compositionError.message, TABLE_CONTENT_WIDTH)]);
       }
       console.log(compositionErrorsTable.toString());
       process.exitCode = 1;
@@ -236,12 +236,11 @@ export default (opts: BaseCommandOptions) => {
       const compositionWarningsTable = new Table({
         head: [pc.bold(pc.white('WARNING_MESSAGE'))],
         colWidths: [120],
-        wordWrap: true,
       });
 
       console.log(pc.yellow(`The following warnings were produced while composing:`));
       for (const warning of result.warnings) {
-        compositionWarningsTable.push([warning.message]);
+        compositionWarningsTable.push([wrapText(warning.message, TABLE_CONTENT_WIDTH)]);
       }
       console.log(compositionWarningsTable.toString());
     }
@@ -601,7 +600,6 @@ async function buildFeatureFlagsConfig(
       const compositionErrorsTable = new Table({
         head: [pc.bold(pc.white('ERROR_MESSAGE'))],
         colWidths: [120],
-        wordWrap: true,
       });
 
       console.log(
@@ -612,7 +610,7 @@ async function buildFeatureFlagsConfig(
         ),
       );
       for (const compositionError of featureResult.errors) {
-        compositionErrorsTable.push([compositionError.message]);
+        compositionErrorsTable.push([wrapText(compositionError.message, TABLE_CONTENT_WIDTH)]);
       }
       console.log(compositionErrorsTable.toString());
       continue;
@@ -622,14 +620,13 @@ async function buildFeatureFlagsConfig(
       const compositionWarningsTable = new Table({
         head: [pc.bold(pc.white('WARNING_MESSAGE'))],
         colWidths: [120],
-        wordWrap: true,
       });
 
       console.log(
         pc.yellow(`The following warnings were produced while composing the feature flag ${pc.italic(ff.name)}:`),
       );
       for (const warning of featureResult.warnings) {
-        compositionWarningsTable.push([warning.message]);
+        compositionWarningsTable.push([wrapText(warning.message, TABLE_CONTENT_WIDTH)]);
       }
       console.log(compositionWarningsTable.toString());
     }

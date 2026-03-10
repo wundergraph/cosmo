@@ -177,6 +177,8 @@ export const introspectSubgraph = async ({
   };
 };
 
+export { wrapText } from './wrap-text.js';
+
 /**
  * Composes a list of subgraphs into a single schema.
  */
