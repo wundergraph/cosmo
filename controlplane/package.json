@@ -58,7 +58,7 @@
     "@sentry/node-native": "^10.19.0",
     "@sentry/profiling-node": "^10.19.0",
     "@tiptap/core": "^2.1.13",
-    "@wundergraph/composition": "0.51.1",
+    "@wundergraph/composition": "workspace:*",
     "@wundergraph/cosmo-connect": "workspace:*",
     "@wundergraph/cosmo-shared": "workspace:*",
     "@wundergraph/protographic": "workspace:*",

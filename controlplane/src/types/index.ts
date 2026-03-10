@@ -804,7 +804,3 @@ export interface ProposalSubgraphDTO {
   isNew: boolean;
   labels: Label[];
 }
-
-export type CompositionOptions = {
-  disableResolvabilityValidation: boolean;
-};
