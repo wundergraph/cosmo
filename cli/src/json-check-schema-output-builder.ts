@@ -9,7 +9,7 @@ import type {
   SchemaChange,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
-export type JsonOutputDescriptor = {
+export type JsonCheckSchemaOutputDescriptor = {
   status: 'error' | 'success';
   code: EnumStatusCode;
   details?: string;
@@ -46,8 +46,8 @@ export type JsonOutputDescriptor = {
   operationUsageStats?: CheckOperationUsageStats;
 };
 
-export class JsonOutputBuilder {
-  private readonly data: JsonOutputDescriptor;
+export class JsonCheckSchemaOutputBuilder {
+  private readonly data: JsonCheckSchemaOutputDescriptor;
   private readonly outFile?: string;
 
   constructor(code: EnumStatusCode, rowLimit: number, outFile?: string) {
@@ -195,7 +195,7 @@ export class JsonOutputBuilder {
     return this;
   }
 
-  build(): JsonOutputDescriptor {
+  build(): JsonCheckSchemaOutputDescriptor {
     return this.data;
   }
 

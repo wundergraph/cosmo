@@ -11,14 +11,16 @@ import {
   LintIssue,
   SchemaChange,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { JsonOutputBuilder } from '../src/json-output-builder.js';
-import type { JsonOutputDescriptor } from '../src/json-output-builder.js';
+import {
+  JsonCheckSchemaOutputBuilder,
+  type JsonCheckSchemaOutputDescriptor,
+} from '../src/json-check-schema-output-builder.js';
 
-describe('JsonOutputBuilder', () => {
+describe('JsonCheckSchemaOutputBuilder', () => {
   describe('constructor / build', () => {
     it('initialises with error status and given code and rowLimit', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.ERR, 50);
-      expect(b.build()).toMatchObject<Partial<JsonOutputDescriptor>>({
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.ERR, 50);
+      expect(b.build()).toMatchObject<Partial<JsonCheckSchemaOutputDescriptor>>({
         status: 'error',
         code: EnumStatusCode.ERR,
         rowLimit: 50,
@@ -28,13 +30,13 @@ describe('JsonOutputBuilder', () => {
 
   describe('setStatus', () => {
     it('sets status to success when true', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setStatus(true);
       expect(b.build().status).toBe('success');
     });
 
     it('sets status to error when false', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setStatus(false);
       expect(b.build().status).toBe('error');
     });
@@ -42,7 +44,7 @@ describe('JsonOutputBuilder', () => {
 
   describe('setCode', () => {
     it('updates code', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.ERR, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.ERR, 10);
       b.setCode(EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA);
       expect(b.build().code).toBe(EnumStatusCode.ERR_INVALID_SUBGRAPH_SCHEMA);
     });
@@ -50,7 +52,7 @@ describe('JsonOutputBuilder', () => {
 
   describe('setUrl / setMessage / setDetails', () => {
     it('sets url, message, and details', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setUrl('https://example.com').setMessage('hello').setDetails('some detail');
       const result = b.build();
       expect(result.url).toBe('https://example.com');
@@ -59,7 +61,7 @@ describe('JsonOutputBuilder', () => {
     });
 
     it('setDetails with undefined clears details', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setDetails(undefined);
       expect(b.build().details).toBeUndefined();
     });
@@ -67,19 +69,19 @@ describe('JsonOutputBuilder', () => {
 
   describe('proposals', () => {
     it('setProposals overwrites existing proposals', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setProposals('first').setProposals('second');
       expect(b.build().proposals).toEqual({ message: 'second' });
     });
 
     it('initProposals does not overwrite if already set', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setProposals('original').initProposals('ignored');
       expect(b.build().proposals).toEqual({ message: 'original' });
     });
 
     it('initProposals sets value when not set', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.initProposals('new');
       expect(b.build().proposals).toEqual({ message: 'new' });
     });
@@ -87,13 +89,13 @@ describe('JsonOutputBuilder', () => {
 
   describe('traffic', () => {
     it('setTraffic replaces traffic', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setTraffic('ok');
       expect(b.build().traffic).toEqual({ message: 'ok' });
     });
 
     it('markTrafficLinkedFailed uses fallback when no prior message', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.markTrafficLinkedFailed('fallback');
       expect(b.build().traffic).toMatchObject({
         message: 'fallback',
@@ -101,7 +103,7 @@ describe('JsonOutputBuilder', () => {
     });
 
     it('markTrafficLinkedFailed preserves prior message', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setTraffic('prior').markTrafficLinkedFailed('fallback');
       expect(b.build().traffic?.message).toBe('prior');
     });
@@ -122,21 +124,21 @@ describe('JsonOutputBuilder', () => {
     });
 
     it('addBreakingChanges accumulates changes', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addBreakingChanges([change]).addBreakingChanges([change]);
       expect(b.build().changes?.breaking).toHaveLength(2);
       expect(b.build().changes?.nonBreaking).toHaveLength(0);
     });
 
     it('addNonBreakingChanges accumulates changes', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addNonBreakingChanges([nonChange]).addNonBreakingChanges([nonChange]);
       expect(b.build().changes?.nonBreaking).toHaveLength(2);
       expect(b.build().changes?.breaking).toHaveLength(0);
     });
 
     it('mixing breaking and non-breaking preserves both', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addBreakingChanges([change]).addNonBreakingChanges([nonChange]);
       expect(b.build().changes?.breaking).toHaveLength(1);
       expect(b.build().changes?.nonBreaking).toHaveLength(1);
@@ -158,7 +160,7 @@ describe('JsonOutputBuilder', () => {
     });
 
     it('addCompositionErrors accumulates', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addCompositionErrors([err]).addCompositionErrors([err]);
       const comp = b.build().composition!;
       expect(comp.errors).toHaveLength(2);
@@ -166,7 +168,7 @@ describe('JsonOutputBuilder', () => {
     });
 
     it('addCompositionWarnings accumulates', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addCompositionWarnings([warn]).addCompositionWarnings([warn]);
       const comp = b.build().composition!;
       expect(comp.warnings).toHaveLength(2);
@@ -179,14 +181,14 @@ describe('JsonOutputBuilder', () => {
     const lintWarn = new LintIssue({ message: 'lint warn', lintRuleType: 'RULE_B' });
 
     it('addLintErrors accumulates', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addLintErrors([lintErr]).addLintErrors([lintErr]);
       const lint = b.build().lint!;
       expect(lint.errors).toHaveLength(2);
     });
 
     it('addLintWarnings accumulates', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addLintWarnings([lintWarn]);
       const lint = b.build().lint!;
       expect(lint.warnings).toHaveLength(1);
@@ -208,7 +210,7 @@ describe('JsonOutputBuilder', () => {
     });
 
     it('addGraphPruneErrors accumulates', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addGraphPruneErrors([pruneErr]).addGraphPruneErrors([pruneErr]);
       const gp = b.build().graphPrune!;
       expect(gp.errors).toHaveLength(2);
@@ -216,14 +218,14 @@ describe('JsonOutputBuilder', () => {
     });
 
     it('addGraphPruneWarnings accumulates', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addGraphPruneWarnings([pruneWarn]);
       const gp = b.build().graphPrune!;
       expect(gp.warnings).toHaveLength(1);
     });
 
     it('markGraphPruneLinkedFailed initializes graphPrune', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.markGraphPruneLinkedFailed();
       const gp = b.build().graphPrune!;
       expect(gp).toBeDefined();
@@ -242,14 +244,14 @@ describe('JsonOutputBuilder', () => {
     });
 
     it('addComposedSchemaBreakingChanges initializes and accumulates', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addComposedSchemaBreakingChanges([composedChange]).addComposedSchemaBreakingChanges([composedChange]);
       expect(b.build().composedSchemaBreakingChanges).toHaveLength(2);
     });
 
     it('addComposedSchemaBreakingChanges preserves existing entries when called multiple times', () => {
       const second = new FederatedGraphSchemaChange({ ...composedChange, federatedGraphName: 'other-fed' });
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addComposedSchemaBreakingChanges([composedChange]).addComposedSchemaBreakingChanges([second]);
       const result = b.build().composedSchemaBreakingChanges!;
       expect(result).toHaveLength(2);
@@ -258,20 +260,20 @@ describe('JsonOutputBuilder', () => {
     });
 
     it('composedSchemaBreakingChanges is absent when never set', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       expect(b.build().composedSchemaBreakingChanges).toBeUndefined();
     });
   });
 
   describe('extensions / exceededRowLimit / operationUsageStats', () => {
     it('setExtensionError sets message', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setExtensionError('bad extension');
       expect(b.build().extensions).toEqual({ message: 'bad extension' });
     });
 
     it('setExceededRowLimit stores the flag', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setExceededRowLimit(true);
       expect(b.build().exceededRowLimit).toBe(true);
     });
@@ -279,7 +281,7 @@ describe('JsonOutputBuilder', () => {
     it('setOperationUsageStats does not overwrite if already set', () => {
       const stats1 = new CheckOperationUsageStats({ totalOperations: 5 });
       const stats2 = new CheckOperationUsageStats({ totalOperations: 99 });
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setOperationUsageStats(stats1).setOperationUsageStats(stats2);
       expect(b.build().operationUsageStats?.totalOperations).toBe(5);
     });
@@ -292,7 +294,7 @@ describe('JsonOutputBuilder', () => {
 
     it('logs to console when no outFile', async () => {
       const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setStatus(true);
       await b.write();
       expect(spy).toHaveBeenCalledWith(b.build());
@@ -301,7 +303,7 @@ describe('JsonOutputBuilder', () => {
     it('writes JSON to file when outFile provided', async () => {
       const outFile = join(tmpdir(), `json-output-builder-test-${Date.now()}.json`);
       try {
-        const b = new JsonOutputBuilder(EnumStatusCode.OK, 10, outFile);
+        const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10, outFile);
         b.setStatus(true).setMessage('done');
         await b.write();
         const written = JSON.parse(readFileSync(outFile, 'utf8'));
@@ -314,7 +316,7 @@ describe('JsonOutputBuilder', () => {
 
   describe('method chaining', () => {
     it('all setters return this for fluent chaining', () => {
-      const b = new JsonOutputBuilder(EnumStatusCode.OK, 10);
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       const result = b
         .setUrl('https://x.com')
         .setCode(EnumStatusCode.OK)

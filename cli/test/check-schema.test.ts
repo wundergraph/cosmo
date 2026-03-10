@@ -11,7 +11,7 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { Client } from '../src/core/client/client.js';
 import { config } from '../src/core/config.js';
 import CheckSchema from '../src/commands/subgraph/commands/check.js';
-import type { JsonOutputDescriptor } from '../src/handle-check-result.js';
+import type { JsonCheckSchemaOutputDescriptor } from '../src/json-check-schema-output-builder.js';
 
 vi.mock('../src/core/config.js', async (importOriginal) => {
   const mod = await importOriginal<typeof import('../src/core/config.js')>();
@@ -82,7 +82,7 @@ async function runCheck(
   await program.parseAsync(args, { from: 'user' });
 }
 
-function getJsonOutput(logSpy: MockInstance<typeof console.log>): JsonOutputDescriptor {
+function getJsonOutput(logSpy: MockInstance<typeof console.log>): JsonCheckSchemaOutputDescriptor {
   const call = logSpy.mock.calls.find(([arg]) => {
     if (arg !== null && typeof arg === 'object') {
       return true;
@@ -98,7 +98,7 @@ function getJsonOutput(logSpy: MockInstance<typeof console.log>): JsonOutputDesc
     throw new Error('No JSON output found in console.log calls');
   }
   const arg = call[0];
-  return typeof arg === 'string' ? JSON.parse(arg) : (arg as JsonOutputDescriptor);
+  return typeof arg === 'string' ? JSON.parse(arg) : (arg as JsonCheckSchemaOutputDescriptor);
 }
 
 describe('stdout', () => {
@@ -1060,7 +1060,7 @@ describe('json output', () => {
 
     await runCheck({ response: { code: EnumStatusCode.OK } }, { json: true, outFile: tmpFile });
 
-    const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonOutputDescriptor;
+    const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonCheckSchemaOutputDescriptor;
     expect(written.status).toBe('success');
     expect(logSpy).not.toHaveBeenCalledWith(expect.objectContaining({ status: expect.any(String) }));
   });
@@ -1084,7 +1084,7 @@ describe('json output', () => {
       { json: true, outFile: tmpFile },
     );
 
-    const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonOutputDescriptor;
+    const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonCheckSchemaOutputDescriptor;
     expect(written.status).toBe('error');
     expect(written.details).toBe('Syntax error');
   });
@@ -1200,7 +1200,7 @@ describe('json output', () => {
 
     await runCheck({ response: { code: EnumStatusCode.OK } }, { outFile: tmpFile });
 
-    const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonOutputDescriptor;
+    const written = JSON.parse(readFileSync(tmpFile, 'utf8')) as JsonCheckSchemaOutputDescriptor;
     expect(written.status).toBe('success');
   });
 });

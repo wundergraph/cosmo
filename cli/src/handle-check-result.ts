@@ -8,14 +8,13 @@ import { program } from 'commander';
 import logSymbols from 'log-symbols';
 import pc from 'picocolors';
 import { config } from './core/config.js';
-import { JsonOutputBuilder } from './json-output-builder.js';
-export type { JsonOutputDescriptor } from './json-output-builder.js';
+import { JsonCheckSchemaOutputBuilder } from './json-check-schema-output-builder.js';
 
 // operationUsageStats is required — caller must guard with `if (response.operationUsageStats)` before calling
 const handleTrafficCheck = (
   response: CheckSubgraphSchemaResponse,
   operationUsageStats: CheckOperationUsageStats,
-  jsonBuilder: JsonOutputBuilder,
+  jsonBuilder: JsonCheckSchemaOutputBuilder,
   shouldOutputJson: boolean,
 ): { success: boolean; finalStatement: string } => {
   const {
@@ -99,7 +98,7 @@ const handleTrafficCheck = (
 
 const handleSchemaChanges = (
   response: CheckSubgraphSchemaResponse,
-  jsonBuilder: JsonOutputBuilder,
+  jsonBuilder: JsonCheckSchemaOutputBuilder,
   shouldOutputJson: boolean,
 ): void => {
   if (response.breakingChanges.length > 0) {
@@ -129,7 +128,7 @@ const handleSchemaChanges = (
 
 const handleComposedSchemaBreakingChanges = (
   response: CheckSubgraphSchemaResponse,
-  jsonBuilder: JsonOutputBuilder,
+  jsonBuilder: JsonCheckSchemaOutputBuilder,
   shouldOutputJson: boolean,
 ): void => {
   jsonBuilder.addComposedSchemaBreakingChanges(response.composedSchemaBreakingChanges);
@@ -168,7 +167,7 @@ const handleComposedSchemaBreakingChanges = (
 
 const handleCompositionErrors = (
   response: CheckSubgraphSchemaResponse,
-  jsonBuilder: JsonOutputBuilder,
+  jsonBuilder: JsonCheckSchemaOutputBuilder,
   shouldOutputJson: boolean,
 ): void => {
   jsonBuilder.addCompositionErrors(response.compositionErrors);
@@ -189,7 +188,7 @@ const handleCompositionErrors = (
 
 const handleCompositionWarnings = (
   response: CheckSubgraphSchemaResponse,
-  jsonBuilder: JsonOutputBuilder,
+  jsonBuilder: JsonCheckSchemaOutputBuilder,
   shouldOutputJson: boolean,
 ): void => {
   jsonBuilder.addCompositionWarnings(response.compositionWarnings);
@@ -210,7 +209,7 @@ const handleCompositionWarnings = (
 
 const handleLintIssues = (
   response: CheckSubgraphSchemaResponse,
-  jsonBuilder: JsonOutputBuilder,
+  jsonBuilder: JsonCheckSchemaOutputBuilder,
   shouldOutputJson: boolean,
 ): void => {
   jsonBuilder.addLintErrors(response.lintErrors);
@@ -243,7 +242,7 @@ const handleLintIssues = (
 
 const handleGraphPruneIssues = (
   response: CheckSubgraphSchemaResponse,
-  jsonBuilder: JsonOutputBuilder,
+  jsonBuilder: JsonCheckSchemaOutputBuilder,
   shouldOutputJson: boolean,
 ): void => {
   jsonBuilder.addGraphPruneErrors(response.graphPruneErrors);
@@ -287,7 +286,7 @@ const handleGraphPruneIssues = (
 // currentSuccess determines which sentence variant to use in the returned statement
 const handleLinkedCheckFailures = (
   response: CheckSubgraphSchemaResponse,
-  jsonBuilder: JsonOutputBuilder,
+  jsonBuilder: JsonCheckSchemaOutputBuilder,
   currentSuccess: boolean,
 ): string => {
   let additionalStatement = currentSuccess
@@ -316,7 +315,7 @@ const handleOkResult = ({
   studioCheckDestination,
 }: {
   response: CheckSubgraphSchemaResponse;
-  jsonBuilder: JsonOutputBuilder;
+  jsonBuilder: JsonCheckSchemaOutputBuilder;
   rowLimit: number;
   shouldOutputJson?: boolean;
   studioCheckDestination: string;
@@ -480,7 +479,7 @@ export const handleCheckResult = async ({
   shouldOutputJson?: boolean;
   outFile?: string;
 }): Promise<boolean> => {
-  const jsonBuilder = new JsonOutputBuilder(EnumStatusCode.ERR, rowLimit, outFile);
+  const jsonBuilder = new JsonCheckSchemaOutputBuilder(EnumStatusCode.ERR, rowLimit, outFile);
 
   let studioCheckDestination = '';
   if (response.checkId && response.checkedFederatedGraphs.length > 0) {
