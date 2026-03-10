@@ -21,8 +21,11 @@ export default (opts: BaseCommandOptions) => {
     'This will skip checking for client traffic and any breaking change will fail the run.',
   );
   command.option('-l, --limit [number]', 'The amount of entries shown in the schema checks output.', '50');
+  command.option('-j, --json', 'Prints to the console in json format instead of table');
+  command.option('-o, --out [string]', 'Destination file for the json output.');
 
   command.action(async (name, options) => {
+    let outFile;
     const schemaFile = resolve(options.schema);
 
     if (!existsSync(schemaFile)) {
@@ -32,6 +35,10 @@ export default (opts: BaseCommandOptions) => {
         ),
       );
       return;
+    }
+
+    if (options.out) {
+      outFile = resolve(options.out);
     }
 
     const limit = Number(options.limit);
@@ -79,7 +86,12 @@ export default (opts: BaseCommandOptions) => {
       },
     );
 
-    const success = handleCheckResult(resp, limit);
+    const success = await handleCheckResult({
+      response: resp,
+      rowLimit: limit,
+      shouldOutputJson: options.json || !!outFile,
+      outFile,
+    });
 
     if (!success && !ignoreErrorsDueToGitHubIntegration) {
       process.exitCode = 1;
