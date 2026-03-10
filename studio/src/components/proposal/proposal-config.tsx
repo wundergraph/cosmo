@@ -1,37 +1,24 @@
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { useState } from "react";
-import { useToast } from "../ui/use-toast";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { useState } from 'react';
+import { useToast } from '../ui/use-toast';
 import {
   configureNamespaceProposalConfig,
   enableProposalsForNamespace,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useMutation } from "@connectrpc/connect-query";
-import { Button } from "../ui/button";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { useMutation } from '@connectrpc/connect-query';
+import { Button } from '../ui/button';
 import {
   GetNamespaceProposalConfigResponse,
   LintSeverity,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useFeature } from "@/hooks/use-feature";
-import { docsBaseURL } from "@/lib/constants";
-import Link from "next/link";
-import { Switch } from "../ui/switch";
-import { useCheckUserAccess } from "@/hooks/use-check-user-access";
-import { useWorkspace } from "@/hooks/use-workspace";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { useFeature } from '@/hooks/use-feature';
+import { docsBaseURL } from '@/lib/constants';
+import Link from 'next/link';
+import { Switch } from '../ui/switch';
+import { useCheckUserAccess } from '@/hooks/use-check-user-access';
+import { useWorkspace } from '@/hooks/use-workspace';
 
 export const ProposalConfig = ({
   data,
@@ -41,26 +28,26 @@ export const ProposalConfig = ({
   refetch: () => void;
 }) => {
   const checkUserAccess = useCheckUserAccess();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
-  const proposalsFeature = useFeature("proposals");
+  const proposalsFeature = useFeature('proposals');
 
   const { mutate: enableProposals } = useMutation(enableProposalsForNamespace);
-  const { mutate: configureProposalConfig, isPending } = useMutation(
-    configureNamespaceProposalConfig,
-  );
+  const { mutate: configureProposalConfig, isPending } = useMutation(configureNamespaceProposalConfig);
   const [proposalsEnabled, setProposalsEnabled] = useState(data.enabled);
   const [checkSeverityLevel, setCheckSeverityLevel] = useState<string>(
-    data.checkSeverityLevel === LintSeverity.warn ? "warn" : "error",
+    data.checkSeverityLevel === LintSeverity.warn ? 'warn' : 'error',
   );
   const [publishSeverityLevel, setPublishSeverityLevel] = useState<string>(
-    data.publishSeverityLevel === LintSeverity.warn ? "warn" : "error",
+    data.publishSeverityLevel === LintSeverity.warn ? 'warn' : 'error',
   );
   const { toast } = useToast();
 
   const severityOptions = [
-    { value: "error", label: "error" },
-    { value: "warn", label: "warn" },
+    { value: 'error', label: 'error' },
+    { value: 'warn', label: 'warn' },
   ];
 
   return (
@@ -70,24 +57,16 @@ export const ProposalConfig = ({
           <h3 className="font-semibold tracking-tight">Enable Proposals</h3>
           <p className="text-sm text-muted-foreground">
             {!!proposalsFeature?.enabled
-              ? "Enable proposals to require changes to the schema to go through a proposal process."
-              : "Upgrade your billing plan to use proposals."}{" "}
-            <Link
-              href={docsBaseURL + "/concepts/proposals"}
-              className="text-primary"
-              target="_blank"
-              rel="noreferrer"
-            >
+              ? 'Enable proposals to require changes to the schema to go through a proposal process.'
+              : 'Upgrade your billing plan to use proposals.'}{' '}
+            <Link href={docsBaseURL + '/concepts/proposals'} className="text-primary" target="_blank" rel="noreferrer">
               Learn more
             </Link>
           </p>
         </div>
         <Switch
           checked={proposalsEnabled}
-          disabled={
-            !proposalsFeature?.enabled ||
-            !checkUserAccess({ rolesToBe: ["organization-admin"] })
-          }
+          disabled={!proposalsFeature?.enabled || !checkUserAccess({ rolesToBe: ['organization-admin'] })}
           onCheckedChange={(checked) => {
             setProposalsEnabled(checked);
             enableProposals(
@@ -99,9 +78,7 @@ export const ProposalConfig = ({
                 onSuccess: (d) => {
                   if (d.response?.code === EnumStatusCode.OK) {
                     toast({
-                      description: checked
-                        ? "Proposals enabled successfully."
-                        : "Proposals disabled successfully",
+                      description: checked ? 'Proposals enabled successfully.' : 'Proposals disabled successfully',
                       duration: 3000,
                     });
                   } else if (d.response?.details) {
@@ -115,8 +92,8 @@ export const ProposalConfig = ({
                 onError: (_) => {
                   toast({
                     description: checked
-                      ? "Could not enable proposals. Please try again."
-                      : "Could not disable proposals. Please try again.",
+                      ? 'Could not enable proposals. Please try again.'
+                      : 'Could not disable proposals. Please try again.',
                     duration: 3000,
                   });
                 },
@@ -133,36 +110,27 @@ export const ProposalConfig = ({
               <CardTitle>Proposal Configuration</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
                 {proposalsEnabled
-                  ? "Configure the proposal severity levels for subgraph checks and publishes."
-                  : "Enable proposals to set the severity levels."}
+                  ? 'Configure the proposal severity levels for subgraph checks and publishes.'
+                  : 'Enable proposals to set the severity levels.'}
               </CardDescription>
             </div>
             <Button
               type="submit"
               variant="default"
               isLoading={isPending}
-              disabled={
-                !proposalsEnabled ||
-                !checkUserAccess({ rolesToBe: ["organization-admin"] })
-              }
+              disabled={!proposalsEnabled || !checkUserAccess({ rolesToBe: ['organization-admin'] })}
               onClick={() => {
                 configureProposalConfig(
                   {
                     namespace,
-                    checkSeverityLevel:
-                      checkSeverityLevel === "error"
-                        ? LintSeverity.error
-                        : LintSeverity.warn,
-                    publishSeverityLevel:
-                      publishSeverityLevel === "error"
-                        ? LintSeverity.error
-                        : LintSeverity.warn,
+                    checkSeverityLevel: checkSeverityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
+                    publishSeverityLevel: publishSeverityLevel === 'error' ? LintSeverity.error : LintSeverity.warn,
                   },
                   {
                     onSuccess: (d) => {
                       if (d.response?.code === EnumStatusCode.OK) {
                         toast({
-                          description: "Proposal config set successfully.",
+                          description: 'Proposal config set successfully.',
                           duration: 3000,
                         });
                       } else if (d.response?.details) {
@@ -175,8 +143,7 @@ export const ProposalConfig = ({
                     },
                     onError: (_) => {
                       toast({
-                        description:
-                          "Could not set the proposal config. Please try again.",
+                        description: 'Could not set the proposal config. Please try again.',
                         duration: 3000,
                       });
                     },
@@ -199,8 +166,7 @@ export const ProposalConfig = ({
                   Check Severity Level
                 </label>
                 <span className="text-sm text-muted-foreground">
-                  Set the severity level for subgraph checks during proposal
-                  evaluation
+                  Set the severity level for subgraph checks during proposal evaluation
                 </span>
               </div>
               <Select
@@ -233,8 +199,7 @@ export const ProposalConfig = ({
                   Publish Severity Level
                 </label>
                 <span className="text-sm text-muted-foreground">
-                  Set the severity level for subgraph publishes during proposal
-                  evaluation
+                  Set the severity level for subgraph publishes during proposal evaluation
                 </span>
               </div>
               <Select
