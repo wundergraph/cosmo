@@ -1,55 +1,40 @@
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Tag, TagInput } from "@/components/ui/tag-input/tag-input";
-import { useToast } from "@/components/ui/use-toast";
-import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useUser } from "@/hooks/use-user";
-import { docsBaseURL } from "@/lib/constants";
-import { useMutation, createConnectQueryKey } from "@connectrpc/connect-query";
-import { CheckCircleIcon } from "@heroicons/react/24/outline";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
+import { Tag, TagInput } from '@/components/ui/tag-input/tag-input';
+import { useToast } from '@/components/ui/use-toast';
+import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { useUser } from '@/hooks/use-user';
+import { docsBaseURL } from '@/lib/constants';
+import { useMutation, createConnectQueryKey } from '@connectrpc/connect-query';
+import { CheckCircleIcon } from '@heroicons/react/24/outline';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   createFederatedGraph,
   createMonograph,
-  getWorkspace
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { useState, useEffect } from "react";
-import { z } from "zod";
-import { EmptyState } from "./empty-state";
-import { cn } from "@/lib/utils";
+  getWorkspace,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useState, useEffect } from 'react';
+import { z } from 'zod';
+import { EmptyState } from './empty-state';
+import { cn } from '@/lib/utils';
 import {
   CreateFederatedGraphResponse,
   CreateMonographResponse,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useQueryClient } from "@tanstack/react-query";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { useQueryClient } from '@tanstack/react-query';
 
-export const CreateGraphForm = ({
-  isMonograph = false,
-}: {
-  isMonograph?: boolean;
-}) => {
+export const CreateGraphForm = ({ isMonograph = false }: { isMonograph?: boolean }) => {
   const router = useRouter();
   const user = useUser();
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const queryClient = useQueryClient();
 
   const [tags, setTags] = useState<Tag[]>([]);
@@ -61,11 +46,7 @@ export const CreateGraphForm = ({
     data: federatedGraphData,
   } = useMutation(createFederatedGraph);
 
-  const {
-    mutate: mutateMonograph,
-    isPending: creatingMonograph,
-    data: monographData,
-  } = useMutation(createMonograph);
+  const { mutate: mutateMonograph, isPending: creatingMonograph, data: monographData } = useMutation(createMonograph);
 
   const isPending = creatingFederatedGraph || creatingMonograph;
 
@@ -73,29 +54,27 @@ export const CreateGraphForm = ({
     .string()
     .url()
     .min(1, {
-      message: "The routing url cannot be empty",
+      message: 'The routing url cannot be empty',
     })
     .refine(
       (url) =>
-        process.env.NODE_ENV === "production"
-          ? url.startsWith("https://")
-          : url.startsWith("http://") || url.startsWith("https://"),
-      process.env.NODE_ENV === "production"
-        ? "The endpoint must use https"
-        : "The endpoint must use http or https",
+        process.env.NODE_ENV === 'production'
+          ? url.startsWith('https://')
+          : url.startsWith('http://') || url.startsWith('https://'),
+      process.env.NODE_ENV === 'production' ? 'The endpoint must use https' : 'The endpoint must use http or https',
     );
 
   const schema = z.object({
     name: z
       .string()
       .min(1, {
-        message: "The name cannot be empty",
+        message: 'The name cannot be empty',
       })
       .max(100, {
-        message: "The name must be at most 100 characters long",
+        message: 'The name must be at most 100 characters long',
       })
       .regex(
-        new RegExp("^[a-zA-Z0-9]+(?:[_.@/-][a-zA-Z0-9]+)*$"),
+        new RegExp('^[a-zA-Z0-9]+(?:[_.@/-][a-zA-Z0-9]+)*$'),
         "Name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between.",
       ),
     routingUrl: urlSchema,
@@ -116,12 +95,12 @@ export const CreateGraphForm = ({
 
   const form = useZodForm<GraphDetailsInput>({
     schema,
-    mode: "onChange",
+    mode: 'onChange',
   });
 
   // Sync form value when tags change (handles both direct updates and functional updaters)
   useEffect(() => {
-    form.setValue("labelMatchers", tags as [Tag, ...Tag[]], {
+    form.setValue('labelMatchers', tags as [Tag, ...Tag[]], {
       shouldValidate: true,
     });
   }, [tags, form]);
@@ -130,22 +109,18 @@ export const CreateGraphForm = ({
 
   const onSubmit: SubmitHandler<GraphDetailsInput> = (data) => {
     const responseHandlers = {
-      onSuccess: async (
-        d: CreateFederatedGraphResponse | CreateMonographResponse,
-      ) => {
+      onSuccess: async (d: CreateFederatedGraphResponse | CreateMonographResponse) => {
         if (d.response?.code === EnumStatusCode.OK) {
           // We need to refresh the workspace after creating a graph
           await queryClient.refetchQueries({ queryKey: createConnectQueryKey(getWorkspace) });
-          router.replace(
-            `/${user?.currentOrganization.slug}/${namespace}/graph/${data.name}`,
-          );
+          router.replace(`/${user?.currentOrganization.slug}/${namespace}/graph/${data.name}`);
         } else if (d.response?.details) {
           toast({ description: d.response.details, duration: 3000 });
         }
       },
       onError: () => {
         toast({
-          description: "Could not create graph. Please try again.",
+          description: 'Could not create graph. Please try again.',
           duration: 3000,
         });
       },
@@ -182,14 +157,11 @@ export const CreateGraphForm = ({
     }
   };
 
-  if (
-    federatedGraphData?.response?.code === EnumStatusCode.OK ||
-    monographData?.response?.code === EnumStatusCode.OK
-  ) {
+  if (federatedGraphData?.response?.code === EnumStatusCode.OK || monographData?.response?.code === EnumStatusCode.OK) {
     return (
       <EmptyState
         icon={<CheckCircleIcon className="text-success" />}
-        title={`${isMonograph ? "Monograph" : "Federated Graph"} created`}
+        title={`${isMonograph ? 'Monograph' : 'Federated Graph'} created`}
         description="You will be now be redirected to your new graph"
       />
     );
@@ -197,10 +169,7 @@ export const CreateGraphForm = ({
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="flex flex-col gap-y-4"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -210,9 +179,7 @@ export const CreateGraphForm = ({
               <FormControl>
                 <Input {...field} autoFocus />
               </FormControl>
-              <FormDescription>
-                This is used to uniquely identify your graph.
-              </FormDescription>
+              <FormDescription>This is used to uniquely identify your graph.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -226,9 +193,7 @@ export const CreateGraphForm = ({
               <FormControl>
                 <Input {...field} />
               </FormControl>
-              <FormDescription>
-                This is the URL that the router will be accessible at.
-              </FormDescription>
+              <FormDescription>This is the URL that the router will be accessible at.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -237,15 +202,12 @@ export const CreateGraphForm = ({
           control={form.control}
           name="graphUrl"
           render={({ field }) => (
-            <FormItem className={cn(!isMonograph && "hidden")}>
+            <FormItem className={cn(!isMonograph && 'hidden')}>
               <FormLabel>Graph URL</FormLabel>
               <FormControl>
                 <Input {...field} />
               </FormControl>
-              <FormDescription>
-                The endpoint of your GraphQL server that is accessible from the
-                router.
-              </FormDescription>
+              <FormDescription>The endpoint of your GraphQL server that is accessible from the router.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -260,10 +222,8 @@ export const CreateGraphForm = ({
                   control={form.control}
                   name="labelMatchers"
                   render={({ field }) => (
-                    <FormItem className={cn(isMonograph && "hidden")}>
-                      <FormLabel className="text-left">
-                        Label Matchers{" "}
-                      </FormLabel>
+                    <FormItem className={cn(isMonograph && 'hidden')}>
+                      <FormLabel className="text-left">Label Matchers </FormLabel>
                       <FormControl>
                         <TagInput
                           {...field}
@@ -277,19 +237,19 @@ export const CreateGraphForm = ({
                           }}
                           // Commas are valid inside a matcher value list (e.g. team=A,team=B).
                           // Separate matchers with space or Enter (each matcher is AND-ed).
-                          delimiterList={[" ", "Enter"]}
+                          delimiterList={[' ', 'Enter']}
                           activeTagIndex={activeTagIndex}
                           setActiveTagIndex={setActiveTagIndex}
                           allowDuplicates={false}
                         />
                       </FormControl>
                       <FormDescription className="text-left">
-                        Label matchers are used to select which subgraphs participate in this federated graph composition.
-                        Enter space-separated key-value pairs in the format <code>key=value</code>.
-                        To specify multiple values for the same key (OR condition), use commas within a single matcher (e.g., <code>team=A,team=B</code> matches subgraphs where team is either A or B).
-                        {" "}
+                        Label matchers are used to select which subgraphs participate in this federated graph
+                        composition. Enter space-separated key-value pairs in the format <code>key=value</code>. To
+                        specify multiple values for the same key (OR condition), use commas within a single matcher
+                        (e.g., <code>team=A,team=B</code> matches subgraphs where team is either A or B).{' '}
                         <Link
-                          href={docsBaseURL + "/cli/essentials#label-matcher"}
+                          href={docsBaseURL + '/cli/essentials#label-matcher'}
                           className="text-primary"
                           target="_blank"
                           rel="noreferrer"
@@ -312,13 +272,9 @@ export const CreateGraphForm = ({
                         <Input {...field} autoFocus />
                       </FormControl>
                       <FormDescription>
-                        The endpoint used to implement admission control for the
-                        graph. Learn more{" "}
+                        The endpoint used to implement admission control for the graph. Learn more{' '}
                         <Link
-                          href={
-                            docsBaseURL +
-                            "/router/security/config-validation-and-signing"
-                          }
+                          href={docsBaseURL + '/router/security/config-validation-and-signing'}
                           className="text-primary"
                           target="_blank"
                           rel="noreferrer"
@@ -339,9 +295,7 @@ export const CreateGraphForm = ({
                       <FormControl>
                         <Input {...field} autoFocus />
                       </FormControl>
-                      <FormDescription>
-                        This is used to sign requests made to the above webhook.
-                      </FormDescription>
+                      <FormDescription>This is used to sign requests made to the above webhook.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -351,12 +305,7 @@ export const CreateGraphForm = ({
           </AccordionItem>
         </Accordion>
 
-        <Button
-          className="ml-auto"
-          isLoading={isPending}
-          type="submit"
-          disabled={!form.formState.isValid}
-        >
+        <Button className="ml-auto" isLoading={isPending} type="submit" disabled={!form.formState.isValid}>
           Create Graph
         </Button>
       </form>
