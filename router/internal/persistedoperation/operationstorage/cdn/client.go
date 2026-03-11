@@ -24,6 +24,9 @@ type Options struct {
 	Logger *zap.Logger
 }
 
+// Deprecated: The CDN-based persisted operation client is deprecated.
+// The router now downloads all operations at once via the PQL manifest, avoiding
+// per-request CDN latency. This client is kept for backward compatibility.
 var _ persistedoperation.StorageClient = (*client)(nil)
 
 type client struct {

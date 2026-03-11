@@ -106,6 +106,9 @@ const jwtMiddleware = (secret: string | ((c: Context) => string)) => {
   };
 };
 
+// Deprecated: Individual persisted operation lookups via CDN are deprecated.
+// The router now downloads all operations at once via the PQL manifest, avoiding
+// per-request latency. This handler is kept for backward compatibility with older routers.
 const persistedOperation = (storage: BlobStorage) => {
   return async (c: Context) => {
     const organizationId = c.get('authenticatedOrganizationId');

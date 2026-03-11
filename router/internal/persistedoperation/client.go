@@ -79,7 +79,6 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 	// PQL manifest check (local, no network)
 	if c.pqlStore != nil && c.pqlStore.IsLoaded() {
 		if body, found := c.pqlStore.LookupByHash(sha256Hash); found {
-			c.cache.Set(clientName, sha256Hash, body, 0)
 			return body, false, nil
 		}
 		// Manifest is authoritative — operation not found

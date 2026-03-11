@@ -203,6 +203,9 @@ export function publishPersistedOperations(
           version: 1,
           body: operation.contents,
         };
+        // Deprecated: Uploading individual operations to blob storage is deprecated.
+        // The router now downloads all operations at once via the PQL manifest, avoiding
+        // per-request CDN latency. This upload is kept for backward compatibility with older routers.
         try {
           await opts.blobStorage.putObject({
             key: path,
