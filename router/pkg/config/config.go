@@ -616,19 +616,11 @@ type NatsAuthentication struct {
 	NatsTokenBasedAuthentication `yaml:"token,inline"`
 }
 
-type NatsDurableConsumersConfiguration struct {
-	DeleteOnShutdown bool `yaml:"delete_on_shutdown" envDefault:"false"`
-}
-
-type NatsConsumersConfiguration struct {
-	Durable NatsDurableConsumersConfiguration `yaml:"durable,omitempty"`
-}
-
 type NatsEventSource struct {
-	ID             string                     `yaml:"id,omitempty"`
-	URL            string                     `yaml:"url,omitempty"`
-	Authentication *NatsAuthentication        `yaml:"authentication,omitempty"`
-	Consumers      NatsConsumersConfiguration `yaml:"experiment_consumers,omitempty"`
+	ID                               string              `yaml:"id,omitempty"`
+	URL                              string              `yaml:"url,omitempty"`
+	Authentication                   *NatsAuthentication `yaml:"authentication,omitempty"`
+	DeleteDurableConsumersOnShutdown bool                `yaml:"experiment_delete_durable_consumers_on_shutdown" envDefault:"false"`
 }
 
 func (n NatsEventSource) GetID() string {
