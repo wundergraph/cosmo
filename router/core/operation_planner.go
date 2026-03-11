@@ -198,15 +198,16 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 			}
 			prepared.planningDuration = time.Since(start)
 
+			// This is only used for test cases
+			if p.planningDurationOverride != nil {
+				prepared.planningDuration = p.planningDurationOverride(prepared.content)
+			}
+
+			// Set into the main cache after planningDuration is finalized,
+			// because the OnEvict callback reads planningDuration concurrently.
 			p.planCache.Set(operationID, prepared, 1)
 
-			// Only run this when we care about expensive cache items
 			if p.useFallback {
-				// This is only used for test cases
-				if p.planningDurationOverride != nil {
-					prepared.planningDuration = p.planningDurationOverride(prepared.content)
-				}
-
 				p.expensiveCache.Set(operationID, prepared, prepared.planningDuration)
 			}
 
