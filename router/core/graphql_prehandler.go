@@ -544,9 +544,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	// Compute the operation sha256 hash as soon as possible for observability reasons
 	if h.shouldComputeOperationSha256(operationKit, requestContext) {
 		if operationKit.parsedOperation.Request.Query == "" && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
-			// The request has a persisted hash but no query body (run by ID). Use the client-provided
-			// hash for telemetry instead of hashing an empty string. The hash will be verified against
-			// the persisted operations store (source of truth) when the operation is fetched.
+			// No query body to hash; use the client-provided persisted hash for telemetry.
 			requestContext.operation.sha256Hash = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
 			requestContext.expressionContext.Request.Operation.Sha256Hash = requestContext.operation.sha256Hash
 
