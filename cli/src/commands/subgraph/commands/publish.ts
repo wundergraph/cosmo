@@ -110,7 +110,7 @@ export default (opts: BaseCommandOptions) => {
   command.option(
     '-l, --limit [number]',
     'The maximum number of composition errors, warnings, and deployment errors to display.',
-    '50'
+    '50',
   );
 
   command.action(async (name, options) => {
