@@ -82,7 +82,7 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 			return body, false, nil
 		}
 		// Manifest is authoritative — operation not found
-		if c.apqClient != nil {
+		if c.APQEnabled() {
 			return nil, true, nil
 		}
 		return nil, false, &PersistentOperationNotFoundError{

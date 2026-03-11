@@ -140,5 +140,15 @@ func (f *Fetcher) Fetch(ctx context.Context, currentRevision string) (*Manifest,
 		return nil, false, fmt.Errorf("could not unmarshal PQL manifest: %w", err)
 	}
 
+	if manifest.Version < 1 {
+		return nil, false, fmt.Errorf("unsupported PQL manifest version %d", manifest.Version)
+	}
+	if manifest.Revision == "" {
+		return nil, false, errors.New("PQL manifest has empty revision")
+	}
+	if manifest.Operations == nil {
+		return nil, false, errors.New("PQL manifest has no operations field")
+	}
+
 	return &manifest, true, nil
 }

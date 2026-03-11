@@ -75,32 +75,7 @@ export function deletePersistedOperation(
     });
 
     try {
-      await Promise.all([
-        opts.blobStorage.deleteObject({
-          key: path,
-        }),
-        generateAndUploadManifest({
-          db: opts.db,
-          federatedGraphId: federatedGraph.id,
-          organizationId: authContext.organizationId,
-          blobStorage: opts.blobStorage,
-          logger,
-        }),
-      ]);
-
-      return {
-        response: {
-          code: EnumStatusCode.OK,
-        },
-        operation: deletedOperation
-          ? {
-              id: deletedOperation.id,
-              operationId: deletedOperation.operationId,
-              clientName: deletedOperation.clientName,
-              operationNames: deletedOperation.operationNames,
-            }
-          : undefined,
-      };
+      await opts.blobStorage.deleteObject({ key: path });
     } catch (e) {
       const error = e instanceof Error ? e : new Error('Unknown error');
       logger.error(error, `Could not delete operation for ${operation.operationId} at ${path}`);
@@ -112,5 +87,35 @@ export function deletePersistedOperation(
         },
       };
     }
+
+    try {
+      await generateAndUploadManifest({
+        db: opts.db,
+        federatedGraphId: federatedGraph.id,
+        organizationId: authContext.organizationId,
+        blobStorage: opts.blobStorage,
+        logger,
+      });
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      logger.error(error, `Failed to regenerate PQL manifest after deleting operation ${operation.operationId}`, {
+        federatedGraphId: federatedGraph.id,
+        organizationId: authContext.organizationId,
+      });
+    }
+
+    return {
+      response: {
+        code: EnumStatusCode.OK,
+      },
+      operation: deletedOperation
+        ? {
+            id: deletedOperation.id,
+            operationId: deletedOperation.operationId,
+            clientName: deletedOperation.clientName,
+            operationNames: deletedOperation.operationNames,
+          }
+        : undefined,
+    };
   });
 }

@@ -15,7 +15,7 @@ These methods can exist in concert — for example, users can enable the PQL man
 
 ## Lookup Order
 
-When a persisted operation request arrives, the client resolves it in this order:
+When a persisted operation request arrives, the router resolves it in this order:
 
 1. **APQ cache** — if APQ is enabled and the hash is cached, use it
 2. **In-memory normalization cache** — if the operation was previously resolved and cached locally
@@ -24,11 +24,13 @@ When a persisted operation request arrives, the client resolves it in this order
 
 ## Flows
 
+> **Hash validation prerequisite:** When a request includes both a query body and `extensions.persistedQuery.sha256Hash`, the router validates the body against the hash and rejects the request if they do not match — _before_ any APQ or persisted-operation lookup occurs. See `router/core/graphql_prehandler.go` (`handleOperation`).
+
 1. **Persisted Operations (CDN), no APQ** → The router fetches individual operations from CDN/S3 on demand. If a query is not found, the router returns an error. After the query is planned, the router caches the normalized query in the local persisted operation cache.
 1. **PQL Manifest, no APQ** → The router downloads the manifest at startup and polls for updates. All lookups are in-memory. Unknown hashes are rejected immediately without any network call.
-1. **APQ, No Persisted Operations** → If a `persisted_operation` request is sent, the router checks the APQ cache first. If not found, it checks if a query body was sent with the request. If so, it executes and caches it. Otherwise, the router returns an error.
+1. **APQ, No Persisted Operations** → If a `persisted_operation` request is sent, the router checks the APQ cache first. If not found, it checks if a query body was sent with the request. If so, it validates the hash against the body, then executes and caches it. Otherwise, the router returns an error.
 1. **No APQ, No Persisted Operations** → If a persisted operation is sent, the router returns an error, as there are no persisted operations stored. Even if a query is sent, the router will still error because APQ isn't enabled.
-1. **APQ and Persisted Operations** → The router checks APQ first, then the PQL manifest or CDN (depending on config), then checks if a query body was attached. First match wins.
+1. **APQ and Persisted Operations** → The router validates any included query body against the hash, then checks APQ first, then the PQL manifest or CDN (depending on config), then checks if a query body was attached. First match wins.
 
 ## Enforcement Modes
 

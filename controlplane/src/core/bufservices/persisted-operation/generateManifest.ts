@@ -25,6 +25,10 @@ export async function generateAndUploadManifest(params: {
   const operationsRepo = new OperationsRepository(db, federatedGraphId);
   const allOperations = await operationsRepo.getAllPersistedOperationsForGraph();
 
+  if (allOperations.length === 0) {
+    logger.warn({ federatedGraphId }, 'No persisted operations with content found for manifest generation');
+  }
+
   const operations: Record<string, string> = {};
   for (const op of allOperations) {
     operations[op.hash] = op.operationContent;

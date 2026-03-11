@@ -248,13 +248,15 @@ export class OperationsRepository {
       .innerJoin(federatedGraphClients, eq(federatedGraphClients.id, federatedGraphPersistedOperations.clientId))
       .where(eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId));
 
-    return results.map((r) => ({
-      hash: r.hash,
-      operationContent: r.operationContent ?? '',
-      operationId: r.operationId,
-      operationNames: r.operationNames ?? [],
-      clientName: r.clientName,
-    }));
+    return results
+      .filter((r) => r.operationContent != null)
+      .map((r) => ({
+        hash: r.hash,
+        operationContent: r.operationContent!,
+        operationId: r.operationId,
+        operationNames: r.operationNames ?? [],
+        clientName: r.clientName,
+      }));
   }
 
   public async getRegisteredClients(): Promise<ClientDTO[]> {
