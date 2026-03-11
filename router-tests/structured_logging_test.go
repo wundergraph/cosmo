@@ -2029,7 +2029,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			)
 		})
 
-		t.Run("validate request.operation.sha256Hash expression with persisted hash and body", func(t *testing.T) {
+		t.Run("validate request.operation.sha256Hash expression with persisted hash only", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t,
