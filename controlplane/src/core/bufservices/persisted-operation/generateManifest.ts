@@ -6,6 +6,8 @@ import type { BlobStorage } from '../../blobstorage/index.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import { createManifestBlobStoragePath } from './utils.js';
 
+export const MAX_MANIFEST_OPERATIONS = 3000;
+
 export interface PQLManifest {
   version: 1;
   revision: string;
@@ -29,8 +31,18 @@ export async function generateAndUploadManifest(params: {
     logger.warn({ federatedGraphId }, 'No persisted operations with content found for manifest generation');
   }
 
+  const truncated = allOperations.length > MAX_MANIFEST_OPERATIONS;
+  const includedOperations = truncated ? allOperations.slice(0, MAX_MANIFEST_OPERATIONS) : allOperations;
+
+  if (truncated) {
+    logger.warn(
+      { federatedGraphId, organizationId, total: allOperations.length, included: MAX_MANIFEST_OPERATIONS },
+      `Manifest truncated: found ${allOperations.length} operations, including only the first ${MAX_MANIFEST_OPERATIONS}`,
+    );
+  }
+
   const operations: Record<string, string> = {};
-  for (const op of allOperations) {
+  for (const op of includedOperations) {
     operations[op.hash] = op.operationContent;
   }
 

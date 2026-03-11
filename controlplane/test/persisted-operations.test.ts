@@ -1,7 +1,11 @@
+import crypto from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi, type Mock } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
+import { MAX_MANIFEST_OPERATIONS } from '../src/core/bufservices/persisted-operation/generateManifest.js';
+import { FederatedGraphRepository } from '../src/core/repositories/FederatedGraphRepository.js';
+import { OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -723,6 +727,60 @@ describe('Persisted operations', (ctx) => {
 
       // Same operations should produce the same revision
       expect(manifest2.revision).toBe(manifest1.revision);
+    });
+
+    test('Should truncate the manifest to the max operation limit', async (testContext) => {
+      const { client, server, blobStorage, users } = await SetupTest({
+        dbname,
+        chClient,
+      });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const user = users.adminAliceCompanyA;
+      const db = server.db;
+      const logger = server.log;
+
+      // Resolve the federated graph ID.
+      const fedGraphRepo = new FederatedGraphRepository(logger, db, user.organizationId);
+      const fedGraph = await fedGraphRepo.byName(fedGraphName, 'default');
+      expect(fedGraph).toBeDefined();
+
+      // Seed operations directly in the DB to avoid hitting the per-request
+      // limit of 100 repeatedly.
+      const opsRepo = new OperationsRepository(db, fedGraph!.id);
+      const clientId = await opsRepo.registerClient('test-client', user.userId);
+
+      const seedOps = Array.from({ length: MAX_MANIFEST_OPERATIONS + 1 }, (_, i) => ({
+        operationId: `seed-op-${i}`,
+        hash: crypto.createHash('sha256').update(`seed-op-${i}`).digest('hex'),
+        filePath: `seed-op-${i}.graphql`,
+        contents: `query { hello }`,
+        operationNames: [`SeedOp${i}`],
+      }));
+      await opsRepo.updatePersistedOperations(clientId, user.userId, seedOps);
+
+      // Publish one operation via the API to trigger manifest generation.
+      const resp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: genID('trigger'), contents: `query { hello }` }],
+      });
+      expect(resp.response?.code).toBe(EnumStatusCode.OK);
+
+      // The manifest should be truncated to MAX_MANIFEST_OPERATIONS.
+      const storageKeys = blobStorage.keys();
+      const manifestKey = storageKeys.find((key) => key.endsWith('/operations/manifest.json'));
+      expect(manifestKey).toBeDefined();
+
+      const blobObject = await blobStorage.getObject({ key: manifestKey! });
+      const text = await new Response(blobObject.stream).text();
+      const manifest = JSON.parse(text);
+
+      expect(Object.keys(manifest.operations).length).toBe(MAX_MANIFEST_OPERATIONS);
     });
   });
 
