@@ -1282,8 +1282,6 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 	})
 
 	t.Run("Successfully persists cache across config change restarts", func(t *testing.T) {
-		t.Skip()
-		
 		t.Parallel()
 
 		updateConfig := func(t *testing.T, xEnv *testenv.Environment, ctx context.Context, listenString string, config string) {
@@ -1313,7 +1311,7 @@ cache_warmup:
       enabled: false
 
 engine:
-  expensive_query_threshold: "0s"
+  expensive_query_threshold: "1ns"
   expensive_query_cache_size: 100
   debug:
     enable_cache_response_headers: true
