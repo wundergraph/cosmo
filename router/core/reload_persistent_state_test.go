@@ -3,7 +3,6 @@ package core
 import (
 	"testing"
 
-	"github.com/dgraph-io/ristretto/v2"
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -24,16 +23,18 @@ func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg)
 
-		require.NotNil(t, cache.queriesForFeatureFlag)
-		require.Empty(t, cache.queriesForFeatureFlag)
+		require.NotNil(t, cache.expensiveCaches)
+		require.Empty(t, cache.expensiveCaches)
+		require.NotNil(t, cache.cachedOps)
+		require.Empty(t, cache.cachedOps)
 	})
 
 	t.Run("disable cache from enabled state", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
+			expensiveCaches: make(map[string]*expensivePlanCache),
+			cachedOps:       make(map[string][]*nodev1.Operation),
 		}
-		cache.queriesForFeatureFlag["test"] = nil
 
 		cfg := &Config{
 			cacheWarmup: &config.CacheWarmupConfiguration{
@@ -43,16 +44,18 @@ func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg)
 
-		require.Nil(t, cache.queriesForFeatureFlag)
+		require.Nil(t, cache.expensiveCaches)
+		require.Nil(t, cache.cachedOps)
 	})
 
 	t.Run("update when already enabled keeps existing data", func(t *testing.T) {
 		t.Parallel()
-		existingMap := make(map[string]any)
-		existingMap["test"] = nil
+		existingCaches := make(map[string]*expensivePlanCache)
+		existingCaches["test"] = nil
 
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: existingMap,
+			expensiveCaches: existingCaches,
+			cachedOps:       make(map[string][]*nodev1.Operation),
 		}
 
 		cfg := &Config{
@@ -64,15 +67,15 @@ func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg)
 
-		require.NotNil(t, cache.queriesForFeatureFlag)
-		require.Len(t, cache.queriesForFeatureFlag, 1)
-		require.Contains(t, cache.queriesForFeatureFlag, "test")
+		require.NotNil(t, cache.expensiveCaches)
+		require.Len(t, cache.expensiveCaches, 1)
+		require.Contains(t, cache.expensiveCaches, "test")
 	})
 
 	t.Run("update when already disabled", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: nil,
+			expensiveCaches: nil,
 		}
 
 		cfg := &Config{
@@ -83,13 +86,14 @@ func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg)
 
-		require.Nil(t, cache.queriesForFeatureFlag)
+		require.Nil(t, cache.expensiveCaches)
 	})
 
 	t.Run("nil cacheWarmup config disables cache", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
+			expensiveCaches: make(map[string]*expensivePlanCache),
+			cachedOps:       make(map[string][]*nodev1.Operation),
 		}
 
 		cfg := &Config{
@@ -98,7 +102,8 @@ func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg)
 
-		require.Nil(t, cache.queriesForFeatureFlag)
+		require.Nil(t, cache.expensiveCaches)
+		require.Nil(t, cache.cachedOps)
 	})
 
 	t.Run("cacheWarmup enabled but InMemoryFallback disabled", func(t *testing.T) {
@@ -114,49 +119,14 @@ func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t
 
 		cache.updateStateFromConfig(cfg)
 
-		require.Nil(t, cache.queriesForFeatureFlag)
+		require.Nil(t, cache.expensiveCaches)
 	})
 }
 
 func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 	t.Parallel()
-	t.Run("returns operations for existing feature flag when enabled with ristretto cache", func(t *testing.T) {
-		t.Parallel()
-		mockCache, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
-			MaxCost:            10000,
-			NumCounters:        10000000,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-		})
-		require.NoError(t, err)
 
-		query1 := "query { test1 }"
-		query2 := "query { test2 }"
-
-		mockCache.Set(1, &planWithMetaData{content: query1}, 1)
-		mockCache.Set(2, &planWithMetaData{content: query2}, 1)
-		mockCache.Wait()
-
-		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
-		}
-		cache.queriesForFeatureFlag["test-ff"] = mockCache
-
-		result := cache.getCachedOperationsForFF("test-ff")
-
-		require.NotNil(t, result)
-		require.IsType(t, []*nodev1.Operation{}, result)
-		require.Len(t, result, 2)
-
-		// Verify the operations contain the expected queries (order may vary)
-		queries := make([]string, len(result))
-		for i, op := range result {
-			queries[i] = op.Request.Query
-		}
-		require.ElementsMatch(t, []string{query1, query2}, queries)
-	})
-
-	t.Run("returns operations for existing feature flag when enabled with operation slice", func(t *testing.T) {
+	t.Run("returns operations for existing feature flag from cachedOps", func(t *testing.T) {
 		t.Parallel()
 		expectedOps := []*nodev1.Operation{
 			{Request: &nodev1.OperationRequest{Query: "query { test1 }"}},
@@ -164,9 +134,10 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 		}
 
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
+			cachedOps: map[string][]*nodev1.Operation{
+				"test-ff": expectedOps,
+			},
 		}
-		cache.queriesForFeatureFlag["test-ff"] = expectedOps
 
 		result := cache.getCachedOperationsForFF("test-ff")
 
@@ -174,11 +145,11 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 		require.Equal(t, expectedOps, result)
 	})
 
-	t.Run("returns empty slice for non-existent feature flag", func(t *testing.T) {
+	t.Run("returns nil for non-existent feature flag", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			logger:                zap.NewNop(),
-			queriesForFeatureFlag: make(map[string]any),
+			logger:    zap.NewNop(),
+			cachedOps: make(map[string][]*nodev1.Operation),
 		}
 
 		result := cache.getCachedOperationsForFF("non-existent")
@@ -188,7 +159,7 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 	t.Run("returns nil when cache is disabled", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: nil,
+			cachedOps: nil,
 		}
 
 		result := cache.getCachedOperationsForFF("test-ff")
@@ -197,68 +168,22 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 	})
 }
 
-func TestInMemoryPlanCacheFallback_SetPlanCacheForFF(t *testing.T) {
-	t.Parallel()
-	t.Run("sets cache for feature flag when enabled", func(t *testing.T) {
-		t.Parallel()
-		mockCache, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
-			MaxCost:     100,
-			NumCounters: 10000,
-			BufferItems: 64,
-		})
-		require.NoError(t, err)
-
-		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
-		}
-
-		cache.setPlanCacheForFF("test-ff", mockCache)
-
-		require.Contains(t, cache.queriesForFeatureFlag, "test-ff")
-		// Verify it's the same cache by comparing the underlying pointer
-		require.Equal(t, cache.queriesForFeatureFlag["test-ff"], mockCache)
-	})
-
-	t.Run("does not set cache when disabled", func(t *testing.T) {
-		t.Parallel()
-		mockCache, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
-			MaxCost:     100,
-			NumCounters: 10000,
-			BufferItems: 64,
-		})
-		require.NoError(t, err)
-
-		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: nil,
-		}
-
-		cache.setPlanCacheForFF("test-ff", mockCache)
-
-		require.Nil(t, cache.queriesForFeatureFlag)
-	})
-
-	t.Run("does not set nil cache", func(t *testing.T) {
-		t.Parallel()
-		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
-		}
-
-		cache.setPlanCacheForFF("test-ff", nil)
-
-		require.NotContains(t, cache.queriesForFeatureFlag, "test-ff")
-	})
-}
-
 func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 	t.Parallel()
 	t.Run("removes unused feature flags", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
+			expensiveCaches: map[string]*expensivePlanCache{
+				"ff1": nil,
+				"ff2": nil,
+				"ff3": nil,
+			},
+			cachedOps: map[string][]*nodev1.Operation{
+				"ff1": nil,
+				"ff2": nil,
+				"ff3": nil,
+			},
 		}
-		cache.queriesForFeatureFlag["ff1"] = nil
-		cache.queriesForFeatureFlag["ff2"] = nil
-		cache.queriesForFeatureFlag["ff3"] = nil
 
 		routerCfg := &nodev1.RouterConfig{
 			FeatureFlagConfigs: &nodev1.FeatureFlagRouterExecutionConfigs{
@@ -271,19 +196,26 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 
 		cache.cleanupUnusedFeatureFlags(routerCfg)
 
-		require.Len(t, cache.queriesForFeatureFlag, 2)
-		require.Contains(t, cache.queriesForFeatureFlag, "ff1")
-		require.Contains(t, cache.queriesForFeatureFlag, "ff2")
-		require.NotContains(t, cache.queriesForFeatureFlag, "ff3")
+		require.Len(t, cache.expensiveCaches, 2)
+		require.Contains(t, cache.expensiveCaches, "ff1")
+		require.Contains(t, cache.expensiveCaches, "ff2")
+		require.NotContains(t, cache.expensiveCaches, "ff3")
+		require.Len(t, cache.cachedOps, 2)
+		require.NotContains(t, cache.cachedOps, "ff3")
 	})
 
 	t.Run("keeps empty string feature flag", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
+			expensiveCaches: map[string]*expensivePlanCache{
+				"":    nil,
+				"ff1": nil,
+			},
+			cachedOps: map[string][]*nodev1.Operation{
+				"":    nil,
+				"ff1": nil,
+			},
 		}
-		cache.queriesForFeatureFlag[""] = nil
-		cache.queriesForFeatureFlag["ff1"] = nil
 
 		routerCfg := &nodev1.RouterConfig{
 			FeatureFlagConfigs: &nodev1.FeatureFlagRouterExecutionConfigs{
@@ -293,15 +225,15 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 
 		cache.cleanupUnusedFeatureFlags(routerCfg)
 
-		require.Len(t, cache.queriesForFeatureFlag, 1)
-		require.Contains(t, cache.queriesForFeatureFlag, "")
-		require.NotContains(t, cache.queriesForFeatureFlag, "ff1")
+		require.Len(t, cache.expensiveCaches, 1)
+		require.Contains(t, cache.expensiveCaches, "")
+		require.NotContains(t, cache.expensiveCaches, "ff1")
 	})
 
 	t.Run("does nothing when cache is disabled", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: nil,
+			expensiveCaches: nil,
 		}
 
 		routerCfg := &nodev1.RouterConfig{
@@ -313,20 +245,27 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 		cache.cleanupUnusedFeatureFlags(routerCfg)
 
 		// Should still be nil because cleanup is skipped when disabled
-		require.Nil(t, cache.queriesForFeatureFlag)
+		require.Nil(t, cache.expensiveCaches)
 	})
 
 	t.Run("removes feature flags when not in ConfigByFeatureFlagName", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
+			expensiveCaches: map[string]*expensivePlanCache{
+				"":    nil, // base should be kept
+				"ff1": nil,
+				"ff2": nil,
+				"ff3": nil,
+				"ff4": nil,
+				"ff5": nil,
+			},
+			cachedOps: map[string][]*nodev1.Operation{
+				"":    nil,
+				"ff1": nil,
+				"ff2": nil,
+				"ff3": nil,
+			},
 		}
-		cache.queriesForFeatureFlag[""] = nil // base should be kept
-		cache.queriesForFeatureFlag["ff1"] = nil
-		cache.queriesForFeatureFlag["ff2"] = nil
-		cache.queriesForFeatureFlag["ff3"] = nil
-		cache.queriesForFeatureFlag["ff4"] = nil
-		cache.queriesForFeatureFlag["ff5"] = nil
 
 		routerCfg := &nodev1.RouterConfig{
 			FeatureFlagConfigs: nil,
@@ -334,86 +273,77 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 
 		cache.cleanupUnusedFeatureFlags(routerCfg)
 
-		require.Len(t, cache.queriesForFeatureFlag, 1)
-		require.Contains(t, cache.queriesForFeatureFlag, "")
-		require.NotContains(t, cache.queriesForFeatureFlag, "ff1")
-		require.NotContains(t, cache.queriesForFeatureFlag, "ff2")
-		require.NotContains(t, cache.queriesForFeatureFlag, "ff3")
+		require.Len(t, cache.expensiveCaches, 1)
+		require.Contains(t, cache.expensiveCaches, "")
+		require.NotContains(t, cache.expensiveCaches, "ff1")
+		require.NotContains(t, cache.expensiveCaches, "ff2")
+		require.NotContains(t, cache.expensiveCaches, "ff3")
 	})
 }
 
 func TestInMemoryPlanCacheFallback_ProcessOnConfigChangeRestart(t *testing.T) {
 	t.Parallel()
-	t.Run("converts ristretto caches to operation slices", func(t *testing.T) {
+	t.Run("extracts expensive cache entries to cachedOps", func(t *testing.T) {
 		t.Parallel()
-		mockCache1, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
-			MaxCost:            10000,
-			NumCounters:        10000000,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-		})
-		require.NoError(t, err)
-
-		mockCache2, err := ristretto.NewCache(&ristretto.Config[uint64, *planWithMetaData]{
-			MaxCost:            10000,
-			NumCounters:        10000000,
-			IgnoreInternalCost: true,
-			BufferItems:        64,
-		})
-		require.NoError(t, err)
 
 		query1 := "query { test1 }"
 		query2 := "query { test2 }"
 
-		mockCache1.Set(1, &planWithMetaData{content: query1}, 1)
-		mockCache1.Wait()
-		mockCache2.Set(2, &planWithMetaData{content: query2}, 1)
-		mockCache2.Wait()
+		expCache1, err := newExpensivePlanCache(100)
+		require.NoError(t, err)
+		expCache2, err := newExpensivePlanCache(100)
+		require.NoError(t, err)
+
+		expCache1.Set(1, &planWithMetaData{content: query1}, 5*1e9)
+		expCache1.Wait()
+		expCache2.Set(2, &planWithMetaData{content: query2}, 5*1e9)
+		expCache2.Wait()
 
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
+			expensiveCaches: map[string]*expensivePlanCache{
+				"ff1": expCache1,
+				"ff2": expCache2,
+			},
+			cachedOps: make(map[string][]*nodev1.Operation),
 		}
-		cache.queriesForFeatureFlag["ff1"] = mockCache1
-		cache.queriesForFeatureFlag["ff2"] = mockCache2
 
 		cache.extractQueriesAndOverridePlanCache()
 
-		// Verify both caches have been converted to operation slices
-		require.IsType(t, []*nodev1.Operation{}, cache.queriesForFeatureFlag["ff1"])
-		require.IsType(t, []*nodev1.Operation{}, cache.queriesForFeatureFlag["ff2"])
+		// Verify both caches have been extracted to cachedOps
+		require.Len(t, cache.cachedOps["ff1"], 1)
+		require.Len(t, cache.cachedOps["ff2"], 1)
+		require.Equal(t, query1, cache.cachedOps["ff1"][0].Request.Query)
+		require.Equal(t, query2, cache.cachedOps["ff2"][0].Request.Query)
 
-		ff1Ops := cache.queriesForFeatureFlag["ff1"].([]*nodev1.Operation)
-		ff2Ops := cache.queriesForFeatureFlag["ff2"].([]*nodev1.Operation)
-
-		require.Len(t, ff1Ops, 1)
-		require.Len(t, ff2Ops, 1)
-		require.Equal(t, query1, ff1Ops[0].Request.Query)
-		require.Equal(t, query2, ff2Ops[0].Request.Query)
+		// expensiveCaches should be reset to empty map
+		require.NotNil(t, cache.expensiveCaches)
+		require.Empty(t, cache.expensiveCaches)
 	})
 
 	t.Run("does nothing when cache is disabled", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: nil,
+			expensiveCaches: nil,
 		}
 
 		cache.extractQueriesAndOverridePlanCache()
 
 		// Should remain nil since processing is skipped
-		require.Nil(t, cache.queriesForFeatureFlag)
+		require.Nil(t, cache.expensiveCaches)
 	})
 
 	t.Run("handles empty cache", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
+			expensiveCaches: make(map[string]*expensivePlanCache),
+			cachedOps:       make(map[string][]*nodev1.Operation),
 		}
 
 		require.NotPanics(t, func() {
 			cache.extractQueriesAndOverridePlanCache()
 		})
 
-		require.Empty(t, cache.queriesForFeatureFlag)
+		require.Empty(t, cache.cachedOps)
 	})
 }
 
@@ -422,7 +352,7 @@ func TestInMemoryPlanCacheFallback_IsEnabled(t *testing.T) {
 	t.Run("returns true when cache is enabled", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: make(map[string]any),
+			expensiveCaches: make(map[string]*expensivePlanCache),
 		}
 
 		require.True(t, cache.IsEnabled())
@@ -431,10 +361,9 @@ func TestInMemoryPlanCacheFallback_IsEnabled(t *testing.T) {
 	t.Run("returns false when cache is disabled", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			queriesForFeatureFlag: nil,
+			expensiveCaches: nil,
 		}
 
 		require.False(t, cache.IsEnabled())
 	})
-
 }

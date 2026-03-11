@@ -984,6 +984,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 					},
 				}),
 				core.WithConfigVersionHeader(true),
+				core.WithPlanningDurationOverride(func(content string) time.Duration {
+					return 10 * time.Second
+				}),
 			},
 			RouterConfig: &testenv.RouterConfig{
 				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
@@ -1130,6 +1133,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 					Enabled:          true,
 					InMemoryFallback: true,
 				}),
+				core.WithPlanningDurationOverride(func(content string) time.Duration {
+					return 10 * time.Second
+				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -1182,6 +1188,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 							Enabled: true,
 						},
 					},
+				}),
+				core.WithPlanningDurationOverride(func(content string) time.Duration {
+					return 10 * time.Second
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1236,6 +1245,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 						},
 					},
 				}),
+				core.WithPlanningDurationOverride(func(content string) time.Duration {
+					return 10 * time.Second
+				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -1286,7 +1298,8 @@ cache_warmup:
     cdn:
       enabled: false
 
-engine: 
+engine:
+  expensive_query_threshold: "0s"
   debug:
     enable_cache_response_headers: true
 `

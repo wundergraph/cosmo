@@ -105,10 +105,15 @@ func (c *expensivePlanCache) applySet(key uint64, plan *planWithMetaData, durati
 	defer c.mu.Unlock()
 
 	// If key already exists, update it
-	if _, ok := c.entries[key]; ok {
-		c.entries[key] = &expensivePlanEntry{plan: plan, duration: duration}
-		if key == c.minKey || duration < c.minDur {
-			c.refreshMin()
+	if currEntry, ok := c.entries[key]; ok {
+		// Consider worst case, if the previous run was faster then increase
+		if currEntry.duration < duration {
+			c.entries[key] = &expensivePlanEntry{plan: plan, duration: duration}
+
+			// If the minKey duration was increased, there can be a new minKey
+			if c.minKey == key {
+				c.refreshMin()
+			}
 		}
 		return
 	}

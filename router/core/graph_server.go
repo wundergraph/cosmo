@@ -1418,7 +1418,6 @@ func (s *graphServer) buildGraphMux(
 			// We first utilize the existing plan cache (if it was already set, i.e., not on the first start) to create a list of queries
 			// and then reset the plan cache to the new plan cache for this start afterwards.
 			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getCachedOperationsForFF(opts.FeatureFlagName))
-			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setExpensiveCacheForFF(opts.FeatureFlagName, operationPlanner.expensiveCache)
 		case s.cacheWarmup.Source.CdnSource.Enabled:
 			if s.graphApiToken == "" {
@@ -1429,7 +1428,6 @@ func (s *graphServer) buildGraphMux(
 			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
 			if s.cacheWarmup.InMemoryFallback {
 				warmupConfig.FallbackSource = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getCachedOperationsForFF(opts.FeatureFlagName))
-				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setExpensiveCacheForFF(opts.FeatureFlagName, operationPlanner.expensiveCache)
 			}
 			cdnSource, err := NewCDNSource(s.cdnConfig.URL, s.graphApiToken, s.logger)
