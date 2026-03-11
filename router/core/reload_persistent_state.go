@@ -42,14 +42,12 @@ func (s *ReloadPersistentState) OnRouterConfigReload() {
 	s.inMemoryPlanCacheFallback.extractQueriesAndOverridePlanCache()
 }
 
-// InMemoryPlanCacheFallback is a store that stores expensive query cache references or extracted operations
-// for use with the cache warmer across config reloads. Only expensive queries (planning duration >= threshold)
-// are persisted.
+// InMemoryPlanCacheFallback is a store that stores either queries or references to the planner cache for use with the cache warmer.
+// Only expensive queries (planning duration >= threshold) are persisted.
 type InMemoryPlanCacheFallback struct {
-	mu              sync.RWMutex
-	expensiveCaches map[string]*expensivePlanCache // live references during runtime
-	cachedOps       map[string][]*nodev1.Operation // extracted snapshots after reload
-	logger          *zap.Logger
+	mu                    sync.RWMutex
+	queriesForFeatureFlag map[string]any
+	logger                *zap.Logger
 }
 
 // updateStateFromConfig updates the internal state of the in-memory fallback cache based on the provided config
@@ -64,18 +62,14 @@ func (c *InMemoryPlanCacheFallback) updateStateFromConfig(config *Config) {
 	// If the configuration change occurred which disabled or enabled the fallback cache, we need to update the internal state
 	if enabled {
 		// Only initialize if its nil because its a first start, we dont want to override any old data in a map
-		if c.expensiveCaches == nil {
-			c.expensiveCaches = make(map[string]*expensivePlanCache)
-		}
-		if c.cachedOps == nil {
-			c.cachedOps = make(map[string][]*nodev1.Operation)
+		if c.queriesForFeatureFlag == nil {
+			c.queriesForFeatureFlag = make(map[string]any)
 		}
 		return
 	}
 
-	// Reset the maps to free up memory
-	c.expensiveCaches = nil
-	c.cachedOps = nil
+	// Reset the map to free up memory
+	c.queriesForFeatureFlag = nil
 }
 
 // IsEnabled returns whether the in-memory fallback cache is enabled
@@ -83,90 +77,72 @@ func (c *InMemoryPlanCacheFallback) IsEnabled() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	return c.expensiveCaches != nil
+	return c.queriesForFeatureFlag != nil
 }
 
-// getCachedOperationsForFF returns all cached operations for a feature flag key.
-// It first checks extracted snapshots (cachedOps), then falls back to reading
-// from live expensive cache references (used during execution config updates
-// where extractQueriesAndOverridePlanCache has not been called).
-func (c *InMemoryPlanCacheFallback) getCachedOperationsForFF(featureFlagKey string) []*nodev1.Operation {
+// getPlanCacheForFF gets the plan cache in the []*nodev1.Operation format for a specific feature flag key.
+// It handles both live expensive cache references and already-extracted operation snapshots.
+func (c *InMemoryPlanCacheFallback) getPlanCacheForFF(featureFlagKey string) []*nodev1.Operation {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if c.expensiveCaches == nil {
+	if c.queriesForFeatureFlag == nil {
 		return nil
 	}
 
-	// Check extracted snapshots first (populated after router config reloads)
-	if ops, ok := c.cachedOps[featureFlagKey]; ok {
-		return ops
+	switch cache := c.queriesForFeatureFlag[featureFlagKey].(type) {
+	case *expensivePlanCache:
+		return convertToNodeOperation(cache)
+	case []*nodev1.Operation:
+		return cache
+	// This would occur during the first start (we add this case to specifically log any other cases)
+	case nil:
+		return nil
+	// This should not happen as we cannot have any types other than the above
+	default:
+		c.logger.Error("unexpected type")
+		return nil
 	}
-
-	// Fall back to reading from live expensive cache references
-	// This path is used during execution config updates where the previous
-	// expensive cache is still valid and hasn't been extracted yet.
-	if expCache, ok := c.expensiveCaches[featureFlagKey]; ok {
-		var ops []*nodev1.Operation
-		expCache.IterValues(func(v *planWithMetaData) bool {
-			if v.content != "" {
-				ops = append(ops, &nodev1.Operation{
-					Request: &nodev1.OperationRequest{Query: v.content},
-				})
-			}
-			return false
-		})
-		return ops
-	}
-
-	return nil
 }
 
-// setExpensiveCacheForFF stores the expensive plan cache reference for a feature flag key
-// so that expensive query entries survive config reloads.
-func (c *InMemoryPlanCacheFallback) setExpensiveCacheForFF(featureFlagKey string, cache *expensivePlanCache) {
+// setPlanCacheForFF sets the plan cache for a specific feature flag key
+func (c *InMemoryPlanCacheFallback) setPlanCacheForFF(featureFlagKey string, cache *expensivePlanCache) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.expensiveCaches == nil || cache == nil {
+	if c.queriesForFeatureFlag == nil || cache == nil {
 		return
 	}
-	c.expensiveCaches[featureFlagKey] = cache
+	c.queriesForFeatureFlag[featureFlagKey] = cache
 }
 
-// extractQueriesAndOverridePlanCache extracts operations from the expensive plan caches
-// and stores them in cachedOps so they survive config reloads.
+// extractQueriesAndOverridePlanCache extracts the queries from the plan cache and overrides the internal map
 func (c *InMemoryPlanCacheFallback) extractQueriesAndOverridePlanCache() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.expensiveCaches == nil {
+	if c.queriesForFeatureFlag == nil {
 		return
 	}
 
 	// Wait for all pending writes from expensive caches so that
 	// IterValues sees a complete snapshot before we extract.
-	for _, expCache := range c.expensiveCaches {
-		expCache.Wait()
-	}
-
-	cachedOps := make(map[string][]*nodev1.Operation)
-	for k, expCache := range c.expensiveCaches {
-		var ops []*nodev1.Operation
-		expCache.IterValues(func(v *planWithMetaData) bool {
-			if v.content != "" {
-				ops = append(ops, &nodev1.Operation{
-					Request: &nodev1.OperationRequest{Query: v.content},
-				})
-			}
-			return false
-		})
-		if len(ops) > 0 {
-			cachedOps[k] = ops
+	for _, v := range c.queriesForFeatureFlag {
+		if expCache, ok := v.(*expensivePlanCache); ok {
+			expCache.Wait()
 		}
 	}
-	c.cachedOps = cachedOps
-	c.expensiveCaches = make(map[string]*expensivePlanCache)
+
+	fallbackMap := make(map[string]any)
+	for k, v := range c.queriesForFeatureFlag {
+		if cache, ok := v.(*expensivePlanCache); ok {
+			ops := convertToNodeOperation(cache)
+			if len(ops) > 0 {
+				fallbackMap[k] = ops
+			}
+		}
+	}
+	c.queriesForFeatureFlag = fallbackMap
 }
 
 // cleanupUnusedFeatureFlags removes any feature flags that were removed from the execution config
@@ -175,21 +151,33 @@ func (c *InMemoryPlanCacheFallback) cleanupUnusedFeatureFlags(routerCfg *nodev1.
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.expensiveCaches == nil {
+	if c.queriesForFeatureFlag == nil {
 		return
 	}
 
-	for ffName := range c.expensiveCaches {
+	for ffName := range c.queriesForFeatureFlag {
 		// Skip the base which is ""
 		if ffName == "" {
 			continue
 		}
 		if routerCfg.FeatureFlagConfigs == nil {
-			delete(c.expensiveCaches, ffName)
-			delete(c.cachedOps, ffName)
+			delete(c.queriesForFeatureFlag, ffName)
 		} else if _, exists := routerCfg.FeatureFlagConfigs.ConfigByFeatureFlagName[ffName]; !exists {
-			delete(c.expensiveCaches, ffName)
-			delete(c.cachedOps, ffName)
+			delete(c.queriesForFeatureFlag, ffName)
 		}
 	}
+}
+
+func convertToNodeOperation(data *expensivePlanCache) []*nodev1.Operation {
+	items := make([]*nodev1.Operation, 0)
+
+	data.IterValues(func(v *planWithMetaData) (stop bool) {
+		if v.content != "" {
+			items = append(items, &nodev1.Operation{
+				Request: &nodev1.OperationRequest{Query: v.content},
+			})
+		}
+		return false
+	})
+	return items
 }
