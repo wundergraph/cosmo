@@ -1,10 +1,14 @@
 packages:
+  - aws-lambda-router
   - cli
   - composition
+  - graphqlmetrics
   - composition-go/shim
   - controlplane
   - controlplane/emails
   - proto
+  - router
+  - router-plugin
   - shared
   - studio
   - connect

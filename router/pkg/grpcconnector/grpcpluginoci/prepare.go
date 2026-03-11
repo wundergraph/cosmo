@@ -21,7 +21,7 @@ func (d *GRPCPlugin) PreparePlugin(img v1.Image) (*exec.Cmd, error) {
 
 	defer func() {
 		if err != nil {
-			os.RemoveAll(workDir)
+			_ = os.RemoveAll(workDir)
 		}
 	}()
 
@@ -63,7 +63,10 @@ func (d *GRPCPlugin) PreparePlugin(img v1.Image) (*exec.Cmd, error) {
 	cmd := exec.Command(execPath, finalArgs...)
 	cmd.Dir = workDir
 
-	grpccommon.PrepareCommand(cmd, d.startupConfig)
+	err = grpccommon.PrepareCommand(cmd, d.startupConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare plugin command: %w", err)
+	}
 
 	return cmd, nil
 }

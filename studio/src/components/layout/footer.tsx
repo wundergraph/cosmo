@@ -1,29 +1,29 @@
-import Link from "next/link";
-import { Logo } from "../logo";
+import Link from 'next/link';
+import { Logo } from '../logo';
 
 export const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   const footerLinks = [
     {
-      href: "https://wundergraph.com/privacy-policy",
-      label: "Privacy Policy",
+      href: 'https://wundergraph.com/privacy-policy',
+      label: 'Privacy Policy',
     },
     {
-      href: "https://trust.wundergraph.com/",
-      label: "Trust Center",
+      href: 'https://trust.wundergraph.com/',
+      label: 'Trust Center',
     },
     {
-      href: "https://wundergraph.com/terms",
-      label: "Website Terms of Use",
+      href: 'https://wundergraph.com/terms',
+      label: 'Website Terms of Use',
     },
     {
-      href: "https://wundergraph.com/cosmo-managed-service-terms",
-      label: "Cosmo Managed Service Terms",
+      href: 'https://wundergraph.com/cosmo-managed-service-terms',
+      label: 'Cosmo Managed Service Terms',
     },
     {
-      href: "https://wundergraph.com/cookies",
-      label: "Cookie Policy",
+      href: 'https://wundergraph.com/cookies',
+      label: 'Cookie Policy',
     },
   ];
 
@@ -48,9 +48,7 @@ export const Footer = () => {
             ))}
           </nav>
 
-          <div className="text-sm">
-            © {currentYear} WunderGraph, Inc. All rights reserved.
-          </div>
+          <div className="text-sm">© {currentYear} WunderGraph, Inc. All rights reserved.</div>
         </div>
       </div>
     </footer>

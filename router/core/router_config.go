@@ -11,6 +11,7 @@ import (
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -66,6 +67,7 @@ type Config struct {
 	ipAnonymization                 *IPAnonymizationConfig
 	listenAddr                      string
 	baseURL                         string
+	graphqlEndpointURL              string
 	graphqlWebURL                   string
 	playgroundPath                  string
 	graphqlPath                     string
@@ -97,7 +99,6 @@ type Config struct {
 	preOriginHandlers               []TransportPreHandler
 	postOriginHandlers              []TransportPostHandler
 	headerRules                     *config.HeaderRules
-	headerPropagation               *HeaderPropagation
 	subgraphTransportOptions        *SubgraphTransportOptions
 	subgraphCircuitBreakerOptions   *SubgraphCircuitBreakerOptions
 	graphqlMetricsConfig            *GraphQLMetricsConfig
@@ -108,6 +109,7 @@ type Config struct {
 	retryOptions                    retrytransport.RetryOptions
 	redisClient                     rd.RDCloser
 	mcpServer                       *mcpserver.GraphQLSchemaServer
+	connectRPCServer                *connectrpc.Server
 	processStartTime                time.Time
 	developmentMode                 bool
 	healthcheck                     health.Checker
@@ -116,6 +118,7 @@ type Config struct {
 	localhostFallbackInsideDocker bool
 	tlsServerConfig               *tls.Config
 	tlsConfig                     *TlsConfig
+	subgraphTLSConfiguration      config.ClientTLSConfiguration
 	telemetryAttributes           []config.CustomAttribute
 	tracePropagators              []propagation.TextMapPropagator
 	compositePropagator           propagation.TextMapPropagator
@@ -139,6 +142,7 @@ type Config struct {
 	subscriptionHeartbeatInterval time.Duration
 	hostName                      string
 	mcp                           config.MCPConfiguration
+	connectRPC                    config.ConnectRPCConfiguration
 	plugins                       config.PluginsConfiguration
 	tracingAttributes             []config.CustomAttribute
 	subscriptionHooks             subscriptionHooks
@@ -309,7 +313,7 @@ func (c *Config) Usage() map[string]any {
 	}
 
 	if c.routerConfigPollerConfig != nil {
-		usage["fallback_execution_config_storage_enabled"] = c.routerConfigPollerConfig.ExecutionConfig.FallbackStorage.Enabled
+		usage["fallback_execution_config_storage_enabled"] = c.routerConfigPollerConfig.FallbackStorage.Enabled
 	}
 	usage["cache_warmup"] = c.cacheWarmup != nil && c.cacheWarmup.Enabled
 	if c.cacheWarmup != nil && c.cacheWarmup.Enabled {
@@ -318,6 +322,7 @@ func (c *Config) Usage() map[string]any {
 		} else {
 			usage["cache_warmup_source"] = "cdn"
 		}
+		usage["cache_warmup_in_memory_fallback_enabled"] = c.cacheWarmup.InMemoryFallback
 		usage["cache_warmup_workers"] = c.cacheWarmup.Workers
 		usage["cache_warmup_items_per_second"] = c.cacheWarmup.ItemsPerSecond
 		usage["cache_warmup_timeout"] = c.cacheWarmup.Timeout.String()
@@ -327,6 +332,8 @@ func (c *Config) Usage() map[string]any {
 	usage["mcp_enable_arbitrary_operations"] = c.mcp.EnableArbitraryOperations
 	usage["mcp_exclude_mutations"] = c.mcp.ExcludeMutations
 	usage["mcp_expose_schema"] = c.mcp.ExposeSchema
+
+	usage["connect_rpc"] = c.connectRPC.Enabled
 
 	usage["cosmo_cdn"] = c.cdnConfig.URL == "https://cosmo-cdn.wundergraph.com"
 

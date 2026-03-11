@@ -4,6 +4,48 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.17.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.17.0...@wundergraph/protographic@0.17.1) (2026-03-10)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+# [0.17.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.16.3...@wundergraph/protographic@0.17.0) (2026-03-05)
+
+### Features
+
+* add format script + optional git hooks ([#2579](https://github.com/wundergraph/cosmo/issues/2579)) ([edabd2b](https://github.com/wundergraph/cosmo/commit/edabd2bd8f775c5717ca785f16616cff6f7ae039)) (@comatory)
+
+## [0.16.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.16.2...@wundergraph/protographic@0.16.3) (2026-03-04)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.16.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.16.1...@wundergraph/protographic@0.16.2) (2026-03-02)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.16.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.16.0...@wundergraph/protographic@0.16.1) (2026-02-28)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+# [0.16.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.6...@wundergraph/protographic@0.16.0) (2026-02-26)
+
+### Features
+
+* add support for requires in protographic ([#2439](https://github.com/wundergraph/cosmo/issues/2439)) ([48a1613](https://github.com/wundergraph/cosmo/commit/48a1613285c978589b95a2c18d7618c9569b8f4f)) (@Noroth)
+
+## [0.15.6](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.5...@wundergraph/protographic@0.15.6) (2026-02-20)
+
+### Bug Fixes
+
+* **protographic:** prevent duplicate UNSPECIFIED enum value in proto generation ([#2525](https://github.com/wundergraph/cosmo/issues/2525)) ([957d92a](https://github.com/wundergraph/cosmo/commit/957d92a103346a11c695020716f499210da46e65)) (@jensneuse)
+
+## [0.15.5](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.4...@wundergraph/protographic@0.15.5) (2026-02-16)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
+## [0.15.4](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.3...@wundergraph/protographic@0.15.4) (2026-02-12)
+
+**Note:** Version bump only for package @wundergraph/protographic
+
 ## [0.15.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.15.2...@wundergraph/protographic@0.15.3) (2026-01-27)
 
 **Note:** Version bump only for package @wundergraph/protographic

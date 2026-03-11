@@ -12,19 +12,25 @@
 /connect/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera
 /connect-go/ @Aenimus @JivusAyrus @StarpTech @jensneuse @endigma @wilsonrivera
 /controlplane/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
-/graphqlmetrics/ @Noroth @StarpTech
-/helm/ @Noroth @StarpTech
-/infrastructure/ @Noroth @StarpTech
+/graphqlmetrics/ @Noroth @pepol @StarpTech
+/helm/ @Noroth @pepol @StarpTech
+/infrastructure/ @Noroth @pepol @StarpTech
 /keycloak/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
-/otelcollector/ @Noroth @StarpTech
+/otelcollector/ @Noroth @pepol @StarpTech
 /playground/ @wundergraph/Router @thisisnithin @StarpTech
 /proto/ @JivusAyrus @wilsonrivera @StarpTech @endigma
-/protographic/ @Noroth @StarpTech @endigma
+/protographic/ @Noroth @StarpTech @endigma @dkorittki
 # Same owner for router and tests to avoid requesting too many reviewers
-/router/ @Noroth @devsergiy @StarpTech @jensneuse @endigma
-/router-tests/ @Noroth @devsergiy @StarpTech @jensneuse @endigma
-/router-plugin/ @Noroth @StarpTech @endigma @devsergiy
+/router/ @Noroth @devsergiy @StarpTech @jensneuse @endigma @SkArchon
+/router-tests/ @Noroth @devsergiy @StarpTech @jensneuse @endigma @SkArchon
+/router-plugin/ @Noroth @StarpTech @endigma @devsergiy @SkArchon
 /shared/ @Aenimus @JivusAyrus @StarpTech @thisisnithin
 /studio/ @JivusAyrus @wilsonrivera @StarpTech @thisisnithin
 # Cosmo Streams / EDFS
 /router/pkg/pubsub @alepane21 @StarpTech @jensneuse @dkorittki
+
+# generated protobuf files, sourced from /proto/
+/router/gen/
+/connect-go/gen/
+/graphqlmetrics/gen/
+/connect/src/wg/

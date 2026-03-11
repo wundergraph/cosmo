@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { buildSchema, parse, GraphQLInputObjectType, GraphQLEnumType } from 'graphql';
-import { buildRequestMessage, buildInputObjectMessage, buildEnumType, createFieldNumberManager } from '../../src';
+import { buildRequestMessage, buildInputObjectMessage, buildEnumType, createFieldNumberManager } from '../../src/index.js';
 
 describe('Request Builder', () => {
   describe('buildRequestMessage', () => {
@@ -364,6 +364,29 @@ describe('Request Builder', () => {
       expect(protoEnum.values.PRIORITY_LOW).toBe(1);
       expect(protoEnum.values.PRIORITY_MEDIUM).toBe(2);
       expect(protoEnum.values.PRIORITY_HIGH).toBe(3);
+    });
+
+    test('should not duplicate UNSPECIFIED when enum explicitly declares it', () => {
+      const schema = buildSchema(`
+        enum State {
+          UNSPECIFIED
+          ACTIVE
+          INACTIVE
+        }
+      `);
+
+      const enumType = schema.getType('State');
+      if (!enumType || enumType.constructor.name !== 'GraphQLEnumType') {
+        throw new Error('Invalid enum type');
+      }
+
+      const protoEnum = buildEnumType(enumType as GraphQLEnumType);
+
+      expect(protoEnum.values.STATE_UNSPECIFIED).toBe(0);
+      expect(protoEnum.values.STATE_ACTIVE).toBe(1);
+      expect(protoEnum.values.STATE_INACTIVE).toBe(2);
+      // Ensure no duplicate — only 3 values total
+      expect(Object.keys(protoEnum.values)).toHaveLength(3);
     });
   });
 

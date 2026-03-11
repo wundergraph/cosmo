@@ -1,0 +1,191 @@
+syntax = "proto3";
+package employee.v1;
+
+option go_package = "github.com/wundergraph/cosmo/router/pkg/connectrpc/testdata/services/employee/v1;employeev1";
+
+service EmployeeService {
+  rpc FindEmployeesByPets(FindEmployeesByPetsRequest) returns (FindEmployeesByPetsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc FindEmployeesByPetsInlineFragment(FindEmployeesByPetsInlineFragmentRequest) returns (FindEmployeesByPetsInlineFragmentResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc FindEmployeesByPetsNamedFragment(FindEmployeesByPetsNamedFragmentRequest) returns (FindEmployeesByPetsNamedFragmentResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetEmployeeById(GetEmployeeByIdRequest) returns (GetEmployeeByIdResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetEmployees(GetEmployeesRequest) returns (GetEmployeesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc GetEmployeesWithMood(GetEmployeesWithMoodRequest) returns (GetEmployeesWithMoodResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+
+  rpc UpdateEmployeeMood(UpdateEmployeeMoodRequest) returns (UpdateEmployeeMoodResponse) {}
+}
+
+message UpdateEmployeeMoodRequest {
+  int32 employee_id = 1;
+  Mood mood = 2;
+}
+
+message UpdateEmployeeMoodResponse {
+  message UpdateMood {
+    message Details {
+      string forename = 5;
+      string surname = 6;
+    }
+    int32 id = 1;
+    Details details = 2;
+    Mood current_mood = 3;
+    Mood derived_mood = 4;
+  }
+  // This mutation update the mood of an employee.
+  UpdateMood update_mood = 1;
+}
+
+message GetEmployeeByIdRequest {
+  int32 employee_id = 1;
+}
+
+message GetEmployeeByIdResponse {
+  message Employee {
+    message Details {
+      message Pets {
+        string name = 1;
+      }
+      message Location {
+        message Key {
+          string name = 1;
+        }
+        Key key = 1;
+      }
+      string forename = 5;
+      string surname = 6;
+      repeated Pets pets = 9;
+      Location location = 10;
+    }
+    int32 id = 1;
+    string tag = 2;
+    Details details = 3;
+  }
+  Employee employee = 1;
+}
+
+message FindEmployeesByPetsRequest {
+  bool has_pets = 1;
+}
+
+message FindEmployeesByPetsResponse {
+  message FindEmployees {
+    message Details {
+      message Pets {
+        string name = 1;
+      }
+      string forename = 5;
+      string surname = 6;
+      repeated Pets pets = 9;
+    }
+    int32 id = 1;
+    Details details = 2;
+  }
+  // This is a GraphQL query that retrieves a list of employees.
+  repeated FindEmployees find_employees = 1;
+}
+
+message GetEmployeesWithMoodRequest {
+}
+
+message GetEmployeesWithMoodResponse {
+  message Employees {
+    message Details {
+      message Pets {
+        string name = 1;
+        Gender gender = 3;
+      }
+      repeated Pets pets = 9;
+    }
+    int32 id = 1;
+    Details details = 3;
+    Mood current_mood = 4;
+  }
+  repeated Employees employees = 1;
+}
+
+message GetEmployeesRequest {
+}
+
+message GetEmployeesResponse {
+  message Employees {
+    message Details {
+      string forename = 11;
+      string surname = 12;
+      bool has_children = 13;
+    }
+    int32 id = 1;
+    Details details = 3;
+  }
+  repeated Employees employees = 1;
+}
+
+message FindEmployeesByPetsInlineFragmentRequest {
+  bool has_pets = 1;
+}
+
+message FindEmployeesByPetsInlineFragmentResponse {
+  message FindEmployees {
+    message Details {
+      message Pets {
+        string name = 1;
+      }
+      string forename = 11;
+      string surname = 12;
+      repeated Pets pets = 14;
+    }
+    int32 id = 1;
+    Details details = 2;
+  }
+  // This is a GraphQL query that retrieves a list of employees.
+  repeated FindEmployees find_employees = 1;
+}
+
+message FindEmployeesByPetsNamedFragmentRequest {
+  bool has_pets = 1;
+}
+
+message FindEmployeesByPetsNamedFragmentResponse {
+  message FindEmployees {
+    message Details {
+      message Pets {
+        string name = 1;
+      }
+      string forename = 11;
+      string surname = 12;
+      repeated Pets pets = 14;
+    }
+    int32 id = 1;
+    Details details = 2;
+  }
+  // This is a GraphQL query that retrieves a list of employees.
+  repeated FindEmployees find_employees = 1;
+}
+
+enum Mood {
+  MOOD_UNSPECIFIED = 0;
+  MOOD_HAPPY = 1;
+  MOOD_SAD = 2;
+}
+
+enum Gender {
+  GENDER_UNSPECIFIED = 0;
+  GENDER_FEMALE = 1;
+  GENDER_MALE = 2;
+  GENDER_UNKNOWN = 3;
+}

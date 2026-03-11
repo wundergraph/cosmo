@@ -17,7 +17,7 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
   STRING_SCALAR,
-  Subgraph,
+  type Subgraph,
   UNION,
 } from '../../../src';
 import { CONFIGURE_DESCRIPTION_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';

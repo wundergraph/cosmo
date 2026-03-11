@@ -7,62 +7,57 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
-	"slices"
+	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
-
+	"github.com/cespare/xxhash/v2"
 	"github.com/expr-lang/expr/vm"
 	cachedirective "github.com/pquerna/cachecontrol/cacheobject"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/expr"
+	"github.com/wundergraph/cosmo/router/internal/headers"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 )
 
 var (
-	_              EnginePreOriginHandler = (*HeaderPropagation)(nil)
-	ignoredHeaders                        = []string{
-		"Alt-Svc",
-		"Connection",
-		"Proxy-Connection", // non-standard but still sent by libcurl and rejected by e.g. google
-
-		// Hop-by-hop headers
-		// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Connection
-		"Keep-Alive",
-		"Proxy-Authenticate",
-		"Proxy-Authorization",
-		"Te",      // canonicalized version of "TE"
-		"Trailer", // not Trailers per URL above; https://www.rfc-editor.org/errata_search.php?eid=4522
-		"Transfer-Encoding",
-		"Upgrade",
-
-		// Content Negotiation. We must never propagate the client headers to the upstream
-		// The router has to decide on its own what to send to the upstream
-		"Content-Type",
-		"Content-Encoding",
-		"Content-Length",
-		"Accept-Encoding",
-		"Accept-Charset",
-		"Accept",
-
-		// Web Socket negotiation headers. We must never propagate the client headers to the upstream.
-		"Sec-Websocket-Extensions",
-		"Sec-Websocket-Key",
-		"Sec-Websocket-Protocol",
-		"Sec-Websocket-Version",
-	}
-	cacheControlKey       = "Cache-Control"
-	expiresKey            = "Expires"
-	noCache               = "no-cache"
-	caseInsensitiveRegexp = "(?i)"
+	_                     EnginePostOriginHandler = (*HeaderPropagation)(nil)
+	cacheControlKey                               = "Cache-Control"
+	expiresKey                                    = "Expires"
+	noCache                                       = "no-cache"
+	caseInsensitiveRegexp                         = "(?i)"
 )
+
+// ignoredHeaderPrefixes are prefixes for headers that should not be forwarded to downstream services.
+var ignoredHeaderPrefixes = []string{
+	"Grpc-", // reserved in gRPC metadata
+}
+
+// isIgnoredHeader reports whether a header should never be propagated to subgraphs.
+// It checks both the exact ignoredHeaders list and any prefix in ignoredHeaderPrefixes.
+func isIgnoredHeader(name string) bool {
+	canonicalName := http.CanonicalHeaderKey(name)
+
+	if _, ok := headers.SkippedHeaders[canonicalName]; ok {
+		return true
+	}
+	for _, prefix := range ignoredHeaderPrefixes {
+		if strings.HasPrefix(canonicalName, prefix) {
+			return true
+		}
+	}
+	return false
+}
 
 type responseHeaderPropagationKey struct{}
 
@@ -88,32 +83,56 @@ func getResponseHeaderPropagation(ctx context.Context) *responseHeaderPropagatio
 	return v.(*responseHeaderPropagation)
 }
 
-func HeaderPropagationWriter(w http.ResponseWriter, ctx context.Context) io.Writer {
-	propagation := getResponseHeaderPropagation(ctx)
-	if propagation == nil {
-		return w
-	}
+func HeaderPropagationWriter(w http.ResponseWriter, resolveCtx *resolve.Context, setContentLength bool) io.Writer {
+	propagation := getResponseHeaderPropagation(resolveCtx.Context())
 	return &headerPropagationWriter{
 		writer:            w,
 		headerPropagation: propagation,
-		propagateHeaders:  true,
+		propagateHeaders:  propagation != nil,
+		setContentLength:  setContentLength,
+		resolveCtx:        resolveCtx,
 	}
 }
 
 type headerPropagationWriter struct {
-	writer            http.ResponseWriter
-	headerPropagation *responseHeaderPropagation
-	propagateHeaders  bool
+	setContentLength          bool
+	propagateHeaders          bool
+	writer                    http.ResponseWriter
+	headerPropagation         *responseHeaderPropagation
+	resolveCtx                *resolve.Context
+	didSetSubgraphErrors      bool
+	routerHeaderPropagation   *HeaderPropagation
+	reqCtx                    *requestContext
+	didApplyRouterRespHeaders bool
 }
 
 func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
+	if h.setContentLength {
+		// setContentLength assumes this Write is called exactly once with the entire body
+		h.writer.Header().Set("Content-Length", strconv.Itoa(len(p)))
+		h.setContentLength = false
+	}
 	if h.propagateHeaders {
+		wh := h.writer.Header()
 		for k, v := range h.headerPropagation.header {
 			for _, el := range v {
-				h.writer.Header().Add(k, el)
+				wh.Add(k, el)
 			}
 		}
 		h.propagateHeaders = false
+	}
+	if errs := h.resolveCtx.SubgraphErrors(); errs != nil && !h.didSetSubgraphErrors {
+		h.writer.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+		h.didSetSubgraphErrors = true
+		trackFinalResponseError(h.resolveCtx.Context(), errs)
+	}
+	if h.routerHeaderPropagation != nil && !h.didApplyRouterRespHeaders {
+		h.didApplyRouterRespHeaders = true
+		if err := h.routerHeaderPropagation.ApplyRouterResponseHeaderRules(h.writer, h.reqCtx); err != nil {
+			if h.reqCtx != nil {
+				h.reqCtx.logger.Error("Failed to apply router response header rules", zap.Error(err))
+			}
+		}
 	}
 	return h.writer.Write(p)
 }
@@ -123,10 +142,13 @@ func (h *headerPropagationWriter) Write(p []byte) (n int, err error) {
 type HeaderPropagation struct {
 	regex                       map[string]*regexp.Regexp
 	rules                       *config.HeaderRules
-	compiledRequestRules        map[string]*vm.Program
+	compiledRules               map[string]*vm.Program
 	compiledRouterResponseRules map[string]*vm.Program
 	hasRequestRules             bool
 	hasResponseRules            bool
+	// Precomputed request rule presence for fast-path checks
+	hasAllRequestRules      bool
+	subgraphHasRequestRules map[string]bool
 }
 
 func initHeaderRules(rules *config.HeaderRules) {
@@ -147,13 +169,25 @@ func NewHeaderPropagation(rules *config.HeaderRules) (*HeaderPropagation, error)
 	hf := HeaderPropagation{
 		rules:                       rules,
 		regex:                       map[string]*regexp.Regexp{},
-		compiledRequestRules:        map[string]*vm.Program{},
+		compiledRules:               map[string]*vm.Program{},
 		compiledRouterResponseRules: map[string]*vm.Program{},
 	}
 
 	rhrs, rhrrs, rrs := hf.getAllRules()
 	hf.hasRequestRules = len(rhrs) > 0
 	hf.hasResponseRules = len(rhrrs) > 0
+
+	// Pre-compute request rule presence
+	hf.hasAllRequestRules = len(hf.rules.All.Request) > 0
+	if !hf.hasAllRequestRules {
+		// Only build a per-subgraph map if we don't have global rules
+		hf.subgraphHasRequestRules = make(map[string]bool, len(hf.rules.Subgraphs))
+		for name, sg := range hf.rules.Subgraphs {
+			if sg != nil && len(sg.Request) > 0 {
+				hf.subgraphHasRequestRules[name] = true
+			}
+		}
+	}
 
 	if err := hf.collectRuleMatchers(rhrs, rhrrs); err != nil {
 		return nil, err
@@ -248,35 +282,34 @@ func (hf *HeaderPropagation) collectRuleMatchers(rhrs []*config.RequestHeaderRul
 	return nil
 }
 
-func (hf *HeaderPropagation) compileExpressionRules(subgraphRequestRules []*config.RequestHeaderRule, routerRequestRules []*config.RouterResponseHeaderRule) error {
+func (hf *HeaderPropagation) compileExpressionRules(requestRules []*config.RequestHeaderRule, routerResponseRules []*config.RouterResponseHeaderRule) error {
 	manager := expr.CreateNewExprManager()
-	for _, rule := range subgraphRequestRules {
-		if err := processExpression(rule.Expression, hf.compiledRequestRules, manager); err != nil {
-			return fmt.Errorf("error compiling header %s: %w", rule.Name, err)
+	for _, rule := range requestRules {
+		if rule.Expression == "" {
+			continue
 		}
-	}
-
-	for _, rule := range routerRequestRules {
-		if err := processExpression(rule.Expression, hf.compiledRouterResponseRules, manager); err != nil {
-			return fmt.Errorf("error compiling header %s: %w", rule.Name, err)
+		if _, ok := hf.compiledRules[rule.Expression]; ok {
+			continue
 		}
+		program, err := manager.CompileExpression(rule.Expression, reflect.String)
+		if err != nil {
+			return fmt.Errorf("error compiling expression %s for header rule %s: %w", rule.Expression, rule.Name, err)
+		}
+		hf.compiledRules[rule.Expression] = program
 	}
-
-	return nil
-}
-
-func processExpression(expression string, hf map[string]*vm.Program, manager *expr.Manager) error {
-	if expression == "" {
-		return nil
+	for _, rule := range routerResponseRules {
+		if rule.Expression == "" {
+			continue
+		}
+		if _, ok := hf.compiledRouterResponseRules[rule.Expression]; ok {
+			continue
+		}
+		program, err := manager.CompileExpression(rule.Expression, reflect.String)
+		if err != nil {
+			return fmt.Errorf("error compiling expression %s for header rule %s: %w", rule.Expression, rule.Name, err)
+		}
+		hf.compiledRouterResponseRules[rule.Expression] = program
 	}
-	if _, ok := hf[expression]; ok {
-		return nil
-	}
-	program, err := manager.CompileExpression(expression, reflect.String)
-	if err != nil {
-		return fmt.Errorf("error compiling expression %s for header rule: %w", expression, err)
-	}
-	hf[expression] = program
 	return nil
 }
 
@@ -294,57 +327,136 @@ func (h *HeaderPropagation) HasResponseRules() bool {
 	return h.hasResponseRules
 }
 
-func (h *HeaderPropagation) OnOriginRequest(request *http.Request, ctx RequestContext) (*http.Request, *http.Response) {
-	for _, rule := range h.rules.All.Request {
-		h.applyRequestRule(ctx, request, rule)
+// BuildRequestHeaderForSubgraph builds headers for an outbound subgraph request
+// as if the propagation rules were applied during transport. It returns the
+// resulting headers and a stable hash over all header names and values that is
+// independent of map iteration order.
+func (h *HeaderPropagation) BuildRequestHeaderForSubgraph(subgraphName string, ctx *requestContext) (http.Header, uint64) {
+	if h == nil || h.rules == nil || ctx == nil || ctx.Request() == nil {
+		return http.Header{}, 0
 	}
 
-	subgraph := ctx.ActiveSubgraph(request)
-	if subgraph != nil {
-		if subgraphRules, ok := h.rules.Subgraphs[subgraph.Name]; ok {
-			for _, rule := range subgraphRules.Request {
-				h.applyRequestRule(ctx, request, rule)
+	// Fast-path: if we know no request rules apply to this subgraph, skip cache and building
+	if !h.hasRequestRulesForSubgraph(subgraphName) {
+		return nil, 0
+	}
+
+	// Build headers in a fresh map without relying on a subgraph request seed.
+	outHeader := make(http.Header)
+
+	// Apply global rules
+	for _, rule := range h.rules.All.Request {
+		h.applyRequestRuleToHeader(ctx, outHeader, rule)
+	}
+
+	// Apply subgraph-specific rules
+	if subgraphName != "" {
+		if subRules, ok := h.rules.Subgraphs[subgraphName]; ok {
+			for _, rule := range subRules.Request {
+				h.applyRequestRuleToHeader(ctx, outHeader, rule)
 			}
 		}
 	}
 
-	return request, nil
+	headerHash := hashHeaderStable(outHeader)
+	return outHeader, headerHash
 }
 
-func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
-	// In the case of an error response, it is possible that the response is nil
-	if resp == nil {
-		return nil
+// hasRequestRulesForSubgraph returns true if there are request header rules
+// that would apply to the given subgraph. The result is computed at creation time.
+func (h *HeaderPropagation) hasRequestRulesForSubgraph(subgraphName string) bool {
+	if h == nil || h.rules == nil {
+		return false
+	}
+	if h.hasAllRequestRules {
+		// At least one global rule applies to all subgraphs
+		return true
+	}
+	if subgraphName == "" {
+		// No subgraph specified and no global rules
+		return false
+	}
+	return h.subgraphHasRequestRules != nil && h.subgraphHasRequestRules[subgraphName]
+}
+
+// hashHeaderStable computes a deterministic 64-bit hash over the provided header map.
+// It is independent of map iteration order and minimizes allocations.
+func hashHeaderStable(hdr http.Header) uint64 {
+	if len(hdr) == 0 {
+		return 0
 	}
 
-	propagation := getResponseHeaderPropagation(resp.Request.Context())
+	keys := make([]string, len(hdr))
+	i := 0
+	for k := range hdr {
+		keys[i] = k
+		i++
+	}
+	sort.Strings(keys)
+
+	d := xxhash.New()
+	for _, k := range keys {
+		_, _ = d.WriteString(k)
+		_, _ = d.WriteString("\x00")
+		// Iterate values without creating copies to avoid allocations
+		vals := hdr[k]
+		for i := 0; i < len(vals); i++ {
+			_, _ = d.WriteString(vals[i])
+			_, _ = d.WriteString("\x00")
+		}
+		_, _ = d.WriteString("\x01")
+	}
+
+	return d.Sum64()
+}
+
+// ApplyResponseHeaderRules applies response header rules for a subgraph fetch.
+// Called from OnFinished for every fetch (both singleflight leaders and followers).
+func (h *HeaderPropagation) ApplyResponseHeaderRules(ctx context.Context, headers http.Header, subgraphName string, statusCode int, request *http.Request) {
+	propagation := getResponseHeaderPropagation(ctx)
 	if propagation == nil {
-		return resp
+		return
+	}
+
+	resp := &http.Response{
+		StatusCode: statusCode,
+		Header:     headers,
+	}
+	if request != nil {
+		resp.Request = request
+	} else {
+		resp.Request = (&http.Request{}).WithContext(ctx)
 	}
 
 	for _, rule := range h.rules.All.Response {
 		h.applyResponseRule(propagation, resp, rule)
 	}
 
-	subgraph := ctx.ActiveSubgraph(resp.Request)
-	if subgraph != nil {
-		if subgraphRules, ok := h.rules.Subgraphs[subgraph.Name]; ok {
+	if subgraphName != "" {
+		if subgraphRules, ok := h.rules.Subgraphs[subgraphName]; ok {
 			for _, rule := range subgraphRules.Response {
 				h.applyResponseRule(propagation, resp, rule)
 			}
 		}
 	}
+}
 
+func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestContext) *http.Response {
+	// Response header rules are now applied in the engine loader hooks (OnFinished)
+	// via ApplyResponseHeaderRules, not here. This ensures both singleflight leaders
+	// and followers are handled uniformly. This method is kept for module compatibility.
 	return resp
 }
 
 func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropagation, res *http.Response, rule *config.ResponseHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
+		propagation.m.Lock()
 		propagation.header.Set(rule.Name, rule.Value)
 		if rule.Name == cacheControlKey {
 			// Handle the case where the cache control header is set explicitly
 			propagation.setCacheControl = true
 		}
+		propagation.m.Unlock()
 		return
 	}
 
@@ -353,7 +465,7 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 	}
 
 	if rule.Named != "" {
-		if slices.Contains(ignoredHeaders, rule.Named) {
+		if isIgnoredHeader(rule.Named) {
 			return
 		}
 
@@ -373,7 +485,7 @@ func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropaga
 					result = !result
 				}
 				if result {
-					if slices.Contains(ignoredHeaders, name) {
+					if isIgnoredHeader(name) {
 						continue
 					}
 					values := res.Header.Values(name)
@@ -403,36 +515,43 @@ func (h *HeaderPropagation) applyResponseRuleKeyValue(res *http.Response, propag
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmAppend:
 		propagation.m.Lock()
-		propagation.header[key] = append(propagation.header[key], values...)
+		// Set-Cookie cannot be comma-combined per RFC 6265 — commas appear
+		// inside cookie values (e.g. Expires dates), so each cookie must
+		// remain a separate header line.
+		if key == "Set-Cookie" {
+			propagation.header[key] = append(propagation.header[key], values...)
+		} else {
+			all := append(propagation.header[key], values...)
+			propagation.header.Set(key, strings.Join(all, ","))
+		}
 		propagation.m.Unlock()
 	case config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl:
 		h.applyResponseRuleMostRestrictiveCacheControl(res, propagation, rule)
 	}
 }
 
-func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.Request, rule *config.RequestHeaderRule) {
+func (h *HeaderPropagation) applyRequestRuleToHeader(ctx *requestContext, header http.Header, rule *config.RequestHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
-		reqCtx := getRequestContext(request.Context())
 		if rule.ValueFrom != nil && rule.ValueFrom.ContextField != "" {
-			val := getCustomDynamicAttributeValue(rule.ValueFrom, reqCtx, nil)
+			val := getCustomDynamicAttributeValue(rule.ValueFrom, ctx, nil)
 			value := fmt.Sprintf("%v", val)
 			if value != "" {
-				request.Header.Set(rule.Name, value)
+				header.Set(rule.Name, value)
 			}
 			return
 		}
 
 		if rule.Expression != "" {
-			value, err := h.getRequestRuleExpressionValue(rule, reqCtx)
+			value, err := h.getRequestRuleExpressionValue(rule, ctx)
 			if err != nil {
-				reqCtx.SetError(err)
+				ctx.SetError(err)
 			} else if value != "" {
-				request.Header.Set(rule.Name, value)
+				header.Set(rule.Name, value)
 			}
 			return
 		}
 
-		request.Header.Set(rule.Name, rule.Value)
+		header.Set(rule.Name, rule.Value)
 		return
 	}
 
@@ -446,18 +565,18 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 
 	if rule.Rename != "" && rule.Named != "" {
 		// Ignore the rule when the target header is in the ignored list
-		if slices.Contains(ignoredHeaders, rule.Rename) {
+		if isIgnoredHeader(rule.Rename) {
 			return
 		}
 
 		value := ctx.Request().Header.Get(rule.Named)
 		if value != "" {
-			request.Header.Set(rule.Rename, ctx.Request().Header.Get(rule.Named))
-			request.Header.Del(rule.Named)
+			header.Set(rule.Rename, ctx.Request().Header.Get(rule.Named))
+			header.Del(rule.Named)
 			return
 		} else if rule.Default != "" {
-			request.Header.Set(rule.Rename, rule.Default)
-			request.Header.Del(rule.Named)
+			header.Set(rule.Rename, rule.Default)
+			header.Del(rule.Named)
 			return
 		}
 
@@ -469,15 +588,15 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 	 */
 
 	if rule.Named != "" {
-		if slices.Contains(ignoredHeaders, rule.Named) {
+		if isIgnoredHeader(rule.Named) {
 			return
 		}
 
 		values := ctx.Request().Header.Values(rule.Named)
 		if len(values) > 0 {
-			request.Header[http.CanonicalHeaderKey(rule.Named)] = values
+			header[http.CanonicalHeaderKey(rule.Named)] = values
 		} else if rule.Default != "" {
-			request.Header.Set(rule.Named, rule.Default)
+			header.Set(rule.Named, rule.Default)
 		}
 
 		return
@@ -502,17 +621,17 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 				 */
 				if rule.Rename != "" && rule.Named == "" {
 
-					if slices.Contains(ignoredHeaders, rule.Rename) {
+					if isIgnoredHeader(rule.Rename) {
 						continue
 					}
 
 					value := ctx.Request().Header.Get(name)
 					if value != "" {
-						request.Header.Set(rule.Rename, ctx.Request().Header.Get(name))
-						request.Header.Del(name)
+						header.Set(rule.Rename, ctx.Request().Header.Get(name))
+						header.Del(name)
 					} else if rule.Default != "" {
-						request.Header.Set(rule.Rename, rule.Default)
-						request.Header.Del(name)
+						header.Set(rule.Rename, rule.Default)
+						header.Del(name)
 					}
 
 					continue
@@ -521,20 +640,24 @@ func (h *HeaderPropagation) applyRequestRule(ctx RequestContext, request *http.R
 				/**
 				 *	Propagate the header as is
 				 */
-				if slices.Contains(ignoredHeaders, name) {
+				if isIgnoredHeader(name) {
 					continue
 				}
-				request.Header.Set(name, ctx.Request().Header.Get(name))
+				header.Set(name, ctx.Request().Header.Get(name))
 			}
 		}
 	}
 }
 
 func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *http.Response, propagation *responseHeaderPropagation, rule *config.ResponseHeaderRule) {
+	propagation.m.Lock()
 	if propagation.setCacheControl {
+		propagation.m.Unlock()
 		// Handle the case where the cache control header is set explicitly using the set propagation rule
 		return
 	}
+	previousCacheControl := propagation.previousCacheControl
+	propagation.m.Unlock()
 
 	ctx := res.Request.Context()
 	tracer := rtrace.TracerFromContext(ctx)
@@ -549,8 +672,14 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	defer span.End()
 
 	// Set no-cache for all mutations, to ensure that requests to mutate data always work as expected (without returning cached data)
-	if resolve.SingleFlightDisallowed(ctx) {
+	if resolve.GetOperationTypeFromContext(ctx) == ast.OperationTypeMutation {
+		propagation.m.Lock()
+		if propagation.setCacheControl {
+			propagation.m.Unlock()
+			return
+		}
 		propagation.header.Set(cacheControlKey, noCache)
+		propagation.m.Unlock()
 		return
 	}
 
@@ -560,7 +689,7 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 	dateHeader, _ := http.ParseTime(res.Header.Get("Date"))
 	lastModifiedHeader, _ := http.ParseTime(res.Header.Get("Last-Modified"))
 
-	if propagation.previousCacheControl == nil && reqCacheHeader == "" && resCacheHeader == "" && expiresHeader.IsZero() && rule.Default == "" {
+	if previousCacheControl == nil && reqCacheHeader == "" && resCacheHeader == "" && expiresHeader.IsZero() && rule.Default == "" {
 		// There is no default/previous value to set, and since no cache control headers have been set, exit early
 		return
 	}
@@ -588,21 +717,31 @@ func (h *HeaderPropagation) applyResponseRuleMostRestrictiveCacheControl(res *ht
 		otel.WgResponseCacheControlExpiration.String(rv.OutExpirationTime.String()),
 	)
 
-	// Add each cache control object to the policies list
-	policies := []*cachedirective.Object{obj}
+	var defaultPolicy *cachedirective.Object
 	if rule.Default != "" {
 		defaultResponseCache, _ := cachedirective.ParseResponseCacheControl(rule.Default)
-		policies = append(policies, &cachedirective.Object{RespDirectives: defaultResponseCache})
+		defaultPolicy = &cachedirective.Object{RespDirectives: defaultResponseCache}
+	}
+
+	propagation.m.Lock()
+	defer propagation.m.Unlock()
+	if propagation.setCacheControl {
+		// We compute restrictivePolicy outside the lock. If a concurrent
+		// response applied an explicit `set` Cache-Control rule in the meantime,
+		// that explicit value must win; drop this computed result.
+		return
+	}
+	// Merge with the current shared state under lock to avoid lost updates when
+	// multiple subgraph responses compute policies concurrently.
+	policies := []*cachedirective.Object{obj}
+	if defaultPolicy != nil {
+		policies = append(policies, defaultPolicy)
 	}
 	if propagation.previousCacheControl != nil {
 		policies = append(policies, propagation.previousCacheControl)
 	}
 
-	// Determine the most restrictive cache policy and cache control header
 	restrictivePolicy, cacheControlHeader := createMostRestrictivePolicy(policies)
-
-	propagation.m.Lock()
-	defer propagation.m.Unlock()
 	propagation.previousCacheControl = restrictivePolicy
 	if cacheControlHeader != "" {
 		propagation.header.Set(cacheControlKey, cacheControlHeader)
@@ -618,13 +757,13 @@ func (h *HeaderPropagation) getRequestRuleExpressionValue(rule *config.RequestHe
 	if reqCtx == nil {
 		return "", fmt.Errorf("context cannot be nil")
 	}
-	program, ok := h.compiledRequestRules[rule.Expression]
+	program, ok := h.compiledRules[rule.Expression]
 	if !ok {
 		return "", fmt.Errorf("expression %s not found in compiled rules for header rule %s", rule.Expression, rule.Name)
 	}
 	value, err = expr.ResolveStringExpression(program, reqCtx.expressionContext)
 	if err != nil {
-		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %w", rule.Expression, rule.Name, err)
+		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %s", rule.Expression, rule.Name, err.Error())
 	}
 	return
 }
@@ -642,6 +781,24 @@ func (h *HeaderPropagation) getRouterResponseRuleExpressionValue(rule *config.Ro
 		return "", fmt.Errorf("unable to resolve expression %q for header rule %s: %w", rule.Expression, rule.Name, err)
 	}
 	return
+}
+
+// ApplyRouterResponseHeaderRules applies router response header rules to the response writer
+func (h *HeaderPropagation) ApplyRouterResponseHeaderRules(w http.ResponseWriter, reqCtx *requestContext) error {
+	for _, rule := range h.rules.Router.Response {
+		if rule.Expression == "" {
+			continue
+		}
+		value, err := h.getRouterResponseRuleExpressionValue(rule, reqCtx)
+		if err != nil {
+			return fmt.Errorf("failed to evaluate router response header expression for %s: %w", rule.Name, err)
+		}
+		if value != "" {
+			w.Header().Set(rule.Name, value)
+		}
+	}
+
+	return nil
 }
 
 func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirective.Object, string) {
@@ -701,24 +858,6 @@ func createMostRestrictivePolicy(policies []*cachedirective.Object) (*cachedirec
 	cacheControlHeader := strings.Join(headerParts, ", ")
 
 	return &result, cacheControlHeader
-}
-
-// ApplyRouterResponseHeaderRules applies router response header rules to the response writer
-func (h *HeaderPropagation) ApplyRouterResponseHeaderRules(w http.ResponseWriter, reqCtx *requestContext) error {
-	for _, rule := range h.rules.Router.Response {
-		if rule.Expression == "" {
-			continue
-		}
-		value, err := h.getRouterResponseRuleExpressionValue(rule, reqCtx)
-		if err != nil {
-			return fmt.Errorf("failed to evaluate router response header expression for %s: %w", rule.Name, err)
-		}
-		if value != "" {
-			w.Header().Set(rule.Name, value)
-		}
-	}
-
-	return nil
 }
 
 // SubgraphRules returns the list of header rules for the subgraph with the given name

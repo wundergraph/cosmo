@@ -65,6 +65,7 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 var ErrEnvironmentClosed = errors.New("test environment closed")
@@ -260,6 +261,13 @@ type EngineStatOptions struct {
 	EnableSubscription bool
 }
 
+type MetricsLogExporterOptions struct {
+	Enabled        bool
+	ExcludeMetrics []*regexp.Regexp
+	IncludeMetrics []*regexp.Regexp
+	ExportInterval time.Duration
+}
+
 type MetricOptions struct {
 	MetricExclusions                      MetricExclusions
 	EnableRuntimeMetrics                  bool
@@ -274,6 +282,7 @@ type MetricOptions struct {
 	EnablePrometheusConnectionMetrics     bool
 	EnablePrometheusCircuitBreakerMetrics bool
 	EnablePrometheusStreamMetrics         bool
+	LogExporter                           MetricsLogExporterOptions
 }
 
 type PrometheusSchemaFieldUsage struct {
@@ -308,6 +317,8 @@ type Config struct {
 	DisableParentBasedSampler          bool
 	TLSConfig                          *core.TlsConfig
 	TraceExporter                      trace.SpanExporter
+	TracingSanitizeUTF8                *config.SanitizeUTF8Config
+	IPAnonymization                    *core.IPAnonymizationConfig
 	CustomMetricAttributes             []config.CustomAttribute
 	CustomTelemetryAttributes          []config.CustomAttribute
 	CustomTracingAttributes            []config.CustomAttribute
@@ -350,8 +361,9 @@ type Config struct {
 }
 
 type PluginConfig struct {
-	Path    string
-	Enabled bool
+	Path        string
+	Enabled     bool
+	RegistryURL string // for OCI plugin tests
 }
 
 type CacheMetricsAssertions struct {
@@ -388,9 +400,14 @@ type SubgraphsConfig struct {
 }
 
 type SubgraphConfig struct {
-	Middleware   func(http.Handler) http.Handler
-	Delay        time.Duration
-	CloseOnStart bool
+	Middleware      func(http.Handler) http.Handler
+	GRPCInterceptor grpc.UnaryServerInterceptor
+	Delay           time.Duration
+	CloseOnStart    bool
+
+	// TLSConfig enables TLS on this subgraph server. When set, the subgraph uses StartTLS()
+	// instead of Start(). This is useful for testing mTLS between the router and subgraphs.
+	TLSConfig *tls.Config
 }
 
 type LogObservationConfig struct {
@@ -426,6 +443,14 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		)
 		if err != nil {
 			return nil, err
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		err = client.Ping(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not connect to kafka: %w", err)
 		}
 
 		kafkaClient = client
@@ -573,15 +598,15 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localDelay:       cfg.Subgraphs.Countries.Delay,
 	}
 
-	employeesServer := makeSafeHttpTestServer(t, employees)
-	familyServer := makeSafeHttpTestServer(t, family)
-	hobbiesServer := makeSafeHttpTestServer(t, hobbies)
-	productsServer := makeSafeHttpTestServer(t, products)
-	test1Server := makeSafeHttpTestServer(t, test1)
-	availabilityServer := makeSafeHttpTestServer(t, availability)
-	moodServer := makeSafeHttpTestServer(t, mood)
-	countriesServer := makeSafeHttpTestServer(t, countries)
-	productFgServer := makeSafeHttpTestServer(t, productsFg)
+	employeesServer := makeSubgraphTestServer(t, employees, cfg.Subgraphs.Employees.TLSConfig)
+	familyServer := makeSubgraphTestServer(t, family, cfg.Subgraphs.Family.TLSConfig)
+	hobbiesServer := makeSubgraphTestServer(t, hobbies, cfg.Subgraphs.Hobbies.TLSConfig)
+	productsServer := makeSubgraphTestServer(t, products, cfg.Subgraphs.Products.TLSConfig)
+	test1Server := makeSubgraphTestServer(t, test1, cfg.Subgraphs.Test1.TLSConfig)
+	availabilityServer := makeSubgraphTestServer(t, availability, cfg.Subgraphs.Availability.TLSConfig)
+	moodServer := makeSubgraphTestServer(t, mood, cfg.Subgraphs.Mood.TLSConfig)
+	countriesServer := makeSubgraphTestServer(t, countries, cfg.Subgraphs.Countries.TLSConfig)
+	productFgServer := makeSubgraphTestServer(t, productsFg, cfg.Subgraphs.ProductsFg.TLSConfig)
 
 	var (
 		projectServer *grpc.Server
@@ -589,19 +614,19 @@ func CreateTestSupervisorEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
 	}
 
 	replacements := map[string]string{
-		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
-		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
-		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
-		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
-		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
-		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
-		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
-		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
-		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.EmployeesDefaultDemoURL:    GqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       GqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      GqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     GqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        GqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: GqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         GqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    GqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   GqlURL(productFgServer),
 		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
@@ -850,6 +875,14 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 			return nil, err
 		}
 
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		err = client.Ping(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("could not connect to kafka: %w", err)
+		}
+
 		kafkaClient = client
 		kafkaAdminClient = kadm.NewClient(kafkaClient)
 	}
@@ -995,15 +1028,15 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 		localDelay:       cfg.Subgraphs.Countries.Delay,
 	}
 
-	employeesServer := makeSafeHttpTestServer(t, employees)
-	familyServer := makeSafeHttpTestServer(t, family)
-	hobbiesServer := makeSafeHttpTestServer(t, hobbies)
-	productsServer := makeSafeHttpTestServer(t, products)
-	test1Server := makeSafeHttpTestServer(t, test1)
-	availabilityServer := makeSafeHttpTestServer(t, availability)
-	moodServer := makeSafeHttpTestServer(t, mood)
-	countriesServer := makeSafeHttpTestServer(t, countries)
-	productFgServer := makeSafeHttpTestServer(t, productsFg)
+	employeesServer := makeSubgraphTestServer(t, employees, cfg.Subgraphs.Employees.TLSConfig)
+	familyServer := makeSubgraphTestServer(t, family, cfg.Subgraphs.Family.TLSConfig)
+	hobbiesServer := makeSubgraphTestServer(t, hobbies, cfg.Subgraphs.Hobbies.TLSConfig)
+	productsServer := makeSubgraphTestServer(t, products, cfg.Subgraphs.Products.TLSConfig)
+	test1Server := makeSubgraphTestServer(t, test1, cfg.Subgraphs.Test1.TLSConfig)
+	availabilityServer := makeSubgraphTestServer(t, availability, cfg.Subgraphs.Availability.TLSConfig)
+	moodServer := makeSubgraphTestServer(t, mood, cfg.Subgraphs.Mood.TLSConfig)
+	countriesServer := makeSubgraphTestServer(t, countries, cfg.Subgraphs.Countries.TLSConfig)
+	productFgServer := makeSubgraphTestServer(t, productsFg, cfg.Subgraphs.ProductsFg.TLSConfig)
 
 	var (
 		projectServer *grpc.Server
@@ -1011,19 +1044,19 @@ func CreateTestEnv(t testing.TB, cfg *Config) (*Environment, error) {
 	)
 
 	if cfg.EnableGRPC {
-		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{})
+		projectServer, endpoint = makeSafeGRPCServer(t, &projects.ProjectsService_ServiceDesc, &service.ProjectsService{}, cfg.Subgraphs.Projects.GRPCInterceptor)
 	}
 
 	replacements := map[string]string{
-		subgraphs.EmployeesDefaultDemoURL:    gqlURL(employeesServer),
-		subgraphs.FamilyDefaultDemoURL:       gqlURL(familyServer),
-		subgraphs.HobbiesDefaultDemoURL:      gqlURL(hobbiesServer),
-		subgraphs.ProductsDefaultDemoURL:     gqlURL(productsServer),
-		subgraphs.Test1DefaultDemoURL:        gqlURL(test1Server),
-		subgraphs.AvailabilityDefaultDemoURL: gqlURL(availabilityServer),
-		subgraphs.MoodDefaultDemoURL:         gqlURL(moodServer),
-		subgraphs.CountriesDefaultDemoURL:    gqlURL(countriesServer),
-		subgraphs.ProductsFgDefaultDemoURL:   gqlURL(productFgServer),
+		subgraphs.EmployeesDefaultDemoURL:    GqlURL(employeesServer),
+		subgraphs.FamilyDefaultDemoURL:       GqlURL(familyServer),
+		subgraphs.HobbiesDefaultDemoURL:      GqlURL(hobbiesServer),
+		subgraphs.ProductsDefaultDemoURL:     GqlURL(productsServer),
+		subgraphs.Test1DefaultDemoURL:        GqlURL(test1Server),
+		subgraphs.AvailabilityDefaultDemoURL: GqlURL(availabilityServer),
+		subgraphs.MoodDefaultDemoURL:         GqlURL(moodServer),
+		subgraphs.CountriesDefaultDemoURL:    GqlURL(countriesServer),
+		subgraphs.ProductsFgDefaultDemoURL:   GqlURL(productFgServer),
 		subgraphs.ProjectsDefaultDemoURL:     grpcURL(endpoint),
 	}
 
@@ -1299,11 +1332,12 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 	}
 
 	engineExecutionConfig := config.EngineExecutionConfiguration{
-		EnableNetPoll:            true,
-		EnableSingleFlight:       true,
-		EnableRequestTracing:     true,
-		EnableNormalizationCache: true,
-		NormalizationCacheSize:   1024,
+		EnableNetPoll:                     true,
+		EnableSingleFlight:                true,
+		EnableInboundRequestDeduplication: false,
+		EnableRequestTracing:              true,
+		EnableNormalizationCache:          true,
+		NormalizationCacheSize:            1024,
 		Debug: config.EngineDebugConfiguration{
 			ReportWebSocketConnections: true,
 			PrintQueryPlans:            false,
@@ -1457,34 +1491,54 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithMCP(testConfig.MCP))
 	}
 
-	routerOpts = append(routerOpts, core.WithPlugins(config.PluginsConfiguration{
+	pluginsCfg := config.PluginsConfiguration{
 		Path:    testConfig.Plugins.Path,
 		Enabled: testConfig.Plugins.Enabled,
-	}))
+	}
+	if testConfig.Plugins.RegistryURL != "" {
+		if strings.HasPrefix(testConfig.Plugins.RegistryURL, "http://") || strings.HasPrefix(testConfig.Plugins.RegistryURL, "https://") {
+			return nil, fmt.Errorf("RegistryURL must be a host-only OCI registry address (no http:// or https:// scheme), got %q", testConfig.Plugins.RegistryURL)
+		}
+		pluginsCfg.Registry = config.PluginRegistryConfiguration{
+			URL: testConfig.Plugins.RegistryURL,
+		}
+	}
+	routerOpts = append(routerOpts, core.WithPlugins(pluginsCfg))
 
 	if testConfig.TraceExporter != nil {
 		testConfig.PropagationConfig.TraceContext = true
 
+		tracingConfig := config.Tracing{
+			Enabled:                    true,
+			SamplingRate:               1,
+			ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
+			OperationContentAttributes: testConfig.OperationContentAttributes,
+			Exporters:                  []config.TracingExporter{},
+			Propagation:                testConfig.PropagationConfig,
+			TracingGlobalFeatures:      config.TracingGlobalFeatures{},
+			ResponseTraceHeader:        testConfig.ResponseTraceHeader,
+		}
+
+		if testConfig.TracingSanitizeUTF8 != nil {
+			tracingConfig.SanitizeUTF8 = *testConfig.TracingSanitizeUTF8
+		}
+
 		c := core.TraceConfigFromTelemetry(&config.Telemetry{
 			ServiceName:        "cosmo-router",
 			ResourceAttributes: testConfig.CustomResourceAttributes,
-			Tracing: config.Tracing{
-				Enabled:                    true,
-				SamplingRate:               1,
-				ParentBasedSampler:         !testConfig.DisableParentBasedSampler,
-				OperationContentAttributes: testConfig.OperationContentAttributes,
-				Exporters:                  []config.TracingExporter{},
-				Propagation:                testConfig.PropagationConfig,
-				TracingGlobalFeatures:      config.TracingGlobalFeatures{},
-				ResponseTraceHeader:        testConfig.ResponseTraceHeader,
-			},
+			Tracing:            tracingConfig,
 		})
 
 		c.TestMemoryExporter = testConfig.TraceExporter
+		c.TestErrorHandler = rtrace.NewOtelErrorHandler(testConfig.Logger)
 
 		routerOpts = append(routerOpts,
 			core.WithTracing(c),
 		)
+	}
+
+	if testConfig.IPAnonymization != nil {
+		routerOpts = append(routerOpts, core.WithAnonymization(testConfig.IPAnonymization))
 	}
 
 	if testConfig.CustomTelemetryAttributes != nil {
@@ -1566,12 +1620,18 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 					CircuitBreaker:      testConfig.MetricOptions.EnableOTLPCircuitBreakerMetrics,
 					ExcludeMetrics:      testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetrics,
 					ExcludeMetricLabels: testConfig.MetricOptions.MetricExclusions.ExcludedOTLPMetricLabels,
+					LogExporter: config.MetricsLogExporter{
+						Enabled:        testConfig.MetricOptions.LogExporter.Enabled,
+						ExcludeMetrics: testConfig.MetricOptions.LogExporter.ExcludeMetrics,
+						IncludeMetrics: testConfig.MetricOptions.LogExporter.IncludeMetrics,
+					},
 				},
 			},
 		})
 
 		c.Prometheus = prometheusConfig
 		c.OpenTelemetry.TestReader = testConfig.MetricReader
+		c.OpenTelemetry.LogExporter.ExportInterval = testConfig.MetricOptions.LogExporter.ExportInterval
 		c.IsUsingCloudExporter = !testConfig.DisableSimulateCloudExporter
 
 		routerOpts = append(routerOpts, core.WithMetrics(c))
@@ -1646,17 +1706,23 @@ func testVersionedTokenClaims() jwt.MapClaims {
 	}
 }
 
-func makeSafeHttpTestServer(t testing.TB, handler http.Handler) *httptest.Server {
+func makeSubgraphTestServer(_ testing.TB, handler http.Handler, tlsConfig *tls.Config) *httptest.Server {
 	// NewUnstartedServer binds an ephemeral port.
 	// We want to avoid using freeport because it creates too much strain on the network stack:
 	// freeport checks if port is available by listening on it and then closing the listener.
 	// On Linux trying to listen on the just-closed port could lead to the "unable to bind" error.
 	s := httptest.NewUnstartedServer(handler)
+
+	if tlsConfig != nil {
+		s.TLS = tlsConfig
+		s.StartTLS()
+		return s
+	}
 	s.Start()
 	return s
 }
 
-func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.Server, string) {
+func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any, interceptor grpc.UnaryServerInterceptor) (*grpc.Server, string) {
 	t.Helper()
 
 	// We could use freeport here, but it is easy to use ephemeral port and get the endpoint
@@ -1667,7 +1733,12 @@ func makeSafeGRPCServer(t testing.TB, sd *grpc.ServiceDesc, service any) (*grpc.
 
 	require.NotNil(t, service)
 
-	s := grpc.NewServer()
+	var opts []grpc.ServerOption
+	if interceptor != nil {
+		opts = append(opts, grpc.ChainUnaryInterceptor(interceptor))
+	}
+
+	s := grpc.NewServer(opts...)
 	s.RegisterService(sd, service)
 
 	go func() {
@@ -1712,7 +1783,7 @@ func SetupCDNServer(t testing.TB) (cdnServer *httptest.Server, port int) {
 	return cdnServer, port
 }
 
-func gqlURL(srv *httptest.Server) string {
+func GqlURL(srv *httptest.Server) string {
 	path, err := url.JoinPath(srv.URL, "/graphql")
 	if err != nil {
 		panic(err)
@@ -1850,6 +1921,10 @@ func (e *Environment) Shutdown() {
 		// Do not call s.Close() here, as it will get stuck on connections left open!
 		lErr := s.Listener.Close()
 		if lErr != nil {
+			if errors.Is(lErr, net.ErrClosed) {
+				// skip, server was already closed, e.g. through manual (intentional) intervention
+				continue
+			}
 			e.t.Logf("could not close server listener: %s", lErr)
 		}
 	}
@@ -2116,8 +2191,12 @@ func (e *Environment) newGraphQLRequestOverGET(baseURL string, request GraphQLRe
 }
 
 func (e *Environment) MakeGraphQLRequestRaw(request *http.Request) (*TestResponse, error) {
+	return MakeGraphQLRequestRawFromClient(request, e.RouterClient)
+}
+
+func MakeGraphQLRequestRawFromClient(request *http.Request, routerClient *http.Client) (*TestResponse, error) {
 	request.Header.Set("Accept-Encoding", "identity")
-	resp, err := e.RouterClient.Do(request)
+	resp, err := routerClient.Do(request)
 	if err != nil {
 		return nil, err
 	}
@@ -2844,7 +2923,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, nats
 	}
 	natsPubSubByProviderID := make(map[string]pubsubNats.Adapter, len(DemoNatsProviders))
 	for _, sourceName := range DemoNatsProviders {
-		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", datasource.ProviderOpts{
+		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", false, datasource.ProviderOpts{
 			StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
 		})
 		require.NoError(t, err)

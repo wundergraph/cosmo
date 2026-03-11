@@ -1,15 +1,17 @@
-import React from "react";
-import Link from "next/link";
-import { Cross2Icon } from "@radix-ui/react-icons";
-import { Button } from "../ui/button";
-import { MdArrowOutward } from "react-icons/md";
-import { useNewFeaturesPopupDisabled } from "@/hooks/use-new-features-popup-disabled";
+import React from 'react';
+import Link from 'next/link';
+import { Cross2Icon } from '@radix-ui/react-icons';
+import { Button } from '../ui/button';
+import { MdArrowOutward } from 'react-icons/md';
+import { useNewFeaturesPopupDisabled } from '@/hooks/use-new-features-popup-disabled';
 
 export default function NewFeaturesPopup() {
   const [isPopupDisabled, setDisablePopup] = useNewFeaturesPopupDisabled();
 
-  const handleClosePopup = () => {
-    setDisablePopup("true");
+  const handleClosePopup = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDisablePopup('true');
   };
 
   // Don't render the popup if it's been dismissed
@@ -18,14 +20,34 @@ export default function NewFeaturesPopup() {
   }
 
   return (
-    <div className="group relative w-[195px] overflow-hidden rounded-lg p-[1px] before:absolute before:inset-0 before:z-[-1] before:rounded-lg before:bg-gradient-to-r before:from-[hsla(271,91%,65%,1)] before:to-[hsla(330,81%,60%,1)] before:content-['']">
-      <div className="relative z-10 flex h-full w-full flex-col items-start justify-center gap-4 rounded-lg bg-card p-3">
-        <div className="flex w-full flex-col gap-1.5">
+    <Link
+      href="https://hub.wundergraph.com/login?utm_source=cosmo&utm_content=popup&utm_medium=internal"
+      target="_blank"
+      rel="noreferrer"
+      className="group relative block w-[195px] overflow-hidden rounded-lg p-[1px] transition-all duration-300 ease-out before:absolute before:inset-0 before:z-[-1] before:rounded-lg before:bg-gradient-to-r before:from-[hsla(271,91%,65%,1)] before:to-[hsla(330,81%,60%,1)] before:opacity-80 before:transition-opacity before:duration-300 before:content-[''] hover:scale-[1.02] hover:shadow-[0_0_24px_-4px_hsla(271,91%,65%,0.4)] hover:before:opacity-100"
+    >
+      <style>{`
+        @keyframes popup-shine {
+          0% { transform: translateX(-100%); }
+          40% { transform: translateX(200%); }
+          100% { transform: translateX(200%); }
+        }
+      `}</style>
+      <div className="pointer-events-none absolute inset-0 z-20 overflow-hidden rounded-lg">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 35%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.03) 65%, transparent 100%)',
+            animation: 'popup-shine 3s ease-in-out 2 forwards',
+          }}
+        />
+      </div>
+      <div className="relative z-10 flex h-full w-full flex-col items-start justify-center gap-6 rounded-lg bg-card p-3">
+        <div className="flex w-full flex-col gap-3">
           <div className="flex w-full items-start justify-between">
             <h2 className="text-base font-semibold leading-tight text-card-foreground">
-              Cosmo Connect
-              <br />
-              is here!
+              Discover Hub: Built for schema design & governance
             </h2>
             <Button
               variant="ghost"
@@ -37,20 +59,13 @@ export default function NewFeaturesPopup() {
             </Button>
           </div>
           <p className="text-sm leading-snug text-muted-foreground">
-            A new way to unify your
-            <br />
-            API ecosystem
+            A smarter way to design schemas, collaborate, and govern changes — all in one place.
           </p>
         </div>
-        <Link
-          href="https://wundergraph.com/connect"
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-x-1 text-sm font-medium text-card-foreground hover:underline"
-        >
-          Learn more
+        <span className="flex items-center gap-x-1 text-sm font-medium text-card-foreground group-hover:underline">
+          Explore Hub
           <MdArrowOutward className="h-4 w-4" />
-        </Link>
+        </span>
       </div>
       <div className="pointer-events-none absolute left-4 top-4 z-40">
         <svg
@@ -190,16 +205,11 @@ export default function NewFeaturesPopup() {
           </g>
           <defs>
             <clipPath id="clip0_354_8">
-              <rect
-                width="171"
-                height="112"
-                fill="currentColor"
-                transform="translate(0.625)"
-              />
+              <rect width="171" height="112" fill="currentColor" transform="translate(0.625)" />
             </clipPath>
           </defs>
         </svg>
       </div>
-    </div>
+    </Link>
   );
 }

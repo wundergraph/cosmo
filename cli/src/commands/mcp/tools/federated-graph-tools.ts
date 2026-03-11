@@ -4,18 +4,20 @@ import { getBaseHeaders } from '../../../core/config.js';
 import {
   fetchRouterConfig,
   getFederatedGraphSchemas,
-  getSubgraphSDL,
   getSubgraphsOfFedGraph,
 } from '../../graph/federated-graph/utils.js';
 import { ToolContext } from './types.js';
 
 export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
   // List federated graphs tool
-  server.tool(
+  server.registerTool(
     'list_supergraphs',
-    'List all federated graphs / Supergraphs',
     {
-      namespace: z.string().optional().describe('Filter to get graphs in this namespace only'),
+      title: 'List Supergraphs',
+      description: 'List all federated graphs / Supergraphs',
+      inputSchema: {
+        namespace: z.string().optional().describe('Filter to get graphs in this namespace only'),
+      },
     },
     async ({ namespace }) => {
       try {
@@ -63,12 +65,15 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
   );
 
   // Fetch federated graph details tool
-  server.tool(
+  server.registerTool(
     'fetch_supergraph',
-    'Fetch the schemas and configuration of a federated graph / Supergraph',
     {
-      name: z.string().describe('The name of the federated graph to fetch'),
-      namespace: z.string().optional().describe('The namespace of the federated graph'),
+      title: 'Fetch Supergraph',
+      description: 'Fetch the schemas and configuration of a federated graph / Supergraph',
+      inputSchema: {
+        name: z.string().describe('The name of the federated graph to fetch'),
+        namespace: z.string().optional().describe('The namespace of the federated graph'),
+      },
     },
     async ({ name, namespace }) => {
       try {
@@ -104,12 +109,15 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
   );
 
   // Fetch router config tool
-  server.tool(
+  server.registerTool(
     'fetch_supergraph_router_config',
-    'Fetch the router configuration for a federated graph / Supergraph',
     {
-      name: z.string().describe('The name of the federated graph to fetch'),
-      namespace: z.string().optional().describe('The namespace of the federated graph'),
+      title: 'Fetch Supergraph Router Config',
+      description: 'Fetch the router configuration for a federated graph / Supergraph',
+      inputSchema: {
+        name: z.string().describe('The name of the federated graph to fetch'),
+        namespace: z.string().optional().describe('The namespace of the federated graph'),
+      },
     },
     async ({ name, namespace }) => {
       try {
@@ -129,12 +137,15 @@ export const registerFederatedGraphTools = ({ server, opts }: ToolContext) => {
   );
 
   // Fetch subgraphs tool
-  server.tool(
+  server.registerTool(
     'fetch_supergraph_subgraphs',
-    'Fetch all subgraphs and their schemas for a federated graph / Supergraph',
     {
-      name: z.string().describe('The name of the federated graph to fetch'),
-      namespace: z.string().optional().describe('The namespace of the federated graph'),
+      title: 'Fetch Supergraph Subgraphs',
+      description: 'Fetch all subgraphs and their schemas for a federated graph / Supergraph',
+      inputSchema: {
+        name: z.string().describe('The name of the federated graph to fetch'),
+        namespace: z.string().optional().describe('The namespace of the federated graph'),
+      },
     },
     async ({ name, namespace }) => {
       try {

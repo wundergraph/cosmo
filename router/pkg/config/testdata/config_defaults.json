@@ -28,7 +28,11 @@
       "Attributes": null,
       "OperationContentAttributes": false,
       "ExportGraphQLVariables": false,
-      "WithNewRoot": false
+      "WithNewRoot": false,
+      "SanitizeUTF8": {
+        "Enabled": false,
+        "LogSanitizations": false
+      }
     },
     "Metrics": {
       "Attributes": null,
@@ -44,7 +48,12 @@
         "Streams": false,
         "ExcludeMetrics": null,
         "ExcludeMetricLabels": null,
-        "Exporters": null
+        "Exporters": null,
+        "LogExporter": {
+          "Enabled": false,
+          "ExcludeMetrics": null,
+          "IncludeMetrics": null
+        }
       },
       "Prometheus": {
         "Enabled": true,
@@ -114,6 +123,15 @@
         "CertFile": "",
         "Required": false
       }
+    },
+    "Client": {
+      "All": {
+        "CertFile": "",
+        "KeyFile": "",
+        "CaFile": "",
+        "InsecureSkipCaVerification": false
+      },
+      "Subgraphs": null
     }
   },
   "CacheControl": {
@@ -139,6 +157,17 @@
     "ExposeSchema": false,
     "RouterURL": "",
     "OmitToolNamePrefix": false
+  },
+  "ConnectRPC": {
+    "Enabled": false,
+    "Server": {
+      "ListenAddr": "localhost:5026",
+      "BaseURL": ""
+    },
+    "Storage": {
+      "ProviderID": ""
+    },
+    "GraphQLEndpoint": ""
   },
   "DemoMode": false,
   "Modules": null,
@@ -248,6 +277,7 @@
   "QueryPlansEnabled": true,
   "LogLevel": "info",
   "JSONLog": true,
+  "LogServiceName": "@wundergraph/router",
   "ShutdownDelay": 60000000000,
   "GracePeriod": 30000000000,
   "PollInterval": 10000000000,
@@ -315,11 +345,15 @@
   "CacheWarmup": {
     "Enabled": false,
     "Source": {
-      "Filesystem": null
+      "Filesystem": null,
+      "CdnSource": {
+        "Enabled": true
+      }
     },
     "Workers": 8,
     "ItemsPerSecond": 50,
-    "Timeout": 30000000000
+    "Timeout": 30000000000,
+    "InMemoryFallback": true
   },
   "RouterConfigPath": "",
   "RouterRegistration": true,
@@ -376,6 +410,9 @@
       "AlwaysSkipLoader": false
     },
     "EnableSingleFlight": true,
+    "ForceEnableSingleFlight": false,
+    "EnableInboundRequestDeduplication": true,
+    "ForceEnableInboundRequestDeduplication": false,
     "EnableRequestTracing": true,
     "EnableExecutionPlanCacheResponseHeader": false,
     "MaxConcurrentResolvers": 1024,
@@ -402,7 +439,8 @@
     "DisableVariablesRemapping": false,
     "EnableRequireFetchReasons": false,
     "SubscriptionFetchTimeout": 30000000000,
-    "ValidateRequiredExternalFields": false
+    "ValidateRequiredExternalFields": false,
+    "RelaxSubgraphOperationFieldSelectionMergingNullability": false
   },
   "WebSocket": {
     "Enabled": true,

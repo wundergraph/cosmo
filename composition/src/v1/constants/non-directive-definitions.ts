@@ -1,4 +1,9 @@
-import { EnumTypeDefinitionNode, InputObjectTypeDefinitionNode, Kind, ScalarTypeDefinitionNode } from 'graphql';
+import {
+  type EnumTypeDefinitionNode,
+  type InputObjectTypeDefinitionNode,
+  Kind,
+  type ScalarTypeDefinitionNode,
+} from 'graphql';
 import { stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
   AND_UPPER,

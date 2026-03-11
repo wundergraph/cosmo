@@ -6,10 +6,12 @@ import {
   SetGraphRouterCompatibilityVersionResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { ROUTER_COMPATIBILITY_VERSIONS, SupportedRouterCompatibilityVersion } from '@wundergraph/composition';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, newCompositionOptions } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -30,6 +32,7 @@ export function setGraphRouterCompatibilityVersion(
     }
 
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
 
     req.namespace = req.namespace || DefaultNamespace;
 
@@ -110,6 +113,11 @@ export function setGraphRouterCompatibilityVersion(
       };
     }
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
+
     await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
 
@@ -140,7 +148,10 @@ export function setGraphRouterCompatibilityVersion(
         },
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
-        compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+        compositionOptions: {
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        },
         federatedGraphs: [federatedGraph],
       });
 

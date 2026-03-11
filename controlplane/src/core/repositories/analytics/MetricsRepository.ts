@@ -114,7 +114,12 @@ export class MetricsRepository {
       federatedGraphId: graphId,
       multiplier,
     };
-    const top5 = this.client.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
+    const top5 = this.client.queryPromise<{
+      hash: string;
+      name: string;
+      value: string;
+      isPersisted: boolean;
+    }>(
       `
       WITH
         toDateTime({startDate:UInt32}) AS startDate,
@@ -261,7 +266,12 @@ export class MetricsRepository {
         federatedGraphId: graphId,
         quantile: Number.parseFloat(quantile),
       };
-      return this.client.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
+      return this.client.queryPromise<{
+        hash: string;
+        name: string;
+        value: string;
+        isPersisted: boolean;
+      }>(
         `
         WITH
           toDateTime({startDate:UInt32}) AS startDate,
@@ -453,7 +463,12 @@ export class MetricsRepository {
       organizationId,
       federatedGraphId: graphId,
     };
-    const top5 = this.client.queryPromise<{ hash: string; name: string; value: string; isPersisted: boolean }>(
+    const top5 = this.client.queryPromise<{
+      hash: string;
+      name: string;
+      value: string;
+      isPersisted: boolean;
+    }>(
       `
       WITH
         toDateTime({startDate:UInt32}) AS startDate,
@@ -568,7 +583,11 @@ export class MetricsRepository {
     };
 
     // get requests in last [range] hours in series of [step]
-    const series = await this.client.queryPromise<{ timestamp: string; requestRate: string; errorRate: string }>(
+    const series = await this.client.queryPromise<{
+      timestamp: string;
+      requestRate: string;
+      errorRate: string;
+    }>(
       `
       WITH
         toStartOfInterval(toDateTime({startDate:UInt32}), INTERVAL {granule:UInt32} MINUTE) AS startDate,
@@ -777,7 +796,13 @@ export class MetricsRepository {
     }
 
     return buildAnalyticsViewFilters(
-      { operationName: '', operationHash: '', operationPersistedId: '', clientName: '', clientVersion: '' },
+      {
+        operationName: '',
+        operationHash: '',
+        operationPersistedId: '',
+        clientName: '',
+        clientVersion: '',
+      },
       filters,
     );
   }
@@ -1309,5 +1334,45 @@ export class MetricsRepository {
       requestCount: client.requestCount || 0,
       lastUsed: new Date(client.lastUsed + 'Z').toISOString(),
     }));
+  }
+
+  public async getPersistedOperationMetrics({
+    id,
+    organizationId,
+    graphId,
+    start,
+    end,
+  }: {
+    id: string;
+    organizationId: string;
+    graphId: string;
+    start: number;
+    end: number;
+  }) {
+    const query = `
+    WITH
+      toDateTime({start:UInt32}) AS startDate,
+      toDateTime({end:UInt32}) AS endDate
+    SELECT sum(TotalRequests) as TotalRequests
+    FROM ${this.client.database}.operation_request_metrics_5_30
+    WHERE Timestamp >= startDate AND Timestamp <= endDate
+      AND OrganizationID = {organizationId:String}
+      AND FederatedGraphID = {graphId:String}
+      AND OperationPersistedID = {id:String}`;
+
+    const results = await this.client.queryPromise<{
+      TotalRequests: number;
+    }>(query, {
+      id,
+      organizationId,
+      graphId,
+      start,
+      end,
+    });
+    const totalRequests = Number(results[0]?.TotalRequests || 0);
+
+    return {
+      totalRequests,
+    };
   }
 }

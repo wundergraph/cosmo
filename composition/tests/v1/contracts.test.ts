@@ -1,4 +1,10 @@
-import { ContractTagOptions, FederationSuccess, parse, ROUTER_COMPATIBILITY_VERSION_ONE, Subgraph } from '../../src';
+import {
+  type ContractTagOptions,
+  type FederationSuccess,
+  parse,
+  ROUTER_COMPATIBILITY_VERSION_ONE,
+  type Subgraph,
+} from '../../src';
 import { describe, expect, test } from 'vitest';
 import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION, TAG_DIRECTIVE } from './utils/utils';
 import {

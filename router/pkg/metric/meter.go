@@ -159,7 +159,8 @@ func NewPrometheusMeterProvider(ctx context.Context, c *Config, serviceInstanceI
 func getTemporalitySelector(temporality otelconfig.ExporterTemporality, log *zap.Logger) func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
 	// https://github.com/open-telemetry/opentelemetry-go/blob/main/internal/shared/otlp/otlpmetric/oconf/envconfig.go.tmpl#L166-L177
 	// See the above link for selectors for different temporalities
-	if temporality == otelconfig.DeltaTemporality {
+	switch temporality {
+	case otelconfig.DeltaTemporality:
 		deltaTemporalitySelector := func(kind sdkmetric.InstrumentKind) metricdata.Temporality {
 			switch kind {
 			case sdkmetric.InstrumentKindCounter,
@@ -171,11 +172,11 @@ func getTemporalitySelector(temporality otelconfig.ExporterTemporality, log *zap
 			}
 		}
 		return deltaTemporalitySelector
-	} else if temporality == otelconfig.CumulativeTemporality {
+	case otelconfig.CumulativeTemporality:
 		return cumulativeTemporalitySelector
-	} else if temporality == otelconfig.CustomCloudTemporality {
+	case otelconfig.CustomCloudTemporality:
 		return defaultCloudTemporalitySelector
-	} else {
+	default:
 		// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#metricreader
 		// if the temporality is not configured, we fallback the to the default as per OTEL-SDK
 		log.Debug("The temporality selector falls back to the default.")
@@ -262,30 +263,44 @@ func NewOtlpMeterProvider(ctx context.Context, log *zap.Logger, c *Config, servi
 	}
 
 	if c.OpenTelemetry.TestReader != nil {
-		mp := sdkmetric.NewMeterProvider(append(opts, sdkmetric.WithReader(c.OpenTelemetry.TestReader))...)
-		// Set the global MeterProvider to the SDK metric provider.
-		otel.SetMeterProvider(mp)
+		opts = append(opts, sdkmetric.WithReader(c.OpenTelemetry.TestReader))
+	} else {
+		for _, exp := range c.OpenTelemetry.Exporters {
+			if exp.Disabled {
+				continue
+			}
 
-		return mp, nil
+			exporter, err := createOTELExporter(log, exp)
+			if err != nil {
+				log.Error("creating OTEL metrics exporter", zap.Error(err))
+				return nil, err
+			}
+
+			opts = append(opts, sdkmetric.WithReader(
+				sdkmetric.NewPeriodicReader(exporter,
+					sdkmetric.WithTimeout(defaultExportTimeout),
+					sdkmetric.WithInterval(defaultExportInterval),
+				),
+			))
+		}
 	}
 
-	for _, exp := range c.OpenTelemetry.Exporters {
-		if exp.Disabled {
-			continue
+	if c.OpenTelemetry.LogExporter.Enabled {
+		if len(c.OpenTelemetry.LogExporter.ExcludeMetrics) > 0 && len(c.OpenTelemetry.LogExporter.IncludeMetrics) > 0 {
+			return nil, fmt.Errorf("metrics log exporter: exclude_metrics and include_metrics cannot be used together, use only one")
 		}
-
-		exporter, err := createOTELExporter(log, exp)
-		if err != nil {
-			log.Error("creating OTEL metrics exporter", zap.Error(err))
-			return nil, err
+		logExp := newLogExporter(log, c.OpenTelemetry.LogExporter.ExcludeMetrics, c.OpenTelemetry.LogExporter.IncludeMetrics)
+		exportInterval := defaultExportInterval
+		if c.OpenTelemetry.LogExporter.ExportInterval > 0 {
+			exportInterval = c.OpenTelemetry.LogExporter.ExportInterval
 		}
-
 		opts = append(opts, sdkmetric.WithReader(
-			sdkmetric.NewPeriodicReader(exporter,
+			sdkmetric.NewPeriodicReader(logExp,
 				sdkmetric.WithTimeout(defaultExportTimeout),
-				sdkmetric.WithInterval(defaultExportInterval),
+				sdkmetric.WithInterval(exportInterval),
 			),
 		))
+		log.Warn("Metrics log exporter is enabled. Expect increased log volume.")
 	}
 
 	mp := sdkmetric.NewMeterProvider(opts...)

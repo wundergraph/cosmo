@@ -9,40 +9,33 @@ import {
   TooltipProps,
   XAxis,
   YAxis,
-} from "recharts";
-import React from "react";
-import useWindowSize from "@/hooks/use-window-size";
-import { formatDateTime } from "@/lib/format-date";
+} from 'recharts';
+import React from 'react';
+import useWindowSize from '@/hooks/use-window-size';
+import { formatDateTime } from '@/lib/format-date';
 
 const labelFormatter = (label: number, utc?: boolean) => {
-  return utc
-    ? new Date(label).toUTCString()
-    : label
-    ? formatDateTime(label)
-    : label;
+  return utc ? new Date(label).toUTCString() : label ? formatDateTime(label) : label;
 };
 
-export const valueFormatter = (tick: number) =>
-  tick === 0 || tick % 1 != 0 ? "" : `${tick}`;
+export const valueFormatter = (tick: number) => (tick === 0 || tick % 1 != 0 ? '' : `${tick}`);
 
-type TimeSetting = "relative" | "local" | "utc";
+type TimeSetting = 'relative' | 'local' | 'utc';
 
 export const nanoTimestampToTime = (nano: number) => {
   let ms = (nano / 1000000).toFixed(1);
 
   if (parseFloat(ms) > 1000) {
     let seconds = (nano / 1000000000).toFixed(1); // Converting nano to seconds
-    return seconds + " s";
+    return seconds + ' s';
   }
-  return ms + " ms";
+  return ms + ' ms';
 };
 
 export const tooltipWrapperClassName =
-  "rounded-md border !border-popover !bg-popover/60 p-2 text-sm shadow-md outline-0 backdrop-blur-lg";
+  'rounded-md border !border-popover !bg-popover/60 p-2 text-sm shadow-md outline-0 backdrop-blur-lg';
 
-export const ChartTooltip = (
-  props: TooltipProps<any, any> & { utc?: boolean },
-) => {
+export const ChartTooltip = (props: TooltipProps<any, any> & { utc?: boolean }) => {
   const { utc, ...rest } = props;
   return (
     <Tooltip
@@ -53,23 +46,15 @@ export const ChartTooltip = (
   );
 };
 
-ChartTooltip.displayName = "Tooltip";
+ChartTooltip.displayName = 'Tooltip';
 
-export const CustomTooltip = ({
-  active,
-  payload,
-  label,
-  p95,
-  utc,
-  valueLabel = "Value",
-}: any) => {
+export const CustomTooltip = ({ active, payload, label, p95, utc, valueLabel = 'Value' }: any) => {
   if (active && payload && payload.length) {
     return (
       <div className={tooltipWrapperClassName}>
         <p className="label">{labelFormatter(label, utc)}</p>
         <p className="intro">
-          {valueLabel}:{" "}
-          {p95 ? nanoTimestampToTime(payload[0].value) : payload[0].value}
+          {valueLabel}: {p95 ? nanoTimestampToTime(payload[0].value) : payload[0].value}
         </p>
       </div>
     );
@@ -101,12 +86,7 @@ export const BarChartComponent = ({
   return (
     <ResponsiveContainer width="100%" height={chartHeight} className="-ml-6">
       <BarChart data={data}>
-        <CartesianGrid
-          color="currenColor"
-          strokeWidth="0.2"
-          vertical={false}
-          strokeDasharray="3 1"
-        />
+        <CartesianGrid color="currentColor" strokeWidth="0.2" vertical={false} strokeDasharray="3 1" />
         <Bar dataKey="value" fill="indianred" barSize={12} />
         <XAxis
           dataKey="timestamp"
@@ -120,14 +100,8 @@ export const BarChartComponent = ({
             right: isMobile ? 16 : 32,
           }}
         />
-        <YAxis
-          tickFormatter={valueFormatter}
-          dataKey="value"
-          axisLine={false}
-          tickLine={false}
-          interval={1}
-        />
-        <ChartTooltip utc={viewOption.value === "utc"} />
+        <YAxis tickFormatter={valueFormatter} dataKey="value" axisLine={false} tickLine={false} interval={1} />
+        <ChartTooltip utc={viewOption.value === 'utc'} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -165,19 +139,10 @@ export const LineChartComponent = ({
   className?: string;
 }) => {
   return (
-    <ResponsiveContainer
-      width="100%"
-      height={chartHeight}
-      className={className}
-    >
+    <ResponsiveContainer width="100%" height={chartHeight} className={className}>
       <LineChart data={data}>
         {cartesianGrid && (
-          <CartesianGrid
-            color="currenColor"
-            strokeWidth="0.2"
-            vertical={false}
-            strokeDasharray="3 1"
-          />
+          <CartesianGrid color="currentColor" strokeWidth="0.2" vertical={false} strokeDasharray="3 1" />
         )}
         <Line dot={false} type="monotone" dataKey="value" strokeWidth="2" />
         <XAxis
@@ -191,15 +156,9 @@ export const LineChartComponent = ({
           padding={xAxisPadding}
           hide={hideXAxis}
         />
-        <YAxis
-          tickFormatter={yAxisTickFormatter}
-          dataKey="value"
-          axisLine={false}
-          tickLine={false}
-          hide={hideYAxis}
-        />
+        <YAxis tickFormatter={yAxisTickFormatter} dataKey="value" axisLine={false} tickLine={false} hide={hideYAxis} />
 
-        <ChartTooltip utc={viewOption.value === "utc"} />
+        <ChartTooltip utc={viewOption.value === 'utc'} />
       </LineChart>
     </ResponsiveContainer>
   );

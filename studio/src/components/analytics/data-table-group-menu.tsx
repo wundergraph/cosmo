@@ -1,13 +1,13 @@
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { CheckIcon, ChevronDownIcon } from "@radix-ui/react-icons";
-import { AnalyticsViewGroupName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+} from '@/components/ui/dropdown-menu';
+import { CheckIcon, ChevronDownIcon } from '@radix-ui/react-icons';
+import { AnalyticsViewGroupName } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 export function DataTableGroupMenu({
   value,
@@ -27,7 +27,7 @@ export function DataTableGroupMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="outline" className={className}>
-          Group By: {items.find((each) => each.value === value)?.label ?? ""}
+          Group By: {items.find((each) => each.value === value)?.label ?? ''}
           <ChevronDownIcon className="ml-2" />
         </Button>
       </DropdownMenuTrigger>
@@ -41,9 +41,7 @@ export function DataTableGroupMenu({
                 className="flex flex-row items-center justify-between"
               >
                 <span>{item.label}</span>
-                {value === item.value ? (
-                  <CheckIcon className="h-5 w-5" />
-                ) : null}
+                {value === item.value ? <CheckIcon className="h-5 w-5" /> : null}
               </DropdownMenuItem>
             );
           })}

@@ -76,40 +76,6 @@ func TestPubSubSubscriptionDataSource_SubscriptionEventConfiguration_InvalidJSON
 	assert.Equal(t, testSubscriptionEventConfiguration{}, result)
 }
 
-func TestPubSubSubscriptionDataSource_UniqueRequestID_Success(t *testing.T) {
-	mockAdapter := NewMockProvider(t)
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
-		return nil
-	}
-
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
-
-	ctx := &resolve.Context{}
-	input := []byte(`{"test": "data"}`)
-	xxh := xxhash.New()
-
-	err := dataSource.UniqueRequestID(ctx, input, xxh)
-	assert.NoError(t, err)
-}
-
-func TestPubSubSubscriptionDataSource_UniqueRequestID_Error(t *testing.T) {
-	mockAdapter := NewMockProvider(t)
-	expectedError := errors.New("unique ID generation error")
-	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
-		return expectedError
-	}
-
-	dataSource := NewPubSubSubscriptionDataSource[testSubscriptionEventConfiguration](mockAdapter, uniqueRequestIDFn, zap.NewNop(), testSubscriptionDataSourceEventBuilder)
-
-	ctx := &resolve.Context{}
-	input := []byte(`{"test": "data"}`)
-	xxh := xxhash.New()
-
-	err := dataSource.UniqueRequestID(ctx, input, xxh)
-	assert.Error(t, err)
-	assert.Equal(t, expectedError, err)
-}
-
 func TestPubSubSubscriptionDataSource_Start_Success(t *testing.T) {
 	mockAdapter := NewMockProvider(t)
 	uniqueRequestIDFn := func(ctx *resolve.Context, input []byte, xxh *xxhash.Digest) error {
@@ -130,7 +96,7 @@ func TestPubSubSubscriptionDataSource_Start_Success(t *testing.T) {
 
 	mockAdapter.On("Subscribe", ctx.Context(), testConfig, mock.AnythingOfType("*datasource.subscriptionEventUpdater")).Return(nil)
 
-	err = dataSource.Start(ctx, input, mockUpdater)
+	err = dataSource.Start(ctx, nil, input, mockUpdater)
 	assert.NoError(t, err)
 	mockAdapter.AssertExpectations(t)
 }
@@ -147,7 +113,7 @@ func TestPubSubSubscriptionDataSource_Start_NoConfiguration(t *testing.T) {
 	ctx := resolve.NewContext(context.Background())
 	mockUpdater := NewMockSubscriptionUpdater(t)
 
-	err := dataSource.Start(ctx, invalidInput, mockUpdater)
+	err := dataSource.Start(ctx, nil, invalidInput, mockUpdater)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid character 'j' looking for beginning of value")
 }
@@ -173,7 +139,7 @@ func TestPubSubSubscriptionDataSource_Start_SubscribeError(t *testing.T) {
 
 	mockAdapter.On("Subscribe", ctx.Context(), testConfig, mock.AnythingOfType("*datasource.subscriptionEventUpdater")).Return(expectedError)
 
-	err = dataSource.Start(ctx, input, mockUpdater)
+	err = dataSource.Start(ctx, nil, input, mockUpdater)
 	assert.Error(t, err)
 	assert.Equal(t, expectedError, err)
 	mockAdapter.AssertExpectations(t)
