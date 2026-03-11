@@ -88,7 +88,7 @@ const MobileNav = () => {
 const Organizations = () => {
   const user = useContext(UserContext);
   const router = useRouter();
-  const pathSegments = router.pathname.substring(1).split('/');
+  const pathSegments = router.pathname.substring(1).split("/");
   const isOrganizationRoot = pathSegments.length === 2;
 
   if (!user?.currentOrganization) return null;
@@ -113,11 +113,12 @@ const Organizations = () => {
             );
             if (currentOrg) {
               router.replace({
-                pathname: isOrganizationRoot &&
+                pathname:
+                  isOrganizationRoot &&
                   pathSegments[0]?.toLowerCase() !== "account" &&
                   pathSegments[1]?.toLowerCase() !== "invitations"
-                  ? `/[organizationSlug]/${pathSegments[1]}`
-                  : `/[organizationSlug]`,
+                    ? `/[organizationSlug]/${pathSegments[1]}`
+                    : `/[organizationSlug]`,
                 query: {
                   organizationSlug: currentOrg.slug,
                 },
@@ -127,7 +128,11 @@ const Organizations = () => {
         >
           {user?.organizations?.map(({ name, slug }) => {
             return (
-              <DropdownMenuRadioItem className="pl-2 gap-x-2" key={slug} value={slug}>
+              <DropdownMenuRadioItem
+                className="gap-x-2 pl-2"
+                key={slug}
+                value={slug}
+              >
                 <span className="w-full">{name}</span>
               </DropdownMenuRadioItem>
             );
@@ -147,10 +152,31 @@ interface SideNavLayoutProps extends LayoutProps {
   isBannerDisplayed?: boolean;
 }
 
+export const footerLinks = [
+  {
+    href: "https://wundergraph.com/privacy-policy",
+    label: "Privacy Policy",
+  },
+  {
+    href: "https://trust.wundergraph.com/",
+    label: "Trust Center",
+  },
+  {
+    href: "https://wundergraph.com/cosmo-managed-service-terms",
+    label: "Service Terms",
+  },
+  {
+    href: "https://wundergraph.com/cookies",
+    label: "Cookie Policy",
+  },
+];
+
 export const SideNav = (props: SideNavLayoutProps) => {
   const router = useRouter();
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [isLegalOpen, setIsLegalOpen] = useState(false);
   const user = useUser();
+  const currentYear = new Date().getFullYear();
 
   return (
     <div className="lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
@@ -242,20 +268,55 @@ export const SideNav = (props: SideNavLayoutProps) => {
             })}
           </nav>
         </div>
+        <div className="flex flex-col gap-1 border-t  pb-4">
+          <div className="flex flex-col gap-1 ">
+            <button
+              type="button"
+              className="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+              aria-expanded={isLegalOpen}
+              onClick={() => setIsLegalOpen((open) => !open)}
+            >
+              <span>Legal</span>
+              <CaretSortIcon
+                className={cn(
+                  "h-3 w-3 opacity-60 transition-transform",
+                  isLegalOpen ? "rotate-180" : "rotate-0",
+                )}
+              />
+            </button>
 
-        <div className="hidden items-center justify-between space-x-2 border-t pt-2 lg:flex">
-          <Link
-            href={docsBaseURL}
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <FiHelpCircle />
-            Documentation
-          </Link>
-          <UserMenu />
+            {isLegalOpen && (
+              <div className="ml-6 gap-1 space-y-1">
+                {footerLinks?.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="flex items-center justify-between gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            )}
+            <div className="hidden items-center  gap-1 space-x-2 border-b border-t pt-2 lg:flex">
+              <Link
+                href={docsBaseURL}
+                className="flex flex-1 items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <FiHelpCircle />
+                Documentation
+              </Link>
+              <UserMenu />
+            </div>
+          </div>
         </div>
-        <div className="absolute bottom-3 left-3 z-50 hidden lg:block">
+        <div className="pt-2 text-sm">© {currentYear} WunderGraph, Inc.</div>
+        <div className="text-sm">All rights reserved.</div>
+        <div className="absolute bottom-3 left-3 z-50 hidden lg:block ">
           <NewFeaturesPopup />
         </div>
       </aside>

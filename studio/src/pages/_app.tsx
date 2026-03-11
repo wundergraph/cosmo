@@ -25,7 +25,6 @@ import { Router } from "next/router";
 import posthog from "posthog-js";
 import { PostHogProvider } from "posthog-js/react";
 import { withErrorBoundary } from "@sentry/nextjs";
-import { Footer } from "@/components/layout/footer";
 
 const queryClient = new QueryClient();
 
@@ -82,7 +81,6 @@ function MyApp({ Component, pageProps }: AppPropsWithLayout) {
           </QueryClientProvider>
         </ThemeProvider>
       </PostHogProvider>
-      <Footer />
     </>
   );
 }
