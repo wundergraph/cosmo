@@ -142,7 +142,7 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 		}
 		cache.queriesForFeatureFlag["test-ff"] = mockCache
 
-		result := cache.getPlanCacheForFF("test-ff")
+		result := cache.getCachedOperationsForFF("test-ff")
 
 		require.NotNil(t, result)
 		require.IsType(t, []*nodev1.Operation{}, result)
@@ -168,7 +168,7 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 		}
 		cache.queriesForFeatureFlag["test-ff"] = expectedOps
 
-		result := cache.getPlanCacheForFF("test-ff")
+		result := cache.getCachedOperationsForFF("test-ff")
 
 		require.NotNil(t, result)
 		require.Equal(t, expectedOps, result)
@@ -181,7 +181,7 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 			queriesForFeatureFlag: make(map[string]any),
 		}
 
-		result := cache.getPlanCacheForFF("non-existent")
+		result := cache.getCachedOperationsForFF("non-existent")
 		require.Nil(t, result)
 	})
 
@@ -191,7 +191,7 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 			queriesForFeatureFlag: nil,
 		}
 
-		result := cache.getPlanCacheForFF("test-ff")
+		result := cache.getCachedOperationsForFF("test-ff")
 
 		require.Nil(t, result)
 	})

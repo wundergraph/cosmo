@@ -1355,6 +1355,7 @@ func (s *graphServer) buildGraphMux(
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation planner: %w", err)
 	}
+	operationPlanner.planningDurationOverride = s.planningDurationOverride
 	gm.operationPlanner = operationPlanner
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
@@ -1416,7 +1417,7 @@ func (s *graphServer) buildGraphMux(
 		case s.cacheWarmup.InMemoryFallback && (s.selfRegister == nil || !s.cacheWarmup.Source.CdnSource.Enabled):
 			// We first utilize the existing plan cache (if it was already set, i.e., not on the first start) to create a list of queries
 			// and then reset the plan cache to the new plan cache for this start afterwards.
-			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
+			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getCachedOperationsForFF(opts.FeatureFlagName))
 			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setExpensiveCacheForFF(opts.FeatureFlagName, operationPlanner.expensiveCache)
 		case s.cacheWarmup.Source.CdnSource.Enabled:
@@ -1427,7 +1428,7 @@ func (s *graphServer) buildGraphMux(
 			// We use the in-memory cache as a fallback if enabled
 			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
 			if s.cacheWarmup.InMemoryFallback {
-				warmupConfig.FallbackSource = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
+				warmupConfig.FallbackSource = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getCachedOperationsForFF(opts.FeatureFlagName))
 				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
 				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setExpensiveCacheForFF(opts.FeatureFlagName, operationPlanner.expensiveCache)
 			}

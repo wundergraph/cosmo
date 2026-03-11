@@ -2236,6 +2236,14 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	}
 }
 
+// WithPlanningDurationOverride sets a function that overrides the measured planning duration.
+// Used in tests to simulate slow queries that exceed the expensive query threshold.
+func WithPlanningDurationOverride(fn func(content string) time.Duration) Option {
+	return func(r *Router) {
+		r.planningDurationOverride = fn
+	}
+}
+
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
 		r.mcp = cfg

@@ -12,8 +12,17 @@ type expensivePlanEntry struct {
 	duration time.Duration
 }
 
-// expensivePlanCache is a bounded, mutex-protected map that holds expensive plans
+type setRequest struct {
+	key      uint64
+	plan     *planWithMetaData
+	duration time.Duration
+	waitCh   chan struct{} // if non-nil, closed after this request is processed
+}
+
+// expensivePlanCache is a bounded map that holds expensive plans
 // that should not be subject to TinyLFU eviction in the main cache.
+// Writes are buffered through a channel and applied asynchronously by a
+// background goroutine, making Set non-blocking. Reads are protected by a RWMutex.
 // It tracks the minimum-duration entry so that rejection of cheaper entries is O(1).
 type expensivePlanCache struct {
 	mu      sync.RWMutex
@@ -21,16 +30,46 @@ type expensivePlanCache struct {
 	maxSize int
 	minKey  uint64
 	minDur  time.Duration
+
+	writeCh chan setRequest
+	stop    chan struct{}
+	done    chan struct{}
 }
+
+// We use the same value as ristretto (this would be the buffer size if we used ristretto as the backing cache)
+const defaultWriteBufferSize = 32 * 1024
 
 func newExpensivePlanCache(maxSize int) (*expensivePlanCache, error) {
 	if maxSize < 1 {
 		return nil, fmt.Errorf("expensive query cache size must be at least 1, got %d", maxSize)
 	}
-	return &expensivePlanCache{
+	c := &expensivePlanCache{
 		entries: make(map[uint64]*expensivePlanEntry, maxSize),
 		maxSize: maxSize,
-	}, nil
+		writeCh: make(chan setRequest, defaultWriteBufferSize),
+		stop:    make(chan struct{}),
+		done:    make(chan struct{}),
+	}
+	go c.processWrites()
+	return c, nil
+}
+
+// processWrites drains the write channel and applies sets under the write lock.
+// It exits when the stop channel is closed.
+func (c *expensivePlanCache) processWrites() {
+	for {
+		select {
+		case req := <-c.writeCh:
+			if req.waitCh != nil {
+				close(req.waitCh)
+				continue
+			}
+			c.applySet(req.key, req.plan, req.duration)
+		case <-c.stop:
+			c.done <- struct{}{}
+			return
+		}
+	}
 }
 
 func (c *expensivePlanCache) Get(key uint64) (*planWithMetaData, bool) {
@@ -44,20 +83,30 @@ func (c *expensivePlanCache) Get(key uint64) (*planWithMetaData, bool) {
 	return entry.plan, true
 }
 
-// Set stores a plan in the expensive cache. When at capacity, it only adds the
-// new entry if its duration exceeds the current minimum; otherwise, it is skipped.
+// Set enqueues a write to the cache. The write is applied asynchronously.
+// If the write buffer is full, the entry is silently dropped.
 func (c *expensivePlanCache) Set(key uint64, plan *planWithMetaData, duration time.Duration) {
+	select {
+	case c.writeCh <- setRequest{key: key, plan: plan, duration: duration}:
+	default:
+	}
+}
+
+// Wait blocks until all pending writes in the buffer have been processed.
+func (c *expensivePlanCache) Wait() {
+	ch := make(chan struct{})
+	c.writeCh <- setRequest{waitCh: ch}
+	<-ch
+}
+
+// applySet performs the actual cache mutation. Must only be called from processWrites.
+func (c *expensivePlanCache) applySet(key uint64, plan *planWithMetaData, duration time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-
-	if c.entries == nil {
-		return
-	}
 
 	// If key already exists, update it
 	if _, ok := c.entries[key]; ok {
 		c.entries[key] = &expensivePlanEntry{plan: plan, duration: duration}
-		// If this was the tracked min, or the new duration is lower, refresh the min
 		if key == c.minKey || duration < c.minDur {
 			c.refreshMin()
 		}
@@ -79,6 +128,7 @@ func (c *expensivePlanCache) Set(key uint64, plan *planWithMetaData, duration ti
 		return
 	}
 
+	// When at max capacity
 	// Evict the minimum and insert the new entry
 	delete(c.entries, c.minKey)
 	c.entries[key] = &expensivePlanEntry{plan: plan, duration: duration}
@@ -108,9 +158,14 @@ func (c *expensivePlanCache) IterValues(cb func(v *planWithMetaData) bool) {
 	}
 }
 
+// Close stops the background goroutine and releases resources.
+// Pending writes in the buffer may be dropped.
 func (c *expensivePlanCache) Close() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	close(c.stop)
+	<-c.done
 
+	close(c.done)
+	c.mu.Lock()
 	c.entries = nil
+	c.mu.Unlock()
 }

@@ -87,8 +87,9 @@ func (c *InMemoryPlanCacheFallback) IsEnabled() bool {
 	return c.queriesForFeatureFlag != nil
 }
 
-// getPlanCacheForFF gets the plan cache in the []*nodev1.Operation format for a specific feature flag key
-func (c *InMemoryPlanCacheFallback) getPlanCacheForFF(featureFlagKey string) []*nodev1.Operation {
+// getCachedOperationsForFF returns all cached operations for a feature flag key,
+// including entries from both the main plan cache and the expensive query cache.
+func (c *InMemoryPlanCacheFallback) getCachedOperationsForFF(featureFlagKey string) []*nodev1.Operation {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -96,19 +97,25 @@ func (c *InMemoryPlanCacheFallback) getPlanCacheForFF(featureFlagKey string) []*
 		return nil
 	}
 
+	var ops []*nodev1.Operation
+
 	switch cache := c.queriesForFeatureFlag[featureFlagKey].(type) {
 	case planCache:
-		return convertToNodeOperation(cache)
+		ops = convertToNodeOperation(cache)
 	case []*nodev1.Operation:
-		return cache
+		ops = cache
 	// This would occur during the first start (we add this case to specifically log any other cases)
 	case nil:
-		return nil
 	// This should not happen as we cannot have any types other than the above
 	default:
 		c.logger.Error("unexpected type")
-		return nil
 	}
+
+	if expCache, ok := c.expensiveCaches[featureFlagKey]; ok {
+		ops = mergeExpensiveCacheOperations(ops, expCache)
+	}
+
+	return ops
 }
 
 // setPlanCacheForFF sets the plan cache for a specific feature flag key
@@ -142,6 +149,12 @@ func (c *InMemoryPlanCacheFallback) extractQueriesAndOverridePlanCache() {
 
 	if c.queriesForFeatureFlag == nil {
 		return
+	}
+
+	// Wait for all pending writes from expensive caches so that
+	// IterValues sees a complete snapshot before we extract.
+	for _, expCache := range c.expensiveCaches {
+		expCache.Wait()
 	}
 
 	fallbackMap := make(map[string]any)
@@ -218,4 +231,3 @@ func mergeExpensiveCacheOperations(ops []*nodev1.Operation, expCache *expensiveP
 	})
 	return ops
 }
-

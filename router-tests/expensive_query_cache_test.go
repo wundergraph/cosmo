@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,15 +23,32 @@ import (
 func TestExpensiveQueryCache(t *testing.T) {
 	t.Parallel()
 
-	// distinctQueries are queries that normalize to different plans, used to overflow a small main cache.
-	distinctQueries := []testenv.GraphQLRequest{
+	// slowQueries are queries whose planning duration is overridden to exceed the threshold.
+	slowQueries := []testenv.GraphQLRequest{
 		{Query: `{ employees { id } }`},
 		{Query: `query { employees { id details { forename } } }`},
+	}
+
+	// fastQueries are queries whose planning duration stays below the threshold.
+	fastQueries := []testenv.GraphQLRequest{
 		{Query: `query { employees { id details { forename surname } } }`},
 		{Query: `query m($id: Int!){ employee(id: $id) { id details { forename surname } } }`, Variables: []byte(`{"id": 1}`)},
 	}
 
-	// waitForExpensiveCacheHits sends all distinctQueries, retrying until each one
+	allQueries := append(slowQueries, fastQueries...)
+
+	expensiveThreshold := 1 * time.Second
+
+	// The override function receives the normalized (minified) query content.
+	// Both slow queries lack "surname", while all fast queries contain it.
+	planningDurationOverride := core.WithPlanningDurationOverride(func(content string) time.Duration {
+		if !strings.Contains(content, "surname") {
+			return 10 * time.Second
+		}
+		return 0
+	})
+
+	// waitForExpensiveCacheHits sends all queries, retrying until each one
 	// is served from either the main or expensive cache. Then it does a single
 	// final pass and returns the number of expensive cache hits.
 	waitForExpensiveCacheHits := func(t *testing.T, xEnv *testenv.Environment, queries []testenv.GraphQLRequest, extraChecks ...func(*assert.CollectT, *testenv.TestResponse)) int {
@@ -66,10 +84,8 @@ func TestExpensiveQueryCache(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				// Tiny main cache: only 1 plan fits in Ristretto
 				cfg.ExecutionPlanCacheSize = 1
-				// All plans qualify as expensive (threshold effectively zero)
-				cfg.ExpensiveQueryThreshold = 1 * time.Nanosecond
+				cfg.ExpensiveQueryThreshold = expensiveThreshold
 				cfg.ExpensiveQueryCacheSize = 100
 			},
 			RouterOptions: []core.Option{
@@ -77,17 +93,54 @@ func TestExpensiveQueryCache(t *testing.T) {
 					Enabled:          true,
 					InMemoryFallback: true,
 				}),
+				planningDurationOverride,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Send all distinct queries — each is a MISS and gets planned via singleflight.
-			for _, q := range distinctQueries {
+			// Send all queries — each is a MISS and gets planned via singleflight.
+			for _, q := range allQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, 200, res.Response.StatusCode)
 				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 			}
 
-			hits := waitForExpensiveCacheHits(t, xEnv, distinctQueries)
-			require.Greater(t, hits, 0, "expected at least one query to be served from the expensive cache")
+			// Only slow queries should end up in the expensive cache
+			hits := waitForExpensiveCacheHits(t, xEnv, slowQueries)
+			require.Greater(t, hits, 0, "expected at least one slow query to be served from the expensive cache")
+		})
+	})
+
+	t.Run("fast queries do not enter expensive cache", func(t *testing.T) {
+		t.Parallel()
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.ExecutionPlanCacheSize = 1
+				cfg.ExpensiveQueryThreshold = expensiveThreshold
+				cfg.ExpensiveQueryCacheSize = 100
+			},
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:          true,
+					InMemoryFallback: true,
+				}),
+				planningDurationOverride,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Send all queries
+			for _, q := range allQueries {
+				res := xEnv.MakeGraphQLRequestOK(q)
+				require.Equal(t, 200, res.Response.StatusCode)
+			}
+
+			// Wait for Ristretto eviction
+			time.Sleep(200 * time.Millisecond)
+
+			// Fast queries should never be served from the expensive cache
+			for _, q := range fastQueries {
+				res := xEnv.MakeGraphQLRequestOK(q)
+				require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Expensive-Plan-Cache"),
+					"fast query should not be in the expensive cache")
+			}
 		})
 	})
 
@@ -101,7 +154,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.ExpensiveQueryThreshold = 1 * time.Nanosecond
+				cfg.ExpensiveQueryThreshold = expensiveThreshold
 				cfg.ExpensiveQueryCacheSize = 100
 			},
 			RouterOptions: []core.Option{
@@ -115,6 +168,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 					},
 				}),
 				core.WithConfigVersionHeader(true),
+				planningDurationOverride,
 			},
 			RouterConfig: &testenv.RouterConfig{
 				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
@@ -123,8 +177,8 @@ func TestExpensiveQueryCache(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Populate caches with multiple distinct queries
-			for _, q := range distinctQueries {
+			// Populate caches with slow queries
+			for _, q := range slowQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, 200, res.Response.StatusCode)
 				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
@@ -135,8 +189,8 @@ func TestExpensiveQueryCache(t *testing.T) {
 			pm.initConfig.Version = "updated"
 			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
 
-			// After reload, all queries should still be available via expensive cache.
-			hits := waitForExpensiveCacheHits(t, xEnv, distinctQueries, func(ct *assert.CollectT, res *testenv.TestResponse) {
+			// After reload, slow queries should still be available via expensive cache.
+			hits := waitForExpensiveCacheHits(t, xEnv, slowQueries, func(ct *assert.CollectT, res *testenv.TestResponse) {
 				assert.Equal(ct, "updated", res.Response.Header.Get("X-Router-Config-Version"))
 			})
 			require.Greater(t, hits, 0, "expected at least one query to be served from the expensive cache after config reload")
@@ -153,7 +207,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.ExpensiveQueryThreshold = 1 * time.Nanosecond
+				cfg.ExpensiveQueryThreshold = expensiveThreshold
 				cfg.ExpensiveQueryCacheSize = 100
 			},
 			RouterOptions: []core.Option{
@@ -167,6 +221,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 					},
 				}),
 				core.WithConfigVersionHeader(true),
+				planningDurationOverride,
 			},
 			RouterConfig: &testenv.RouterConfig{
 				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
@@ -175,8 +230,8 @@ func TestExpensiveQueryCache(t *testing.T) {
 				},
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Warm up with distinct queries
-			for _, q := range distinctQueries {
+			// Warm up with slow queries
+			for _, q := range slowQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 			}
@@ -187,7 +242,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			pm.initConfig.Version = "v2"
 			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
 
-			waitForExpensiveCacheHits(t, xEnv, distinctQueries, func(ct *assert.CollectT, res *testenv.TestResponse) {
+			waitForExpensiveCacheHits(t, xEnv, slowQueries, func(ct *assert.CollectT, res *testenv.TestResponse) {
 				assert.Equal(ct, "v2", res.Response.Header.Get("X-Router-Config-Version"))
 			})
 
@@ -195,7 +250,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			pm.initConfig.Version = "v3"
 			require.NoError(t, pm.updateConfig(pm.initConfig, "v2"))
 
-			hits := waitForExpensiveCacheHits(t, xEnv, distinctQueries, func(ct *assert.CollectT, res *testenv.TestResponse) {
+			hits := waitForExpensiveCacheHits(t, xEnv, slowQueries, func(ct *assert.CollectT, res *testenv.TestResponse) {
 				assert.Equal(ct, "v3", res.Response.Header.Get("X-Router-Config-Version"))
 			})
 			require.Greater(t, hits, 0, "expected at least one query to be served from the expensive cache after multiple reloads")
@@ -208,7 +263,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.ExpensiveQueryThreshold = 1 * time.Nanosecond
+				cfg.ExpensiveQueryThreshold = expensiveThreshold
 				cfg.ExpensiveQueryCacheSize = 10
 			},
 			RouterOptions: []core.Option{
@@ -216,16 +271,17 @@ func TestExpensiveQueryCache(t *testing.T) {
 					Enabled:          true,
 					InMemoryFallback: true,
 				}),
+				planningDurationOverride,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Send multiple distinct queries to overflow the tiny main cache
-			for _, q := range distinctQueries {
+			// Send slow queries to overflow the tiny main cache
+			for _, q := range slowQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, 200, res.Response.StatusCode)
 				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 			}
 
-			hits := waitForExpensiveCacheHits(t, xEnv, distinctQueries)
+			hits := waitForExpensiveCacheHits(t, xEnv, slowQueries)
 			require.Greater(t, hits, 0, "expected at least one query to be served from the expensive cache")
 		})
 	})
@@ -236,7 +292,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.ExpensiveQueryThreshold = 1 * time.Nanosecond
+				cfg.ExpensiveQueryThreshold = expensiveThreshold
 				cfg.ExpensiveQueryCacheSize = 50
 			},
 			RouterOptions: []core.Option{
@@ -244,10 +300,11 @@ func TestExpensiveQueryCache(t *testing.T) {
 					Enabled:          true,
 					InMemoryFallback: true,
 				}),
+				planningDurationOverride,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Make some requests to populate both caches
-			for _, q := range distinctQueries {
+			for _, q := range allQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, 200, res.Response.StatusCode)
 			}
@@ -266,7 +323,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			MetricReader:  metricReader,
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.ExpensiveQueryThreshold = 1 * time.Nanosecond
+				cfg.ExpensiveQueryThreshold = expensiveThreshold
 				cfg.ExpensiveQueryCacheSize = 100
 			},
 			RouterOptions: []core.Option{
@@ -274,20 +331,21 @@ func TestExpensiveQueryCache(t *testing.T) {
 					Enabled:          true,
 					InMemoryFallback: true,
 				}),
+				planningDurationOverride,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Send multiple distinct queries to overflow the tiny main cache
-			for _, q := range distinctQueries {
+			// Send slow queries to overflow the tiny main cache
+			for _, q := range slowQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 			}
 
 			// Wait for caches to converge, then reset spans for a clean measurement
-			waitForExpensiveCacheHits(t, xEnv, distinctQueries)
+			waitForExpensiveCacheHits(t, xEnv, slowQueries)
 			exporter.Reset()
 
 			// Final pass to generate spans with known state
-			for _, q := range distinctQueries {
+			for _, q := range slowQueries {
 				xEnv.MakeGraphQLRequestOK(q)
 			}
 
@@ -348,7 +406,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			PrometheusRegistry: promRegistry,
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.ExpensiveQueryThreshold = 1 * time.Nanosecond
+				cfg.ExpensiveQueryThreshold = expensiveThreshold
 				cfg.ExpensiveQueryCacheSize = 100
 			},
 			RouterOptions: []core.Option{
@@ -356,18 +414,19 @@ func TestExpensiveQueryCache(t *testing.T) {
 					Enabled:          true,
 					InMemoryFallback: true,
 				}),
+				planningDurationOverride,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Overflow the tiny main cache
-			for _, q := range distinctQueries {
+			// Overflow the tiny main cache with slow queries
+			for _, q := range slowQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 			}
 
 			// Wait for caches to converge, then make a final pass for Prometheus
-			waitForExpensiveCacheHits(t, xEnv, distinctQueries)
+			waitForExpensiveCacheHits(t, xEnv, slowQueries)
 
-			for _, q := range distinctQueries {
+			for _, q := range slowQueries {
 				xEnv.MakeGraphQLRequestOK(q)
 			}
 
@@ -421,7 +480,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			PrometheusRegistry: promRegistry,
 			// InMemoryFallback is NOT set — expensive cache is disabled
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			for _, q := range distinctQueries {
+			for _, q := range allQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, 200, res.Response.StatusCode)
 				// Header must be absent when feature is disabled
@@ -430,7 +489,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			}
 
 			// Second pass — cache hits
-			for _, q := range distinctQueries {
+			for _, q := range allQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Empty(t, res.Response.Header.Get("X-WG-Expensive-Plan-Cache"))
 			}
@@ -480,13 +539,71 @@ func TestExpensiveQueryCache(t *testing.T) {
 		})
 	})
 
+	t.Run("expensive cache entries survive static execution config reload", func(t *testing.T) {
+		t.Parallel()
+
+		configFile := t.TempDir() + "/config.json"
+		writeTestConfig(t, "initial", configFile)
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.ExecutionPlanCacheSize = 1
+				cfg.ExpensiveQueryThreshold = expensiveThreshold
+				cfg.ExpensiveQueryCacheSize = 100
+			},
+			RouterOptions: []core.Option{
+				core.WithConfigVersionHeader(true),
+				core.WithExecutionConfig(&core.ExecutionConfig{
+					Path:          configFile,
+					Watch:         true,
+					WatchInterval: 100 * time.Millisecond,
+				}),
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:          true,
+					InMemoryFallback: true,
+				}),
+				// Override the hello query to be slow
+				core.WithPlanningDurationOverride(func(content string) time.Duration {
+					return 10 * time.Second
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			q := testenv.GraphQLRequest{Query: `query { hello }`}
+
+			// First request is a MISS
+			res := xEnv.MakeGraphQLRequestOK(q)
+			require.Equal(t, 200, res.Response.StatusCode)
+			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+
+			// Wait for the expensive cache to pick it up
+			require.EventuallyWithT(t, func(ct *assert.CollectT) {
+				res = xEnv.MakeGraphQLRequestOK(q)
+				planHit := res.Response.Header.Get("x-wg-execution-plan-cache") == "HIT"
+				expensiveHit := res.Response.Header.Get("X-WG-Expensive-Plan-Cache") == "HIT"
+				assert.True(ct, planHit || expensiveHit, "expected plan to be cached")
+			}, 2*time.Second, 100*time.Millisecond)
+
+			// Trigger schema reload by writing a new config version
+			writeTestConfig(t, "updated", configFile)
+
+			// After reload, the plan should still be available (carried forward via extractQueriesAndOverridePlanCache)
+			require.EventuallyWithT(t, func(ct *assert.CollectT) {
+				res = xEnv.MakeGraphQLRequestOK(q)
+				assert.Equal(ct, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+				planHit := res.Response.Header.Get("x-wg-execution-plan-cache") == "HIT"
+				expensiveHit := res.Response.Header.Get("X-WG-Expensive-Plan-Cache") == "HIT"
+				assert.True(ct, planHit || expensiveHit, "expected plan to survive schema reload via expensive cache merge")
+			}, 2*time.Second, 100*time.Millisecond)
+		})
+	})
+
 	t.Run("high threshold prevents fast plans from entering expensive cache", func(t *testing.T) {
 		t.Parallel()
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				// Threshold so high no plan will qualify
 				cfg.ExpensiveQueryThreshold = 1 * time.Hour
 				cfg.ExpensiveQueryCacheSize = 100
 			},
@@ -495,10 +612,11 @@ func TestExpensiveQueryCache(t *testing.T) {
 					Enabled:          true,
 					InMemoryFallback: true,
 				}),
+				// No planning duration override — all plans are fast
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
 			// Populate — all plans are fast (well under 1h threshold)
-			for _, q := range distinctQueries {
+			for _, q := range allQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, 200, res.Response.StatusCode)
 				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
@@ -512,7 +630,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			// Re-query — with main cache size 1, most are evicted from Ristretto.
 			// Since no plan met the 1h threshold, the expensive cache is empty.
 			// These should be re-planned (MISS on both caches).
-			for _, q := range distinctQueries {
+			for _, q := range allQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, 200, res.Response.StatusCode)
 				require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Expensive-Plan-Cache"),
