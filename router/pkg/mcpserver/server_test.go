@@ -149,30 +149,19 @@ func TestReload_ReservedToolNameCollision(t *testing.T) {
 		assert.Equal(t, "get_operation_info", entry.ContextMap()["conflicting_tool"])
 	}
 
-	// "list_employees" should still be registered, "get_operation_info" should not be
-	// in registeredTools as an operation tool (only the internal one).
-	assert.Contains(t, srv.registeredTools, "list_employees")
-	assert.Contains(t, srv.registeredTools, "get_operation_info",
-		"get_operation_info should still be registered as the internal tool")
-
-	// Count occurrences — should appear exactly once (the internal tool, not the operation)
-	count := 0
-	for _, name := range srv.registeredTools {
-		if name == "get_operation_info" {
-			count++
-		}
-	}
-	assert.Equal(t, 1, count,
-		"get_operation_info should appear exactly once in registeredTools")
+	assert.ElementsMatch(t, []string{"get_schema", "list_employees", "get_operation_info"}, srv.registeredTools)
 }
 
-func TestReload_NoPrefixCollisionBetweenOperations(t *testing.T) {
+func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 	core, logs := observer.New(zapcore.DebugLevel)
 	logger := zap.New(core)
 
+	// "GetOperationInfo" snake_cases to "get_operation_info" which is a reserved name.
+	// With the prefix enabled, it becomes "execute_operation_get_operation_info" and no collision occurs.
 	tempDir := t.TempDir()
 	writeOperationFiles(t, tempDir, map[string]string{
-		"ListEmployees.graphql": listEmployeesOp,
+		"GetOperationInfo.graphql": getOperationInfoOp,
+		"ListEmployees.graphql":   listEmployeesOp,
 	})
 
 	schemaDoc, report := astparser.ParseGraphqlDocumentString(testSchema)
@@ -180,7 +169,6 @@ func TestReload_NoPrefixCollisionBetweenOperations(t *testing.T) {
 	err := asttransform.MergeDefinitionWithBaseSchema(&schemaDoc)
 	require.NoError(t, err)
 
-	// With prefix, no collisions expected
 	srv, err := NewGraphQLSchemaServer(
 		"http://localhost:4000/graphql",
 		WithLogger(logger),
@@ -192,10 +180,15 @@ func TestReload_NoPrefixCollisionBetweenOperations(t *testing.T) {
 	err = srv.Reload(&schemaDoc)
 	require.NoError(t, err)
 
+	// No collisions because the prefix disambiguates from the reserved name
 	collisionLogs := logs.FilterMessage("Skipping operation due to tool name collision")
 	assert.Equal(t, 0, collisionLogs.Len(),
 		"no collisions expected with tool name prefix enabled")
 
-	// Tool should be prefixed
-	assert.Contains(t, srv.registeredTools, "execute_operation_list_employees")
+	assert.ElementsMatch(t, []string{
+		"get_schema",
+		"execute_operation_get_operation_info",
+		"execute_operation_list_employees",
+		"get_operation_info",
+	}, srv.registeredTools)
 }
