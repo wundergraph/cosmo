@@ -771,8 +771,7 @@ export class NormalizationFactory {
     }
     if (isCost) {
       this.handleCostDirective({ data, directiveCoords, directiveNode, errorMessages });
-    }
-    if (isListSize && isField) {
+    } else if (isListSize && isField) {
       this.handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages });
     }
     if (duplicateArgumentNames.size > 0) {
