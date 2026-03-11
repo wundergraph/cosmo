@@ -423,6 +423,8 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			rtrace.AttachErrToSpan(routerSpan, err)
 
 			if h.operationProcessor.costControl != nil && h.operationProcessor.costControl.ExposeHeaders &&
+				// Report the estimated cost in case of errors.
+				// The actual cost is only available for successful requests.
 				requestContext.operation != nil && requestContext.operation.costEstimatedSet {
 				ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
 			}

@@ -311,9 +311,9 @@ func TestOperationCost(t *testing.T) {
 				// employees-only: weight 5 applies from employees subgraph only
 				require.Equal(t, "150", estimated2)
 
-				actual2 := res.Response.Header.Get(core.CostActualHeader)
+				actual2 := res2.Response.Header.Get(core.CostActualHeader)
 				require.NotEmpty(t, actual2, "actual cost header should be present")
-				require.Equal(t, "45", actual2)
+				require.Equal(t, "21", actual2)
 			})
 		})
 

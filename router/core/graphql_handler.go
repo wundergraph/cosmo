@@ -252,7 +252,8 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Compute actual cost for metrics/telemetry if not already set by the header callback
-		if !reqCtx.operation.costActualSet && resolveCtx.ActualListSizes != nil {
+		if !reqCtx.operation.costActualSet && resolveCtx.ActualListSizes != nil &&
+			reqCtx.operation.preparedPlan != nil && reqCtx.operation.preparedPlan.preparedPlan != nil {
 			if costCalc := reqCtx.operation.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
 				reqCtx.operation.costActual = costCalc.ActualCost(reqCtx.operation.planConfig, resolveCtx.ActualListSizes)
 				reqCtx.operation.costActualSet = true
