@@ -27,9 +27,10 @@ type Event struct {
 }
 
 // SyncReporter wraps EngineStats and emits channel-based events for test
-// synchronization. It satisfies statistics.EngineStatistics via delegation
-// to the inner EngineStats, while additionally emitting events on a buffered
-// channel that tests can select on directly.
+// synchronization. The buffered events channel is a best-effort signal used by
+// publish-retry helpers, while the inner EngineStats remains the authoritative
+// snapshot source for predicate-based waits on counts (subscriptions,
+// connections, messages, triggers).
 type SyncReporter struct {
 	inner  *statistics.EngineStats
 	events chan Event
@@ -38,7 +39,8 @@ type SyncReporter struct {
 var _ statistics.EngineStatistics = (*SyncReporter)(nil)
 
 // NewSyncReporter creates a SyncReporter wrapping a real EngineStats.
-// The inner EngineStats has periodic reporting disabled (test-only).
+// The inner EngineStats has periodic reporting disabled (test-only), but still
+// provides the stateful wait semantics that the lossy event channel cannot.
 func NewSyncReporter(ctx context.Context, logger *zap.Logger) *SyncReporter {
 	return &SyncReporter{
 		inner:  statistics.NewEngineStats(ctx, logger, false),

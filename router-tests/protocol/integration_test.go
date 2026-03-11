@@ -33,7 +33,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-
 func normalizeJSON(tb testing.TB, data []byte) []byte {
 	buf := new(bytes.Buffer)
 	err := json.Indent(buf, data, "", "  ")
@@ -1252,7 +1251,7 @@ func TestOperationSelection(t *testing.T) {
 func TestTestdataQueries(t *testing.T) {
 	t.Parallel()
 
-	testDir := "testdata/queries"
+	testDir := filepath.Join("testdata", "queries")
 	entries, err := os.ReadDir(testDir)
 	require.NoError(t, err)
 	for _, entry := range entries {
@@ -1269,7 +1268,7 @@ func TestTestdataQueries(t *testing.T) {
 
 			g := goldie.New(
 				t,
-				goldie.WithFixtureDir("testdata/queries"),
+				goldie.WithFixtureDir(testDir),
 				goldie.WithNameSuffix(".json"),
 				goldie.WithDiffEngine(goldie.ClassicDiff),
 			)
