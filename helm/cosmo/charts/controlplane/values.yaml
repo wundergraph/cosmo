@@ -201,6 +201,8 @@ configuration:
   openAiApiKey: ''
   # -- URL of the CDN to use for serving router configs and persistent operations
   cdnBaseUrl: 'http://cosmo-cdn:8787'
+  # -- The domain for the cookie used to store SSO authentication information
+  authSsoCookieDomain: '.wundergraph.local'
 
   # -- Use this section to configure the smtp server.
   smtp:

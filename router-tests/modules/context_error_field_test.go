@@ -97,6 +97,31 @@ func TestContextErrorModule(t *testing.T) {
 		})
 	})
 
+	t.Run("in case of errors in the response, cache control is set to no-cache", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusInternalServerError)
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`{"query":"{ employees { id } }"}`))
+			require.NoError(t, err)
+			require.Equal(t, "no-store, no-cache, must-revalidate", res.Header.Get("Cache-Control"))
+			defer res.Body.Close()
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: empty response.","extensions":{"statusCode":500}}],"data":{"employees":null}}`, string(body))
+		})
+	})
+
 	t.Run("no error in context when request succeeds", func(t *testing.T) {
 		t.Parallel()
 

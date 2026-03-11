@@ -1722,7 +1722,7 @@ func TestConcurrentQueriesWithDelay(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 					Query: query,
 				})
-				require.JSONEq(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), res.Body, "query %d failed", ii)
+				require.Equal(t, fmt.Sprintf(`{"data":{"delay":"%s"}}`, resp), res.Body, "query %d failed", ii)
 			}(ii)
 		}
 		wg.Wait()
@@ -1761,5 +1761,47 @@ func TestDataNotSetOnPreExecutionErrors(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, res.Response.Header.Get("Content-Type"), "application/json; charset=utf-8")
 		require.Equal(t, `{"errors":[{"message":"unexpected token - got: RBRACE want one of: [COLON]","locations":[{"line":1,"column":46}]}]}`, res.Body)
+	})
+}
+
+func TestNullParentSkippedFetch(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no panic when parent entity is null and child fetch is skipped", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{}, func(t *testing.T, xEnv *testenv.Environment) {
+			// employee(id: 999) does not exist — returns null from the employees subgraph.
+			// currentMood is resolved from the mood subgraph via entity resolution.
+			// With a null parent, the mood fetch is skipped.
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 999) { id currentMood } }`,
+			})
+			require.Equal(t, `{"data":{"employee":null}}`, res.Body)
+		})
+	})
+
+	t.Run("no panic when parent entity is null with response header propagation", func(t *testing.T) {
+		// Reproduces issue #2530: OnFinished → ApplyResponseHeaderRules →
+		// getResponseHeaderPropagation panics on nil context when fetches are skipped.
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Response: []*config.ResponseHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Algorithm: config.ResponseHeaderRuleAlgorithmMostRestrictiveCacheControl,
+							},
+						},
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ employee(id: 999) { id currentMood } }`,
+			})
+			require.Equal(t, `{"data":{"employee":null}}`, res.Body)
+		})
 	})
 }

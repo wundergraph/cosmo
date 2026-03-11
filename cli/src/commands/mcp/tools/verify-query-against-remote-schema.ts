@@ -18,10 +18,13 @@ export const registerVerifyQueryAgainstRemoteSchemaTool = ({
   server: McpServer;
   opts: BaseCommandOptions;
 }) => {
-  server.tool(
+  server.registerTool(
     'verify_query_against_remote_schema',
-    'Verify if a GraphQL query is valid against a remote Supergraph.',
-    { query: z.string(), supergraph: z.string(), namespace: z.string().optional() },
+    {
+      title: 'Verify Query Against Remote Schema',
+      description: 'Verify if a GraphQL query is valid against a remote Supergraph.',
+      inputSchema: { query: z.string(), supergraph: z.string(), namespace: z.string().optional() },
+    },
     async ({ query, supergraph, namespace }) => {
       try {
         const fedGraphSchemas = await getFederatedGraphSchemas({

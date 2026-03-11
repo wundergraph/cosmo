@@ -19,6 +19,7 @@ export class ApiKeyRepository {
     expiresAt: ExpiresAt;
     groupId: string;
     permissions: string[];
+    isExternal: boolean;
   }) {
     let expiresAtDate: Date | undefined;
     const present = new Date();
@@ -53,6 +54,7 @@ export class ApiKeyRepository {
           name: input.name,
           organizationId: input.organizationID,
           userId: input.userID,
+          external: input.isExternal,
           groupId: input.groupId,
           expiresAt: expiresAtDate,
         })
@@ -84,6 +86,7 @@ export class ApiKeyRepository {
         name: apiKeys.name,
         createdAt: apiKeys.createdAt,
         lastUsedAt: apiKeys.lastUsedAt,
+        external: apiKeys.external,
         expiresAt: apiKeys.expiresAt,
         createdBy: users.email,
         creatorUserID: users.id,
@@ -104,6 +107,7 @@ export class ApiKeyRepository {
       createdAt: key[0].createdAt.toISOString(),
       lastUsedAt: key[0].lastUsedAt?.toISOString() ?? '',
       expiresAt: key[0].expiresAt?.toISOString() ?? '',
+      external: key[0].external,
       createdBy: key[0].createdBy,
       creatorUserID: key[0].creatorUserID,
       group: { id: key[0].groupId },
@@ -118,6 +122,7 @@ export class ApiKeyRepository {
         createdAt: apiKeys.createdAt,
         lastUsedAt: apiKeys.lastUsedAt,
         expiresAt: apiKeys.expiresAt,
+        external: apiKeys.external,
         createdBy: users.email,
         groupId: schema.organizationGroups.id,
         groupName: schema.organizationGroups.name,
@@ -147,6 +152,7 @@ export class ApiKeyRepository {
           createdAt: key.createdAt.toISOString(),
           lastUsedAt: key.lastUsedAt?.toISOString() ?? '',
           expiresAt: key.expiresAt?.toISOString() ?? '',
+          external: key.external,
           group: groupId ? { id: groupId, name: groupName } : undefined,
           createdBy: key.createdBy,
           creatorUserID: key.creatorUserID,
@@ -154,13 +160,14 @@ export class ApiKeyRepository {
     );
   }
 
-  public async getAPIKeysCount(input: { organizationID: string }): Promise<number> {
+  public async getAPIKeysCount(input: { organizationID: string; includeExternal: boolean }): Promise<number> {
+    const condition = eq(apiKeys.organizationId, input.organizationID);
     const result = await this.db
       .select({
         count: count(),
       })
       .from(apiKeys)
-      .where(eq(apiKeys.organizationId, input.organizationID))
+      .where(input.includeExternal ? condition : and(condition, eq(apiKeys.external, false)))
       .execute();
 
     return result[0]?.count ?? 0;

@@ -268,7 +268,7 @@ func TestShortCircuitOnSuccess(t *testing.T) {
 	body, err := io.ReadAll(resp.Body)
 	assert.NoError(t, err)
 	assert.Equal(t, "success", string(body))
-	resp.Body.Close()
+	_ = resp.Body.Close()
 }
 
 func TestMaxRetryCountRespected(t *testing.T) {
@@ -431,7 +431,7 @@ func TestRequestLoggerIsUsed(t *testing.T) {
 
 	req := httptest.NewRequest("GET", "http://localhost:3000/graphql", nil)
 
-	tr.RoundTrip(req)
+	_, _ = tr.RoundTrip(req)
 
 	assert.Contains(t, requestLoggerBuf.String(), "Failed draining when discarding the body\t{\"error\": \"retry read error, index: 1\"}")
 	assert.Contains(t, requestLoggerBuf.String(), "Failed draining when closing the body\t{\"error\": \"retry close error, index: 2\"}")

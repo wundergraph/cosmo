@@ -48,7 +48,8 @@ import {
   ExclamationTriangleIcon,
   KeyIcon,
 } from "@heroicons/react/24/outline";
-import { PlusIcon } from "@radix-ui/react-icons";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { InfoCircledIcon, PlusIcon } from "@radix-ui/react-icons";
 import { useQuery, useMutation } from "@connectrpc/connect-query";
 import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
 import {
@@ -67,6 +68,7 @@ import { FiCheck, FiCopy } from "react-icons/fi";
 import { z } from "zod";
 import { GroupSelect } from "@/components/group-select";
 import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+import { Badge, badgeVariants } from "@/components/ui/badge";
 
 const CreateAPIKeyDialog = ({
   existingApiKeys,
@@ -860,10 +862,26 @@ const APIKeysPage: NextPageWithLayout = () => {
                     lastUsedAt,
                     expiresAt,
                     group,
+                    external,
                   }) => {
                     return (
                       <TableRow key={name}>
-                        <TableCell className="font-medium">{name}</TableCell>
+                        <TableCell className="font-medium space-x-3">
+                          <span>{name}</span>
+                          {external && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={badgeVariants({ variant: "outline", className: "space-x-1" })}>
+                                  <InfoCircledIcon className="size-3 pointer-events-none" />
+                                  <span className="pointer-events-none">External</span>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                This API key is managed by an external service and cannot be modified or deleted.
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </TableCell>
                         <TableCell>{createdBy}</TableCell>
                         <TableCell>
                           {expiresAt
@@ -887,7 +905,7 @@ const APIKeysPage: NextPageWithLayout = () => {
                             ? formatDateTime(new Date(lastUsedAt))
                             : "Never"}
                         </TableCell>
-                        {canManageAPIKeys && (
+                        {canManageAPIKeys && !external && (
                           <TableCell>
                             <DropdownMenu>
                               <div className="flex justify-center">

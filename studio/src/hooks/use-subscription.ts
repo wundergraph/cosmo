@@ -1,4 +1,4 @@
-import { useUser } from "./use-user";
+import { useUser } from './use-user';
 
 export const useSubscription = () => {
   const user = useUser();

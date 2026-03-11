@@ -23,6 +23,7 @@
     "generate": "pnpm buf generate --path proto/wg/cosmo/platform --path proto/wg/cosmo/notifications --path proto/wg/cosmo/common --path proto/wg/cosmo/node --template buf.ts.gen.yaml && pnpm -r run --filter './connect' build",
     "husky": "husky install",
     "lint:fix": "pnpm run -r --parallel lint:fix",
+    "format": "pnpm run -r --parallel format",
     "clean": "rm -rf node_modules **/node_modules dist **/dist gen **/gen .next **/.next tsconfig.tsbuildinfo **/tsconfig.tsbuildinfo .eslintcache **/.eslintcache",
     "release-preview": "lerna publish --ignore-scripts --dry-run",
     "release": "lerna publish -y",
@@ -36,6 +37,9 @@
     "pnpm": "9"
   },
   "lint-staged": {
+    "**/*.go": [
+      "sh -c 'for file in \"$@\"; do case \"$file\" in */gen/*|*/vendor/*) ;; *) gofmt -w \"$file\" ;; esac; done' --"
+    ],
     "*.{js,jsx,ts,tsx,md,mdx,yml,yaml,css,json,graphql,gql}": [
       "prettier --write"
     ]
@@ -69,7 +73,7 @@
       "graphql": "16.9.0",
       "cross-spawn": "7.0.6",
       "next": "15.4.10",
-      "zod": "^3.24.2",
+      "zod": "^3.25.0",
       "debug": "<4.4.2",
       "supports-color": "<10.2.1",
       "wrap-ansi": "<9.0.1",
@@ -83,7 +87,12 @@
       "supports-hyperlinks": "<4.1.1",
       "has-ansi": "<6.0.1",
       "chalk-template": "<1.1.1",
-      "backslash": "<0.2.1"
+      "backslash": "<0.2.1",
+      "qs": "6.14.1",
+      "mdast-util-to-hast": ">=13.2.1",
+      "js-yaml": ">=4.1.1",
+      "fast-xml-parser": ">=5.3.6",
+      "@aws-sdk/client-sesv2": "^3.996.0"
     },
     "patchedDependencies": {
       "graphql@16.9.0": "patches/graphql@16.9.0.patch"

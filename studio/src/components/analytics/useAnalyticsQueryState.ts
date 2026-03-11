@@ -1,9 +1,9 @@
-import { AnalyticsViewGroupName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { subHours } from "date-fns";
-import { useRouter } from "next/router";
-import { useMemo } from "react";
-import { Range, getRange } from "../date-picker-with-range";
-import { refreshIntervals } from "./refresh-interval";
+import { AnalyticsViewGroupName } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { subHours } from 'date-fns';
+import { useRouter } from 'next/router';
+import { useMemo } from 'react';
+import { Range, getRange } from '../date-picker-with-range';
+import { refreshIntervals } from './refresh-interval';
 
 const parse = (value: string, fallback: any) => {
   try {
@@ -75,30 +75,25 @@ export const useAnalyticsQueryState = (customDefaultRange?: Range) => {
     const offset = (Number(query.page) || 0) * limit;
 
     const name = query.group
-      ? AnalyticsViewGroupName[
-          query.group as string as keyof typeof AnalyticsViewGroupName
-        ]
+      ? AnalyticsViewGroupName[query.group as string as keyof typeof AnalyticsViewGroupName]
       : AnalyticsViewGroupName.None;
 
-    let refreshIntervalObject = parse(
-      query.refreshInterval as string,
-      refreshIntervals[0].value,
-    );
+    let refreshIntervalObject = parse(query.refreshInterval as string, refreshIntervals[0].value);
 
     let sort =
-      query.group && query.group !== "None"
+      query.group && query.group !== 'None'
         ? {
-            id: "totalRequests",
+            id: 'totalRequests',
             desc: true,
           }
         : {
-            id: "unixTimestamp",
+            id: 'unixTimestamp',
             desc: true,
           };
 
     if (query.sort) {
       sort.id = query.sort.toString();
-      sort.desc = query.sortDir === "desc";
+      sort.desc = query.sortDir === 'desc';
     }
 
     return {

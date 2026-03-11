@@ -49,6 +49,9 @@ export const DEFAULT_ROUTER_URL = 'http://localhost:3002';
 export const DEFAULT_SUBGRAPH_URL_ONE = 'http://localhost:4001';
 export const DEFAULT_SUBGRAPH_URL_TWO = 'http://localhost:4002';
 export const DEFAULT_SUBGRAPH_URL_THREE = 'http://localhost:4003';
+export const DEFAULT_GRPC_SUBGRAPH_URL_ONE = 'localhost:4001';
+export const DEFAULT_GRPC_SUBGRAPH_URL_TWO = 'localhost:4002';
+export const DEFAULT_GRPC_SUBGRAPH_URL_THREE = 'localhost:4003';
 export const DEFAULT_NAMESPACE = 'default';
 
 const getKeycloakGroups = async (realm: string, keycloak: Keycloak, groupId: string | undefined) => {
@@ -111,8 +114,6 @@ export const SetupTest = async function ({
     users.adminJimCompanyB = createTestContext('company-b', randomUUID());
   }
 
-  const authenticator = createTestAuthenticator(users);
-
   const realm = 'test';
   const loginRealm = 'master';
   const apiUrl = 'http://localhost:8080';
@@ -121,6 +122,7 @@ export const SetupTest = async function ({
   const adminPassword = 'changeme';
   const webBaseUrl = 'http://localhost:3000';
 
+  const authenticator = createTestAuthenticator(users, apiUrl, realm);
   const keycloakClient = new Keycloak({
     apiUrl,
     realm: loginRealm,
@@ -498,6 +500,8 @@ export const addKeycloakUser = async ({
   try {
     id = await keycloakClient.addKeycloakUser({
       email: userTestData.email,
+      firstName: 'Test',
+      lastName: 'User',
       realm: realmName,
       isPasswordTemp: false,
       password: 'wunder@123',

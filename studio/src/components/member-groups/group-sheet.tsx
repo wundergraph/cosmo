@@ -1,27 +1,32 @@
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   OrganizationGroup,
-  UpdateOrganizationGroupRequest_GroupRule
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { Button } from "@/components/ui/button";
-import { InfoCircledIcon, PlusIcon } from "@radix-ui/react-icons";
-import { PencilIcon } from "@heroicons/react/24/outline";
-import { useMutation, useQuery } from "@connectrpc/connect-query";
+  UpdateOrganizationGroupRequest_GroupRule,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { Button } from '@/components/ui/button';
+import { InfoCircledIcon, PlusIcon } from '@radix-ui/react-icons';
+import { PencilIcon } from '@heroicons/react/24/outline';
+import { useMutation, useQuery } from '@connectrpc/connect-query';
 import {
   getUserAccessibleResources,
   updateOrganizationGroup,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { GroupRuleBuilder } from "@/components/member-groups/group-rule-builder";
-import { useState } from "react";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { useToast } from "@/components/ui/use-toast";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { roles } from "@/lib/constants";
-import { useFeature } from "@/hooks/use-feature";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { GroupRuleBuilder } from '@/components/member-groups/group-rule-builder';
+import { useState } from 'react';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { useToast } from '@/components/ui/use-toast';
+import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { roles } from '@/lib/constants';
+import { useFeature } from '@/hooks/use-feature';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
-export function GroupSheet({ open, group, onGroupUpdated, onOpenChange }: {
+export function GroupSheet({
+  open,
+  group,
+  onGroupUpdated,
+  onOpenChange,
+}: {
   open: boolean;
   group?: OrganizationGroup;
   onGroupUpdated(): Promise<unknown>;
@@ -39,24 +44,26 @@ export function GroupSheet({ open, group, onGroupUpdated, onOpenChange }: {
   return (
     <Sheet open={open} onOpenChange={onSheetOpenChange}>
       <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
-        {!currentGroup
-          ? null
-          : (
-            <MemberGroupSheetContent
-              group={currentGroup}
-              onGroupUpdated={async () => {
-                await onGroupUpdated();
-                onOpenChange(false);
-              }}
-              onCancel={() => onOpenChange(false)}
-            />
-          )}
+        {!currentGroup ? null : (
+          <MemberGroupSheetContent
+            group={currentGroup}
+            onGroupUpdated={async () => {
+              await onGroupUpdated();
+              onOpenChange(false);
+            }}
+            onCancel={() => onOpenChange(false)}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );
 }
 
-function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
+function MemberGroupSheetContent({
+  group,
+  onGroupUpdated,
+  onCancel,
+}: {
   group: OrganizationGroup;
   onGroupUpdated(): Promise<unknown>;
   onCancel(): void;
@@ -64,15 +71,18 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
   const { data } = useQuery(getUserAccessibleResources);
   const [description, setDescription] = useState(group.description || '');
   const { toast } = useToast();
-  const rbac = useFeature("rbac");
+  const rbac = useFeature('rbac');
 
-  const [groupRules, setGroupRules] = useState<UpdateOrganizationGroupRequest_GroupRule[]>([...group.rules.map(
-    (r) => new UpdateOrganizationGroupRequest_GroupRule({
-      role: r.role,
-      namespaces: r.namespaces,
-      resources: r.resources,
-    })
-  )]);
+  const [groupRules, setGroupRules] = useState<UpdateOrganizationGroupRequest_GroupRule[]>([
+    ...group.rules.map(
+      (r) =>
+        new UpdateOrganizationGroupRequest_GroupRule({
+          role: r.role,
+          namespaces: r.namespaces,
+          resources: r.resources,
+        }),
+    ),
+  ]);
 
   const allRulesHaveRole = groupRules.every((rule) => !!rule.role);
   const { mutate, isPending, isSuccess } = useMutation(updateOrganizationGroup);
@@ -92,24 +102,24 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
           if (resp?.response?.code === EnumStatusCode.OK) {
             onGroupUpdated().finally(() => {
               toast({
-                description: "Group updated successfully",
+                description: 'Group updated successfully',
                 duration: 3000,
               });
             });
           } else {
             toast({
-              description: resp?.response?.details ?? "Could not update the group. Please try again.",
+              description: resp?.response?.details ?? 'Could not update the group. Please try again.',
               duration: 3000,
             });
           }
         },
         onError() {
           toast({
-            description: "Could not update the group. Please try again.",
+            description: 'Could not update the group. Please try again.',
             duration: 3000,
           });
         },
-      }
+      },
     );
   };
 
@@ -118,13 +128,9 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
       <SheetHeader>
         <SheetTitle>Rules for &quot;{group.name}&quot;</SheetTitle>
         <SheetDescription className="space-x-2">
-          <span>{description || "No description set"}</span>
+          <span>{description || 'No description set'}</span>
           {rbac?.enabled && !group.builtin && (
-            <EditDescriptionDialog
-              description={description}
-              disabled={isDisabled}
-              onUpdate={setDescription}
-            />
+            <EditDescriptionDialog description={description} disabled={isDisabled} onUpdate={setDescription} />
           )}
         </SheetDescription>
       </SheetHeader>
@@ -133,14 +139,12 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
         <Alert className="mt-6">
           <InfoCircledIcon className="size-5" />
           <AlertTitle>Attention!</AlertTitle>
-          <AlertDescription>
-            You need to enable RBAC in the settings to be able to modify groups.
-          </AlertDescription>
+          <AlertDescription>You need to enable RBAC in the settings to be able to modify groups.</AlertDescription>
         </Alert>
       )}
 
       <div className="my-6 space-y-3">
-        {groupRules.length > 0 && (
+        {groupRules.length > 0 &&
           groupRules.map((rule, index) => (
             <GroupRuleBuilder
               key={`rule-${rule.role}-${index}`}
@@ -160,8 +164,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
                 setGroupRules(newGroupRules);
               }}
             />
-          ))
-        )}
+          ))}
 
         {rbac?.enabled && !group.builtin && (
           <div>
@@ -174,10 +177,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
                   return;
                 }
 
-                setGroupRules([
-                  ...groupRules,
-                  UpdateOrganizationGroupRequest_GroupRule.fromJson({}),
-                ]);
+                setGroupRules([...groupRules, UpdateOrganizationGroupRequest_GroupRule.fromJson({})]);
               }}
             >
               <PlusIcon className="size-4" />
@@ -194,11 +194,7 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
               Cancel
             </Button>
 
-            <Button
-              disabled={isDisabled || !allRulesHaveRole}
-              isLoading={isPending || isSuccess}
-              onClick={onSaveClick}
-            >
+            <Button disabled={isDisabled || !allRulesHaveRole} isLoading={isPending || isSuccess} onClick={onSaveClick}>
               Save
             </Button>
           </>
@@ -208,7 +204,11 @@ function MemberGroupSheetContent({ group, onGroupUpdated, onCancel }: {
   );
 }
 
-function EditDescriptionDialog({ description, disabled, onUpdate }: {
+function EditDescriptionDialog({
+  description,
+  disabled,
+  onUpdate,
+}: {
   description: string;
   disabled: boolean;
   onUpdate(description: string): void;
@@ -236,16 +236,11 @@ function EditDescriptionDialog({ description, disabled, onUpdate }: {
             onChange={(e) => setTmpDescription(e.target.value)}
           />
 
-          <div className="text-right text-xs">
-            {tmpDescription.length}/250
-          </div>
+          <div className="text-right text-xs">{tmpDescription.length}/250</div>
         </div>
 
         <DialogFooter>
-          <Button
-            variant="secondary"
-            onClick={() => setOpen(false)}
-          >
+          <Button variant="secondary" onClick={() => setOpen(false)}>
             Cancel
           </Button>
           <Button
