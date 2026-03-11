@@ -87,15 +87,39 @@ func (c *InMemoryPlanCacheFallback) IsEnabled() bool {
 }
 
 // getCachedOperationsForFF returns all cached operations for a feature flag key.
+// It first checks extracted snapshots (cachedOps), then falls back to reading
+// from live expensive cache references (used during execution config updates
+// where extractQueriesAndOverridePlanCache has not been called).
 func (c *InMemoryPlanCacheFallback) getCachedOperationsForFF(featureFlagKey string) []*nodev1.Operation {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	if c.cachedOps == nil {
+	if c.expensiveCaches == nil {
 		return nil
 	}
 
-	return c.cachedOps[featureFlagKey]
+	// Check extracted snapshots first (populated after router config reloads)
+	if ops, ok := c.cachedOps[featureFlagKey]; ok {
+		return ops
+	}
+
+	// Fall back to reading from live expensive cache references
+	// This path is used during execution config updates where the previous
+	// expensive cache is still valid and hasn't been extracted yet.
+	if expCache, ok := c.expensiveCaches[featureFlagKey]; ok {
+		var ops []*nodev1.Operation
+		expCache.IterValues(func(v *planWithMetaData) bool {
+			if v.content != "" {
+				ops = append(ops, &nodev1.Operation{
+					Request: &nodev1.OperationRequest{Query: v.content},
+				})
+			}
+			return false
+		})
+		return ops
+	}
+
+	return nil
 }
 
 // setExpensiveCacheForFF stores the expensive plan cache reference for a feature flag key

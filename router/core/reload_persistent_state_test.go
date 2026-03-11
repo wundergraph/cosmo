@@ -134,6 +134,7 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 		}
 
 		cache := &InMemoryPlanCacheFallback{
+			expensiveCaches: make(map[string]*expensivePlanCache),
 			cachedOps: map[string][]*nodev1.Operation{
 				"test-ff": expectedOps,
 			},
@@ -145,11 +146,34 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 		require.Equal(t, expectedOps, result)
 	})
 
+	t.Run("returns operations from live expensive cache when cachedOps has no entry", func(t *testing.T) {
+		t.Parallel()
+
+		expCache, err := newExpensivePlanCache(100)
+		require.NoError(t, err)
+		expCache.Set(1, &planWithMetaData{content: "query { fromExpensive }"}, 5*1e9)
+		expCache.Wait()
+
+		cache := &InMemoryPlanCacheFallback{
+			expensiveCaches: map[string]*expensivePlanCache{
+				"test-ff": expCache,
+			},
+			cachedOps: make(map[string][]*nodev1.Operation),
+		}
+
+		result := cache.getCachedOperationsForFF("test-ff")
+
+		require.NotNil(t, result)
+		require.Len(t, result, 1)
+		require.Equal(t, "query { fromExpensive }", result[0].Request.Query)
+	})
+
 	t.Run("returns nil for non-existent feature flag", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			logger:    zap.NewNop(),
-			cachedOps: make(map[string][]*nodev1.Operation),
+			logger:          zap.NewNop(),
+			expensiveCaches: make(map[string]*expensivePlanCache),
+			cachedOps:       make(map[string][]*nodev1.Operation),
 		}
 
 		result := cache.getCachedOperationsForFF("non-existent")
@@ -159,7 +183,8 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 	t.Run("returns nil when cache is disabled", func(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
-			cachedOps: nil,
+			expensiveCaches: nil,
+			cachedOps:       nil,
 		}
 
 		result := cache.getCachedOperationsForFF("test-ff")
