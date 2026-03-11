@@ -3342,7 +3342,7 @@
         "expensive_query_cache_size": {
           "type": "integer",
           "minimum": 1,
-          "default": 100,
+          "default": 256,
           "description": "The maximum number of entries in the expensive query plan cache. Expensive queries are protected from TinyLFU eviction in the main plan cache."
         },
         "expensive_query_threshold": {
@@ -3351,7 +3351,7 @@
           "description": "The minimum planning duration for a query to be considered expensive and protected from TinyLFU cache eviction. Queries exceeding this threshold are re-validated in the background before promotion to the expensive cache.",
           "default": "5s",
           "duration": {
-            "minimum": "100ms"
+            "minimum": "1ns"
           }
         },
         "operation_hash_cache_size": {

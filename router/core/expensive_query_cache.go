@@ -25,11 +25,12 @@ type setRequest struct {
 // background goroutine, making Set non-blocking. Reads are protected by a RWMutex.
 // It tracks the minimum-duration entry so that rejection of cheaper entries is O(1).
 type expensivePlanCache struct {
-	mu      sync.RWMutex
-	entries map[uint64]*expensivePlanEntry
-	maxSize int
-	minKey  uint64
-	minDur  time.Duration
+	mu        sync.RWMutex
+	entries   map[uint64]*expensivePlanEntry
+	maxSize   int
+	threshold time.Duration
+	minKey    uint64
+	minDur    time.Duration
 
 	writeCh chan setRequest
 	stop    chan struct{}
@@ -39,16 +40,17 @@ type expensivePlanCache struct {
 // We use the same value as ristretto (this would be the buffer size if we used ristretto as the backing cache)
 const defaultWriteBufferSize = 32 * 1024
 
-func newExpensivePlanCache(maxSize int) (*expensivePlanCache, error) {
+func newExpensivePlanCache(maxSize int, threshold time.Duration) (*expensivePlanCache, error) {
 	if maxSize < 1 {
 		return nil, fmt.Errorf("expensive query cache size must be at least 1, got %d", maxSize)
 	}
 	c := &expensivePlanCache{
-		entries: make(map[uint64]*expensivePlanEntry, maxSize),
-		maxSize: maxSize,
-		writeCh: make(chan setRequest, defaultWriteBufferSize),
-		stop:    make(chan struct{}),
-		done:    make(chan struct{}),
+		entries:   make(map[uint64]*expensivePlanEntry, maxSize),
+		maxSize:   maxSize,
+		threshold: threshold,
+		writeCh:   make(chan setRequest, defaultWriteBufferSize),
+		stop:      make(chan struct{}),
+		done:      make(chan struct{}),
 	}
 	go c.processWrites()
 	return c, nil
@@ -101,6 +103,11 @@ func (c *expensivePlanCache) Wait() {
 
 // applySet performs the actual cache mutation. Must only be called from processWrites.
 func (c *expensivePlanCache) applySet(key uint64, plan *planWithMetaData, duration time.Duration) {
+	// Reject entries that don't meet the threshold
+	if duration < c.threshold {
+		return
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

@@ -149,7 +149,7 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 	t.Run("returns operations from live expensive cache when cachedOps has no entry", func(t *testing.T) {
 		t.Parallel()
 
-		expCache, err := newExpensivePlanCache(100)
+		expCache, err := newExpensivePlanCache(100, 0)
 		require.NoError(t, err)
 		expCache.Set(1, &planWithMetaData{content: "query { fromExpensive }"}, 5*1e9)
 		expCache.Wait()
@@ -314,9 +314,9 @@ func TestInMemoryPlanCacheFallback_ProcessOnConfigChangeRestart(t *testing.T) {
 		query1 := "query { test1 }"
 		query2 := "query { test2 }"
 
-		expCache1, err := newExpensivePlanCache(100)
+		expCache1, err := newExpensivePlanCache(100, 0)
 		require.NoError(t, err)
-		expCache2, err := newExpensivePlanCache(100)
+		expCache2, err := newExpensivePlanCache(100, 0)
 		require.NoError(t, err)
 
 		expCache1.Set(1, &planWithMetaData{content: query1}, 5*1e9)

@@ -35,8 +35,6 @@ type OperationPlanner struct {
 	useFallback    bool
 	logger         *zap.Logger
 
-	threshold time.Duration
-
 	// planningDurationOverride, when set, replaces the measured planning duration.
 	// This is used in tests to simulate slow queries.
 	planningDurationOverride func(content string) time.Duration
@@ -68,11 +66,10 @@ func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache Execu
 
 	if inMemoryPlanCacheFallback {
 		var err error
-		p.expensiveCache, err = newExpensivePlanCache(expensiveCacheSize)
+		p.expensiveCache, err = newExpensivePlanCache(expensiveCacheSize, threshold)
 		if err != nil {
 			return nil, err
 		}
-		p.threshold = threshold
 	}
 
 	return p, nil
@@ -210,9 +207,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 					prepared.planningDuration = p.planningDurationOverride(prepared.content)
 				}
 
-				if prepared.planningDuration >= p.threshold {
-					p.expensiveCache.Set(operationID, prepared, prepared.planningDuration)
-				}
+				p.expensiveCache.Set(operationID, prepared, prepared.planningDuration)
 			}
 
 			return prepared, nil

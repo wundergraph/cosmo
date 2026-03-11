@@ -588,9 +588,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 				if s.operationPlanner == nil || s.operationPlanner.expensiveCache == nil {
 					return
 				}
-				if item.Value.planningDuration >= s.operationPlanner.threshold {
-					s.operationPlanner.expensiveCache.Set(item.Key, item.Value, item.Value.planningDuration)
-				}
+				s.operationPlanner.expensiveCache.Set(item.Key, item.Value, item.Value.planningDuration)
 			}
 		}
 		s.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)

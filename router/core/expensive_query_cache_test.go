@@ -9,7 +9,7 @@ import (
 
 func TestExpensivePlanCache_GetSet(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -42,7 +42,7 @@ func TestExpensivePlanCache_GetSet(t *testing.T) {
 
 func TestExpensivePlanCache_BoundedSize(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(3)
+	c, err := newExpensivePlanCache(3, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -69,7 +69,7 @@ func TestExpensivePlanCache_BoundedSize(t *testing.T) {
 
 func TestExpensivePlanCache_BoundedSize_SkipsCheaper(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(3)
+	c, err := newExpensivePlanCache(3, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -95,7 +95,7 @@ func TestExpensivePlanCache_BoundedSize_SkipsCheaper(t *testing.T) {
 
 func TestExpensivePlanCache_UpdateExisting(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(2)
+	c, err := newExpensivePlanCache(2, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -121,7 +121,7 @@ func TestExpensivePlanCache_UpdateExisting(t *testing.T) {
 
 func TestExpensivePlanCache_IterValues(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -141,7 +141,7 @@ func TestExpensivePlanCache_IterValues(t *testing.T) {
 
 func TestExpensivePlanCache_IterValues_EarlyStop(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -160,7 +160,7 @@ func TestExpensivePlanCache_IterValues_EarlyStop(t *testing.T) {
 
 func TestExpensivePlanCache_Close(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10, 0)
 	require.NoError(t, err)
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
 
@@ -173,7 +173,7 @@ func TestExpensivePlanCache_Close(t *testing.T) {
 
 func TestExpensivePlanCache_SetAfterClose(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10, 0)
 	require.NoError(t, err)
 	c.Close()
 
@@ -188,7 +188,7 @@ func TestExpensivePlanCache_SetAfterClose(t *testing.T) {
 
 func TestExpensivePlanCache_IterValuesEmpty(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -202,7 +202,7 @@ func TestExpensivePlanCache_IterValuesEmpty(t *testing.T) {
 
 func TestExpensivePlanCache_IterValuesAfterClose(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10)
+	c, err := newExpensivePlanCache(10, 0)
 	require.NoError(t, err)
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
 	c.Close()
@@ -217,7 +217,7 @@ func TestExpensivePlanCache_IterValuesAfterClose(t *testing.T) {
 
 func TestExpensivePlanCache_EqualDurationNotEvicted(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(2)
+	c, err := newExpensivePlanCache(2, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -238,7 +238,7 @@ func TestExpensivePlanCache_EqualDurationNotEvicted(t *testing.T) {
 
 func TestExpensivePlanCache_MaxSizeOne(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(1)
+	c, err := newExpensivePlanCache(1, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
@@ -268,7 +268,7 @@ func TestExpensivePlanCache_MaxSizeOne(t *testing.T) {
 
 func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(100)
+	c, err := newExpensivePlanCache(100, 0)
 	require.NoError(t, err)
 	defer c.Close()
 	done := make(chan struct{})
@@ -312,9 +312,34 @@ func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
 
 func TestExpensivePlanCache_InvalidSize(t *testing.T) {
 	t.Parallel()
-	_, err := newExpensivePlanCache(0)
+	_, err := newExpensivePlanCache(0, 0)
 	require.Error(t, err)
 
-	_, err = newExpensivePlanCache(-1)
+	_, err = newExpensivePlanCache(-1, 0)
 	require.Error(t, err)
+}
+
+func TestExpensivePlanCache_ThresholdRejectsBelow(t *testing.T) {
+	t.Parallel()
+	c, err := newExpensivePlanCache(10, 100*time.Millisecond)
+	require.NoError(t, err)
+	defer c.Close()
+
+	// Below threshold — should be rejected
+	c.Set(1, &planWithMetaData{content: "q1"}, 50*time.Millisecond)
+	c.Wait()
+	_, ok := c.Get(1)
+	require.False(t, ok, "entry below threshold should be rejected")
+
+	// At threshold — should be accepted
+	c.Set(2, &planWithMetaData{content: "q2"}, 100*time.Millisecond)
+	c.Wait()
+	_, ok = c.Get(2)
+	require.True(t, ok, "entry at threshold should be accepted")
+
+	// Above threshold — should be accepted
+	c.Set(3, &planWithMetaData{content: "q3"}, 200*time.Millisecond)
+	c.Wait()
+	_, ok = c.Get(3)
+	require.True(t, ok, "entry above threshold should be accepted")
 }
