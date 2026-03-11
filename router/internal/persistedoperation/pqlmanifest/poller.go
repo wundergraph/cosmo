@@ -17,8 +17,11 @@ type Poller struct {
 }
 
 func NewPoller(fetcher *Fetcher, store *Store, pollInterval, pollJitter time.Duration, logger *zap.Logger) *Poller {
-	if pollJitter < 0 {
-		pollJitter = 0
+	if pollJitter <= 0 {
+		pollJitter = 5
+	}
+	if pollInterval <= 0 {
+		pollInterval = 10 * time.Second
 	}
 	if logger == nil {
 		logger = zap.NewNop()
