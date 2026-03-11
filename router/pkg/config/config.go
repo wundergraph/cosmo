@@ -628,7 +628,7 @@ type NatsEventSource struct {
 	ID             string                     `yaml:"id,omitempty"`
 	URL            string                     `yaml:"url,omitempty"`
 	Authentication *NatsAuthentication        `yaml:"authentication,omitempty"`
-	Consumers      NatsConsumersConfiguration `yaml:"consumers,omitempty"`
+	Consumers      NatsConsumersConfiguration `yaml:"experiment_consumers,omitempty"`
 }
 
 func (n NatsEventSource) GetID() string {

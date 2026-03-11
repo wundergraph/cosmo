@@ -2581,9 +2581,9 @@
                       }
                     ]
                   },
-                  "consumers": {
+                  "experiment_consumers": {
                     "type": "object",
-                    "description": "Configuration for JetStream consumers managed by this NATS provider.",
+                    "description": "Configuration for JetStream consumers managed by this NATS provider. NOTE: This option and it's suboptions are experimental and may change at any time.",
                     "additionalProperties": false,
                     "properties": {
                       "durable": {
@@ -2593,7 +2593,7 @@
                         "properties": {
                           "delete_on_shutdown": {
                             "type": "boolean",
-                            "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down normally. Defaults to false.",
+                            "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down normally. NOTE: This option is experimental and may change at any time. Defaults to false.",
                             "default": false
                           }
                         }
