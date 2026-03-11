@@ -1303,11 +1303,15 @@ Example:
       messageLines.push(
         ...this.buildMessage({
           messageName: argsMessageName,
-          fields: field.args.map((arg) => ({
-            fieldName: graphqlFieldToProtoField(arg.name),
-            typeName: this.getProtoTypeFromGraphQL(arg.type).typeName,
-            fieldNumber: ++fieldNumber,
-          })),
+          fields: field.args.map((arg) => {
+            const protoType = this.getProtoTypeFromGraphQL(arg.type);
+            return {
+              fieldName: graphqlFieldToProtoField(arg.name),
+              typeName: protoType.typeName,
+              isRepeated: protoType.isRepeated,
+              fieldNumber: ++fieldNumber,
+            };
+          }),
         }),
       );
     }
