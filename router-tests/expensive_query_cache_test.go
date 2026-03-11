@@ -62,7 +62,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				assert.Equal(ct, 200, res.Response.StatusCode)
 				planHit := res.Response.Header.Get("x-wg-execution-plan-cache") == "HIT"
-				expensiveHit := res.Response.Header.Get("X-WG-Expensive-Plan-Cache") == "HIT"
+				expensiveHit := res.Response.Header.Get("x-wg-expensive-plan-cache") == "HIT"
 				assert.True(ct, planHit || expensiveHit, "expected plan to be served from main or expensive cache")
 				for _, check := range extraChecks {
 					check(ct, res)
@@ -74,7 +74,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 		expensiveCacheHits := 0
 		for _, q := range queries {
 			res := xEnv.MakeGraphQLRequestOK(q)
-			if res.Response.Header.Get("X-WG-Expensive-Plan-Cache") == "HIT" {
+			if res.Response.Header.Get("x-wg-expensive-plan-cache") == "HIT" {
 				expensiveCacheHits++
 			}
 		}
@@ -140,7 +140,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			// Fast queries should never be served from the expensive cache
 			for _, q := range fastQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
-				require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Expensive-Plan-Cache"),
+				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-expensive-plan-cache"),
 					"fast query should not be in the expensive cache")
 			}
 		})
@@ -267,7 +267,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 				require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
 				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"),
 					"fast query should not be in main plan cache after config reload")
-				require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Expensive-Plan-Cache"),
+				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-expensive-plan-cache"),
 					"fast query should not be in expensive cache after config reload")
 			}
 		})
@@ -560,14 +560,14 @@ func TestExpensiveQueryCache(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, 200, res.Response.StatusCode)
 				// Header must be absent when feature is disabled
-				require.Empty(t, res.Response.Header.Get("X-WG-Expensive-Plan-Cache"),
-					"X-WG-Expensive-Plan-Cache header should not be present when InMemoryFallback is disabled")
+				require.Empty(t, res.Response.Header.Get("x-wg-expensive-plan-cache"),
+					"x-wg-expensive-plan-cache header should not be present when InMemoryFallback is disabled")
 			}
 
 			// Second pass — cache hits
 			for _, q := range allQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
-				require.Empty(t, res.Response.Header.Get("X-WG-Expensive-Plan-Cache"))
+				require.Empty(t, res.Response.Header.Get("x-wg-expensive-plan-cache"))
 			}
 
 			// Verify spans do NOT contain the expensive_plan_cache_hit attribute
@@ -665,7 +665,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 				res := xEnv.MakeGraphQLRequestOK(slowQ)
 				assert.Equal(ct, "updated", res.Response.Header.Get("X-Router-Config-Version"))
 				planHit := res.Response.Header.Get("x-wg-execution-plan-cache") == "HIT"
-				expensiveHit := res.Response.Header.Get("X-WG-Expensive-Plan-Cache") == "HIT"
+				expensiveHit := res.Response.Header.Get("x-wg-expensive-plan-cache") == "HIT"
 				assert.True(ct, planHit || expensiveHit, "expected slow plan to survive schema reload")
 			}, 2*time.Second, 100*time.Millisecond)
 
@@ -674,7 +674,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
 			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"),
 				"fast query should not be in main plan cache after schema reload")
-			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Expensive-Plan-Cache"),
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-expensive-plan-cache"),
 				"fast query should not survive schema reload via expensive cache")
 		})
 	})
@@ -702,7 +702,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 				require.Equal(t, 200, res.Response.StatusCode)
 				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
 				// Feature is enabled so header is present, but should be MISS
-				require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Expensive-Plan-Cache"))
+				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-expensive-plan-cache"))
 			}
 
 			// Wait for Ristretto eviction
@@ -714,7 +714,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			for _, q := range allQueries {
 				res := xEnv.MakeGraphQLRequestOK(q)
 				require.Equal(t, 200, res.Response.StatusCode)
-				require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Expensive-Plan-Cache"),
+				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-expensive-plan-cache"),
 					"no plan should be in the expensive cache with a 1h threshold")
 			}
 		})
