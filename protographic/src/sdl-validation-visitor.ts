@@ -377,14 +377,14 @@ export class SDLValidationVisitor {
       return;
     }
 
-    if (!hasResolverDirective) {
+    if (hasResolverDirective) {
       this.addWarning(
-        `No @${CONNECT_FIELD_RESOLVER} directive found on the field ${ctx.node.name.value} - falling back to ID field`,
+        `@${CONNECT_FIELD_RESOLVER} directive on the field ${ctx.node.name.value} has no context provided - falling back to ID field`,
         ctx.node.loc,
       );
     } else {
       this.addWarning(
-        `@${CONNECT_FIELD_RESOLVER} directive on the field ${ctx.node.name.value} has no context provided - falling back to ID field`,
+        `No @${CONNECT_FIELD_RESOLVER} directive found on the field ${ctx.node.name.value} - falling back to ID field`,
         ctx.node.loc,
       );
     }
