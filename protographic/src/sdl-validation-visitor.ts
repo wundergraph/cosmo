@@ -377,10 +377,17 @@ export class SDLValidationVisitor {
       return;
     }
 
-    this.addWarning(
-      `No @${CONNECT_FIELD_RESOLVER} directive found on the field ${ctx.node.name.value} - falling back to ID field`,
-      ctx.node.loc,
-    );
+    if (!hasResolverDirective) {
+      this.addWarning(
+        `No @${CONNECT_FIELD_RESOLVER} directive found on the field ${ctx.node.name.value} - falling back to ID field`,
+        ctx.node.loc,
+      );
+    } else {
+      this.addWarning(
+        `@${CONNECT_FIELD_RESOLVER} directive on the field ${ctx.node.name.value} has no context provided - falling back to ID field`,
+        ctx.node.loc,
+      );
+    }
     const idFields =
       parent.fields?.filter((field) => this.getUnderlyingType(field.type).name.value === GraphQLID.name) ?? [];
     switch (idFields.length) {
