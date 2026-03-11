@@ -5,13 +5,12 @@ import type {
   DeletePersistedOperationRequest,
   DeletePersistedOperationResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import type { BlobStorage } from '../../blobstorage/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import type { PersistedOperationWithClientDTO } from '../../../types/index.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { generateAndUploadManifest } from './generateManifest.js';
 import { createBlobStoragePath } from './utils.js';
 
 export function deletePersistedOperation(
@@ -76,9 +75,19 @@ export function deletePersistedOperation(
     });
 
     try {
-      await opts.blobStorage.deleteObject({
-        key: path,
-      });
+      await Promise.all([
+        opts.blobStorage.deleteObject({
+          key: path,
+        }),
+        generateAndUploadManifest({
+          db: opts.db,
+          federatedGraphId: federatedGraph.id,
+          organizationId: authContext.organizationId,
+          blobStorage: opts.blobStorage,
+          logger,
+        }),
+      ]);
+
       return {
         response: {
           code: EnumStatusCode.OK,

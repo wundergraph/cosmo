@@ -18,6 +18,7 @@ import { OperationsRepository } from '../../repositories/OperationsRepository.js
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { generateAndUploadManifest } from './generateManifest.js';
 import { createBlobStoragePath } from './utils.js';
 
 const MAX_PERSISTED_OPERATIONS = 100;
@@ -262,6 +263,14 @@ export function publishPersistedOperations(
     }
 
     await operationsRepo.updatePersistedOperations(clientId, userId, updatedOperations);
+
+    await generateAndUploadManifest({
+      db: opts.db,
+      federatedGraphId: federatedGraph.id,
+      organizationId,
+      blobStorage: opts.blobStorage,
+      logger,
+    });
 
     return {
       response: {

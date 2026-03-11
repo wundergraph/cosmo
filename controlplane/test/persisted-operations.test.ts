@@ -241,14 +241,17 @@ describe('Persisted operations', (ctx) => {
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
       const storageKeys = blobStorage.keys();
-      expect(storageKeys.length).toBe(2);
-      const keyComponents = storageKeys[1].split('/');
+      // 3 keys: routerconfig + operation + manifest
+      expect(storageKeys.length).toBe(3);
+      const operationKey = storageKeys.find((key) => key.includes(`/${id}.json`));
+      expect(operationKey).toBeDefined();
+      const keyComponents = operationKey!.split('/');
       const keyFilename = keyComponents.at(-1)!;
       const keyBasename = keyFilename.split('.')[0];
       expect(keyBasename).toBe(id);
 
       const blobObject = await blobStorage.getObject({
-        key: storageKeys[1],
+        key: operationKey!,
       });
       const text = await new Response(blobObject.stream).text();
       expect(JSON.parse(text)).toEqual({ version: 1, body: query });
@@ -278,18 +281,20 @@ describe('Persisted operations', (ctx) => {
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
       const storageKeys = blobStorage.keys();
-      expect(storageKeys.length).toBe(2);
+      expect(storageKeys.length).toBe(3);
 
       // The client name should be escaped in the storage key
-      expect(storageKeys[1]).toContain(encodeURIComponent(clientName));
+      const operationKey = storageKeys.find((key) => key.includes(`/${id}.json`));
+      expect(operationKey).toBeDefined();
+      expect(operationKey).toContain(encodeURIComponent(clientName));
 
-      const keyComponents = storageKeys[1].split('/');
+      const keyComponents = operationKey!.split('/');
       const keyFilename = keyComponents.at(-1)!;
       const keyBasename = keyFilename.split('.')[0];
       expect(keyBasename).toBe(id);
 
       const blobObject = await blobStorage.getObject({
-        key: storageKeys[1],
+        key: operationKey!,
       });
       const text = await new Response(blobObject.stream).text();
       expect(JSON.parse(text)).toEqual({ version: 1, body: query });
@@ -325,7 +330,7 @@ describe('Persisted operations', (ctx) => {
 
       expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
 
-      expect(blobStorage.keys().length).toBe(2);
+      expect(blobStorage.keys().length).toBe(3);
 
       const deleteFederatedGraphResp = await client.deleteFederatedGraph({
         name: fedGraphName,
@@ -537,6 +542,187 @@ describe('Persisted operations', (ctx) => {
         clientName: 'curl',
       });
       expect(deleteOperationsResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+    });
+  });
+
+  describe('manifest generation', () => {
+    test('Should generate a PQL manifest after publishing persisted operations', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({
+        dbname,
+        chClient,
+      });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const query = `query { hello }`;
+
+      const publishOperationsResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: genID('hello'), contents: query }],
+      });
+
+      expect(publishOperationsResp.response?.code).toBe(EnumStatusCode.OK);
+
+      const storageKeys = blobStorage.keys();
+      const manifestKey = storageKeys.find((key) => key.endsWith('/operations/manifest.json'));
+      expect(manifestKey).toBeDefined();
+
+      const blobObject = await blobStorage.getObject({ key: manifestKey! });
+      const text = await new Response(blobObject.stream).text();
+      const manifest = JSON.parse(text);
+
+      expect(manifest.version).toBe(1);
+      expect(manifest.revision).toBeDefined();
+      expect(manifest.generatedAt).toBeDefined();
+      expect(Object.keys(manifest.operations).length).toBe(1);
+
+      const entry = Object.values(manifest.operations)[0] as string;
+      expect(entry).toBe(query);
+    });
+
+    test('Should include operations from multiple clients in the manifest', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({
+        dbname,
+        chClient,
+      });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const queryA = `query { hello }`;
+      const queryB = `query { world }`;
+
+      const publishResp1 = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'client-a',
+        operations: [{ id: genID('op1'), contents: queryA }],
+      });
+      expect(publishResp1.response?.code).toBe(EnumStatusCode.OK);
+
+      const publishResp2 = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'client-b',
+        operations: [{ id: genID('op2'), contents: queryB }],
+      });
+      expect(publishResp2.response?.code).toBe(EnumStatusCode.OK);
+
+      const storageKeys = blobStorage.keys();
+      const manifestKey = storageKeys.find((key) => key.endsWith('/operations/manifest.json'));
+      expect(manifestKey).toBeDefined();
+
+      const blobObject = await blobStorage.getObject({ key: manifestKey! });
+      const text = await new Response(blobObject.stream).text();
+      const manifest = JSON.parse(text);
+
+      expect(Object.keys(manifest.operations).length).toBe(2);
+
+      const bodies = Object.values(manifest.operations) as string[];
+      expect(bodies).toContain(queryA);
+      expect(bodies).toContain(queryB);
+    });
+
+    test('Should regenerate the manifest after deleting a persisted operation', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({
+        dbname,
+        chClient,
+      });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const query1 = `query { hello }`;
+      const query2 = `query { world }`;
+      const op1Id = genID('op1');
+      const op2Id = genID('op2');
+
+      const publishResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [
+          { id: op1Id, contents: query1 },
+          { id: op2Id, contents: query2 },
+        ],
+      });
+      expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // Verify manifest has 2 operations
+      let storageKeys = blobStorage.keys();
+      let manifestKey = storageKeys.find((key) => key.endsWith('/operations/manifest.json'));
+      let blobObject = await blobStorage.getObject({ key: manifestKey! });
+      let text = await new Response(blobObject.stream).text();
+      let manifest = JSON.parse(text);
+      expect(Object.keys(manifest.operations).length).toBe(2);
+      const revisionBefore = manifest.revision;
+
+      // Delete one operation
+      const deleteResp = await client.deletePersistedOperation({
+        fedGraphName,
+        namespace: 'default',
+        operationId: publishResp.operations[0].id,
+        clientName: 'test-client',
+      });
+      expect(deleteResp.response?.code).toBe(EnumStatusCode.OK);
+
+      // Verify manifest now has 1 operation with a new revision
+      storageKeys = blobStorage.keys();
+      manifestKey = storageKeys.find((key) => key.endsWith('/operations/manifest.json'));
+      blobObject = await blobStorage.getObject({ key: manifestKey! });
+      text = await new Response(blobObject.stream).text();
+      manifest = JSON.parse(text);
+      expect(Object.keys(manifest.operations).length).toBe(1);
+      expect(manifest.revision).not.toBe(revisionBefore);
+    });
+
+    test('Should produce a deterministic revision for the same set of operations', async (testContext) => {
+      const { client, server, blobStorage } = await SetupTest({
+        dbname,
+        chClient,
+      });
+      testContext.onTestFinished(() => server.close());
+
+      const fedGraphName = genID('fedGraph');
+      await setupFederatedGraph(fedGraphName, client);
+
+      const query = `query { hello }`;
+
+      const publishResp = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: genID('hello'), contents: query }],
+      });
+      expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+
+      const storageKeys = blobStorage.keys();
+      const manifestKey = storageKeys.find((key) => key.endsWith('/operations/manifest.json'));
+      const blobObject1 = await blobStorage.getObject({ key: manifestKey! });
+      const text1 = await new Response(blobObject1.stream).text();
+      const manifest1 = JSON.parse(text1);
+
+      // Publish the same operations again (will be UP_TO_DATE), which still triggers manifest regen
+      const publishResp2 = await client.publishPersistedOperations({
+        fedGraphName,
+        namespace: 'default',
+        clientName: 'test-client',
+        operations: [{ id: publishResp.operations[0].id, contents: query }],
+      });
+      expect(publishResp2.response?.code).toBe(EnumStatusCode.OK);
+
+      const blobObject2 = await blobStorage.getObject({ key: manifestKey! });
+      const text2 = await new Response(blobObject2.stream).text();
+      const manifest2 = JSON.parse(text2);
+
+      // Same operations should produce the same revision
+      expect(manifest2.revision).toBe(manifest1.revision);
     });
   });
 

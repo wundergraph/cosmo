@@ -7,6 +7,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.uber.org/zap"
 )
 
@@ -37,12 +38,14 @@ type Options struct {
 
 	ProviderClient StorageClient
 	ApqClient      apq.Client
+	PQLStore       *pqlmanifest.Store
 }
 
 type Client struct {
 	cache          *operationstorage.OperationsCache
 	providerClient StorageClient
 	apqClient      apq.Client
+	pqlStore       *pqlmanifest.Store
 }
 
 func NewClient(opts *Options) (*Client, error) {
@@ -57,6 +60,7 @@ func NewClient(opts *Options) (*Client, error) {
 		providerClient: opts.ProviderClient,
 		cache:          cache,
 		apqClient:      opts.ApqClient,
+		pqlStore:       opts.PQLStore,
 	}, nil
 }
 
@@ -70,6 +74,21 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 
 	if data := c.cache.Get(clientName, sha256Hash); data != nil {
 		return data, false, nil
+	}
+
+	// PQL manifest check (local, no network)
+	if c.pqlStore != nil && c.pqlStore.IsLoaded() {
+		if body, found := c.pqlStore.LookupByHash(sha256Hash); found {
+			c.cache.Set(clientName, sha256Hash, body, 0)
+			return body, false, nil
+		}
+		// Manifest is authoritative — operation not found
+		if c.apqClient != nil {
+			return nil, true, nil
+		}
+		return nil, false, &PersistentOperationNotFoundError{
+			ClientName: clientName, Sha256Hash: sha256Hash,
+		}
 	}
 
 	if c.providerClient == nil {
