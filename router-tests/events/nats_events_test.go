@@ -1108,7 +1108,7 @@ func TestNatsEvents(t *testing.T) {
 			Payload: []byte(`{"query":"subscription { employeeUpdatedNatsStream(id: 12) { id }}"}`),
 		})
 		require.NoError(t, err)
-		env.WaitForSubscriptionCount(1, NatsWaitTimeout)
+		env.WaitForSubscriptionCount(1, EventWaitTimeout)
 
 		// Verify the durable consumer was created on the stream
 		stream, err := js.Stream(env.Context, streamName)
@@ -1165,7 +1165,7 @@ func TestNatsEvents(t *testing.T) {
 			Payload: []byte(`{"query":"subscription { employeeUpdatedNatsStream(id: 12) { id }}"}`),
 		})
 		require.NoError(t, err)
-		env.WaitForSubscriptionCount(1, NatsWaitTimeout)
+		env.WaitForSubscriptionCount(1, EventWaitTimeout)
 
 		// Verify the durable consumer was created on the stream
 		stream, err := js.Stream(env.Context, streamName)
