@@ -1083,7 +1083,7 @@ func TestNatsEvents(t *testing.T) {
 			},
 			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
 				for i := range cfg.Providers.Nats {
-					cfg.Providers.Nats[i].Consumers.Durable.DeleteOnShutdown = true
+					cfg.Providers.Nats[i].DeleteDurableConsumersOnShutdown = true
 				}
 			},
 		})
@@ -1140,7 +1140,7 @@ func TestNatsEvents(t *testing.T) {
 			},
 			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
 				for i := range cfg.Providers.Nats {
-					cfg.Providers.Nats[i].Consumers.Durable.DeleteOnShutdown = false
+					cfg.Providers.Nats[i].DeleteDurableConsumersOnShutdown = false
 				}
 			},
 		})
