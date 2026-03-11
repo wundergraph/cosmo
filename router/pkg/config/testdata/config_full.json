@@ -656,7 +656,12 @@
         {
           "ID": "default",
           "URL": "nats://localhost:4222",
-          "Authentication": null
+          "Authentication": null,
+          "Consumers": {
+            "Durable": {
+              "DeleteOnShutdown": false
+            }
+          }
         },
         {
           "ID": "my-nats",
@@ -667,6 +672,11 @@
               "Username": "admin"
             },
             "Token": null
+          },
+          "Consumers": {
+            "Durable": {
+              "DeleteOnShutdown": false
+            }
           }
         }
       ],
