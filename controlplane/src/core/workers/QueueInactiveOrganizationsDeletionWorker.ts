@@ -71,7 +71,7 @@ export class QueueInactiveOrganizationsDeletionQueue implements IQueue<QueueInac
         pattern: '0 0 0 1 * *',
       },
       {
-        name: '',
+        name: `${WorkerName}-job`,
         data: {},
         opts: {},
       },
