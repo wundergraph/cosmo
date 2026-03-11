@@ -1386,6 +1386,7 @@ func (s *graphServer) buildGraphMux(
 				otel.WgOperationName.String(item.OperationName),
 				otel.WgClientName.String(item.ClientName),
 				otel.WgClientVersion.String(item.ClientVersion),
+				otel.WgFeatureFlag.String(opts.FeatureFlagName),
 				otel.WgOperationHash.String(item.OperationHash),
 				otel.WgOperationType.String(item.OperationType),
 				otel.WgEnginePlanCacheHit.Bool(false),
