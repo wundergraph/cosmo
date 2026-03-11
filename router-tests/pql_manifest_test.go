@@ -15,6 +15,23 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// getCDNRequests returns all recorded HTTP requests from the CDN test server.
+// The CDN test server records every request path it receives. Calling GET on
+// its base URL returns these as a JSON array of strings (e.g. "GET /org/graph/operations/...").
+func getCDNRequests(t *testing.T, cdnURL string) []string {
+	t.Helper()
+	resp, err := http.Get(cdnURL)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	var requests []string
+	err = json.Unmarshal(body, &requests)
+	require.NoError(t, err)
+	return requests
+}
+
 func TestPQLManifest(t *testing.T) {
 	t.Parallel()
 
@@ -91,19 +108,8 @@ func TestPQLManifest(t *testing.T) {
 				require.Equal(t, expectedEmployeesBody, res.Body)
 			}
 
-			// Check CDN request log - only manifest request, no individual operation requests
-			resp, err := http.Get(xEnv.CDN.URL)
-			require.NoError(t, err)
-			defer resp.Body.Close()
-			body, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-
-			var cdnRequests []string
-			err = json.Unmarshal(body, &cdnRequests)
-			require.NoError(t, err)
-
-			// Should have manifest request(s) but no individual operation requests
-			for _, req := range cdnRequests {
+			// With manifest enabled, the router should never call CDN for individual operations
+			for _, req := range getCDNRequests(t, xEnv.CDN.URL) {
 				require.False(t, strings.Contains(req, "/operations/my-client/"),
 					"expected no individual operation CDN requests, but got: %s", req)
 			}
@@ -212,21 +218,9 @@ func TestPQLManifest(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, expectedEmployeesBody, res.Body)
 
-			// Verify CDN was hit for the individual operation
-			resp, err := http.Get(xEnv.CDN.URL)
-			require.NoError(t, err)
-			defer resp.Body.Close()
-			body, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-
-			var cdnRequests []string
-			err = json.Unmarshal(body, &cdnRequests)
-			require.NoError(t, err)
-
-			// CDN should have been called for the individual operation, not the manifest
 			hasOperationRequest := false
 			hasManifestRequest := false
-			for _, req := range cdnRequests {
+			for _, req := range getCDNRequests(t, xEnv.CDN.URL) {
 				if strings.Contains(req, "/operations/my-client/") {
 					hasOperationRequest = true
 				}
@@ -269,20 +263,9 @@ func TestPQLManifest(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, persistedNotFoundResp, res.Body)
 
-			// Verify CDN was hit for individual operations, not manifest
-			resp, err := http.Get(xEnv.CDN.URL)
-			require.NoError(t, err)
-			defer resp.Body.Close()
-			body, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-
-			var cdnRequests []string
-			err = json.Unmarshal(body, &cdnRequests)
-			require.NoError(t, err)
-
 			hasOperationRequest := false
 			hasManifestRequest := false
-			for _, req := range cdnRequests {
+			for _, req := range getCDNRequests(t, xEnv.CDN.URL) {
 				if strings.Contains(req, "/operations/my-client/") {
 					hasOperationRequest = true
 				}
@@ -324,19 +307,8 @@ func TestPQLManifest(t *testing.T) {
 			logEntries := xEnv.Observer().FilterMessageSnippet("Unknown persisted operation found").All()
 			require.Len(t, logEntries, 1)
 
-			// Verify CDN was used, not manifest
-			resp, err := http.Get(xEnv.CDN.URL)
-			require.NoError(t, err)
-			defer resp.Body.Close()
-			body, err := io.ReadAll(resp.Body)
-			require.NoError(t, err)
-
-			var cdnRequests []string
-			err = json.Unmarshal(body, &cdnRequests)
-			require.NoError(t, err)
-
 			hasManifestRequest := false
-			for _, req := range cdnRequests {
+			for _, req := range getCDNRequests(t, xEnv.CDN.URL) {
 				if strings.Contains(req, "/operations/manifest.json") {
 					hasManifestRequest = true
 				}

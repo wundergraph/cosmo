@@ -1,7 +1,7 @@
 package pqlmanifest
 
 import (
-	"sync"
+	"sync/atomic"
 
 	"go.uber.org/zap"
 )
@@ -14,8 +14,7 @@ type Manifest struct {
 }
 
 type Store struct {
-	mu       sync.RWMutex
-	manifest *Manifest
+	manifest atomic.Pointer[Manifest]
 	logger   *zap.Logger
 }
 
@@ -25,23 +24,19 @@ func NewStore(logger *zap.Logger) *Store {
 	}
 }
 
-// Load write-locks and swaps the manifest atomically.
+// Load swaps the manifest atomically.
 func (s *Store) Load(manifest *Manifest) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.manifest = manifest
+	s.manifest.Store(manifest)
 }
 
-// LookupByHash read-locks and performs an O(1) map lookup by sha256 hash.
+// LookupByHash performs an O(1) map lookup by sha256 hash.
 func (s *Store) LookupByHash(sha256Hash string) (body []byte, found bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	if s.manifest == nil {
+	m := s.manifest.Load()
+	if m == nil {
 		return nil, false
 	}
 
-	op, ok := s.manifest.Operations[sha256Hash]
+	op, ok := m.Operations[sha256Hash]
 	if !ok {
 		return nil, false
 	}
@@ -51,31 +46,23 @@ func (s *Store) LookupByHash(sha256Hash string) (body []byte, found bool) {
 
 // IsLoaded returns whether a manifest has been loaded.
 func (s *Store) IsLoaded() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.manifest != nil
+	return s.manifest.Load() != nil
 }
 
 // Revision returns the current manifest revision for polling.
 func (s *Store) Revision() string {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	if s.manifest == nil {
+	m := s.manifest.Load()
+	if m == nil {
 		return ""
 	}
-
-	return s.manifest.Revision
+	return m.Revision
 }
 
 // OperationCount returns the number of operations in the manifest.
 func (s *Store) OperationCount() int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	if s.manifest == nil {
+	m := s.manifest.Load()
+	if m == nil {
 		return 0
 	}
-
-	return len(s.manifest.Operations)
+	return len(m.Operations)
 }

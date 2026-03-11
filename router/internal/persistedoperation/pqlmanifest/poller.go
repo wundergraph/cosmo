@@ -67,7 +67,7 @@ func (p *Poller) Poll(ctx context.Context) {
 
 		if changed && manifest != nil {
 			p.store.Load(manifest)
-			p.logger.Info("Updated PQL manifest",
+			p.logger.Debug("Updated PQL manifest",
 				zap.String("revision", manifest.Revision),
 				zap.String("previous_revision", currentRevision),
 				zap.Int("operation_count", len(manifest.Operations)),

@@ -595,7 +595,7 @@ describe('Persisted operations', (ctx) => {
       await setupFederatedGraph(fedGraphName, client);
 
       const queryA = `query { hello }`;
-      const queryB = `query { world }`;
+      const queryB = `query { __typename }`;
 
       const publishResp1 = await client.publishPersistedOperations({
         fedGraphName,
@@ -639,7 +639,7 @@ describe('Persisted operations', (ctx) => {
       await setupFederatedGraph(fedGraphName, client);
 
       const query1 = `query { hello }`;
-      const query2 = `query { world }`;
+      const query2 = `query { __typename }`;
       const op1Id = genID('op1');
       const op2Id = genID('op2');
 
