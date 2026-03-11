@@ -125,21 +125,10 @@ func (c *InMemoryPlanCacheFallback) extractQueriesAndOverridePlanCache() {
 		return
 	}
 
-	// Wait for all pending writes from expensive caches so that
-	// IterValues sees a complete snapshot before we extract.
-	for _, v := range c.queriesForFeatureFlag {
-		if expCache, ok := v.(*expensivePlanCache); ok {
-			expCache.Wait()
-		}
-	}
-
 	fallbackMap := make(map[string]any)
 	for k, v := range c.queriesForFeatureFlag {
 		if cache, ok := v.(*expensivePlanCache); ok {
-			ops := convertToNodeOperation(cache)
-			if len(ops) > 0 {
-				fallbackMap[k] = ops
-			}
+			fallbackMap[k] = convertToNodeOperation(cache)
 		}
 	}
 	c.queriesForFeatureFlag = fallbackMap
@@ -172,11 +161,9 @@ func convertToNodeOperation(data *expensivePlanCache) []*nodev1.Operation {
 	items := make([]*nodev1.Operation, 0)
 
 	data.IterValues(func(v *planWithMetaData) (stop bool) {
-		if v.content != "" {
-			items = append(items, &nodev1.Operation{
-				Request: &nodev1.OperationRequest{Query: v.content},
-			})
-		}
+		items = append(items, &nodev1.Operation{
+			Request: &nodev1.OperationRequest{Query: v.content},
+		})
 		return false
 	})
 	return items
