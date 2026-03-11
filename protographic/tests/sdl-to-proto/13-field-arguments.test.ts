@@ -963,6 +963,121 @@ describe('SDL to Proto Field Arguments', () => {
       'Invalid field context for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @connect__fieldResolver directive',
     );
   });
+  it('should support @connect__fieldResolver on fields without arguments', () => {
+    const sdl = `
+    type User {
+        id: ID!
+        name: String!
+        avatar: String! @connect__fieldResolver(context: "id")
+    }
+
+    type Query {
+        user(id: ID!): User
+    }
+  `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc ResolveUserAvatar(ResolveUserAvatarRequest) returns (ResolveUserAvatarResponse) {}
+      }
+
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+      message ResolveUserAvatarContext {
+        string id = 1;
+      }
+
+      message ResolveUserAvatarRequest {
+        // context provides the resolver context for the field avatar of type User.
+        repeated ResolveUserAvatarContext context = 1;
+      }
+
+      message ResolveUserAvatarResult {
+        string avatar = 1;
+      }
+
+      message ResolveUserAvatarResponse {
+        repeated ResolveUserAvatarResult result = 1;
+      }
+
+      message User {
+        string id = 1;
+        string name = 2;
+      }"
+    `);
+  });
+  it('should support @connect__fieldResolver on fields without arguments using multiple context fields', () => {
+    const sdl = `
+    type User {
+        id: ID!
+        name: String!
+        avatar: String! @connect__fieldResolver(context: "id name")
+    }
+
+    type Query {
+        user(id: ID!): User
+    }
+  `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc ResolveUserAvatar(ResolveUserAvatarRequest) returns (ResolveUserAvatarResponse) {}
+      }
+
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+      message ResolveUserAvatarContext {
+        string id = 1;
+        string name = 2;
+      }
+
+      message ResolveUserAvatarRequest {
+        // context provides the resolver context for the field avatar of type User.
+        repeated ResolveUserAvatarContext context = 1;
+      }
+
+      message ResolveUserAvatarResult {
+        string avatar = 1;
+      }
+
+      message ResolveUserAvatarResponse {
+        repeated ResolveUserAvatarResult result = 1;
+      }
+
+      message User {
+        string id = 1;
+        string name = 2;
+      }"
+    `);
+  });
   it('should correctly convert camelCase field names to snake_case in context messages', () => {
     const sdl = `
     type User {

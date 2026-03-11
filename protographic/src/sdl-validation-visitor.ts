@@ -346,7 +346,15 @@ export class SDLValidationVisitor {
    * @private
    */
   private validateInvalidResolverContext(ctx: VisitContext<FieldDefinitionNode>): void {
-    if (ctx.node.name.value.startsWith('_') || (ctx.node.arguments?.length ?? 0) === 0) {
+    if (ctx.node.name.value.startsWith('_')) {
+      return;
+    }
+
+    const hasArgs = (ctx.node.arguments?.length ?? 0) > 0;
+    const hasResolverDirective = ctx.node.directives?.some((d) => d.name.value === CONNECT_FIELD_RESOLVER) ?? false;
+
+    // Skip fields without args unless they have the @connect__fieldResolver directive
+    if (!hasArgs && !hasResolverDirective) {
       return;
     }
 

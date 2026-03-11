@@ -166,7 +166,7 @@ type Product @key(fields: "id") {
 Maps to:
 
 ```protobuf
-rpc RequireProductStockHealthScoreById(RequireProductStockHealthScoreByIdRequest) 
+rpc RequireProductStockHealthScoreById(RequireProductStockHealthScoreByIdRequest)
     returns (RequireProductStockHealthScoreByIdResponse) {}
 
 message RequireProductStockHealthScoreByIdRequest {
@@ -198,6 +198,7 @@ message RequireProductStockHealthScoreByIdFields {
 **Naming Convention**: `Require{EntityType}{FieldName}By{KeyFields}`
 
 For the example above: `RequireProductStockHealthScoreById`
+
 - Entity type: `Product`
 - Field name: `StockHealthScore`
 - Key fields: `Id` (from the `@key` directive)
@@ -245,7 +246,7 @@ type ActionResult {
 Maps to:
 
 ```protobuf
-rpc RequireProductNameById(RequireProductNameByIdRequest) 
+rpc RequireProductNameById(RequireProductNameByIdRequest)
     returns (RequireProductNameByIdResponse) {}
 
 message RequireProductNameByIdRequest {
@@ -271,17 +272,18 @@ message RequireProductNameByIdFields {
       string status = 1;
       string message = 2;
     }
-    
+
     string description = 1;
     ActionResult review_summary = 2;
   }
-  
+
   string manufacturer_id = 1;
   ProductDetails details = 2;
 }
 ```
 
 **Key Points**:
+
 - The `Fields` message contains only the selected subset from the `@requires` directive, not the full types
 - Nested types are generated as nested proto messages within the `Fields` message
 - Only the selected fields from nested types are included (e.g., `description` and `reviewSummary` from `ProductDetails`, not `id` or `title`)
@@ -291,9 +293,11 @@ message RequireProductNameByIdFields {
 
 Field resolvers allow you to define custom resolution logic for specific fields within a GraphQL type. Using the `@connect__fieldResolver` directive, you can specify which fields should be resolved through dedicated RPC methods, enabling lazy loading, computed fields, or integration with external data sources.
 
-### Basic Field Resolver
+Fields with the `@connect__fieldResolver` directive are excluded from the parent type's Proto message. This is the same behavior as fields with arguments, which are always treated as resolver fields. This ensures that expensive or lazily-loaded fields are not part of the regular response returned by operations — they are only resolved through their dedicated RPC methods.
 
-Fields marked with `@connect__fieldResolver` generate dedicated RPC methods with request and response messages:
+### Basic Field Resolver with Arguments
+
+Fields with arguments are automatically treated as resolver fields. Additionally, fields marked with `@connect__fieldResolver` generate dedicated RPC methods with request and response messages:
 
 ```graphql
 type User {
@@ -342,14 +346,61 @@ message ResolveUserPostsResponse {
 }
 ```
 
+### Field Resolver without Arguments
+
+The `@connect__fieldResolver` directive can also be used on fields **without arguments** to exclude expensive fields from the parent type's message and resolve them separately. In this case, no `Args` message is generated and the request message only contains the `context` field:
+
+```graphql
+type User {
+  id: ID!
+  name: String!
+  avatar: String! @connect__fieldResolver(context: "id")
+}
+
+type Query {
+  user(id: ID!): User
+}
+```
+
+Maps to:
+
+```protobuf
+rpc ResolveUserAvatar(ResolveUserAvatarRequest) returns (ResolveUserAvatarResponse) {}
+
+message ResolveUserAvatarContext {
+  string id = 1;
+}
+
+// Request message only includes context (no field_args)
+message ResolveUserAvatarRequest {
+  repeated ResolveUserAvatarContext context = 1;
+}
+
+message ResolveUserAvatarResult {
+  string avatar = 1;
+}
+
+message ResolveUserAvatarResponse {
+  repeated ResolveUserAvatarResult result = 1;
+}
+
+// Note: avatar is excluded from the User message
+message User {
+  string id = 1;
+  string name = 2;
+}
+```
+
 ### Field Resolver Components
 
-Each field resolver generates four message types:
+For field resolvers **with arguments**, four message types are generated:
 
 1. **Context Message** (`Resolve{Type}{Field}Context`): Contains fields from the parent type needed to resolve the field
 2. **Args Message** (`Resolve{Type}{Field}Args`): Contains the arguments passed to the field
 3. **Result Message** (`Resolve{Type}{Field}Result`): Contains the resolved field value
 4. **Request/Response Messages**: Standard request/response pattern for the RPC method
+
+For field resolvers **without arguments**, the `Args` message is omitted and the request message only contains the `context` field.
 
 ### Context Specification
 
@@ -381,20 +432,23 @@ If the `@connect__fieldResolver` directive is **not specified** on a field with 
 type User {
   id: ID!
   name: String!
-  posts(limit: Int!): [Post!]!  # No directive: automatically uses "id" as context
+  posts(limit: Int!): [Post!]! # No directive: automatically uses "id" as context
 }
 ```
 
 #### Context Validation Rules
 
 When the `@connect__fieldResolver` directive is specified:
+
 - The `context` parameter is **required** - you must explicitly specify which field(s) to use
 
 When the directive is NOT specified (automatic inference):
+
 - If no `ID` field exists, an error is raised
 - If multiple `ID` fields exist, an error is raised (you must use the directive with explicit context)
 
 In all cases:
+
 - Context fields are converted from camelCase to snake_case following Protocol Buffer naming conventions
 
 ### Field Name Conversion
@@ -421,6 +475,7 @@ message ResolveUserPostContext {
 ```
 
 This conversion applies to:
+
 - Context field names
 - Argument field names
 - Result field names
@@ -517,8 +572,8 @@ Field resolvers can return both scalar and list types:
 ```graphql
 type User {
   id: ID!
-  posts(limit: Int!): [Post!]!  # Returns list
-  activePost: Post               # Returns single item (nullable)
+  posts(limit: Int!): [Post!]! # Returns list
+  activePost: Post # Returns single item (nullable)
 }
 ```
 
@@ -650,11 +705,12 @@ Protographic handles GraphQL list nullability by creating wrapper messages when 
 ### Core Concepts
 
 - **Non-nullable single-level lists**: Use the `repeated` keyword directly
-- **Nullable lists**: Wrapped in `ListOf{Type}` messages 
+- **Nullable lists**: Wrapped in `ListOf{Type}` messages
 - **Nested lists**: Always use wrapper messages with multiple `ListOf` prefixes based on nesting level (e.g., `ListOfListOfString`)
 - **Nullable list items**: Currently ignored (no wrapper generated for item nullability)
 
 ### Non-Nullable Single Lists
+
 Non-nullable lists use `repeated` fields directly:
 
 ```graphql
@@ -758,9 +814,6 @@ message User {
   ListOfListOfString posts = 1;
 }
 ```
-
-
-
 
 ## Field Numbering and Stability
 
@@ -867,14 +920,14 @@ Protographic preserves documentation from GraphQL schemas and converts it to Pro
 
 ### Comment Conversion
 
-| GraphQL Documentation | Protocol Buffer Representation |
-| -------------------- | ------------------------------ |
-| Single-line descriptions (`"description"`) | Single-line comments (`// comment`) |
+| GraphQL Documentation                         | Protocol Buffer Representation        |
+| --------------------------------------------- | ------------------------------------- |
+| Single-line descriptions (`"description"`)    | Single-line comments (`// comment`)   |
 | Multi-line descriptions (`"""description"""`) | Multi-line comments (`/* comment */`) |
-| Field descriptions | Field comments |
-| Type descriptions | Message/enum comments |
-| Enum value descriptions | Enum value comments |
-| Operation descriptions | RPC method comments |
+| Field descriptions                            | Field comments                        |
+| Type descriptions                             | Message/enum comments                 |
+| Enum value descriptions                       | Enum value comments                   |
+| Operation descriptions                        | RPC method comments                   |
 
 ### Comment Preservation
 
