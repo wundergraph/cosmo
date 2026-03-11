@@ -1581,6 +1581,32 @@ func BenchmarkSequentialBigCostControl(b *testing.B) {
 	})
 }
 
+func BenchmarkParallelCostControl(b *testing.B) {
+	testenv.Bench(b, &testenv.Config{
+		ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
+			cfg.CostControl = &config.CostControl{
+				Enabled:           true,
+				Mode:              config.CostControlModeMeasure,
+				EstimatedListSize: 15,
+			}
+		},
+	}, func(b *testing.B, xEnv *testenv.Environment) {
+		b.SetBytes(int64(len(bigEmployeesResponse)))
+		b.ReportAllocs()
+		b.ResetTimer()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: bigEmployeesQuery,
+				})
+				if len(res.Body) < 3000 {
+					b.Errorf("unexpected result %q, expecting \n\n%q", res.Body, bigEmployeesResponse)
+				}
+			}
+		})
+	})
+}
+
 func TestSubgraphOperationMinifier(t *testing.T) {
 	t.Parallel()
 	t.Run("prefer minified version", func(t *testing.T) {
