@@ -24,6 +24,7 @@ require (
 
 require (
 	connectrpc.com/connect v1.16.2 // indirect
+	connectrpc.com/vanguard v0.3.0 // indirect
 	github.com/KimMachineGun/automemlimit v0.6.1 // indirect
 	github.com/MicahParks/jwkset v0.11.0 // indirect
 	github.com/MicahParks/keyfunc/v3 v3.6.2 // indirect
