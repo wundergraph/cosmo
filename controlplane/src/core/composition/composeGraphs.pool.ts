@@ -3,9 +3,10 @@
  *
  * The worker only exchanges plain `Serialized*` payloads so we do not rely on
  * structured cloning of rich runtime objects across the Tinypool boundary.
+ * Node 22 loads the source `.ts` worker natively in development, and the built
+ * `.js` worker in production.
  */
 import { existsSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { availableParallelism } from 'node:os';
 import { Warning } from '@wundergraph/composition';
@@ -20,14 +21,12 @@ import {
 } from './composeGraphs.types.js';
 
 let composeGraphsPool: WorkerPool | undefined;
-const require = createRequire(import.meta.url);
 
 function getWorkerFilename() {
   const sourceWorker = new URL('composeGraphs.worker.ts', import.meta.url);
   if (existsSync(fileURLToPath(sourceWorker))) {
     return {
       filename: sourceWorker.href,
-      execArgv: ['--import', require.resolve('tsx')],
     };
   }
 
@@ -46,11 +45,10 @@ function getComposeGraphsPool() {
     return composeGraphsPool;
   }
 
-  const { execArgv, filename } = getWorkerFilename();
+  const { filename } = getWorkerFilename();
 
   composeGraphsPool = new WorkerPool({
     filename,
-    execArgv,
     minThreads: 1,
     maxThreads: getMaxThreads(),
     concurrentTasksPerWorker: 1,
