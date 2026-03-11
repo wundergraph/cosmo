@@ -1818,7 +1818,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					"service_name":             "service-name",                                                     // From request header
 					"operation_persisted_hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", // From context
 					"operation_hash":           "1163600561566987607",                                              // From context
-					"operation_sha256":         "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", // From context (client-provided persisted hash, no query body to hash)
+					"operation_sha256":         "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", // From context
 					"operation_name":           "Employees",                                                        // From context
 					"operation_type":           "query",                                                            // From context
 				}
