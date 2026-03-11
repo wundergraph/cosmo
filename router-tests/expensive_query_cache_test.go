@@ -199,6 +199,80 @@ func TestExpensiveQueryCache(t *testing.T) {
 		})
 	})
 
+	t.Run("only expensive queries persist across config reload, fast queries do not", func(t *testing.T) {
+		t.Parallel()
+
+		pm := ConfigPollerMock{
+			ready: make(chan struct{}),
+		}
+
+		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				// Large enough to hold all queries — no evictions before reload
+				cfg.ExecutionPlanCacheSize = 1024
+				cfg.ExpensiveQueryThreshold = expensiveThreshold
+				cfg.ExpensiveQueryCacheSize = 100
+			},
+			RouterOptions: []core.Option{
+				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
+					Enabled:          true,
+					InMemoryFallback: true,
+					Source: config.CacheWarmupSource{
+						CdnSource: config.CacheWarmupCDNSource{
+							Enabled: true,
+						},
+					},
+				}),
+				core.WithConfigVersionHeader(true),
+				planningDurationOverride,
+			},
+			RouterConfig: &testenv.RouterConfig{
+				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
+					pm.initConfig = config
+					return &pm
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Populate caches with both slow and fast queries
+			for _, q := range allQueries {
+				res := xEnv.MakeGraphQLRequestOK(q)
+				require.Equal(t, 200, res.Response.StatusCode)
+				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+			}
+
+			// Verify all queries are cached in the main plan cache before reload
+			for _, q := range allQueries {
+				require.EventuallyWithT(t, func(ct *assert.CollectT) {
+					res := xEnv.MakeGraphQLRequestOK(q)
+					assert.Equal(ct, "HIT", res.Response.Header.Get("x-wg-execution-plan-cache"))
+				}, 2*time.Second, 100*time.Millisecond)
+			}
+
+			// Trigger config reload — main plan cache is reset.
+			<-pm.ready
+			pm.initConfig.Version = "updated"
+			require.NoError(t, pm.updateConfig(pm.initConfig, "old-1"))
+
+			// Wait for reload to complete by checking a slow query (which will be
+			// served from the expensive cache, confirming the new server is active).
+			require.EventuallyWithT(t, func(ct *assert.CollectT) {
+				res := xEnv.MakeGraphQLRequestOK(slowQueries[0])
+				assert.Equal(ct, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+			}, 2*time.Second, 100*time.Millisecond)
+
+			// After reload, fast queries must not be persisted anywhere — the first
+			// request on the new server should be a MISS on both caches.
+			for _, q := range fastQueries {
+				res := xEnv.MakeGraphQLRequestOK(q)
+				require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+				require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"),
+					"fast query should not be in main plan cache after config reload")
+				require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Expensive-Plan-Cache"),
+					"fast query should not be in expensive cache after config reload")
+			}
+		})
+	})
+
 	t.Run("plans survive multiple config reloads with small main cache", func(t *testing.T) {
 		t.Parallel()
 
@@ -549,7 +623,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.ExecutionPlanCacheSize = 1
+				cfg.ExecutionPlanCacheSize = 1024
 				cfg.ExpensiveQueryThreshold = expensiveThreshold
 				cfg.ExpensiveQueryCacheSize = 100
 			},
@@ -564,39 +638,44 @@ func TestExpensiveQueryCache(t *testing.T) {
 					Enabled:          true,
 					InMemoryFallback: true,
 				}),
-				// Override the hello query to be slow
-				core.WithPlanningDurationOverride(func(_ string) time.Duration {
-					return 10 * time.Second
+				// "hello" is slow (enters expensive cache), "world" is fast (does not)
+				core.WithPlanningDurationOverride(func(content string) time.Duration {
+					if strings.Contains(content, "hello") {
+						return 10 * time.Second
+					}
+					return 0
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			q := testenv.GraphQLRequest{Query: `query { hello }`}
+			slowQ := testenv.GraphQLRequest{Query: `query { hello }`}
+			fastQ := testenv.GraphQLRequest{Query: `query { world }`}
 
-			// First request is a MISS
-			res := xEnv.MakeGraphQLRequestOK(q)
-			require.Equal(t, 200, res.Response.StatusCode)
-			require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
-			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"))
+			// Plan both queries
+			for _, q := range []testenv.GraphQLRequest{slowQ, fastQ} {
+				res := xEnv.MakeGraphQLRequestOK(q)
+				require.Equal(t, 200, res.Response.StatusCode)
+				require.Equal(t, "initial", res.Response.Header.Get("X-Router-Config-Version"))
+			}
 
-			// Wait for the expensive cache to pick it up
-			require.EventuallyWithT(t, func(ct *assert.CollectT) {
-				res = xEnv.MakeGraphQLRequestOK(q)
-				planHit := res.Response.Header.Get("x-wg-execution-plan-cache") == "HIT"
-				expensiveHit := res.Response.Header.Get("X-WG-Expensive-Plan-Cache") == "HIT"
-				assert.True(ct, planHit || expensiveHit, "expected plan to be cached")
-			}, 2*time.Second, 100*time.Millisecond)
-
-			// Trigger schema reload by writing a new config version
+			// Trigger schema reload
 			writeTestConfig(t, "updated", configFile)
 
-			// After reload, the plan should still be available (carried forward via extractQueriesAndOverridePlanCache)
+			// Wait for reload to complete — slow query should survive via expensive cache
 			require.EventuallyWithT(t, func(ct *assert.CollectT) {
-				res = xEnv.MakeGraphQLRequestOK(q)
+				res := xEnv.MakeGraphQLRequestOK(slowQ)
 				assert.Equal(ct, "updated", res.Response.Header.Get("X-Router-Config-Version"))
 				planHit := res.Response.Header.Get("x-wg-execution-plan-cache") == "HIT"
 				expensiveHit := res.Response.Header.Get("X-WG-Expensive-Plan-Cache") == "HIT"
-				assert.True(ct, planHit || expensiveHit, "expected plan to survive schema reload via expensive cache merge")
+				assert.True(ct, planHit || expensiveHit, "expected slow plan to survive schema reload")
 			}, 2*time.Second, 100*time.Millisecond)
+
+			// Fast query must not be persisted anywhere after reload
+			res := xEnv.MakeGraphQLRequestOK(fastQ)
+			require.Equal(t, "updated", res.Response.Header.Get("X-Router-Config-Version"))
+			require.Equal(t, "MISS", res.Response.Header.Get("x-wg-execution-plan-cache"),
+				"fast query should not be in main plan cache after schema reload")
+			require.Equal(t, "MISS", res.Response.Header.Get("X-WG-Expensive-Plan-Cache"),
+				"fast query should not survive schema reload via expensive cache")
 		})
 	})
 
