@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.290.0](https://github.com/wundergraph/cosmo/compare/router@0.289.0...router@0.290.0) (2026-03-11)
+
+### Features
+
+* option to remove nats consumers on shutdown ([#2600](https://github.com/wundergraph/cosmo/issues/2600)) ([30fab93](https://github.com/wundergraph/cosmo/commit/30fab93263e0655dd0f96f766a3b93f7c87912c4)) (@dkorittki)
+
 # [0.289.0](https://github.com/wundergraph/cosmo/compare/router@0.288.2...router@0.289.0) (2026-03-10)
 
 ### Features
