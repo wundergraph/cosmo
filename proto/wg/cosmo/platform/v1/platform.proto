@@ -2960,6 +2960,7 @@ message UpdateProposalResponse {
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 16;
   optional bool hasLinkedSchemaChecks = 17;
+  repeated FederatedGraphSchemaChange composedSchemaBreakingChanges = 18;
 }
 
 message EnableProposalsForNamespaceRequest {
