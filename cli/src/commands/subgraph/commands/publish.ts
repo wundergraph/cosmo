@@ -223,10 +223,11 @@ export default (opts: BaseCommandOptions) => {
         console.log(compositionErrorsTable.toString());
 
         if (options.failOnCompositionError) {
+          // Only composition errors were displayed at this point, warnings come after switch
           printTruncationWarning(resp.counts, {
             compositionErrors: resp.compositionErrors.length,
-            compositionWarnings: resp.compositionWarnings.length,
-            deploymentErrors: resp.deploymentErrors.length,
+            compositionWarnings: 0,
+            deploymentErrors: 0,
           });
           program.error(pc.red(pc.bold('The command failed due to composition errors.')));
         }
@@ -259,9 +260,10 @@ export default (opts: BaseCommandOptions) => {
         console.log(deploymentErrorsTable.toString());
 
         if (options.failOnAdmissionWebhookError) {
+          // Only deployment errors were displayed at this point, warnings come after switch
           printTruncationWarning(resp.counts, {
-            compositionErrors: resp.compositionErrors.length,
-            compositionWarnings: resp.compositionWarnings.length,
+            compositionErrors: 0,
+            compositionWarnings: 0,
             deploymentErrors: resp.deploymentErrors.length,
           });
           program.error(pc.red(pc.bold('The command failed due to admission webhook errors.')));
@@ -278,6 +280,9 @@ export default (opts: BaseCommandOptions) => {
         return;
       }
     }
+
+    // Track what was actually displayed
+    const displayedWarnings = options.suppressWarnings ? 0 : resp.compositionWarnings.length;
 
     if (!options.suppressWarnings && resp.compositionWarnings.length > 0) {
       const compositionWarningsTable = new Table({
@@ -303,11 +308,15 @@ export default (opts: BaseCommandOptions) => {
       console.log(compositionWarningsTable.toString());
     }
 
-    printTruncationWarning(resp.counts, {
-      compositionErrors: resp.compositionErrors.length,
-      compositionWarnings: resp.compositionWarnings.length,
-      deploymentErrors: resp.deploymentErrors.length,
-    });
+    // Determine what was actually displayed based on the response code
+    const displayedCounts = {
+      compositionErrors:
+        resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED ? resp.compositionErrors.length : 0,
+      compositionWarnings: displayedWarnings,
+      deploymentErrors: resp.response?.code === EnumStatusCode.ERR_DEPLOYMENT_FAILED ? resp.deploymentErrors.length : 0,
+    };
+
+    printTruncationWarning(resp.counts, displayedCounts);
   });
 
   return command;
