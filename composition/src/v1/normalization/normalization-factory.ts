@@ -2504,7 +2504,7 @@ export class NormalizationFactory {
             listSizeConfig.requireOneSlicingArgument = argumentNode.value.value;
           }
           break;
-        case SLICING_ARGUMENTS:
+        case SLICING_ARGUMENTS: {
           let argumentValues: ReadonlyArray<ValueNode>;
           if (argumentNode.value.kind === Kind.LIST) {
             argumentValues = (argumentNode.value as ListValueNode).values;
@@ -2539,7 +2539,8 @@ export class NormalizationFactory {
             listSizeConfig.slicingArguments.push(slicingArgName);
           }
           break;
-        case SIZED_FIELDS:
+        }
+        case SIZED_FIELDS: {
           let fieldValues: ReadonlyArray<ValueNode>;
           if (argumentNode.value.kind === Kind.LIST) {
             fieldValues = (argumentNode.value as ListValueNode).values;
@@ -2587,6 +2588,7 @@ export class NormalizationFactory {
             listSizeConfig.sizedFields.push(sizedFieldName);
           }
           break;
+        }
       }
     }
 
