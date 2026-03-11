@@ -107,17 +107,15 @@ export type Costs = {
   // Key: "TypeName.fieldName" (lookup handle for O(1) merge during normalization)
   listSizes: Map<FieldCoords, FieldListSizeConfiguration>;
 
-  typeWeights: { [key: TypeName]: number };
-
-  // Key: "directiveName.argumentName"
-  directiveArgumentWeights?: { [key: DirectiveArgumentCoords]: number };
+  typeWeights: Record<TypeName, number>;
+  directiveArgumentWeights?: Record<DirectiveArgumentCoords, number>;
 };
 
 export type FieldWeightConfiguration = {
   typeName: TypeName;
   fieldName: FieldName;
   weight?: number;
-  argumentWeights?: { [key: ArgumentName]: number };
+  argumentWeights?: Record<ArgumentName, number>;
 };
 
 export type FieldListSizeConfiguration = {
