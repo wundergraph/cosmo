@@ -5,18 +5,15 @@ import (
 	"strconv"
 	"time"
 
-	"go.uber.org/zap"
-
-	"golang.org/x/sync/singleflight"
-
+	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
+	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-
-	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
-	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
+	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 )
 
 type planWithMetaData struct {

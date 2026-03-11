@@ -8,6 +8,7 @@ import (
 )
 
 func TestExpensivePlanCache_GetSet(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(10)
 	require.NoError(t, err)
 	defer c.Close()
@@ -40,6 +41,7 @@ func TestExpensivePlanCache_GetSet(t *testing.T) {
 }
 
 func TestExpensivePlanCache_BoundedSize(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(3)
 	require.NoError(t, err)
 	defer c.Close()
@@ -66,6 +68,7 @@ func TestExpensivePlanCache_BoundedSize(t *testing.T) {
 }
 
 func TestExpensivePlanCache_BoundedSize_SkipsCheaper(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(3)
 	require.NoError(t, err)
 	defer c.Close()
@@ -91,6 +94,7 @@ func TestExpensivePlanCache_BoundedSize_SkipsCheaper(t *testing.T) {
 }
 
 func TestExpensivePlanCache_UpdateExisting(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(2)
 	require.NoError(t, err)
 	defer c.Close()
@@ -116,6 +120,7 @@ func TestExpensivePlanCache_UpdateExisting(t *testing.T) {
 }
 
 func TestExpensivePlanCache_IterValues(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(10)
 	require.NoError(t, err)
 	defer c.Close()
@@ -135,6 +140,7 @@ func TestExpensivePlanCache_IterValues(t *testing.T) {
 }
 
 func TestExpensivePlanCache_IterValues_EarlyStop(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(10)
 	require.NoError(t, err)
 	defer c.Close()
@@ -145,7 +151,7 @@ func TestExpensivePlanCache_IterValues_EarlyStop(t *testing.T) {
 	c.Wait()
 
 	count := 0
-	c.IterValues(func(v *planWithMetaData) bool {
+	c.IterValues(func(_ *planWithMetaData) bool {
 		count++
 		return true // stop after first
 	})
@@ -153,6 +159,7 @@ func TestExpensivePlanCache_IterValues_EarlyStop(t *testing.T) {
 }
 
 func TestExpensivePlanCache_Close(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(10)
 	require.NoError(t, err)
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
@@ -165,6 +172,7 @@ func TestExpensivePlanCache_Close(t *testing.T) {
 }
 
 func TestExpensivePlanCache_SetAfterClose(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(10)
 	require.NoError(t, err)
 	c.Close()
@@ -179,12 +187,13 @@ func TestExpensivePlanCache_SetAfterClose(t *testing.T) {
 }
 
 func TestExpensivePlanCache_IterValuesEmpty(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(10)
 	require.NoError(t, err)
 	defer c.Close()
 
 	count := 0
-	c.IterValues(func(v *planWithMetaData) bool {
+	c.IterValues(func(_ *planWithMetaData) bool {
 		count++
 		return false
 	})
@@ -192,13 +201,14 @@ func TestExpensivePlanCache_IterValuesEmpty(t *testing.T) {
 }
 
 func TestExpensivePlanCache_IterValuesAfterClose(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(10)
 	require.NoError(t, err)
 	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
 	c.Close()
 
 	count := 0
-	c.IterValues(func(v *planWithMetaData) bool {
+	c.IterValues(func(_ *planWithMetaData) bool {
 		count++
 		return false
 	})
@@ -206,6 +216,7 @@ func TestExpensivePlanCache_IterValuesAfterClose(t *testing.T) {
 }
 
 func TestExpensivePlanCache_EqualDurationNotEvicted(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(2)
 	require.NoError(t, err)
 	defer c.Close()
@@ -226,6 +237,7 @@ func TestExpensivePlanCache_EqualDurationNotEvicted(t *testing.T) {
 }
 
 func TestExpensivePlanCache_MaxSizeOne(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(1)
 	require.NoError(t, err)
 	defer c.Close()
@@ -255,6 +267,7 @@ func TestExpensivePlanCache_MaxSizeOne(t *testing.T) {
 }
 
 func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
+	t.Parallel()
 	c, err := newExpensivePlanCache(100)
 	require.NoError(t, err)
 	defer c.Close()
@@ -265,7 +278,7 @@ func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
 		go func(id int) {
 			defer func() { done <- struct{}{} }()
 			for j := 0; j < 100; j++ {
-				key := uint64(id*100 + j)
+				key := uint64(id*100 + j) //nolint:gosec // test code, no overflow risk
 				c.Set(key, &planWithMetaData{content: "q"}, time.Duration(j)*time.Millisecond)
 			}
 		}(i)
@@ -276,7 +289,7 @@ func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
 		go func(id int) {
 			defer func() { done <- struct{}{} }()
 			for j := 0; j < 100; j++ {
-				c.Get(uint64(id*100 + j))
+				c.Get(uint64(id*100 + j)) //nolint:gosec // test code, no overflow risk
 			}
 		}(i)
 	}
@@ -285,7 +298,7 @@ func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		go func() {
 			defer func() { done <- struct{}{} }()
-			c.IterValues(func(v *planWithMetaData) bool {
+			c.IterValues(func(_ *planWithMetaData) bool {
 				return false
 			})
 		}()
@@ -298,6 +311,7 @@ func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
 }
 
 func TestExpensivePlanCache_InvalidSize(t *testing.T) {
+	t.Parallel()
 	_, err := newExpensivePlanCache(0)
 	require.Error(t, err)
 

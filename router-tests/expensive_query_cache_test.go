@@ -35,7 +35,9 @@ func TestExpensiveQueryCache(t *testing.T) {
 		{Query: `query m($id: Int!){ employee(id: $id) { id details { forename surname } } }`, Variables: []byte(`{"id": 1}`)},
 	}
 
-	allQueries := append(slowQueries, fastQueries...)
+	allQueries := make([]testenv.GraphQLRequest, 0, len(slowQueries)+len(fastQueries))
+	allQueries = append(allQueries, slowQueries...)
+	allQueries = append(allQueries, fastQueries...)
 
 	expensiveThreshold := 1 * time.Second
 
@@ -105,7 +107,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 
 			// Only slow queries should end up in the expensive cache
 			hits := waitForExpensiveCacheHits(t, xEnv, slowQueries)
-			require.Greater(t, hits, 0, "expected at least one slow query to be served from the expensive cache")
+			require.Positive(t, hits, "expected at least one slow query to be served from the expensive cache")
 		})
 	})
 
@@ -193,7 +195,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			hits := waitForExpensiveCacheHits(t, xEnv, slowQueries, func(ct *assert.CollectT, res *testenv.TestResponse) {
 				assert.Equal(ct, "updated", res.Response.Header.Get("X-Router-Config-Version"))
 			})
-			require.Greater(t, hits, 0, "expected at least one query to be served from the expensive cache after config reload")
+			require.Positive(t, hits, "expected at least one query to be served from the expensive cache after config reload")
 		})
 	})
 
@@ -253,7 +255,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			hits := waitForExpensiveCacheHits(t, xEnv, slowQueries, func(ct *assert.CollectT, res *testenv.TestResponse) {
 				assert.Equal(ct, "v3", res.Response.Header.Get("X-Router-Config-Version"))
 			})
-			require.Greater(t, hits, 0, "expected at least one query to be served from the expensive cache after multiple reloads")
+			require.Positive(t, hits, "expected at least one query to be served from the expensive cache after multiple reloads")
 		})
 	})
 
@@ -282,7 +284,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 			}
 
 			hits := waitForExpensiveCacheHits(t, xEnv, slowQueries)
-			require.Greater(t, hits, 0, "expected at least one query to be served from the expensive cache")
+			require.Positive(t, hits, "expected at least one query to be served from the expensive cache")
 		})
 	})
 
@@ -563,7 +565,7 @@ func TestExpensiveQueryCache(t *testing.T) {
 					InMemoryFallback: true,
 				}),
 				// Override the hello query to be slow
-				core.WithPlanningDurationOverride(func(content string) time.Duration {
+				core.WithPlanningDurationOverride(func(_ string) time.Duration {
 					return 10 * time.Second
 				}),
 			},

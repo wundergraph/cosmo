@@ -585,10 +585,10 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 		}
 		if srv.cacheWarmup != nil && srv.cacheWarmup.Enabled && srv.cacheWarmup.InMemoryFallback {
 			planCacheConfig.OnEvict = func(item *ristretto.Item[*planWithMetaData]) {
-				if s.operationPlanner == nil || s.operationPlanner.expensiveCache == nil || item.Value.content == "" {
+				if s.operationPlanner == nil || s.operationPlanner.expensiveCache == nil {
 					return
 				}
-				if s.operationPlanner.threshold > 0 && item.Value.planningDuration >= s.operationPlanner.threshold {
+				if item.Value.planningDuration >= s.operationPlanner.threshold {
 					s.operationPlanner.expensiveCache.Set(item.Key, item.Value, item.Value.planningDuration)
 				}
 			}
