@@ -2,12 +2,15 @@ package integration
 
 import (
 	"context"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -65,6 +68,30 @@ func TestOperationCost(t *testing.T) {
 						Enabled:           true,
 						Mode:              config.CostControlModeEnforce,
 						MaxEstimatedLimit: 50,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+
+				// employee: @cost(weight: 5); argument id: @cost(weight: 2); details: 1 = 8
+				require.Equal(t, "8", res.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "8", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
+		t.Run("field and argument cost weights are not rejected when equal to limit", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 8,
 						EstimatedListSize: 10,
 						ExposeHeaders:     true,
 					}
@@ -792,6 +819,169 @@ func TestOperationCost(t *testing.T) {
 
 				// employee(id:1) cost = 8 per request.  3 requests = 24.
 				require.Equal(t, int64(24), totalSum, "total estimated cost sum should be 3×8=24")
+			})
+		})
+	})
+
+	t.Run("negative weights", func(t *testing.T) {
+		t.Parallel()
+
+		// Helper to find the employees datasource and modify its cost configuration.
+		modifyEmployeesCost := func(routerConfig *nodev1.RouterConfig, modify func(cc *nodev1.CostConfiguration)) {
+			var dsID string
+			for _, sg := range routerConfig.Subgraphs {
+				if sg.Name == "employees" {
+					dsID = sg.Id
+					break
+				}
+			}
+			if dsID == "" {
+				return
+			}
+			for _, ds := range routerConfig.EngineConfig.DatasourceConfigurations {
+				if ds.Id != dsID || ds.CostConfiguration == nil {
+					continue
+				}
+				modify(ds.CostConfiguration)
+			}
+		}
+
+		t.Run("negative field weight clips total to zero", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+					modifyEmployeesCost(routerConfig, func(cc *nodev1.CostConfiguration) {
+						for _, f := range cc.FieldWeights {
+							if f.TypeName == "Query" && f.FieldName == "employee" {
+								neg := int32(-3)
+								f.Weight = &neg
+							}
+						}
+					})
+				},
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Baseline cost is 8 with employee weight=5 and id arg weight=2.
+				// With employee weight=-3: argsCost=2, round((1 + (-3)) * 1) = -2 → total = 2 + (-2) = 0, clipped to 0
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+				require.Equal(t, "0", res.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "0", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
+		t.Run("negative type weight on list field clips to zero", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+					modifyEmployeesCost(routerConfig, func(cc *nodev1.CostConfiguration) {
+						if cc.TypeWeights == nil {
+							cc.TypeWeights = make(map[string]int32)
+						}
+						cc.TypeWeights["Department"] = -10
+					})
+				},
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// Baseline with Department type weight=1 gives estimated=18.
+				// With Department type weight=-10, the negative subtree cost clips at zero.
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { role { departments } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+
+				estimated := res.Response.Header.Get(core.CostEstimatedHeader)
+				require.NotEmpty(t, estimated)
+				estimatedVal, err := strconv.Atoi(estimated)
+				require.NoError(t, err)
+				require.Equal(t, estimatedVal, 8, "estimated cost must not be negative")
+				require.Equal(t, estimatedVal, 8, "negative type weight should reduce cost below baseline of 18")
+			})
+		})
+
+		t.Run("negative argument weight reduces cost but does not zero it", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+					modifyEmployeesCost(routerConfig, func(cc *nodev1.CostConfiguration) {
+						for _, f := range cc.FieldWeights {
+							if f.TypeName == "Query" && f.FieldName == "employee" {
+								if f.ArgumentWeights == nil {
+									f.ArgumentWeights = make(map[string]int32)
+								}
+								f.ArgumentWeights["id"] = -5
+							}
+						}
+					})
+				},
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// With arg id weight=-5: argsCost=-5, round((1 + 5) * 1) = 6 → total = -5 + 6 = 1
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+				require.Equal(t, "1", res.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "1", res.Response.Header.Get(core.CostActualHeader))
+			})
+		})
+
+		t.Run("negative field weight partially offsets positive cost", func(t *testing.T) {
+			t.Parallel()
+			testenv.Run(t, &testenv.Config{
+				ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+					modifyEmployeesCost(routerConfig, func(cc *nodev1.CostConfiguration) {
+						for _, f := range cc.FieldWeights {
+							if f.TypeName == "Query" && f.FieldName == "employee" {
+								neg := int32(-1)
+								f.Weight = &neg
+							}
+						}
+					})
+				},
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						MaxEstimatedLimit: 10000,
+						EstimatedListSize: 10,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				// With employee weight=-1: argsCost=2, round((1 + (-1)) * 1) = 0 → total = 2 + 0 = 2
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: `{ employee(id:1) { id details { forename surname } } }`,
+				})
+				require.Contains(t, res.Body, `"data":`)
+				require.Equal(t, "2", res.Response.Header.Get(core.CostEstimatedHeader))
+				require.Equal(t, "2", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
 	})
