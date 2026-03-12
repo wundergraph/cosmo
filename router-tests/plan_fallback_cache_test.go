@@ -68,8 +68,8 @@ func TestPlanFallbackCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.PlanFallbackThreshold = fallbackThreshold
-				cfg.PlanFallbackCacheSize = 100
+				cfg.SlowPlanCacheThreshold = fallbackThreshold
+				cfg.SlowPlanCacheSize = 100
 			},
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -97,8 +97,8 @@ func TestPlanFallbackCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.PlanFallbackThreshold = fallbackThreshold
-				cfg.PlanFallbackCacheSize = 100
+				cfg.SlowPlanCacheThreshold = fallbackThreshold
+				cfg.SlowPlanCacheSize = 100
 			},
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -136,8 +136,8 @@ func TestPlanFallbackCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.PlanFallbackThreshold = fallbackThreshold
-				cfg.PlanFallbackCacheSize = 100
+				cfg.SlowPlanCacheThreshold = fallbackThreshold
+				cfg.SlowPlanCacheSize = 100
 			},
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -189,8 +189,8 @@ func TestPlanFallbackCache(t *testing.T) {
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				// Large enough to hold all queries — no evictions before reload
 				cfg.ExecutionPlanCacheSize = 1024
-				cfg.PlanFallbackThreshold = fallbackThreshold
-				cfg.PlanFallbackCacheSize = 100
+				cfg.SlowPlanCacheThreshold = fallbackThreshold
+				cfg.SlowPlanCacheSize = 100
 			},
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -260,8 +260,8 @@ func TestPlanFallbackCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.PlanFallbackThreshold = fallbackThreshold
-				cfg.PlanFallbackCacheSize = 100
+				cfg.SlowPlanCacheThreshold = fallbackThreshold
+				cfg.SlowPlanCacheSize = 100
 			},
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -315,8 +315,8 @@ func TestPlanFallbackCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.PlanFallbackThreshold = fallbackThreshold
-				cfg.PlanFallbackCacheSize = 10
+				cfg.SlowPlanCacheThreshold = fallbackThreshold
+				cfg.SlowPlanCacheSize = 10
 			},
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -343,8 +343,8 @@ func TestPlanFallbackCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.PlanFallbackThreshold = fallbackThreshold
-				cfg.PlanFallbackCacheSize = 50
+				cfg.SlowPlanCacheThreshold = fallbackThreshold
+				cfg.SlowPlanCacheSize = 50
 			},
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -372,8 +372,8 @@ func TestPlanFallbackCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1024
-				cfg.PlanFallbackThreshold = fallbackThreshold
-				cfg.PlanFallbackCacheSize = 100
+				cfg.SlowPlanCacheThreshold = fallbackThreshold
+				cfg.SlowPlanCacheSize = 100
 			},
 			RouterOptions: []core.Option{
 				core.WithConfigVersionHeader(true),
@@ -430,8 +430,8 @@ func TestPlanFallbackCache(t *testing.T) {
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
 				cfg.ExecutionPlanCacheSize = 1
-				cfg.PlanFallbackThreshold = 1 * time.Hour
-				cfg.PlanFallbackCacheSize = 100
+				cfg.SlowPlanCacheThreshold = 1 * time.Hour
+				cfg.SlowPlanCacheSize = 100
 			},
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{

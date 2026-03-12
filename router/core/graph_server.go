@@ -54,8 +54,8 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
-	"github.com/wundergraph/cosmo/router/pkg/planfallbackcache"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
@@ -546,7 +546,7 @@ type graphMux struct {
 	mux *chi.Mux
 
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
-	planFallbackCache           *planfallbackcache.Cache[*planWithMetaData]
+	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
 	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache          *ristretto.Cache[uint64, NormalizationCacheEntry]
 	complexityCalculationCache  *ristretto.Cache[uint64, ComplexityCacheEntry]
@@ -1346,9 +1346,9 @@ func (s *graphServer) buildGraphMux(
 
 	if opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled() {
 		var err error
-		gm.planFallbackCache, err = planfallbackcache.New[*planWithMetaData](
-			int(s.engineExecutionConfiguration.PlanFallbackCacheSize),
-			s.engineExecutionConfiguration.PlanFallbackThreshold,
+		gm.planFallbackCache, err = slowplancache.New[*planWithMetaData](
+			int(s.engineExecutionConfiguration.SlowPlanCacheSize),
+			s.engineExecutionConfiguration.SlowPlanCacheThreshold,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create plan fallback cache: %w", err)
@@ -1411,7 +1411,7 @@ func (s *graphServer) buildGraphMux(
 		//   - Using static execution config (not Cosmo): s.selfRegister == nil
 		//   - OR CDN cache warmer is explictly disabled
 		case s.cacheWarmup.InMemoryFallback && (s.selfRegister == nil || !s.cacheWarmup.Source.CdnSource.Enabled):
-			// We first utilize the existing plan cache (if it was already set, i.e., not on the first start) to create a list of queries
+			// We first utilize the existing cache (if it was already set, i.e., not on the first start) to create a list of queries
 			// and then reset the plan cache to the new plan cache for this start afterwards.
 			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
 			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planFallbackCache)

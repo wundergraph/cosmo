@@ -1,4 +1,4 @@
-package planfallbackcache
+package slowplancache
 
 import (
 	"fmt"
@@ -42,7 +42,7 @@ const defaultWriteBufferSize = 32 * 1024
 
 func New[V any](maxSize int, threshold time.Duration) (*Cache[V], error) {
 	if maxSize < 1 {
-		return nil, fmt.Errorf("plan fallback cache size must be at least 1, got %d", maxSize)
+		return nil, fmt.Errorf("slow plan cache size must be at least 1, got %d", maxSize)
 	}
 	c := &Cache[V]{
 		entries:   make(map[uint64]*Entry[V], maxSize),

@@ -7,7 +7,7 @@ import (
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
-	"github.com/wundergraph/cosmo/router/pkg/planfallbackcache"
+	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -29,7 +29,7 @@ type planWithMetaData struct {
 type OperationPlanner struct {
 	sf             singleflight.Group
 	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
-	fallbackCache  *planfallbackcache.Cache[*planWithMetaData]
+	fallbackCache  *slowplancache.Cache[*planWithMetaData]
 	executor       *Executor
 	trackUsageInfo bool
 	useFallback    bool
@@ -57,7 +57,7 @@ type ExecutionPlanCache[K any, V any] interface {
 func NewOperationPlanner(
 	executor *Executor,
 	planCache ExecutionPlanCache[uint64, *planWithMetaData],
-	fallbackCache *planfallbackcache.Cache[*planWithMetaData],
+	fallbackCache *slowplancache.Cache[*planWithMetaData],
 	planningDurationOverride func(content string) time.Duration,
 ) *OperationPlanner {
 	return &OperationPlanner{

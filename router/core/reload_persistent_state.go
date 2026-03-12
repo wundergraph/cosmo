@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/pkg/planfallbackcache"
+	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"go.uber.org/zap"
 )
 
@@ -92,7 +92,7 @@ func (c *InMemoryPlanCacheFallback) getPlanCacheForFF(featureFlagKey string) []*
 	}
 
 	switch cache := c.queriesForFeatureFlag[featureFlagKey].(type) {
-	case *planfallbackcache.Cache[*planWithMetaData]:
+	case *slowplancache.Cache[*planWithMetaData]:
 		return convertToNodeOperation(cache)
 	case []*nodev1.Operation:
 		return cache
@@ -107,7 +107,7 @@ func (c *InMemoryPlanCacheFallback) getPlanCacheForFF(featureFlagKey string) []*
 }
 
 // setPlanCacheForFF sets the plan cache for a specific feature flag key
-func (c *InMemoryPlanCacheFallback) setPlanCacheForFF(featureFlagKey string, cache *planfallbackcache.Cache[*planWithMetaData]) {
+func (c *InMemoryPlanCacheFallback) setPlanCacheForFF(featureFlagKey string, cache *slowplancache.Cache[*planWithMetaData]) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -128,7 +128,7 @@ func (c *InMemoryPlanCacheFallback) extractQueriesAndOverridePlanCache() {
 
 	fallbackMap := make(map[string]any)
 	for k, v := range c.queriesForFeatureFlag {
-		if cache, ok := v.(*planfallbackcache.Cache[*planWithMetaData]); ok {
+		if cache, ok := v.(*slowplancache.Cache[*planWithMetaData]); ok {
 			fallbackMap[k] = convertToNodeOperation(cache)
 		}
 	}
@@ -158,7 +158,7 @@ func (c *InMemoryPlanCacheFallback) cleanupUnusedFeatureFlags(routerCfg *nodev1.
 	}
 }
 
-func convertToNodeOperation(data *planfallbackcache.Cache[*planWithMetaData]) []*nodev1.Operation {
+func convertToNodeOperation(data *slowplancache.Cache[*planWithMetaData]) []*nodev1.Operation {
 	items := make([]*nodev1.Operation, 0)
 
 	data.IterValues(func(v *planWithMetaData) (stop bool) {

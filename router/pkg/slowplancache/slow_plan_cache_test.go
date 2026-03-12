@@ -1,4 +1,4 @@
-package planfallbackcache
+package slowplancache
 
 import (
 	"testing"

@@ -976,7 +976,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.PlanFallbackCacheSize = 100
+				cfg.SlowPlanCacheSize = 100
 			},
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
@@ -1128,7 +1128,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.PlanFallbackCacheSize = 100
+				cfg.SlowPlanCacheSize = 100
 			},
 			RouterOptions: []core.Option{
 				core.WithConfigVersionHeader(true),
@@ -1178,7 +1178,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.PlanFallbackCacheSize = 100
+				cfg.SlowPlanCacheSize = 100
 			},
 			CdnSever: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
@@ -1237,7 +1237,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 
 		testenv.Run(t, &testenv.Config{
 			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
-				cfg.PlanFallbackCacheSize = 100
+				cfg.SlowPlanCacheSize = 100
 			},
 			CdnSever: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusUnauthorized)
@@ -1313,8 +1313,8 @@ cache_warmup:
       enabled: false
 
 engine:
-  plan_fallback_threshold: "1ns"
-  plan_fallback_cache_size: 100
+  slow_plan_cache_threshold: "1ns"
+  slow_plan_cache_size: 100
   debug:
     enable_cache_response_headers: true
 `

@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
-	"github.com/wundergraph/cosmo/router/pkg/planfallbackcache"
+	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +48,7 @@ func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t
 	t.Run("update when already enabled keeps existing data", func(t *testing.T) {
 		t.Parallel()
 		existing := make(map[string]any)
-		existing["test"] = (*planfallbackcache.Cache[*planWithMetaData])(nil)
+		existing["test"] = (*slowplancache.Cache[*planWithMetaData])(nil)
 
 		cache := &InMemoryPlanCacheFallback{
 			queriesForFeatureFlag: existing,
@@ -142,7 +142,7 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 	t.Run("returns operations from live fallback cache reference", func(t *testing.T) {
 		t.Parallel()
 
-		fallbackCache, err := planfallbackcache.New[*planWithMetaData](100, 0)
+		fallbackCache, err := slowplancache.New[*planWithMetaData](100, 0)
 		require.NoError(t, err)
 		fallbackCache.Set(1, &planWithMetaData{content: "query { fromFallback }"}, 5*1e9)
 		fallbackCache.Wait()
@@ -189,9 +189,9 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
 			queriesForFeatureFlag: map[string]any{
-				"ff1": (*planfallbackcache.Cache[*planWithMetaData])(nil),
-				"ff2": (*planfallbackcache.Cache[*planWithMetaData])(nil),
-				"ff3": (*planfallbackcache.Cache[*planWithMetaData])(nil),
+				"ff1": (*slowplancache.Cache[*planWithMetaData])(nil),
+				"ff2": (*slowplancache.Cache[*planWithMetaData])(nil),
+				"ff3": (*slowplancache.Cache[*planWithMetaData])(nil),
 			},
 		}
 
@@ -216,8 +216,8 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
 			queriesForFeatureFlag: map[string]any{
-				"":    (*planfallbackcache.Cache[*planWithMetaData])(nil),
-				"ff1": (*planfallbackcache.Cache[*planWithMetaData])(nil),
+				"":    (*slowplancache.Cache[*planWithMetaData])(nil),
+				"ff1": (*slowplancache.Cache[*planWithMetaData])(nil),
 			},
 		}
 
@@ -256,12 +256,12 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
 			queriesForFeatureFlag: map[string]any{
-				"":    (*planfallbackcache.Cache[*planWithMetaData])(nil), // base should be kept
-				"ff1": (*planfallbackcache.Cache[*planWithMetaData])(nil),
-				"ff2": (*planfallbackcache.Cache[*planWithMetaData])(nil),
-				"ff3": (*planfallbackcache.Cache[*planWithMetaData])(nil),
-				"ff4": (*planfallbackcache.Cache[*planWithMetaData])(nil),
-				"ff5": (*planfallbackcache.Cache[*planWithMetaData])(nil),
+				"":    (*slowplancache.Cache[*planWithMetaData])(nil), // base should be kept
+				"ff1": (*slowplancache.Cache[*planWithMetaData])(nil),
+				"ff2": (*slowplancache.Cache[*planWithMetaData])(nil),
+				"ff3": (*slowplancache.Cache[*planWithMetaData])(nil),
+				"ff4": (*slowplancache.Cache[*planWithMetaData])(nil),
+				"ff5": (*slowplancache.Cache[*planWithMetaData])(nil),
 			},
 		}
 
@@ -287,9 +287,9 @@ func TestInMemoryPlanCacheFallback_ProcessOnConfigChangeRestart(t *testing.T) {
 		query1 := "query { test1 }"
 		query2 := "query { test2 }"
 
-		fallbackCache1, err := planfallbackcache.New[*planWithMetaData](100, 0)
+		fallbackCache1, err := slowplancache.New[*planWithMetaData](100, 0)
 		require.NoError(t, err)
-		fallbackCache2, err := planfallbackcache.New[*planWithMetaData](100, 0)
+		fallbackCache2, err := slowplancache.New[*planWithMetaData](100, 0)
 		require.NoError(t, err)
 
 		fallbackCache1.Set(1, &planWithMetaData{content: query1}, 5*1e9)

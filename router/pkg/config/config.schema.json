@@ -3325,16 +3325,16 @@
           "default": 1024,
           "description": "The size of the execution plan cache."
         },
-        "plan_fallback_cache_size": {
+        "slow_plan_cache_size": {
           "type": "integer",
           "minimum": 1,
           "default": 256,
-          "description": "The maximum number of entries in the plan fallback cache. Plans that exceed the planning threshold are protected from TinyLFU eviction in the main plan cache."
+          "description": "The maximum number of entries in the slow plan cache. Plans that exceed the planning threshold are protected from TinyLFU eviction in the main plan cache."
         },
-        "plan_fallback_threshold": {
+        "slow_plan_cache_threshold": {
           "type": "string",
           "format": "go-duration",
-          "description": "The minimum planning duration for a query plan to be stored in the fallback cache, protecting it from TinyLFU cache eviction.",
+          "description": "The minimum planning duration for a query plan to be stored in the slow plan cache, protecting it from TinyLFU cache eviction.",
           "default": "5s",
           "duration": {
             "minimum": "1ns"
