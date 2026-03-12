@@ -2491,6 +2491,7 @@ export class NormalizationFactory {
       fieldName: data.name,
       slicingArguments: [],
       sizedFields: [],
+      requireOneSlicingArgument: true, // per IBM cost spec
     };
 
     for (const argumentNode of args) {
@@ -2596,7 +2597,7 @@ export class NormalizationFactory {
     }
 
     if (listSizeConfig.assumedSize !== undefined && listSizeConfig.slicingArguments.length > 0) {
-      if (listSizeConfig.requireOneSlicingArgument !== false) {
+      if (listSizeConfig.requireOneSlicingArgument) {
         errorMessages.push(listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords));
       } else {
         for (const slicingArgName of listSizeConfig.slicingArguments) {

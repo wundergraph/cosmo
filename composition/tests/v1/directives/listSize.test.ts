@@ -343,6 +343,7 @@ describe('@listSize directive tests', () => {
         typeName: 'Query',
         fieldName: 'users',
         assumedSize: 100,
+        requireOneSlicingArgument: true,
         sizedFields: [],
         slicingArguments: [],
       });
@@ -353,6 +354,7 @@ describe('@listSize directive tests', () => {
       expect(costs.listSizes.get('Query.users')).toEqual({
         typeName: 'Query',
         fieldName: 'users',
+        requireOneSlicingArgument: true,
         sizedFields: [],
         slicingArguments: ['first', 'last'],
       });
@@ -363,6 +365,7 @@ describe('@listSize directive tests', () => {
       expect(costs.listSizes.get('Query.usersConnection')).toEqual({
         typeName: 'Query',
         fieldName: 'usersConnection',
+        requireOneSlicingArgument: true,
         slicingArguments: ['first'],
         sizedFields: ['edges', 'nodes'],
       });
@@ -411,7 +414,7 @@ describe('@listSize directive tests', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithNonListSlicingArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
       const ls = costs.listSizes.get('Query.users');
       expect(ls).toBeDefined();
-      expect(ls!.requireOneSlicingArgument).toBeUndefined();
+      expect(ls!.requireOneSlicingArgument).toBe(true);
       expect(ls!.slicingArguments).toEqual(['first']);
     });
 

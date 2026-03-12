@@ -120,5 +120,5 @@ export type FieldListSizeConfiguration = {
   slicingArguments: Array<ArgumentName>;
   sizedFields: Array<FieldName>;
   assumedSize?: number;
-  requireOneSlicingArgument?: boolean;
+  requireOneSlicingArgument: boolean;
 };
