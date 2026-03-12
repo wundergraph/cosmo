@@ -71,7 +71,6 @@ func NewOperationPlanner(
 }
 
 // planOperation performs the core planning work: parse, plan, and postprocess.
-// This is the single source of truth for query planning logic.
 func (p *OperationPlanner) planOperation(content string, name string, includeQueryPlan bool) (*planWithMetaData, error) {
 	doc, report := astparser.ParseGraphqlDocumentString(content)
 	if report.HasErrors() {
