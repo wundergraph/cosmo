@@ -117,6 +117,90 @@ func TestSafelist(t *testing.T) {
 		})
 	})
 
+	t.Run("safelist with access log sha256 attribute allows a persisted query to run", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key: "operation_sha256",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldOperationSha256,
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{Enabled: true},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Header:        header,
+				Query:         persistedQuery,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		})
+	})
+
+	t.Run("safelist with access log sha256 attribute allows a persisted query run with ID", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key: "operation_sha256",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldOperationSha256,
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{Enabled: true},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, `{"data":{"employees":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5},{"id":7},{"id":8},{"id":10},{"id":11},{"id":12}]}}`, res.Body)
+		})
+	})
+
+	t.Run("safelist with access log sha256 attribute rejects non persisted query", func(t *testing.T) {
+		testenv.Run(t, &testenv.Config{
+			AccessLogFields: []config.CustomAttribute{
+				{
+					Key: "operation_sha256",
+					ValueFrom: &config.CustomDynamicAttribute{
+						ContextField: core.ContextFieldOperationSha256,
+					},
+				},
+			},
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Safelist: config.SafelistConfiguration{Enabled: true},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Header:        header,
+				Query:         queryWithDetails,
+			})
+			require.NoError(t, err)
+			require.Equal(t, persistedNotFoundResp, res.Body)
+		})
+	})
+
 	t.Run("log unknown operations", func(t *testing.T) {
 		t.Run("logs non persisted query but allows them to continue", func(t *testing.T) {
 			testenv.Run(t, &testenv.Config{

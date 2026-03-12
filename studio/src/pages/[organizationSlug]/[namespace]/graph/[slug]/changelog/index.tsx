@@ -1,47 +1,34 @@
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { Changelog } from "@/components/changelog/changelog";
-import { CompositionErrorsBanner } from "@/components/composition-errors-banner";
-import {
-  DatePickerWithRange,
-  DateRangePickerChangeHandler,
-} from "@/components/date-picker-with-range";
-import { EmptyState } from "@/components/empty-state";
-import {
-  GraphContext,
-  GraphPageLayout,
-  getGraphLayout,
-} from "@/components/layout/graph-layout";
-import { Button } from "@/components/ui/button";
-import { CLI } from "@/components/ui/cli";
-import { Loader } from "@/components/ui/loader";
-import { Toolbar } from "@/components/ui/toolbar";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { docsBaseURL } from "@/lib/constants";
-import { formatDateTime } from "@/lib/format-date";
-import { createDateRange } from "@/lib/insights-helpers";
-import { NextPageWithLayout } from "@/lib/page";
-import { useQuery } from "@connectrpc/connect-query";
-import {
-  CommandLineIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getFederatedGraphChangelog } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { FederatedGraphChangelogOutput } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { endOfDay, formatISO, startOfDay } from "date-fns";
-import { useRouter } from "next/router";
-import { useContext, useEffect, useRef, useState } from "react";
-import { useWorkspace } from "@/hooks/use-workspace";
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useDateRangeQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { Changelog } from '@/components/changelog/changelog';
+import { CompositionErrorsBanner } from '@/components/composition-errors-banner';
+import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
+import { EmptyState } from '@/components/empty-state';
+import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { Button } from '@/components/ui/button';
+import { CLI } from '@/components/ui/cli';
+import { Loader } from '@/components/ui/loader';
+import { Toolbar } from '@/components/ui/toolbar';
+import { useFeatureLimit } from '@/hooks/use-feature-limit';
+import { docsBaseURL } from '@/lib/constants';
+import { formatDateTime } from '@/lib/format-date';
+import { createDateRange } from '@/lib/insights-helpers';
+import { NextPageWithLayout } from '@/lib/page';
+import { useQuery } from '@connectrpc/connect-query';
+import { CommandLineIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { getFederatedGraphChangelog } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { FederatedGraphChangelogOutput } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { endOfDay, formatISO, startOfDay } from 'date-fns';
+import { useRouter } from 'next/router';
+import { useContext, useEffect, useRef, useState } from 'react';
+import { useWorkspace } from '@/hooks/use-workspace';
 
 const ChangelogToolbar = () => {
   const applyParams = useApplyParams();
   const { dateRange, range } = useDateRangeQueryState();
 
-  const onDateRangeChange: DateRangePickerChangeHandler = ({
-    dateRange,
-    range,
-  }) => {
+  const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange, range }) => {
     if (range) {
       applyParams({
         range: range.toString(),
@@ -60,7 +47,7 @@ const ChangelogToolbar = () => {
     }
   };
 
-  const changelogRetention = useFeatureLimit("changelog-retention", 7);
+  const changelogRetention = useFeatureLimit('changelog-retention', 7);
 
   return (
     <Toolbar>
@@ -81,12 +68,13 @@ const ChangelogPage: NextPageWithLayout = () => {
   const [items, setItems] = useState<FederatedGraphChangelogOutput[]>([]);
   const [offset, setOffset] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const graphData = useContext(GraphContext);
 
-  const validGraph =
-    graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
+  const validGraph = graphData?.graph?.isComposable && !!graphData?.graph?.lastUpdatedAt;
 
   const {
     dateRange: { start, end },
@@ -130,8 +118,7 @@ const ChangelogPage: NextPageWithLayout = () => {
   useEffect(() => {
     const handleScroll = () => {
       if (
-        window.innerHeight + window.scrollY >=
-          document.documentElement.scrollHeight - 5 &&
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 5 &&
         !isLoading &&
         data?.hasNextPage
       ) {
@@ -139,8 +126,8 @@ const ChangelogPage: NextPageWithLayout = () => {
       }
     };
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [isLoading, data?.hasNextPage]);
 
   useEffect(() => {
@@ -149,10 +136,7 @@ const ChangelogPage: NextPageWithLayout = () => {
 
   if (items.length === 0 && isLoading) return <Loader fullscreen />;
 
-  if (
-    items.length === 0 &&
-    (!data || error || data.response?.code !== EnumStatusCode.OK)
-  )
+  if (items.length === 0 && (!data || error || data.response?.code !== EnumStatusCode.OK))
     return (
       <GraphPageLayout
         title="Changelog"
@@ -163,9 +147,7 @@ const ChangelogPage: NextPageWithLayout = () => {
         <EmptyState
           icon={<ExclamationTriangleIcon />}
           title="Could not retrieve changelog"
-          description={
-            data?.response?.details || error?.message || "Please try again"
-          }
+          description={data?.response?.details || error?.message || 'Please try again'}
           actions={<Button onClick={() => refetch()}>Retry</Button>}
         />
       </GraphPageLayout>
@@ -184,14 +166,8 @@ const ChangelogPage: NextPageWithLayout = () => {
           title="Publish schema using the CLI"
           description={
             <>
-              No changelogs found. Use the CLI tool to publish or adjust the
-              date range.{" "}
-              <a
-                target="_blank"
-                rel="noreferrer"
-                href={docsBaseURL + "/cli/subgraph/publish"}
-                className="text-primary"
-              >
+              No changelogs found. Use the CLI tool to publish or adjust the date range.{' '}
+              <a target="_blank" rel="noreferrer" href={docsBaseURL + '/cli/subgraph/publish'} className="text-primary">
                 Learn more.
               </a>
             </>
@@ -208,11 +184,7 @@ const ChangelogPage: NextPageWithLayout = () => {
         />
       ) : (
         <div className="relative">
-          {!validGraph && (
-            <CompositionErrorsBanner
-              errors={graphData?.graph?.compositionErrors}
-            />
-          )}
+          {!validGraph && <CompositionErrorsBanner errors={graphData?.graph?.compositionErrors} />}
           <div className="sticky top-[20px] z-20 h-0 overflow-visible">
             <div className="absolute right-0 hidden w-[280px] grid-cols-2 rounded border bg-card px-4 py-2 lg:grid">
               <h2 className="text-sm font-semibold">Jump to log</h2>
@@ -225,12 +197,9 @@ const ChangelogPage: NextPageWithLayout = () => {
                         const element = document.getElementById(id)!;
                         const offset = 112;
 
-                        const top = scrollRef.current
-                          ? scrollRef.current.scrollTop
-                          : window.scrollY;
+                        const top = scrollRef.current ? scrollRef.current.scrollTop : window.scrollY;
 
-                        const elementPosition =
-                          element.getBoundingClientRect().top;
+                        const elementPosition = element.getBoundingClientRect().top;
                         const scrollPosition = top + elementPosition - offset;
 
                         parent.scrollTo({ top: scrollPosition });
@@ -247,11 +216,7 @@ const ChangelogPage: NextPageWithLayout = () => {
           </div>
           <div className="absolute left-40 ml-1.5 hidden h-full w-px border-r lg:block" />
           <Changelog entries={items} />
-          {!data?.hasNextPage && (
-            <p className="mx-auto py-12 text-sm font-bold leading-none">
-              End of changelog
-            </p>
-          )}
+          {!data?.hasNextPage && <p className="mx-auto py-12 text-sm font-bold leading-none">End of changelog</p>}
         </div>
       )}
     </GraphPageLayout>
@@ -260,7 +225,7 @@ const ChangelogPage: NextPageWithLayout = () => {
 
 ChangelogPage.getLayout = (page) =>
   getGraphLayout(page, {
-    title: "Changelog",
+    title: 'Changelog',
   });
 
 export default ChangelogPage;

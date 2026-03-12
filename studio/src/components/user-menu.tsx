@@ -4,14 +4,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useUser } from "@/hooks/use-user";
-import { resetTracking } from "@/lib/track";
-import Link from "next/link";
-import { ThemeToggle } from "./theme-toggle";
-import { Avatar, AvatarFallback } from "./ui/avatar";
-import { Button } from "./ui/button";
-import { PropsWithChildren } from "react";
+} from '@/components/ui/dropdown-menu';
+import { useUser } from '@/hooks/use-user';
+import { resetTracking } from '@/lib/track';
+import Link from 'next/link';
+import { ThemeToggle } from './theme-toggle';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import { Button } from './ui/button';
+import { PropsWithChildren } from 'react';
 
 const localStorageKeysToRemove = [
   'graphiql:headers',
@@ -23,11 +23,11 @@ const localStorageKeysToRemove = [
   'playground:pre-flight:selected',
   'playground:pre-operation:selected',
   'playground:post-operation:selected',
-  'playground:script:tabState'
+  'playground:script:tabState',
 ];
 
 function removeLocalStorageItems() {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     return;
   }
 
@@ -43,12 +43,12 @@ const LogoutLink = ({ children }: PropsWithChildren) => {
         removeLocalStorageItems();
         resetTracking();
       }}
-      href={process.env.NEXT_PUBLIC_COSMO_CP_URL + "/v1/auth/logout"}
+      href={process.env.NEXT_PUBLIC_COSMO_CP_URL + '/v1/auth/logout'}
     >
-      {children || "Logout"}
+      {children || 'Logout'}
     </Link>
   );
-}
+};
 
 export const UserMenuMobile = () => {
   const user = useUser();
@@ -83,7 +83,7 @@ export const UserMenu = () => {
             </AvatarFallback>
           </Avatar>
           {hasInvitations ? (
-            <div className="absolute right-0 top-0 -translate-x-0.5 -translate-y-0.5 rounded-full border-2 border-background pointer-events-none">
+            <div className="pointer-events-none absolute right-0 top-0 -translate-x-0.5 -translate-y-0.5 rounded-full border-2 border-background">
               <div className="absolute size-2 animate-ping rounded-full bg-blue-400" />
               <div className="size-2 rounded-full bg-blue-400" />
             </div>
@@ -91,9 +91,7 @@ export const UserMenu = () => {
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[180px]">
-        <p className="cursor-text truncate px-2 py-1.5 text-sm font-semibold">
-          {user.email}
-        </p>
+        <p className="cursor-text truncate px-2 py-1.5 text-sm font-semibold">{user.email}</p>
         <Link href="/account/invitations">
           <DropdownMenuItem>
             Invitations
