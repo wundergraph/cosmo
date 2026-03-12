@@ -77,10 +77,10 @@ message PublishFederatedSubgraphResponse {
   optional bool hasChanged = 4;
   repeated CompositionWarning compositionWarnings = 5;
   optional string proposalMatchMessage = 6;
-  optional PublishCounts counts = 7;
+  optional SubgraphPublishStats counts = 7;
 }
 
-message PublishCounts {
+message SubgraphPublishStats {
   int32 compositionErrors = 1;
   int32 compositionWarnings = 2;
   int32 deploymentErrors = 3;

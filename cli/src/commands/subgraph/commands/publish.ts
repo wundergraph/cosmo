@@ -11,14 +11,14 @@ import {
   parseGraphQLWebsocketSubprotocol,
   splitLabel,
 } from '@wundergraph/cosmo-shared';
-import { SubgraphType, PublishCounts } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { SubgraphType, SubgraphPublishStats } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { validateSubscriptionProtocols } from '../../../utils.js';
 import { websocketSubprotocolDescription, limitMaxValue } from '../../../constants.js';
 
 const printTruncationWarning = (
-  counts: PublishCounts | undefined,
+  counts: SubgraphPublishStats | undefined,
   displayedCounts: {
     compositionErrors: number;
     compositionWarnings: number;
