@@ -61,9 +61,22 @@ func (r *mutationResolver) UpdateEmployeeTag(ctx context.Context, id int, tag st
 	defer r.mux.Unlock()
 	for _, employee := range r.EmployeesData {
 		if id == employee.ID {
-			employee.Tag = tag
-			employee.UpdatedAt = time.Now().String()
-			return employee, nil
+			details := &model.Details{}
+			if employee.Details != nil {
+				details.Forename = employee.Details.Forename
+				details.Surname = employee.Details.Surname
+				details.Location = employee.Details.Location
+			}
+			return &model.Employee{
+				ID:        employee.ID,
+				Details:   details,
+				Tag:       tag,
+				Expertise: employee.Expertise,
+				Role:      employee.Role,
+				Notes:     employee.Notes,
+				UpdatedAt: time.Now().String(),
+				StartDate: employee.StartDate,
+			}, nil
 		}
 	}
 	return nil, nil
@@ -107,6 +120,7 @@ func (r *queryResolver) Employee(ctx context.Context, id int) (*model.Employee, 
 				},
 				UpdatedAt: time.Now().String(),
 				Tag:       employee.Tag,
+				Expertise: employee.Expertise,
 				Role:      employee.Role,
 				Notes:     employee.Notes,
 				StartDate: employee.StartDate,
@@ -136,6 +150,7 @@ func (r *queryResolver) Employees(ctx context.Context) ([]*model.Employee, error
 			ID:        employee.ID,
 			Details:   employee.Details,
 			Tag:       employee.Tag,
+			Expertise: employee.Expertise,
 			Role:      employee.Role,
 			Notes:     employee.Notes,
 			UpdatedAt: time.Now().String(),
@@ -173,6 +188,7 @@ func (r *queryResolver) FirstEmployee(ctx context.Context) (*model.Employee, err
 		ID:        Employees[0].ID,
 		Details:   Employees[0].Details,
 		Tag:       Employees[0].Tag,
+		Expertise: Employees[0].Expertise,
 		Role:      Employees[0].Role,
 		Notes:     Employees[0].Notes,
 		UpdatedAt: time.Now().String(),

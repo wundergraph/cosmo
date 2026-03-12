@@ -1,47 +1,25 @@
-import { cn } from "@/lib/utils";
-import { Dialog, Transition } from "@headlessui/react";
-import { Fragment } from "react";
+import { cn } from '@/lib/utils';
+import { Dialog, Transition } from '@headlessui/react';
+import { Fragment } from 'react';
 
 const Dialog2Overlay = () => {
-  return (
-    <div
-      className="fixed inset-0 bg-background/80 backdrop-blur-sm"
-      aria-hidden="true"
-    />
-  );
+  return <div className="fixed inset-0 bg-background/80 backdrop-blur-sm" aria-hidden="true" />;
 };
 
-const Dialog2Title = ({
-  children,
-  className,
-}: {
-  children?: React.ReactNode;
-  className?: string;
-}) => {
+const Dialog2Title = ({ children, className }: { children?: React.ReactNode; className?: string }) => {
   return (
-    <Dialog.Title
-      className={cn(
-        "text-lg font-semibold leading-none tracking-tight",
-        className
-      )}
-    >
+    <Dialog.Title className={cn('text-lg font-semibold leading-none tracking-tight', className)}>
       {children}
     </Dialog.Title>
   );
 };
 
-const Dialog2Content = ({
-  children,
-  className,
-}: {
-  children?: React.ReactNode;
-  className?: string;
-}) => {
+const Dialog2Content = ({ children, className }: { children?: React.ReactNode; className?: string }) => {
   return (
     <Dialog.Panel
       className={cn(
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg md:w-full",
-        className
+        'fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border bg-background p-6 shadow-lg duration-200 sm:rounded-lg md:w-full',
+        className,
       )}
     >
       {children}
@@ -69,11 +47,7 @@ const Dialog2 = ({
       leaveTo="transform scale-95 opacity-0"
       as={Fragment}
     >
-      <Dialog
-        open={isOpen}
-        onClose={() => setIsOpen(false)}
-        className="relative z-50"
-      >
+      <Dialog open={isOpen} onClose={() => setIsOpen(false)} className="relative z-50">
         <Dialog2Overlay />
         {children}
       </Dialog>

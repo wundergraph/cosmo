@@ -1,16 +1,12 @@
-import { EmptyState } from "@/components/empty-state";
-import {
-  GraphContext,
-  GraphPageLayout,
-  getGraphLayout,
-} from "@/components/layout/graph-layout";
-import { OverviewToolbar } from "@/components/overview/OverviewToolbar";
-import { CLI } from "@/components/ui/cli";
-import { docsBaseURL } from "@/lib/constants";
-import { CommandLineIcon } from "@heroicons/react/24/outline";
-import { useRouter } from "next/router";
-import { useContext } from "react";
-import { SafeMarkdown } from "@/components/safe-markdown";
+import { EmptyState } from '@/components/empty-state';
+import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { OverviewToolbar } from '@/components/overview/OverviewToolbar';
+import { CLI } from '@/components/ui/cli';
+import { docsBaseURL } from '@/lib/constants';
+import { CommandLineIcon } from '@heroicons/react/24/outline';
+import { useRouter } from 'next/router';
+import { useContext } from 'react';
+import { SafeMarkdown } from '@/components/safe-markdown';
 
 const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
   const router = useRouter();
@@ -22,11 +18,11 @@ const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
       title="Add federated graph README using CLI"
       description={
         <>
-          No graph readme found. Use the CLI tool to add the readme.{" "}
+          No graph readme found. Use the CLI tool to add the readme.{' '}
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/studio/graph-documentation"}
+            href={docsBaseURL + '/studio/graph-documentation'}
             className="text-primary"
           >
             Learn more.
@@ -36,12 +32,8 @@ const Empty = ({ fedGraphName }: { fedGraphName: string }) => {
       actions={
         <CLI
           command={`npx wgc ${
-            !graphContext?.graph?.supportsFederation
-              ? "monograph"
-              : "federated-graph"
-          } update ${fedGraphName} --namespace ${
-            router.query.namespace
-          } --readme <path-to-readme>`}
+            !graphContext?.graph?.supportsFederation ? 'monograph' : 'federated-graph'
+          } update ${fedGraphName} --namespace ${router.query.namespace} --readme <path-to-readme>`}
         />
       }
     />
@@ -74,7 +66,7 @@ const FederatedGraphReadmePage = () => {
 
 FederatedGraphReadmePage.getLayout = (page: React.ReactNode) => {
   return getGraphLayout(page, {
-    title: "README",
+    title: 'README',
   });
 };
 
@@ -88,7 +80,7 @@ FederatedGraphReadmePage.getLayout = (page: React.ReactNode) => {
       {page}
     </GraphPageLayout>,
     {
-      title: "README",
+      title: 'README',
     },
   );
 };

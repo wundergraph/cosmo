@@ -10,7 +10,6 @@ import {
 import { joinLabel, normalizeURL } from '@wundergraph/cosmo-shared';
 import {
   and,
-  arrayContains,
   arrayOverlaps,
   asc,
   desc,
@@ -33,6 +32,7 @@ import { parse } from 'graphql';
 import { generateKeyPair, importPKCS8, SignJWT } from 'jose';
 import { uid } from 'uid/secure';
 import {
+  CompositionOptions,
   ContractTagOptions,
   FederationResult,
   FederationResultWithContracts,
@@ -53,7 +53,6 @@ import {
   users,
 } from '../../db/schema.js';
 import {
-  CompositionOptions,
   DateRange,
   FederatedGraphChangelogDTO,
   FederatedGraphDTO,

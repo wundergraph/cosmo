@@ -37,6 +37,7 @@ service ProjectsService {
   rpc QuerySearchProjects(QuerySearchProjectsRequest) returns (QuerySearchProjectsResponse) {}
   rpc QueryTasks(QueryTasksRequest) returns (QueryTasksResponse) {}
   rpc QueryTasksByPriority(QueryTasksByPriorityRequest) returns (QueryTasksByPriorityResponse) {}
+  rpc RequireEmployeeTaggedProjectSummaryById(RequireEmployeeTaggedProjectSummaryByIdRequest) returns (RequireEmployeeTaggedProjectSummaryByIdResponse) {}
   rpc ResolveEmployeeAverageTaskCompletionDays(ResolveEmployeeAverageTaskCompletionDaysRequest) returns (ResolveEmployeeAverageTaskCompletionDaysResponse) {}
   rpc ResolveEmployeeCurrentWorkload(ResolveEmployeeCurrentWorkloadRequest) returns (ResolveEmployeeCurrentWorkloadResponse) {}
   rpc ResolveMilestoneDaysUntilDue(ResolveMilestoneDaysUntilDueRequest) returns (ResolveMilestoneDaysUntilDueResponse) {}
@@ -763,8 +764,30 @@ message ResolveEmployeeAverageTaskCompletionDaysResponse {
   repeated ResolveEmployeeAverageTaskCompletionDaysResult result = 1;
 }
 
+message RequireEmployeeTaggedProjectSummaryByIdRequest {
+  // RequireEmployeeTaggedProjectSummaryByIdContext provides the context for the required fields method RequireEmployeeTaggedProjectSummaryById.
+  repeated RequireEmployeeTaggedProjectSummaryByIdContext context = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeTaggedProjectSummaryByIdFields fields = 2;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdResponse {
+  // RequireEmployeeTaggedProjectSummaryByIdResult provides the result for the required fields method RequireEmployeeTaggedProjectSummaryById.
+  repeated RequireEmployeeTaggedProjectSummaryByIdResult result = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdResult {
+  string tagged_project_summary = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdFields {
+  string expertise = 1;
+}
+
 message Project {
-  reserved 20 to 25;
   string id = 1;
   string name = 2;
   google.protobuf.StringValue description = 3;
@@ -787,7 +810,6 @@ message Project {
 }
 
 message Milestone {
-  reserved 12 to 13;
   string id = 1;
   string project_id = 2;
   string name = 3;
@@ -824,7 +846,6 @@ message Task {
 }
 
 message Employee {
-  reserved 8 to 9;
   int32 id = 1;
   ListOfProject projects = 2;
   repeated Task assigned_tasks = 3;

@@ -1,31 +1,22 @@
-import {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useState,
-} from "react";
+import { Dispatch, SetStateAction, useCallback, useEffect, useState } from 'react';
 
-import { useEventListener } from "./use-event-listener";
-import { useEventCallback } from "./use-event-callback";
+import { useEventListener } from './use-event-listener';
+import { useEventCallback } from './use-event-callback';
 
 declare global {
   interface WindowEventMap {
-    "session-storage": CustomEvent;
+    'session-storage': CustomEvent;
   }
 }
 
 type SetValue<T> = Dispatch<SetStateAction<T>>;
 
-export function useSessionStorage<T>(
-  key: string,
-  initialValue: T
-): [T, SetValue<T>] {
+export function useSessionStorage<T>(key: string, initialValue: T): [T, SetValue<T>] {
   // Get from session storage then
   // parse stored json or return initialValue
   const readValue = useCallback((): T => {
     // Prevent build error "window is undefined" but keep keep working
-    if (typeof window === "undefined") {
+    if (typeof window === 'undefined') {
       return initialValue;
     }
 
@@ -46,10 +37,8 @@ export function useSessionStorage<T>(
   // ... persists the new value to sessionStorage.
   const setValue: SetValue<T> = useEventCallback((value) => {
     // Prevent build error "window is undefined" but keeps working
-    if (typeof window == "undefined") {
-      console.warn(
-        `Tried setting sessionStorage key “${key}” even though environment is not a client`
-      );
+    if (typeof window == 'undefined') {
+      console.warn(`Tried setting sessionStorage key “${key}” even though environment is not a client`);
     }
 
     try {
@@ -63,7 +52,7 @@ export function useSessionStorage<T>(
       setStoredValue(newValue);
 
       // We dispatch a custom event so every useSessionStorage hook are notified
-      window.dispatchEvent(new Event("session-storage"));
+      window.dispatchEvent(new Event('session-storage'));
     } catch (error) {
       console.warn(`Error setting sessionStorage key “${key}”:`, error);
     }
@@ -81,15 +70,15 @@ export function useSessionStorage<T>(
       }
       setStoredValue(readValue());
     },
-    [key, readValue]
+    [key, readValue],
   );
 
   // this only works for other documents, not the current one
-  useEventListener("storage", handleStorageChange);
+  useEventListener('storage', handleStorageChange);
 
   // this is a custom event, triggered in writeValueTosessionStorage
   // See: useSessionStorage()
-  useEventListener("session-storage", handleStorageChange);
+  useEventListener('session-storage', handleStorageChange);
 
   return [storedValue, setValue];
 }
@@ -97,9 +86,9 @@ export function useSessionStorage<T>(
 // A wrapper for "JSON.parse()"" to support "undefined" value
 function parseJSON<T>(value: string | null): T | undefined {
   try {
-    return value === "undefined" ? undefined : JSON.parse(value ?? "");
+    return value === 'undefined' ? undefined : JSON.parse(value ?? '');
   } catch {
-    console.log("parsing error on", { value });
+    console.log('parsing error on', { value });
     return undefined;
   }
 }
