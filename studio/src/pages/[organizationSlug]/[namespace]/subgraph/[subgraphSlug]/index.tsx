@@ -1,40 +1,32 @@
-import { EmptyState } from "@/components/empty-state";
-import {
-  SubgraphPageLayout,
-  getSubgraphLayout,
-} from "@/components/layout/subgraph-layout";
-import { AddSubgraphUsersContent } from "@/components/subgraphs-table";
-import { Badge } from "@/components/ui/badge";
-import { CLI } from "@/components/ui/cli";
-import { CopyButton } from "@/components/ui/copy-button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useSubgraph } from "@/hooks/use-subgraph";
-import { docsBaseURL } from "@/lib/constants";
-import { formatDateTime } from "@/lib/format-date";
-import { cn } from "@/lib/utils";
-import { useQuery } from "@connectrpc/connect-query";
-import {
-  CommandLineIcon,
-  ArrowTopRightOnSquareIcon,
-} from "@heroicons/react/24/outline";
+import { EmptyState } from '@/components/empty-state';
+import { SubgraphPageLayout, getSubgraphLayout } from '@/components/layout/subgraph-layout';
+import { AddSubgraphUsersContent } from '@/components/subgraphs-table';
+import { Badge } from '@/components/ui/badge';
+import { CLI } from '@/components/ui/cli';
+import { CopyButton } from '@/components/ui/copy-button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSubgraph } from '@/hooks/use-subgraph';
+import { docsBaseURL } from '@/lib/constants';
+import { formatDateTime } from '@/lib/format-date';
+import { cn } from '@/lib/utils';
+import { useQuery } from '@connectrpc/connect-query';
+import { CommandLineIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import {
   getOrganizationMembers,
   getSubgraphMembers,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { SubgraphType } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { formatDistanceToNow } from "date-fns";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { SafeMarkdown } from "@/components/safe-markdown";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { SafeMarkdown } from '@/components/safe-markdown';
 
 export const Empty = ({ subgraphName }: { subgraphName: string }) => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   return (
     <EmptyState
@@ -42,11 +34,11 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
       title="Add subgraph README using CLI"
       description={
         <>
-          No subgraph readme found. Use the CLI tool to add the readme.{" "}
+          No subgraph readme found. Use the CLI tool to add the readme.{' '}
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/studio/graph-documentation"}
+            href={docsBaseURL + '/studio/graph-documentation'}
             className="text-primary"
           >
             Learn more.
@@ -54,9 +46,7 @@ export const Empty = ({ subgraphName }: { subgraphName: string }) => {
         </>
       }
       actions={
-        <CLI
-          command={`npx wgc subgraph update ${subgraphName} --namespace ${namespace} --readme <path-to-readme>`}
-        />
+        <CLI command={`npx wgc subgraph update ${subgraphName} --namespace ${namespace} --readme <path-to-readme>`} />
       }
     />
   );
@@ -83,13 +73,9 @@ const SubgraphOverviewPage = () => {
   useEffect(() => {
     if (!data || !subgraphMembersData) return;
     const orgMemberEmails = data.members.map((m) => m.email);
-    const subgraphMemberEmails = subgraphMembersData.members.map(
-      (m) => m.email,
-    );
+    const subgraphMemberEmails = subgraphMembersData.members.map((m) => m.email);
 
-    const options = orgMemberEmails.filter(
-      (x) => !subgraphMemberEmails.includes(x),
-    );
+    const options = orgMemberEmails.filter((x) => !subgraphMemberEmails.includes(x));
     setInviteOptions(options);
   }, [data, subgraphMembersData]);
 
@@ -110,9 +96,7 @@ const SubgraphOverviewPage = () => {
               <dt className="text-sm text-muted-foreground">Routing URL</dt>
               <dd className="flex items-center text-sm">
                 <Tooltip delayDuration={100}>
-                  <TooltipTrigger className="w-full truncate text-start text-sm">
-                    {subgraph.routingURL}
-                  </TooltipTrigger>
+                  <TooltipTrigger className="w-full truncate text-start text-sm">{subgraph.routingURL}</TooltipTrigger>
                   <TooltipContent>{subgraph.routingURL}</TooltipContent>
                 </Tooltip>
                 <CopyButton tooltip="Copy URL" value={subgraph.routingURL} />
@@ -124,8 +108,8 @@ const SubgraphOverviewPage = () => {
             <dt className="text-sm text-muted-foreground">Labels</dt>
             <dd className="flex gap-x-2">
               <div
-                className={cn("flex flex-shrink-0 gap-x-2", {
-                  "ml-4": subgraph.labels.length === 0,
+                className={cn('flex flex-shrink-0 gap-x-2', {
+                  'ml-4': subgraph.labels.length === 0,
                 })}
               >
                 {subgraph.labels.length > 0
@@ -136,7 +120,7 @@ const SubgraphOverviewPage = () => {
                         </Badge>
                       );
                     })
-                  : "-"}
+                  : '-'}
               </div>
             </dd>
           </div>
@@ -171,27 +155,26 @@ const SubgraphOverviewPage = () => {
             </div>
           )}
 
-          {subgraph.type === SubgraphType.GRPC_PLUGIN &&
-            subgraph.pluginData && (
-              <>
-                <div className="flex-start flex min-w-[60px] flex-col gap-2">
-                  <dt className="text-sm text-muted-foreground">Version</dt>
-                  <dd className="flex gap-x-2">
-                    <p className="text-sm">{subgraph.pluginData.version}</p>
-                  </dd>
-                </div>
-                <div className="flex-start flex min-w-[100px] flex-col gap-2">
-                  <dt className="text-sm text-muted-foreground">Platforms</dt>
-                  <dd className="flex gap-x-1">
-                    {subgraph.pluginData.platforms.map((platform) => (
-                      <Badge variant="secondary" key={platform}>
-                        {platform}
-                      </Badge>
-                    ))}
-                  </dd>
-                </div>
-              </>
-            )}
+          {subgraph.type === SubgraphType.GRPC_PLUGIN && subgraph.pluginData && (
+            <>
+              <div className="flex-start flex min-w-[60px] flex-col gap-2">
+                <dt className="text-sm text-muted-foreground">Version</dt>
+                <dd className="flex gap-x-2">
+                  <p className="text-sm">{subgraph.pluginData.version}</p>
+                </dd>
+              </div>
+              <div className="flex-start flex min-w-[100px] flex-col gap-2">
+                <dt className="text-sm text-muted-foreground">Platforms</dt>
+                <dd className="flex gap-x-1">
+                  {subgraph.pluginData.platforms.map((platform) => (
+                    <Badge variant="secondary" key={platform}>
+                      {platform}
+                    </Badge>
+                  ))}
+                </dd>
+              </div>
+            </>
+          )}
 
           <div className="flex-start flex flex-col gap-2 ">
             <dt className="text-sm text-muted-foreground">Last Published</dt>
@@ -203,12 +186,10 @@ const SubgraphOverviewPage = () => {
                       addSuffix: true,
                     })}
                   </TooltipTrigger>
-                  <TooltipContent>
-                    {formatDateTime(new Date(subgraph.lastUpdatedAt))}
-                  </TooltipContent>
+                  <TooltipContent>{formatDateTime(new Date(subgraph.lastUpdatedAt))}</TooltipContent>
                 </Tooltip>
               ) : (
-                "Never"
+                'Never'
               )}
             </dd>
           </div>
@@ -216,59 +197,47 @@ const SubgraphOverviewPage = () => {
           {subgraph.subscriptionUrl && (
             <>
               <div className="flex-start flex min-w-[150px] flex-col gap-2">
-                <dt className="text-sm text-muted-foreground">
-                  Subscription URL
-                </dt>
+                <dt className="text-sm text-muted-foreground">Subscription URL</dt>
                 <dd>
                   <p
-                    className={cn("text-sm", {
-                      "ml-12": subgraph.subscriptionUrl === "",
+                    className={cn('text-sm', {
+                      'ml-12': subgraph.subscriptionUrl === '',
                     })}
                   >
-                    {subgraph.subscriptionUrl !== "" ? (
+                    {subgraph.subscriptionUrl !== '' ? (
                       <Tooltip delayDuration={100}>
                         <TooltipTrigger className="w-full truncate text-start text-sm">
                           {subgraph.subscriptionUrl}
                         </TooltipTrigger>
-                        <TooltipContent>
-                          {subgraph.subscriptionUrl}
-                        </TooltipContent>
+                        <TooltipContent>{subgraph.subscriptionUrl}</TooltipContent>
                       </Tooltip>
                     ) : (
-                      "-"
+                      '-'
                     )}
                   </p>
                 </dd>
               </div>
               <div className="flex-start flex min-w-[200px] flex-col gap-2">
-                <dt className="text-sm text-muted-foreground">
-                  Subscription Protocol
-                </dt>
+                <dt className="text-sm text-muted-foreground">Subscription Protocol</dt>
                 <dd>
                   <p
-                    className={cn("text-sm", {
-                      "ml-16": subgraph.subscriptionUrl === "",
+                    className={cn('text-sm', {
+                      'ml-16': subgraph.subscriptionUrl === '',
                     })}
                   >
-                    {subgraph.subscriptionUrl !== ""
-                      ? subgraph.subscriptionProtocol
-                      : "-"}
+                    {subgraph.subscriptionUrl !== '' ? subgraph.subscriptionProtocol : '-'}
                   </p>
                 </dd>
               </div>
               <div className="flex-start flex min-w-[250px] flex-col gap-2">
-                <dt className="text-sm text-muted-foreground">
-                  Subscription WS Subprotocol
-                </dt>
+                <dt className="text-sm text-muted-foreground">Subscription WS Subprotocol</dt>
                 <dd>
                   <p
-                    className={cn("text-sm", {
-                      "ml-[90px]": subgraph.subscriptionUrl === "",
+                    className={cn('text-sm', {
+                      'ml-[90px]': subgraph.subscriptionUrl === '',
                     })}
                   >
-                    {subgraph.subscriptionUrl !== ""
-                      ? subgraph.websocketSubprotocol
-                      : "-"}
+                    {subgraph.subscriptionUrl !== '' ? subgraph.websocketSubprotocol : '-'}
                   </p>
                 </dd>
               </div>
@@ -278,9 +247,7 @@ const SubgraphOverviewPage = () => {
       </div>
       <div className="flex min-h-0 flex-1 grid-cols-3 flex-col gap-4 p-4 lg:grid lg:px-6">
         <div className="col-span-2 flex flex-col rounded-md border">
-          <h3 className="border-b px-4 py-2 font-semibold tracking-tight">
-            README
-          </h3>
+          <h3 className="border-b px-4 py-2 font-semibold tracking-tight">README</h3>
           {subgraph.readme ? (
             <div className="flex h-full w-full px-6 py-4">
               <div className="scrollbar-custom prose-pre:scrollbar-custom prose mx-auto h-full w-full max-w-none overflow-auto overflow-y-auto dark:prose-invert prose-code:bg-secondary prose-pre:!bg-secondary/50">
@@ -294,9 +261,7 @@ const SubgraphOverviewPage = () => {
         <div className="scrollbar-custom col-span-1 flex flex-col rounded-md border">
           <h3 className="border-b px-4 py-2 font-semibold">Subgraph Members</h3>
           <div className="px-4 py-4">
-            <AddSubgraphUsersContent
-              subgraphMembers={subgraphMembersData?.members || []}
-            />
+            <AddSubgraphUsersContent subgraphMembers={subgraphMembersData?.members || []} />
           </div>
         </div>
       </div>
@@ -306,15 +271,11 @@ const SubgraphOverviewPage = () => {
 
 SubgraphOverviewPage.getLayout = (page: React.ReactNode) => {
   return getSubgraphLayout(
-    <SubgraphPageLayout
-      title="Subgraph Overview"
-      subtitle="An overview of your subgraph"
-      noPadding
-    >
+    <SubgraphPageLayout title="Subgraph Overview" subtitle="An overview of your subgraph" noPadding>
       {page}
     </SubgraphPageLayout>,
     {
-      title: "Subgraph Overview",
+      title: 'Subgraph Overview',
     },
   );
 };

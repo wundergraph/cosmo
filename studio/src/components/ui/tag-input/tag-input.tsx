@@ -1,14 +1,11 @@
-import { cn } from "@/lib/utils";
-import { VariantProps } from "class-variance-authority";
-import React from "react";
-import { Input } from "../input";
-import { tagVariants } from "./tag";
-import { TagList } from "./tag-list";
+import { cn } from '@/lib/utils';
+import { VariantProps } from 'class-variance-authority';
+import React from 'react';
+import { Input } from '../input';
+import { tagVariants } from './tag';
+import { TagList } from './tag-list';
 
-type OmittedInputProps = Omit<
-  React.InputHTMLAttributes<HTMLInputElement>,
-  "size" | "value"
->;
+type OmittedInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'value'>;
 
 export type Tag = {
   id: string;
@@ -24,9 +21,7 @@ export interface TagInputStyleClassesProps {
   input?: string;
 }
 
-export interface TagInputProps
-  extends OmittedInputProps,
-  VariantProps<typeof tagVariants> {
+export interface TagInputProps extends OmittedInputProps, VariantProps<typeof tagVariants> {
   placeholder?: string;
   tags: Tag[];
   setTags: React.Dispatch<React.SetStateAction<Tag[]>>;
@@ -42,263 +37,239 @@ export interface TagInputProps
   delimiterList: string[];
   truncate?: number;
   value?: string | number | readonly string[] | { id: string; text: string }[];
-  direction?: "row" | "column";
+  direction?: 'row' | 'column';
   onInputChange?: (value: string) => void;
   customTagRenderer?: (tag: Tag, isActiveTag: boolean) => React.ReactNode;
   onFocus?: React.FocusEventHandler<HTMLInputElement>;
   onBlur?: React.FocusEventHandler<HTMLInputElement>;
   onTagClick?: (tag: Tag) => void;
-  inputFieldPosition?: "bottom" | "top";
+  inputFieldPosition?: 'bottom' | 'top';
   inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
   activeTagIndex: number | null;
   setActiveTagIndex: React.Dispatch<React.SetStateAction<number | null>>;
   styleClasses?: TagInputStyleClassesProps;
 }
 
-const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>(
-  (props, ref) => {
-    const {
-      id,
-      placeholder,
-      tags,
-      setTags,
-      variant,
-      size,
-      shape,
-      maxTags,
-      onTagAdd,
-      onTagRemove,
-      allowDuplicates,
-      showCount,
-      placeholderWhenFull = "Max tags reached",
-      delimiterList,
-      truncate,
-      borderStyle,
-      textCase,
-      interaction,
-      animation,
-      textStyle,
-      direction = "row",
-      onInputChange,
-      customTagRenderer,
-      onFocus,
-      onBlur,
-      onTagClick,
-      inputFieldPosition = "bottom",
-      inputProps = {},
-      activeTagIndex,
-      setActiveTagIndex,
-      styleClasses = {},
-      disabled,
-    } = props;
+const TagInput = React.forwardRef<HTMLInputElement, TagInputProps>((props, ref) => {
+  const {
+    id,
+    placeholder,
+    tags,
+    setTags,
+    variant,
+    size,
+    shape,
+    maxTags,
+    onTagAdd,
+    onTagRemove,
+    allowDuplicates,
+    showCount,
+    placeholderWhenFull = 'Max tags reached',
+    delimiterList,
+    truncate,
+    borderStyle,
+    textCase,
+    interaction,
+    animation,
+    textStyle,
+    direction = 'row',
+    onInputChange,
+    customTagRenderer,
+    onFocus,
+    onBlur,
+    onTagClick,
+    inputFieldPosition = 'bottom',
+    inputProps = {},
+    activeTagIndex,
+    setActiveTagIndex,
+    styleClasses = {},
+    disabled,
+  } = props;
 
-    const [inputValue, setInputValue] = React.useState("");
-    const inputRef = React.useRef<HTMLInputElement>(null);
+  const [inputValue, setInputValue] = React.useState('');
+  const inputRef = React.useRef<HTMLInputElement>(null);
 
-    if (
-      (maxTags !== undefined && maxTags < 0) ||
-      (props.minTags !== undefined && props.minTags < 0)
-    ) {
-      console.warn("maxTags and minTags cannot be less than 0");
-      // error
-      return null;
+  if ((maxTags !== undefined && maxTags < 0) || (props.minTags !== undefined && props.minTags < 0)) {
+    console.warn('maxTags and minTags cannot be less than 0');
+    // error
+    return null;
+  }
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setInputValue(newValue);
+    onInputChange?.(newValue);
+  };
+
+  const tryAddTag = (rawText: string, nextTags: Tag[]) => {
+    const newTagText = rawText.trim();
+    if (!newTagText) {
+      return nextTags;
+    }
+    if (!allowDuplicates && nextTags.some((tag) => tag.text === newTagText)) {
+      return nextTags;
+    }
+    if (maxTags !== undefined && nextTags.length >= maxTags) {
+      return nextTags;
+    }
+    const newTagId = crypto.randomUUID();
+    onTagAdd?.(newTagText);
+    return [...nextTags, { id: newTagId, text: newTagText }];
+  };
+
+  const escapeForCharClass = (value: string) => value.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&');
+
+  const commitInputValue = (rawText: string, splitByDelimiters: boolean) => {
+    const trimmed = rawText.trim();
+    if (!trimmed) {
+      setInputValue('');
+      return;
     }
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newValue = e.target.value;
-      setInputValue(newValue);
-      onInputChange?.(newValue);
-    };
+    const charDelimiters = delimiterList.filter((d) => d.length === 1);
+    const nextTagTexts =
+      splitByDelimiters && charDelimiters.length
+        ? trimmed
+            .split(new RegExp(`[${charDelimiters.map(escapeForCharClass).join('')}]+`))
+            .map((t) => t.trim())
+            .filter(Boolean)
+        : [trimmed];
 
-    const tryAddTag = 
-      (rawText: string, nextTags: Tag[]) => {
-        const newTagText = rawText.trim();
-        if (!newTagText) {
-          return nextTags;
-        }
-        if (!allowDuplicates && nextTags.some((tag) => tag.text === newTagText)) {
-          return nextTags;
-        }
-        if (maxTags !== undefined && nextTags.length >= maxTags) {
-          return nextTags;
-        }
-        const newTagId = crypto.randomUUID();
-        onTagAdd?.(newTagText);
-        return [...nextTags, { id: newTagId, text: newTagText }];
-      };
-
-    const escapeForCharClass = (value: string) =>
-      value.replace(/[-\\^$*+?.()|[\]{}]/g, "\\$&");
-
-    const commitInputValue = 
-      (rawText: string, splitByDelimiters: boolean) => {
-        const trimmed = rawText.trim();
-        if (!trimmed) {
-          setInputValue("");
-          return;
-        }
-
-        const charDelimiters = delimiterList.filter((d) => d.length === 1);
-        const nextTagTexts =
-          splitByDelimiters && charDelimiters.length
-            ? trimmed
-              .split(
-                new RegExp(
-                  `[${charDelimiters.map(escapeForCharClass).join("")}]+`,
-                ),
-              )
-              .map((t) => t.trim())
-              .filter(Boolean)
-            : [trimmed];
-
-        // Use functional updater pattern to get latest state and avoid race conditions
-        setTags((prevTags) => {
-          let nextTags = prevTags;
-          for (const text of nextTagTexts) {
-            nextTags = tryAddTag(text, nextTags);
-          }
-          if (nextTags !== prevTags) {
-            return nextTags;
-          }
-          return prevTags;
-        });
-        setInputValue("");
-      };
-
-    const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
-      setActiveTagIndex(null); // Reset active tag index when the input field gains focus
-      onFocus?.(event);
-    };
-
-    const handleInputBlur = (event: React.FocusEvent<HTMLInputElement>) => {
-      // If the user pasted/typed text and clicks outside (e.g. submit button),
-      // ensure the pending input becomes a tag.
-      commitInputValue(inputValue, true);
-      onBlur?.(event);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (delimiterList.includes(e.key)) {
-        e.preventDefault();
-        commitInputValue(inputValue, false);
-      } else if (e.key === "Backspace" && inputValue.length === 0) {
-        setTags((prevTags) => {
-          if (prevTags.length > 0) {
-            const removedTag = prevTags[prevTags.length - 1];
-            const newTags = prevTags.slice(0, -1);
-            onTagRemove?.(removedTag.text);
-            return newTags;
-          }
-          return prevTags;
-        });
-        e.preventDefault();
+    // Use functional updater pattern to get latest state and avoid race conditions
+    setTags((prevTags) => {
+      let nextTags = prevTags;
+      for (const text of nextTagTexts) {
+        nextTags = tryAddTag(text, nextTags);
       }
-    };
+      if (nextTags !== prevTags) {
+        return nextTags;
+      }
+      return prevTags;
+    });
+    setInputValue('');
+  };
 
-    const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+  const handleInputFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    setActiveTagIndex(null); // Reset active tag index when the input field gains focus
+    onFocus?.(event);
+  };
+
+  const handleInputBlur = (event: React.FocusEvent<HTMLInputElement>) => {
+    // If the user pasted/typed text and clicks outside (e.g. submit button),
+    // ensure the pending input becomes a tag.
+    commitInputValue(inputValue, true);
+    onBlur?.(event);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (delimiterList.includes(e.key)) {
       e.preventDefault();
-      const pastedText = e.clipboardData.getData("text/plain");
-      commitInputValue(pastedText, true);
-    };
-
-    const removeTag = (idToRemove: string) => {
+      commitInputValue(inputValue, false);
+    } else if (e.key === 'Backspace' && inputValue.length === 0) {
       setTags((prevTags) => {
-        const tagToRemove = prevTags.find((tag) => tag.id === idToRemove);
-        const newTags = prevTags.filter((tag) => tag.id !== idToRemove);
-        if (newTags.length !== prevTags.length) {
-          onTagRemove?.(tagToRemove?.text || "");
+        if (prevTags.length > 0) {
+          const removedTag = prevTags[prevTags.length - 1];
+          const newTags = prevTags.slice(0, -1);
+          onTagRemove?.(removedTag.text);
           return newTags;
         }
         return prevTags;
       });
-    };
+      e.preventDefault();
+    }
+  };
 
-    const truncatedTags = truncate
-      ? tags.map((tag) => ({
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text/plain');
+    commitInputValue(pastedText, true);
+  };
+
+  const removeTag = (idToRemove: string) => {
+    setTags((prevTags) => {
+      const tagToRemove = prevTags.find((tag) => tag.id === idToRemove);
+      const newTags = prevTags.filter((tag) => tag.id !== idToRemove);
+      if (newTags.length !== prevTags.length) {
+        onTagRemove?.(tagToRemove?.text || '');
+        return newTags;
+      }
+      return prevTags;
+    });
+  };
+
+  const truncatedTags = truncate
+    ? tags.map((tag) => ({
         id: tag.id,
-        text:
-          tag.text?.length > truncate
-            ? `${tag.text.substring(0, truncate)}...`
-            : tag.text,
+        text: tag.text?.length > truncate ? `${tag.text.substring(0, truncate)}...` : tag.text,
       }))
-      : tags;
+    : tags;
 
-    return (
-      <div
-        className={`flex w-full ${inputFieldPosition === "bottom"
-          ? "flex-col"
-          : inputFieldPosition === "top"
-            ? "flex-col-reverse"
-            : "flex-row"
-          }`}
-      >
-        <div className="w-full">
-          <div
+  return (
+    <div
+      className={`flex w-full ${
+        inputFieldPosition === 'bottom' ? 'flex-col' : inputFieldPosition === 'top' ? 'flex-col-reverse' : 'flex-row'
+      }`}
+    >
+      <div className="w-full">
+        <div
+          className={cn(
+            `flex w-full flex-row flex-wrap items-center gap-2 rounded-md border border-input bg-background p-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`,
+            styleClasses?.inlineTagsContainer,
+          )}
+        >
+          <TagList
+            tags={truncatedTags}
+            customTagRenderer={customTagRenderer}
+            variant={variant}
+            size={size}
+            shape={shape}
+            borderStyle={borderStyle}
+            textCase={textCase}
+            interaction={interaction}
+            animation={animation}
+            textStyle={textStyle}
+            onTagClick={onTagClick}
+            onRemoveTag={removeTag}
+            direction={direction}
+            activeTagIndex={activeTagIndex}
+            setActiveTagIndex={setActiveTagIndex}
+            classStyleProps={{
+              tagClasses: styleClasses?.tag,
+            }}
+            disabled={disabled}
+          />
+          <Input
+            ref={inputRef}
+            id={id}
+            type="text"
+            placeholder={maxTags !== undefined && tags.length >= maxTags ? placeholderWhenFull : placeholder}
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyDown={handleKeyDown}
+            onFocus={handleInputFocus}
+            onBlur={handleInputBlur}
+            onPaste={handlePaste}
+            {...inputProps}
             className={cn(
-              `flex w-full flex-row flex-wrap items-center gap-2 rounded-md border border-input bg-background p-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`,
-              styleClasses?.inlineTagsContainer,
+              'h-5 w-fit flex-1 border-0 bg-transparent px-1.5 focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-0',
+              styleClasses?.input,
             )}
-          >
-            <TagList
-              tags={truncatedTags}
-              customTagRenderer={customTagRenderer}
-              variant={variant}
-              size={size}
-              shape={shape}
-              borderStyle={borderStyle}
-              textCase={textCase}
-              interaction={interaction}
-              animation={animation}
-              textStyle={textStyle}
-              onTagClick={onTagClick}
-              onRemoveTag={removeTag}
-              direction={direction}
-              activeTagIndex={activeTagIndex}
-              setActiveTagIndex={setActiveTagIndex}
-              classStyleProps={{
-                tagClasses: styleClasses?.tag,
-              }}
-              disabled={disabled}
-            />
-            <Input
-              ref={inputRef}
-              id={id}
-              type="text"
-              placeholder={
-                maxTags !== undefined && tags.length >= maxTags
-                  ? placeholderWhenFull
-                  : placeholder
-              }
-              value={inputValue}
-              onChange={handleInputChange}
-              onKeyDown={handleKeyDown}
-              onFocus={handleInputFocus}
-              onBlur={handleInputBlur}
-              onPaste={handlePaste}
-              {...inputProps}
-              className={cn(
-                "h-5 w-fit flex-1 border-0 bg-transparent px-1.5 focus-visible:ring-0 focus-visible:ring-transparent focus-visible:ring-offset-0",
-                styleClasses?.input,
-              )}
-              disabled={
-                disabled || (maxTags !== undefined && tags.length >= maxTags)
-              }
-            />
-          </div>
+            disabled={disabled || (maxTags !== undefined && tags.length >= maxTags)}
+          />
         </div>
-
-        {showCount && maxTags && (
-          <div className="flex">
-            <span className="ml-auto mt-1 text-sm text-muted-foreground">
-              {`${tags.length}`}/{`${maxTags}`}
-            </span>
-          </div>
-        )}
       </div>
-    );
-  },
-);
 
-TagInput.displayName = "TagInput";
+      {showCount && maxTags && (
+        <div className="flex">
+          <span className="ml-auto mt-1 text-sm text-muted-foreground">
+            {`${tags.length}`}/{`${maxTags}`}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+});
+
+TagInput.displayName = 'TagInput';
 
 export { TagInput };

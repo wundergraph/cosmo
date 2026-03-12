@@ -6,6 +6,7 @@ import {
   CompositionWarning,
   GraphPruningIssue,
   LintIssue,
+  LintSeverity,
   ProposalSubgraph,
   SchemaChange,
   VCSContext,
@@ -744,8 +745,13 @@ export class SchemaCheckRepository {
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
 
+    type ExtendedCheckSubgraph = CheckSubgraph & {
+      lintIssues: SchemaLintIssues;
+      pruneIssues: SchemaGraphPruningIssues;
+    };
+
     const federatedGraphs: FederatedGraphDTO[] = [];
-    const checkSubgraphs: Map<string, CheckSubgraph> = new Map();
+    const checkSubgraphs: Map<string, ExtendedCheckSubgraph> = new Map();
     const fedGraphIdToCheckFedGraphId = new Map<string, string>();
 
     const changeRetention = await orgRepo.getFeature({
@@ -943,6 +949,8 @@ export class SchemaCheckRepository {
         checkSubgraphId: schemaCheckSubgraphId,
         routerCompatibilityVersion,
         labels: s.isNew ? s.labels : undefined,
+        lintIssues: { warnings: [], errors: [] },
+        pruneIssues: { warnings: [], errors: [] },
       });
     }
 
@@ -1029,13 +1037,6 @@ export class SchemaCheckRepository {
         storedBreakingChanges,
       );
 
-      checkSubgraphs.set(subgraphName, {
-        ...checkSubgraph,
-        inspectorChanges,
-        storedBreakingChanges,
-        checkSubgraphId: schemaCheckSubgraphId,
-      });
-
       const lintIssues: SchemaLintIssues = await schemaLintRepo.performSchemaLintCheck({
         schemaCheckID,
         newSchemaSDL,
@@ -1119,6 +1120,15 @@ export class SchemaCheckRepository {
             }),
         ),
       );
+
+      checkSubgraphs.set(subgraphName, {
+        ...checkSubgraph,
+        inspectorChanges,
+        storedBreakingChanges,
+        checkSubgraphId: schemaCheckSubgraphId,
+        lintIssues,
+        pruneIssues: graphPruningIssues,
+      });
     }
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
@@ -1322,6 +1332,54 @@ export class SchemaCheckRepository {
       }
     }
 
+    // Execute the subgraph check extension webhook
+    const sceResult = await webhookService.sendSubgraphCheckExtension({
+      actorId,
+      schemaCheckID,
+      blobStorage,
+      admissionConfig,
+      organization: { id: organizationId, slug: organizationSlug },
+      namespace,
+      vcsContext,
+      subgraphs: [...checkSubgraphs.entries()].map(([subgraphName, { subgraph, ...check }]) => ({
+        id: subgraph?.id ?? '',
+        name: subgraphName,
+        labels: subgraph?.labels ?? check.labels ?? [],
+        schemaSDL: subgraph?.schemaSDL ?? '',
+        schemaChanges: check.schemaChanges,
+        lintIssues: check.lintIssues,
+        pruneIssues: check.pruneIssues,
+        newSchemaSDL: check.newSchemaSDL,
+        isDeleted: check.newSchemaSDL === '',
+      })),
+      affectedGraphs: federatedGraphs,
+      composedGraphs,
+      inspectedOperations,
+    });
+
+    if (sceResult?.lintIssuesBySubgraph) {
+      for (const [subgraphName, check] of checkSubgraphs.entries()) {
+        const sceLintIssues = sceResult.lintIssuesBySubgraph.get(subgraphName);
+        if (sceLintIssues && sceLintIssues.length > 0) {
+          const sceLintWarnings = sceLintIssues.filter((issue) => issue.severity === LintSeverity.warn);
+          const sceLintErrors = sceLintIssues.filter((issue) => issue.severity === LintSeverity.error);
+
+          check.lintIssues.warnings.push(...sceLintIssues.filter((issue) => issue.severity === LintSeverity.warn));
+          check.lintIssues.errors.push(...sceLintIssues.filter((issue) => issue.severity === LintSeverity.error));
+
+          lintWarnings.push(...sceLintWarnings.map((issue) => new LintIssue({ ...issue, subgraphName })));
+          lintErrors.push(...sceLintErrors.map((issue) => new LintIssue({ ...issue, subgraphName })));
+
+          // Then, we need to add the overwritten lint issues
+          await schemaLintRepo.addSchemaCheckLintIssues({
+            schemaCheckId: schemaCheckID,
+            lintIssues: sceLintIssues,
+            schemaCheckSubgraphId: check.checkSubgraphId,
+          });
+        }
+      }
+    }
+
     // Update the overall schema check with the results
     await this.update({
       schemaCheckID,
@@ -1329,6 +1387,8 @@ export class SchemaCheckRepository {
       hasBreakingChanges: breakingChanges.length > 0 || composedSchemaBreakingChanges.length > 0,
       hasLintErrors: lintErrors.length > 0,
       hasGraphPruningErrors: graphPruneErrors.length > 0,
+      checkExtensionDeliveryId: sceResult?.deliveryInfo?.id,
+      checkExtensionErrorMessage: sceResult?.deliveryInfo?.errorMessage ?? undefined,
     });
 
     let isLinkedTrafficCheckFailed = false;
