@@ -178,7 +178,18 @@
       "rpc": "LookupEmployeeById",
       "request": "LookupEmployeeByIdRequest",
       "response": "LookupEmployeeByIdResponse",
-      "requiredFieldMappings": []
+      "requiredFieldMappings": [
+        {
+          "fieldMapping": {
+            "original": "taggedProjectSummary",
+            "mapped": "tagged_project_summary",
+            "argumentMappings": []
+          },
+          "rpc": "RequireEmployeeTaggedProjectSummaryById",
+          "request": "RequireEmployeeTaggedProjectSummaryByIdRequest",
+          "response": "RequireEmployeeTaggedProjectSummaryByIdResponse"
+        }
+      ]
     },
     {
       "typeName": "Product",
@@ -882,6 +893,11 @@
           "argumentMappings": []
         },
         {
+          "original": "expertise",
+          "mapped": "expertise",
+          "argumentMappings": []
+        },
+        {
           "original": "projects",
           "mapped": "projects",
           "argumentMappings": []
@@ -909,6 +925,11 @@
         {
           "original": "projectHistory",
           "mapped": "project_history",
+          "argumentMappings": []
+        },
+        {
+          "original": "taggedProjectSummary",
+          "mapped": "tagged_project_summary",
           "argumentMappings": []
         },
         {
