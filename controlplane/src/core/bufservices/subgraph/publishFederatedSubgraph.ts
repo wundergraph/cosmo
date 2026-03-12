@@ -8,6 +8,7 @@ import {
   SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
+import { maxRowLimitForChecks } from '../../constants.js';
 import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -21,6 +22,7 @@ import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPrun
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
+  clamp,
   convertToSubgraphType,
   enrichLogger,
   formatSubgraphType,
@@ -739,15 +741,29 @@ export function publishFederatedSubgraph(
       }
     }
 
+    // If req.limit is not provided, use maxRowLimitForChecks as default
+    const boundedLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
+
+    const boundedCompositionErrors = compositionErrors.slice(0, boundedLimit);
+    const boundedCompositionWarnings = compositionWarnings.slice(0, boundedLimit);
+    const boundedDeploymentErrors = deploymentErrors.slice(0, boundedLimit);
+
+    const counts = {
+      compositionErrors: compositionErrors.length,
+      compositionWarnings: compositionWarnings.length,
+      deploymentErrors: deploymentErrors.length,
+    };
+
     if (compositionErrors.length > 0) {
       return {
         response: {
           code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
         },
-        compositionErrors,
-        compositionWarnings,
+        compositionErrors: boundedCompositionErrors,
+        compositionWarnings: boundedCompositionWarnings,
         deploymentErrors: [],
         proposalMatchMessage,
+        counts,
       };
     }
 
@@ -757,9 +773,10 @@ export function publishFederatedSubgraph(
           code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
         },
         compositionErrors: [],
-        deploymentErrors,
-        compositionWarnings,
+        deploymentErrors: boundedDeploymentErrors,
+        compositionWarnings: boundedCompositionWarnings,
         proposalMatchMessage,
+        counts,
       };
     }
 
@@ -770,8 +787,9 @@ export function publishFederatedSubgraph(
       compositionErrors: [],
       deploymentErrors: [],
       hasChanged: subgraphChanged,
-      compositionWarnings,
+      compositionWarnings: boundedCompositionWarnings,
       proposalMatchMessage,
+      counts,
     };
   });
 }
