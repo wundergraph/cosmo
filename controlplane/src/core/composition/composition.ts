@@ -23,7 +23,7 @@ export function buildSchema(
   });
 }
 
-function validateRouterCompatibilityVersion(version: string): SupportedRouterCompatibilityVersion {
+export function validateRouterCompatibilityVersion(version: string): SupportedRouterCompatibilityVersion {
   const castVersion = version as SupportedRouterCompatibilityVersion;
   if (!ROUTER_COMPATIBILITY_VERSIONS.has(castVersion)) {
     throw new Error(

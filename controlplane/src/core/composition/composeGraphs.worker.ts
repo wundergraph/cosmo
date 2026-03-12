@@ -23,29 +23,16 @@ import type {
   FederationResult,
   FederationResultWithContracts,
   Subgraph,
-  SupportedRouterCompatibilityVersion,
 } from '@wundergraph/composition';
 import type { RouterSubgraph } from '@wundergraph/cosmo-shared';
 import type { SubgraphDTO } from '../../types/index.js';
+import { validateRouterCompatibilityVersion } from './composition.js';
 import type {
   ComposeGraphsTaskInput,
   ComposeGraphsTaskResult,
   SerializedContractCompositionArtifact,
   SerializedComposedGraphArtifact,
 } from './composeGraphs.types.js';
-
-function validateRouterCompatibilityVersion(version: string): SupportedRouterCompatibilityVersion {
-  const castVersion = version as SupportedRouterCompatibilityVersion;
-  if (!ROUTER_COMPATIBILITY_VERSIONS.has(castVersion)) {
-    throw new Error(
-      `Router compatibility version ${version} is not supported by Cosmo. ` +
-        `Please set one of the following valid versions:\n ` +
-        [...ROUTER_COMPATIBILITY_VERSIONS].join(','),
-    );
-  }
-
-  return castVersion;
-}
 
 function composeFederatedGraphWithPotentialContracts(
   subgraphs: Subgraph[],
