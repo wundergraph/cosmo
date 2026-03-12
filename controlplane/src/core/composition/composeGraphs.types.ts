@@ -26,6 +26,7 @@ export interface SerializedComposedSubgraph {
   id: string;
   isFeatureSubgraph: boolean;
   name: string;
+  sdl: string;
   schemaVersionId: string;
   targetId: string;
 }
@@ -57,6 +58,7 @@ export interface ComposeGraphsTaskInput {
   }>;
   tagOptionsByContractName: SerializedContractTagOptions[];
   compositionOptions?: CompositionOptions;
+  skipRouterConfig?: boolean;
 }
 
 export interface ComposeGraphsTaskResultItem {

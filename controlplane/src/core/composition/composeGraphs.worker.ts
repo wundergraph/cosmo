@@ -258,6 +258,7 @@ function serializeComposedGraphArtifact(
       id: subgraph.id,
       isFeatureSubgraph: subgraph.isFeatureSubgraph,
       name: subgraph.name,
+      sdl: subgraph.sdl,
       schemaVersionId: subgraph.schemaVersionId,
       targetId: subgraph.targetId,
     })),
@@ -266,11 +267,13 @@ function serializeComposedGraphArtifact(
 }
 
 function toCompositionSubgraphs(subgraphs: SubgraphDTO[]) {
-  return subgraphs.map((subgraph) => ({
-    name: subgraph.name,
-    url: subgraph.routingUrl,
-    definitions: parse(subgraph.schemaSDL),
-  }));
+  return subgraphs
+    .filter((s) => s.schemaSDL !== '')
+    .map((subgraph) => ({
+      name: subgraph.name,
+      url: subgraph.routingUrl,
+      definitions: parse(subgraph.schemaSDL),
+    }));
 }
 
 export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): ComposeGraphsTaskResult {
@@ -302,7 +305,8 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
             task.compositionOptions,
           );
 
-      const base = serializeComposedGraphArtifact(task, task.federatedGraph, subgraphsToCompose.subgraphs, result);
+      const includeRouterConfig = !task.skipRouterConfig;
+      const base = serializeComposedGraphArtifact(task, task.federatedGraph, subgraphsToCompose.subgraphs, result, includeRouterConfig);
 
       const contracts: SerializedContractCompositionArtifact[] = [];
       if ('federationResultByContractName' in result && result.success) {
@@ -322,6 +326,7 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
               },
               subgraphsToCompose.subgraphs,
               contractResult,
+              includeRouterConfig,
             ),
           });
         }
