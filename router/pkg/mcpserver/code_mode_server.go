@@ -19,14 +19,15 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
+	toonformat "github.com/toon-format/toon-go"
 	"github.com/wundergraph/cosmo/router/internal/headers"
+	"github.com/wundergraph/cosmo/router/internal/llmcli"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
 	"github.com/wundergraph/cosmo/router/pkg/sandbox"
 	"github.com/wundergraph/cosmo/router/pkg/yokoclient"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
-	toonformat "github.com/toon-format/toon-go"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
@@ -48,17 +49,19 @@ type CodeModeServerConfig struct {
 
 // CodeModeServer is the MCP server for Code Mode with search and execute tools.
 type CodeModeServer struct {
-	mcpServer      *server.MCPServer
-	config         CodeModeServerConfig
-	logger         *zap.Logger
-	transpiler     *sandbox.Transpiler
-	sandboxPool    *sandbox.Pool
-	httpClient    *http.Client
-	rawHTTPServer *http.Server
-	yokoClient     yokoclient.YokoClient
-	tracer         trace.Tracer
-	execCounter    otelmetric.Int64Counter
-	execDuration   otelmetric.Float64Histogram
+	mcpServer       *server.MCPServer
+	config          CodeModeServerConfig
+	logger          *zap.Logger
+	transpiler      *sandbox.Transpiler
+	sandboxPool     *sandbox.Pool
+	httpClient      *http.Client
+	rawHTTPServer   *http.Server
+	yokoClient      yokoclient.YokoClient
+	tracer          trace.Tracer
+	execCounter     otelmetric.Int64Counter
+	execDuration    otelmetric.Float64Histogram
+	validateExecute func(ctx context.Context, code string) error
+	repairExecute   func(ctx context.Context, code string, compileErr error) (string, string, error)
 
 	// queryCache maps xxhash64 hashes to query strings using ristretto for LRU eviction.
 	// Populated by generateQueries, read by executeOperationByHashFunc.
@@ -123,16 +126,20 @@ func NewCodeModeServer(cfg CodeModeServerConfig) (*CodeModeServer, error) {
 	}
 
 	s := &CodeModeServer{
-		mcpServer:    mcpSrv,
-		config:       cfg,
-		logger:       cfg.Logger,
-		transpiler:   sandbox.NewTranspiler(),
-		sandboxPool:  sandbox.NewPool(4, cfg.SandboxConfig),
-		httpClient:   httpClient,
-		tracer:       otel.Tracer("wundergraph.cosmo.router.mcp.code_mode"),
-		execCounter:  execCounter,
-		execDuration: execDuration,
-		queryCache:   queryCache,
+		mcpServer:       mcpSrv,
+		config:          cfg,
+		logger:          cfg.Logger,
+		transpiler:      sandbox.NewTranspiler(),
+		sandboxPool:     sandbox.NewPool(4, cfg.SandboxConfig),
+		httpClient:      httpClient,
+		tracer:          otel.Tracer("wundergraph.cosmo.router.mcp.code_mode"),
+		execCounter:     execCounter,
+		execDuration:    execDuration,
+		validateExecute: newTypeScriptExecuteValidator(cfg.Logger),
+		repairExecute: func(ctx context.Context, code string, compileErr error) (string, string, error) {
+			return repairExecuteCode(ctx, sandbox.NewTranspiler(), code, compileErr)
+		},
+		queryCache: queryCache,
 	}
 
 	// Initialize Yoko client for query generation if enabled
@@ -338,10 +345,53 @@ func (s *CodeModeServer) handleExecute() server.ToolHandlerFunc {
 			status = "error"
 			return mcp.NewToolResultError("'code' must be an async arrow function, e.g.: async () => { return await executeOperationByHash(\"hashFromSearch\"); }"), nil
 		}
+		if s.validateExecute != nil {
+			if err := s.validateExecute(ctx, code); err != nil {
+				if s.repairExecute != nil {
+					repairedCode, runner, repairErr := s.repairExecute(ctx, code, err)
+					if repairErr != nil {
+						s.logger.Warn("failed to repair execute_graphql code after TypeScript validation error",
+							zap.Error(err),
+							zap.Error(repairErr),
+						)
+					} else if validateErr := s.validateExecute(ctx, repairedCode); validateErr != nil {
+						err = validateErr
+					} else {
+						code = repairedCode
+						err = nil
+						s.logger.Info("repaired execute_graphql code after TypeScript validation error",
+							zap.String("runner", runner),
+						)
+					}
+				}
+				if err != nil {
+					status = "error"
+					return mcp.NewToolResultError(formatTypeScriptValidationError(err)), nil
+				}
+			}
+		}
 		jsCode, err := s.transpiler.Transpile(code)
 		if err != nil {
-			status = "error"
-			return mcp.NewToolResultError(fmt.Sprintf("TypeScript compilation error: %v", err)), nil
+			if s.repairExecute != nil {
+				repairedCode, runner, repairErr := s.repairExecute(ctx, code, err)
+				if repairErr != nil {
+					s.logger.Warn("failed to repair execute_graphql code after TypeScript compile error",
+						zap.Error(err),
+						zap.Error(repairErr),
+					)
+				} else {
+					jsCode, err = s.transpiler.Transpile(repairedCode)
+					if err == nil {
+						s.logger.Info("repaired execute_graphql code after TypeScript compile error",
+							zap.String("runner", runner),
+						)
+					}
+				}
+			}
+			if err != nil {
+				status = "error"
+				return mcp.NewToolResultError(formatTypeScriptCompilationError(err)), nil
+			}
 		}
 
 		// Create a context for async functions (like executeOperationByHash with mutation approval).
@@ -547,6 +597,58 @@ func isMutation(queryStr, operationName string) bool {
 		}
 	}
 	return false
+}
+
+func repairExecuteCode(ctx context.Context, transpiler *sandbox.Transpiler, code string, compileErr error) (string, string, error) {
+	return llmcli.FirstDecoded(ctx, buildExecuteCodeRepairPrompt(code, compileErr), func(name, text string) (string, error) {
+		fixed := llmcli.StripMarkdownCodeFences(text)
+		if strings.TrimSpace(fixed) == "" {
+			return "", errors.New("empty response")
+		}
+		if _, err := transpiler.Transpile(fixed); err != nil {
+			return "", fmt.Errorf("generated code still does not compile: %w", err)
+		}
+		return fixed, nil
+	}, llmcli.NewClaudeRunner(), llmcli.NewCodexRunner())
+}
+
+func buildExecuteCodeRepairPrompt(code string, compileErr error) string {
+	return fmt.Sprintf(`You repair TypeScript snippets for a GraphQL execution sandbox.
+
+Return ONLY the repaired async arrow function.
+Do not return markdown, code fences, bullets, or explanation.
+
+The repaired code must:
+- remain an async arrow function expression
+- look like: async () => { ... }
+- use ES2020 only
+- use no imports
+- not wrap the function in an IIFE
+- only use executeOperationByHash(hash, variables?) as its external global
+- preserve the original intent unless the validation or compiler error forces a structural fix
+- make the smallest valid fix that compiles
+
+Validation or compiler error:
+%s
+
+Original code:
+%s`, compileErr, code)
+}
+
+func formatTypeScriptCompilationError(err error) string {
+	msg := err.Error()
+	if strings.HasPrefix(msg, "TypeScript compilation error:") {
+		return msg
+	}
+	return "TypeScript compilation error: " + msg
+}
+
+func formatTypeScriptValidationError(err error) string {
+	msg := err.Error()
+	if strings.HasPrefix(msg, "TypeScript validation error:") {
+		return msg
+	}
+	return "TypeScript validation error: " + msg
 }
 
 // queryResultWithHash extends yokoclient.QueryResult with a server-computed hash

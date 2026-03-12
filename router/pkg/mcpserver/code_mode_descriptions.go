@@ -18,7 +18,10 @@ Each result contains:
   hash: string         — identifier for use with executeOperationByHash() inside your code
   execute: string      — JS expression to use inside your async arrow function in execute_graphql
 
-Workflow: search_graphql (1 call) → execute_graphql (1 call) = done. Never revisit either tool.
+Preferred workflow: search_graphql (1 call) → execute_graphql (ideally 1 call) = done.
+If the task is complex, an earlier attempt fails, or you need to recover from a tool error, a small number of follow-up
+execute_graphql calls is acceptable. Avoid repeated search_graphql calls unless hashes expire or you truly need
+different operations.
 
 Example:
   prompts: ["list all employees", "mutation to update employee department"]`
@@ -26,8 +29,10 @@ Example:
 const executeToolName = "execute_graphql"
 
 const executeToolDescription = `Execute GraphQL operations. The "code" parameter must be an async arrow function (ES2020, no imports).
-Do NOT call this tool multiple times. Fetch data, inspect it, decide, mutate, and return — ALL in one function.
-Do NOT fetch data in one call and process/mutate in another — combine everything into a single function.
+Prefer to solve the task in a single call when possible: fetch data, inspect it, decide, mutate, and return in one
+function.
+If the task is unusually complex or you need to recover from a failed attempt, a small number of follow-up
+execute_graphql calls is acceptable. Avoid splitting work across many tiny calls.
 Write compact code: no comments, no blank lines, short variable names. Every token costs money.
 
 Your code runs in a JS sandbox with full language support: loops, conditionals, Promise.all, try/catch, array methods.
@@ -50,8 +55,9 @@ const executeAPIResourceURI = "code-mode://execute-api.d.ts"
 
 // executeTypeDefs is served as an MCP resource for agents that support resource fetching.
 const executeTypeDefs = `// The "code" parameter must be an async arrow function (ES2020, no imports).
-// Do NOT call this tool multiple times. Do everything in ONE function.
-// Do NOT fetch data in one call and mutate in another — combine into a single function.
+// Prefer to solve the task in one execute_graphql call when possible.
+// If recovery or task complexity requires it, a small number of follow-up calls is acceptable.
+// Avoid splitting work across many tiny calls.
 // Write compact code: no comments, no blank lines, short variable names. Every token costs money.
 //
 // Your code has full JS: loops, conditionals, Promise.all, try/catch, array methods.

@@ -1,6 +1,6 @@
 // yoko-mock is a mock implementation of the Yoko query generation API.
 // It accepts natural language prompts and generates GraphQL queries by
-// shelling out to the Claude CLI with the supergraph schema as context.
+// racing the Claude and Codex CLIs with the supergraph schema as context.
 package main
 
 import (
@@ -11,9 +11,10 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/wundergraph/cosmo/router/internal/llmcli"
 )
 
 type generateRequest struct {
@@ -77,7 +78,7 @@ func main() {
 		log.Printf("[REQUEST] prompt=%q schema_hash=%q", req.Prompt, req.SchemaHash)
 		start := time.Now()
 
-		queries, err := generateWithClaude(r.Context(), schema, req.Prompt)
+		queries, err := generateQueries(r.Context(), schema, req.Prompt)
 		elapsed := time.Since(start)
 
 		if err != nil {
@@ -92,12 +93,16 @@ func main() {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(generateResponse{Queries: queries})
+		if err := json.NewEncoder(w).Encode(generateResponse{Queries: queries}); err != nil {
+			log.Printf("[ERROR] failed to write response: %v", err)
+		}
 	})
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		if _, err := w.Write([]byte("ok")); err != nil {
+			log.Printf("[ERROR] failed to write health response: %v", err)
+		}
 	})
 
 	log.Printf("Yoko mock server starting on %s (schema: %s)", listenAddr, schemaFile)
@@ -106,8 +111,8 @@ func main() {
 	}
 }
 
-func generateWithClaude(ctx context.Context, schema, prompt string) ([]queryResult, error) {
-	claudePrompt := fmt.Sprintf(`You are a GraphQL query generator. Given a natural language prompt and a GraphQL schema, generate one or more valid GraphQL queries that satisfy the request.
+func generateQueries(ctx context.Context, schema, prompt string) ([]queryResult, error) {
+	modelPrompt := fmt.Sprintf(`You are a GraphQL query generator. Given a natural language prompt and a GraphQL schema, generate one or more valid GraphQL queries that satisfy the request.
 
 IMPORTANT: Your response must be ONLY a valid JSON array of objects, with no markdown formatting, no code fences, no explanation. Each object must have:
 - "query": a valid GraphQL query string
@@ -125,28 +130,20 @@ Generate queries for this prompt: %s`, schema, prompt)
 	cmdCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
-	cmd := exec.CommandContext(cmdCtx, "claude", "-p", claudePrompt, "--output-format", "text")
-	cmd.Stderr = os.Stderr
+	queries, _, err := llmcli.FirstDecoded(cmdCtx, modelPrompt, func(name, text string) ([]queryResult, error) {
+		text = llmcli.StripMarkdownCodeFences(text)
 
-	output, err := cmd.Output()
+		var queries []queryResult
+		if err := json.Unmarshal([]byte(text), &queries); err != nil {
+			return nil, fmt.Errorf("failed to parse %s output as JSON: %w\nRaw output:\n%s", name, err, text)
+		}
+		if len(queries) == 0 {
+			return nil, fmt.Errorf("%s generated 0 queries", name)
+		}
+		return queries, nil
+	}, llmcli.NewClaudeRunner(), llmcli.NewCodexRunner())
 	if err != nil {
-		return nil, fmt.Errorf("claude CLI failed: %w", err)
-	}
-
-	// Claude may wrap in markdown code fences — strip them
-	text := strings.TrimSpace(string(output))
-	text = strings.TrimPrefix(text, "```json")
-	text = strings.TrimPrefix(text, "```")
-	text = strings.TrimSuffix(text, "```")
-	text = strings.TrimSpace(text)
-
-	var queries []queryResult
-	if err := json.Unmarshal([]byte(text), &queries); err != nil {
-		return nil, fmt.Errorf("failed to parse claude output as JSON: %w\nRaw output:\n%s", err, text)
-	}
-
-	if len(queries) == 0 {
-		return nil, fmt.Errorf("claude generated 0 queries")
+		return nil, err
 	}
 
 	return queries, nil
@@ -155,5 +152,7 @@ Generate queries for this prompt: %s`, schema, prompt)
 func writeError(w http.ResponseWriter, status int, msg, details string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(errorResponse{Error: msg, Details: details})
+	if err := json.NewEncoder(w).Encode(errorResponse{Error: msg, Details: details}); err != nil {
+		log.Printf("[ERROR] failed to write error response: %v", err)
+	}
 }

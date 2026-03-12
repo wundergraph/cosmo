@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -36,6 +37,7 @@ func newTestCodeModeServer(t *testing.T) *CodeModeServer {
 
 	srv, err := newCodeModeServerWithSchema(t, cfg)
 	require.NoError(t, err)
+	srv.validateExecute = nil
 	return srv
 }
 
@@ -46,6 +48,7 @@ func newCodeModeServerWithSchema(t *testing.T, cfg CodeModeServerConfig) (*CodeM
 	if err != nil {
 		return nil, err
 	}
+	srv.validateExecute = nil
 	t.Cleanup(func() {
 		srv.sandboxPool.Close()
 	})
@@ -116,6 +119,13 @@ func TestSearch_NoYokoClient(t *testing.T) {
 	assert.Contains(t, text, "not available")
 }
 
+func TestCodeModeDescriptions_PreferSingleCallButAllowRecovery(t *testing.T) {
+	assert.Contains(t, searchToolDescription, "ideally 1 call")
+	assert.Contains(t, executeToolDescription, "Prefer to solve the task in a single call when possible")
+	assert.Contains(t, executeToolDescription, "small number of follow-up")
+	assert.NotContains(t, executeToolDescription, "Do NOT call this tool multiple times.")
+}
+
 // --- Execute tool tests ---
 
 func TestExecute_EmptyCode(t *testing.T) {
@@ -132,6 +142,77 @@ func TestExecute_SimpleReturn(t *testing.T) {
 	text := result.Content[0].(mcp.TextContent).Text
 	assert.Contains(t, text, "hello")
 	assert.Contains(t, text, "world")
+}
+
+func TestExecute_RepairsTypeScriptCompilationError(t *testing.T) {
+	srv := newTestCodeModeServer(t)
+	srv.repairExecute = func(ctx context.Context, code string, compileErr error) (string, string, error) {
+		assert.Contains(t, code, "const x =")
+		assert.Contains(t, compileErr.Error(), "TypeScript compilation error")
+		return `async () => { return { repaired: true }; }`, "test-runner", nil
+	}
+
+	result := callExecuteTool(t, srv, `async () => { const x = ; return x; }`)
+	require.False(t, result.IsError, "unexpected error: %+v", result.Content)
+
+	text := result.Content[0].(mcp.TextContent).Text
+	assert.Contains(t, text, "repaired")
+	assert.Contains(t, text, "true")
+}
+
+func TestExecute_RepairsTypeScriptValidationError(t *testing.T) {
+	srv := newTestCodeModeServer(t)
+	calls := 0
+	srv.validateExecute = func(ctx context.Context, code string) error {
+		calls++
+		if strings.Contains(code, "async () =>") {
+			return nil
+		}
+		return fmt.Errorf("code must be rooted at an async arrow function")
+	}
+	srv.repairExecute = func(ctx context.Context, code string, compileErr error) (string, string, error) {
+		assert.Contains(t, compileErr.Error(), "async arrow function")
+		return `async () => { return { repaired: true }; }`, "test-runner", nil
+	}
+
+	result := callExecuteTool(t, srv, `() => { return { repaired: false }; }`)
+	require.False(t, result.IsError, "unexpected error: %+v", result.Content)
+	assert.Equal(t, 2, calls, "expected validation before and after repair")
+
+	text := result.Content[0].(mcp.TextContent).Text
+	assert.Contains(t, text, "repaired")
+	assert.Contains(t, text, "true")
+}
+
+func TestExecute_TypeScriptValidationErrorReturned(t *testing.T) {
+	srv := newTestCodeModeServer(t)
+	srv.validateExecute = func(ctx context.Context, code string) error {
+		return fmt.Errorf("code must be rooted at an async arrow function")
+	}
+	srv.repairExecute = func(ctx context.Context, code string, compileErr error) (string, string, error) {
+		return "", "", fmt.Errorf("repair unavailable")
+	}
+
+	result := callExecuteTool(t, srv, `() => { return { repaired: false }; }`)
+	require.True(t, result.IsError)
+
+	text := result.Content[0].(mcp.TextContent).Text
+	assert.Contains(t, text, "TypeScript validation error:")
+	assert.Contains(t, text, "async arrow function")
+}
+
+func TestExecute_TypeScriptCompilationErrorNotDuplicated(t *testing.T) {
+	srv := newTestCodeModeServer(t)
+	srv.repairExecute = func(ctx context.Context, code string, compileErr error) (string, string, error) {
+		return "", "", fmt.Errorf("repair unavailable")
+	}
+
+	result := callExecuteTool(t, srv, `async () => { const x = ; return x; }`)
+	require.True(t, result.IsError)
+
+	text := result.Content[0].(mcp.TextContent).Text
+	assert.Contains(t, text, "TypeScript compilation error:")
+	assert.NotContains(t, text, "TypeScript compilation error: TypeScript compilation error:")
 }
 
 func TestExecute_GraphQL(t *testing.T) {
@@ -462,7 +543,7 @@ func TestExecute_PromiseAll(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		n := callCount.Add(1)
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(fmt.Sprintf(`{"data":{"call":%d}}`, n)))
+		_, _ = fmt.Fprintf(w, `{"data":{"call":%d}}`, n)
 	}))
 	defer mockServer.Close()
 
@@ -823,4 +904,3 @@ func TestSearch_ExecuteSnippetWithoutVariables(t *testing.T) {
 	// Should not contain variable object when no variables
 	assert.NotContains(t, text, "variables")
 }
-
