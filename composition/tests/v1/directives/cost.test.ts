@@ -412,6 +412,16 @@ describe('@cost directive tests', () => {
       );
     });
 
+    test('that @cost with string weight on a field argument produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithStringCostWeightOnArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(COST, 'Query.search(query: ...)', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('"10"', '@cost', 'weight', 'Int!'),
+        ]),
+      );
+    });
+
     test('that @cost with decimal weight produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithDecimalCost, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
@@ -507,6 +517,19 @@ describe('@cost directive tests', () => {
     test('that costs without directive argument weights has empty directiveArgumentWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.directiveArgumentWeights.size).toBe(0);
+    });
+
+    test('that @cost with non-INT weight on a directive argument produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithStringCostWeightOnDirectiveArgument,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(COST, '@myDirective(arg1: ...)', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('"5"', '@cost', 'weight', 'Int!'),
+        ]),
+      );
     });
   });
 
@@ -745,6 +768,16 @@ const subgraphWithStringCostWeight: Subgraph = {
   `),
 };
 
+const subgraphWithStringCostWeightOnArgument: Subgraph = {
+  name: 'subgraph-cost-string-weight-argument',
+  url: '',
+  definitions: parse(`
+    type Query {
+      search(query: String! @cost(weight: "10")): [String!]!
+    }
+  `),
+};
+
 const subgraphWithCostOnInterface: Subgraph = {
   name: 'subgraph-cost-interface',
   url: '',
@@ -834,6 +867,18 @@ const subgraphWithCostOnMultipleDirectiveArguments: Subgraph = {
 
     type Query {
       field: String! @myDirective(arg1: "hello", arg2: 42)
+    }
+  `),
+};
+
+const subgraphWithStringCostWeightOnDirectiveArgument: Subgraph = {
+  name: 'subgraph-string-cost-directive-arg',
+  url: '',
+  definitions: parse(`
+    directive @myDirective(arg1: String @cost(weight: "5")) on FIELD_DEFINITION
+
+    type Query {
+      field: String! @myDirective(arg1: "hello")
     }
   `),
 };

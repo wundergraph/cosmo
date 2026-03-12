@@ -1164,7 +1164,16 @@ export class NormalizationFactory {
           continue;
         }
         const weightArg = directive.arguments?.find((a) => a.name.value === WEIGHT);
-        if (!weightArg || weightArg.value.kind !== Kind.INT) {
+        if (!weightArg) {
+          continue;
+        }
+        if (weightArg.value.kind !== Kind.INT) {
+          const directiveCoords = `@${directiveName}(${argNode.name.value}: ...)`;
+          this.errors.push(
+            invalidDirectiveError(COST, directiveCoords, '1st', [
+              invalidArgumentValueErrorMessage(print(weightArg.value), `@${COST}`, WEIGHT, 'Int!'),
+            ]),
+          );
           continue;
         }
         const weightValue = parseInt((weightArg.value as IntValueNode).value, 10);
