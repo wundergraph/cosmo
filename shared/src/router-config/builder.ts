@@ -40,7 +40,10 @@ import {
 import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
 import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 
-function costsToCostConfiguration(costs: Costs): CostConfiguration | undefined {
+function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined {
+  if (!costs) {
+    return undefined;
+  }
   if (
     costs.fieldWeights.size === 0 &&
     costs.listSizes.size === 0 &&
@@ -303,7 +306,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       // https://github.com/wundergraph/cosmo/blob/main/router/core/router.go#L342
       id: subgraph.id,
       childNodes,
-      costConfiguration: subgraph.costs ? costsToCostConfiguration(subgraph.costs) : undefined,
+      costConfiguration: costsToCostConfiguration(subgraph.costs),
       customEvents,
       customGraphql,
       directives: [],
