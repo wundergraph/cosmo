@@ -3328,8 +3328,8 @@
         "slow_plan_cache_size": {
           "type": "integer",
           "minimum": 1,
-          "default": 256,
-          "description": "The maximum number of entries in the slow plan cache. Plans that exceed the planning threshold are protected from TinyLFU eviction in the main plan cache."
+          "default": 100,
+          "description": "The maximum number of entries in the slow plan cache."
         },
         "slow_plan_cache_threshold": {
           "type": "string",

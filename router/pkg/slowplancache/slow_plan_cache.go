@@ -3,6 +3,7 @@ package slowplancache
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -32,9 +33,11 @@ type Cache[V any] struct {
 	minKey    uint64
 	minDur    time.Duration
 
-	writeCh chan setRequest[V]
-	stop    chan struct{}
-	done    chan struct{}
+	writeCh   chan setRequest[V]
+	stop      chan struct{}
+	done      chan struct{}
+	closeOnce sync.Once
+	closed    atomic.Bool
 }
 
 // We use the same value as ristretto (this would be the buffer size if we used ristretto as the backing cache)
@@ -59,6 +62,8 @@ func New[V any](maxSize int, threshold time.Duration) (*Cache[V], error) {
 // processWrites drains the write channel and applies sets under the write lock.
 // It exits when the stop channel is closed.
 func (c *Cache[V]) processWrites() {
+	defer close(c.done)
+
 	for {
 		select {
 		case req := <-c.writeCh:
@@ -68,13 +73,17 @@ func (c *Cache[V]) processWrites() {
 			}
 			c.applySet(req.key, req.value, req.dur)
 		case <-c.stop:
-			c.done <- struct{}{}
 			return
 		}
 	}
 }
 
 func (c *Cache[V]) Get(key uint64) (V, bool) {
+	if c == nil || c.closed.Load() {
+		var zero V
+		return zero, false
+	}
+
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -83,15 +92,17 @@ func (c *Cache[V]) Get(key uint64) (V, bool) {
 		var zero V
 		return zero, false
 	}
+
 	return entry.value, true
 }
 
 // Set enqueues a write to the cache. The write is applied asynchronously.
-// If the write buffer is full, the entry is silently dropped.
+// If the write buffer is full or the cache is closed, the entry is silently dropped.
 func (c *Cache[V]) Set(key uint64, value V, duration time.Duration) {
-	if c == nil {
+	if c == nil || c.closed.Load() {
 		return
 	}
+
 	select {
 	case c.writeCh <- setRequest[V]{key: key, value: value, dur: duration}:
 	default:
@@ -99,10 +110,19 @@ func (c *Cache[V]) Set(key uint64, value V, duration time.Duration) {
 }
 
 // Wait blocks until all pending writes in the buffer have been processed.
+// Returns immediately if the cache is closed.
 func (c *Cache[V]) Wait() {
+	if c == nil || c.closed.Load() {
+		return
+	}
+
 	ch := make(chan struct{})
-	c.writeCh <- setRequest[V]{waitCh: ch}
-	<-ch
+
+	select {
+	case c.writeCh <- setRequest[V]{waitCh: ch}:
+		<-ch
+	case <-c.done:
+	}
 }
 
 // applySet performs the actual cache mutation. Must only be called from processWrites.
@@ -153,38 +173,63 @@ func (c *Cache[V]) applySet(key uint64, value V, duration time.Duration) {
 
 // refreshMin rescans the entries to find the new minimum. Must be called with mu held.
 func (c *Cache[V]) refreshMin() {
-	first := true
+	var (
+		minKey uint64
+		minDur time.Duration
+		first  = true
+	)
+
 	for k, e := range c.entries {
-		if first || e.duration < c.minDur {
-			c.minKey = k
-			c.minDur = e.duration
+		if first || e.duration < minDur {
+			minKey = k
+			minDur = e.duration
 			first = false
 		}
 	}
+
+	if !first {
+		c.minKey = minKey
+		c.minDur = minDur
+	}
 }
 
+// IterValues iterates over all cached values. The callback is invoked outside
+// the read lock to avoid holding it during user code execution.
 func (c *Cache[V]) IterValues(cb func(v V) bool) {
-	c.mu.RLock()
-	defer c.mu.RUnlock()
+	if c == nil || c.closed.Load() {
+		return
+	}
 
+	c.mu.RLock()
+	values := make([]V, 0, len(c.entries))
 	for _, e := range c.entries {
-		if cb(e.value) {
+		values = append(values, e.value)
+	}
+	c.mu.RUnlock()
+
+	for _, v := range values {
+		if cb(v) {
 			return
 		}
 	}
 }
 
 // Close stops the background goroutine and releases resources.
-// Pending writes in the buffer may be dropped.
+// Pending writes in the buffer may be dropped. Safe to call multiple times.
 func (c *Cache[V]) Close() {
-	if c == nil {
+	if c == nil || c.closed.Load() {
 		return
 	}
-	close(c.stop)
-	<-c.done
 
-	close(c.done)
-	c.mu.Lock()
-	c.entries = nil
-	c.mu.Unlock()
+	c.closeOnce.Do(func() {
+		c.closed.Store(true)
+
+		close(c.stop)
+		<-c.done
+		close(c.writeCh)
+
+		c.mu.Lock()
+		c.entries = nil
+		c.mu.Unlock()
+	})
 }

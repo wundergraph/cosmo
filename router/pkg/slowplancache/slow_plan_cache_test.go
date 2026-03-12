@@ -347,3 +347,31 @@ func TestCache_ThresholdRejectsBelow(t *testing.T) {
 	_, ok = c.Get(3)
 	require.True(t, ok, "entry above threshold should be accepted")
 }
+
+func TestCache_WaitAfterClose(t *testing.T) {
+	t.Parallel()
+	c, err := New[*testPlan](10, 0)
+	require.NoError(t, err)
+
+	c.Set(1, &testPlan{content: "q1"}, 10*time.Millisecond)
+	c.Close()
+
+	// Wait after Close should not deadlock or panic
+	require.NotPanics(t, func() {
+		c.Wait()
+	})
+}
+
+func TestCache_DoubleClose(t *testing.T) {
+	t.Parallel()
+	c, err := New[*testPlan](10, 0)
+	require.NoError(t, err)
+
+	c.Set(1, &testPlan{content: "q1"}, 10*time.Millisecond)
+
+	// Double Close should not panic
+	require.NotPanics(t, func() {
+		c.Close()
+		c.Close()
+	})
+}
