@@ -32,6 +32,7 @@ func (s *ReloadPersistentState) CleanupFeatureFlags(routerCfg *nodev1.RouterConf
 	s.inMemoryPlanCacheFallback.cleanupUnusedFeatureFlags(routerCfg)
 }
 
+// This should always be called before graphMux.Shutdown() as ordering matters
 func (s *ReloadPersistentState) OnRouterConfigReload() {
 	// For cases of router config changes (not execution config), we shut down before creating the
 	// graph mux, because we need to initialize everything from the start

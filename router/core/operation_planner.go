@@ -32,7 +32,6 @@ type OperationPlanner struct {
 	fallbackCache  *slowplancache.Cache[*planWithMetaData]
 	executor       *Executor
 	trackUsageInfo bool
-	useFallback    bool
 
 	// planningDurationOverride, when set, replaces the measured planning duration.
 	// This is used in tests to simulate slow queries.
@@ -64,7 +63,6 @@ func NewOperationPlanner(
 		planCache:                planCache,
 		executor:                 executor,
 		trackUsageInfo:           executor.TrackUsageInfo,
-		useFallback:              fallbackCache != nil,
 		fallbackCache:            fallbackCache,
 		planningDurationOverride: planningDurationOverride,
 	}
@@ -162,7 +160,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		// re-use a prepared plan from the main cache
 		opContext.preparedPlan = cachedPlan
 		opContext.planCacheHit = true
-	} else if p.useFallback {
+	} else if p.fallbackCache != nil {
 		if cachedPlan, ok = p.fallbackCache.Get(operationID); ok {
 			// found in the plan fallback cache — re-use and re-insert into main cache
 			opContext.preparedPlan = cachedPlan
@@ -177,7 +175,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		operationIDStr := strconv.FormatUint(operationID, 10)
 		sharedPreparedPlan, err, _ := p.sf.Do(operationIDStr, func() (interface{}, error) {
 			start := time.Now()
-			prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: p.useFallback})
+			prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: p.fallbackCache != nil})
 			if err != nil {
 				return nil, err
 			}
@@ -192,9 +190,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 			// because the OnEvict callback reads planningDuration concurrently.
 			p.planCache.Set(operationID, prepared, 1)
 
-			if p.useFallback {
-				p.fallbackCache.Set(operationID, prepared, prepared.planningDuration)
-			}
+			p.fallbackCache.Set(operationID, prepared, prepared.planningDuration)
 
 			return prepared, nil
 		})
