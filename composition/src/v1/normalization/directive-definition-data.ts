@@ -123,7 +123,11 @@ import {
   SUBSCRIPTION_FILTER_DEFINITION,
   TAG_DEFINITION,
 } from '../constants/directive-definitions';
-import { REQUIRED_FIELDSET_TYPE_NODE, REQUIRED_INT_TYPE_NODE, REQUIRED_STRING_TYPE_NODE } from '../constants/type-nodes';
+import {
+  REQUIRED_FIELDSET_TYPE_NODE,
+  REQUIRED_INT_TYPE_NODE,
+  REQUIRED_STRING_TYPE_NODE,
+} from '../constants/type-nodes';
 
 // Note that arguments with default values are classed as optional and should be placed into `optionalArgumentNames`.
 

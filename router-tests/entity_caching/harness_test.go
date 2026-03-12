@@ -157,21 +157,6 @@ func entityCachingOptions(cache resolve.LoaderCache) []core.Option {
 	}
 }
 
-func entityCachingOptionsMulti(caches map[string]resolve.LoaderCache) []core.Option {
-	return []core.Option{
-		core.WithEntityCaching(config.EntityCachingConfiguration{
-			Enabled: true,
-			L1: config.EntityCachingL1Configuration{
-				Enabled: true,
-			},
-			L2: config.EntityCachingL2Configuration{
-				Enabled: true,
-			},
-		}),
-		core.WithEntityCacheInstances(caches),
-	}
-}
-
 // clearEntityCacheConfigs removes all entity cache configs from the router config.
 func clearEntityCacheConfigs(rc *nodev1.RouterConfig) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
@@ -297,42 +282,6 @@ func entityCachingOptionsWithSubgraphConfig(caches map[string]resolve.LoaderCach
 // newMemoryCache is a convenience wrapper.
 func newMemoryCache() *entitycache.MemoryEntityCache {
 	return entitycache.NewMemoryEntityCache()
-}
-
-// debugCache wraps a LoaderCache to log all operations (for test debugging).
-type debugCache struct {
-	inner resolve.LoaderCache
-	t     testing.TB
-}
-
-func newDebugCache(t testing.TB, inner resolve.LoaderCache) *debugCache {
-	return &debugCache{inner: inner, t: t}
-}
-
-func (d *debugCache) Get(ctx context.Context, keys []string) ([]*resolve.CacheEntry, error) {
-	entries, err := d.inner.Get(ctx, keys)
-	for i, e := range entries {
-		if e != nil {
-			d.t.Logf("[cache] GET key=%q → hit (value=%d bytes)", keys[i], len(e.Value))
-		} else {
-			d.t.Logf("[cache] GET key=%q → miss", keys[i])
-		}
-	}
-	return entries, err
-}
-
-func (d *debugCache) Set(ctx context.Context, entries []*resolve.CacheEntry, ttl time.Duration) error {
-	for _, e := range entries {
-		d.t.Logf("[cache] SET key=%q ttl=%s (value=%d bytes)", e.Key, ttl, len(e.Value))
-	}
-	return d.inner.Set(ctx, entries, ttl)
-}
-
-func (d *debugCache) Delete(ctx context.Context, keys []string) error {
-	for _, k := range keys {
-		d.t.Logf("[cache] DELETE key=%q", k)
-	}
-	return d.inner.Delete(ctx, keys)
 }
 
 // extensionInvalidationMiddleware returns an HTTP middleware that injects

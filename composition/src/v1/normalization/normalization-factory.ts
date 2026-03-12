@@ -445,7 +445,10 @@ export class NormalizationFactory {
   directiveDefinitionDataByName = initializeDirectiveDefinitionDatas();
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
-  entityCacheConfigByTypeName = new Map<string, { maxAgeSeconds: number; includeHeaders: boolean; partialCacheLoad: boolean; shadowMode: boolean }>();
+  entityCacheConfigByTypeName = new Map<
+    string,
+    { maxAgeSeconds: number; includeHeaders: boolean; partialCacheLoad: boolean; shadowMode: boolean }
+  >();
   errors = new Array<Error>();
   entityDataByTypeName = new Map<string, EntityData>();
   entityInterfaceDataByTypeName = new Map<string, EntityInterfaceSubgraphData>();
@@ -3241,7 +3244,8 @@ export class NormalizationFactory {
         for (const arg of directive.arguments) {
           switch (arg.name.value) {
             case MAX_AGE:
-              maxAgeSeconds = (arg.value as IntValueNode).kind === Kind.INT ? parseInt((arg.value as IntValueNode).value, 10) : 0;
+              maxAgeSeconds =
+                (arg.value as IntValueNode).kind === Kind.INT ? parseInt((arg.value as IntValueNode).value, 10) : 0;
               break;
             case INCLUDE_HEADERS:
               includeHeaders = arg.value.kind === Kind.BOOLEAN && arg.value.value;
@@ -3281,8 +3285,7 @@ export class NormalizationFactory {
       const isQuery = operationType === OperationTypeNode.QUERY;
       const isMutationOrSubscription =
         operationType === OperationTypeNode.MUTATION || operationType === OperationTypeNode.SUBSCRIPTION;
-      const operationTypeString =
-        operationType === OperationTypeNode.MUTATION ? 'Mutation' : 'Subscription';
+      const operationTypeString = operationType === OperationTypeNode.MUTATION ? 'Mutation' : 'Subscription';
 
       for (const [fieldName, fieldData] of parentData.fieldDataByName) {
         const fieldCoords = `${parentTypeName}.${fieldName}`;
@@ -3365,7 +3368,11 @@ export class NormalizationFactory {
           const keyFieldSets = this.keyFieldSetDatasByTypeName.get(returnTypeName);
           const keyFields = this.extractKeyFieldNames(keyFieldSets);
           const { mappings, unmappedKeyField } = this.buildArgumentKeyMappings(
-            fieldData, fieldCoords, returnTypeName, keyFields, isListReturn,
+            fieldData,
+            fieldCoords,
+            returnTypeName,
+            keyFields,
+            isListReturn,
           );
 
           // Rule 7: Incomplete mapping warning (non-list only)
@@ -3398,7 +3405,10 @@ export class NormalizationFactory {
           }
           const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // Rule 15: Return type must be entity with @entityCache
-          if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
+          if (
+            !this.keyFieldSetDatasByTypeName.has(returnTypeName) ||
+            !this.entityCacheConfigByTypeName.has(returnTypeName)
+          ) {
             this.errors.push(
               invalidDirectiveError(CACHE_INVALIDATE, fieldCoords, '1st', [
                 cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
@@ -3426,7 +3436,10 @@ export class NormalizationFactory {
           }
           const returnTypeName = getTypeNodeNamedTypeName(fieldData.node.type);
           // Rule 18: Return type must be entity with @entityCache
-          if (!this.keyFieldSetDatasByTypeName.has(returnTypeName) || !this.entityCacheConfigByTypeName.has(returnTypeName)) {
+          if (
+            !this.keyFieldSetDatasByTypeName.has(returnTypeName) ||
+            !this.entityCacheConfigByTypeName.has(returnTypeName)
+          ) {
             this.errors.push(
               invalidDirectiveError(CACHE_POPULATE, fieldCoords, '1st', [
                 cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords, returnTypeName),
@@ -3485,8 +3498,12 @@ export class NormalizationFactory {
 
     // Phase 3: Attach configs to ConfigurationData
     // Group by the entity type's configuration data entry
-    if (entityCacheConfigs.length > 0 || rootFieldCacheConfigs.length > 0 ||
-        cachePopulateConfigs.length > 0 || cacheInvalidateConfigs.length > 0) {
+    if (
+      entityCacheConfigs.length > 0 ||
+      rootFieldCacheConfigs.length > 0 ||
+      cachePopulateConfigs.length > 0 ||
+      cacheInvalidateConfigs.length > 0
+    ) {
       // Attach to the first available root type configuration data
       // Entity cache configs go to the type they're defined on
       for (const ec of entityCacheConfigs) {
@@ -3588,9 +3605,7 @@ export class NormalizationFactory {
         if (isFieldValue) {
           // Rule 13: Redundant @is if argument name matches key field (warning, not error)
           if (isFieldValue === argumentName) {
-            this.warnings.push(
-              redundantIsDirectiveWarning(this.subgraphName, argumentName, fieldCoords),
-            );
+            this.warnings.push(redundantIsDirectiveWarning(this.subgraphName, argumentName, fieldCoords));
           }
           // Rule 11: @is field must reference a @key field
           if (!keyFields.has(isFieldValue)) {
@@ -3637,9 +3652,7 @@ export class NormalizationFactory {
       }
     }
 
-    const mappings: EntityKeyMappingConfig[] = fieldMappings.length > 0
-      ? [{ entityTypeName, fieldMappings }]
-      : [];
+    const mappings: EntityKeyMappingConfig[] = fieldMappings.length > 0 ? [{ entityTypeName, fieldMappings }] : [];
 
     return { mappings, unmappedKeyField };
   }
