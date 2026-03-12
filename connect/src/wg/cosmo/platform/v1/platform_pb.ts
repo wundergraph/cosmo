@@ -22604,6 +22604,11 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
    */
   hasLinkedSchemaChecks?: boolean;
 
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.FederatedGraphSchemaChange composedSchemaBreakingChanges = 21;
+   */
+  composedSchemaBreakingChanges: FederatedGraphSchemaChange[] = [];
+
   constructor(data?: PartialMessage<CreateProposalResponse>) {
     super();
     proto3.util.initPartial(data, this);
@@ -22632,6 +22637,7 @@ export class CreateProposalResponse extends Message<CreateProposalResponse> {
     { no: 18, name: "isLinkedTrafficCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 19, name: "isLinkedPruningCheckFailed", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
     { no: 20, name: "hasLinkedSchemaChecks", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+    { no: 21, name: "composedSchemaBreakingChanges", kind: "message", T: FederatedGraphSchemaChange, repeated: true },
   ]);
 
   static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): CreateProposalResponse {
