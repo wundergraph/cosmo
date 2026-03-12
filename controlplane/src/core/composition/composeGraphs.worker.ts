@@ -64,7 +64,7 @@ function validateRouterCompatibilityVersion(version: string): SupportedRouterCom
   const castVersion = version as SupportedRouterCompatibilityVersion;
   if (!ROUTER_COMPATIBILITY_VERSIONS.has(castVersion)) {
     throw new Error(
-      `Router compatibility version ${version} is not supported by Cosmo.` +
+      `Router compatibility version ${version} is not supported by Cosmo. ` +
         `Please set one of the following valid versions:\n ` +
         [...ROUTER_COMPATIBILITY_VERSIONS].join(','),
     );
