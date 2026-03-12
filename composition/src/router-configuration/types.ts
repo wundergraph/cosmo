@@ -101,24 +101,24 @@ export type ConfigurationData = {
 };
 
 export type Costs = {
+  directiveArgumentWeights: Map<DirectiveArgumentCoords, number>;
   fieldWeights: Map<FieldCoords, FieldWeightConfiguration>;
   listSizes: Map<FieldCoords, FieldListSizeConfiguration>;
   typeWeights: Map<TypeName, number>;
-  directiveArgumentWeights: Map<DirectiveArgumentCoords, number>;
 };
 
 export type FieldWeightConfiguration = {
-  typeName: TypeName;
-  fieldName: FieldName;
   argumentWeights: Map<ArgumentName, number>;
+  fieldName: FieldName;
+  typeName: TypeName;
   weight?: number;
 };
 
 export type FieldListSizeConfiguration = {
-  typeName: TypeName;
   fieldName: FieldName;
-  slicingArguments: Array<ArgumentName>;
-  sizedFields: Array<FieldName>;
-  assumedSize?: number;
   requireOneSlicingArgument: boolean;
+  sizedFields: Array<FieldName>;
+  slicingArguments: Array<ArgumentName>;
+  typeName: TypeName;
+  assumedSize?: number;
 };
