@@ -57,7 +57,6 @@ import {
 import { BlobStorage } from '../blobstorage/index.js';
 import {
   BaseCompositionData,
-  buildRouterExecutionConfig,
   ComposedSubgraph,
   Composer,
   ContractBaseCompositionData,
@@ -1705,16 +1704,18 @@ export class FederatedGraphRepository {
             const contractComposedGraph = deserializeComposedGraphArtifact(contractGraph, artifact);
             let contractRouterExecutionConfig;
             if (artifact.success) {
-              contractRouterExecutionConfig = buildRouterExecutionConfig(
-                contractComposedGraph,
-                contractSchemaVersionId,
-                contractGraph.routerCompatibilityVersion,
-              );
+              if (!artifact.routerExecutionConfigJson) {
+                throw new Error(
+                  `Successful contract composition for federated graph "${contractGraph.name}" does not contain a router execution config.`,
+                );
+              }
+              contractRouterExecutionConfig = deserializeRouterExecutionConfig(artifact.routerExecutionConfigJson);
               if (!contractRouterExecutionConfig) {
                 throw new Error(
                   `Successful contract composition for federated graph "${contractGraph.name}" did not produce a router execution config.`,
                 );
               }
+              contractRouterExecutionConfig.version = contractSchemaVersionId;
             }
 
             const contractComposition = await composer.saveComposition({

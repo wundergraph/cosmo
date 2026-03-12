@@ -322,7 +322,6 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
               },
               subgraphsToCompose.subgraphs,
               contractResult,
-              false,
             ),
           });
         }
