@@ -1,7 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { useLocalStorage } from '@/lib/use-local-storage';
-import { cn } from '@/lib/utils';
 import Editor, { useMonaco } from '@monaco-editor/react';
 import { CheckIcon, Cross1Icon, Pencil1Icon, PlayIcon } from '@radix-ui/react-icons';
 import CryptoJS from 'crypto-js';
@@ -187,7 +186,7 @@ const ScriptEditor = ({ script, close }: { script: PlaygroundScript; close: () =
     }
   };
 
-  const [selectedScript, setSelectedScript] = useLocalStorage<{
+  const [, setSelectedScript] = useLocalStorage<{
     id?: string;
     content?: string;
     updatedByTabId?: string;
