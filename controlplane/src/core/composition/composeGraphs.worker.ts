@@ -11,19 +11,11 @@ import {
   federateSubgraphsContract,
   federateSubgraphsWithContracts,
   newContractTagOptionsFromArrays,
-  ROUTER_COMPATIBILITY_VERSIONS,
 } from '@wundergraph/composition';
 import { buildRouterConfig, SubgraphKind } from '@wundergraph/cosmo-shared';
 import { GRPCMapping, ImageReference, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { parse } from 'graphql';
-import type {
-  CompositionOptions,
-  ContractTagOptions,
-  FieldConfiguration,
-  FederationResult,
-  FederationResultWithContracts,
-  Subgraph,
-} from '@wundergraph/composition';
+import type { FieldConfiguration, FederationResult, FederationResultWithContracts } from '@wundergraph/composition';
 import type { RouterSubgraph } from '@wundergraph/cosmo-shared';
 import type { SubgraphDTO } from '../../types/index.js';
 import { validateRouterCompatibilityVersion } from './composition.js';
@@ -33,34 +25,6 @@ import type {
   SerializedContractCompositionArtifact,
   SerializedComposedGraphArtifact,
 } from './composeGraphs.types.js';
-
-function composeFederatedGraphWithPotentialContracts(
-  subgraphs: Subgraph[],
-  tagOptionsByContractName: Map<string, ContractTagOptions>,
-  version: string,
-  options?: CompositionOptions,
-) {
-  return federateSubgraphsWithContracts({
-    options,
-    subgraphs,
-    tagOptionsByContractName,
-    version: validateRouterCompatibilityVersion(version),
-  });
-}
-
-function composeFederatedContract(
-  subgraphs: Subgraph[],
-  contractTagOptions: ContractTagOptions,
-  version: string,
-  options?: CompositionOptions,
-) {
-  return federateSubgraphsContract({
-    contractTagOptions,
-    options,
-    subgraphs,
-    version: validateRouterCompatibilityVersion(version),
-  });
-}
 
 function parseGRPCMapping(mappings: string): GRPCMapping {
   try {
@@ -141,27 +105,6 @@ function subgraphDTOsToRouterSubgraphs(
   });
 }
 
-function buildRouterExecutionConfig(
-  composedSchema: string,
-  federatedClientSchema: string | undefined,
-  shouldIncludeClientSchema: boolean,
-  fieldConfigurations: FieldConfiguration[],
-  subgraphs: RouterSubgraph[],
-  federatedSchemaVersionId: string,
-  routerCompatibilityVersion: string,
-): RouterConfig {
-  const federatedClientSDL = shouldIncludeClientSchema ? federatedClientSchema || '' : '';
-
-  return buildRouterConfig({
-    federatedClientSDL,
-    federatedSDL: composedSchema,
-    fieldConfigurations,
-    routerCompatibilityVersion,
-    subgraphs,
-    schemaVersionId: federatedSchemaVersionId,
-  });
-}
-
 // Serialize the worker-side composition result into a structured-clone-safe
 // artifact for the main thread. This keeps the boundary limited to plain data,
 // and the main thread is responsible for rebuilding richer runtime objects
@@ -183,15 +126,14 @@ function serializeComposedGraphArtifact(
   let routerExecutionConfigJson: ReturnType<RouterConfig['toJson']> | undefined;
   if (includeRouterExecutionConfig && result.success && composedSchema) {
     const routerSubgraphs = subgraphDTOsToRouterSubgraphs(organizationId, subgraphs, result);
-    const routerExecutionConfig = buildRouterExecutionConfig(
-      composedSchema,
-      federatedClientSchema,
-      shouldIncludeClientSchema,
+    const routerExecutionConfig = buildRouterConfig({
+      federatedClientSDL: shouldIncludeClientSchema ? federatedClientSchema || '' : '',
+      federatedSDL: composedSchema,
       fieldConfigurations,
-      routerSubgraphs,
-      randomUUID(),
       routerCompatibilityVersion,
-    );
+      subgraphs: routerSubgraphs,
+      schemaVersionId: randomUUID(),
+    });
     routerExecutionConfigJson = routerExecutionConfig.toJson();
   }
 
@@ -240,22 +182,24 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
     results: task.subgraphsToCompose.map((subgraphsToCompose) => {
       const compositionSubgraphs = toCompositionSubgraphs(subgraphsToCompose.subgraphs);
 
+      const version = validateRouterCompatibilityVersion(task.federatedGraph.routerCompatibilityVersion);
+
       const result: FederationResult | FederationResultWithContracts = task.federatedGraph.contract
-        ? composeFederatedContract(
-            compositionSubgraphs,
-            newContractTagOptionsFromArrays(
+        ? federateSubgraphsContract({
+            contractTagOptions: newContractTagOptionsFromArrays(
               task.federatedGraph.contract.excludeTags,
               task.federatedGraph.contract.includeTags,
             ),
-            task.federatedGraph.routerCompatibilityVersion,
-            task.compositionOptions,
-          )
-        : composeFederatedGraphWithPotentialContracts(
-            compositionSubgraphs,
+            options: task.compositionOptions,
+            subgraphs: compositionSubgraphs,
+            version,
+          })
+        : federateSubgraphsWithContracts({
+            options: task.compositionOptions,
+            subgraphs: compositionSubgraphs,
             tagOptionsByContractName,
-            task.federatedGraph.routerCompatibilityVersion,
-            task.compositionOptions,
-          );
+            version,
+          });
 
       const includeRouterConfig = !task.skipRouterConfig;
       const base = serializeComposedGraphArtifact(
