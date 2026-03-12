@@ -1367,8 +1367,8 @@ describe('Publish subgraph tests', () => {
       expect(publishResp.counts).toBeDefined();
       // When limit is 1, only 1 error should be returned but counts reflects the total
       expect(publishResp.compositionErrors.length).toBe(1);
-      // The total count should be equal to or greater than what's returned
-      expect(publishResp.counts!.compositionErrors! >= publishResp.compositionErrors.length).toBe(true);
+      // The total count must be strictly greater than returned errors, proving truncation occurred
+      expect(publishResp.counts!.compositionErrors!).toBeGreaterThan(publishResp.compositionErrors.length);
 
       await server.close();
     });
