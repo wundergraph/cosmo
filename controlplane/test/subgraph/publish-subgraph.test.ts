@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { joinLabel } from '@wundergraph/cosmo-shared';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
@@ -14,6 +15,7 @@ import {
 } from '../../src/core/test-util.js';
 import {
   createEventDrivenGraph,
+  createFederatedGraph,
   createSubgraph,
   DEFAULT_NAMESPACE,
   eventDrivenGraphSDL,
@@ -1222,6 +1224,151 @@ describe('Publish subgraph tests', () => {
       });
 
       expect(publishResponseIpv4.response?.code).toBe(EnumStatusCode.OK);
+
+      await server.close();
+    });
+  });
+
+  describe('Publish response counts tests', () => {
+    test('Should return counts in the response on successful publish', async () => {
+      const { client, server } = await SetupTest({ dbname });
+
+      const subgraphName = genID('subgraph');
+
+      await createSubgraph(client, subgraphName, 'http://localhost:4001');
+      const publishResp = await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        schema: subgraphSDL,
+      });
+
+      expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(publishResp.counts).toBeDefined();
+      expect(publishResp.counts?.compositionErrors).toBe(0);
+      expect(publishResp.counts?.compositionWarnings).toBe(0);
+      expect(publishResp.counts?.deploymentErrors).toBe(0);
+
+      await server.close();
+    });
+
+    test('Should reflect actual composition errors in counts', async () => {
+      const { client, server } = await SetupTest({ dbname });
+
+      const federatedGraphName = genID('fedGraph');
+      const label = genUniqueLabel();
+
+      await createFederatedGraph(client, federatedGraphName, 'default', [joinLabel(label)], 'http://localhost:8081');
+
+      const subgraphName1 = genID('subgraph1');
+      await client.createFederatedSubgraph({
+        name: subgraphName1,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:4001',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraphName1,
+        namespace: 'default',
+        schema: `
+          type Query {
+            hello: String
+          }
+          type User @key(fields: "id") {
+            id: ID!
+            name: String
+          }
+        `,
+      });
+
+      const subgraphName2 = genID('subgraph2');
+      await client.createFederatedSubgraph({
+        name: subgraphName2,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:4002',
+      });
+
+      // This schema has a conflicting type definition that causes composition errors
+      const publishResp = await client.publishFederatedSubgraph({
+        name: subgraphName2,
+        namespace: 'default',
+        schema: `
+          type User @key(fields: "id") {
+            id: ID!
+            name: Int
+          }
+        `,
+      });
+
+      expect(publishResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+      expect(publishResp.counts).toBeDefined();
+      expect(publishResp.compositionErrors.length).toBe(publishResp.counts?.compositionErrors);
+
+      await server.close();
+    });
+
+    test('Should restrict the number of returned composition errors when limit parameter is set', async () => {
+      const { client, server } = await SetupTest({ dbname });
+
+      const federatedGraphName = genID('fedGraph');
+      const label = genUniqueLabel();
+
+      await createFederatedGraph(client, federatedGraphName, 'default', [joinLabel(label)], 'http://localhost:8081');
+
+      const subgraphName1 = genID('subgraph1');
+      await client.createFederatedSubgraph({
+        name: subgraphName1,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:4001',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraphName1,
+        namespace: 'default',
+        schema: `
+          type Query {
+            hello: String
+          }
+          type User @key(fields: "id") {
+            id: ID!
+            name: String
+            email: String
+            age: Int
+          }
+        `,
+      });
+
+      const subgraphName2 = genID('subgraph2');
+      await client.createFederatedSubgraph({
+        name: subgraphName2,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:4002',
+      });
+
+      // This schema has multiple conflicting type definitions to generate multiple errors
+      const publishResp = await client.publishFederatedSubgraph({
+        name: subgraphName2,
+        namespace: 'default',
+        schema: `
+          type User @key(fields: "id") {
+            id: ID!
+            name: Int
+            email: Int
+            age: String
+          }
+        `,
+        limit: 1,
+      });
+
+      expect(publishResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+      expect(publishResp.counts).toBeDefined();
+      // When limit is 1, only 1 error should be returned but counts reflects the total
+      expect(publishResp.compositionErrors.length).toBe(1);
+      // The total count must be strictly greater than returned errors, proving truncation occurred
+      expect(publishResp.counts!.compositionErrors!).toBeGreaterThan(publishResp.compositionErrors.length);
 
       await server.close();
     });
