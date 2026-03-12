@@ -543,7 +543,8 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 }
 
 type graphMux struct {
-	mux                         *chi.Mux
+	mux *chi.Mux
+
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
 	planFallbackCache           *planfallbackcache.Cache[*planWithMetaData]
 	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
@@ -1350,13 +1351,7 @@ func (s *graphServer) buildGraphMux(
 		}
 	}
 
-	operationPlanner := NewOperationPlanner(
-		s.logger,
-		executor,
-		gm.planCache,
-		gm.planFallbackCache,
-	)
-	operationPlanner.planningDurationOverride = s.planningDurationOverride
+	operationPlanner := NewOperationPlanner(executor, gm.planCache, gm.planFallbackCache, s.planningDurationOverride)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {

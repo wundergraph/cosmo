@@ -13,7 +13,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -34,7 +33,6 @@ type OperationPlanner struct {
 	executor       *Executor
 	trackUsageInfo bool
 	useFallback    bool
-	logger         *zap.Logger
 
 	// planningDurationOverride, when set, replaces the measured planning duration.
 	// This is used in tests to simulate slow queries.
@@ -56,14 +54,19 @@ type ExecutionPlanCache[K any, V any] interface {
 	Close()
 }
 
-func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], fallbackCache *planfallbackcache.Cache[*planWithMetaData]) *OperationPlanner {
+func NewOperationPlanner(
+	executor *Executor,
+	planCache ExecutionPlanCache[uint64, *planWithMetaData],
+	fallbackCache *planfallbackcache.Cache[*planWithMetaData],
+	planningDurationOverride func(content string) time.Duration,
+) *OperationPlanner {
 	return &OperationPlanner{
-		logger:         logger,
-		planCache:      planCache,
-		executor:       executor,
-		trackUsageInfo: executor.TrackUsageInfo,
-		useFallback:    fallbackCache != nil,
-		fallbackCache:  fallbackCache,
+		planCache:                planCache,
+		executor:                 executor,
+		trackUsageInfo:           executor.TrackUsageInfo,
+		useFallback:              fallbackCache != nil,
+		fallbackCache:            fallbackCache,
+		planningDurationOverride: planningDurationOverride,
 	}
 }
 
