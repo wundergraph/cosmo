@@ -43,8 +43,8 @@ jobs:
       - name: Generate code
         run: pnpm buf generate --template buf.ts.gen.yaml
 
-      # - name: Lint
-      #   run: pnpm run --filter studio lint:fix
+      - name: Lint
+        run: pnpm run --filter studio lint:fix
 
       - uses: ./.github/actions/git-dirty-check
         with:
