@@ -34,7 +34,9 @@
     "preview": "vite preview",
     "copy-html": "cp dist/index.html ../router/internal/graphiql/graphiql.html",
     "build:router": "VITE_SINGLE_FILE_OUTPUT=true pnpm build && pnpm copy-html",
-    "format": "prettier -w -c ."
+    "lint": "eslint --cache --ext .ts,.tsx,.mjs,.cjs . && prettier -c .",
+    "lint:fix": "eslint --cache --fix --ext .ts,.tsx,.mjs,.cjs . && pnpm format",
+    "format": "prettier -w ."
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
@@ -60,7 +62,6 @@
     "graphql-ws": "^5.16.0",
     "lodash": "^4.17.21",
     "monaco-editor": "^0.45.0",
-    "prettier": "^3.1.0",
     "prism-react-renderer": "^2.3.0",
     "prismjs": "^1.30.0",
     "react": "^18.3.1",
@@ -80,7 +81,12 @@
     "@types/prismjs": "^1.26.3",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "eslint": "^8.57.1",
+    "eslint-plugin-react": "^7.37.0",
+    "eslint-plugin-react-hooks": "^4.6.2",
     "autoprefixer": "^10.4.16",
     "postcss": "^8.4.38",
     "tailwind-merge": "^2.0.0",
