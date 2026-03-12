@@ -50,12 +50,12 @@ export interface SerializedContractCompositionArtifact {
 
 export interface ComposeGraphsTaskInput {
   federatedGraph: FederatedGraphDTO;
-  subgraphsToCompose: Array<{
+  subgraphsToCompose: {
     subgraphs: SubgraphDTO[];
     isFeatureFlagComposition: boolean;
     featureFlagName: string;
     featureFlagId: string;
-  }>;
+  }[];
   tagOptionsByContractName: SerializedContractTagOptions[];
   compositionOptions?: CompositionOptions;
   skipRouterConfig?: boolean;
