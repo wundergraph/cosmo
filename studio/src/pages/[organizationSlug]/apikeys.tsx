@@ -1,7 +1,7 @@
-import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { EmptyState } from '@/components/empty-state';
+import { getDashboardLayout } from '@/components/layout/dashboard-layout';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -10,65 +10,47 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Loader } from "@/components/ui/loader";
-import { Pagination } from "@/components/ui/pagination";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
-import { useFeature } from "@/hooks/use-feature";
-import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useUser } from "@/hooks/use-user";
-import { docsBaseURL } from "@/lib/constants";
-import { formatDateTime } from "@/lib/format-date";
-import { NextPageWithLayout } from "@/lib/page";
-import {
-  EllipsisVerticalIcon,
-  ExclamationTriangleIcon,
-  KeyIcon,
-} from "@heroicons/react/24/outline";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { InfoCircledIcon, PlusIcon } from "@radix-ui/react-icons";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
+import { Pagination } from '@/components/ui/pagination';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { useToast } from '@/components/ui/use-toast';
+import { useFeature } from '@/hooks/use-feature';
+import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { useUser } from '@/hooks/use-user';
+import { docsBaseURL } from '@/lib/constants';
+import { formatDateTime } from '@/lib/format-date';
+import { NextPageWithLayout } from '@/lib/page';
+import { EllipsisVerticalIcon, ExclamationTriangleIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { InfoCircledIcon, PlusIcon } from '@radix-ui/react-icons';
+import { useQuery, useMutation } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   createAPIKey,
   deleteAPIKey,
   getAPIKeys,
   getUserAccessiblePermissions,
   updateAPIKey,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { ExpiresAt } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import copy from "copy-to-clipboard";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { Dispatch, SetStateAction, useEffect, useId, useState } from "react";
-import { FiCheck, FiCopy } from "react-icons/fi";
-import { z } from "zod";
-import { GroupSelect } from "@/components/group-select";
-import { useCheckUserAccess } from "@/hooks/use-check-user-access";
-import { Badge, badgeVariants } from "@/components/ui/badge";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import copy from 'copy-to-clipboard';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { Dispatch, SetStateAction, useEffect, useId, useState } from 'react';
+import { FiCheck, FiCopy } from 'react-icons/fi';
+import { z } from 'zod';
+import { GroupSelect } from '@/components/group-select';
+import { useCheckUserAccess } from '@/hooks/use-check-user-access';
+import { Badge, badgeVariants } from '@/components/ui/badge';
 
 const CreateAPIKeyDialog = ({
   existingApiKeys,
@@ -82,21 +64,21 @@ const CreateAPIKeyDialog = ({
   refresh: () => void;
 }) => {
   const user = useUser();
-  const rbac = useFeature("rbac");
+  const rbac = useFeature('rbac');
   const { toast } = useToast();
 
   const { mutate, isPending } = useMutation(createAPIKey);
 
   const { data: permissionsData } = useQuery(getUserAccessiblePermissions);
 
-  const expiresOptions = ["Never", "30 days", "6 months", "1 year"];
+  const expiresOptions = ['Never', '30 days', '6 months', '1 year'];
   const expiresOptionsMappingToEnum: {
     [key: string]: ExpiresAt;
   } = {
     Never: ExpiresAt.NEVER,
-    "30 days": ExpiresAt.THIRTY_DAYS,
-    "6 months": ExpiresAt.SIX_MONTHS,
-    "1 year": ExpiresAt.ONE_YEAR,
+    '30 days': ExpiresAt.THIRTY_DAYS,
+    '6 months': ExpiresAt.SIX_MONTHS,
+    '1 year': ExpiresAt.ONE_YEAR,
   };
 
   const [expires, setExpires] = useState(expiresOptions[0]);
@@ -107,10 +89,10 @@ const CreateAPIKeyDialog = ({
     name: z
       .string()
       .trim()
-      .min(3, { message: "API key name must be a minimum of 3 characters" })
-      .max(50, { message: "API key name must be maximum 50 characters" })
+      .min(3, { message: 'API key name must be a minimum of 3 characters' })
+      .max(50, { message: 'API key name must be maximum 50 characters' })
       .regex(
-        new RegExp("^[a-zA-Z0-9]+(?:[_.@/-][a-zA-Z0-9]+)*$"),
+        new RegExp('^[a-zA-Z0-9]+(?:[_.@/-][a-zA-Z0-9]+)*$'),
         "The name should start and end with an alphanumeric character. Only '.', '_', '@', '/', and '-' are allowed as separators in between.",
       )
       .superRefine((arg, ctx) => {
@@ -123,7 +105,7 @@ const CreateAPIKeyDialog = ({
           message: `An API key with the name ${arg} already exists`,
         });
       }),
-    groupId: z.string().uuid({ message: "Select a valid group" }),
+    groupId: z.string().uuid({ message: 'Select a valid group' }),
   });
 
   type CreateAPIKeyInput = z.infer<typeof createAPIKeyInputSchema>;
@@ -137,7 +119,7 @@ const CreateAPIKeyDialog = ({
     setValue,
     watch,
   } = useZodForm<CreateAPIKeyInput>({
-    mode: "onBlur",
+    mode: 'onBlur',
     schema: createAPIKeyInputSchema,
   });
 
@@ -160,12 +142,12 @@ const CreateAPIKeyDialog = ({
             refresh();
             reset();
           } else if (d.response?.details) {
-            setError("name", { message: d.response.details });
+            setError('name', { message: d.response.details });
           }
         },
         onError: () => {
           toast({
-            description: "Could not create an API key. Please try again.",
+            description: 'Could not create an API key. Please try again.',
             duration: 3000,
           });
         },
@@ -213,42 +195,20 @@ const CreateAPIKeyDialog = ({
         <DialogHeader>
           <DialogTitle>Create API Key</DialogTitle>
         </DialogHeader>
-        <form
-          className="mt-4 flex flex-col gap-y-3"
-          onSubmit={handleSubmit(onSubmit)}
-        >
+        <form className="mt-4 flex flex-col gap-y-3" onSubmit={handleSubmit(onSubmit)}>
           <div className="flex flex-col gap-y-2">
             <label className="text-sm font-semibold" htmlFor={nameInputId}>
               Name
             </label>
-            <Input
-              className="w-full"
-              id={nameInputId}
-              type="text"
-              {...register("name")}
-            />
-            {errors.name && (
-              <span className="px-2 text-xs text-destructive">
-                {errors.name.message}
-              </span>
-            )}
+            <Input className="w-full" id={nameInputId} type="text" {...register('name')} />
+            {errors.name && <span className="px-2 text-xs text-destructive">{errors.name.message}</span>}
           </div>
           <div className="flex flex-col gap-y-2">
-            <label
-              className="text-sm font-semibold"
-              htmlFor={expiresInputLabel}
-            >
+            <label className="text-sm font-semibold" htmlFor={expiresInputLabel}>
               Expires
             </label>
-            <Select
-              value={expires}
-              onValueChange={(value) => setExpires(value)}
-            >
-              <SelectTrigger
-                value={expires}
-                className="w-[200px] lg:w-full"
-                id={expiresInputLabel}
-              >
+            <Select value={expires} onValueChange={(value) => setExpires(value)}>
+              <SelectTrigger value={expires} className="w-[200px] lg:w-full" id={expiresInputLabel}>
                 <SelectValue aria-label={expires}>{expires}</SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -269,9 +229,9 @@ const CreateAPIKeyDialog = ({
             </label>
             <GroupSelect
               id={groupInputLabel}
-              value={watch("groupId")}
+              value={watch('groupId')}
               onValueChange={(group) =>
-                setValue("groupId", group.groupId, {
+                setValue('groupId', group.groupId, {
                   shouldValidate: true,
                   shouldDirty: true,
                   shouldTouch: true,
@@ -279,70 +239,42 @@ const CreateAPIKeyDialog = ({
               }
             />
 
-            {errors.groupId && (
-              <span className="px-2 text-xs text-destructive">
-                {errors.groupId.message}
-              </span>
-            )}
+            {errors.groupId && <span className="px-2 text-xs text-destructive">{errors.groupId.message}</span>}
           </div>
 
-          {canManageAPIKeys &&
-            permissionsData &&
-            permissionsData.permissions.length > 0 && (
-              <div className="mt-2 flex flex-col gap-y-3">
-                <div className="flex flex-col gap-y-1">
-                  <span className="text-base font-semibold">Permissions</span>
-                  <span className="text-sm text-muted-foreground">
-                    {"Select permissions for the API key."}
-                  </span>
-                </div>
-                {permissionsData.permissions.map((permission) => {
-                  return (
-                    <div
-                      className="flex items-center gap-x-2"
-                      key={permission.value}
-                    >
-                      <Checkbox
-                        id="scim"
-                        checked={selectedPermissions.includes(permission.value)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedPermissions([
-                              ...Array.from(
-                                new Set([
-                                  ...selectedPermissions,
-                                  permission.value,
-                                ]),
-                              ),
-                            ]);
-                          } else {
-                            setSelectedPermissions([
-                              ...selectedPermissions.filter(
-                                (p) => p !== permission.value,
-                              ),
-                            ]);
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor="scim"
-                        className="text-sm font-medium capitalize leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {permission.displayName}
-                      </label>
-                    </div>
-                  );
-                })}
+          {canManageAPIKeys && permissionsData && permissionsData.permissions.length > 0 && (
+            <div className="mt-2 flex flex-col gap-y-3">
+              <div className="flex flex-col gap-y-1">
+                <span className="text-base font-semibold">Permissions</span>
+                <span className="text-sm text-muted-foreground">{'Select permissions for the API key.'}</span>
               </div>
-            )}
+              {permissionsData.permissions.map((permission) => {
+                return (
+                  <div className="flex items-center gap-x-2" key={permission.value}>
+                    <Checkbox
+                      id="scim"
+                      checked={selectedPermissions.includes(permission.value)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedPermissions([...Array.from(new Set([...selectedPermissions, permission.value]))]);
+                        } else {
+                          setSelectedPermissions([...selectedPermissions.filter((p) => p !== permission.value)]);
+                        }
+                      }}
+                    />
+                    <label
+                      htmlFor="scim"
+                      className="text-sm font-medium capitalize leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      {permission.displayName}
+                    </label>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
-          <Button
-            className="mt-2"
-            type="submit"
-            disabled={!isValid}
-            variant="default"
-            isLoading={isPending}
-          >
+          <Button className="mt-2" type="submit" disabled={!isValid} variant="default" isLoading={isPending}>
             Generate API key
           </Button>
         </form>
@@ -371,7 +303,7 @@ const DeleteAPIKeyDialog = ({
   const regex = new RegExp(`^${apiKeyName}$`);
   const schema = z.object({
     apiKeyName: z.string().regex(regex, {
-      message: "Please enter the api key name as requested.",
+      message: 'Please enter the api key name as requested.',
     }),
   });
 
@@ -383,7 +315,7 @@ const DeleteAPIKeyDialog = ({
     handleSubmit,
     reset,
   } = useZodForm<DeleteAPIKeyInput>({
-    mode: "onChange",
+    mode: 'onChange',
     schema: schema,
   });
 
@@ -393,7 +325,7 @@ const DeleteAPIKeyDialog = ({
       {
         onSuccess: (d) => {
           toast({
-            description: d.response?.details || "API key deleted successfully.",
+            description: d.response?.details || 'API key deleted successfully.',
             duration: 3000,
           });
           refresh();
@@ -402,7 +334,7 @@ const DeleteAPIKeyDialog = ({
         },
         onError: () => {
           toast({
-            description: "Could not delete an API key. Please try again.",
+            description: 'Could not delete an API key. Please try again.',
             duration: 3000,
           });
           reset();
@@ -419,36 +351,17 @@ const DeleteAPIKeyDialog = ({
         <DialogHeader>
           <DialogTitle>Delete API Key</DialogTitle>
         </DialogHeader>
-        <form
-          className="mt-4 flex flex-col gap-y-3"
-          onSubmit={handleSubmit(onSubmit)}
-        >
+        <form className="mt-4 flex flex-col gap-y-3" onSubmit={handleSubmit(onSubmit)}>
           <div className="flex flex-col gap-y-2">
             <span className="text-sm">
               Are you sure you want to delete this api key? <br />
-              Enter <strong>{apiKeyName}</strong> to confirm you want to delete
-              this api key.
+              Enter <strong>{apiKeyName}</strong> to confirm you want to delete this api key.
             </span>
             {/* </div> */}
-            <Input
-              className="w-full"
-              type="text"
-              {...register("apiKeyName")}
-              autoFocus
-            />
-            {errors.apiKeyName && (
-              <span className="px-2 text-xs text-destructive">
-                {errors.apiKeyName.message}
-              </span>
-            )}
+            <Input className="w-full" type="text" {...register('apiKeyName')} autoFocus />
+            {errors.apiKeyName && <span className="px-2 text-xs text-destructive">{errors.apiKeyName.message}</span>}
           </div>
-          <Button
-            className="mt-2"
-            type="submit"
-            disabled={!isValid}
-            variant="destructive"
-            isLoading={isPending}
-          >
+          <Button className="mt-2" type="submit" disabled={!isValid} variant="destructive" isLoading={isPending}>
             Delete API key
           </Button>
         </form>
@@ -490,10 +403,7 @@ const APIKeyCreatedDialog = ({
           <DialogTitle>API key generated!</DialogTitle>
         </DialogHeader>
         <div className="text-sm">
-          <p className="pb-6">
-            Make sure to copy your client ID user secret key, we&apos;ll only
-            show it to you once.
-          </p>
+          <p className="pb-6">Make sure to copy your client ID user secret key, we&apos;ll only show it to you once.</p>
           <div className="flex items-center justify-between gap-4 rounded-md border px-3 py-2">
             <code className="break-all">{apiKey}</code>
             <Button
@@ -503,13 +413,7 @@ const APIKeyCreatedDialog = ({
               onClick={() => copyHandler(apiKey)}
               className="cursor-pointer"
             >
-              <div>
-                {copied ? (
-                  <FiCheck className="text-xs" />
-                ) : (
-                  <FiCopy className="text-xs" />
-                )}
-              </div>
+              <div>{copied ? <FiCheck className="text-xs" /> : <FiCopy className="text-xs" />}</div>
             </Button>
           </div>
           <div className="mt-5">
@@ -544,13 +448,8 @@ export const Empty = ({
       title="Create an API key"
       description={
         <>
-          No Api keys found.{" "}
-          <a
-            target="_blank"
-            rel="noreferrer"
-            href={docsBaseURL + "/studio/api-keys"}
-            className="text-primary"
-          >
+          No Api keys found.{' '}
+          <a target="_blank" rel="noreferrer" href={docsBaseURL + '/studio/api-keys'} className="text-primary">
             Learn more.
           </a>
         </>
@@ -604,9 +503,7 @@ export const CreateAPIKey = ({
         existingApiKeys={existingApiKeys}
         canManageAPIKeys={canManageAPIKeys}
       />
-      {apiKey && (
-        <APIKeyCreatedDialog open={open} setOpen={setOpen} apiKey={apiKey} />
-      )}
+      {apiKey && <APIKeyCreatedDialog open={open} setOpen={setOpen} apiKey={apiKey} />}
     </>
   );
 };
@@ -647,20 +544,12 @@ const UpdateAPIKey = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Update API key group</DialogTitle>
-          <DialogDescription>
-            Select the new group for the API key.
-          </DialogDescription>
+          <DialogDescription>Select the new group for the API key.</DialogDescription>
         </DialogHeader>
-        <GroupSelect
-          value={groupId}
-          onValueChange={(group) => setGroupId(group.groupId)}
-        />
+        <GroupSelect value={groupId} onValueChange={(group) => setGroupId(group.groupId)} />
 
         <DialogFooter>
-          <Button
-            variant="secondary"
-            onClick={() => onOpenChangeCallback(false)}
-          >
+          <Button variant="secondary" onClick={() => onOpenChangeCallback(false)}>
             Cancel
           </Button>
           <Button
@@ -678,24 +567,21 @@ const UpdateAPIKey = ({
                     if (d.response?.code === EnumStatusCode.OK) {
                       onOpenChange(false);
                       toast({
-                        description: "API key group updated successfully.",
+                        description: 'API key group updated successfully.',
                         duration: 3000,
                       });
 
                       refresh();
                     } else {
                       toast({
-                        description:
-                          d.response?.details ??
-                          "Could not update the API key. Please try again.",
+                        description: d.response?.details ?? 'Could not update the API key. Please try again.',
                         duration: 3000,
                       });
                     }
                   },
                   onError() {
                     toast({
-                      description:
-                        "Could not update the API key. Please try again.",
+                      description: 'Could not update the API key. Please try again.',
                       duration: 3000,
                     });
                   },
@@ -715,11 +601,9 @@ const APIKeysPage: NextPageWithLayout = () => {
   const checkUserAccess = useCheckUserAccess();
   const router = useRouter();
 
-  const pageNumber = router.query.page
-    ? parseInt(router.query.page as string)
-    : 1;
+  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
 
-  const limit = Number.parseInt((router.query.pageSize as string) || "10");
+  const limit = Number.parseInt((router.query.pageSize as string) || '10');
 
   const { data, isLoading, error, refetch } = useQuery(getAPIKeys, {
     limit: limit > 50 ? 50 : limit,
@@ -733,17 +617,13 @@ const APIKeysPage: NextPageWithLayout = () => {
     groupId: string | undefined;
   }>();
   const [apiKey, setApiKey] = useState<string | undefined>();
-  const [deleteApiKeyName, setDeleteApiKeyName] = useState<
-    string | undefined
-  >();
+  const [deleteApiKeyName, setDeleteApiKeyName] = useState<string | undefined>();
   const [openApiKeyCreatedDialog, setOpenApiKeyCreatedDialog] = useState(false);
 
   const canCreateAPIKey = checkUserAccess({
-    rolesToBe: ["organization-admin", "organization-developer"],
+    rolesToBe: ['organization-admin', 'organization-developer'],
   });
-  const canManageAPIKeys =
-    canCreateAPIKey ||
-    checkUserAccess({ rolesToBe: ["organization-apikey-manager"] });
+  const canManageAPIKeys = canCreateAPIKey || checkUserAccess({ rolesToBe: ['organization-apikey-manager'] });
 
   useEffect(() => {
     if (!openApiKeyCreatedDialog) setApiKey(undefined);
@@ -756,9 +636,7 @@ const APIKeysPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve API keys"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -793,21 +671,15 @@ const APIKeysPage: NextPageWithLayout = () => {
           <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <div>
               <p className="text-sm text-muted-foreground">
-                API keys are used to authenticate the Cosmo CLI for local
-                development or CI/CD.{" "}
-                <Link
-                  href={docsBaseURL + "/studio/api-keys"}
-                  className="text-primary"
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                API keys are used to authenticate the Cosmo CLI for local development or CI/CD.{' '}
+                <Link href={docsBaseURL + '/studio/api-keys'} className="text-primary" target="_blank" rel="noreferrer">
                   Learn more
                 </Link>
               </p>
               <p className="text-sm text-muted-foreground">
-                If you need a token for the Router please take a look{" "}
+                If you need a token for the Router please take a look{' '}
                 <Link
-                  href={docsBaseURL + "/cli/router/token/create"}
+                  href={docsBaseURL + '/cli/router/token/create'}
                   className="text-primary"
                   target="_blank"
                   rel="noreferrer"
@@ -848,109 +720,77 @@ const APIKeysPage: NextPageWithLayout = () => {
                   <TableHead>Group</TableHead>
                   <TableHead>Created At</TableHead>
                   <TableHead>Last Used At</TableHead>
-                  {canManageAPIKeys && (
-                    <TableHead className="flex items-center justify-center" />
-                  )}
+                  {canManageAPIKeys && <TableHead className="flex items-center justify-center" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {apiKeys.map(
-                  ({
-                    name,
-                    createdBy,
-                    createdAt,
-                    lastUsedAt,
-                    expiresAt,
-                    group,
-                    external,
-                  }) => {
-                    return (
-                      <TableRow key={name}>
-                        <TableCell className="font-medium space-x-3">
-                          <span>{name}</span>
-                          {external && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className={badgeVariants({ variant: "outline", className: "space-x-1" })}>
-                                  <InfoCircledIcon className="size-3 pointer-events-none" />
-                                  <span className="pointer-events-none">External</span>
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                This API key is managed by an external service and cannot be modified or deleted.
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </TableCell>
-                        <TableCell>{createdBy}</TableCell>
-                        <TableCell>
-                          {expiresAt
-                            ? formatDateTime(new Date(expiresAt))
-                            : "Never"}
-                        </TableCell>
-                        <TableCell
-                          className={
-                            !group?.id ? "text-muted-foreground" : undefined
-                          }
-                        >
-                          {group?.name ?? "-"}
-                        </TableCell>
-                        <TableCell>
-                          {createdAt
-                            ? formatDateTime(new Date(createdAt))
-                            : "Never"}
-                        </TableCell>
-                        <TableCell>
-                          {lastUsedAt
-                            ? formatDateTime(new Date(lastUsedAt))
-                            : "Never"}
-                        </TableCell>
-                        {canManageAPIKeys && !external && (
-                          <TableCell>
-                            <DropdownMenu>
-                              <div className="flex justify-center">
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
-                                    <EllipsisVerticalIcon className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                              </div>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setOpenUpdateDialog(true);
-                                    setSelectedGroup({
-                                      apiKeyName: name,
-                                      groupId: group?.id,
-                                    });
-                                  }}
-                                >
-                                  Update group
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setDeleteApiKeyName(name);
-                                    setOpenDeleteDialog(true);
-                                  }}
-                                >
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
+                {apiKeys.map(({ name, createdBy, createdAt, lastUsedAt, expiresAt, group, external }) => {
+                  return (
+                    <TableRow key={name}>
+                      <TableCell className="space-x-3 font-medium">
+                        <span>{name}</span>
+                        {external && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className={badgeVariants({ variant: 'outline', className: 'space-x-1' })}>
+                                <InfoCircledIcon className="pointer-events-none size-3" />
+                                <span className="pointer-events-none">External</span>
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              This API key is managed by an external service and cannot be modified or deleted.
+                            </TooltipContent>
+                          </Tooltip>
                         )}
-                      </TableRow>
-                    );
-                  },
-                )}
+                      </TableCell>
+                      <TableCell>{createdBy}</TableCell>
+                      <TableCell>{expiresAt ? formatDateTime(new Date(expiresAt)) : 'Never'}</TableCell>
+                      <TableCell className={!group?.id ? 'text-muted-foreground' : undefined}>
+                        {group?.name ?? '-'}
+                      </TableCell>
+                      <TableCell>{createdAt ? formatDateTime(new Date(createdAt)) : 'Never'}</TableCell>
+                      <TableCell>{lastUsedAt ? formatDateTime(new Date(lastUsedAt)) : 'Never'}</TableCell>
+                      {canManageAPIKeys && !external && (
+                        <TableCell>
+                          <DropdownMenu>
+                            <div className="flex justify-center">
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <EllipsisVerticalIcon className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                            </div>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setOpenUpdateDialog(true);
+                                  setSelectedGroup({
+                                    apiKeyName: name,
+                                    groupId: group?.id,
+                                  });
+                                }}
+                              >
+                                Update group
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setDeleteApiKeyName(name);
+                                  setOpenDeleteDialog(true);
+                                }}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableWrapper>
-          <Pagination
-            limit={limit}
-            noOfPages={noOfPages}
-            pageNumber={pageNumber}
-          />
+          <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
         </>
       )}
     </div>
@@ -958,11 +798,7 @@ const APIKeysPage: NextPageWithLayout = () => {
 };
 
 APIKeysPage.getLayout = (page) => {
-  return getDashboardLayout(
-    page,
-    "API Keys",
-    "Manage all the API keys of your organization",
-  );
+  return getDashboardLayout(page, 'API Keys', 'Manage all the API keys of your organization');
 };
 
 export default APIKeysPage;
