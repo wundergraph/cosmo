@@ -108,7 +108,7 @@ export default (opts: BaseCommandOptions) => {
     'This flag will disable the validation for whether all nodes of the federated graph are resolvable. Do NOT use unless troubleshooting.',
   );
   command.option(
-    '-l, --limit [number]',
+    '-l, --limit <number>',
     'The maximum number of composition errors, warnings, and deployment errors to display.',
     '50',
   );
@@ -137,7 +137,7 @@ export default (opts: BaseCommandOptions) => {
     });
 
     const limit = Number(options.limit);
-    if (Number.isNaN(limit) || limit <= 0 || limit > limitMaxValue) {
+    if (!Number.isInteger(limit) || limit <= 0 || limit > limitMaxValue) {
       program.error(
         pc.red(`The limit must be a valid number between 1 and ${limitMaxValue}. Received: '${options.limit}'`),
       );

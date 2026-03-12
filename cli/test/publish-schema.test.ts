@@ -97,9 +97,6 @@ describe('truncation warning', () => {
   });
 
   afterEach(() => {
-    logSpy.mockRestore();
-    stderrSpy.mockRestore();
-    exitSpy.mockRestore();
     process.exitCode = undefined;
   });
 
