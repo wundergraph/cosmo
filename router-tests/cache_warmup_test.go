@@ -987,7 +987,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 					},
 				}),
 				core.WithConfigVersionHeader(true),
-				core.WithPlanningDurationOverride(func(content string) time.Duration {
+				core.WithPlanningDurationOverride(func(_ string) time.Duration {
 					return 10 * time.Second
 				}),
 			},
@@ -1139,7 +1139,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 					Enabled:          true,
 					InMemoryFallback: true,
 				}),
-				core.WithPlanningDurationOverride(func(content string) time.Duration {
+				core.WithPlanningDurationOverride(func(_ string) time.Duration {
 					return 10 * time.Second
 				}),
 			},
@@ -1198,7 +1198,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 						},
 					},
 				}),
-				core.WithPlanningDurationOverride(func(content string) time.Duration {
+				core.WithPlanningDurationOverride(func(_ string) time.Duration {
 					return 10 * time.Second
 				}),
 			},
@@ -1257,7 +1257,7 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 						},
 					},
 				}),
-				core.WithPlanningDurationOverride(func(content string) time.Duration {
+				core.WithPlanningDurationOverride(func(_ string) time.Duration {
 					return 10 * time.Second
 				}),
 			},
