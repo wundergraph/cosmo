@@ -166,7 +166,7 @@ type Product @key(fields: "id") {
 Maps to:
 
 ```protobuf
-rpc RequireProductStockHealthScoreById(RequireProductStockHealthScoreByIdRequest) 
+rpc RequireProductStockHealthScoreById(RequireProductStockHealthScoreByIdRequest)
     returns (RequireProductStockHealthScoreByIdResponse) {}
 
 message RequireProductStockHealthScoreByIdRequest {
@@ -198,6 +198,7 @@ message RequireProductStockHealthScoreByIdFields {
 **Naming Convention**: `Require{EntityType}{FieldName}By{KeyFields}`
 
 For the example above: `RequireProductStockHealthScoreById`
+
 - Entity type: `Product`
 - Field name: `StockHealthScore`
 - Key fields: `Id` (from the `@key` directive)
@@ -245,7 +246,7 @@ type ActionResult {
 Maps to:
 
 ```protobuf
-rpc RequireProductNameById(RequireProductNameByIdRequest) 
+rpc RequireProductNameById(RequireProductNameByIdRequest)
     returns (RequireProductNameByIdResponse) {}
 
 message RequireProductNameByIdRequest {
@@ -271,17 +272,18 @@ message RequireProductNameByIdFields {
       string status = 1;
       string message = 2;
     }
-    
+
     string description = 1;
     ActionResult review_summary = 2;
   }
-  
+
   string manufacturer_id = 1;
   ProductDetails details = 2;
 }
 ```
 
 **Key Points**:
+
 - The `Fields` message contains only the selected subset from the `@requires` directive, not the full types
 - Nested types are generated as nested proto messages within the `Fields` message
 - Only the selected fields from nested types are included (e.g., `description` and `reviewSummary` from `ProductDetails`, not `id` or `title`)
@@ -381,20 +383,23 @@ If the `@connect__fieldResolver` directive is **not specified** on a field with 
 type User {
   id: ID!
   name: String!
-  posts(limit: Int!): [Post!]!  # No directive: automatically uses "id" as context
+  posts(limit: Int!): [Post!]! # No directive: automatically uses "id" as context
 }
 ```
 
 #### Context Validation Rules
 
 When the `@connect__fieldResolver` directive is specified:
+
 - The `context` parameter is **required** - you must explicitly specify which field(s) to use
 
 When the directive is NOT specified (automatic inference):
+
 - If no `ID` field exists, an error is raised
 - If multiple `ID` fields exist, an error is raised (you must use the directive with explicit context)
 
 In all cases:
+
 - Context fields are converted from camelCase to snake_case following Protocol Buffer naming conventions
 
 ### Field Name Conversion
@@ -421,6 +426,7 @@ message ResolveUserPostContext {
 ```
 
 This conversion applies to:
+
 - Context field names
 - Argument field names
 - Result field names
@@ -517,8 +523,8 @@ Field resolvers can return both scalar and list types:
 ```graphql
 type User {
   id: ID!
-  posts(limit: Int!): [Post!]!  # Returns list
-  activePost: Post               # Returns single item (nullable)
+  posts(limit: Int!): [Post!]! # Returns list
+  activePost: Post # Returns single item (nullable)
 }
 ```
 
@@ -650,11 +656,12 @@ Protographic handles GraphQL list nullability by creating wrapper messages when 
 ### Core Concepts
 
 - **Non-nullable single-level lists**: Use the `repeated` keyword directly
-- **Nullable lists**: Wrapped in `ListOf{Type}` messages 
+- **Nullable lists**: Wrapped in `ListOf{Type}` messages
 - **Nested lists**: Always use wrapper messages with multiple `ListOf` prefixes based on nesting level (e.g., `ListOfListOfString`)
 - **Nullable list items**: Currently ignored (no wrapper generated for item nullability)
 
 ### Non-Nullable Single Lists
+
 Non-nullable lists use `repeated` fields directly:
 
 ```graphql
@@ -758,9 +765,6 @@ message User {
   ListOfListOfString posts = 1;
 }
 ```
-
-
-
 
 ## Field Numbering and Stability
 
@@ -867,14 +871,14 @@ Protographic preserves documentation from GraphQL schemas and converts it to Pro
 
 ### Comment Conversion
 
-| GraphQL Documentation | Protocol Buffer Representation |
-| -------------------- | ------------------------------ |
-| Single-line descriptions (`"description"`) | Single-line comments (`// comment`) |
+| GraphQL Documentation                         | Protocol Buffer Representation        |
+| --------------------------------------------- | ------------------------------------- |
+| Single-line descriptions (`"description"`)    | Single-line comments (`// comment`)   |
 | Multi-line descriptions (`"""description"""`) | Multi-line comments (`/* comment */`) |
-| Field descriptions | Field comments |
-| Type descriptions | Message/enum comments |
-| Enum value descriptions | Enum value comments |
-| Operation descriptions | RPC method comments |
+| Field descriptions                            | Field comments                        |
+| Type descriptions                             | Message/enum comments                 |
+| Enum value descriptions                       | Enum value comments                   |
+| Operation descriptions                        | RPC method comments                   |
 
 ### Comment Preservation
 

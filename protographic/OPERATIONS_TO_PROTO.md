@@ -42,6 +42,7 @@ The operations-to-proto compiler generates Protocol Buffer service definitions d
 ### When to Use Operations-Based Generation
 
 Use operations-based generation when:
+
 - You want to minimize the proto API surface area
 - You have a large GraphQL schema but only use a subset of it
 - You want proto definitions that exactly match your client operations
@@ -57,6 +58,7 @@ Use operations-based generation when:
 All operations must have a name. The operation name becomes the RPC method name in the generated proto.
 
 **✅ Correct: Named operation**
+
 ```graphql
 query GetUser($id: ID!) {
   user(id: $id) {
@@ -66,6 +68,7 @@ query GetUser($id: ID!) {
 ```
 
 **❌ Incorrect: Anonymous operation**
+
 ```graphql
 query {
   user(id: "123") {
@@ -88,6 +91,7 @@ wgc grpc-service generate MyService \
 ```
 
 **Generates:**
+
 - Proto messages only for fields used in operations
 - Request/response messages per operation
 - `service.proto.lock.json` for field number stability
@@ -133,36 +137,36 @@ wgc grpc-service generate [name] [options]
 
 #### Required Arguments
 
-| Argument | Description |
-|----------|-------------|
-| `name` | The name of the proto service (e.g., `UserService`) |
+| Argument | Description                                         |
+| -------- | --------------------------------------------------- |
+| `name`   | The name of the proto service (e.g., `UserService`) |
 
 #### Required Options
 
-| Option | Description |
-|--------|-------------|
+| Option               | Description                     |
+| -------------------- | ------------------------------- |
 | `-i, --input <path>` | Path to the GraphQL schema file |
 
 #### Output Options
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `-o, --output <path>` | `.` | Output directory for generated files |
-| `-p, --package-name <name>` | `service.v1` | Proto package name |
+| Option                      | Default      | Description                          |
+| --------------------------- | ------------ | ------------------------------------ |
+| `-o, --output <path>`       | `.`          | Output directory for generated files |
+| `-p, --package-name <name>` | `service.v1` | Proto package name                   |
 
 #### Operations Mode Options
 
-| Option | Description |
-|--------|-------------|
-| `-w, --with-operations <path>` | Path to directory containing `.graphql` or `.gql` operation files. Subdirectories are traversed recursively. Enables operations-based generation. |
-| `--prefix-operation-type` | Prefix RPC method names with operation type (Query/Mutation/Subscription) |
-| `--custom-scalar-mapping <json>` | Custom scalar type mappings as inline JSON string. Example: `'{"DateTime":"google.protobuf.Timestamp","UUID":"string"}'` |
-| `--custom-scalar-mapping-file <path>` | Path to JSON file containing custom scalar type mappings. Example: `./mappings.json` |
+| Option                                | Description                                                                                                                                       |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-w, --with-operations <path>`        | Path to directory containing `.graphql` or `.gql` operation files. Subdirectories are traversed recursively. Enables operations-based generation. |
+| `--prefix-operation-type`             | Prefix RPC method names with operation type (Query/Mutation/Subscription)                                                                         |
+| `--custom-scalar-mapping <json>`      | Custom scalar type mappings as inline JSON string. Example: `'{"DateTime":"google.protobuf.Timestamp","UUID":"string"}'`                          |
+| `--custom-scalar-mapping-file <path>` | Path to JSON file containing custom scalar type mappings. Example: `./mappings.json`                                                              |
 
 #### Language-Specific Options
 
-| Option | Description |
-|--------|-------------|
+| Option                    | Description                                |
+| ------------------------- | ------------------------------------------ |
 | `-g, --go-package <name>` | Adds `option go_package` to the proto file |
 
 ### Examples
@@ -216,7 +220,6 @@ wgc grpc-service generate UserService \
   --go-package github.com/myorg/myapp/proto/user/v1
 ```
 
-
 ---
 
 ## API Reference
@@ -229,25 +232,25 @@ Compiles GraphQL operations to Protocol Buffer definitions.
 function compileOperationsToProto(
   operationSource: string | DocumentNode,
   schemaOrSDL: GraphQLSchema | string,
-  options?: OperationsToProtoOptions
-): CompileOperationsToProtoResult
+  options?: OperationsToProtoOptions,
+): CompileOperationsToProtoResult;
 ```
 
 #### Parameters
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `operationSource` | `string \| DocumentNode` | GraphQL operations as a string or parsed DocumentNode |
-| `schemaOrSDL` | `GraphQLSchema \| string` | GraphQL schema or SDL string |
-| `options` | `OperationsToProtoOptions` | Optional configuration |
+| Parameter         | Type                       | Description                                           |
+| ----------------- | -------------------------- | ----------------------------------------------------- |
+| `operationSource` | `string \| DocumentNode`   | GraphQL operations as a string or parsed DocumentNode |
+| `schemaOrSDL`     | `GraphQLSchema \| string`  | GraphQL schema or SDL string                          |
+| `options`         | `OperationsToProtoOptions` | Optional configuration                                |
 
 #### Returns
 
 ```typescript
 interface CompileOperationsToProtoResult {
-  proto: string;              // Generated proto text
-  root: protobuf.Root;        // Protobufjs AST root
-  lockData: ProtoLock;        // Lock data for field stability
+  proto: string; // Generated proto text
+  root: protobuf.Root; // Protobufjs AST root
+  lockData: ProtoLock; // Lock data for field stability
 }
 ```
 
@@ -256,9 +259,9 @@ interface CompileOperationsToProtoResult {
 ```typescript
 interface OperationsToProtoOptions {
   // Service Configuration
-  serviceName?: string;           // Default: "DefaultService"
-  packageName?: string;           // Default: "service.v1"
-  
+  serviceName?: string; // Default: "DefaultService"
+  packageName?: string; // Default: "service.v1"
+
   // Language Options
   goPackage?: string;
   javaPackage?: string;
@@ -270,15 +273,15 @@ interface OperationsToProtoOptions {
   phpMetadataNamespace?: string;
   objcClassPrefix?: string;
   swiftPrefix?: string;
-  
+
   // Generation Options
-  includeComments?: boolean;           // Default: true
-  prefixOperationType?: boolean;       // Default: false
-  queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT';  // Optional
-  maxDepth?: number;                   // Default: 50
-  
+  includeComments?: boolean; // Default: true
+  prefixOperationType?: boolean; // Default: false
+  queryIdempotency?: 'NO_SIDE_EFFECTS' | 'DEFAULT'; // Optional
+  maxDepth?: number; // Default: 50
+
   // Field Stability
-  lockData?: ProtoLock;           // Previous lock data
+  lockData?: ProtoLock; // Previous lock data
 }
 ```
 
@@ -296,11 +299,11 @@ const result = compileOperationsToProto(operations, schema, {
   packageName: 'myorg.user.v1',
   goPackage: 'github.com/myorg/myapp/proto/user/v1',
   prefixOperationType: true,
-  queryIdempotency: 'NO_SIDE_EFFECTS',  // All queries are marked as idempotent
+  queryIdempotency: 'NO_SIDE_EFFECTS', // All queries are marked as idempotent
   includeComments: true,
   customScalarMappings: {
-    'DateTime': 'google.protobuf.Timestamp',
-    'UUID': 'string'
+    DateTime: 'google.protobuf.Timestamp',
+    UUID: 'string',
   },
 });
 
@@ -426,9 +429,9 @@ option go_package = "github.com/myorg/myapp/proto/user/v1";
 
 service UserService {
   rpc GetUser(GetUserRequest) returns (GetUserResponse) {}
-  
+
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {}
-  
+
   rpc CreateUser(CreateUserRequest) returns (CreateUserResponse) {}
 }
 
@@ -442,7 +445,7 @@ message GetUserResponse {
     string name = 2;
     google.protobuf.StringValue email = 3;
   }
-  
+
   User user = 1;
 }
 
@@ -539,7 +542,7 @@ query GetUser($id: ID!) {
     id
     name
     email
-    age  # New field
+    age # New field
   }
 }
 ```
@@ -550,20 +553,19 @@ Regenerate - the lock file preserves existing field numbers and assigns the next
 
 ## Advanced Topics
 
-
 ### Custom Scalar Mappings
 
 GraphQL custom scalars can be mapped to proto types using either inline JSON or a separate configuration file.
 
 #### Common Scalar Mappings
 
-| GraphQL Scalar | Recommended Proto Type |
-|----------------|----------------------|
-| `DateTime` | `google.protobuf.Timestamp` |
-| `Date` | `google.protobuf.Timestamp` |
-| `JSON` | `google.protobuf.Struct` |
-| `UUID` | `string` |
-| `BigInt` | `int64` |
+| GraphQL Scalar | Recommended Proto Type      |
+| -------------- | --------------------------- |
+| `DateTime`     | `google.protobuf.Timestamp` |
+| `Date`         | `google.protobuf.Timestamp` |
+| `JSON`         | `google.protobuf.Struct`    |
+| `UUID`         | `string`                    |
+| `BigInt`       | `int64`                     |
 
 #### Using Inline JSON
 
@@ -582,6 +584,7 @@ wgc grpc-service generate UserService \
 Create a JSON file with your scalar mappings:
 
 **scalar-mappings.json:**
+
 ```json
 {
   "DateTime": "google.protobuf.Timestamp",
@@ -611,10 +614,10 @@ When using the API directly, pass the mappings as an object:
 ```typescript
 const result = compileOperationsToProto(operations, schema, {
   customScalarMappings: {
-    'DateTime': 'google.protobuf.Timestamp',
-    'UUID': 'string',
-    'JSON': 'google.protobuf.Struct'
-  }
+    DateTime: 'google.protobuf.Timestamp',
+    UUID: 'string',
+    JSON: 'google.protobuf.Struct',
+  },
 });
 ```
 
@@ -655,11 +658,13 @@ The lock file maintains field number stability across generations.
 #### No Operation Files Found
 
 **Error:**
+
 ```text
 No GraphQL operation files (.graphql, .gql) found in ./operations
 ```
 
 **Solution:**
+
 - Ensure your operation files have `.graphql`, `.gql`, `.graphqls`, or `.gqls` extensions
 - Check the path to your operations directory
 - Verify files contain valid GraphQL operations
@@ -668,6 +673,7 @@ No GraphQL operation files (.graphql, .gql) found in ./operations
 #### Anonymous Operations Not Supported
 
 **Error:**
+
 ```text
 Operations must be named
 ```
@@ -694,11 +700,13 @@ query GetUser {
 #### Field Number Conflicts
 
 **Error:**
+
 ```text
 Field number conflict in message X
 ```
 
 **Solution:**
+
 - Delete the lock file and regenerate (breaking change)
 - Or manually resolve conflicts in the lock file (advanced)
 
