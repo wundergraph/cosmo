@@ -2428,6 +2428,7 @@ export class NormalizationFactory {
           (): FieldWeightConfiguration => ({
             typeName,
             fieldName: data.name,
+            argumentWeights: new Map(),
           }),
         );
         fieldWeight.weight = weightValue;
@@ -2454,12 +2455,10 @@ export class NormalizationFactory {
             (): FieldWeightConfiguration => ({
               typeName,
               fieldName: ivData.fieldName!,
+              argumentWeights: new Map(),
             }),
           );
-          if (!fieldWeight.argumentWeights) {
-            fieldWeight.argumentWeights = {};
-          }
-          fieldWeight.argumentWeights[ivData.name] = weightValue;
+          fieldWeight.argumentWeights.set(ivData.name, weightValue);
         } else {
           const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
           const fieldCoords = `${typeName}.${ivData.name}`;
@@ -2469,6 +2468,7 @@ export class NormalizationFactory {
             (): FieldWeightConfiguration => ({
               typeName,
               fieldName: ivData.name,
+              argumentWeights: new Map(),
             }),
           );
           fieldWeight.weight = weightValue;

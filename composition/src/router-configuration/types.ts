@@ -110,8 +110,8 @@ export type Costs = {
 export type FieldWeightConfiguration = {
   typeName: TypeName;
   fieldName: FieldName;
+  argumentWeights: Map<ArgumentName, number>;
   weight?: number;
-  argumentWeights?: Record<ArgumentName, number>;
 };
 
 export type FieldListSizeConfiguration = {

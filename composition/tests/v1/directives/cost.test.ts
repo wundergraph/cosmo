@@ -359,11 +359,13 @@ describe('@cost directive tests', () => {
         expect(costsA?.fieldWeights.get('User.name')).toEqual({
           typeName: 'User',
           fieldName: 'name',
+          argumentWeights: new Map(),
           weight: 10,
         });
         expect(costsB?.fieldWeights.get('User.name')).toEqual({
           typeName: 'User',
           fieldName: 'name',
+          argumentWeights: new Map(),
           weight: 20,
         });
       });
@@ -444,6 +446,7 @@ describe('@cost directive tests', () => {
       expect(costs.fieldWeights.get('User.id')).toEqual({
         typeName: 'User',
         fieldName: 'id',
+        argumentWeights: new Map(),
         weight: 5,
       });
     });
@@ -486,6 +489,7 @@ describe('@cost directive tests', () => {
       expect(costs.fieldWeights.get('Query.expensiveField')).toEqual({
         typeName: 'Query',
         fieldName: 'expensiveField',
+        argumentWeights: new Map(),
         weight: 10,
       });
     });
@@ -495,7 +499,7 @@ describe('@cost directive tests', () => {
       expect(costs.fieldWeights.get('Query.search')).toEqual({
         typeName: 'Query',
         fieldName: 'search',
-        argumentWeights: { query: 5 },
+        argumentWeights: new Map([['query', 5]]),
       });
     });
 
@@ -504,6 +508,7 @@ describe('@cost directive tests', () => {
       expect(costs.fieldWeights.get('SearchInput.query')).toEqual({
         typeName: 'SearchInput',
         fieldName: 'query',
+        argumentWeights: new Map(),
         weight: 5,
       });
     });
@@ -544,7 +549,7 @@ describe('@cost directive tests', () => {
         typeName: 'Query',
         fieldName: 'search',
         weight: 10,
-        argumentWeights: { query: 3 },
+        argumentWeights: new Map([['query', 3]]),
       });
     });
 
@@ -563,6 +568,7 @@ describe('@cost directive tests', () => {
       expect(costs.fieldWeights.get('User.name')).toEqual({
         typeName: 'User',
         fieldName: 'name',
+        argumentWeights: new Map(),
         weight: 5,
       });
     });
