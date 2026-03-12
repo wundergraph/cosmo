@@ -15,7 +15,7 @@ import {
 import { buildRouterConfig, SubgraphKind } from '@wundergraph/cosmo-shared';
 import { GRPCMapping, ImageReference, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { parse } from 'graphql';
-import type { FieldConfiguration, FederationResult, FederationResultWithContracts } from '@wundergraph/composition';
+import type { FederationResult, FederationResultWithContracts } from '@wundergraph/composition';
 import type { RouterSubgraph } from '@wundergraph/cosmo-shared';
 import type { SubgraphDTO } from '../../types/index.js';
 import { validateRouterCompatibilityVersion } from './composition.js';
