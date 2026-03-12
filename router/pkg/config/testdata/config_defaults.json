@@ -425,6 +425,8 @@
     "WebSocketClientPingTimeout": 30000000000,
     "WebSocketClientFrameTimeout": 100000000,
     "ExecutionPlanCacheSize": 1024,
+    "SlowPlanCacheSize": 100,
+    "SlowPlanCacheThreshold": 5000000000,
     "MinifySubgraphOperations": true,
     "EnablePersistedOperationsCache": true,
     "EnableNormalizationCache": true,

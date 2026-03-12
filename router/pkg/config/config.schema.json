@@ -3325,6 +3325,21 @@
           "default": 1024,
           "description": "The size of the execution plan cache."
         },
+        "slow_plan_cache_size": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 100,
+          "description": "The maximum number of entries in the slow plan cache."
+        },
+        "slow_plan_cache_threshold": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The minimum planning duration for a query plan to be stored in the slow plan cache, protecting it from TinyLFU cache eviction.",
+          "default": "5s",
+          "duration": {
+            "minimum": "1ns"
+          }
+        },
         "operation_hash_cache_size": {
           "type": "integer",
           "default": 2048,
