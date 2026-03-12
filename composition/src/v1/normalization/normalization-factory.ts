@@ -2445,10 +2445,10 @@ export class NormalizationFactory {
             errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
             break;
           }
-          const parentFieldCoord = `${typeName}.${ivData.fieldName}`;
+          const parentFieldCoords = `${typeName}.${ivData.fieldName}`;
           const fieldWeight = getValueOrDefault(
             this.costs.fieldWeights,
-            parentFieldCoord,
+            parentFieldCoords,
             (): FieldWeightConfiguration => ({
               typeName,
               fieldName: ivData.fieldName!,
@@ -2460,10 +2460,10 @@ export class NormalizationFactory {
           fieldWeight.argumentWeights[ivData.name] = weightValue;
         } else {
           const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
-          const fieldCoord = `${typeName}.${ivData.name}`;
+          const fieldCoords = `${typeName}.${ivData.name}`;
           const fieldWeight = getValueOrDefault(
             this.costs.fieldWeights,
-            fieldCoord,
+            fieldCoords,
             (): FieldWeightConfiguration => ({
               typeName,
               fieldName: ivData.name,

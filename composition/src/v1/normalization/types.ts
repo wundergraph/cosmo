@@ -10,7 +10,7 @@ import {
 } from '../../schema-building/types';
 import { type ConstDirectiveNode, type DocumentNode, type InputValueDefinitionNode, type ValueNode } from 'graphql';
 import { type RequiredFieldConfiguration } from '../../router-configuration/types';
-import { type SubgraphName } from '../../types/types';
+import { type DirectiveArgumentCoords, type SubgraphName } from '../../types/types';
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
@@ -70,14 +70,14 @@ export type HandleSemanticNonNullDirectiveParams = {
 
 export type HandleCostDirectiveParams = {
   data: NodeData | SchemaData;
-  directiveCoords: string;
+  directiveCoords: DirectiveArgumentCoords;
   directiveNode: ConstDirectiveNode;
   errorMessages: Array<string>;
 };
 
 export type HandleListSizeDirectiveParams = {
   data: FieldData;
-  directiveCoords: string;
+  directiveCoords: DirectiveArgumentCoords;
   directiveNode: ConstDirectiveNode;
   errorMessages: Array<string>;
 };

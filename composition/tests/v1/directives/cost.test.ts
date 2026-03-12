@@ -424,7 +424,7 @@ describe('@cost directive tests', () => {
     test('that @cost on a field within an interface type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInterfaceField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('is not permitted on fields or arguments of an interface type');
+      expect(errors[0].message).toContain('is not permitted on fields or arguments of an Interface type');
     });
 
     test('that @cost on an argument of an interface field produces an error', () => {
@@ -433,7 +433,7 @@ describe('@cost directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('is not permitted on fields or arguments of an interface type');
+      expect(errors[0].message).toContain('is not permitted on fields or arguments of an Interface type');
     });
 
     test('that @cost on a field of a type implementing an interface succeeds', () => {
