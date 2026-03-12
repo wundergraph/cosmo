@@ -90,7 +90,7 @@ export function deserializeComposedGraphArtifact(
     federatedClientSchema: artifact.federatedClientSchema,
     shouldIncludeClientSchema: artifact.shouldIncludeClientSchema,
     errors: artifact.errors.map((message) => new Error(message)),
-    fieldConfigurations: [],
+    fieldConfigurations: artifact.fieldConfigurations,
     subgraphs: artifact.subgraphs as ComposedSubgraph[],
     warnings: artifact.warnings.map((warning) => deserializeWarning(warning.message, warning.subgraphName)),
   };

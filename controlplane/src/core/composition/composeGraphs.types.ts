@@ -7,7 +7,7 @@
  * classes, and custom Error/Warning instances are reconstructed outside the
  * worker when needed.
  */
-import { CompositionOptions } from '@wundergraph/composition';
+import type { CompositionOptions, FieldConfiguration } from '@wundergraph/composition';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { FederatedGraphDTO, SubgraphDTO } from '../../types/index.js';
 
@@ -37,6 +37,7 @@ export interface SerializedComposedGraphArtifact {
   composedSchema?: string;
   federatedClientSchema?: string;
   shouldIncludeClientSchema: boolean;
+  fieldConfigurations: FieldConfiguration[];
   subgraphs: SerializedComposedSubgraph[];
   routerExecutionConfigJson?: ReturnType<RouterConfig['toJson']>;
 }

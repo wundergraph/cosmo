@@ -250,6 +250,7 @@ function serializeComposedGraphArtifact(
     composedSchema: composedGraph.composedSchema,
     federatedClientSchema: composedGraph.federatedClientSchema,
     shouldIncludeClientSchema: composedGraph.shouldIncludeClientSchema ?? false,
+    fieldConfigurations: composedGraph.fieldConfigurations,
     subgraphs: composedGraph.subgraphs.map((subgraph) => ({
       id: subgraph.id,
       isFeatureSubgraph: subgraph.isFeatureSubgraph,
