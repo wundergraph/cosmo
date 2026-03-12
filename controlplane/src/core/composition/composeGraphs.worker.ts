@@ -306,7 +306,13 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
           );
 
       const includeRouterConfig = !task.skipRouterConfig;
-      const base = serializeComposedGraphArtifact(task, task.federatedGraph, subgraphsToCompose.subgraphs, result, includeRouterConfig);
+      const base = serializeComposedGraphArtifact(
+        task,
+        task.federatedGraph,
+        subgraphsToCompose.subgraphs,
+        result,
+        includeRouterConfig,
+      );
 
       const contracts: SerializedContractCompositionArtifact[] = [];
       if ('federationResultByContractName' in result && result.success) {

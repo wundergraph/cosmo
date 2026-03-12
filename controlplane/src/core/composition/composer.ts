@@ -33,7 +33,11 @@ import { CacheWarmerRepository } from '../repositories/CacheWarmerRepository.js'
 import { NamespaceRepository } from '../repositories/NamespaceRepository.js';
 import { InspectorSchemaChange } from '../services/SchemaUsageTrafficInspector.js';
 import { SchemaCheckChangeAction } from '../../db/models.js';
-import { composeGraphsInWorker, DeserializedComposedGraph, deserializeComposedGraphArtifact } from './composeGraphs.pool.js';
+import {
+  composeGraphsInWorker,
+  DeserializedComposedGraph,
+  deserializeComposedGraphArtifact,
+} from './composeGraphs.pool.js';
 import { getDiffBetweenGraphs, GetDiffBetweenGraphsResult, GetDiffBetweenGraphsSuccess } from './schemaCheck.js';
 
 export function getRouterCompatibilityVersionPath(routerCompatibilityVersion: string): string {
@@ -91,7 +95,6 @@ export interface CompositionSubgraphRecord {
   schemaVersionId: string;
   isFeatureSubgraph: boolean;
 }
-
 
 export interface ComposedFederatedGraph {
   id: string;
@@ -515,12 +518,14 @@ export class Composer {
 
         const { results } = await composeGraphsInWorker({
           federatedGraph: graph,
-          subgraphsToCompose: [{
-            subgraphs: subgraphsToSend,
-            isFeatureFlagComposition: false,
-            featureFlagName: '',
-            featureFlagId: '',
-          }],
+          subgraphsToCompose: [
+            {
+              subgraphs: subgraphsToSend,
+              isFeatureFlagComposition: false,
+              featureFlagName: '',
+              featureFlagId: '',
+            },
+          ],
           tagOptionsByContractName,
           compositionOptions,
           skipRouterConfig: true,
@@ -662,12 +667,14 @@ export class Composer {
 
         const { results } = await composeGraphsInWorker({
           federatedGraph: graph,
-          subgraphsToCompose: [{
-            subgraphs: subgraphsToSend,
-            isFeatureFlagComposition: false,
-            featureFlagName: '',
-            featureFlagId: '',
-          }],
+          subgraphsToCompose: [
+            {
+              subgraphs: subgraphsToSend,
+              isFeatureFlagComposition: false,
+              featureFlagName: '',
+              featureFlagId: '',
+            },
+          ],
           tagOptionsByContractName,
           compositionOptions,
           skipRouterConfig: true,

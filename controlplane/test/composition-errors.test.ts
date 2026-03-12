@@ -140,7 +140,10 @@ describe('Composition error tests', (ctx) => {
       `),
     };
 
-    const result = federateSubgraphs({ subgraphs: [subgraph1, subgraph2], version: LATEST_ROUTER_COMPATIBILITY_VERSION }) as FederationFailure;
+    const result = federateSubgraphs({
+      subgraphs: [subgraph1, subgraph2],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -177,7 +180,10 @@ describe('Composition error tests', (ctx) => {
       `),
     };
 
-    const result = federateSubgraphs({ subgraphs: [subgraph1, subgraph2], version: LATEST_ROUTER_COMPATIBILITY_VERSION }) as FederationFailure;
+    const result = federateSubgraphs({
+      subgraphs: [subgraph1, subgraph2],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -216,7 +222,10 @@ describe('Composition error tests', (ctx) => {
       `),
     };
 
-    const result = federateSubgraphs({ subgraphs: [subgraph1, subgraph2], version: LATEST_ROUTER_COMPATIBILITY_VERSION }) as FederationFailure;
+    const result = federateSubgraphs({
+      subgraphs: [subgraph1, subgraph2],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors[0]).toStrictEqual(
@@ -252,7 +261,10 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = federateSubgraphs({ subgraphs: [subgraph1, subgraph2], version: LATEST_ROUTER_COMPATIBILITY_VERSION }) as FederationFailure;
+    const result = federateSubgraphs({
+      subgraphs: [subgraph1, subgraph2],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationFailure;
 
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
@@ -282,7 +294,10 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = federateSubgraphs({ subgraphs: [subgraph1, subgraph2], version: LATEST_ROUTER_COMPATIBILITY_VERSION }) as FederationFailure;
+    const result = federateSubgraphs({
+      subgraphs: [subgraph1, subgraph2],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationFailure;
 
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
@@ -312,7 +327,10 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = federateSubgraphs({ subgraphs: [subgraph1, subgraph2], version: LATEST_ROUTER_COMPATIBILITY_VERSION }) as FederationFailure;
+    const result = federateSubgraphs({
+      subgraphs: [subgraph1, subgraph2],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors?.[0]).toStrictEqual(noQueryRootTypeError());
@@ -343,7 +361,10 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = federateSubgraphs({ subgraphs: [subgraph1, subgraph2], version: LATEST_ROUTER_COMPATIBILITY_VERSION }) as FederationFailure;
+    const result = federateSubgraphs({
+      subgraphs: [subgraph1, subgraph2],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors).toStrictEqual([
@@ -393,7 +414,10 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = federateSubgraphs({ subgraphs: [subgraph1, subgraph2], version: LATEST_ROUTER_COMPATIBILITY_VERSION }) as FederationFailure;
+    const result = federateSubgraphs({
+      subgraphs: [subgraph1, subgraph2],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationFailure;
 
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
@@ -439,7 +463,10 @@ describe('Composition error tests', (ctx) => {
       url: '',
     };
 
-    const result = federateSubgraphs({ subgraphs: [subgraph1, subgraph2], version: LATEST_ROUTER_COMPATIBILITY_VERSION }) as FederationFailure;
+    const result = federateSubgraphs({
+      subgraphs: [subgraph1, subgraph2],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationFailure;
     expect(result.success).toBe(false);
     expect(result.errors).toHaveLength(1);
     expect(result.errors?.[0].message).toBe(
@@ -477,7 +504,10 @@ describe('Composition error tests', (ctx) => {
       name: 'subgraph2',
     };
 
-    const result = federateSubgraphs({ subgraphs: [subgraph1, subgraph2], version: LATEST_ROUTER_COMPATIBILITY_VERSION }) as FederationFailure;
+    const result = federateSubgraphs({
+      subgraphs: [subgraph1, subgraph2],
+      version: LATEST_ROUTER_COMPATIBILITY_VERSION,
+    }) as FederationFailure;
     expect(result.success).toBe(false);
     expect(result.errors[0]).toStrictEqual(
       invalidRequiredInputValueError(

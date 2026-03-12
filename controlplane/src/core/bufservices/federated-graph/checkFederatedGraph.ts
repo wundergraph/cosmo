@@ -109,12 +109,14 @@ export function checkFederatedGraph(
 
     const { results } = await composeGraphsInWorker({
       federatedGraph,
-      subgraphsToCompose: [{
-        subgraphs: subgraphsUsedForComposition,
-        isFeatureFlagComposition: false,
-        featureFlagName: '',
-        featureFlagId: '',
-      }],
+      subgraphsToCompose: [
+        {
+          subgraphs: subgraphsUsedForComposition,
+          isFeatureFlagComposition: false,
+          featureFlagName: '',
+          featureFlagId: '',
+        },
+      ],
       tagOptionsByContractName: [],
       compositionOptions: {
         disableResolvabilityValidation: req.disableResolvabilityValidation,
