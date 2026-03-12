@@ -227,7 +227,7 @@ func (c *Cache[V]) Close() {
 		close(c.stop)
 		<-c.done
 
-		// This downside is also there in ristretto (if set is called after)
+		// This downside is also there in ristretto (if set is called concurrently)
 		// it is even documented in the ristretto code as a comment
 		close(c.writeCh)
 
