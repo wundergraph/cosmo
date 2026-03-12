@@ -190,7 +190,7 @@ function serializeComposedGraphArtifact(
   const federatedClientSchema = result.success
     ? printSchemaWithDirectives(result.federatedGraphClientSchema)
     : undefined;
-  const shouldIncludeClientSchema = result.success ? result.shouldIncludeClientSchema ?? false : false;
+  const shouldIncludeClientSchema = result.success ? (result.shouldIncludeClientSchema ?? false) : false;
   const fieldConfigurations = result.success ? result.fieldConfigurations : [];
 
   let routerExecutionConfigJson: ReturnType<RouterConfig['toJson']> | undefined;
