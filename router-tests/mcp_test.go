@@ -215,7 +215,7 @@ func TestMCP(t *testing.T) {
 				})
 			})
 
-			t.Run("Tool name collision with built-in tool uses prefixed name when OmitToolNamePrefix is enabled", func(t *testing.T) {
+			t.Run("Tool name collision with built-in tool skips colliding operation when OmitToolNamePrefix is enabled", func(t *testing.T) {
 				testenv.Run(t, &testenv.Config{
 					MCPOperationsPath: "testdata/mcp_operations_collision",
 					MCP: config.MCPConfiguration{
@@ -234,8 +234,8 @@ func TestMCP(t *testing.T) {
 						toolNames[i] = tool.Name
 					}
 
-					assert.Contains(t, toolNames, "get_schema")                   // built-in tool (ExposeSchema=true)
-					assert.Contains(t, toolNames, "execute_operation_get_schema") // collision uses prefix
+					assert.Contains(t, toolNames, "get_schema")                      // built-in tool (ExposeSchema=true)
+					assert.NotContains(t, toolNames, "execute_operation_get_schema") // colliding operation is skipped, not prefixed
 				})
 			})
 
