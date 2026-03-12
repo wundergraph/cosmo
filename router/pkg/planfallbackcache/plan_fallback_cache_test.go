@@ -1,4 +1,4 @@
-package core
+package planfallbackcache
 
 import (
 	"testing"
@@ -7,14 +7,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestExpensivePlanCache_GetSet(t *testing.T) {
+type testPlan struct {
+	content string
+}
+
+func TestCache_GetSet(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10, 0)
+	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
-	plan1 := &planWithMetaData{content: "query { a }"}
-	plan2 := &planWithMetaData{content: "query { b }"}
+	plan1 := &testPlan{content: "query { a }"}
+	plan2 := &testPlan{content: "query { b }"}
 
 	// Miss
 	_, ok := c.Get(1)
@@ -40,18 +44,18 @@ func TestExpensivePlanCache_GetSet(t *testing.T) {
 	require.Equal(t, plan1, got)
 }
 
-func TestExpensivePlanCache_BoundedSize(t *testing.T) {
+func TestCache_BoundedSize(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(3, 0)
+	c, err := New[*testPlan](3, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
-	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
-	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
-	c.Set(3, &planWithMetaData{content: "q3"}, 30*time.Millisecond)
+	c.Set(1, &testPlan{content: "q1"}, 10*time.Millisecond)
+	c.Set(2, &testPlan{content: "q2"}, 20*time.Millisecond)
+	c.Set(3, &testPlan{content: "q3"}, 30*time.Millisecond)
 
 	// Cache is full (3/3). Adding a 4th with higher duration should evict the shortest (key=1, 10ms)
-	c.Set(4, &planWithMetaData{content: "q4"}, 25*time.Millisecond)
+	c.Set(4, &testPlan{content: "q4"}, 25*time.Millisecond)
 	c.Wait()
 
 	// Key 1 should be evicted (it had the shortest duration: 10ms)
@@ -67,18 +71,18 @@ func TestExpensivePlanCache_BoundedSize(t *testing.T) {
 	require.True(t, ok)
 }
 
-func TestExpensivePlanCache_BoundedSize_SkipsCheaper(t *testing.T) {
+func TestCache_BoundedSize_SkipsCheaper(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(3, 0)
+	c, err := New[*testPlan](3, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
-	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Second)
-	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Second)
-	c.Set(3, &planWithMetaData{content: "q3"}, 30*time.Second)
+	c.Set(1, &testPlan{content: "q1"}, 10*time.Second)
+	c.Set(2, &testPlan{content: "q2"}, 20*time.Second)
+	c.Set(3, &testPlan{content: "q3"}, 30*time.Second)
 
 	// Try to add a cheaper entry (5s < 10s minimum) — should be rejected
-	c.Set(4, &planWithMetaData{content: "q4"}, 5*time.Second)
+	c.Set(4, &testPlan{content: "q4"}, 5*time.Second)
 	c.Wait()
 
 	_, ok := c.Get(4)
@@ -93,14 +97,14 @@ func TestExpensivePlanCache_BoundedSize_SkipsCheaper(t *testing.T) {
 	require.True(t, ok)
 }
 
-func TestExpensivePlanCache_UpdateExisting(t *testing.T) {
+func TestCache_UpdateExisting(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(2, 0)
+	c, err := New[*testPlan](2, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
-	plan1 := &planWithMetaData{content: "q1"}
-	plan1Updated := &planWithMetaData{content: "q1-updated"}
+	plan1 := &testPlan{content: "q1"}
+	plan1Updated := &testPlan{content: "q1-updated"}
 
 	c.Set(1, plan1, 10*time.Millisecond)
 	c.Set(1, plan1Updated, 50*time.Millisecond)
@@ -111,7 +115,7 @@ func TestExpensivePlanCache_UpdateExisting(t *testing.T) {
 	require.Equal(t, "q1-updated", got.content)
 
 	// Updating an existing key should not increase the count
-	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
+	c.Set(2, &testPlan{content: "q2"}, 20*time.Millisecond)
 	c.Wait()
 	_, ok = c.Get(1)
 	require.True(t, ok, "key 1 should still exist after adding key 2 (capacity is 2)")
@@ -119,19 +123,19 @@ func TestExpensivePlanCache_UpdateExisting(t *testing.T) {
 	require.True(t, ok)
 }
 
-func TestExpensivePlanCache_IterValues(t *testing.T) {
+func TestCache_IterValues(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10, 0)
+	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
-	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
-	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
-	c.Set(3, &planWithMetaData{content: "q3"}, 30*time.Millisecond)
+	c.Set(1, &testPlan{content: "q1"}, 10*time.Millisecond)
+	c.Set(2, &testPlan{content: "q2"}, 20*time.Millisecond)
+	c.Set(3, &testPlan{content: "q3"}, 30*time.Millisecond)
 	c.Wait()
 
 	var contents []string
-	c.IterValues(func(v *planWithMetaData) bool {
+	c.IterValues(func(v *testPlan) bool {
 		contents = append(contents, v.content)
 		return false
 	})
@@ -139,30 +143,30 @@ func TestExpensivePlanCache_IterValues(t *testing.T) {
 	require.ElementsMatch(t, []string{"q1", "q2", "q3"}, contents)
 }
 
-func TestExpensivePlanCache_IterValues_EarlyStop(t *testing.T) {
+func TestCache_IterValues_EarlyStop(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10, 0)
+	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
-	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
-	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
-	c.Set(3, &planWithMetaData{content: "q3"}, 30*time.Millisecond)
+	c.Set(1, &testPlan{content: "q1"}, 10*time.Millisecond)
+	c.Set(2, &testPlan{content: "q2"}, 20*time.Millisecond)
+	c.Set(3, &testPlan{content: "q3"}, 30*time.Millisecond)
 	c.Wait()
 
 	count := 0
-	c.IterValues(func(_ *planWithMetaData) bool {
+	c.IterValues(func(_ *testPlan) bool {
 		count++
 		return true // stop after first
 	})
 	require.Equal(t, 1, count)
 }
 
-func TestExpensivePlanCache_Close(t *testing.T) {
+func TestCache_Close(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10, 0)
+	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
-	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
+	c.Set(1, &testPlan{content: "q1"}, 10*time.Millisecond)
 
 	c.Close()
 
@@ -171,61 +175,61 @@ func TestExpensivePlanCache_Close(t *testing.T) {
 	require.False(t, ok)
 }
 
-func TestExpensivePlanCache_SetAfterClose(t *testing.T) {
+func TestCache_SetAfterClose(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10, 0)
+	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
 	c.Close()
 
 	// Set after Close should not panic — buffer drops silently
 	require.NotPanics(t, func() {
-		c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
+		c.Set(1, &testPlan{content: "q1"}, 10*time.Millisecond)
 	})
 
 	_, ok := c.Get(1)
 	require.False(t, ok)
 }
 
-func TestExpensivePlanCache_IterValuesEmpty(t *testing.T) {
+func TestCache_IterValuesEmpty(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10, 0)
+	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
 	count := 0
-	c.IterValues(func(_ *planWithMetaData) bool {
+	c.IterValues(func(_ *testPlan) bool {
 		count++
 		return false
 	})
 	require.Equal(t, 0, count)
 }
 
-func TestExpensivePlanCache_IterValuesAfterClose(t *testing.T) {
+func TestCache_IterValuesAfterClose(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10, 0)
+	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
-	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
+	c.Set(1, &testPlan{content: "q1"}, 10*time.Millisecond)
 	c.Close()
 
 	count := 0
-	c.IterValues(func(_ *planWithMetaData) bool {
+	c.IterValues(func(_ *testPlan) bool {
 		count++
 		return false
 	})
 	require.Equal(t, 0, count)
 }
 
-func TestExpensivePlanCache_EqualDurationNotEvicted(t *testing.T) {
+func TestCache_EqualDurationNotEvicted(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(2, 0)
+	c, err := New[*testPlan](2, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
-	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
-	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
+	c.Set(1, &testPlan{content: "q1"}, 10*time.Millisecond)
+	c.Set(2, &testPlan{content: "q2"}, 20*time.Millisecond)
 
 	// Same duration as minimum (10ms) — should NOT evict (requires strictly greater)
-	c.Set(3, &planWithMetaData{content: "q3"}, 10*time.Millisecond)
+	c.Set(3, &testPlan{content: "q3"}, 10*time.Millisecond)
 	c.Wait()
 
 	_, ok := c.Get(3)
@@ -236,20 +240,20 @@ func TestExpensivePlanCache_EqualDurationNotEvicted(t *testing.T) {
 	require.True(t, ok)
 }
 
-func TestExpensivePlanCache_MaxSizeOne(t *testing.T) {
+func TestCache_MaxSizeOne(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(1, 0)
+	c, err := New[*testPlan](1, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
-	c.Set(1, &planWithMetaData{content: "q1"}, 10*time.Millisecond)
+	c.Set(1, &testPlan{content: "q1"}, 10*time.Millisecond)
 	c.Wait()
 	got, ok := c.Get(1)
 	require.True(t, ok)
 	require.Equal(t, "q1", got.content)
 
 	// Adding a more expensive entry should evict the only entry
-	c.Set(2, &planWithMetaData{content: "q2"}, 20*time.Millisecond)
+	c.Set(2, &testPlan{content: "q2"}, 20*time.Millisecond)
 	c.Wait()
 	_, ok = c.Get(1)
 	require.False(t, ok)
@@ -258,7 +262,7 @@ func TestExpensivePlanCache_MaxSizeOne(t *testing.T) {
 	require.Equal(t, "q2", got.content)
 
 	// Adding a cheaper entry should be rejected
-	c.Set(3, &planWithMetaData{content: "q3"}, 5*time.Millisecond)
+	c.Set(3, &testPlan{content: "q3"}, 5*time.Millisecond)
 	c.Wait()
 	_, ok = c.Get(3)
 	require.False(t, ok)
@@ -266,9 +270,9 @@ func TestExpensivePlanCache_MaxSizeOne(t *testing.T) {
 	require.True(t, ok)
 }
 
-func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
+func TestCache_ConcurrentAccess(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(100, 0)
+	c, err := New[*testPlan](100, 0)
 	require.NoError(t, err)
 	defer c.Close()
 	done := make(chan struct{})
@@ -279,7 +283,7 @@ func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
 			defer func() { done <- struct{}{} }()
 			for j := 0; j < 100; j++ {
 				key := uint64(id*100 + j) //nolint:gosec // test code, no overflow risk
-				c.Set(key, &planWithMetaData{content: "q"}, time.Duration(j)*time.Millisecond)
+				c.Set(key, &testPlan{content: "q"}, time.Duration(j)*time.Millisecond)
 			}
 		}(i)
 	}
@@ -298,7 +302,7 @@ func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		go func() {
 			defer func() { done <- struct{}{} }()
-			c.IterValues(func(_ *planWithMetaData) bool {
+			c.IterValues(func(_ *testPlan) bool {
 				return false
 			})
 		}()
@@ -310,35 +314,35 @@ func TestExpensivePlanCache_ConcurrentAccess(t *testing.T) {
 	}
 }
 
-func TestExpensivePlanCache_InvalidSize(t *testing.T) {
+func TestCache_InvalidSize(t *testing.T) {
 	t.Parallel()
-	_, err := newExpensivePlanCache(0, 0)
+	_, err := New[*testPlan](0, 0)
 	require.Error(t, err)
 
-	_, err = newExpensivePlanCache(-1, 0)
+	_, err = New[*testPlan](-1, 0)
 	require.Error(t, err)
 }
 
-func TestExpensivePlanCache_ThresholdRejectsBelow(t *testing.T) {
+func TestCache_ThresholdRejectsBelow(t *testing.T) {
 	t.Parallel()
-	c, err := newExpensivePlanCache(10, 100*time.Millisecond)
+	c, err := New[*testPlan](10, 100*time.Millisecond)
 	require.NoError(t, err)
 	defer c.Close()
 
 	// Below threshold — should be rejected
-	c.Set(1, &planWithMetaData{content: "q1"}, 50*time.Millisecond)
+	c.Set(1, &testPlan{content: "q1"}, 50*time.Millisecond)
 	c.Wait()
 	_, ok := c.Get(1)
 	require.False(t, ok, "entry below threshold should be rejected")
 
 	// At threshold — should be accepted
-	c.Set(2, &planWithMetaData{content: "q2"}, 100*time.Millisecond)
+	c.Set(2, &testPlan{content: "q2"}, 100*time.Millisecond)
 	c.Wait()
 	_, ok = c.Get(2)
 	require.True(t, ok, "entry at threshold should be accepted")
 
 	// Above threshold — should be accepted
-	c.Set(3, &planWithMetaData{content: "q3"}, 200*time.Millisecond)
+	c.Set(3, &testPlan{content: "q3"}, 200*time.Millisecond)
 	c.Wait()
 	_, ok = c.Get(3)
 	require.True(t, ok, "entry above threshold should be accepted")

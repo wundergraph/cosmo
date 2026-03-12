@@ -585,10 +585,10 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 		}
 		if srv.cacheWarmup != nil && srv.cacheWarmup.Enabled && srv.cacheWarmup.InMemoryFallback {
 			planCacheConfig.OnEvict = func(item *ristretto.Item[*planWithMetaData]) {
-				if s.operationPlanner == nil || s.operationPlanner.expensiveCache == nil {
+				if s.operationPlanner == nil || s.operationPlanner.fallbackCache == nil {
 					return
 				}
-				s.operationPlanner.expensiveCache.Set(item.Key, item.Value, item.Value.planningDuration)
+				s.operationPlanner.fallbackCache.Set(item.Key, item.Value, item.Value.planningDuration)
 			}
 		}
 		s.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
@@ -1347,8 +1347,8 @@ func (s *graphServer) buildGraphMux(
 		executor,
 		gm.planCache,
 		opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled(),
-		int(s.engineExecutionConfiguration.ExpensiveQueryCacheSize),
-		s.engineExecutionConfiguration.ExpensiveQueryThreshold,
+		int(s.engineExecutionConfiguration.PlanFallbackCacheSize),
+		s.engineExecutionConfiguration.PlanFallbackThreshold,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create operation planner: %w", err)
@@ -1391,9 +1391,6 @@ func (s *graphServer) buildGraphMux(
 				otel.WgOperationType.String(item.OperationType),
 				otel.WgEnginePlanCacheHit.Bool(false),
 			}
-			if operationPlanner.useFallback {
-				attrs = append(attrs, otel.WgEngineExpensivePlanCacheHit.Bool(false))
-			}
 			gm.metricStore.MeasureOperationPlanningTime(ctx,
 				item.PlanningTime,
 				nil,
@@ -1417,7 +1414,7 @@ func (s *graphServer) buildGraphMux(
 			// We first utilize the existing plan cache (if it was already set, i.e., not on the first start) to create a list of queries
 			// and then reset the plan cache to the new plan cache for this start afterwards.
 			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
-			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, operationPlanner.expensiveCache)
+			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, operationPlanner.fallbackCache)
 		case s.cacheWarmup.Source.CdnSource.Enabled:
 			if s.graphApiToken == "" {
 				return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
@@ -1427,7 +1424,7 @@ func (s *graphServer) buildGraphMux(
 			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
 			if s.cacheWarmup.InMemoryFallback {
 				warmupConfig.FallbackSource = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
-				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, operationPlanner.expensiveCache)
+				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, operationPlanner.fallbackCache)
 			}
 			cdnSource, err := NewCDNSource(s.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {

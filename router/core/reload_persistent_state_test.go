@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/planfallbackcache"
 	"go.uber.org/zap"
 )
 
@@ -47,7 +48,7 @@ func TestInMemoryPlanCacheFallback_UpdateInMemoryFallbackCacheForConfigChanges(t
 	t.Run("update when already enabled keeps existing data", func(t *testing.T) {
 		t.Parallel()
 		existing := make(map[string]any)
-		existing["test"] = (*expensivePlanCache)(nil)
+		existing["test"] = (*planfallbackcache.Cache[*planWithMetaData])(nil)
 
 		cache := &InMemoryPlanCacheFallback{
 			queriesForFeatureFlag: existing,
@@ -138,17 +139,17 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 		require.Equal(t, expectedOps, result)
 	})
 
-	t.Run("returns operations from live expensive cache reference", func(t *testing.T) {
+	t.Run("returns operations from live fallback cache reference", func(t *testing.T) {
 		t.Parallel()
 
-		expCache, err := newExpensivePlanCache(100, 0)
+		fallbackCache, err := planfallbackcache.New[*planWithMetaData](100, 0)
 		require.NoError(t, err)
-		expCache.Set(1, &planWithMetaData{content: "query { fromExpensive }"}, 5*1e9)
-		expCache.Wait()
+		fallbackCache.Set(1, &planWithMetaData{content: "query { fromFallback }"}, 5*1e9)
+		fallbackCache.Wait()
 
 		cache := &InMemoryPlanCacheFallback{
 			queriesForFeatureFlag: map[string]any{
-				"test-ff": expCache,
+				"test-ff": fallbackCache,
 			},
 		}
 
@@ -156,7 +157,7 @@ func TestInMemoryPlanCacheFallback_GetPlanCacheForFF(t *testing.T) {
 
 		require.NotNil(t, result)
 		require.Len(t, result, 1)
-		require.Equal(t, "query { fromExpensive }", result[0].Request.Query)
+		require.Equal(t, "query { fromFallback }", result[0].Request.Query)
 	})
 
 	t.Run("returns nil for non-existent feature flag", func(t *testing.T) {
@@ -188,9 +189,9 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
 			queriesForFeatureFlag: map[string]any{
-				"ff1": (*expensivePlanCache)(nil),
-				"ff2": (*expensivePlanCache)(nil),
-				"ff3": (*expensivePlanCache)(nil),
+				"ff1": (*planfallbackcache.Cache[*planWithMetaData])(nil),
+				"ff2": (*planfallbackcache.Cache[*planWithMetaData])(nil),
+				"ff3": (*planfallbackcache.Cache[*planWithMetaData])(nil),
 			},
 		}
 
@@ -215,8 +216,8 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
 			queriesForFeatureFlag: map[string]any{
-				"":    (*expensivePlanCache)(nil),
-				"ff1": (*expensivePlanCache)(nil),
+				"":    (*planfallbackcache.Cache[*planWithMetaData])(nil),
+				"ff1": (*planfallbackcache.Cache[*planWithMetaData])(nil),
 			},
 		}
 
@@ -255,12 +256,12 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 		t.Parallel()
 		cache := &InMemoryPlanCacheFallback{
 			queriesForFeatureFlag: map[string]any{
-				"":    (*expensivePlanCache)(nil), // base should be kept
-				"ff1": (*expensivePlanCache)(nil),
-				"ff2": (*expensivePlanCache)(nil),
-				"ff3": (*expensivePlanCache)(nil),
-				"ff4": (*expensivePlanCache)(nil),
-				"ff5": (*expensivePlanCache)(nil),
+				"":    (*planfallbackcache.Cache[*planWithMetaData])(nil), // base should be kept
+				"ff1": (*planfallbackcache.Cache[*planWithMetaData])(nil),
+				"ff2": (*planfallbackcache.Cache[*planWithMetaData])(nil),
+				"ff3": (*planfallbackcache.Cache[*planWithMetaData])(nil),
+				"ff4": (*planfallbackcache.Cache[*planWithMetaData])(nil),
+				"ff5": (*planfallbackcache.Cache[*planWithMetaData])(nil),
 			},
 		}
 
@@ -280,26 +281,26 @@ func TestInMemoryPlanCacheFallback_CleanupUnusedFeatureFlags(t *testing.T) {
 
 func TestInMemoryPlanCacheFallback_ProcessOnConfigChangeRestart(t *testing.T) {
 	t.Parallel()
-	t.Run("extracts expensive cache entries to operations", func(t *testing.T) {
+	t.Run("extracts fallback cache entries to operations", func(t *testing.T) {
 		t.Parallel()
 
 		query1 := "query { test1 }"
 		query2 := "query { test2 }"
 
-		expCache1, err := newExpensivePlanCache(100, 0)
+		fallbackCache1, err := planfallbackcache.New[*planWithMetaData](100, 0)
 		require.NoError(t, err)
-		expCache2, err := newExpensivePlanCache(100, 0)
+		fallbackCache2, err := planfallbackcache.New[*planWithMetaData](100, 0)
 		require.NoError(t, err)
 
-		expCache1.Set(1, &planWithMetaData{content: query1}, 5*1e9)
-		expCache1.Wait()
-		expCache2.Set(2, &planWithMetaData{content: query2}, 5*1e9)
-		expCache2.Wait()
+		fallbackCache1.Set(1, &planWithMetaData{content: query1}, 5*1e9)
+		fallbackCache1.Wait()
+		fallbackCache2.Set(2, &planWithMetaData{content: query2}, 5*1e9)
+		fallbackCache2.Wait()
 
 		cache := &InMemoryPlanCacheFallback{
 			queriesForFeatureFlag: map[string]any{
-				"ff1": expCache1,
-				"ff2": expCache2,
+				"ff1": fallbackCache1,
+				"ff2": fallbackCache2,
 			},
 		}
 

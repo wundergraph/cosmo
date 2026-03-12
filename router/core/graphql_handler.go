@@ -34,7 +34,6 @@ var (
 
 const (
 	ExecutionPlanCacheHeader          = "X-WG-Execution-Plan-Cache"
-	ExpensivePlanCacheHeader          = "X-WG-Expensive-Plan-Cache"
 	PersistedOperationCacheHeader     = "X-WG-Persisted-Operation-Cache"
 	NormalizationCacheHeader          = "X-WG-Normalization-Cache"
 	VariablesNormalizationCacheHeader = "X-WG-Variables-Normalization-Cache"
@@ -520,13 +519,6 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 			w.Header().Set(ExecutionPlanCacheHeader, "HIT")
 		} else {
 			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
-		}
-		if opCtx.expensiveCacheEnabled {
-			if opCtx.expensivePlanCacheHit {
-				w.Header().Set(ExpensivePlanCacheHeader, "HIT")
-			} else {
-				w.Header().Set(ExpensivePlanCacheHeader, "MISS")
-			}
 		}
 	}
 }

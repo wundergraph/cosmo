@@ -7,6 +7,7 @@ import (
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
+	"github.com/wundergraph/cosmo/router/pkg/planfallbackcache"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -29,7 +30,7 @@ type planWithMetaData struct {
 type OperationPlanner struct {
 	sf             singleflight.Group
 	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
-	expensiveCache *expensivePlanCache
+	fallbackCache  *planfallbackcache.Cache[*planWithMetaData]
 	executor       *Executor
 	trackUsageInfo bool
 	useFallback    bool
@@ -55,7 +56,7 @@ type ExecutionPlanCache[K any, V any] interface {
 	Close()
 }
 
-func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], inMemoryPlanCacheFallback bool, expensiveCacheSize int, threshold time.Duration) (*OperationPlanner, error) {
+func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], inMemoryPlanCacheFallback bool, fallbackCacheSize int, threshold time.Duration) (*OperationPlanner, error) {
 	p := &OperationPlanner{
 		logger:         logger,
 		planCache:      planCache,
@@ -66,7 +67,7 @@ func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache Execu
 
 	if inMemoryPlanCacheFallback {
 		var err error
-		p.expensiveCache, err = newExpensivePlanCache(expensiveCacheSize, threshold)
+		p.fallbackCache, err = planfallbackcache.New[*planWithMetaData](fallbackCacheSize, threshold)
 		if err != nil {
 			return nil, err
 		}
@@ -75,12 +76,12 @@ func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache Execu
 	return p, nil
 }
 
-// Close releases expensive cache resources.
+// Close releases fallback cache resources.
 func (p *OperationPlanner) Close() {
 	if p == nil || !p.useFallback {
 		return
 	}
-	p.expensiveCache.Close()
+	p.fallbackCache.Close()
 }
 
 // planOperation performs the core planning work: parse, plan, and postprocess.
@@ -149,7 +150,6 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 	// if we have tracing enabled or want to include a query plan in the response we always prepare a new plan
 	// this is because in case of tracing, we're writing trace data to the plan
 	// in case of including the query plan, we don't want to cache this additional overhead
-	opContext.expensiveCacheEnabled = p.useFallback
 
 	skipCache := options.TraceOptions.Enable || options.ExecutionOptions.IncludeQueryPlanInResponse
 
@@ -178,10 +178,10 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		opContext.preparedPlan = cachedPlan
 		opContext.planCacheHit = true
 	} else if p.useFallback {
-		if cachedPlan, ok = p.expensiveCache.Get(operationID); ok {
-			// found in the expensive query cache — re-use and re-insert into main cache
+		if cachedPlan, ok = p.fallbackCache.Get(operationID); ok {
+			// found in the plan fallback cache — re-use and re-insert into main cache
 			opContext.preparedPlan = cachedPlan
-			opContext.expensivePlanCacheHit = true
+			opContext.planCacheHit = true
 			p.planCache.Set(operationID, cachedPlan, 1)
 		}
 	}
@@ -208,7 +208,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 			p.planCache.Set(operationID, prepared, 1)
 
 			if p.useFallback {
-				p.expensiveCache.Set(operationID, prepared, prepared.planningDuration)
+				p.fallbackCache.Set(operationID, prepared, prepared.planningDuration)
 			}
 
 			return prepared, nil

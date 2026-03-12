@@ -621,8 +621,6 @@ type operationContext struct {
 	traceOptions     resolve.TraceOptions
 	executionOptions resolve.ExecutionOptions
 	planCacheHit          bool
-	expensivePlanCacheHit bool
-	expensiveCacheEnabled bool
 	initialPayload   []byte
 	extensions       []byte
 	persistedID      string

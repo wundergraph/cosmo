@@ -27,7 +27,6 @@ const (
 	WgRequestError                     = attribute.Key("wg.request.error")
 	WgOperationPersistedID             = attribute.Key("wg.operation.persisted_id")
 	WgEnginePlanCacheHit               = attribute.Key("wg.engine.plan_cache_hit")
-	WgEngineExpensivePlanCacheHit      = attribute.Key("wg.engine.expensive_plan_cache_hit")
 	WgEnginePersistedOperationCacheHit = attribute.Key("wg.engine.persisted_operation_cache_hit")
 	WgEngineRequestTracingEnabled      = attribute.Key("wg.engine.request_tracing_enabled")
 	WgRouterRootSpan                   = attribute.Key("wg.router.root_span")
