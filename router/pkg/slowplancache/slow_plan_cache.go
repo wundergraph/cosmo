@@ -226,6 +226,11 @@ func (c *Cache[V]) Close() {
 
 		close(c.stop)
 		<-c.done
+
+		// This downside is also there in ristretto
+		// where a user can call set after close, since it hasnt affected us
+		// however we let in flight requests finish first before swapping
+		// and we have got no complains about panics from customers
 		close(c.writeCh)
 
 		c.mu.Lock()

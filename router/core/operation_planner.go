@@ -29,7 +29,7 @@ type planWithMetaData struct {
 type OperationPlanner struct {
 	sf             singleflight.Group
 	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
-	fallbackCache  *slowplancache.Cache[*planWithMetaData]
+	slowPlanCache  *slowplancache.Cache[*planWithMetaData]
 	executor       *Executor
 	trackUsageInfo bool
 
@@ -63,7 +63,7 @@ func NewOperationPlanner(
 		planCache:                planCache,
 		executor:                 executor,
 		trackUsageInfo:           executor.TrackUsageInfo,
-		fallbackCache:            fallbackCache,
+		slowPlanCache:            fallbackCache,
 		planningDurationOverride: planningDurationOverride,
 	}
 }
@@ -160,8 +160,8 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		// re-use a prepared plan from the main cache
 		opContext.preparedPlan = cachedPlan
 		opContext.planCacheHit = true
-	} else if p.fallbackCache != nil {
-		if cachedPlan, ok = p.fallbackCache.Get(operationID); ok {
+	} else if p.slowPlanCache != nil {
+		if cachedPlan, ok = p.slowPlanCache.Get(operationID); ok {
 			// found in the plan fallback cache — re-use and re-insert into main cache
 			opContext.preparedPlan = cachedPlan
 			opContext.planCacheHit = true
@@ -175,7 +175,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 		operationIDStr := strconv.FormatUint(operationID, 10)
 		sharedPreparedPlan, err, _ := p.sf.Do(operationIDStr, func() (interface{}, error) {
 			start := time.Now()
-			prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: p.fallbackCache != nil})
+			prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: p.slowPlanCache != nil})
 			if err != nil {
 				return nil, err
 			}
@@ -189,8 +189,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 			// Set into the main cache after planningDuration is finalized,
 			// because the OnEvict callback reads planningDuration concurrently.
 			p.planCache.Set(operationID, prepared, 1)
-
-			p.fallbackCache.Set(operationID, prepared, prepared.planningDuration)
+			p.slowPlanCache.Set(operationID, prepared, prepared.planningDuration)
 
 			return prepared, nil
 		})
