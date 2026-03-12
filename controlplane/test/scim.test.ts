@@ -164,7 +164,7 @@ describe('Scim server v2.0', () => {
     spy.mockReset();
   });
 
-  test('that adding an existing user from another organization, invitest the user', async () => {
+  test('that adding an existing user from another organization, invites the user', async () => {
     const email = otherOrgUserTestData!.email;
 
     // Remove the user from the organization and reject any pending invitation
@@ -293,6 +293,45 @@ describe('Scim server v2.0', () => {
     const emails = pendingOrgMembers.pendingInvitations.map((inv) => inv.email);
     const exists = emails.includes(email);
     expect(exists).toBe(true);
+  });
+
+  test('that an error is returned if the user is already part of the organization', async () => {
+    const spy = vi.spyOn(keycloakClient, 'executeActionsEmail');
+    spy.mockImplementation(vi.fn());
+
+    const createUserResp = await fetch(`${baseAddress}/scim/v2/Users`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${userTestData.apiKey}`,
+        'Content-Type': 'application/scim+json',
+      },
+      body: JSON.stringify({
+        schemas: ['urn:ietf:params:scim:schemas:core:2.0:User'],
+        userName: userTestData.email,
+        name: {
+          givenName: 'Test',
+          familyName: 'User',
+        },
+        emails: [
+          {
+            primary: true,
+            value: userTestData.email,
+            type: 'work',
+          },
+        ],
+        displayName: 'Test User',
+        locale: 'en-US',
+        externalId: '00ujl29u0le5T6Aj10h7',
+        groups: [],
+        password: 'wunder@123',
+        active: true,
+      }),
+    });
+
+    expect(createUserResp.status).toBe(400);
+    expect(spy).not.toHaveBeenCalled();
+
+    spy.mockReset();
   });
 
   test('that an user can be updated after accepting the organization invitation', async () => {

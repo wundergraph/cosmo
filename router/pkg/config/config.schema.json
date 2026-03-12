@@ -20,7 +20,7 @@
       "properties": {
         "token": {
           "type": "string",
-          "description": "The token used to authenticate with other component from Cosmo. Can be ommitted if the router is started with a static execution config."
+          "description": "The token used to authenticate with other component from Cosmo. Can be omitted if the router is started with a static execution config."
         },
         "sign_key": {
           "type": "string",
@@ -1327,6 +1327,35 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "log_exporter": {
+                  "type": "object",
+                  "description": "Log exporter. When enabled, logs all collected metrics via the router's logger at each export interval.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enables the log exporter. The default value is false."
+                    },
+                    "exclude_metrics": {
+                      "type": "array",
+                      "description": "List of regex patterns for metric names to exclude from log output. Cannot be used together with include_metrics.",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "include_metrics": {
+                      "type": "array",
+                      "description": "List of regex patterns for metric names to include in log output. Only matching metrics will be logged. Cannot be used together with exclude_metrics.",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "not": {
+                    "required": ["exclude_metrics", "include_metrics"]
+                  }
                 }
               }
             },
@@ -1639,6 +1668,11 @@
       "type": "boolean",
       "description": "Enable the JSON log format. The JSON log format is used to log the logs in JSON format. The default value is true. If the value is false, the logs are logged a human friendly text format.",
       "default": true
+    },
+    "log_service_name": {
+      "type": "string",
+      "description": "The service name used in the 'service' field of log entries. The default value is '@wundergraph/router'.",
+      "default": "@wundergraph/router"
     },
     "shutdown_delay": {
       "type": "string",
@@ -2546,6 +2580,11 @@
                         }
                       }
                     ]
+                  },
+                  "experiment_delete_durable_consumers_on_shutdown": {
+                    "type": "boolean",
+                    "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down normally. Defaults to false. NOTE: This option is experimental and may change in future versions.",
+                    "default": false
                   }
                 }
               }

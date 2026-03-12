@@ -1,15 +1,11 @@
-import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { ConfigureOverride } from "@/components/checks/override";
-import { EmptyState } from "@/components/empty-state";
-import {
-  GraphContext,
-  GraphPageLayout,
-  getGraphLayout,
-} from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
+import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { ConfigureOverride } from '@/components/checks/override';
+import { EmptyState } from '@/components/empty-state';
+import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { PageHeader } from '@/components/layout/head';
+import { Button } from '@/components/ui/button';
+import { Loader } from '@/components/ui/loader';
 import {
   Table,
   TableBody,
@@ -19,20 +15,13 @@ import {
   TableHeader,
   TableRow,
   TableWrapper,
-} from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { docsBaseURL } from "@/lib/constants";
-import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
-import {
-  ExclamationTriangleIcon,
-  InformationCircleIcon,
-} from "@heroicons/react/24/outline";
-import { useQuery } from "@connectrpc/connect-query";
+} from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { docsBaseURL } from '@/lib/constants';
+import { NextPageWithLayout } from '@/lib/page';
+import { cn } from '@/lib/utils';
+import { ExclamationTriangleIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { useQuery } from '@connectrpc/connect-query';
 import {
   ColumnDef,
   createColumnHelper,
@@ -42,16 +31,16 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getAllOverrides } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { GetAllOverridesResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { formatDistanceToNow } from "date-fns";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { useContext } from "react";
-import { BiAnalyse } from "react-icons/bi";
-import { IoBarcodeSharp } from "react-icons/io5";
+} from '@tanstack/react-table';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { getAllOverrides } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { GetAllOverridesResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useContext } from 'react';
+import { BiAnalyse } from 'react-icons/bi';
+import { IoBarcodeSharp } from 'react-icons/io5';
 
 const OverridesPage: NextPageWithLayout = () => {
   const graphContext = useContext(GraphContext);
@@ -61,17 +50,13 @@ const OverridesPage: NextPageWithLayout = () => {
   const namespace = router.query.namespace as string;
   const slug = router.query.slug as string;
 
-  const constructLink = (
-    name: string,
-    hash: string,
-    mode: "metrics" | "traces",
-  ) => {
+  const constructLink = (name: string, hash: string, mode: 'metrics' | 'traces') => {
     const filterState = createFilterState({
       operationName: name,
       operationHash: hash,
     });
 
-    if (mode === "metrics") {
+    if (mode === 'metrics') {
       return `/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${filterState}`;
     }
 
@@ -92,57 +77,53 @@ const OverridesPage: NextPageWithLayout = () => {
 
   const applyParams = useApplyParams();
 
-  const columnHelper =
-    createColumnHelper<GetAllOverridesResponse["overrides"][number]>();
+  const columnHelper = createColumnHelper<GetAllOverridesResponse['overrides'][number]>();
 
   const columns = [
-    columnHelper.accessor("name", {
+    columnHelper.accessor('name', {
       header: () => <div>Name</div>,
       cell: (ctx) => (
         <span
-          className={cn("font-medium", {
-            "italic text-muted-foreground": !ctx.getValue(),
+          className={cn('font-medium', {
+            'italic text-muted-foreground': !ctx.getValue(),
           })}
         >
-          {ctx.getValue() || "unnamed operation"}
+          {ctx.getValue() || 'unnamed operation'}
         </span>
       ),
     }),
-    columnHelper.accessor("hash", {
+    columnHelper.accessor('hash', {
       header: () => <div>Hash</div>,
     }),
-    columnHelper.accessor("changesOverrideCount", {
+    columnHelper.accessor('changesOverrideCount', {
       header: () => <div>Change Override</div>,
       cell: (ctx) => {
         const count = ctx.getValue();
-        return `${count} ${count === 1 ? "change" : "changes"}`;
+        return `${count} ${count === 1 ? 'change' : 'changes'}`;
       },
     }),
-    columnHelper.accessor("hasIgnoreAllOverride", {
+    columnHelper.accessor('hasIgnoreAllOverride', {
       header: () => <div>Ignore Override</div>,
       cell: (ctx) => {
         const hasIgnoreOverride = ctx.getValue();
-        return hasIgnoreOverride ? "Active" : "No";
+        return hasIgnoreOverride ? 'Active' : 'No';
       },
     }),
-    columnHelper.accessor("updatedAt", {
+    columnHelper.accessor('updatedAt', {
       header: () => <div>Last updated</div>,
       cell: (ctx) => formatDistanceToNow(new Date(ctx.getValue())),
     }),
     columnHelper.display({
-      id: "actions",
+      id: 'actions',
       cell: (ctx) => {
-        const hash = ctx.row.getValue<string>("hash");
-        const name = ctx.row.getValue<string>("name");
+        const hash = ctx.row.getValue<string>('hash');
+        const name = ctx.row.getValue<string>('name');
         return (
           <div className="flex items-center justify-end gap-x-2">
             <Tooltip delayDuration={0}>
               <TooltipTrigger>
                 <Button variant="ghost" size="icon-sm" asChild>
-                  <Link
-                    href={constructLink(name, hash, "metrics")}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <Link href={constructLink(name, hash, 'metrics')} onClick={(e) => e.stopPropagation()}>
                     <BiAnalyse className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -152,10 +133,7 @@ const OverridesPage: NextPageWithLayout = () => {
             <Tooltip delayDuration={0}>
               <TooltipTrigger>
                 <Button variant="ghost" size="icon-sm" asChild>
-                  <Link
-                    href={constructLink(name, hash, "traces")}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <Link href={constructLink(name, hash, 'traces')} onClick={(e) => e.stopPropagation()}>
                     <IoBarcodeSharp className="h-4 w-4" />
                   </Link>
                 </Button>
@@ -197,9 +175,7 @@ const OverridesPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve operation overrides"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -211,13 +187,8 @@ const OverridesPage: NextPageWithLayout = () => {
         title="No overrides found"
         description={
           <>
-            Overrides that you add from schema checks will appear here.{" "}
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href={docsBaseURL + "/studio/overrides"}
-              className="text-primary"
-            >
+            Overrides that you add from schema checks will appear here.{' '}
+            <a target="_blank" rel="noreferrer" href={docsBaseURL + '/studio/overrides'} className="text-primary">
               Learn more.
             </a>
           </>
@@ -230,35 +201,22 @@ const OverridesPage: NextPageWithLayout = () => {
     <div className="space-y-4">
       <div>
         <p className="text-sm text-muted-foreground">
-          Overrides for operations that you add from schema checks will appear
-          here.{" "}
-          <Link
-            href={docsBaseURL + "/studio/overrides"}
-            className="text-primary"
-            target="_blank"
-            rel="noreferrer"
-          >
+          Overrides for operations that you add from schema checks will appear here.{' '}
+          <Link href={docsBaseURL + '/studio/overrides'} className="text-primary" target="_blank" rel="noreferrer">
             Learn more
           </Link>
         </p>
       </div>
       <TableWrapper>
         <Table>
-          <TableCaption>
-            Found {table.getRowModel().rows?.length} operations with overrides
-          </TableCaption>
+          <TableCaption>Found {table.getRowModel().rows?.length} operations with overrides</TableCaption>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   );
                 })}
@@ -272,29 +230,21 @@ const OverridesPage: NextPageWithLayout = () => {
                   key={row.id}
                   onClick={() => {
                     applyParams({
-                      override: row.getValue("hash"),
-                      overrideName: row.getValue("name"),
+                      override: row.getValue('hash'),
+                      overrideName: row.getValue('name'),
                     });
                   }}
                   className="group cursor-pointer hover:bg-secondary/30"
-                  data-state={row.getIsSelected() && "selected"}
+                  data-state={row.getIsSelected() && 'selected'}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
-                      )}
-                    </TableCell>
+                    <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={columns.length} className="h-24 text-center">
                   No results.
                 </TableCell>
               </TableRow>
@@ -310,10 +260,7 @@ const OverridesPage: NextPageWithLayout = () => {
 OverridesPage.getLayout = (page) =>
   getGraphLayout(
     <PageHeader title="Overrides | Studio">
-      <GraphPageLayout
-        title="Overrides"
-        subtitle="View all operation overrides that are used against traffic checks"
-      >
+      <GraphPageLayout title="Overrides" subtitle="View all operation overrides that are used against traffic checks">
         {page}
       </GraphPageLayout>
     </PageHeader>,

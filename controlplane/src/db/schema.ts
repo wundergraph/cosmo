@@ -960,7 +960,7 @@ export const schemaCheckFederatedGraphs = pgTable(
   },
 );
 
-export const schemaCheckFederatedGraphsRelations = relations(schemaCheckFederatedGraphs, ({ one }) => ({
+export const schemaCheckFederatedGraphsRelations = relations(schemaCheckFederatedGraphs, ({ one, many }) => ({
   schemaCheck: one(schemaChecks, {
     fields: [schemaCheckFederatedGraphs.checkId],
     references: [schemaChecks.id],
@@ -969,7 +969,53 @@ export const schemaCheckFederatedGraphsRelations = relations(schemaCheckFederate
     fields: [schemaCheckFederatedGraphs.federatedGraphId],
     references: [federatedGraphs.id],
   }),
+  composedSchemaChanges: many(schemaCheckFederatedGraphChanges),
 }));
+
+// Maps schema check change actions to federated graphs (for federated graph level changes)
+export const schemaCheckFederatedGraphChanges = pgTable(
+  'schema_check_federated_graph_changes', // scfgc
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    schemaCheckFederatedGraphId: uuid('schema_check_federated_graph_id')
+      .notNull()
+      .references(() => schemaCheckFederatedGraphs.id, {
+        onDelete: 'cascade',
+      }),
+    schemaCheckChangeActionId: uuid('schema_check_change_action_id')
+      .notNull()
+      .references(() => schemaCheckChangeAction.id, {
+        onDelete: 'cascade',
+      }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => {
+    return {
+      schemaCheckFederatedGraphIdIndex: index('scfgsc_schema_check_federated_graph_id_idx').on(
+        t.schemaCheckFederatedGraphId,
+      ),
+      schemaCheckChangeActionIdIndex: index('scfgsc_schema_check_change_action_id_idx').on(t.schemaCheckChangeActionId),
+      uniqueFedGraphChange: uniqueIndex('scfgc_fed_graph_change_action_unique').on(
+        t.schemaCheckFederatedGraphId,
+        t.schemaCheckChangeActionId,
+      ),
+    };
+  },
+);
+
+export const schemaCheckFederatedGraphSchemaChangesRelations = relations(
+  schemaCheckFederatedGraphChanges,
+  ({ one }) => ({
+    schemaCheckFederatedGraph: one(schemaCheckFederatedGraphs, {
+      fields: [schemaCheckFederatedGraphChanges.schemaCheckFederatedGraphId],
+      references: [schemaCheckFederatedGraphs.id],
+    }),
+    changeAction: one(schemaCheckChangeAction, {
+      fields: [schemaCheckFederatedGraphChanges.schemaCheckChangeActionId],
+      references: [schemaCheckChangeAction.id],
+    }),
+  }),
+);
 
 // a join table between schema check subgraphs and schema check fed graphs
 export const schemaCheckSubgraphsFederatedGraphs = pgTable(
@@ -1038,6 +1084,7 @@ export const schemaCheckChangeAction = pgTable(
     schemaCheckSubgraphId: uuid('schema_check_subgraph_id').references(() => schemaCheckSubgraphs.id, {
       onDelete: 'set null',
     }),
+    isFedGraphChange: boolean('is_fed_graph_change').default(false),
   },
   (t) => {
     return {
@@ -1056,6 +1103,7 @@ export const schemaCheckChangeActionRelations = relations(schemaCheckChangeActio
     fields: [schemaCheckChangeAction.schemaCheckSubgraphId],
     references: [schemaCheckSubgraphs.id],
   }),
+  federatedGraphMappings: many(schemaCheckFederatedGraphChanges),
 }));
 
 export const operationChangeOverrides = pgTable(

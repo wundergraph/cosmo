@@ -1,66 +1,41 @@
-import { FieldUsageSheet } from "@/components/analytics/field-usage";
-import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
-import {
-  ErrorMetricsCard,
-  LatencyMetricsCard,
-  RequestMetricsCard,
-} from "@/components/analytics/metrics";
-import { RefreshInterval } from "@/components/analytics/refresh-interval";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import {
-  DatePickerWithRange,
-  DateRangePickerChangeHandler,
-} from "@/components/date-picker-with-range";
-import { EmptyState } from "@/components/empty-state";
-import {
-  GraphContext,
-  GraphPageLayout,
-  getGraphLayout,
-} from "@/components/layout/graph-layout";
-import { ClientUsageTable } from "@/components/operations/client-usage-table";
-import { DeprecatedFieldsTable } from "@/components/operations/deprecated-fields-table";
-import { OperationContentModal } from "@/components/operations/operation-content-modal";
-import { OperationsList } from "@/components/operations/operations-list";
-import { OperationsSearch } from "@/components/operations/operations-search";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { CopyButton } from "@/components/ui/copy-button";
-import { Loader } from "@/components/ui/loader";
-import { Pagination } from "@/components/ui/pagination";
-import { Separator } from "@/components/ui/separator";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Spacer } from "@/components/ui/spacer";
-import { Toolbar } from "@/components/ui/toolbar";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useOperationsFilters } from "@/hooks/use-operations-filters";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { NextPageWithLayout } from "@/lib/page";
-import { PlainMessage } from "@bufbuild/protobuf";
-import { createConnectQueryKey, useQuery } from "@connectrpc/connect-query";
-import {
-  ChartBarIcon,
-  ExclamationTriangleIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline";
-import { UpdateIcon } from "@radix-ui/react-icons";
-import {
-  keepPreviousData,
-  useIsFetching,
-  useQueryClient,
-} from "@tanstack/react-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { FieldUsageSheet } from '@/components/analytics/field-usage';
+import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
+import { ErrorMetricsCard, LatencyMetricsCard, RequestMetricsCard } from '@/components/analytics/metrics';
+import { RefreshInterval } from '@/components/analytics/refresh-interval';
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
+import { EmptyState } from '@/components/empty-state';
+import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { ClientUsageTable } from '@/components/operations/client-usage-table';
+import { DeprecatedFieldsTable } from '@/components/operations/deprecated-fields-table';
+import { OperationContentModal } from '@/components/operations/operation-content-modal';
+import { OperationsList } from '@/components/operations/operations-list';
+import { OperationsSearch } from '@/components/operations/operations-search';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { CopyButton } from '@/components/ui/copy-button';
+import { Loader } from '@/components/ui/loader';
+import { Pagination } from '@/components/ui/pagination';
+import { Separator } from '@/components/ui/separator';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Spacer } from '@/components/ui/spacer';
+import { Toolbar } from '@/components/ui/toolbar';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { useFeatureLimit } from '@/hooks/use-feature-limit';
+import { useOperationsFilters } from '@/hooks/use-operations-filters';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { NextPageWithLayout } from '@/lib/page';
+import { PlainMessage } from '@bufbuild/protobuf';
+import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
+import { ChartBarIcon, ExclamationTriangleIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { UpdateIcon } from '@radix-ui/react-icons';
+import { keepPreviousData, useIsFetching, useQueryClient } from '@tanstack/react-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getGraphMetrics,
   getOperations,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import {
   AnalyticsFilter,
   AnalyticsViewFilterOperator,
@@ -68,12 +43,12 @@ import {
   GetOperationsResponse_OperationType,
   OperationsFetchBasedOn,
   SortDirection,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { formatISO } from "date-fns";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { useContext, useEffect, useMemo, useState } from "react";
-import { useDebounce } from "use-debounce";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { formatISO } from 'date-fns';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import { useDebounce } from 'use-debounce';
 
 const OperationsToolbar = () => {
   const graphContext = useContext(GraphContext);
@@ -85,10 +60,7 @@ const OperationsToolbar = () => {
 
   const applyParams = useApplyParams();
 
-  const onDateRangeChange: DateRangePickerChangeHandler = ({
-    range,
-    dateRange,
-  }) => {
+  const onDateRangeChange: DateRangePickerChangeHandler = ({ range, dateRange }) => {
     if (range) {
       applyParams({
         range: range.toString(),
@@ -113,7 +85,7 @@ const OperationsToolbar = () => {
     });
   };
 
-  const analyticsRetention = useFeatureLimit("analytics-retention", 7);
+  const analyticsRetention = useFeatureLimit('analytics-retention', 7);
 
   return (
     <Toolbar className="flex-nowrap lg:px-0 xl:px-0">
@@ -147,10 +119,7 @@ const OperationsToolbar = () => {
         >
           <UpdateIcon />
         </Button>
-        <RefreshInterval
-          value={refreshInterval}
-          onChange={onRefreshIntervalChange}
-        />
+        <RefreshInterval value={refreshInterval} onChange={onRefreshIntervalChange} />
       </div>
     </Toolbar>
   );
@@ -175,7 +144,7 @@ const OperationsLeftPanel = ({
       }
     | undefined;
   onOperationSelect: (operationHash: string, operationName: string) => void;
-  operations: PlainMessage<GetOperationsResponse>["operations"];
+  operations: PlainMessage<GetOperationsResponse>['operations'];
   isLoading: boolean;
   localSearchQuery: string;
   onSearchQueryChange: (query: string) => void;
@@ -204,13 +173,13 @@ const OperationsLeftPanel = ({
 
       if (op.metric) {
         switch (op.metric.case) {
-          case "latency":
+          case 'latency':
             latency = op.metric.value;
             break;
-          case "requestCount":
+          case 'requestCount':
             requestCount = op.metric.value ? Number(op.metric.value) : 0;
             break;
-          case "errorPercentage":
+          case 'errorPercentage':
             errorRate = op.metric.value;
             break;
         }
@@ -221,10 +190,10 @@ const OperationsLeftPanel = ({
         name: op.name,
         type:
           op.type === GetOperationsResponse_OperationType.QUERY
-            ? ("query" as const)
+            ? ('query' as const)
             : op.type === GetOperationsResponse_OperationType.MUTATION
-              ? ("mutation" as const)
-              : ("subscription" as const),
+              ? ('mutation' as const)
+              : ('subscription' as const),
         latency: latency ?? 0,
         requestCount: requestCount ?? 0,
         errorRate: errorRate ?? 0,
@@ -234,10 +203,7 @@ const OperationsLeftPanel = ({
   }, [operations]);
 
   // Handle operation selection - close sheet on mobile when operation is selected
-  const handleOperationSelect = (
-    operationHash: string,
-    operationName: string,
-  ) => {
+  const handleOperationSelect = (operationHash: string, operationName: string) => {
     onOperationSelect(operationHash, operationName);
     setIsSheetOpen(false);
   };
@@ -250,25 +216,16 @@ const OperationsLeftPanel = ({
           searchQuery={localSearchQuery}
           onSearchQueryChange={onSearchQueryChange}
           fetchBasedOn={fetchBasedOn}
-          onFetchBasedOnChange={(fetchBasedOn) =>
-            applySorting(fetchBasedOn, sortDirection)
-          }
+          onFetchBasedOnChange={(fetchBasedOn) => applySorting(fetchBasedOn, sortDirection)}
           sortDirection={sortDirection}
-          onSortDirectionChange={(direction) =>
-            applySorting(fetchBasedOn, direction)
-          }
-          includeOperationsWithDeprecatedFieldsOnly={
-            includeOperationsWithDeprecatedFieldsOnly
-          }
-          onIncludeOperationsWithDeprecatedFieldsOnlyChange={
-            applyDeprecatedFieldsFilter
-          }
+          onSortDirectionChange={(direction) => applySorting(fetchBasedOn, direction)}
+          includeOperationsWithDeprecatedFieldsOnly={includeOperationsWithDeprecatedFieldsOnly}
+          onIncludeOperationsWithDeprecatedFieldsOnlyChange={applyDeprecatedFieldsFilter}
           className="w-full"
         />
         {totalCount > 0 && (
           <div className="flex justify-end text-xs italic text-muted-foreground">
-            Found a total of {totalCount.toLocaleString()}{" "}
-            {totalCount === 1 ? "operation" : "operations"}.
+            Found a total of {totalCount.toLocaleString()} {totalCount === 1 ? 'operation' : 'operations'}.
           </div>
         )}
       </div>
@@ -286,11 +243,7 @@ const OperationsLeftPanel = ({
 
       {operations.length > 0 && (
         <div className="flex justify-center md:flex">
-          <Pagination
-            limit={pageSize}
-            noOfPages={noOfPages}
-            pageNumber={pageNumber}
-          />
+          <Pagination limit={pageSize} noOfPages={noOfPages} pageNumber={pageNumber} />
         </div>
       )}
     </div>
@@ -301,21 +254,16 @@ const OperationsLeftPanel = ({
       {/* Mobile: Search button that opens sheet */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-full justify-start text-left font-normal md:hidden"
-          >
+          <Button variant="outline" className="w-full justify-start text-left font-normal md:hidden">
             <MagnifyingGlassIcon className="mr-2 h-4 w-4" />
-            {localSearchQuery || "Search operations..."}
+            {localSearchQuery || 'Search operations...'}
           </Button>
         </SheetTrigger>
         <SheetContent side="bottom" className="h-[85vh]">
           <SheetHeader>
             <SheetTitle>Search Operations</SheetTitle>
           </SheetHeader>
-          <div className="mt-4 flex h-[calc(85vh-80px)] flex-col overflow-hidden">
-            {leftPanelContent}
-          </div>
+          <div className="mt-4 flex h-[calc(85vh-80px)] flex-col overflow-hidden">{leftPanelContent}</div>
         </SheetContent>
       </Sheet>
 
@@ -335,7 +283,7 @@ const OperationsRightPanel = ({
         name: string;
       }
     | undefined;
-  operations: PlainMessage<GetOperationsResponse>["operations"];
+  operations: PlainMessage<GetOperationsResponse>['operations'];
 }) => {
   const router = useRouter();
   const graphContext = useContext(GraphContext);
@@ -355,19 +303,16 @@ const OperationsRightPanel = ({
         if (!matchesHash) return false;
 
         // If no name filter is set, match any operation with that hash
-        if (
-          selectedOperation.name === null ||
-          selectedOperation.name === undefined
-        ) {
+        if (selectedOperation.name === null || selectedOperation.name === undefined) {
           return true;
         }
 
         // Otherwise, match exact name (including empty string for unnamed operations)
-        const opName = op.name || "";
+        const opName = op.name || '';
         return selectedOperation.name === opName;
       })
     : undefined;
-  const operationName = selectedOperationData?.name || "";
+  const operationName = selectedOperationData?.name || '';
 
   // Add operationHash and operationName filters from URL params if operation is selected
   const metricsFilters: AnalyticsFilter[] = useMemo(() => {
@@ -375,7 +320,7 @@ const OperationsRightPanel = ({
     if (selectedOperation) {
       operationFilters.push(
         new AnalyticsFilter({
-          field: "operationHash",
+          field: 'operationHash',
           value: selectedOperation.hash,
           operator: AnalyticsViewFilterOperator.EQUALS,
         }),
@@ -384,7 +329,7 @@ const OperationsRightPanel = ({
       if (selectedOperation.name) {
         operationFilters.push(
           new AnalyticsFilter({
-            field: "operationName",
+            field: 'operationName',
             value: selectedOperation.name,
             operator: AnalyticsViewFilterOperator.EQUALS,
           }),
@@ -422,9 +367,7 @@ const OperationsRightPanel = ({
         <EmptyState
           icon={<ExclamationTriangleIcon />}
           title="Could not retrieve operations data"
-          description={
-            data?.response?.details || error?.message || "Please try again"
-          }
+          description={data?.response?.details || error?.message || 'Please try again'}
           actions={<Button onClick={() => refetch()}>Retry</Button>}
         />
       </div>
@@ -459,13 +402,9 @@ const OperationsRightPanel = ({
 
           <div className="flex flex-col gap-4 px-1 md:flex-row md:items-center md:justify-between md:gap-0">
             <div>
-              <h3 className="text-lg font-semibold">
-                {operationName || "Unnamed Operation"}
-              </h3>
+              <h3 className="text-lg font-semibold">{operationName || 'Unnamed Operation'}</h3>
               <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground">
-                  {selectedOperation.hash}
-                </p>
+                <p className="text-sm text-muted-foreground">{selectedOperation.hash}</p>
                 <CopyButton
                   value={selectedOperation.hash}
                   tooltip="Copy operation hash"
@@ -476,11 +415,7 @@ const OperationsRightPanel = ({
               </div>
             </div>
             <div className="flex w-full items-center gap-2 md:w-auto">
-              <Button
-                variant="outline"
-                asChild
-                className="flex-1 md:flex-initial"
-              >
+              <Button variant="outline" asChild className="flex-1 md:flex-initial">
                 <Link
                   href={{
                     pathname: `/[organizationSlug]/[namespace]/graph/[slug]/analytics/traces`,
@@ -500,10 +435,7 @@ const OperationsRightPanel = ({
                   View Traces
                 </Link>
               </Button>
-              <Button
-                onClick={() => setIsModalOpen(true)}
-                className="flex-1 md:flex-initial"
-              >
+              <Button onClick={() => setIsModalOpen(true)} className="flex-1 md:flex-initial">
                 View Operation
               </Button>
             </div>
@@ -512,64 +444,28 @@ const OperationsRightPanel = ({
           <Separator className="my-4" />
 
           {/* Client Usage Table - Always at the top */}
-          <ClientUsageTable
-            operationHash={selectedOperation.hash}
-            operationName={operationName}
-          />
+          <ClientUsageTable operationHash={selectedOperation.hash} operationName={operationName} />
 
           <Separator className="my-4" />
 
           {/* Deprecated Fields Table - Below Client Usage */}
-          <DeprecatedFieldsTable
-            operationHash={selectedOperation.hash}
-            operationName={operationName}
-          />
+          <DeprecatedFieldsTable operationHash={selectedOperation.hash} operationName={operationName} />
 
           <Separator className="my-4" />
 
           {/* Operation-specific Charts */}
           <div className="flex flex-col gap-4">
-            <RequestMetricsCard
-              data={data?.requests}
-              syncId={syncId}
-              showTopList={false}
-              chartClassName="h-36"
-            />
-            <LatencyMetricsCard
-              data={data?.latency}
-              syncId={syncId}
-              showTopList={false}
-              chartClassName="h-36"
-            />
-            <ErrorMetricsCard
-              data={data?.errors}
-              syncId={syncId}
-              showTopList={false}
-              chartClassName="h-36"
-            />
+            <RequestMetricsCard data={data?.requests} syncId={syncId} showTopList={false} chartClassName="h-36" />
+            <LatencyMetricsCard data={data?.latency} syncId={syncId} showTopList={false} chartClassName="h-36" />
+            <ErrorMetricsCard data={data?.errors} syncId={syncId} showTopList={false} chartClassName="h-36" />
           </div>
         </>
       ) : (
         // Default State - All Operations Charts
         <div className="flex flex-col gap-4">
-          <RequestMetricsCard
-            data={data?.requests}
-            syncId={syncId}
-            showTopList={false}
-            chartClassName="h-36"
-          />
-          <LatencyMetricsCard
-            data={data?.latency}
-            syncId={syncId}
-            showTopList={false}
-            chartClassName="h-36"
-          />
-          <ErrorMetricsCard
-            data={data?.errors}
-            syncId={syncId}
-            showTopList={false}
-            chartClassName="h-36"
-          />
+          <RequestMetricsCard data={data?.requests} syncId={syncId} showTopList={false} chartClassName="h-36" />
+          <LatencyMetricsCard data={data?.latency} syncId={syncId} showTopList={false} chartClassName="h-36" />
+          <ErrorMetricsCard data={data?.errors} syncId={syncId} showTopList={false} chartClassName="h-36" />
         </div>
       )}
       {selectedOperation && (
@@ -610,14 +506,12 @@ const OperationsPage: NextPageWithLayout = () => {
   // Reset to page 1 when search changes
   useEffect(() => {
     if (debouncedSearchQuery !== urlSearchQuery) {
-      applyParams({ searchQuery: debouncedSearchQuery || null, page: "1" });
+      applyParams({ searchQuery: debouncedSearchQuery || null, page: '1' });
     }
   }, [debouncedSearchQuery, urlSearchQuery, applyParams]);
 
-  const pageNumber = router.query.page
-    ? parseInt(router.query.page as string, 10)
-    : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || "10");
+  const pageNumber = router.query.page ? parseInt(router.query.page as string, 10) : 1;
+  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
   const offset = (pageNumber - 1) * pageSize;
 
   const {
@@ -641,17 +535,16 @@ const OperationsPage: NextPageWithLayout = () => {
       searchQuery: debouncedSearchQuery || undefined,
       fetchBasedOn: fetchBasedOn || OperationsFetchBasedOn.REQUESTS,
       sortDirection:
-        sortDirection === "asc"
+        sortDirection === 'asc'
           ? SortDirection.ASC
-          : sortDirection === "desc"
+          : sortDirection === 'desc'
             ? SortDirection.DESC
             : SortDirection.DESC,
       includeContent: false,
       limit: pageSize,
       offset: offset,
       includeHasDeprecatedFields: true,
-      includeOperationsWithDeprecatedFieldsOnly:
-        includeOperationsWithDeprecatedFieldsOnly ? true : undefined,
+      includeOperationsWithDeprecatedFieldsOnly: includeOperationsWithDeprecatedFieldsOnly ? true : undefined,
       clientNames,
       includeTotalCount: true,
     },
@@ -684,17 +577,14 @@ const OperationsPage: NextPageWithLayout = () => {
 
     return {
       hash: operationHash,
-      name: operationName ?? "",
+      name: operationName ?? '',
     };
   }, [router.query.operationHash, router.query.operationName]);
 
   // Update URL params when operation is selected
-  const handleOperationSelect = (
-    operationHash: string,
-    operationName: string,
-  ) => {
+  const handleOperationSelect = (operationHash: string, operationName: string) => {
     // For unnamed operations, only set operationHash (don't include operationName in URL)
-    const normalizedOperationName = operationName || "";
+    const normalizedOperationName = operationName || '';
     const params: Record<string, string | null> = {
       operationHash: operationHash || null,
     };
@@ -722,8 +612,8 @@ const OperationsPage: NextPageWithLayout = () => {
       if (!matchesHash) return false;
 
       // Match by name (including empty string for unnamed operations)
-      const opName = op.name || "";
-      const selectedName = selectedOperation.name || "";
+      const opName = op.name || '';
+      const selectedName = selectedOperation.name || '';
       return opName === selectedName;
     });
 
@@ -747,11 +637,7 @@ const OperationsPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve operations data"
-        description={
-          operationsData?.response?.details ||
-          error?.message ||
-          "Please try again"
-        }
+        description={operationsData?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -782,10 +668,7 @@ const OperationsPage: NextPageWithLayout = () => {
         {/* Right Panel - Charts */}
         <div className="min-w-0 flex-1 overflow-hidden md:w-auto">
           <div className="h-full overflow-y-auto">
-            <OperationsRightPanel
-              selectedOperation={selectedOperation}
-              operations={operationsData.operations}
-            />
+            <OperationsRightPanel selectedOperation={selectedOperation} operations={operationsData.operations} />
           </div>
         </div>
       </div>
@@ -806,7 +689,7 @@ OperationsPage.getLayout = (page) =>
       {page}
     </GraphPageLayout>,
     {
-      title: "Operations",
+      title: 'Operations',
     },
   );
 

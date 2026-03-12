@@ -1,21 +1,27 @@
-import { Popover, PopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverTrigger } from '@/components/ui/popover';
 import {
   UpdateOrganizationGroupRequest_GroupRule,
   GetUserAccessibleResourcesResponse,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { roles } from "@/lib/constants";
-import { useMemo, useState } from "react";
-import { PopoverContentWithScrollableContent } from "../popover-content-with-scrollable-content";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { ChevronRightIcon, CheckIcon, MinusIcon } from "@heroicons/react/24/outline";
-import { useGroupResources, GroupResource, GroupResourceItem } from "./use-group-resources";
-import { RiLoader5Fill } from "react-icons/ri";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { roles } from '@/lib/constants';
+import { useMemo, useState } from 'react';
+import { PopoverContentWithScrollableContent } from '../popover-content-with-scrollable-content';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { ChevronRightIcon, CheckIcon, MinusIcon } from '@heroicons/react/24/outline';
+import { useGroupResources, GroupResource, GroupResourceItem } from './use-group-resources';
+import { RiLoader5Fill } from 'react-icons/ri';
 
-export function GroupResourceSelector({ rule, disabled, activeRole, accessibleResources, onRuleUpdated }: {
-  rule: UpdateOrganizationGroupRequest_GroupRule,
+export function GroupResourceSelector({
+  rule,
+  disabled,
+  activeRole,
+  accessibleResources,
+  onRuleUpdated,
+}: {
+  rule: UpdateOrganizationGroupRequest_GroupRule;
   disabled: boolean;
-  activeRole: (typeof roles[number]) | undefined;
+  activeRole: (typeof roles)[number] | undefined;
   accessibleResources: GetUserAccessibleResourcesResponse | undefined;
   onRuleUpdated(rule: UpdateOrganizationGroupRequest_GroupRule): void;
 }) {
@@ -45,37 +51,26 @@ export function GroupResourceSelector({ rule, disabled, activeRole, accessibleRe
   return accessibleResources ? (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          variant="link"
-          className="px-0 justify-start grow truncate"
-          disabled={disabled}
-        >
+        <Button variant="link" className="grow justify-start truncate px-0" disabled={disabled}>
           <span className="truncate">
-            {selectedResources === 0
-              ? "Grants access to all resources."
-              : `${selectedResources} resource(s) selected`}
+            {selectedResources === 0 ? 'Grants access to all resources.' : `${selectedResources} resource(s) selected`}
           </span>
         </Button>
       </PopoverTrigger>
-      <PopoverContentWithScrollableContent className="p-1 text-sm w-[400px]">
+      <PopoverContentWithScrollableContent className="w-[400px] p-1 text-sm">
         <div className="max-h-[32rem] overflow-auto">
-          {availableResources.length > 0
-            ? availableResources.map((res, index) => (
-              <GroupSelectorItem
-                key={`resource-${index}`}
-                depth={0}
-                toggleResources={toggleResources}
-                {...res}
-              />
+          {availableResources.length > 0 ? (
+            availableResources.map((res, index) => (
+              <GroupSelectorItem key={`resource-${index}`} depth={0} toggleResources={toggleResources} {...res} />
             ))
-            : (
-              <div className="p-2 text-center text-muted-foreground">No resources available</div>
-            )}
+          ) : (
+            <div className="p-2 text-center text-muted-foreground">No resources available</div>
+          )}
         </div>
       </PopoverContentWithScrollableContent>
     </Popover>
   ) : (
-    <div className="flex justify-start items-center grow truncate h-9 text-sm gap-x-2">
+    <div className="flex h-9 grow items-center justify-start gap-x-2 truncate text-sm">
       <RiLoader5Fill className="size-4 animate-spin" />
       <span>Loading resources...</span>
     </div>
@@ -98,9 +93,16 @@ function flatten(children: GroupResourceItem[]): GroupResourceItem[] {
   return result;
 }
 
-function GroupSelectorItem({ type, label, children, depth, toggleResources, ...rest }: GroupResource & {
+function GroupSelectorItem({
+  type,
+  label,
+  children,
+  depth,
+  toggleResources,
+  ...rest
+}: GroupResource & {
   depth: number;
-  toggleResources(res: string[], isNamespaceResource: boolean) : void;
+  toggleResources(res: string[], isNamespaceResource: boolean): void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const flattenChildren = useMemo(() => flatten(children ?? []), [children]);
@@ -108,19 +110,12 @@ function GroupSelectorItem({ type, label, children, depth, toggleResources, ...r
     return null;
   }
 
-  if (type === "segment") {
+  if (type === 'segment') {
     return (
       <>
-        <div className="text-xs text-muted-foreground p-1.5 uppercase select-none">
-          {label}
-        </div>
+        <div className="select-none p-1.5 text-xs uppercase text-muted-foreground">{label}</div>
         {children?.map((child) => (
-          <GroupSelectorItem
-            key={child.value}
-            depth={depth}
-            toggleResources={toggleResources}
-            {...child}
-          />
+          <GroupSelectorItem key={child.value} depth={depth} toggleResources={toggleResources} {...child} />
         ))}
       </>
     );
@@ -136,8 +131,8 @@ function GroupSelectorItem({ type, label, children, depth, toggleResources, ...r
     <>
       <div
         className={cn(
-          "flex justify-start items-center gap-x-1.5 px-2.5 py-1.5 hover:bg-accent rounded select-none w-full group/item",
-          disabled && "opacity-50 cursor-not-allowed hover:bg-transparent"
+          'group/item flex w-full select-none items-center justify-start gap-x-1.5 rounded px-2.5 py-1.5 hover:bg-accent',
+          disabled && 'cursor-not-allowed opacity-50 hover:bg-transparent',
         )}
         role="button"
         onClick={() => {
@@ -153,13 +148,13 @@ function GroupSelectorItem({ type, label, children, depth, toggleResources, ...r
         }}
       >
         {hasChildren ? (
-          <ChevronRightIcon
-            className={cn("size-3 transition-all duration-200 shrink-0", isExpanded && "rotate-90")}
-          />
-        ) : depth > 0 && <span className="w-4 shrink-0" /> }
+          <ChevronRightIcon className={cn('size-3 shrink-0 transition-all duration-200', isExpanded && 'rotate-90')} />
+        ) : (
+          depth > 0 && <span className="w-4 shrink-0" />
+        )}
 
         <span
-          className={cn("group/check shrink-0", disabled && "pointer-events-none")}
+          className={cn('group/check shrink-0', disabled && 'pointer-events-none')}
           role="button"
           onClick={(e) => {
             e.preventDefault();
@@ -170,11 +165,14 @@ function GroupSelectorItem({ type, label, children, depth, toggleResources, ...r
 
             if (hasChildren) {
               if (hasSelectedEveryChildren) {
-                toggleResources(flattenChildren.map((res) => res.value), isNamespaceResource);
+                toggleResources(
+                  flattenChildren.map((res) => res.value),
+                  isNamespaceResource,
+                );
               } else {
                 toggleResources(
                   flattenChildren.filter((res) => !res.selected).map((res) => res.value),
-                  isNamespaceResource
+                  isNamespaceResource,
                 );
               }
             } else {
@@ -184,13 +182,13 @@ function GroupSelectorItem({ type, label, children, depth, toggleResources, ...r
         >
           <span
             className={cn(
-              "flex justify-center items-center size-5 border border-border rounded transition-all duration-200",
+              'flex size-5 items-center justify-center rounded border border-border transition-all duration-200',
               selected || hasSelectedSomeChildren
-                ? "bg-primary"
-                : "bg-popover hover:bg-accent group-hover/item:bg-popover group-hover/check:bg-gray-500/30"
+                ? 'bg-primary'
+                : 'bg-popover group-hover/check:bg-gray-500/30 group-hover/item:bg-popover hover:bg-accent',
             )}
           >
-            {(selected || hasSelectedEveryChildren) ? (
+            {selected || hasSelectedEveryChildren ? (
               <CheckIcon className="size-3" />
             ) : hasSelectedSomeChildren ? (
               <MinusIcon className="size-3" />
@@ -198,16 +196,15 @@ function GroupSelectorItem({ type, label, children, depth, toggleResources, ...r
           </span>
         </span>
 
-        <span className="truncate grow">
-          {label}
-        </span>
+        <span className="grow truncate">{label}</span>
       </div>
       {children && children.length > 0 && isExpanded && (
         <div className="pl-[18px]">
           {children.map((child) => (
             <GroupSelectorItem key={child.value} {...child} depth={depth + 1} toggleResources={toggleResources} />
           ))}
-        </div>)}
+        </div>
+      )}
     </>
   );
 }

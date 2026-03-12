@@ -5,7 +5,7 @@
 export const getPreFlightScript = () => {
   const selected = localStorage.getItem('playground:pre-flight:selected');
   const enabled = localStorage.getItem('playground:pre-flight:enabled');
-  
+
   if (!selected || selected === 'undefined') return undefined;
 
   try {
@@ -20,12 +20,9 @@ export const getPreFlightScript = () => {
 
     return undefined;
   }
-}
-  
-export const getScriptTabState = (
-  tabId: string,
-  key: 'pre-operation' | 'post-operation'
-) => {
+};
+
+export const getScriptTabState = (tabId: string, key: 'pre-operation' | 'post-operation') => {
   const tabState = localStorage.getItem('playground:script:tabState');
   if (!tabState) return undefined;
 
@@ -39,4 +36,4 @@ export const getScriptTabState = (
 
     return undefined;
   }
-}
+};

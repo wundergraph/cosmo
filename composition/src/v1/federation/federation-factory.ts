@@ -1,27 +1,27 @@
 import {
   buildASTSchema,
-  ConstDirectiveNode,
-  ConstObjectValueNode,
-  DefinitionNode,
-  DirectiveDefinitionNode,
-  DocumentNode,
-  GraphQLSchema,
+  type ConstDirectiveNode,
+  type ConstObjectValueNode,
+  type DefinitionNode,
+  type DirectiveDefinitionNode,
+  type DocumentNode,
+  type GraphQLSchema,
   Kind,
-  ListTypeNode,
-  NamedTypeNode,
-  NonNullTypeNode,
-  StringValueNode,
-  TypeNode,
+  type ListTypeNode,
+  type NamedTypeNode,
+  type NonNullTypeNode,
+  type StringValueNode,
+  type TypeNode,
 } from 'graphql';
 import {
   getMutableTypeNode,
   getTypeNodeNamedTypeName,
-  MutableDefinitionNode,
-  MutableEnumValueNode,
-  MutableFieldNode,
-  MutableInputValueNode,
-  MutableIntermediateTypeNode,
-  MutableTypeNode,
+  type MutableDefinitionNode,
+  type MutableEnumValueNode,
+  type MutableFieldNode,
+  type MutableInputValueNode,
+  type MutableIntermediateTypeNode,
+  type MutableTypeNode,
 } from '../../schema-building/ast';
 import { stringToNamedTypeNode, stringToNameNode } from '../../ast/utils';
 import {
@@ -75,15 +75,14 @@ import {
   unknownNamedTypeError,
 } from '../../errors/errors';
 import {
-  ChildTagData,
-  FederationFactoryParams,
+  type ChildTagData,
   getDescriptionFromString,
-  InterfaceImplementationData,
-  InterfaceObjectForInternalGraphOptions,
+  type InterfaceImplementationData,
+  type InterfaceObjectForInternalGraphOptions,
   newChildTagData,
   newParentTagData,
-  ParentTagData,
-  SubscriptionFilterData,
+  type ParentTagData,
+  type SubscriptionFilterData,
   validateImplicitFieldSets,
 } from './utils';
 import {
@@ -108,34 +107,34 @@ import {
 } from '../utils/utils';
 import { printTypeNode } from '@graphql-tools/merge';
 import {
-  FieldConfiguration,
-  RequiredFieldConfiguration,
-  SubscriptionCondition,
-  SubscriptionFieldCondition,
-  SubscriptionFilterValue,
+  type FieldConfiguration,
+  type RequiredFieldConfiguration,
+  type SubscriptionCondition,
+  type SubscriptionFieldCondition,
+  type SubscriptionFilterValue,
 } from '../../router-configuration/types';
 import { BASE_SCALARS, DIRECTIVE_DEFINITION_BY_NAME, MAX_OR_SCOPES } from '../constants/constants';
 import { batchNormalize } from '../normalization/normalization-factory';
 import { isNodeQuery } from '../normalization/utils';
 import {
-  AuthorizationData,
-  ChildData,
-  CompositeOutputData,
-  EntityData,
-  EntityInterfaceFederationData,
-  EnumValueData,
+  type AuthorizationData,
+  type ChildData,
+  type CompositeOutputData,
+  type EntityData,
+  type EntityInterfaceFederationData,
+  type EnumValueData,
   ExtensionType,
-  FieldData,
-  InputObjectDefinitionData,
-  InputValueData,
-  InterfaceDefinitionData,
-  NodeData,
-  ObjectDefinitionData,
-  ParentDefinitionData,
-  PersistedDirectiveDefinitionData,
-  PersistedDirectivesData,
-  ScalarDefinitionData,
-  UnionDefinitionData,
+  type FieldData,
+  type InputObjectDefinitionData,
+  type InputValueData,
+  type InterfaceDefinitionData,
+  type NodeData,
+  type ObjectDefinitionData,
+  type ParentDefinitionData,
+  type PersistedDirectiveDefinitionData,
+  type PersistedDirectivesData,
+  type ScalarDefinitionData,
+  type UnionDefinitionData,
 } from '../../schema-building/types';
 import {
   addValidPersistedDirectiveDefinitionNodeByData,
@@ -171,19 +170,19 @@ import { renameRootTypes } from './walkers';
 import { cloneDeep } from 'lodash';
 import {
   DivergentType,
-  FederateTypeParams,
-  FederateTypeResult,
+  type FederateTypeParams,
+  type FederateTypeResult,
   getMostRestrictiveMergedTypeNode,
 } from '../schema-building/type-merging';
-import { Graph } from '../../resolvability-graph/graph';
-import { GraphNode } from '../../resolvability-graph/graph-nodes';
-import { InternalSubgraph, SubgraphConfig } from '../../subgraph/types';
-import { Warning } from '../../warnings/types';
+import { type Graph } from '../../resolvability-graph/graph';
+import { type GraphNode } from '../../resolvability-graph/graph-nodes';
+import { type InternalSubgraph, type SubgraphConfig } from '../../subgraph/types';
+import { type Warning } from '../../warnings/types';
 import {
-  ContractTagOptions,
-  FederationResult,
-  FederationResultWithContracts,
-  MutualParentDefinitionData,
+  type ContractTagOptions,
+  type FederationResult,
+  type FederationResultWithContracts,
+  type MutualParentDefinitionData,
 } from '../../federation/types';
 import {
   AND_UPPER,
@@ -199,13 +198,13 @@ import {
   INPUT_OBJECT,
   LEFT_PARENTHESIS,
   LIST,
+  LITERAL_PERIOD,
   NON_REPEATABLE_PERSISTED_DIRECTIVES,
   NOT_UPPER,
   OBJECT,
   ONE_OF,
   OR_UPPER,
   PARENT_DEFINITION_DATA,
-  LITERAL_PERIOD,
   QUERY,
   REQUIRES_SCOPES,
   SEMANTIC_NON_NULL,
@@ -230,17 +229,30 @@ import {
   getValueOrDefault,
   kindToNodeType,
 } from '../../utils/utils';
-import {
+import type {
   GraphFieldData,
   ImplementationErrors,
   InvalidEntityInterface,
   InvalidFieldImplementation,
   InvalidRequiredInputValueData,
 } from '../../utils/types';
-import { FederateSubgraphsContractV1Params, FederateSubgraphsWithContractsV1Params, FederationParams } from './types';
-import { ContractName, DirectiveName, FieldCoords, FieldName, SubgraphName, TypeName } from '../../types/types';
+import {
+  type ContractName,
+  type DirectiveName,
+  type FieldCoords,
+  type FieldName,
+  type SubgraphName,
+  type TypeName,
+} from '../../types/types';
 import { singleFederatedInputFieldOneOfWarning } from '../warnings/warnings';
-import { ExtractPersistedDirectivesParams, ValidateOneOfDirectiveParams } from './params';
+import type {
+  ExtractPersistedDirectivesParams,
+  FederateSubgraphsContractV1Params,
+  FederateSubgraphsWithContractsV1Params,
+  FederationFactoryParams,
+  FederationParams,
+  ValidateOneOfDirectiveParams,
+} from './params';
 import {
   AUTHENTICATED_DEFINITION,
   DEPRECATED_DEFINITION,
@@ -250,11 +262,11 @@ import {
   SEMANTIC_NON_NULL_DEFINITION,
   TAG_DEFINITION,
 } from '../constants/directive-definitions';
+import type { CompositionOptions } from '../../types/params';
 
 export class FederationFactory {
   authorizationDataByParentTypeName: Map<TypeName, AuthorizationData>;
   coordsByNamedTypeName = new Map<TypeName, Set<string>>();
-  disableResolvabilityValidation: boolean = false;
   directiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
   clientDefinitions: Array<MutableDefinitionNode | DefinitionNode> = [];
   currentSubgraphName = '';
@@ -274,6 +286,7 @@ export class FederationFactory {
   isVersionTwo = false;
   namedInputValueTypeNames = new Set<TypeName>();
   namedOutputTypeNames = new Set<TypeName>();
+  options: CompositionOptions;
   parentDefinitionDataByTypeName = new Map<TypeName, ParentDefinitionData>();
   parentTagDataByTypeName = new Map<TypeName, ParentTagData>();
   persistedDirectiveDefinitionByDirectiveName = new Map<DirectiveName, DirectiveDefinitionNode>([
@@ -295,17 +308,17 @@ export class FederationFactory {
   constructor({
     authorizationDataByParentTypeName,
     concreteTypeNamesByAbstractTypeName,
-    disableResolvabilityValidation,
     entityDataByTypeName,
     entityInterfaceFederationDataByTypeName,
     fieldCoordsByNamedTypeName,
     internalGraph,
     internalSubgraphBySubgraphName,
+    options,
     warnings,
   }: FederationFactoryParams) {
     this.authorizationDataByParentTypeName = authorizationDataByParentTypeName;
+    this.options = options ?? {};
     this.concreteTypeNamesByAbstractTypeName = concreteTypeNamesByAbstractTypeName;
-    this.disableResolvabilityValidation = disableResolvabilityValidation ?? false;
     this.entityDataByTypeName = entityDataByTypeName;
     this.entityInterfaceFederationDataByTypeName = entityInterfaceFederationDataByTypeName;
     this.fieldCoordsByNamedTypeName = fieldCoordsByNamedTypeName;
@@ -2868,7 +2881,7 @@ export class FederationFactory {
      * These checks can be disabled by setting `disableResolvabilityValidation` to true.
      * This should only be done for troubleshooting purposes.
      * */
-    if (!this.disableResolvabilityValidation && this.internalSubgraphBySubgraphName.size > 1) {
+    if (!this.options.disableResolvabilityValidation && this.internalSubgraphBySubgraphName.size > 1) {
       const validationResult = this.internalGraph.validate();
       if (!validationResult.success) {
         return { errors: validationResult.errors, success: false, warnings: this.warnings };
@@ -3241,19 +3254,16 @@ type FederationFactoryResultFailure = {
 
 type FederationFactoryResult = FederationFactoryResultFailure | FederationFactoryResultSuccess;
 
-function initializeFederationFactory({
-  disableResolvabilityValidation,
-  subgraphs,
-}: FederationParams): FederationFactoryResult {
+function initializeFederationFactory({ options, subgraphs }: FederationParams): FederationFactoryResult {
   if (subgraphs.length < 1) {
     return { errors: [minimumSubgraphRequirementError], success: false, warnings: [] };
   }
-  const result = batchNormalize(subgraphs);
+  const result = batchNormalize({ subgraphs, options });
   if (!result.success) {
     return { errors: result.errors, success: false, warnings: result.warnings };
   }
-  const entityInterfaceFederationDataByTypeName = new Map<string, EntityInterfaceFederationData>();
-  const invalidEntityInterfacesByTypeName = new Map<string, Array<InvalidEntityInterface>>();
+  const entityInterfaceFederationDataByTypeName = new Map<TypeName, EntityInterfaceFederationData>();
+  const invalidEntityInterfacesByTypeName = new Map<TypeName, Array<InvalidEntityInterface>>();
   for (const [subgraphName, internalSubgraph] of result.internalSubgraphBySubgraphName) {
     for (const [typeName, entityInterfaceData] of internalSubgraph.entityInterfaces) {
       const existingData = entityInterfaceFederationDataByTypeName.get(typeName);
@@ -3356,12 +3366,12 @@ function initializeFederationFactory({
     federationFactory: new FederationFactory({
       authorizationDataByParentTypeName: result.authorizationDataByParentTypeName,
       concreteTypeNamesByAbstractTypeName: result.concreteTypeNamesByAbstractTypeName,
-      disableResolvabilityValidation,
       entityDataByTypeName: result.entityDataByTypeName,
       entityInterfaceFederationDataByTypeName,
       fieldCoordsByNamedTypeName: result.fieldCoordsByNamedTypeName,
       internalSubgraphBySubgraphName: result.internalSubgraphBySubgraphName,
       internalGraph: result.internalGraph,
+      options,
       warnings: result.warnings,
     }),
     success: true,
@@ -3369,8 +3379,8 @@ function initializeFederationFactory({
   };
 }
 
-export function federateSubgraphs({ disableResolvabilityValidation, subgraphs }: FederationParams): FederationResult {
-  const federationFactoryResult = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
+export function federateSubgraphs({ options, subgraphs }: FederationParams): FederationResult {
+  const federationFactoryResult = initializeFederationFactory({ options, subgraphs });
   if (!federationFactoryResult.success) {
     return { errors: federationFactoryResult.errors, success: false, warnings: federationFactoryResult.warnings };
   }
@@ -3379,11 +3389,11 @@ export function federateSubgraphs({ disableResolvabilityValidation, subgraphs }:
 
 // the flow when publishing a subgraph that also has contracts
 export function federateSubgraphsWithContracts({
+  options,
   subgraphs,
   tagOptionsByContractName,
-  disableResolvabilityValidation,
 }: FederateSubgraphsWithContractsV1Params): FederationResultWithContracts {
-  const factoryResult = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
+  const factoryResult = initializeFederationFactory({ options, subgraphs });
   if (!factoryResult.success) {
     return {
       errors: factoryResult.errors,
@@ -3417,10 +3427,10 @@ export function federateSubgraphsWithContracts({
 // the flow when adding a completely new contract
 export function federateSubgraphsContract({
   contractTagOptions,
-  disableResolvabilityValidation,
+  options,
   subgraphs,
 }: FederateSubgraphsContractV1Params): FederationResult {
-  const result = initializeFederationFactory({ subgraphs, disableResolvabilityValidation });
+  const result = initializeFederationFactory({ options, subgraphs });
   if (!result.success) {
     return { errors: result.errors, success: false, warnings: result.warnings };
   }
