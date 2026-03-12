@@ -1,5 +1,16 @@
 import { describe, expect, test } from 'vitest';
-import { parse, ROUTER_COMPATIBILITY_VERSION_ONE, type Subgraph } from '../../../src';
+import {
+  COST,
+  costOnInterfaceFieldErrorMessage,
+  FIRST_ORDINAL,
+  invalidArgumentValueErrorMessage,
+  invalidDirectiveError,
+  invalidDirectiveLocationErrorMessage,
+  parse,
+  ROUTER_COMPATIBILITY_VERSION_ONE,
+  type Subgraph,
+  undefinedRequiredArgumentsErrorMessage,
+} from '../../../src';
 import { COST_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {
   federateSubgraphsSuccess,
@@ -394,31 +405,49 @@ describe('@cost directive tests', () => {
     test('that @cost with string weight produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithStringCostWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('value ""10"" provided to argument "@cost(weight: ...)" is not a valid "Int!" type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(COST, 'Query.field', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('"10"', '@cost', 'weight', 'Int!'),
+        ]),
+      );
     });
 
     test('that @cost with decimal weight produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithDecimalCost, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('value "2.5" provided to argument "@cost(weight: ...)" is not a valid "Int!" type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(COST, 'Query.field', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('2.5', '@cost', 'weight', 'Int!'),
+        ]),
+      );
     });
 
     test('that @cost on interface type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInterface, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('does not define "INTERFACE" as a valid location');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(COST, 'Node', FIRST_ORDINAL, [invalidDirectiveLocationErrorMessage('cost', 'INTERFACE')]),
+      );
     });
 
     test('that @cost on union type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnUnion, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('does not define "UNION" as a valid location');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(COST, 'SearchResult', FIRST_ORDINAL, [
+          invalidDirectiveLocationErrorMessage('cost', 'UNION'),
+        ]),
+      );
     });
 
     test('that @cost on input object type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInputObject, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('does not define "INPUT_OBJECT" as a valid location');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(COST, 'SearchInput', FIRST_ORDINAL, [
+          invalidDirectiveLocationErrorMessage('cost', 'INPUT_OBJECT'),
+        ]),
+      );
     });
   });
 
@@ -426,7 +455,9 @@ describe('@cost directive tests', () => {
     test('that @cost on a field within an interface type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostOnInterfaceField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('is not permitted on fields or arguments of an Interface type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(COST, 'Node.id', FIRST_ORDINAL, [costOnInterfaceFieldErrorMessage('Node.id')]),
+      );
     });
 
     test('that @cost on an argument of an interface field produces an error', () => {
@@ -435,7 +466,11 @@ describe('@cost directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('is not permitted on fields or arguments of an Interface type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(COST, 'Searchable.search(query: ...)', FIRST_ORDINAL, [
+          costOnInterfaceFieldErrorMessage('Searchable.search(query: ...)'),
+        ]),
+      );
     });
 
     test('that @cost on a field of a type implementing an interface succeeds', () => {
@@ -479,7 +514,11 @@ describe('@cost directive tests', () => {
     test('that @cost without weight argument produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostNoWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('the following 1 required argument: "weight"');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(COST, 'Query.field', FIRST_ORDINAL, [
+          undefinedRequiredArgumentsErrorMessage('cost', ['weight'], []),
+        ]),
+      );
     });
   });
 

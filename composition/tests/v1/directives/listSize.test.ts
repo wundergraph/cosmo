@@ -1,5 +1,21 @@
 import { describe, expect, test } from 'vitest';
-import { parse, ROUTER_COMPATIBILITY_VERSION_ONE, type Subgraph } from '../../../src';
+import {
+  FIRST_ORDINAL,
+  invalidArgumentValueErrorMessage,
+  invalidDirectiveError,
+  LIST_SIZE,
+  listSizeAssumedSizeSlicingArgDefaultErrorMessage,
+  listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage,
+  listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage,
+  listSizeInvalidSlicingArgumentErrorMessage,
+  listSizeSizedFieldNotFoundErrorMessage,
+  listSizeSizedFieldNotListErrorMessage,
+  listSizeSizedFieldsInvalidReturnTypeErrorMessage,
+  listSizeSlicingArgumentNotIntErrorMessage,
+  parse,
+  ROUTER_COMPATIBILITY_VERSION_ONE,
+  type Subgraph,
+} from '../../../src';
 import { LIST_SIZE_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {
   federateSubgraphsSuccess,
@@ -266,19 +282,31 @@ describe('@listSize directive tests', () => {
     test('that @listSize with invalid slicingArguments produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithInvalidSlicingArg, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('"slicingArguments" value "nonexistent" on "Query.users" does not reference a defined argument');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          listSizeInvalidSlicingArgumentErrorMessage('Query.users', 'nonexistent'),
+        ]),
+      );
     });
 
     test('that @listSize with non-Int slicingArgument type produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithNonIntSlicingArg, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          listSizeSlicingArgumentNotIntErrorMessage('Query.users', 'name', 'String'),
+        ]),
+      );
     });
 
     test('that @listSize with list-typed slicingArgument produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithListTypedSlicingArg, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          listSizeSlicingArgumentNotIntErrorMessage('Query.users', 'first', '[Int]'),
+        ]),
+      );
     });
 
     test('that @listSize with non-null list-typed slicingArgument produces an error', () => {
@@ -287,7 +315,11 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          listSizeSlicingArgumentNotIntErrorMessage('Query.users', 'first', '[Int]!'),
+        ]),
+      );
     });
 
     test('that @listSize with list of non-null Int slicingArgument produces an error', () => {
@@ -296,7 +328,11 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          listSizeSlicingArgumentNotIntErrorMessage('Query.users', 'first', '[Int!]'),
+        ]),
+      );
     });
 
     test('that @listSize with non-null list of non-null Int slicingArgument produces an error', () => {
@@ -305,25 +341,41 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('must be of type "Int" or "Int!"');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          listSizeSlicingArgumentNotIntErrorMessage('Query.users', 'first', '[Int!]!'),
+        ]),
+      );
     });
 
     test('that @listSize with invalid sizedFields produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithInvalidSizedField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('"sizedFields" value "nonexistent" on "Query.usersConnection" does not reference a defined field');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.usersConnection', FIRST_ORDINAL, [
+          listSizeSizedFieldNotFoundErrorMessage('Query.usersConnection', 'nonexistent', 'Connection'),
+        ]),
+      );
     });
 
     test('that @listSize with non-list sizedField produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithNonListSizedField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('must return a list type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.usersConnection', FIRST_ORDINAL, [
+          listSizeSizedFieldNotListErrorMessage('Query.usersConnection', 'totalCount', 'Connection', 'Int!'),
+        ]),
+      );
     });
 
     test('that @listSize on non-list field without sizedFields produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithListSizeOnNonListField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('returns type "User!", which is not a list type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.user', FIRST_ORDINAL, [
+          listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage('Query.user', 'User!'),
+        ]),
+      );
     });
 
     test('that bare @listSize (no arguments) on non-list field produces an error', () => {
@@ -332,7 +384,11 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('returns type "User!", which is not a list type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.user', FIRST_ORDINAL, [
+          listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage('Query.user', 'User!'),
+        ]),
+      );
     });
   });
 
@@ -406,7 +462,11 @@ describe('@listSize directive tests', () => {
     test('that @listSize with string assumedSize produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithInvalidAssumedSizeType, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('not a valid "Int" type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('"not an int"', '@listSize', 'assumedSize', 'Int'),
+        ]),
+      );
     });
 
     test('that @listSize with single string slicingArguments succeeds due to list coercion', () => {
@@ -429,13 +489,22 @@ describe('@listSize directive tests', () => {
     test('that @listSize with null in slicingArguments array produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithNullInSlicingArguments, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('not a valid "[String!]" type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('[null]', '@listSize', 'slicingArguments', '[String!]'),
+        ]),
+      );
     });
 
     test('that @listSize with integer sizedFields produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithIntegerSizedFields, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('not a valid "[String!]" type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.usersConnection', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('123', '@listSize', 'sizedFields', '[String!]'),
+          listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage('Query.usersConnection', 'Connection!'),
+        ]),
+      );
     });
 
     test('that @listSize with non-boolean requireOneSlicingArgument produces an error', () => {
@@ -444,7 +513,11 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('not a valid "Boolean" type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          invalidArgumentValueErrorMessage('123', '@listSize', 'requireOneSlicingArgument', 'Boolean'),
+        ]),
+      );
     });
   });
 
@@ -452,7 +525,11 @@ describe('@listSize directive tests', () => {
     test('that @listSize with empty sizedFields on non-list field produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithEmptySizedFields, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('is not a list type, and no "sizedFields" argument is provided.');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.name', FIRST_ORDINAL, [
+          listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage('Query.name', 'String'),
+        ]),
+      );
     });
 
     test('that @listSize with sizedFields on a scalar return type produces an error', () => {
@@ -461,7 +538,11 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('return type "String" is not an object or interface type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.name', FIRST_ORDINAL, [
+          listSizeSizedFieldsInvalidReturnTypeErrorMessage('Query.name', 'String'),
+        ]),
+      );
     });
 
     test('that @listSize with sizedFields on an enum return type produces an error', () => {
@@ -470,7 +551,11 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('return type "Status" is not an object or interface type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.status', FIRST_ORDINAL, [
+          listSizeSizedFieldsInvalidReturnTypeErrorMessage('Query.status', 'Status'),
+        ]),
+      );
     });
 
     test('that @listSize with sizedFields on a union return type produces an error', () => {
@@ -479,7 +564,11 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('return type "Animal" is not an object or interface type');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.animal', FIRST_ORDINAL, [
+          listSizeSizedFieldsInvalidReturnTypeErrorMessage('Query.animal', 'Animal'),
+        ]),
+      );
     });
   });
 
@@ -490,7 +579,11 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('"requireOneSlicingArgument" must be set to false');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage('Query.users'),
+        ]),
+      );
     });
 
     test('that @listSize with assumedSize and slicingArguments with implicit requireOneSlicingArgument produces an error', () => {
@@ -499,7 +592,11 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('"requireOneSlicingArgument" must be set to false');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage('Query.users'),
+        ]),
+      );
     });
 
     test('that @listSize with assumedSize and slicingArguments with requireOneSlicingArgument false and no defaults succeeds', () => {
@@ -520,7 +617,11 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('slicing argument "first" has a default value');
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.users', FIRST_ORDINAL, [
+          listSizeAssumedSizeSlicingArgDefaultErrorMessage('Query.users', 'first'),
+        ]),
+      );
     });
   });
 });
