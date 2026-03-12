@@ -394,13 +394,13 @@ describe('@cost directive tests', () => {
     test('that @cost with string weight produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithStringCostWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('Int!');
+      expect(errors[0].message).toContain('value ""10"" provided to argument "@cost(weight: ...)" is not a valid "Int!" type');
     });
 
     test('that @cost with decimal weight produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithDecimalCost, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('Int!');
+      expect(errors[0].message).toContain('value "2.5" provided to argument "@cost(weight: ...)" is not a valid "Int!" type');
     });
 
     test('that @cost on interface type produces an error', () => {
@@ -479,7 +479,7 @@ describe('@cost directive tests', () => {
     test('that @cost without weight argument produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithCostNoWeight, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('required argument');
+      expect(errors[0].message).toContain('the following 1 required argument: "weight"');
     });
   });
 

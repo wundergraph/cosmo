@@ -266,7 +266,7 @@ describe('@listSize directive tests', () => {
     test('that @listSize with invalid slicingArguments produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithInvalidSlicingArg, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('does not reference a defined argument');
+      expect(errors[0].message).toContain('"slicingArguments" value "nonexistent" on "Query.users" does not reference a defined argument');
     });
 
     test('that @listSize with non-Int slicingArgument type produces an error', () => {
@@ -311,7 +311,7 @@ describe('@listSize directive tests', () => {
     test('that @listSize with invalid sizedFields produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithInvalidSizedField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('does not reference a defined field');
+      expect(errors[0].message).toContain('"sizedFields" value "nonexistent" on "Query.usersConnection" does not reference a defined field');
     });
 
     test('that @listSize with non-list sizedField produces an error', () => {
@@ -323,7 +323,7 @@ describe('@listSize directive tests', () => {
     test('that @listSize on non-list field without sizedFields produces an error', () => {
       const { errors } = normalizeSubgraphFailure(subgraphWithListSizeOnNonListField, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('not a list type');
+      expect(errors[0].message).toContain('returns type "User!", which is not a list type');
     });
 
     test('that bare @listSize (no arguments) on non-list field produces an error', () => {
@@ -332,7 +332,7 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('not a list type');
+      expect(errors[0].message).toContain('returns type "User!", which is not a list type');
     });
   });
 
@@ -517,7 +517,7 @@ describe('@listSize directive tests', () => {
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
       expect(errors).toHaveLength(1);
-      expect(errors[0].message).toContain('has a default value');
+      expect(errors[0].message).toContain('slicing argument "first" has a default value');
     });
   });
 });
