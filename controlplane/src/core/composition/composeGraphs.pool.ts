@@ -21,6 +21,13 @@ import {
 } from './composeGraphs.types.js';
 
 let composeGraphsPool: WorkerPool | undefined;
+const composeGraphsPoolConfig = {
+  maxThreads: 0,
+};
+
+export interface ConfigureComposeGraphsPoolOptions {
+  maxThreads: number;
+}
 
 function getWorkerFilename() {
   const sourceWorker = new URL('composeGraphs.worker.ts', import.meta.url);
@@ -36,8 +43,11 @@ function getWorkerFilename() {
 }
 
 function getMaxThreads() {
-  const parallelism = availableParallelism();
-  return Math.max(1, Math.min(4, parallelism > 1 ? parallelism - 1 : 1));
+  if (composeGraphsPoolConfig.maxThreads > 0) {
+    return composeGraphsPoolConfig.maxThreads;
+  }
+
+  return Math.max(1, availableParallelism());
 }
 
 function getComposeGraphsPool() {
@@ -51,7 +61,7 @@ function getComposeGraphsPool() {
     filename,
     minThreads: 1,
     maxThreads: getMaxThreads(),
-    concurrentTasksPerWorker: 1,
+    concurrentTasksPerWorker: 2,
   });
 
   return composeGraphsPool;
@@ -96,6 +106,10 @@ export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: Ret
 
 export function composeGraphsInWorker(task: ComposeGraphsTaskInput) {
   return getComposeGraphsPool().run(task) as Promise<ComposeGraphsTaskResult>;
+}
+
+export function configureComposeGraphsPool(options: ConfigureComposeGraphsPoolOptions) {
+  composeGraphsPoolConfig.maxThreads = options.maxThreads;
 }
 
 export async function destroyComposeGraphsPool() {

@@ -53,10 +53,13 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
-import { destroyComposeGraphsPool } from './composition/composeGraphs.pool.js';
+import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composition/composeGraphs.pool.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
+  composition: {
+    maxThreads: number;
+  };
   database: {
     url: string;
     tls?: {
@@ -158,6 +161,10 @@ const developmentLoggerOpts: LoggerOptions = {
 };
 
 export default async function build(opts: BuildConfig) {
+  configureComposeGraphsPool({
+    maxThreads: opts.composition.maxThreads,
+  });
+
   opts.logger = {
     timestamp: stdTimeFunctions.isoTime,
     formatters: {
