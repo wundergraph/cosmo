@@ -1,10 +1,10 @@
-import { useRouter } from "next/router";
-import { useMemo } from "react";
-import { FiBell, FiUsers, FiKey, FiSliders } from "react-icons/fi";
-import { PageHeader } from "./head";
-import { LayoutProps } from "./layout";
-import { SideNav, NavLink } from "./sidenav";
-import { TitleLayout } from "./title-layout";
+import { useRouter } from 'next/router';
+import { useMemo } from 'react';
+import { FiBell, FiUsers, FiKey, FiSliders } from 'react-icons/fi';
+import { PageHeader } from './head';
+import { LayoutProps } from './layout';
+import { SideNav, NavLink } from './sidenav';
+import { TitleLayout } from './title-layout';
 
 export const SettingsLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
@@ -15,23 +15,23 @@ export const SettingsLayout = ({ children }: LayoutProps) => {
 
     return [
       {
-        title: "General",
-        href: basePath + "/settings",
+        title: 'General',
+        href: basePath + '/settings',
         icon: <FiSliders />,
       },
       {
-        title: "Members",
-        href: basePath + "/settings/members",
+        title: 'Members',
+        href: basePath + '/settings/members',
         icon: <FiUsers />,
       },
       {
-        title: "API Keys",
-        href: basePath + "/settings/apikeys",
+        title: 'API Keys',
+        href: basePath + '/settings/apikeys',
         icon: <FiKey />,
       },
       {
-        title: "Notifications",
-        href: basePath + "/settings/webhooks",
+        title: 'Notifications',
+        href: basePath + '/settings/webhooks',
         icon: <FiBell />,
       },
     ];
@@ -57,12 +57,7 @@ export const getSettingsLayout = (
   return (
     <SettingsLayout>
       <PageHeader title={`Dashboard | ${title}`}>
-        <TitleLayout
-          title={title}
-          subtitle={subtitle}
-          items={items}
-          toolbar={toolbar}
-        >
+        <TitleLayout title={title} subtitle={subtitle} items={items} toolbar={toolbar}>
           {page}
         </TitleLayout>
       </PageHeader>

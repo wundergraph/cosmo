@@ -1,19 +1,17 @@
-import { Component2Icon } from "@radix-ui/react-icons";
-import { PiGraphLight } from "react-icons/pi";
-import { Handle, NodeProps, Position } from "reactflow";
-import { VscError, VscRecord } from "react-icons/vsc";
-import React from "react";
+import { Component2Icon } from '@radix-ui/react-icons';
+import { PiGraphLight } from 'react-icons/pi';
+import { Handle, NodeProps, Position } from 'reactflow';
+import { VscError, VscRecord } from 'react-icons/vsc';
+import React from 'react';
 
 function ReactFlowGraphNode({ data }: NodeProps) {
   return (
     <>
-      {data.parentId && (
-        <Handle type="target" position={Position.Left} isConnectable={false} />
-      )}
-      <div className="nodrag dark:ring-white/15 grid w-[120px] grid-cols-1 divide-y rounded border border-border-emphasized bg-white text-left text-xs shadow-sm shadow-black/5 ring-1 ring-black/[.08] transition duration-150 dark:divide-gray-700 dark:bg-secondary dark:shadow-black/60">
+      {data.parentId && <Handle type="target" position={Position.Left} isConnectable={false} />}
+      <div className="nodrag grid w-[120px] grid-cols-1 divide-y rounded border border-border-emphasized bg-white text-left text-xs shadow-sm shadow-black/5 ring-1 ring-black/[.08] transition duration-150 dark:divide-gray-700 dark:bg-secondary dark:shadow-black/60 dark:ring-white/15">
         <div className="flex items-center justify-center px-1.5">
           <div className="flex items-center justify-center">
-            {data.kind === "graph" ? (
+            {data.kind === 'graph' ? (
               <PiGraphLight className="h-3 w-3 text-secondary-foreground" />
             ) : (
               <Component2Icon className="h-3 w-3 text-secondary-foreground" />
@@ -35,12 +33,7 @@ function ReactFlowGraphNode({ data }: NodeProps) {
           <div className="text-[7px] text-muted-foreground">RPM</div>
         </div>
       </div>
-      <Handle
-        type="source"
-        position={Position.Right}
-        isConnectable={false}
-        hidden={data.kind === "subgraph"}
-      />
+      <Handle type="source" position={Position.Right} isConnectable={false} hidden={data.kind === 'subgraph'} />
     </>
   );
 }

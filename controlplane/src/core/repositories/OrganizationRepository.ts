@@ -26,6 +26,7 @@ import {
   users,
 } from '../../db/schema.js';
 import {
+  COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
   Feature,
   FeatureIds,
   OrganizationDTO,
@@ -1405,16 +1406,18 @@ export class OrganizationRepository {
       plugins: 0,
       users: 25,
       requests: 30,
-      rbac: false,
-      sso: false,
-      security: false,
-      support: false,
-      oidc: false,
+      // Boolean features
       ai: false,
-      scim: false,
+      [COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID]: false,
       'cache-warmer': false,
+      oidc: false,
       proposals: false,
+      rbac: false,
+      scim: false,
+      security: false,
+      sso: false,
       'subgraph-check-extensions': false,
+      support: false,
     };
 
     for (const feature of features) {

@@ -1,11 +1,11 @@
-import { EmptyState } from "@/components/empty-state";
-import { FullscreenLayout } from "@/components/layout/fullscreen-layout";
-import { Logo } from "@/components/logo";
-import { Button } from "@/components/ui/button";
-import { NextPageWithLayout } from "@/lib/page";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { EmptyState } from '@/components/empty-state';
+import { FullscreenLayout } from '@/components/layout/fullscreen-layout';
+import { Logo } from '@/components/logo';
+import { Button } from '@/components/ui/button';
+import { NextPageWithLayout } from '@/lib/page';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useEffect } from 'react';
 
 const FourOhFour: NextPageWithLayout = () => {
   const router = useRouter();
@@ -13,7 +13,7 @@ const FourOhFour: NextPageWithLayout = () => {
   useEffect(() => {
     let t: NodeJS.Timeout;
     t = setTimeout(() => {
-      router.replace("/");
+      router.replace('/');
     }, 3000);
 
     return () => {
@@ -50,12 +50,7 @@ const FourOhFour: NextPageWithLayout = () => {
         </g>
         <defs>
           <clipPath id="clip0_702_186">
-            <rect
-              width="854.167"
-              height="322.888"
-              fill="white"
-              transform="translate(0.5 0.0560303)"
-            />
+            <rect width="854.167" height="322.888" fill="white" transform="translate(0.5 0.0560303)" />
           </clipPath>
         </defs>
       </svg>

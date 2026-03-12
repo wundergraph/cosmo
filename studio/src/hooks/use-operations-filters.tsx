@@ -1,7 +1,7 @@
-import { useCallback } from "react";
-import { useRouter } from "next/router";
-import { OperationsFetchBasedOn } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
+import { useCallback } from 'react';
+import { useRouter } from 'next/router';
+import { OperationsFetchBasedOn } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { useApplyParams } from '@/components/analytics/use-apply-params';
 
 export const useOperationsFilters = () => {
   const router = useRouter();
@@ -11,8 +11,7 @@ export const useOperationsFilters = () => {
   const applyDeprecatedFieldsFilter = useCallback(
     (includeOperationsWithDeprecatedFieldsOnly: boolean) => {
       const params: Record<string, string | null> = {
-        includeOperationsWithDeprecatedFieldsOnly:
-          includeOperationsWithDeprecatedFieldsOnly ? "true" : null,
+        includeOperationsWithDeprecatedFieldsOnly: includeOperationsWithDeprecatedFieldsOnly ? 'true' : null,
       };
 
       // When enabling deprecated fields filter, clear operation selection
@@ -31,23 +30,23 @@ export const useOperationsFilters = () => {
   const enumToString = (enumValue: OperationsFetchBasedOn): string => {
     switch (enumValue) {
       case OperationsFetchBasedOn.REQUESTS:
-        return "requests";
+        return 'requests';
       case OperationsFetchBasedOn.LATENCY:
-        return "latency";
+        return 'latency';
       case OperationsFetchBasedOn.ERRORS:
-        return "errors";
+        return 'errors';
       default:
-        return "requests";
+        return 'requests';
     }
   };
 
   const stringToEnum = (str: string): OperationsFetchBasedOn => {
     switch (str) {
-      case "requests":
+      case 'requests':
         return OperationsFetchBasedOn.REQUESTS;
-      case "latency":
+      case 'latency':
         return OperationsFetchBasedOn.LATENCY;
-      case "errors":
+      case 'errors':
         return OperationsFetchBasedOn.ERRORS;
       default:
         return OperationsFetchBasedOn.REQUESTS;
@@ -65,16 +64,13 @@ export const useOperationsFilters = () => {
   );
 
   // Get current values from URL
-  const includeOperationsWithDeprecatedFieldsOnly =
-    router.query.includeOperationsWithDeprecatedFieldsOnly === "true";
+  const includeOperationsWithDeprecatedFieldsOnly = router.query.includeOperationsWithDeprecatedFieldsOnly === 'true';
   const clientNamesParam = (router.query.clientNames as string) || null;
-  const clientNames = clientNamesParam
-    ? clientNamesParam.split(",").filter((name) => name.length > 0)
-    : [];
-  const searchQuery = (router.query.searchQuery as string) || "";
-  const fetchBasedOnStr = (router.query.fetchBasedOn as string) || "requests";
+  const clientNames = clientNamesParam ? clientNamesParam.split(',').filter((name) => name.length > 0) : [];
+  const searchQuery = (router.query.searchQuery as string) || '';
+  const fetchBasedOnStr = (router.query.fetchBasedOn as string) || 'requests';
   const fetchBasedOn = stringToEnum(fetchBasedOnStr);
-  const sortDirection = (router.query.sortDirection as string) || "desc";
+  const sortDirection = (router.query.sortDirection as string) || 'desc';
 
   return {
     applyDeprecatedFieldsFilter,

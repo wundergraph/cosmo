@@ -1,32 +1,33 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { PlainMessage } from "@bufbuild/protobuf";
-import { ConfigureSubgraphCheckExtensionsRequest } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import * as z from "zod";
-import { ReactNode, useEffect, useMemo, useState } from "react";
-import { docsBaseURL } from "@/lib/constants";
-import { useZodForm } from "@/hooks/use-form";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { PlainMessage } from '@bufbuild/protobuf';
+import { ConfigureSubgraphCheckExtensionsRequest } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import * as z from 'zod';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { docsBaseURL } from '@/lib/constants';
+import { useZodForm } from '@/hooks/use-form';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import {
   AlertDialog,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogTitle
-} from "@/components/ui/alert-dialog";
-import { clsx } from "clsx";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
-import { useWorkspace } from "@/hooks/use-workspace";
-import Link from "next/link";
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { clsx } from 'clsx';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { useWorkspace } from '@/hooks/use-workspace';
+import Link from 'next/link';
 
 export type SubgraphCheckExtensionsConfig = Omit<PlainMessage<ConfigureSubgraphCheckExtensionsRequest>, 'namespace'>;
 
 const validationSchema = z.object({
-  endpoint: z.string()
+  endpoint: z
+    .string()
     .trim()
-    .superRefine((val, ctx) =>{
+    .superRefine((val, ctx) => {
       if (!val) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -98,7 +99,7 @@ export function CheckExtensionsConfig({
   isLintingEnabledForNamespace,
   isGraphPruningEnabledForNamespace,
   isUpdatingConfig,
-  onSaveChanges
+  onSaveChanges,
 }: CheckExtensionsConfigProps) {
   const { namespace } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
@@ -107,7 +108,7 @@ export function CheckExtensionsConfig({
   const [forceShowSecretKeyInput, setForceShowSecretKeyInput] = useState<boolean | undefined>(undefined);
   const form = useZodForm({
     schema: validationSchema,
-    mode: "onChange",
+    mode: 'onChange',
     defaultValues: config,
   });
 
@@ -131,70 +132,68 @@ export function CheckExtensionsConfig({
     }
   };
 
-  const toggleableOptions = useMemo<ToggleableOptionsType[]>(() => [
-    {
-      key: 'includeComposedSdl',
-      label: 'Composed SDL',
-      description:
-        "Provides both the previous and newly composed Schema Definition Language (SDL) documents for the subgraph " +
-        "being checked, along with the composed SDL for the federated graph.",
-      docsLink: "/studio/subgraph-check-extensions#include-composed-sdl"
-    },
-    {
-      key: "includeLintingIssues",
-      label: "Lint Warnings and Errors",
-      description: isLintingEnabledForNamespace
-        ? "Linting issues identified based on the configured rules for the namespace."
-        : (
+  const toggleableOptions = useMemo<ToggleableOptionsType[]>(
+    () => [
+      {
+        key: 'includeComposedSdl',
+        label: 'Composed SDL',
+        description:
+          'Provides both the previous and newly composed Schema Definition Language (SDL) documents for the subgraph ' +
+          'being checked, along with the composed SDL for the federated graph.',
+        docsLink: '/studio/subgraph-check-extensions#include-composed-sdl',
+      },
+      {
+        key: 'includeLintingIssues',
+        label: 'Lint Warnings and Errors',
+        description: isLintingEnabledForNamespace ? (
+          'Linting issues identified based on the configured rules for the namespace.'
+        ) : (
           <>
             <>
-              You must{" "}
-              <Link
-                href={`/${organizationSlug}/policies?namespace=${namespace.name}`}
-                className="text-primary"
-              >
+              You must{' '}
+              <Link href={`/${organizationSlug}/policies?namespace=${namespace.name}`} className="text-primary">
                 enable the linter
-              </Link>
-              {" "}for the namespace to be able to receive lint warnings and errors.
+              </Link>{' '}
+              for the namespace to be able to receive lint warnings and errors.
             </>
           </>
         ),
-      docsLink: "/studio/subgraph-check-extensions#include-lint-warnings-and-errors",
-      isDisabled: !isLintingEnabledForNamespace,
-    },
-    {
-      key: "includePruningIssues",
-      label: "Graph Pruning Warnings and Errors",
-      description: isGraphPruningEnabledForNamespace
-        ? "Graph pruning issues identified based on the configured rules for the namespace."
-        : (
+        docsLink: '/studio/subgraph-check-extensions#include-lint-warnings-and-errors',
+        isDisabled: !isLintingEnabledForNamespace,
+      },
+      {
+        key: 'includePruningIssues',
+        label: 'Graph Pruning Warnings and Errors',
+        description: isGraphPruningEnabledForNamespace ? (
+          'Graph pruning issues identified based on the configured rules for the namespace.'
+        ) : (
           <>
-            You must{" "}
-            <Link
-              href={`/${organizationSlug}/policies?namespace=${namespace.name}`}
-              className="text-primary"
-            >
+            You must{' '}
+            <Link href={`/${organizationSlug}/policies?namespace=${namespace.name}`} className="text-primary">
               enable the graph pruning linter
-            </Link>
-            {" "}for the namespace to be able to receive graph pruning warnings and errors.
+            </Link>{' '}
+            for the namespace to be able to receive graph pruning warnings and errors.
           </>
         ),
-      docsLink: "/studio/subgraph-check-extensions#include-graph-pruning-warnings-and-errors",
-      isDisabled: !isGraphPruningEnabledForNamespace,
-    },
-    {
-      key: "includeSchemaChanges",
-      label: "Schema Changes",
-      description: "Lists the changes detected in the subgraph schema, including additions, removals, and modifications.",
-      docsLink: "/studio/subgraph-check-extensions#include-schema-changes",
-    },
-    {
-      key: "includeAffectedOperations",
-      label: "Affected Operations",
-      description: "Lists the operations that may be impacted by changes to the subgraph schema.",
-      docsLink: "/studio/subgraph-check-extensions#include-affected-operations",
-    },
-  ], [isLintingEnabledForNamespace, isGraphPruningEnabledForNamespace, namespace.name, organizationSlug]);
+        docsLink: '/studio/subgraph-check-extensions#include-graph-pruning-warnings-and-errors',
+        isDisabled: !isGraphPruningEnabledForNamespace,
+      },
+      {
+        key: 'includeSchemaChanges',
+        label: 'Schema Changes',
+        description:
+          'Lists the changes detected in the subgraph schema, including additions, removals, and modifications.',
+        docsLink: '/studio/subgraph-check-extensions#include-schema-changes',
+      },
+      {
+        key: 'includeAffectedOperations',
+        label: 'Affected Operations',
+        description: 'Lists the operations that may be impacted by changes to the subgraph schema.',
+        docsLink: '/studio/subgraph-check-extensions#include-affected-operations',
+      },
+    ],
+    [isLintingEnabledForNamespace, isGraphPruningEnabledForNamespace, namespace.name, organizationSlug],
+  );
 
   const showSecretKeyInput = forceShowSecretKeyInput || !enableSubgraphCheckExtensions || !isSecretKeyAssigned;
   return (
@@ -203,14 +202,11 @@ export function CheckExtensionsConfig({
         <AlertDialogContent>
           <AlertDialogTitle>Secret key removed</AlertDialogTitle>
           <AlertDialogDescription>
-            You are about to update the webhook configuration and remove the secret key.{" "}
-            Are you sure you want to do this?
+            You are about to update the webhook configuration and remove the secret key. Are you sure you want to do
+            this?
           </AlertDialogDescription>
           <AlertDialogFooter>
-            <Button
-              variant="secondary"
-              onClick={() => setShowConfirmationDialog(false)}
-            >
+            <Button variant="secondary" onClick={() => setShowConfirmationDialog(false)}>
               Cancel
             </Button>
             <Button
@@ -233,8 +229,8 @@ export function CheckExtensionsConfig({
                   <CardTitle>Subgraph Check Extensions</CardTitle>
                   <CardDescription className="text-sm text-muted-foreground">
                     {enableSubgraphCheckExtensions
-                      ? "Configure the subgraph check extensions of this namespace."
-                      : "Enable subgraph check extensions to set the configuration."}
+                      ? 'Configure the subgraph check extensions of this namespace.'
+                      : 'Enable subgraph check extensions to set the configuration.'}
                   </CardDescription>
                 </div>
 
@@ -248,7 +244,7 @@ export function CheckExtensionsConfig({
               </div>
             </CardHeader>
 
-            <CardContent className="space-y-1.5 pt-6 border-t">
+            <CardContent className="space-y-1.5 border-t pt-6">
               <FormField
                 control={form.control}
                 name="endpoint"
@@ -256,21 +252,17 @@ export function CheckExtensionsConfig({
                   <FormItem>
                     <FormLabel>Endpoint</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        type="text"
-                        placeholder="https://example.com/webhook"
-                        disabled={isDisabled}
-                      />
+                      <Input {...field} type="text" placeholder="https://example.com/webhook" disabled={isDisabled} />
                     </FormControl>
 
                     <FormDescription>
-                      The endpoint that will receive POST requests with event data. Must be a valid absolute{" "}
-                      URL starting with <code className="font-mono">https://</code>.
+                      The endpoint that will receive POST requests with event data. Must be a valid absolute URL
+                      starting with <code className="font-mono">https://</code>.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
-                )} />
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -281,19 +273,17 @@ export function CheckExtensionsConfig({
 
                     {showSecretKeyInput ? (
                       <FormControl>
-                        <Input {...field} type="text" placeholder="*************" disabled={isDisabled}/>
+                        <Input {...field} type="text" placeholder="*************" disabled={isDisabled} />
                       </FormControl>
                     ) : (
-                      <div
-                        className="flex justify-start items-center gap-x-1 h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm hover:border-input-active dark:bg-black"
-                      >
+                      <div className="flex h-9 w-full items-center justify-start gap-x-1 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm hover:border-input-active dark:bg-black">
                         <span>If you have lost or forgotten this secret key, you can change it.</span>
                         <Button
                           variant="link"
-                          className="p-0 h-auto"
+                          className="h-auto p-0"
                           onClick={() => {
                             setForceShowSecretKeyInput(true);
-                            form.setValue("secretKey", "");
+                            form.setValue('secretKey', '');
                           }}
                         >
                           Change secret key
@@ -302,10 +292,10 @@ export function CheckExtensionsConfig({
                     )}
 
                     <FormDescription>
-                      This can be used to verify if the events are originating from Cosmo.{" "}
+                      This can be used to verify if the events are originating from Cosmo.{' '}
                       <a
                         rel="noreferrer"
-                        href={docsBaseURL + "/studio/subgraph-check-extensions#verification"}
+                        href={docsBaseURL + '/studio/subgraph-check-extensions#verification'}
                         target="_blank"
                         className="text-primary"
                       >
@@ -317,18 +307,19 @@ export function CheckExtensionsConfig({
                 )}
               />
 
-              <div className="py-2 text-sm space-y-1">
+              <div className="space-y-1 py-2 text-sm">
                 <p className="font-medium leading-none">Included fields</p>
                 <p className="text-muted-foreground">
-                  Specifies which data elements should be included in the generated file delivered via the webhook.{" "}
+                  Specifies which data elements should be included in the generated file delivered via the webhook.{' '}
                   <a
-                    href={docsBaseURL + "/studio/subgraph-check-extensions#configuration"}
+                    href={docsBaseURL + '/studio/subgraph-check-extensions#configuration'}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-primary ml-1"
+                    className="ml-1 text-primary"
                   >
                     Learn more
-                  </a>.
+                  </a>
+                  .
                 </p>
               </div>
 
@@ -340,20 +331,18 @@ export function CheckExtensionsConfig({
                     control={form.control}
                     name={item.key}
                     render={({ field }) => (
-                      <FormItem className="w-full flex justify-start items-start gap-3 rounded-md border p-4 space-y-0">
+                      <FormItem className="flex w-full items-start justify-start gap-3 space-y-0 rounded-md border p-4">
                         <FormControl>
                           <Checkbox
                             checked={!item.isDisabled && (!enableSubgraphCheckExtensions || field.value === true)}
                             disabled={isDisabled || item.isDisabled}
-                            className="w-5 h-5 flex-shrink-0"
+                            className="h-5 w-5 flex-shrink-0"
                             onCheckedChange={(checked) => field.onChange(checked === true)}
                           />
                         </FormControl>
 
                         <div className="flex flex-col gap-y-1">
-                          <FormLabel
-                            className={clsx(isItemDisabled && "text-muted-foreground cursor-not-allowed")}
-                          >
+                          <FormLabel className={clsx(isItemDisabled && 'cursor-not-allowed text-muted-foreground')}>
                             {item.label}
                           </FormLabel>
                           {(item.description || item.docsLink) && (
@@ -365,10 +354,11 @@ export function CheckExtensionsConfig({
                                     href={docsBaseURL + item.docsLink}
                                     target="_blank"
                                     rel="noreferrer"
-                                    className="text-primary ml-1"
+                                    className="ml-1 text-primary"
                                   >
                                     Learn more
-                                  </a>.
+                                  </a>
+                                  .
                                 </>
                               )}
                             </p>

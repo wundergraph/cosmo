@@ -1,30 +1,26 @@
-import { Button, ButtonProps } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import useWindowSize from "@/hooks/use-window-size";
-import { formatDate } from "@/lib/format-date";
-import { cn } from "@/lib/utils";
-import CalendarIcon from "@heroicons/react/24/outline/CalendarIcon";
-import { addDays, addYears, subHours, subYears } from "date-fns";
-import { useEffect, useState } from "react";
-import { DateRange } from "react-day-picker";
+import { Button, ButtonProps } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import useWindowSize from '@/hooks/use-window-size';
+import { formatDate } from '@/lib/format-date';
+import { cn } from '@/lib/utils';
+import CalendarIcon from '@heroicons/react/24/outline/CalendarIcon';
+import { addDays, addYears, subHours, subYears } from 'date-fns';
+import { useEffect, useState } from 'react';
+import { DateRange } from 'react-day-picker';
 
 export function DateRangePicker({
   selectedDateRange,
   onDateRangeChange,
   className,
-  align = "start",
+  align = 'start',
   size,
   calendarDaysLimit,
 }: React.HTMLAttributes<HTMLDivElement> & {
   selectedDateRange: DateRange;
   onDateRangeChange: (newVal: DateRange) => unknown;
-  align?: "start" | "center" | "end";
-  size?: ButtonProps["size"];
+  align?: 'start' | 'center' | 'end';
+  size?: ButtonProps['size'];
   calendarDaysLimit: number;
 }) {
   const { isMobile } = useWindowSize();
@@ -52,12 +48,12 @@ export function DateRangePicker({
       <PopoverTrigger asChild>
         <Button
           id="date"
-          variant={"outline"}
+          variant={'outline'}
           size={size}
           className={cn(
-            "w-[240px] justify-center text-left font-normal",
+            'w-[240px] justify-center text-left font-normal',
             className,
-            !selected && "text-muted-foreground",
+            !selected && 'text-muted-foreground',
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
@@ -82,11 +78,7 @@ export function DateRangePicker({
           selected={selected}
           onSelect={(range, day) => {
             if (range) {
-              if (
-                selected.from &&
-                selected.to &&
-                isDayBetween(day, selected.from, selected.to)
-              ) {
+              if (selected.from && selected.to && isDayBetween(day, selected.from, selected.to)) {
                 setSelected({ from: day, to: undefined });
                 return;
               }

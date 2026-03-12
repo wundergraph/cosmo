@@ -93,6 +93,7 @@ type ComplexityRoot struct {
 		CurrentMood           func(childComplexity int) int
 		DerivedMood           func(childComplexity int) int
 		Details               func(childComplexity int) int
+		Expertise             func(childComplexity int) int
 		ID                    func(childComplexity int) int
 		IsAvailable           func(childComplexity int) int
 		Notes                 func(childComplexity int) int
@@ -374,6 +375,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Employee.Details(childComplexity), true
+
+	case "Employee.expertise":
+		if e.complexity.Employee.Expertise == nil {
+			break
+		}
+
+		return e.complexity.Employee.Expertise(childComplexity), true
 
 	case "Employee.id":
 		if e.complexity.Employee.ID == nil {
@@ -931,24 +939,24 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 
 var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `extend schema
-  @link(
-    url: "https://specs.apollo.dev/federation/v2.5"
-    import: [
-      "@authenticated"
-      "@composeDirective"
-      "@external"
-      "@extends"
-      "@inaccessible"
-      "@interfaceObject"
-      "@override"
-      "@provides"
-      "@key"
-      "@requires"
-      "@requiresScopes"
-      "@shareable"
-      "@tag"
-    ]
-  )
+@link(
+  url: "https://specs.apollo.dev/federation/v2.5"
+  import: [
+    "@authenticated"
+    "@composeDirective"
+    "@external"
+    "@extends"
+    "@inaccessible"
+    "@interfaceObject"
+    "@override"
+    "@provides"
+    "@key"
+    "@requires"
+    "@requiresScopes"
+    "@shareable"
+    "@tag"
+  ]
+)
 
 directive @goField(
   forceResolver: Boolean
@@ -1076,6 +1084,7 @@ type Employee implements Identifiable @key(fields: "id") {
   details: Details! @shareable
   id: Int!
   tag: String!
+  expertise: String!
   role: RoleType!
   notes: String @shareable
   updatedAt: String!
@@ -1126,9 +1135,9 @@ type SDK implements IProduct @key(fields: "upc") {
 }
 
 input FindEmployeeCriteria @oneOf {
-    id: Int
-    department: Department
-    title: String
+  id: Int
+  department: Department
+  title: String
 }`, BuiltIn: false},
 	{Name: "../../federation/directives.graphql", Input: `
 	directive @authenticated on FIELD_DEFINITION | OBJECT | INTERFACE | SCALAR | ENUM
@@ -2096,6 +2105,8 @@ func (ec *executionContext) fieldContext_Consultancy_lead(_ context.Context, fie
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -2251,6 +2262,8 @@ func (ec *executionContext) fieldContext_Cosmo_engineers(_ context.Context, fiel
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -2321,6 +2334,8 @@ func (ec *executionContext) fieldContext_Cosmo_lead(_ context.Context, field gra
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -2797,6 +2812,50 @@ func (ec *executionContext) _Employee_tag(ctx context.Context, field graphql.Col
 }
 
 func (ec *executionContext) fieldContext_Employee_tag(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Employee",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Employee_expertise(ctx context.Context, field graphql.CollectedField, obj *model.Employee) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Employee_expertise(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Expertise, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Employee_expertise(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Employee",
 		Field:      field,
@@ -3332,6 +3391,8 @@ func (ec *executionContext) fieldContext_Engineer_employees(_ context.Context, f
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -3574,6 +3635,8 @@ func (ec *executionContext) fieldContext_Entity_findEmployeeByID(ctx context.Con
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -3890,6 +3953,8 @@ func (ec *executionContext) fieldContext_Marketer_employees(_ context.Context, f
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -3957,6 +4022,8 @@ func (ec *executionContext) fieldContext_Mutation_updateEmployeeTag(ctx context.
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -4291,6 +4358,8 @@ func (ec *executionContext) fieldContext_Operator_employees(_ context.Context, f
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -4402,6 +4471,8 @@ func (ec *executionContext) fieldContext_Query_employee(ctx context.Context, fie
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -4480,6 +4551,8 @@ func (ec *executionContext) fieldContext_Query_employeeAsList(ctx context.Contex
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -4558,6 +4631,8 @@ func (ec *executionContext) fieldContext_Query_employees(_ context.Context, fiel
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -4672,6 +4747,8 @@ func (ec *executionContext) fieldContext_Query_teammates(ctx context.Context, fi
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -4753,6 +4830,8 @@ func (ec *executionContext) fieldContext_Query_firstEmployee(_ context.Context, 
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -4823,6 +4902,8 @@ func (ec *executionContext) fieldContext_Query_findEmployeesBy(ctx context.Conte
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -5182,6 +5263,8 @@ func (ec *executionContext) fieldContext_SDK_engineers(_ context.Context, field 
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -5252,6 +5335,8 @@ func (ec *executionContext) fieldContext_SDK_owner(_ context.Context, field grap
 				return ec.fieldContext_Employee_id(ctx, field)
 			case "tag":
 				return ec.fieldContext_Employee_tag(ctx, field)
+			case "expertise":
+				return ec.fieldContext_Employee_expertise(ctx, field)
 			case "role":
 				return ec.fieldContext_Employee_role(ctx, field)
 			case "notes":
@@ -8223,6 +8308,11 @@ func (ec *executionContext) _Employee(ctx context.Context, sel ast.SelectionSet,
 			}
 		case "tag":
 			out.Values[i] = ec._Employee_tag(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "expertise":
+			out.Values[i] = ec._Employee_expertise(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}

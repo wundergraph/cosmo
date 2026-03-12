@@ -1,6 +1,6 @@
-import { Table } from "@tanstack/react-table";
-import { AnalyticsViewResultFilter } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { AnalyticsFilter } from "./filters";
+import { Table } from '@tanstack/react-table';
+import { AnalyticsViewResultFilter } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { AnalyticsFilter } from './filters';
 
 export const optionConstructor = ({
   label,
@@ -11,10 +11,10 @@ export const optionConstructor = ({
   operator: string;
   value: string | number;
 }) => {
-  let prefix = "";
+  let prefix = '';
 
-  if (operator === "GREATER_THAN") prefix = ">";
-  if (operator === "LESS_THAN") prefix = "<";
+  if (operator === 'GREATER_THAN') prefix = '>';
+  if (operator === 'LESS_THAN') prefix = '<';
 
   return {
     label,
@@ -22,10 +22,7 @@ export const optionConstructor = ({
   };
 };
 
-export const getDataTableFilters = <T>(
-  table: Table<T>,
-  filters: Array<AnalyticsViewResultFilter>,
-) => {
+export const getDataTableFilters = <T>(table: Table<T>, filters: Array<AnalyticsViewResultFilter>) => {
   const filtersList: Array<AnalyticsFilter> = [];
 
   filters.forEach((filter) => {

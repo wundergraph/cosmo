@@ -1,46 +1,33 @@
-import { AnalyticsDataTable } from "@/components/analytics/data-table";
-import { AnalyticsToolbar } from "@/components/analytics/toolbar";
-import TraceDetails from "@/components/analytics/trace-details";
-import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { EmptyState } from "@/components/empty-state";
-import {
-  getGraphLayout,
-  GraphContext,
-  GraphPageLayout,
-} from "@/components/layout/graph-layout";
-import { Button } from "@/components/ui/button";
-import { CopyButton } from "@/components/ui/copy-button";
-import { Kbd } from "@/components/ui/kbd";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Spacer } from "@/components/ui/spacer";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { NextPageWithLayout } from "@/lib/page";
-import { useParseSchema } from "@/lib/schema-helpers";
-import { cn } from "@/lib/utils";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { ArrowRightIcon, SizeIcon } from "@radix-ui/react-icons";
-import { useHotkeys } from "@saas-ui/use-hotkeys";
-import { keepPreviousData } from "@tanstack/react-query";
-import { useQuery } from "@connectrpc/connect-query";
-import { Table } from "@tanstack/react-table";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { AnalyticsDataTable } from '@/components/analytics/data-table';
+import { AnalyticsToolbar } from '@/components/analytics/toolbar';
+import TraceDetails from '@/components/analytics/trace-details';
+import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { EmptyState } from '@/components/empty-state';
+import { getGraphLayout, GraphContext, GraphPageLayout } from '@/components/layout/graph-layout';
+import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/ui/copy-button';
+import { Kbd } from '@/components/ui/kbd';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Spacer } from '@/components/ui/spacer';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { NextPageWithLayout } from '@/lib/page';
+import { useParseSchema } from '@/lib/schema-helpers';
+import { cn } from '@/lib/utils';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { ArrowRightIcon, SizeIcon } from '@radix-ui/react-icons';
+import { useHotkeys } from '@saas-ui/use-hotkeys';
+import { keepPreviousData } from '@tanstack/react-query';
+import { useQuery } from '@connectrpc/connect-query';
+import { Table } from '@tanstack/react-table';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getAnalyticsView,
   getFederatedGraphSDLByName,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { formatISO } from "date-fns";
-import { useRouter } from "next/router";
-import { useContext, useRef, useState } from "react";
-import { FiChevronDown, FiChevronUp } from "react-icons/fi";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { formatISO } from 'date-fns';
+import { useRouter } from 'next/router';
+import { useContext, useRef, useState } from 'react';
+import { FiChevronDown, FiChevronUp } from 'react-icons/fi';
 
 // For the network call we read purely from the query with useAnalyticsQueryState
 // The data table should only set url params and not the state for filters and pagination
@@ -52,16 +39,7 @@ const TracesPage: NextPageWithLayout = () => {
 
   const tableRef = useRef<Table<any>>(null);
 
-  const {
-    name,
-    filters,
-    pagination,
-    range,
-    dateRange,
-    page,
-    refreshInterval,
-    sort,
-  } = useAnalyticsQueryState();
+  const { name, filters, pagination, range, dateRange, page, refreshInterval, sort } = useAnalyticsQueryState();
 
   let { data, isFetching, isLoading, error, refetch } = useQuery(
     getAnalyticsView,
@@ -100,7 +78,7 @@ const TracesPage: NextPageWithLayout = () => {
     data?.view?.rows.map((each) => {
       const entries = Object.entries(each.value);
       const row: {
-        [key: string]: (typeof entries)[number]["1"]["kind"]["value"];
+        [key: string]: (typeof entries)[number]['1']['kind']['value'];
       } = {};
 
       for (const [key, valueObject] of entries) {
@@ -115,9 +93,7 @@ const TracesPage: NextPageWithLayout = () => {
         <EmptyState
           icon={<ExclamationTriangleIcon />}
           title="Could not retrieve analytics data"
-          description={
-            data?.response?.details || error?.message || "Please try again"
-          }
+          description={data?.response?.details || error?.message || 'Please try again'}
           actions={<Button onClick={() => refetch()}>Retry</Button>}
         />
       </div>
@@ -142,8 +118,8 @@ const TracesPage: NextPageWithLayout = () => {
 };
 
 const sizes = {
-  default: "lg:max-w-3xl xl:max-w-6xl",
-  full: "max-w-full",
+  default: 'lg:max-w-3xl xl:max-w-6xl',
+  full: 'max-w-full',
 };
 
 const TraceSheet: React.FC<any> = (props) => {
@@ -152,17 +128,15 @@ const TraceSheet: React.FC<any> = (props) => {
   const traceId = router.query.traceID as string;
   const spanId = router.query.spanID as string;
 
-  const index = props.data.findIndex(
-    (r: any) => r.traceId === traceId && r.spanId === spanId,
-  );
+  const index = props.data.findIndex((r: any) => r.traceId === traceId && r.spanId === spanId);
 
-  const [size, setSize] = useState<keyof typeof sizes>("default");
+  const [size, setSize] = useState<keyof typeof sizes>('default');
 
   const nextTrace = () => {
     if (index + 1 < props.data.length) {
       const newQuery = { ...router.query };
-      newQuery["traceID"] = props.data[index + 1].traceId;
-      newQuery["spanID"] = props.data[index + 1].spanId;
+      newQuery['traceID'] = props.data[index + 1].traceId;
+      newQuery['spanID'] = props.data[index + 1].spanId;
       router.replace({
         query: newQuery,
       });
@@ -172,8 +146,8 @@ const TraceSheet: React.FC<any> = (props) => {
   const previousTrace = () => {
     if (index - 1 >= 0) {
       const newQuery = { ...router.query };
-      newQuery["traceID"] = props.data[index - 1].traceId;
-      newQuery["spanID"] = props.data[index - 1].spanId;
+      newQuery['traceID'] = props.data[index - 1].traceId;
+      newQuery['spanID'] = props.data[index - 1].spanId;
       router.replace({
         query: newQuery,
       });
@@ -181,7 +155,7 @@ const TraceSheet: React.FC<any> = (props) => {
   };
 
   useHotkeys(
-    "K",
+    'K',
     () => {
       previousTrace();
     },
@@ -190,7 +164,7 @@ const TraceSheet: React.FC<any> = (props) => {
   );
 
   useHotkeys(
-    "J",
+    'J',
     () => {
       nextTrace();
     },
@@ -205,8 +179,8 @@ const TraceSheet: React.FC<any> = (props) => {
       onOpenChange={(isOpen) => {
         if (!isOpen) {
           const newQuery = { ...router.query };
-          delete newQuery["traceID"];
-          delete newQuery["spanID"];
+          delete newQuery['traceID'];
+          delete newQuery['spanID'];
           router.replace({
             query: newQuery,
           });
@@ -217,21 +191,13 @@ const TraceSheet: React.FC<any> = (props) => {
         onOpenAutoFocus={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
         hideOverlay
-        className={cn(
-          "scrollbar-custom w-full max-w-full overflow-y-scroll shadow-xl sm:max-w-full",
-          sizes[size],
-        )}
+        className={cn('scrollbar-custom w-full max-w-full overflow-y-scroll shadow-xl sm:max-w-full', sizes[size])}
       >
         <SheetHeader className="mb-12 flex flex-row items-center space-x-2 space-y-0">
           <div className="space-x-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => previousTrace()}
-                  disabled={index === 0}
-                >
+                <Button variant="secondary" size="sm" onClick={() => previousTrace()} disabled={index === 0}>
                   <FiChevronUp />
                 </Button>
               </TooltipTrigger>
@@ -258,13 +224,8 @@ const TraceSheet: React.FC<any> = (props) => {
           </div>
 
           <SheetTitle className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm">
-            <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">
-              {traceId}
-            </code>
-            <CopyButton
-              tooltip="Copy trace id"
-              value={router.query.traceID?.toString() || ""}
-            />
+            <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">{traceId}</code>
+            <CopyButton tooltip="Copy trace id" value={router.query.traceID?.toString() || ''} />
           </SheetTitle>
 
           <Spacer />
@@ -275,15 +236,13 @@ const TraceSheet: React.FC<any> = (props) => {
                 variant="secondary"
                 size="sm"
                 className="hidden lg:flex"
-                onClick={() =>
-                  size === "default" ? setSize("full") : setSize("default")
-                }
+                onClick={() => (size === 'default' ? setSize('full') : setSize('default'))}
               >
-                {size === "default" ? <SizeIcon /> : <ArrowRightIcon />}
+                {size === 'default' ? <SizeIcon /> : <ArrowRightIcon />}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {size === "default" ? "Full size" : "Collapse"} • <Kbd>F</Kbd>
+              {size === 'default' ? 'Full size' : 'Collapse'} • <Kbd>F</Kbd>
             </TooltipContent>
           </Tooltip>
         </SheetHeader>
@@ -303,7 +262,7 @@ TracesPage.getLayout = (page) =>
       {page}
     </GraphPageLayout>,
     {
-      title: "Analytics",
+      title: 'Analytics',
     },
   );
 

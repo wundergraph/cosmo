@@ -4,16 +4,16 @@ import {
   AuthFooter,
   TrustedCompanies,
   ProductCosmoStack,
-} from "@/components/auth/auth-components";
-import { AuthLayout } from "@/components/layout/auth-layout";
-import { Button } from "@/components/ui/button";
-import { NextPageWithLayout } from "@/lib/page";
-import { ArrowRightIcon, GitHubLogoIcon } from "@radix-ui/react-icons";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { FaGoogle } from "react-icons/fa";
-import { z } from "zod";
-import { getSignupContent, parseSignupVariant } from "@/lib/signup-content";
+} from '@/components/auth/auth-components';
+import { AuthLayout } from '@/components/layout/auth-layout';
+import { Button } from '@/components/ui/button';
+import { NextPageWithLayout } from '@/lib/page';
+import { ArrowRightIcon, GitHubLogoIcon } from '@radix-ui/react-icons';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { FaGoogle } from 'react-icons/fa';
+import { z } from 'zod';
+import { getSignupContent, parseSignupVariant } from '@/lib/signup-content';
 
 const signupUrl = `${process.env.NEXT_PUBLIC_COSMO_CP_URL}/v1/auth/signup`;
 
@@ -22,26 +22,20 @@ const querySchema = z.object({
   uc: z.string().optional(),
 });
 
-const constructSignupURL = ({
-  redirectURL,
-  provider,
-}: {
-  redirectURL?: string;
-  provider?: string;
-}) => {
+const constructSignupURL = ({ redirectURL, provider }: { redirectURL?: string; provider?: string }) => {
   const q = new URLSearchParams();
 
-  if (redirectURL) q.append("redirectURL", redirectURL);
-  if (provider) q.append("provider", provider);
+  if (redirectURL) q.append('redirectURL', redirectURL);
+  if (provider) q.append('provider', provider);
 
   const queryString = q.toString();
 
-  return signupUrl + (queryString.length ? "?" + queryString : "");
+  return signupUrl + (queryString.length ? '?' + queryString : '');
 };
 
 function getUcFromUrl(): string | undefined {
-  if (typeof window === "undefined") return undefined;
-  return new URLSearchParams(window.location.search).get("uc") ?? undefined;
+  if (typeof window === 'undefined') return undefined;
+  return new URLSearchParams(window.location.search).get('uc') ?? undefined;
 }
 
 const SignupPage: NextPageWithLayout = () => {
@@ -49,7 +43,7 @@ const SignupPage: NextPageWithLayout = () => {
   // Parse query safely so invalid params (e.g. redirectURL from OAuth) don't crash the page
   const parseResult = querySchema.safeParse(router.query);
   const query = parseResult.success ? parseResult.data : { redirectURL: undefined, uc: undefined };
-  const uc = router.isReady ? query.uc : getUcFromUrl() ?? query.uc;
+  const uc = router.isReady ? query.uc : (getUcFromUrl() ?? query.uc);
   const variant = parseSignupVariant(uc);
   const content = getSignupContent(variant);
   const redirectURL = query.redirectURL;
@@ -78,9 +72,7 @@ const SignupPage: NextPageWithLayout = () => {
                   <h2 className="text-center text-2xl font-normal leading-[120%] text-white lg:text-[32px]">
                     {content.heading}
                   </h2>
-                  <p className="mt-2 text-center text-sm text-white/85 lg:text-base">
-                    {content.description}
-                  </p>
+                  <p className="mt-2 text-center text-sm text-white/85 lg:text-base">{content.description}</p>
 
                   <div className="mt-6 space-y-3 lg:mt-8 lg:space-y-4">
                     <Button
@@ -89,9 +81,7 @@ const SignupPage: NextPageWithLayout = () => {
                       className="h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
                       asChild
                     >
-                      <Link
-                        href={constructSignupURL({ redirectURL, provider: "github" })}
-                      >
+                      <Link href={constructSignupURL({ redirectURL, provider: 'github' })}>
                         <GitHubLogoIcon className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
                         Sign up with GitHub
                       </Link>
@@ -103,9 +93,7 @@ const SignupPage: NextPageWithLayout = () => {
                       className="h-12 w-full rounded-lg border-white/25 bg-transparent text-sm text-white hover:bg-white/15 lg:h-14 lg:text-base"
                       asChild
                     >
-                      <Link
-                        href={constructSignupURL({ redirectURL, provider: "google" })}
-                      >
+                      <Link href={constructSignupURL({ redirectURL, provider: 'google' })}>
                         <FaGoogle className="mr-3 h-5 w-5 lg:mr-4 lg:h-6 lg:w-6" />
                         Sign up with Google
                       </Link>
@@ -130,11 +118,7 @@ const SignupPage: NextPageWithLayout = () => {
                   <p className="text-center text-sm text-gray-400">
                     Already have an account?
                     <Link
-                      href={
-                        redirectURL
-                          ? `/login?redirectURL=${encodeURIComponent(redirectURL)}`
-                          : "/login"
-                      }
+                      href={redirectURL ? `/login?redirectURL=${encodeURIComponent(redirectURL)}` : '/login'}
                       className="ml-[5px] font-medium text-primary hover:underline"
                     >
                       Log in

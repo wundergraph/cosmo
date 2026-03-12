@@ -1,29 +1,15 @@
-import { cn } from "@/lib/utils";
-import {
-  BarChartIcon,
-  CheckIcon,
-  Cross1Icon,
-  GlobeIcon,
-} from "@radix-ui/react-icons";
-import { FederatedGraphSchemaChange } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "../ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
-import { useOpenUsage } from "./use-open-usage";
+import { cn } from '@/lib/utils';
+import { BarChartIcon, CheckIcon, Cross1Icon, GlobeIcon } from '@radix-ui/react-icons';
+import { FederatedGraphSchemaChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '../ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { useOpenUsage } from './use-open-usage';
 
 export const ComposedSchemaChangesTable = ({
   changes,
@@ -90,11 +76,7 @@ const Row = ({
 
   return (
     <TableRow key={changeType + message + federatedGraphName} className="group">
-      <TableCell
-        className={cn(
-          isBreaking ? "text-destructive" : "text-muted-foreground",
-        )}
-      >
+      <TableCell className={cn(isBreaking ? 'text-destructive' : 'text-muted-foreground')}>
         <div className="flex items-center gap-2">
           {isBreaking ? <Cross1Icon /> : <CheckIcon />}
           <span className="block w-[160px] truncate" title={changeType}>
@@ -108,12 +90,7 @@ const Row = ({
           <Tooltip delayDuration={100}>
             <TooltipTrigger asChild>
               {path ? (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  asChild
-                  className="table-action"
-                >
+                <Button variant="ghost" size="icon-sm" asChild className="table-action">
                   <Link
                     href={{
                       pathname: `/[organizationSlug]/[namespace]/graph/[slug]/schema`,
@@ -121,7 +98,7 @@ const Row = ({
                         organizationSlug,
                         namespace,
                         slug: router.query.slug,
-                        typename: path.split(".")[0],
+                        typename: path.split('.')[0],
                       },
                     }}
                   >
@@ -142,9 +119,7 @@ const Row = ({
               )}
             </TooltipTrigger>
             <TooltipContent>
-              {path
-                ? "Open in Explorer"
-                : "Cannot open in explorer. Path to type unavailable"}
+              {path ? 'Open in Explorer' : 'Cannot open in explorer. Path to type unavailable'}
             </TooltipContent>
           </Tooltip>
           <Tooltip delayDuration={100}>

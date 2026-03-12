@@ -1,10 +1,10 @@
-import dagre from "dagre";
+import dagre from 'dagre';
 import {
   FederatedGraphMetrics,
   Subgraph,
   SubgraphMetrics,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import ReactFlow, {
   addEdge,
   Background,
@@ -17,31 +17,23 @@ import ReactFlow, {
   useNodesInitialized,
   useNodesState,
   useReactFlow,
-} from "reactflow";
+} from 'reactflow';
 
-import { cn } from "@/lib/utils";
-import { ArrowsPointingInIcon } from "@heroicons/react/24/outline";
-import "reactflow/dist/style.css";
-import { GraphContext } from "./layout/graph-layout";
-import ReactFlowGraphNode from "./reactflow-graph-node";
-import { buttonVariants } from "./ui/button";
-import SubgraphMetricsEdge from "@/components/reactflow-metrics-edge";
-import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-import { sentenceCase } from "change-case";
+import { cn } from '@/lib/utils';
+import { ArrowsPointingInIcon } from '@heroicons/react/24/outline';
+import 'reactflow/dist/style.css';
+import { GraphContext } from './layout/graph-layout';
+import ReactFlowGraphNode from './reactflow-graph-node';
+import { buttonVariants } from './ui/button';
+import SubgraphMetricsEdge from '@/components/reactflow-metrics-edge';
+import { useDateRangeQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from './ui/select';
+import { sentenceCase } from 'change-case';
 
 export interface Graph {
   id: string;
-  kind: "graph" | "subgraph";
+  kind: 'graph' | 'subgraph';
   name: string;
   parentId: string;
   subgraphId?: string;
@@ -59,13 +51,9 @@ const defaultZoom = {
   padding: 0.3,
 };
 
-const getLayoutedElements = (
-  dagreGraph: dagre.graphlib.Graph,
-  nodes: Node[],
-  edges: Edge[],
-) => {
+const getLayoutedElements = (dagreGraph: dagre.graphlib.Graph, nodes: Node[], edges: Edge[]) => {
   dagreGraph.setGraph({
-    rankdir: "LR",
+    rankdir: 'LR',
     nodesep: 30,
     ranksep: 20,
   });
@@ -119,7 +107,7 @@ function GraphVisualization({
   const [edges, setEdges] = useState<Edge[]>([]);
 
   const [showAll, setShowAll] = useState(false);
-  const [topCategory, setTopCategory] = useState("latency");
+  const [topCategory, setTopCategory] = useState('latency');
 
   const subgraphs = useMemo(() => {
     let tempSubgraphs = [...(graphData?.subgraphs ?? [])];
@@ -132,10 +120,10 @@ function GraphVisualization({
         return 0;
       }
 
-      if (topCategory === "latency") {
+      if (topCategory === 'latency') {
         return metricB.latency - metricA.latency;
       }
-      if (topCategory === "errorRate") {
+      if (topCategory === 'errorRate') {
         return metricB.errorRate - metricA.errorRate;
       }
 
@@ -153,14 +141,14 @@ function GraphVisualization({
     if (!graphData?.graph) return;
 
     const buildGraphs = (subgraphs: Subgraph[]): Graph[] => {
-      const rootName = supportsFederation ? graphData.graph?.name : "router";
+      const rootName = supportsFederation ? graphData.graph?.name : 'router';
 
       const graphs: Graph[] = [
         {
           id: `root-${rootName}`,
-          kind: "graph",
+          kind: 'graph',
           name: rootName!,
-          parentId: "",
+          parentId: '',
           errorRate: federatedGraphMetrics?.errorRate,
           requestRate: federatedGraphMetrics?.requestRate,
         },
@@ -169,7 +157,7 @@ function GraphVisualization({
         graphs.push({
           id: `root-${graphData.graph?.name}-${subgraph.name}}`,
           subgraphId: subgraph.id,
-          kind: "subgraph",
+          kind: 'subgraph',
           name: subgraph.name,
           parentId: graphs[0].id,
         });
@@ -181,10 +169,10 @@ function GraphVisualization({
 
     const buildNodes = (spans: Graph[]): Node[] => {
       return spans.map((span, index) => {
-        if (span.kind === "graph") {
+        if (span.kind === 'graph') {
           return {
             id: span.id,
-            type: "span",
+            type: 'span',
             data: {
               label: span.name,
               kind: span.kind,
@@ -200,12 +188,10 @@ function GraphVisualization({
             },
           };
         }
-        const sm = subgraphMetrics?.find(
-          (x) => x.subgraphID === span.subgraphId,
-        );
+        const sm = subgraphMetrics?.find((x) => x.subgraphID === span.subgraphId);
         return {
           id: span.id,
-          type: "span",
+          type: 'span',
           data: {
             label: span.name,
             kind: span.kind,
@@ -227,15 +213,13 @@ function GraphVisualization({
       return spans
         .filter((s) => !!s.parentId)
         .map((span, index) => {
-          const sm = subgraphMetrics?.find(
-            (x) => x.subgraphID === span.subgraphId,
-          );
+          const sm = subgraphMetrics?.find((x) => x.subgraphID === span.subgraphId);
           return {
             id: span.id,
             source: span.parentId,
             animated: true,
             target: span.id,
-            type: "metricsEdge",
+            type: 'metricsEdge',
             data: {
               latency: sm?.latency,
             },
@@ -258,33 +242,18 @@ function GraphVisualization({
       return { minlen: 5, weight: 1 };
     });
 
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-      dagreGraph,
-      n,
-      e,
-    );
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(dagreGraph, n, e);
 
     setNodes(layoutedNodes);
     setEdges(layoutedEdges);
-  }, [
-    graphData?.graph,
-    subgraphs,
-    subgraphMetrics,
-    federatedGraphMetrics,
-    supportsFederation,
-  ]);
+  }, [graphData?.graph, subgraphs, subgraphMetrics, federatedGraphMetrics, supportsFederation]);
 
   const [nodeStates, setNodeStates, onNodesChange] = useNodesState(nodes);
   const [edgeStates, setEdgeStates, onEdgesChange] = useEdgesState(edges);
 
   const onConnect = useCallback(
     (params: Edge) =>
-      setEdges((eds) =>
-        addEdge(
-          { ...params, type: ConnectionLineType.SmoothStep, animated: true },
-          eds,
-        ),
-      ),
+      setEdges((eds) => addEdge({ ...params, type: ConnectionLineType.SmoothStep, animated: true }, eds)),
     [],
   );
 
@@ -317,25 +286,18 @@ function GraphVisualization({
       edgeTypes={edgeTypes}
     >
       <Background />
-      <Panel
-        position="top-left"
-        className="flex w-full flex-wrap items-center justify-between gap-2 pr-8"
-      >
+      <Panel position="top-left" className="flex w-full flex-wrap items-center justify-between gap-2 pr-8">
         <div>
           <h2 className="flex items-center gap-x-2">
-            <span className="font-semibold leading-none tracking-tight">
-              Graph Metrics
-            </span>
+            <span className="font-semibold leading-none tracking-tight">Graph Metrics</span>
           </h2>
-          <span className="text-xs text-muted-foreground">
-            Latency & Request Per Minute (RPM)
-          </span>
+          <span className="text-xs text-muted-foreground">Latency & Request Per Minute (RPM)</span>
         </div>
         <div className="flex items-center gap-x-2">
           <Tabs
             defaultValue="top"
             onValueChange={(v) => {
-              if (v === "all") {
+              if (v === 'all') {
                 setShowAll(true);
               } else {
                 setShowAll(false);
@@ -362,15 +324,11 @@ function GraphVisualization({
           </Select>
         </div>
       </Panel>
-      <Panel
-        position="bottom-left"
-        className="space-y-4"
-        onClick={() => reactFlowInstance.fitView(defaultZoom)}
-      >
+      <Panel position="bottom-left" className="space-y-4" onClick={() => reactFlowInstance.fitView(defaultZoom)}>
         <ArrowsPointingInIcon
           className={cn(
-            buttonVariants({ variant: "secondary", size: "icon" }),
-            "h-8 w-8 shrink-0 cursor-pointer select-none p-1.5",
+            buttonVariants({ variant: 'secondary', size: 'icon' }),
+            'h-8 w-8 shrink-0 cursor-pointer select-none p-1.5',
           )}
           title="Center"
         />

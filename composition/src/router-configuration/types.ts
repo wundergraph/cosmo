@@ -1,4 +1,4 @@
-import { FieldName, TypeName } from '../types/types';
+import { type FieldName, type TypeName } from '../types/types';
 
 export type NatsEventType = 'subscribe' | 'publish' | 'request';
 

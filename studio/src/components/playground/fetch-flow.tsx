@@ -1,18 +1,12 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { nsToTime } from "@/lib/insights-helpers";
-import { cn } from "@/lib/utils";
-import { ArrowsPointingInIcon } from "@heroicons/react/24/outline";
-import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
-import { sentenceCase } from "change-case";
-import dagre from "dagre";
-import { useCallback, useEffect, useId } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { nsToTime } from '@/lib/insights-helpers';
+import { cn } from '@/lib/utils';
+import { ArrowsPointingInIcon } from '@heroicons/react/24/outline';
+import { CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
+import { sentenceCase } from 'change-case';
+import dagre from 'dagre';
+import { useCallback, useEffect, useId } from 'react';
 import ReactFlow, {
   Background,
   BaseEdge,
@@ -30,28 +24,23 @@ import ReactFlow, {
   useNodesInitialized,
   useNodesState,
   useReactFlow,
-} from "reactflow";
-import "reactflow/dist/style.css";
-import { CodeViewer } from "../code-viewer";
-import { Badge } from "../ui/badge";
-import { Button, buttonVariants } from "../ui/button";
-import { Separator } from "../ui/separator";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
-import { ARTFetchNode, QueryPlanFetchTypeNode } from "./types";
-import { ViewHeaders } from "./view-headers";
-import { ViewInput } from "./view-input";
-import { ViewLoadStats } from "./view-load-stats";
-import { ViewOutput } from "./view-output";
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+import { CodeViewer } from '../code-viewer';
+import { Badge } from '../ui/badge';
+import { Button, buttonVariants } from '../ui/button';
+import { Separator } from '../ui/separator';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import { ARTFetchNode, QueryPlanFetchTypeNode } from './types';
+import { ViewHeaders } from './view-headers';
+import { ViewInput } from './view-input';
+import { ViewLoadStats } from './view-load-stats';
+import { ViewOutput } from './view-output';
 
 const getLayoutedElements = (
   nodes: Node[],
   edges: Edge[],
-  direction: "LR" | "TB",
+  direction: 'LR' | 'TB',
   nodeWidth: number,
   nodeHeight: number,
 ) => {
@@ -74,8 +63,8 @@ const getLayoutedElements = (
 
   nodes.forEach((node: Node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
-    node.targetPosition = direction === "LR" ? Position.Left : Position.Top;
-    node.sourcePosition = direction === "LR" ? Position.Right : Position.Bottom;
+    node.targetPosition = direction === 'LR' ? Position.Left : Position.Top;
+    node.sourcePosition = direction === 'LR' ? Position.Right : Position.Bottom;
 
     // We are shifting the dagre node position (anchor=center center) to the top left
     // so it matches the React Flow node anchor point (top left).
@@ -117,9 +106,9 @@ export function ARTCustomEdge({
         <EdgeLabelRenderer>
           <div
             style={{
-              position: "absolute",
+              position: 'absolute',
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              pointerEvents: "all",
+              pointerEvents: 'all',
             }}
             className="nodrag nopan"
           >
@@ -133,9 +122,7 @@ export function ARTCustomEdge({
   );
 }
 
-export const ReactFlowARTMultiFetchNode = ({
-  data,
-}: Node<Pick<ARTFetchNode, "id" | "type">>) => {
+export const ReactFlowARTMultiFetchNode = ({ data }: Node<Pick<ARTFetchNode, 'id' | 'type'>>) => {
   return (
     <>
       <Handle type="target" position={Position.Left} isConnectable={false} />
@@ -163,25 +150,18 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
     <>
       <Handle type="target" position={Position.Left} isConnectable={false} />
       <div
-        className={cn(
-          "relative flex flex-col  rounded-md border py-4 text-secondary-foreground",
-          {
-            "!border-destructive": isFailure,
-          },
-        )}
+        className={cn('relative flex flex-col  rounded-md border py-4 text-secondary-foreground', {
+          '!border-destructive': isFailure,
+        })}
       >
         <div className="absolute inset-0 -z-10 bg-secondary/30 backdrop-blur-lg" />
         <div className="flex items-start justify-between gap-x-4 border-b px-4 pb-4">
           <p className="flex flex-col gap-y-2 text-base font-medium subpixel-antialiased">
             <span>Fetch from {data.dataSourceName}</span>
-            <span className="text-xs font-normal text-muted-foreground">
-              {data.dataSourceId}
-            </span>
+            <span className="text-xs font-normal text-muted-foreground">{data.dataSourceId}</span>
           </p>
           {data.outputTrace && (
-            <Badge variant={isFailure ? "destructive" : "success"}>
-              {data.outputTrace?.response?.statusCode}
-            </Badge>
+            <Badge variant={isFailure ? 'destructive' : 'success'}>{data.outputTrace?.response?.statusCode}</Badge>
           )}
         </div>
         <div className="flex flex-col gap-y-1 px-4 py-4 text-sm">
@@ -192,56 +172,35 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger>
-                    <p className="max-w-sm truncate text-left">
-                      URL: {data.outputTrace?.request?.url}
-                    </p>
+                    <p className="max-w-sm truncate text-left">URL: {data.outputTrace?.request?.url}</p>
                   </TooltipTrigger>
-                  <TooltipContent>
-                    {data.outputTrace?.request?.url}
-                  </TooltipContent>
+                  <TooltipContent>{data.outputTrace?.request?.url}</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
             </>
           )}
+          <p className="flex items-center gap-x-2">Single Flight: {getIcon(data.singleFlightUsed)}</p>
           <p className="flex items-center gap-x-2">
-            Single Flight: {getIcon(data.singleFlightUsed)}
+            Single Flight Shared Response: {getIcon(data.singleFlightSharedResponse)}
           </p>
-          <p className="flex items-center gap-x-2">
-            Single Flight Shared Response:{" "}
-            {getIcon(data.singleFlightSharedResponse)}
-          </p>
-          <p className="flex items-center gap-x-2">
-            Load Skipped: {getIcon(data.loadSkipped)}
-          </p>
+          <p className="flex items-center gap-x-2">Load Skipped: {getIcon(data.loadSkipped)}</p>
         </div>
-        {(data.outputTrace || data.input || data.rawInput || data.output) && (
-          <Separator className="mb-4" />
-        )}
+        {(data.outputTrace || data.input || data.rawInput || data.output) && <Separator className="mb-4" />}
         <div
-          className={cn("flex gap-2 px-4", {
-            "grid grid-cols-2":
-              data.outputTrace &&
-              (data.input || data.rawInput) &&
-              data.output &&
-              data.loadStats,
+          className={cn('flex gap-2 px-4', {
+            'grid grid-cols-2': data.outputTrace && (data.input || data.rawInput) && data.output && data.loadStats,
           })}
         >
           {data.outputTrace && (
             <ViewHeaders
               requestHeaders={JSON.stringify(data.outputTrace.request.headers)}
-              responseHeaders={JSON.stringify(
-                data.outputTrace.response.headers,
-              )}
+              responseHeaders={JSON.stringify(data.outputTrace.response.headers)}
               asChild
             />
           )}
-          {(data.input || data.rawInput) && (
-            <ViewInput input={data.input} rawInput={data.rawInput} asChild />
-          )}
+          {(data.input || data.rawInput) && <ViewInput input={data.input} rawInput={data.rawInput} asChild />}
           {data.output && <ViewOutput output={data.output} asChild />}
-          {data.loadStats && (
-            <ViewLoadStats loadStats={data.loadStats} asChild />
-          )}
+          {data.loadStats && <ViewLoadStats loadStats={data.loadStats} asChild />}
         </div>
       </div>
       <Handle type="source" position={Position.Right} isConnectable={false} />
@@ -249,9 +208,7 @@ export const ReactFlowARTFetchNode = ({ data }: Node<ARTFetchNode>) => {
   );
 };
 
-export const ReactFlowQueryPlanFetchNode = ({
-  data,
-}: Node<QueryPlanFetchTypeNode>) => {
+export const ReactFlowQueryPlanFetchNode = ({ data }: Node<QueryPlanFetchTypeNode>) => {
   return (
     <>
       <Handle type="target" position={Position.Top} isConnectable={false} />
@@ -260,12 +217,10 @@ export const ReactFlowQueryPlanFetchNode = ({
         <div className="flex items-start justify-between gap-x-4 border-b px-8 py-4">
           <p className="flex flex-col gap-y-2 text-sm font-medium subpixel-antialiased">
             {data.fetch?.kind || data.kind}
-            {["Parallel", "Sequence", "ParallelList", "Trigger"].includes(
-              data.fetch?.kind || data.kind,
-            )
-              ? ""
-              : " Fetch"}{" "}
-            {data.fetch?.subgraphName ? `from ${data.fetch.subgraphName}` : ""}
+            {['Parallel', 'Sequence', 'ParallelList', 'Trigger'].includes(data.fetch?.kind || data.kind)
+              ? ''
+              : ' Fetch'}{' '}
+            {data.fetch?.subgraphName ? `from ${data.fetch.subgraphName}` : ''}
           </p>
         </div>
         {data.fetch && (
@@ -293,31 +248,19 @@ export const ReactFlowQueryPlanFetchNode = ({
                     </TabsList>
                     <TabsContent value="query">
                       <div className="scrollbar-custom h-96 max-w-[calc(42rem_-_3rem)] overflow-auto rounded border">
-                        <CodeViewer
-                          code={data.fetch.query}
-                          language="graphql"
-                          disableLinking
-                        />
+                        <CodeViewer code={data.fetch.query} language="graphql" disableLinking />
                       </div>
                     </TabsContent>
                     <TabsContent value="representations">
                       <div className="scrollbar-custom h-96 max-w-[calc(42rem_-_3rem)] overflow-auto rounded border">
-                        <CodeViewer
-                          code={JSON.stringify(data.fetch.representations)}
-                          language="json"
-                          disableLinking
-                        />
+                        <CodeViewer code={JSON.stringify(data.fetch.representations)} language="json" disableLinking />
                       </div>
                     </TabsContent>
                   </Tabs>
                 )}
                 {data.fetch.query && !data.fetch.representations && (
                   <div className="scrollbar-custom h-96 max-w-[calc(42rem_-_3rem)] overflow-auto rounded border">
-                    <CodeViewer
-                      code={data.fetch.query}
-                      language="graphql"
-                      disableLinking
-                    />
+                    <CodeViewer code={data.fetch.query} language="graphql" disableLinking />
                   </div>
                 )}
               </DialogContent>
@@ -337,7 +280,7 @@ export function FetchFlow({
   initialEdges,
   nodeTypes,
   edgeTypes,
-  direction = "LR",
+  direction = 'LR',
   nodeWidth = 400,
   nodeHeight = 400,
 }: {
@@ -345,7 +288,7 @@ export function FetchFlow({
   initialEdges: Edge[];
   nodeTypes?: any;
   edgeTypes?: any;
-  direction?: "LR" | "TB";
+  direction?: 'LR' | 'TB';
   nodeWidth?: number;
   nodeHeight?: number;
 }) {
@@ -364,12 +307,7 @@ export function FetchFlow({
 
   const onConnect = useCallback(
     (params: Edge) =>
-      setEdges((eds) =>
-        addEdge(
-          { ...params, type: ConnectionLineType.SmoothStep, animated: true },
-          eds,
-        ),
-      ),
+      setEdges((eds) => addEdge({ ...params, type: ConnectionLineType.SmoothStep, animated: true }, eds)),
     [setEdges],
   );
 
@@ -404,14 +342,11 @@ export function FetchFlow({
       edgeTypes={edgeTypes}
     >
       <Background id={id} />
-      <Panel
-        position="bottom-left"
-        onClick={() => reactFlowInstance.fitView(defaultZoom)}
-      >
+      <Panel position="bottom-left" onClick={() => reactFlowInstance.fitView(defaultZoom)}>
         <ArrowsPointingInIcon
           className={cn(
-            buttonVariants({ variant: "secondary", size: "icon" }),
-            "h-8 w-8 shrink-0 cursor-pointer select-none p-1.5",
+            buttonVariants({ variant: 'secondary', size: 'icon' }),
+            'h-8 w-8 shrink-0 cursor-pointer select-none p-1.5',
           )}
           title="Center"
         />

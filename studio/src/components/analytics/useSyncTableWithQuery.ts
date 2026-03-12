@@ -1,28 +1,23 @@
-import {
-  ColumnFiltersState,
-  PaginationState,
-  SortingState,
-  Table,
-} from "@tanstack/react-table";
-import { endOfDay, formatISO, startOfDay, subDays, subHours } from "date-fns";
-import isEqual from "lodash/isEqual";
-import { useRouter } from "next/router";
-import { AnalyticsViewGroupName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useEffect, useRef } from "react";
-import { refreshIntervals } from "./refresh-interval";
-import { DateRange, Range, getRange } from "../date-picker-with-range";
+import { ColumnFiltersState, PaginationState, SortingState, Table } from '@tanstack/react-table';
+import { endOfDay, formatISO, startOfDay, subDays, subHours } from 'date-fns';
+import isEqual from 'lodash/isEqual';
+import { useRouter } from 'next/router';
+import { AnalyticsViewGroupName } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { useEffect, useRef } from 'react';
+import { refreshIntervals } from './refresh-interval';
+import { DateRange, Range, getRange } from '../date-picker-with-range';
 
 export const getDefaultSort = (group?: string) => {
   return group
     ? [
         {
-          id: "totalRequests",
+          id: 'totalRequests',
           desc: true,
         },
       ]
     : [
         {
-          id: "unixTimestamp",
+          id: 'unixTimestamp',
           desc: true,
         },
       ];
@@ -76,30 +71,18 @@ export const useSyncTableWithQuery = <T>({
 
   useEffect(() => {
     if (router.isReady) {
-      const filterStateFromUrl = JSON.parse(
-        decodeURI((router.query.filterState as string) ?? "[]")
-      );
+      const filterStateFromUrl = JSON.parse(decodeURI((router.query.filterState as string) ?? '[]'));
 
       if (!isEqual(filterStateFromUrl, selectedFilters)) {
         setColumnFilters(filterStateFromUrl);
       }
 
-      if (
-        router.query.group &&
-        AnalyticsViewGroupName[selectedGroup] !== router.query.group
-      ) {
-        setSelectedGroup(
-          AnalyticsViewGroupName[
-            router.query.group as string as keyof typeof AnalyticsViewGroupName
-          ]
-        );
+      if (router.query.group && AnalyticsViewGroupName[selectedGroup] !== router.query.group) {
+        setSelectedGroup(AnalyticsViewGroupName[router.query.group as string as keyof typeof AnalyticsViewGroupName]);
       }
 
       let newPagination = pagination;
-      if (
-        router.query.pageSize &&
-        router.query.pageSize !== pageSize.toString()
-      ) {
+      if (router.query.pageSize && router.query.pageSize !== pageSize.toString()) {
         newPagination.pageSize = Number(router.query.pageSize);
       }
       if (router.query.page && router.query.page !== currentPage.toString()) {
@@ -110,10 +93,7 @@ export const useSyncTableWithQuery = <T>({
       const range = router.query.range?.toString();
       const parsedRange = getRange(range);
 
-      if (
-        router.query.dateRange &&
-        router.query.dateRange !== stringifiedDateRange
-      ) {
+      if (router.query.dateRange && router.query.dateRange !== stringifiedDateRange) {
         let dateRangeObjectISO = {
           start: formatISO(startOfDay(subHours(new Date(), parsedRange))),
           end: formatISO(endOfDay(new Date())),
@@ -138,20 +118,15 @@ export const useSyncTableWithQuery = <T>({
         setRange(parsedRange);
       }
 
-      if (
-        router.query.refreshInterval &&
-        Number(router.query.refreshInterval) !== refreshInterval
-      ) {
-        onRefreshIntervalChange(
-          Number(router.query.refreshInterval) || refreshIntervals[0].value
-        );
+      if (router.query.refreshInterval && Number(router.query.refreshInterval) !== refreshInterval) {
+        onRefreshIntervalChange(Number(router.query.refreshInterval) || refreshIntervals[0].value);
       }
 
       if (router.query.sort) {
         setSorting([
           {
             id: router.query.sort.toString(),
-            desc: router.query.sortDir?.toString() !== "asc",
+            desc: router.query.sortDir?.toString() !== 'asc',
           },
         ]);
       } else {

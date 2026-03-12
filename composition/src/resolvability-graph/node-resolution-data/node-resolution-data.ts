@@ -1,7 +1,7 @@
-import { GraphFieldData } from '../../utils/types';
+import { type GraphFieldData } from '../../utils/types';
 import { unexpectedEdgeFatalError } from '../../errors/errors';
-import { FieldName } from '../types/types';
-import { AddExternalSubgraphNameParams, NodeResolutionDataParams } from './types/params';
+import { type FieldName } from '../types/types';
+import { type AddExternalSubgraphNameParams, type NodeResolutionDataParams } from './types/params';
 
 export class NodeResolutionData {
   #isResolved = false;

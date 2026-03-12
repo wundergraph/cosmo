@@ -15,6 +15,7 @@ import { validate as isValidUuid } from 'uuid';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema } from 'graphql';
+import { CompositionOptions } from '@wundergraph/composition';
 import { DBSubgraphType, SchemaCheckChangeAction, WebsocketSubprotocol } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import {
@@ -32,7 +33,6 @@ import {
   users,
 } from '../../db/schema.js';
 import {
-  CompositionOptions,
   FederatedGraphDTO,
   GetChecksResponse,
   Label,
@@ -62,7 +62,6 @@ import {
 import {
   getFederatedGraphRouterCompatibilityVersion,
   hasLabelsChanged,
-  newCompositionOptions,
   normalizeLabels,
   sanitizeReadme,
 } from '../util.js';
@@ -1862,7 +1861,7 @@ export class SubgraphRepository {
     limit,
     chClient,
     newGraphQLSchema,
-    disableResolvabilityValidation,
+    compositionOptions,
     webhookService,
   }: {
     actorId: string;
@@ -1886,7 +1885,7 @@ export class SubgraphRepository {
     limit: number;
     chClient?: ClickHouseClient;
     newGraphQLSchema?: GraphQLSchema;
-    disableResolvabilityValidation?: boolean;
+    compositionOptions?: CompositionOptions;
     webhookService: OrganizationWebhookService;
   }): Promise<
     PlainMessage<CheckSubgraphSchemaResponse> & {
@@ -2070,7 +2069,7 @@ export class SubgraphRepository {
     });
 
     const { composedGraphs } = await composer.composeWithProposedSchemas({
-      compositionOptions: newCompositionOptions(disableResolvabilityValidation),
+      compositionOptions,
       graphs: federatedGraphs.filter((g) => !g.contract),
       inputSubgraphs: checkSubgraphs,
     });
@@ -2300,32 +2299,38 @@ export class SubgraphRepository {
       organization: { id: this.organizationId, slug: organizationSlug },
       namespace,
       vcsContext,
-      subgraph,
-      newSchemaSDL,
-      isDeleted,
+      subgraphs: [
+        {
+          id: subgraph?.id ?? '',
+          name: subgraph?.name ?? subgraphName,
+          labels: subgraph?.labels ?? labels ?? [],
+          schemaSDL: subgraph?.schemaSDL ?? '',
+          schemaChanges,
+          lintIssues,
+          pruneIssues: graphPruningIssues,
+          newSchemaSDL,
+          isDeleted,
+        },
+      ],
       affectedGraphs: federatedGraphs,
       composedGraphs,
-      schemaChanges,
-      lintIssues,
-      pruneIssues: graphPruningIssues,
       inspectedOperations,
     });
 
-    if (sceResult && sceResult.additionalLintIssues.length > 0) {
-      const additionalLintIssues: SchemaLintIssues = {
-        warnings: sceResult.additionalLintIssues.filter((issue) => issue.severity === LintSeverity.warn),
-        errors: sceResult.additionalLintIssues.filter((issue) => issue.severity === LintSeverity.error),
-      };
+    if (sceResult?.lintIssuesBySubgraph) {
+      const sceLintIssues = sceResult.lintIssuesBySubgraph.get(subgraph?.name ?? subgraphName);
 
-      lintIssues.warnings.push(...additionalLintIssues.warnings);
-      lintIssues.errors.push(...additionalLintIssues.errors);
+      if (sceLintIssues && sceLintIssues.length > 0) {
+        lintIssues.warnings.push(...sceLintIssues.filter((issue) => issue.severity === LintSeverity.warn));
+        lintIssues.errors.push(...sceLintIssues.filter((issue) => issue.severity === LintSeverity.error));
 
-      // Then, we need to add the overwritten lint issues
-      await schemaLintRepo.addSchemaCheckLintIssues({
-        schemaCheckId: schemaCheckID,
-        lintIssues: sceResult.additionalLintIssues,
-        schemaCheckSubgraphId,
-      });
+        // Then, we need to add the overwritten lint issues
+        await schemaLintRepo.addSchemaCheckLintIssues({
+          schemaCheckId: schemaCheckID,
+          lintIssues: sceLintIssues,
+          schemaCheckSubgraphId,
+        });
+      }
     }
 
     // Update the overall schema check with the results

@@ -1,16 +1,14 @@
-import { useContext, useState } from "react";
-import { SessionClientContext } from "@/components/app-provider";
-import { useToast } from "@/components/ui/use-toast";
-import { useMutation } from "@connectrpc/connect-query";
-import {
-  restoreOrganization
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { Card, CardDescription, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { useIsAdmin } from "@/hooks/use-is-admin";
-import { useUser } from "@/hooks/use-user";
+import { useContext, useState } from 'react';
+import { SessionClientContext } from '@/components/app-provider';
+import { useToast } from '@/components/ui/use-toast';
+import { useMutation } from '@connectrpc/connect-query';
+import { restoreOrganization } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { Card, CardDescription, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { useIsAdmin } from '@/hooks/use-is-admin';
+import { useUser } from '@/hooks/use-user';
 
 export const RestoreOrganization = () => {
   const user = useUser();
@@ -23,7 +21,7 @@ export const RestoreOrganization = () => {
     onSuccess: async (d) => {
       if (d.response?.code === EnumStatusCode.OK) {
         toast({
-          description: "Organization restored successfully.",
+          description: 'Organization restored successfully.',
           duration: 3000,
         });
 
@@ -36,7 +34,7 @@ export const RestoreOrganization = () => {
     },
     onError: (error) => {
       toast({
-        description: "Could not restore the organization. Please try again.",
+        description: 'Could not restore the organization. Please try again.',
         duration: 3000,
       });
 
@@ -53,42 +51,24 @@ export const RestoreOrganization = () => {
             Cancels the organization deletion.
           </CardDescription>
         </div>
-        <Dialog
-          open={open}
-          onOpenChange={setOpen}
-        >
+        <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button
-              className="w-full md:ml-auto md:w-max"
-              isLoading={isPending}
-              disabled={!isAdmin}
-            >
+            <Button className="w-full md:ml-auto md:w-max" isLoading={isPending} disabled={!isAdmin}>
               Restore Organization
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>
-                Restore {user?.currentOrganization?.name}
-              </DialogTitle>
+              <DialogTitle>Restore {user?.currentOrganization?.name}</DialogTitle>
             </DialogHeader>
 
-            <p>
-              The deletion operation will be canceled upon restoring the organization.
-            </p>
+            <p>The deletion operation will be canceled upon restoring the organization.</p>
 
             <div className="mt-2 flex justify-end gap-x-4">
-              <Button
-                variant="outline"
-                isLoading={isPending}
-                onClick={() => setOpen(false)}
-              >
+              <Button variant="outline" isLoading={isPending} onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button
-                isLoading={isPending}
-                onClick={() => mutate({ userID: user?.id })}
-              >
+              <Button isLoading={isPending} onClick={() => mutate({ userID: user?.id })}>
                 Restore this organization
               </Button>
             </div>

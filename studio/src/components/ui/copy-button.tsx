@@ -1,7 +1,7 @@
-import { FiCheck, FiCopy } from "react-icons/fi";
-import { Button, ButtonProps } from "./button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
-import { MouseEventHandler, useEffect, useState } from "react";
+import { FiCheck, FiCopy } from 'react-icons/fi';
+import { Button, ButtonProps } from './button';
+import { Tooltip, TooltipContent, TooltipTrigger } from './tooltip';
+import { MouseEventHandler, useEffect, useState } from 'react';
 
 export interface CopyButtonProps extends ButtonProps {
   tooltip: string;
@@ -10,11 +10,11 @@ export interface CopyButtonProps extends ButtonProps {
 
 const copyToClipboard = (value: string) => {
   if (!navigator.clipboard) {
-    const el = document.createElement("textarea");
+    const el = document.createElement('textarea');
     el.value = value;
     document.body.appendChild(el);
     el.select();
-    document.execCommand("copy");
+    document.execCommand('copy');
     document.body.removeChild(el);
   } else {
     navigator.clipboard.writeText(value);

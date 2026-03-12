@@ -1,16 +1,6 @@
-import {
-  BoltIcon,
-  BoltSlashIcon,
-  CircleStackIcon,
-} from "@heroicons/react/24/outline";
+import { BoltIcon, BoltSlashIcon, CircleStackIcon } from '@heroicons/react/24/outline';
 
-export const ComposeStatus = ({
-  validGraph,
-  emptyGraph,
-}: {
-  validGraph: boolean;
-  emptyGraph: boolean;
-}) => {
+export const ComposeStatus = ({ validGraph, emptyGraph }: { validGraph: boolean; emptyGraph: boolean }) => {
   if (emptyGraph) {
     return (
       <span className="flex h-5 w-max items-center truncate rounded border border-secondary text-xs">
@@ -60,9 +50,7 @@ export const ComposeStatusMessage = ({
 
     return (
       <span className="whitespace-pre-line">
-        <div>
-          This version of the graph is not ready because the composition failed.
-        </div>
+        <div>This version of the graph is not ready because the composition failed.</div>
       </span>
     );
   }
@@ -70,8 +58,8 @@ export const ComposeStatusMessage = ({
   if (isContract) {
     return (
       <span>
-        No valid schema found in source graph. Once a schema is composed by the
-        source graph, this contract will be updated automatically.
+        No valid schema found in source graph. Once a schema is composed by the source graph, this contract will be
+        updated automatically.
       </span>
     );
   }

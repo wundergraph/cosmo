@@ -1,12 +1,6 @@
-import Head from "next/head";
+import Head from 'next/head';
 
-export const PageHeader = ({
-  title,
-  children,
-}: {
-  title: string;
-  children?: React.ReactNode;
-}) => {
+export const PageHeader = ({ title, children }: { title: string; children?: React.ReactNode }) => {
   return (
     <>
       <Head>

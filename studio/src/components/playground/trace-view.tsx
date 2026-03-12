@@ -1,30 +1,18 @@
-import { cn } from "@/lib/utils";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { Kind, OperationTypeNode, parse } from "graphql";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { BiRename } from "react-icons/bi";
-import { LuNetwork } from "react-icons/lu";
-import { useMovable } from "react-move-hook";
-import { Edge, Node, ReactFlowProvider } from "reactflow";
-import { EmptyState } from "../empty-state";
-import { Card } from "../ui/card";
-import { CLI } from "../ui/cli";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
-import {
-  ARTCustomEdge,
-  FetchFlow,
-  ReactFlowARTFetchNode,
-  ReactFlowARTMultiFetchNode,
-} from "./fetch-flow";
-import { FetchWaterfall } from "./fetch-waterfall";
-import { ARTFetchNode, LoadStats, QueryPlan } from "./types";
+import { cn } from '@/lib/utils';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { Kind, OperationTypeNode, parse } from 'graphql';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { BiRename } from 'react-icons/bi';
+import { LuNetwork } from 'react-icons/lu';
+import { useMovable } from 'react-move-hook';
+import { Edge, Node, ReactFlowProvider } from 'reactflow';
+import { EmptyState } from '../empty-state';
+import { Card } from '../ui/card';
+import { CLI } from '../ui/cli';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import { ARTCustomEdge, FetchFlow, ReactFlowARTFetchNode, ReactFlowARTMultiFetchNode } from './fetch-flow';
+import { FetchWaterfall } from './fetch-waterfall';
+import { ARTFetchNode, LoadStats, QueryPlan } from './types';
 
 const initialPaneWidth = 360;
 
@@ -40,10 +28,10 @@ export const TraceContext = createContext<{
 }>({
   query: undefined,
   subgraphs: [],
-  headers: "",
-  response: "",
+  headers: '',
+  response: '',
   plan: undefined,
-  planError: "",
+  planError: '',
   clientValidationEnabled: true,
   setClientValidationEnabled: () => {},
 });
@@ -56,7 +44,7 @@ const Trace = ({
 }: {
   headers: any;
   response: any;
-  view: "tree" | "waterfall";
+  view: 'tree' | 'waterfall';
   subgraphs: { id: string; name: string }[];
 }) => {
   const [tree, setTree] = useState<ARTFetchNode>();
@@ -89,22 +77,20 @@ const Trace = ({
 
     if (!moveData.moving) {
       setPaneWidth((width) => width + moveData.delta.x);
-      document.body.classList.remove("select-none");
+      document.body.classList.remove('select-none');
     } else {
-      document.body.classList.add("select-none");
+      document.body.classList.add('select-none');
     }
   }, []);
 
   const ref = useMovable({
     onChange: handleChange,
-    axis: "x",
-    bounds: "parent",
+    axis: 'x',
+    bounds: 'parent',
   });
 
   const verticalResizeStyle = {
-    left: mouseState.moving
-      ? paneWidth + mouseState.delta?.x
-      : mouseState.position.x,
+    left: mouseState.moving ? paneWidth + mouseState.delta?.x : mouseState.position.x,
   };
 
   useEffect(() => {
@@ -117,10 +103,7 @@ const Trace = ({
 
     const fetchMap = new Map<string, ARTFetchNode>();
 
-    const parseFetch = (
-      fetch: any,
-      parentId?: string,
-    ): ARTFetchNode | undefined => {
+    const parseFetch = (fetch: any, parentId?: string): ARTFetchNode | undefined => {
       if (!fetch) return;
 
       const fetchNode: ARTFetchNode = {
@@ -128,29 +111,22 @@ const Trace = ({
         parentId,
         type: fetch.type,
         dataSourceId: fetch.data_source_id,
-        dataSourceName:
-          subgraphs?.find((s) => s.id === fetch.data_source_id)?.name ??
-          "subgraph",
+        dataSourceName: subgraphs?.find((s) => s.id === fetch.data_source_id)?.name ?? 'subgraph',
         input: fetch.datasource_load_trace?.input,
         rawInput: fetch.datasource_load_trace?.raw_input_data,
         output: fetch.datasource_load_trace?.output,
-        durationSinceStart:
-          fetch.datasource_load_trace?.duration_since_start_nanoseconds,
-        durationSinceStartPretty:
-          fetch.datasource_load_trace?.duration_since_start_pretty,
+        durationSinceStart: fetch.datasource_load_trace?.duration_since_start_nanoseconds,
+        durationSinceStartPretty: fetch.datasource_load_trace?.duration_since_start_pretty,
         durationLoad: fetch.datasource_load_trace?.duration_load_nanoseconds,
         durationLoadPretty: fetch.datasource_load_trace?.duration_load_pretty,
         singleFlightUsed: fetch.datasource_load_trace?.single_flight_used,
-        singleFlightSharedResponse:
-          fetch.datasource_load_trace?.single_flight_shared_response,
+        singleFlightSharedResponse: fetch.datasource_load_trace?.single_flight_shared_response,
         loadSkipped: fetch.datasource_load_trace?.load_skipped,
         children: [],
       };
 
       if (fetch.datasource_load_trace?.load_stats) {
-        const mappedData: LoadStats = Object.entries(
-          fetch.datasource_load_trace.load_stats,
-        ).map(([key, val]: any) => {
+        const mappedData: LoadStats = Object.entries(fetch.datasource_load_trace.load_stats).map(([key, val]: any) => {
           const durationSinceStart = val.duration_since_start_pretty;
           const idleTime = val.idle_time_pretty;
 
@@ -170,8 +146,7 @@ const Trace = ({
         fetchNode.loadStats = mappedData;
       }
 
-      const fetchOutputTrace =
-        fetch.datasource_load_trace?.output?.extensions?.trace;
+      const fetchOutputTrace = fetch.datasource_load_trace?.output?.extensions?.trace;
       if (fetchOutputTrace) {
         fetchNode.outputTrace = {
           request: {
@@ -185,9 +160,7 @@ const Trace = ({
       }
 
       if (fetchNode.durationLoad && fetchNode.durationSinceStart) {
-        const endTime =
-          gStartTimeNano +
-          BigInt(fetchNode.durationSinceStart + fetchNode.durationLoad);
+        const endTime = gStartTimeNano + BigInt(fetchNode.durationSinceStart + fetchNode.durationLoad);
         if (endTime > gEndTimeNano) {
           gEndTimeNano = endTime;
         }
@@ -204,9 +177,7 @@ const Trace = ({
 
       tempNodes.push({
         id: fetchNode.id,
-        type: ["parallel", "serial", "parallelListItem"].includes(fetch.type)
-          ? "multi"
-          : "fetch",
+        type: ['parallel', 'serial', 'parallelListItem'].includes(fetch.type) ? 'multi' : 'fetch',
         data: {
           ...fetchNode,
         },
@@ -223,7 +194,7 @@ const Trace = ({
         source: `${fetchNode.parentId}`,
         animated: true,
         target: `${fetchNode.id}`,
-        type: "fetch",
+        type: 'fetch',
         data: {
           ...fetchNode,
         },
@@ -231,16 +202,13 @@ const Trace = ({
 
       return fetchNode;
     };
-    const parseJsonOld = (
-      json: any,
-      parentId?: string,
-    ): ARTFetchNode | undefined => {
+    const parseJsonOld = (json: any, parentId?: string): ARTFetchNode | undefined => {
       const fetchNode = parseFetch(json.fetch, parentId);
 
       json.fields?.forEach((field: any) => {
-        if (field.value && field.value.node_type === "array") {
+        if (field.value && field.value.node_type === 'array') {
           field.value.items.forEach((fieldItem: any) => {
-            if (fieldItem.node_type === "object") {
+            if (fieldItem.node_type === 'object') {
               const node = parseJsonOld(fieldItem, fetchNode?.id ?? parentId);
               if (node) {
                 fetchMap.set(node.id, node);
@@ -249,7 +217,7 @@ const Trace = ({
           });
         }
 
-        if (field.value && field.value.node_type === "object") {
+        if (field.value && field.value.node_type === 'object') {
           const node = parseJsonOld(field.value, fetchNode?.id ?? parentId);
           if (node) {
             fetchMap.set(node.id, node);
@@ -260,10 +228,7 @@ const Trace = ({
       return fetchNode;
     };
 
-    const parseFetchNew = (
-      fetch: any,
-      parentId?: string,
-    ): ARTFetchNode | undefined => {
+    const parseFetchNew = (fetch: any, parentId?: string): ARTFetchNode | undefined => {
       if (!fetch) return;
 
       const fetchNode: ARTFetchNode = {
@@ -271,8 +236,7 @@ const Trace = ({
         parentId,
         type: fetch.kind,
         dataSourceId: fetch.source_id,
-        dataSourceName:
-          subgraphs?.find((s) => s.id === fetch.source_id)?.name ?? "subgraph",
+        dataSourceName: subgraphs?.find((s) => s.id === fetch.source_id)?.name ?? 'subgraph',
         input: fetch.trace?.input,
         rawInput: fetch.trace?.raw_input_data,
         output: fetch.trace?.output,
@@ -291,9 +255,7 @@ const Trace = ({
       }
 
       if (fetch.trace?.load_stats) {
-        const mappedData: LoadStats = Object.entries(
-          fetch.trace.load_stats,
-        ).map(([key, val]: any) => {
+        const mappedData: LoadStats = Object.entries(fetch.trace.load_stats).map(([key, val]: any) => {
           const durationSinceStart = val.duration_since_start_pretty;
           const idleTime = val.idle_time_pretty;
 
@@ -327,9 +289,7 @@ const Trace = ({
       }
 
       if (fetchNode.durationLoad && fetchNode.durationSinceStart) {
-        const endTime =
-          gStartTimeNano +
-          BigInt(fetchNode.durationSinceStart + fetchNode.durationLoad);
+        const endTime = gStartTimeNano + BigInt(fetchNode.durationSinceStart + fetchNode.durationLoad);
         if (endTime > gEndTimeNano) {
           gEndTimeNano = endTime;
         }
@@ -340,7 +300,7 @@ const Trace = ({
         childFetches.forEach((f: any) => {
           const node = parseFetchNew(f.fetch || f, fetchNode.id);
           if (node) {
-            if (fetchNode.type === "ParallelList") {
+            if (fetchNode.type === 'ParallelList') {
               node.dataSourceId = fetchNode.dataSourceId;
               node.dataSourceName = fetchNode.dataSourceName;
             }
@@ -351,9 +311,7 @@ const Trace = ({
 
       tempNodes.push({
         id: fetchNode.id,
-        type: ["Parallel", "Sequence", "ParallelList"].includes(fetchNode.type)
-          ? "multi"
-          : "fetch",
+        type: ['Parallel', 'Sequence', 'ParallelList'].includes(fetchNode.type) ? 'multi' : 'fetch',
         data: {
           ...fetchNode,
         },
@@ -367,7 +325,7 @@ const Trace = ({
 
       fetchNode.children.forEach((childNode, index, children) => {
         let parent = fetchNode;
-        if (fetchNode.type === "Sequence") {
+        if (fetchNode.type === 'Sequence') {
           const prevChild = children[index - 1];
           parent = prevChild || fetchNode;
         }
@@ -377,7 +335,7 @@ const Trace = ({
           source: `${parent.id}`,
           animated: true,
           target: `${childNode.id}`,
-          type: "fetch",
+          type: 'fetch',
           data: {
             ...childNode,
           },
@@ -396,40 +354,37 @@ const Trace = ({
         return;
       }
 
-      gStartTimeNano = BigInt(
-        parsedResponse.extensions.trace.info.trace_start_unix * 1e9,
-      );
+      gStartTimeNano = BigInt(parsedResponse.extensions.trace.info.trace_start_unix * 1e9);
 
       const parseStats = parsedResponse.extensions.trace.info.parse_stats;
-      const normalizeStats =
-        parsedResponse.extensions.trace.info.normalize_stats;
+      const normalizeStats = parsedResponse.extensions.trace.info.normalize_stats;
       const validateStats = parsedResponse.extensions.trace.info.validate_stats;
       const plannerStats = parsedResponse.extensions.trace.info.planner_stats;
 
       const parse = {
-        id: "parse",
-        type: "parse",
+        id: 'parse',
+        type: 'parse',
         durationSinceStart: parseStats.duration_since_start_nanoseconds,
         durationLoad: parseStats.duration_nanoseconds,
       } as ARTFetchNode;
 
       const normalize = {
-        id: "normalize",
-        type: "normalize",
+        id: 'normalize',
+        type: 'normalize',
         durationSinceStart: normalizeStats.duration_since_start_nanoseconds,
         durationLoad: normalizeStats.duration_nanoseconds,
       } as ARTFetchNode;
 
       const validate = {
-        id: "validate",
-        type: "validate",
+        id: 'validate',
+        type: 'validate',
         durationSinceStart: validateStats.duration_since_start_nanoseconds,
         durationLoad: validateStats.duration_nanoseconds,
       } as ARTFetchNode;
 
       const plan = {
-        id: "plan",
-        type: "plan",
+        id: 'plan',
+        type: 'plan',
         durationSinceStart: plannerStats.duration_since_start_nanoseconds,
         durationLoad: plannerStats.duration_nanoseconds,
       } as ARTFetchNode;
@@ -443,14 +398,14 @@ const Trace = ({
             source: plan.id,
             animated: true,
             target: `${traceTree.id}`,
-            type: "fetch",
+            type: 'fetch',
             data: {
               ...plan,
             },
           });
         }
       } else {
-        traceTree = parseJsonOld(parsedResponse.extensions.trace, "plan");
+        traceTree = parseJsonOld(parsedResponse.extensions.trace, 'plan');
         if (traceTree) {
           fetchMap.set(traceTree.id, traceTree);
         }
@@ -465,7 +420,7 @@ const Trace = ({
       }
       tempNodes.unshift({
         id: plan.id,
-        type: "multi",
+        type: 'multi',
         data: {
           ...plan,
         },
@@ -482,24 +437,23 @@ const Trace = ({
         source: `${plan.parentId}`,
         animated: true,
         target: `${plan.id}`,
-        type: "fetch",
+        type: 'fetch',
         data: {
           ...plan,
         },
       });
 
       const execute = {
-        id: "execute",
-        type: "execute",
+        id: 'execute',
+        type: 'execute',
         durationSinceStart: executeDurationSinceStart,
-        durationLoad:
-          Number(gEndTimeNano - gStartTimeNano) - executeDurationSinceStart,
+        durationLoad: Number(gEndTimeNano - gStartTimeNano) - executeDurationSinceStart,
         children: [traceTree],
       } as ARTFetchNode;
 
       const root = {
-        id: "root",
-        type: "graphql",
+        id: 'root',
+        type: 'graphql',
         durationLoad: Number(gEndTimeNano - gStartTimeNano),
         children: [parse, normalize, validate, plan, execute],
       } as ARTFetchNode;
@@ -525,12 +479,12 @@ const Trace = ({
 
   const edgeTypes = useMemo<any>(() => ({ fetch: ARTCustomEdge }), []);
 
-  if (view === "waterfall" && tree) {
+  if (view === 'waterfall' && tree) {
     try {
-      const wgTraceHeader = JSON.parse(headers)["X-WG-TRACE"];
+      const wgTraceHeader = JSON.parse(headers)['X-WG-TRACE'];
       if (
-        (typeof wgTraceHeader === "string" || Array.isArray(wgTraceHeader)) &&
-        wgTraceHeader.includes("exclude_load_stats")
+        (typeof wgTraceHeader === 'string' || Array.isArray(wgTraceHeader)) &&
+        wgTraceHeader.includes('exclude_load_stats')
       ) {
         return (
           <EmptyState
@@ -566,8 +520,8 @@ const Trace = ({
               ref={ref}
               style={verticalResizeStyle}
               className={cn(
-                mouseState.moving ? "bg-primary" : "bg-transparent",
-                "absolute z-50 ml-[-9px] h-full w-[2px] cursor-col-resize border-l-2 border-transparent hover:bg-primary",
+                mouseState.moving ? 'bg-primary' : 'bg-transparent',
+                'absolute z-50 ml-[-9px] h-full w-[2px] cursor-col-resize border-l-2 border-transparent hover:bg-primary',
               )}
             ></div>
           </div>
@@ -589,23 +543,13 @@ const Trace = ({
 
   return (
     <ReactFlowProvider>
-      <FetchFlow
-        initialEdges={edges}
-        initialNodes={nodes}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-      />
+      <FetchFlow initialEdges={edges} initialNodes={nodes} nodeTypes={nodeTypes} edgeTypes={edgeTypes} />
     </ReactFlowProvider>
   );
 };
 
 export const TraceView = () => {
-  const {
-    query,
-    response: activeResponse,
-    subgraphs,
-    headers: activeHeader,
-  } = useContext(TraceContext);
+  const { query, response: activeResponse, subgraphs, headers: activeHeader } = useContext(TraceContext);
 
   const [headers, setHeaders] = useState<string>();
   const [response, setResponse] = useState<string>();
@@ -633,11 +577,11 @@ export const TraceView = () => {
 
   const { hasTraceHeader, hasTraceInResponse } = useMemo(() => {
     try {
-      const parsedHeaders = JSON.parse(headers || "{}");
-      const parsedResponse = JSON.parse(activeResponse || "{}");
+      const parsedHeaders = JSON.parse(headers || '{}');
+      const parsedResponse = JSON.parse(activeResponse || '{}');
 
       return {
-        hasTraceHeader: !!parsedHeaders["X-WG-TRACE"],
+        hasTraceHeader: !!parsedHeaders['X-WG-TRACE'],
         hasTraceInResponse: !!parsedResponse?.extensions?.trace,
       };
     } catch {
@@ -647,7 +591,7 @@ export const TraceView = () => {
 
   const isSubscription = useMemo(() => {
     try {
-      const parsed = parse(query ?? "");
+      const parsed = parse(query ?? '');
 
       const isSubscription =
         parsed.definitions[0]?.kind === Kind.OPERATION_DEFINITION &&
@@ -661,7 +605,7 @@ export const TraceView = () => {
 
   const hasTrace = hasTraceHeader && hasTraceInResponse;
 
-  const [view, setView] = useState<"tree" | "waterfall">("tree");
+  const [view, setView] = useState<'tree' | 'waterfall'>('tree');
 
   if (isSubscription) {
     return (
@@ -697,11 +641,7 @@ export const TraceView = () => {
 
   return (
     <div className="relative flex h-full w-full flex-1 flex-col font-sans">
-      <Tabs
-        defaultValue="tree"
-        className="absolute bottom-3 right-4 z-30 w-max"
-        onValueChange={(v: any) => setView(v)}
-      >
+      <Tabs defaultValue="tree" className="absolute bottom-3 right-4 z-30 w-max" onValueChange={(v: any) => setView(v)}>
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="tree">
             <div className="flex items-center gap-x-2">
@@ -717,14 +657,7 @@ export const TraceView = () => {
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      {response && headers && (
-        <Trace
-          headers={headers}
-          response={response}
-          view={view}
-          subgraphs={subgraphs}
-        />
-      )}
+      {response && headers && <Trace headers={headers} response={response} view={view} subgraphs={subgraphs} />}
     </div>
   );
 };

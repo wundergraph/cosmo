@@ -1,4 +1,4 @@
-import { SubgraphName, TypeName } from '../../types/types';
+import { type SubgraphName, type TypeName } from '../../types/types';
 
 export type EntityAncestorData = {
   fieldSetsByTargetSubgraphName: Map<SubgraphName, Set<string>>;

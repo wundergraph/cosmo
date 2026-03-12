@@ -2,9 +2,11 @@ import { describe, expect, test } from 'vitest';
 import {
   abstractTypeInKeyFieldSetErrorMessage,
   argumentsInKeyFieldSetErrorMessage,
-  ConfigurationData,
+  type ConfigurationData,
   duplicateFieldInFieldSetErrorMessage,
-  FieldName,
+  externalEntityExtensionKeyFieldWarning,
+  fieldAlreadyProvidedWarning,
+  type FieldName,
   FIRST_ORDINAL,
   INTERFACE,
   invalidDirectiveError,
@@ -18,11 +20,6 @@ import {
   kindToNodeType,
   nonExternalConditionalFieldError,
   nonExternalConditionalFieldWarning,
-  NormalizationFailure,
-  NormalizationSuccess,
-  normalizeSubgraph,
-  normalizeSubgraphFromString,
-  NOT_APPLICABLE,
   numberToOrdinal,
   OBJECT,
   parse,
@@ -33,9 +30,8 @@ import {
   ROUTER_COMPATIBILITY_VERSION_ONE,
   SCALAR,
   STRING_SCALAR,
-  Subgraph,
-  TypeName,
-  typeNameAlreadyProvidedErrorMessage,
+  type Subgraph,
+  type TypeName,
   undefinedFieldInFieldSetErrorMessage,
   unexpectedArgumentErrorMessage,
   UNION,
@@ -56,313 +52,138 @@ import {
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
-import { Kind } from 'graphql/index';
+import { Kind } from 'graphql';
 
 describe('openfed_FieldSet tests', () => {
   describe('@key FieldSets', () => {
     test('that a complex key FieldSet is validated', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      scalar DateTime
-      
-      type Rating {
-        comments: [PostBody]
-        stars: Float!
-      }
-      
-      type PostBody {
-        author: String!
-        date: DateTime!
-        content: String!
-      }
-
-      type Post {
-        title: String!
-        body: PostBody!
-        rating: Rating
-      }
-
-      type Entity @key(fields: """
-        posts {
-          rating {
-            stars,
-            comments {
-              content,
-              author
-            },
-          },
-          title,
-          body {
-            author,
-            date,
-            content,
-          },
-        },
-        name,
-        id,
-      """) {
-        id: String!
-        name: String!
-        posts: [Post]
-      }
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
+      const { warnings } = normalizeSubgraphSuccess(naaaf, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that referencing undefined arguments in the FieldSet returns an error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id(undefinedArg: \\"hi\\")") {
-        id: ID!
-      }
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaag, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unexpectedArgumentErrorMessage(`id(undefinedArg: "hi")`, 'Entity.id', 'undefinedArg'),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that referencing defined arguments in the FieldSet returns an error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id(undefinedArg: \\"hi\\")") {
-        id(undefinedArg: String!): ID!
-      }
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaah, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           argumentsInKeyFieldSetErrorMessage(`id(undefinedArg: "hi")`, 'Entity.id'),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that including a field that defines an argument in the FieldSet returns an error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id") {
-        id(undefinedArg: String!): ID!
-      }
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaai, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [argumentsInKeyFieldSetErrorMessage(`id`, 'Entity.id')]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that including an undefined field in the FieldSet returns an error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "name") {
-        id: ID!
-      }
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaaj, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           undefinedFieldInFieldSetErrorMessage(`name`, 'Entity', 'name'),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that including an interface in the FieldSet returns an error', () => {
-      const result = normalizeSubgraph(
-        subgraphL.definitions,
-        subgraphL.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(subgraphL, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', INTERFACE, INTERFACE),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that including a Union in the FieldSet returns an error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id") {
-        id: Union!
-      }
-      
-      type ObjectOne {
-        name: String!
-      }
-      
-      type ObjectTwo {
-        name: String!
-      }
-      
-      union Union = ObjectOne | ObjectTwo
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaak, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           abstractTypeInKeyFieldSetErrorMessage(`id`, 'Entity.id', UNION, UNION),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that an empty key returns a parse error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "") {
-        id: ID!
-      }
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaal, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unparsableFieldSetErrorMessage('', new Error(`Syntax Error: Expected Name, found "}".`)),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that an empty selection set returns a parse error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id { }") {
-        id: Object!
-      }
-      
-      type Object {
-        name: String!
-      }  
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaam, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unparsableFieldSetErrorMessage('id { }', new Error(`Syntax Error: Expected Name, found "}".`)),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a consecutive selection set returns a parse error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id { { name } }") {
-        id: Object!
-      }
-      
-      type Object {
-        name: String!
-      }  
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaan, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           unparsableFieldSetErrorMessage('id { { name } }', new Error(`Syntax Error: Expected Name, found "{".`)),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a selection set on a type without fields returns an error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id { something }") {
-        id: ID!
-      }
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaao, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           invalidSelectionSetDefinitionErrorMessage('id { something }', ['Entity.id'], 'ID', SCALAR),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that an object-like without a selection set returns an error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id") {
-        id: Object!
-      }
-      
-      type Object {
-        name: String!
-      }  
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaap, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           invalidSelectionSetErrorMessage('id', ['Entity.id'], OBJECT, OBJECT),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a nested object-like without a selection set returns an error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id { object { object } }") {
-        id: Object!
-      }
-      
-      type Object {
-        object: AnotherObject!
-      }
-      
-      type AnotherObject {
-        object: YetAnotherObject!
-      }
-      
-      type YetAnotherObject {
-        name: String!
-      }
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaaq, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           invalidSelectionSetErrorMessage(
             'id { object { object } }',
@@ -372,55 +193,24 @@ describe('openfed_FieldSet tests', () => {
           ),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a duplicated field returns an error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id name age size id") {
-        id: ID!
-        name: String!
-        age: Int!
-        size: Float!
-      }
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaar, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           duplicateFieldInFieldSetErrorMessage('id name age size id', 'Entity.id'),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a duplicated nested field returns an error', () => {
-      const result = normalizeSubgraphFromString(
-        `
-      type Entity @key(fields: "id { object { object { name } object { name } } }") {
-        id: Object!
-      }
-      
-      type Object {
-        object: AnotherObject!
-      }
-      
-      type AnotherObject {
-        object: YetAnotherObject!
-      }
-      
-      type YetAnotherObject {
-        name: String!
-      }
-    `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaas, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', FIRST_ORDINAL, [
           duplicateFieldInFieldSetErrorMessage(
             'id { object { object { name } object { name } } }',
@@ -428,11 +218,11 @@ describe('openfed_FieldSet tests', () => {
           ),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that __typename is a valid key', () => {
       const { schema, warnings } = normalizeSubgraphSuccess(naaad, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(warnings).toHaveLength(0);
       expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           KEY_DIRECTIVE +
@@ -444,11 +234,11 @@ describe('openfed_FieldSet tests', () => {
             OPENFED_FIELD_SET,
         ),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that an error is returned if a selection is made on __typename', () => {
       const { errors, warnings } = normalizeSubgraphFailure(naaae, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(warnings).toHaveLength(0);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(KEY, 'Entity', numberToOrdinal(1), [
@@ -460,6 +250,7 @@ describe('openfed_FieldSet tests', () => {
           ),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that __typename keys create an entity link between subgraphs', () => {
@@ -511,9 +302,11 @@ describe('openfed_FieldSet tests', () => {
 
   describe('@requires FieldSets', () => {
     test('that a warning is returned for an unconditionally provided @external field that is also required', () => {
-      const result = normalizeSubgraphSuccess(subgraphA, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
+      const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
+        subgraphA,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
+      expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
             'Entity',
@@ -531,26 +324,19 @@ describe('openfed_FieldSet tests', () => {
           ],
         ]),
       );
+      expect(warnings).toHaveLength(2);
+      expect(warnings).toStrictEqual([
+        externalEntityExtensionKeyFieldWarning('Entity', 'id', ['Entity.id'], subgraphA.name),
+        fieldAlreadyProvidedWarning('Entity.id', REQUIRES, 'Entity.name', subgraphA.name),
+      ]);
     });
 
     test('that a @requires directive is ignored when declared on a non-entity parent', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Object {
-          id: ID!
-          name: Object! @requires(fields: "id")
-        }
-      `,
-        true,
+      const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
+        naaat,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(result.warnings).toHaveLength(2);
-      expect(result.warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning(`Object.name`, NOT_APPLICABLE));
-      expect(result.warnings[1]).toStrictEqual(
-        nonExternalConditionalFieldWarning('Object.name', NOT_APPLICABLE, 'Object.id', 'id', REQUIRES),
       );
-      expect(result.configurationDataByTypeName).toStrictEqual(
+      expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
             'Object',
@@ -562,22 +348,19 @@ describe('openfed_FieldSet tests', () => {
           ],
         ]),
       );
+      expect(warnings).toHaveLength(2);
+      expect(warnings[0]).toStrictEqual(requiresDefinedOnNonEntityFieldWarning(`Object.name`, naaat.name));
+      expect(warnings[1]).toStrictEqual(
+        nonExternalConditionalFieldWarning('Object.name', naaat.name, 'Object.id', 'id', REQUIRES),
+      );
     });
 
     test('that a @requires FieldSet supports an immediate inline fragment', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Entity @key(fields: "id") {
-          id: ID!
-          name: String! @external
-          age: Int! @requires(fields: "... on Entity { name }")
-        }
-      `,
-        true,
+      const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
+        naaau,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
+      );
+      expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
             'Entity',
@@ -592,33 +375,26 @@ describe('openfed_FieldSet tests', () => {
           ],
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a @requires FieldSet returns an error for an invalid inline fragment', () => {
-      const result = normalizeSubgraph(
-        subgraphO.definitions,
-        subgraphO.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(subgraphO, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
           ` On field "Entity.age":\n -` + invalidInlineFragmentTypeErrorMessage('... on I { name }', [], 'I', 'Entity'),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a @requires FieldSet supports multiple inline fragments', () => {
-      const result = normalizeSubgraph(
-        subgraphP.definitions,
-        subgraphP.name,
-        undefined,
+      const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
+        subgraphP,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
+      );
+      expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
             'Entity',
@@ -649,31 +425,15 @@ describe('openfed_FieldSet tests', () => {
           ],
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a @requires FieldSet supports an inline fragment with a valid type condition', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Entity @key(fields: "id") {
-          id: ID!
-          interface: I! @external
-          age: Int! @requires(fields: "interface { ... on Object { age } }")
-        }
-        
-        interface I {
-          name: String!
-        }
-        
-        type Object implements I {
-          name: String!
-          age: Int!
-        }  
-      `,
-        true,
+      const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
+        naaav,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
+      );
+      expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
             'Entity',
@@ -704,10 +464,11 @@ describe('openfed_FieldSet tests', () => {
           ],
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a @requires FieldSet returns an error for an inline fragment with an invalid type condition on an interface', () => {
-      const { errors } = normalizeSubgraphFailure(subgraphQ, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { errors, warnings } = normalizeSubgraphFailure(subgraphQ, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
@@ -721,27 +482,14 @@ describe('openfed_FieldSet tests', () => {
             ),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a @requires FieldSet supports an inline fragment with a valid type condition on a union', () => {
-      const { configurationDataByTypeName } = normalizeSubgraphFromString(
-        `
-        type Entity @key(fields: "id") {
-          id: ID!
-          union: U! @external
-          age: Int! @requires(fields: "union { ... on Object { age } }")
-        }
-        
-        union U = Object
-        
-        type Object {
-          name: String!
-          age: Int!
-        }  
-      `,
-        true,
+      const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
+        naaaw,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
+      );
       expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
@@ -765,61 +513,24 @@ describe('openfed_FieldSet tests', () => {
           ],
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a @requires FieldSet returns an error if a union does not define a fragment', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Entity @key(fields: "id") {
-          id: ID!
-          union: U @external
-          name: String! @requires(fields: "union { name }")
-        }
-        
-        union U = Object
-        
-        type Object {
-          name: String!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaax, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
           ` On field "Entity.name":\n -` + invalidSelectionOnUnionErrorMessage('union { name }', ['Entity.union'], 'U'),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a @requires FieldSet returns an error for an inline fragment with an invalid type condition on a union', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Entity @key(fields: "id") {
-          id: ID!
-          union: U! @external
-          age: Int! @requires(fields: "union { ... on AnotherObject { age } }")
-        }
-        
-        union U = Object
-        
-        type Object {
-          name: String!
-          age: Int!
-        }
-        
-        type AnotherObject {
-          name: String!
-        }
-      `,
-        true,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(naaay, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidProvidesOrRequiresDirectivesError(REQUIRES, [
           ` On field "Entity.age":\n -` +
             invalidInlineFragmentTypeConditionErrorMessage(
@@ -831,26 +542,15 @@ describe('openfed_FieldSet tests', () => {
             ),
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a @requires FieldSet allows undefined optional arguments', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Entity @key(fields: "id") {
-          id: ID!
-          object(arg: String): Object! @external
-          age: Int! @requires(fields: "object { name }")
-        }
- 
-        type Object {
-          name: String!
-        }
-      `,
-        true,
+      const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
+        naaaz,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
+      );
+      expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
             'Entity',
@@ -873,26 +573,15 @@ describe('openfed_FieldSet tests', () => {
           ],
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a @requires FieldSet allows defined optional arguments', () => {
-      const result = normalizeSubgraphFromString(
-        `
-        type Entity @key(fields: "id") {
-          id: ID!
-          object(arg: String): Object! @external
-          age: Int! @requires(fields: "object(arg: \\"string\\") { name }")
-        }
- 
-        type Object {
-          name: String!
-        }
-      `,
-        true,
+      const { configurationDataByTypeName, warnings } = normalizeSubgraphSuccess(
+        nbaaa,
         ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(result.configurationDataByTypeName).toStrictEqual(
+      );
+      expect(configurationDataByTypeName).toStrictEqual(
         new Map<TypeName, ConfigurationData>([
           [
             'Entity',
@@ -915,10 +604,11 @@ describe('openfed_FieldSet tests', () => {
           ],
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a @requires FieldSet allows inline fragments #1', () => {
-      const { configurationDataByTypeName, schema } = normalizeSubgraphSuccess(
+      const { configurationDataByTypeName, schema, warnings } = normalizeSubgraphSuccess(
         subgraphH,
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
@@ -1042,6 +732,7 @@ describe('openfed_FieldSet tests', () => {
           ],
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a warning is returned if a provided __typename is required in a V1 subgraph', () => {
@@ -1540,7 +1231,7 @@ describe('openfed_FieldSet tests', () => {
 
   describe('Router configuration tests', () => {
     test('that a field that forms part of a @requires field set cannot be used as an implicit key', () => {
-      const { subgraphConfigBySubgraphName } = federateSubgraphsSuccess(
+      const { subgraphConfigBySubgraphName, warnings } = federateSubgraphsSuccess(
         [subgraphD, subgraphE],
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
@@ -1645,6 +1336,7 @@ describe('openfed_FieldSet tests', () => {
           ],
         ]),
       );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that non-external v1 fields that form part of a @requires field set are treated as non-conditional but return a warning', () => {
@@ -2066,7 +1758,7 @@ const subgraphO: Subgraph = {
   definitions: parse(`
     type Entity @key(fields: "id") {
       id: ID!
-      name: I! @external
+      name: I!
       age: Int! @requires(fields: "... on I { name }")
     }
 
@@ -2106,7 +1798,7 @@ const subgraphQ: Subgraph = {
   definitions: parse(`
     type Entity @key(fields: "id") {
       id: ID!
-      interface: I! @external
+      interface: I!
       age: Int! @requires(fields: "interface { ... on Object { age } }")
     }
 
@@ -2174,6 +1866,370 @@ const naaae: Subgraph = {
   definitions: parse(`
     type Entity @key(fields: "__typename { __typename } ") {
       id: ID!
+    }
+  `),
+};
+
+const naaaf: Subgraph = {
+  name: 'naaaf',
+  url: '',
+  definitions: parse(`
+    scalar DateTime
+    
+    type Rating {
+      comments: [PostBody]
+      stars: Float!
+    }
+    
+    type PostBody {
+      author: String!
+      date: DateTime!
+      content: String!
+    }
+
+    type Post {
+      title: String!
+      body: PostBody!
+      rating: Rating
+    }
+
+    type Entity @key(fields: """
+      posts {
+        rating {
+          stars,
+          comments {
+            content,
+            author
+          },
+        },
+        title,
+        body {
+          author,
+          date,
+          content,
+        },
+      },
+      name,
+      id,
+    """) {
+      id: String!
+      name: String!
+      posts: [Post]
+    }
+  `),
+};
+
+const naaag: Subgraph = {
+  name: 'naaag',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id(undefinedArg: \\"hi\\")") {
+      id: ID!
+    }
+  `),
+};
+
+const naaah: Subgraph = {
+  name: 'naaah',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id(undefinedArg: \\"hi\\")") {
+      id(undefinedArg: String!): ID!
+    }
+  `),
+};
+
+const naaai: Subgraph = {
+  name: 'naaai',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id(undefinedArg: String!): ID!
+    }
+  `),
+};
+
+const naaaj: Subgraph = {
+  name: 'naaaj',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "name") {
+      id: ID!
+    }
+  `),
+};
+
+const naaak: Subgraph = {
+  name: 'naaak',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: Union!
+    }
+    
+    type ObjectOne {
+      name: String!
+    }
+    
+    type ObjectTwo {
+      name: String!
+    }
+    
+    union Union = ObjectOne | ObjectTwo
+  `),
+};
+
+const naaal: Subgraph = {
+  name: 'naaal',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "") {
+      id: ID!
+    }
+  `),
+};
+
+const naaam: Subgraph = {
+  name: 'naaam',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id { }") {
+      id: Object!
+    }
+    
+    type Object {
+      name: String!
+    }
+  `),
+};
+
+const naaan: Subgraph = {
+  name: 'naaan',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id { { name } }") {
+      id: Object!
+    }
+    
+    type Object {
+      name: String!
+    }
+  `),
+};
+
+const naaao: Subgraph = {
+  name: 'naaao',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id { something }") {
+      id: ID!
+    }
+  `),
+};
+
+const naaap: Subgraph = {
+  name: 'naaap',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: Object!
+    }
+    
+    type Object {
+      name: String!
+    }
+  `),
+};
+
+const naaaq: Subgraph = {
+  name: 'naaaq',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id { object { object } }") {
+      id: Object!
+    }
+    
+    type Object {
+      object: AnotherObject!
+    }
+    
+    type AnotherObject {
+      object: YetAnotherObject!
+    }
+    
+    type YetAnotherObject {
+      name: String!
+    }
+  `),
+};
+
+const naaar: Subgraph = {
+  name: 'naaar',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id name age size id") {
+      id: ID!
+      name: String!
+      age: Int!
+      size: Float!
+    }
+  `),
+};
+
+const naaas: Subgraph = {
+  name: 'naaas',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id { object { object { name } object { name } } }") {
+      id: Object!
+    }
+    
+    type Object {
+      object: AnotherObject!
+    }
+    
+    type AnotherObject {
+      object: YetAnotherObject!
+    }
+    
+    type YetAnotherObject {
+      name: String!
+    }
+  `),
+};
+
+const naaat: Subgraph = {
+  name: 'naaat',
+  url: '',
+  definitions: parse(`
+    type Object {
+      id: ID!
+      name: Object! @requires(fields: "id")
+    }
+  `),
+};
+
+const naaau: Subgraph = {
+  name: 'naaau',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      name: String! @external
+      age: Int! @requires(fields: "... on Entity { name }")
+    }
+  `),
+};
+
+const naaav: Subgraph = {
+  name: 'naaav',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      interface: I! @external
+      age: Int! @requires(fields: "interface { ... on Object { age } }")
+    }
+    
+    interface I {
+      name: String!
+    }
+    
+    type Object implements I {
+      name: String!
+      age: Int!
+    }
+  `),
+};
+
+const naaaw: Subgraph = {
+  name: 'naaaw',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      union: U! @external
+      age: Int! @requires(fields: "union { ... on Object { age } }")
+    }
+    
+    union U = Object
+    
+    type Object {
+      name: String!
+      age: Int!
+    }
+  `),
+};
+
+const naaax: Subgraph = {
+  name: 'naaax',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      union: U @external
+      name: String! @requires(fields: "union { name }")
+    }
+    
+    union U = Object
+    
+    type Object {
+      name: String!
+    }
+  `),
+};
+
+const naaay: Subgraph = {
+  name: 'naaay',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      union: U! @external
+      age: Int! @requires(fields: "union { ... on AnotherObject { age } }")
+    }
+    
+    union U = Object
+    
+    type Object {
+      name: String!
+      age: Int!
+    }
+    
+    type AnotherObject {
+      name: String!
+    }
+  `),
+};
+
+const naaaz: Subgraph = {
+  name: 'naaaz',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      object(arg: String): Object! @external
+      age: Int! @requires(fields: "object { name }")
+    }
+
+    type Object {
+      name: String!
+    }
+  `),
+};
+
+const nbaaa: Subgraph = {
+  name: 'nbaaa',
+  url: '',
+  definitions: parse(`
+    type Entity @key(fields: "id") {
+      id: ID!
+      object(arg: String): Object! @external
+      age: Int! @requires(fields: "object(arg: \\"string\\") { name }")
+    }
+
+    type Object {
+      name: String!
     }
   `),
 };

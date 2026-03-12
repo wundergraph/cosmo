@@ -1,11 +1,9 @@
-import { useRouter } from "next/router";
+import { useRouter } from 'next/router';
 
 export const useRange = () => {
   const router = useRouter();
 
-  const range = router.query.range
-    ? parseInt(router.query.range?.toString())
-    : 24;
+  const range = router.query.range ? parseInt(router.query.range?.toString()) : 24;
 
   switch (range) {
     case 24:

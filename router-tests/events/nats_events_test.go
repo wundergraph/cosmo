@@ -1200,6 +1200,120 @@ func TestNatsEvents(t *testing.T) {
 		})
 	})
 
+	t.Run("durable consumer is deleted from nats server on router shutdown", func(t *testing.T) {
+		t.Parallel()
+
+		env, err := testenv.CreateTestEnv(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				// Remove feature flag configs to work around a bug where buildGraphMux
+				// overwrites s.pubSubProviders on each call, orphaning the base providers.
+				routerConfig.FeatureFlagConfigs = nil
+			},
+			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
+				for i := range cfg.Providers.Nats {
+					cfg.Providers.Nats[i].DeleteDurableConsumersOnShutdown = true
+				}
+			},
+		})
+		require.NoError(t, err)
+		t.Cleanup(env.Shutdown)
+
+		js, err := jetstream.New(env.NatsConnectionDefault)
+		require.NoError(t, err)
+
+		streamName := env.GetPubSubName("streamName")
+		_, err = js.CreateOrUpdateStream(env.Context, jetstream.StreamConfig{
+			Name:     streamName,
+			Subjects: []string{env.GetPubSubName("employeeUpdated.>")},
+			Storage:  jetstream.MemoryStorage,
+		})
+		require.NoError(t, err)
+
+		conn := env.InitGraphQLWebSocketConnection(nil, nil, nil)
+		err = conn.WriteJSON(&testenv.WebSocketMessage{
+			ID:      "1",
+			Type:    "subscribe",
+			Payload: []byte(`{"query":"subscription { employeeUpdatedNatsStream(id: 12) { id }}"}`),
+		})
+		require.NoError(t, err)
+		env.WaitForSubscriptionCount(1, NatsWaitTimeout)
+
+		// Verify the durable consumer was created on the stream
+		stream, err := js.Stream(env.Context, streamName)
+		require.NoError(t, err)
+		streamInfo, err := stream.Info(env.Context)
+		require.NoError(t, err)
+		require.Equal(t, 1, streamInfo.State.Consumers, "expected one consumer before shutdown")
+
+		// Shut down the router; this should trigger deletion of durable consumers
+		env.Shutdown()
+
+		// env.Context is cancelled by Shutdown, so use a fresh context for JetStream queries
+		ctx := context.Background()
+		streamInfo, err = stream.Info(ctx)
+		require.NoError(t, err)
+		require.Equal(t, 0, streamInfo.State.Consumers, "expected no consumers after shutdown with delete_on_shutdown enabled")
+	})
+
+	t.Run("durable consumer is not deleted from nats server on router shutdown", func(t *testing.T) {
+		t.Parallel()
+
+		env, err := testenv.CreateTestEnv(t, &testenv.Config{
+			RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+			EnableNats:               true,
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				// Remove feature flag configs to work around a bug where buildGraphMux
+				// overwrites s.pubSubProviders on each call, orphaning the base providers.
+				routerConfig.FeatureFlagConfigs = nil
+			},
+			ModifyEventsConfiguration: func(cfg *config.EventsConfiguration) {
+				for i := range cfg.Providers.Nats {
+					cfg.Providers.Nats[i].DeleteDurableConsumersOnShutdown = false
+				}
+			},
+		})
+		require.NoError(t, err)
+		t.Cleanup(env.Shutdown)
+
+		js, err := jetstream.New(env.NatsConnectionDefault)
+		require.NoError(t, err)
+
+		streamName := env.GetPubSubName("streamName")
+		_, err = js.CreateOrUpdateStream(env.Context, jetstream.StreamConfig{
+			Name:     streamName,
+			Subjects: []string{env.GetPubSubName("employeeUpdated.>")},
+			Storage:  jetstream.MemoryStorage,
+		})
+		require.NoError(t, err)
+
+		conn := env.InitGraphQLWebSocketConnection(nil, nil, nil)
+		err = conn.WriteJSON(&testenv.WebSocketMessage{
+			ID:      "1",
+			Type:    "subscribe",
+			Payload: []byte(`{"query":"subscription { employeeUpdatedNatsStream(id: 12) { id }}"}`),
+		})
+		require.NoError(t, err)
+		env.WaitForSubscriptionCount(1, NatsWaitTimeout)
+
+		// Verify the durable consumer was created on the stream
+		stream, err := js.Stream(env.Context, streamName)
+		require.NoError(t, err)
+		streamInfo, err := stream.Info(env.Context)
+		require.NoError(t, err)
+		require.Equal(t, 1, streamInfo.State.Consumers, "expected one consumer before shutdown")
+
+		// Shut down the router; this should trigger deletion of durable consumers
+		env.Shutdown()
+
+		// env.Context is cancelled by Shutdown, so use a fresh context for JetStream queries
+		ctx := context.Background()
+		streamInfo, err = stream.Info(ctx)
+		require.NoError(t, err)
+		require.Equal(t, 1, streamInfo.State.Consumers, "expected one consumer after shutdown with delete_on_shutdown disabled")
+	})
+
 	t.Run("subscribing to a non-existent stream returns an error", func(t *testing.T) {
 		t.Parallel()
 

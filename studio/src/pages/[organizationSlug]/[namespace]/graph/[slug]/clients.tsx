@@ -1,23 +1,14 @@
-import { useReducer } from "react";
-import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
-import { CodeViewer } from "@/components/code-viewer";
-import { EmptyState } from "@/components/empty-state";
-import {
-  GraphContext,
-  GraphPageLayout,
-  getGraphLayout,
-} from "@/components/layout/graph-layout";
-import { PageHeader } from "@/components/layout/head";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { DeletePersistedOperationDialog } from "@/components/clients/delete-persisted-operation-dialog";
-import { CLI } from "@/components/ui/cli";
+import { useReducer } from 'react';
+import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
+import { CodeViewer } from '@/components/code-viewer';
+import { EmptyState } from '@/components/empty-state';
+import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { PageHeader } from '@/components/layout/head';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { DeletePersistedOperationDialog } from '@/components/clients/delete-persisted-operation-dialog';
+import { CLI } from '@/components/ui/cli';
 import {
   Dialog,
   DialogContent,
@@ -25,67 +16,30 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Loader } from "@/components/ui/loader";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useToast } from "@/components/ui/use-toast";
-import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { docsBaseURL } from "@/lib/constants";
-import { formatDateTime } from "@/lib/format-date";
-import { NextPageWithLayout } from "@/lib/page";
-import {
-  extractVariablesFromGraphQL,
-  useParseSchema,
-} from "@/lib/schema-helpers";
-import { cn } from "@/lib/utils";
-import {
-  ArchiveBoxXMarkIcon,
-  CommandLineIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
-import {
-  CopyIcon,
-  Cross1Icon,
-  MagnifyingGlassIcon,
-  PlayIcon,
-  PlusIcon,
-} from "@radix-ui/react-icons";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+} from '@/components/ui/dropdown-menu';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/components/ui/use-toast';
+import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { docsBaseURL } from '@/lib/constants';
+import { formatDateTime } from '@/lib/format-date';
+import { NextPageWithLayout } from '@/lib/page';
+import { extractVariablesFromGraphQL, useParseSchema } from '@/lib/schema-helpers';
+import { cn } from '@/lib/utils';
+import { ArchiveBoxXMarkIcon, CommandLineIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { CopyIcon, Cross1Icon, MagnifyingGlassIcon, PlayIcon, PlusIcon } from '@radix-ui/react-icons';
+import { useQuery, useMutation } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getClients,
   getFederatedGraphSDLByName,
@@ -93,20 +47,20 @@ import {
   publishPersistedOperations,
   deletePersistedOperation,
   checkPersistedOperationTraffic,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import copy from "copy-to-clipboard";
-import { formatDistanceToNow } from "date-fns";
-import Fuse from "fuse.js";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useRouter } from "next/router";
-import { useContext, useState } from "react";
-import { BiAnalyse } from "react-icons/bi";
-import { IoBarcodeSharp } from "react-icons/io5";
-import { z } from "zod";
-import { useCheckUserAccess } from "@/hooks/use-check-user-access";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import copy from 'copy-to-clipboard';
+import { formatDistanceToNow } from 'date-fns';
+import Fuse from 'fuse.js';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/router';
+import { useContext, useState } from 'react';
+import { BiAnalyse } from 'react-icons/bi';
+import { IoBarcodeSharp } from 'react-icons/io5';
+import { z } from 'zod';
+import { useCheckUserAccess } from '@/hooks/use-check-user-access';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
 const getSnippets = ({
   clientName,
@@ -121,10 +75,9 @@ const getSnippets = ({
   routingURL: string;
   variables: Record<string, any>;
 }) => {
-  const variablesString =
-    Object.keys(variables).length > 0 ? JSON.stringify(variables) : undefined;
+  const variablesString = Object.keys(variables).length > 0 ? JSON.stringify(variables) : undefined;
 
-  let variablesDeclaration = "";
+  let variablesDeclaration = '';
   for (const [key, value] of Object.entries(variables)) {
     variablesDeclaration += `${key}: ${JSON.stringify(value)},\n`;
   }
@@ -134,9 +87,9 @@ const getSnippets = ({
     -H 'graphql-client-name: ${clientName}' \\
     -H 'Content-Type: application/json' \\
     -d '{${
-      operationNames.length > 1 ? `"operationName":"${operationNames[0]}",` : ""
+      operationNames.length > 1 ? `"operationName":"${operationNames[0]}",` : ''
     }"extensions":{"persistedQuery":{"version":1,"sha256Hash":"${operationId}"}}${
-      variablesString ? `,"variables": ${variablesString}` : ""
+      variablesString ? `,"variables": ${variablesString}` : ''
     }}'`;
 
   const js = `const url = '${routingURL}';
@@ -146,7 +99,7 @@ const headers = {
 };
 
 const body = {
-  ${operationNames.length > 1 ? `operationName: "${operationNames[0]}",` : ""}
+  ${operationNames.length > 1 ? `operationName: "${operationNames[0]}",` : ''}
   extensions: {
     persistedQuery: {
       version: 1,
@@ -157,7 +110,7 @@ const body = {
       ? `,
   variables: {
     ${variablesDeclaration}  },`
-      : ""
+      : ''
   }
 };
 
@@ -182,15 +135,15 @@ type DeletePersistedOperationState = {
 
 type DeletePersistedOperationAction =
   | {
-      type: "delete-modal-hidden";
+      type: 'delete-modal-hidden';
     }
   | {
-      type: "delete-modal-show";
+      type: 'delete-modal-show';
       id: string;
       names: string[];
     }
   | {
-      type: "delete-modal-show-with-traffic-warning";
+      type: 'delete-modal-show-with-traffic-warning';
       id: string;
       names: string[];
     };
@@ -200,7 +153,7 @@ const deletePersistedOperationReducer = (
   action: DeletePersistedOperationAction,
 ): DeletePersistedOperationState => {
   switch (action.type) {
-    case "delete-modal-show":
+    case 'delete-modal-show':
       return {
         ...state,
         id: action.id,
@@ -208,7 +161,7 @@ const deletePersistedOperationReducer = (
         hasTraffic: false,
         show: true,
       };
-    case "delete-modal-show-with-traffic-warning":
+    case 'delete-modal-show-with-traffic-warning':
       return {
         ...state,
         id: action.id,
@@ -216,17 +169,13 @@ const deletePersistedOperationReducer = (
         hasTraffic: true,
         show: true,
       };
-    case "delete-modal-hidden":
+    case 'delete-modal-hidden':
     default:
       return { ...state, id: null, names: [], hasTraffic: false, show: false };
   }
 };
 
-const ClientOperations = ({
-  isOrganizationAdminOrDeveloper,
-}: {
-  isOrganizationAdminOrDeveloper: boolean;
-}) => {
+const ClientOperations = ({ isOrganizationAdminOrDeveloper }: { isOrganizationAdminOrDeveloper: boolean }) => {
   const router = useRouter();
   const slug = router.query.slug as string;
   const {
@@ -235,18 +184,15 @@ const ClientOperations = ({
   const organizationSlug = router.query.organizationSlug as string;
   const { toast } = useToast();
   const searchParams = useSearchParams();
-  const clientId = searchParams.get("clientId");
-  const clientName = searchParams.get("clientName");
+  const clientId = searchParams.get('clientId');
+  const clientName = searchParams.get('clientName');
   const graphContext = useContext(GraphContext);
-  const [persistedOperationDeleteState, dispatch] = useReducer(
-    deletePersistedOperationReducer,
-    {
-      id: null,
-      names: [],
-      hasTraffic: false,
-      show: false,
-    },
-  );
+  const [persistedOperationDeleteState, dispatch] = useReducer(deletePersistedOperationReducer, {
+    id: null,
+    names: [],
+    hasTraffic: false,
+    show: false,
+  });
 
   const { data: sdlData } = useQuery(
     getFederatedGraphSDLByName,
@@ -278,7 +224,7 @@ const ClientOperations = ({
   const { data, isLoading, error, refetch } = useQuery(
     getPersistedOperations,
     {
-      clientId: clientId ?? "",
+      clientId: clientId ?? '',
       federatedGraphName: slug,
       namespace,
     },
@@ -287,73 +233,68 @@ const ClientOperations = ({
     },
   );
 
-  const {
-    mutate: mutateDeletePeristedOperation,
-    isPending: isDeletePersistedOperationPending,
-  } = useMutation(deletePersistedOperation, {
-    onSuccess(data) {
-      if (data.response?.code !== EnumStatusCode.OK) {
+  const { mutate: mutateDeletePeristedOperation, isPending: isDeletePersistedOperationPending } = useMutation(
+    deletePersistedOperation,
+    {
+      onSuccess(data) {
+        if (data.response?.code !== EnumStatusCode.OK) {
+          toast({
+            variant: 'destructive',
+            title: 'Could not delete the operation',
+            description: data.response?.details ?? 'Please try again',
+          });
+          return;
+        }
+
+        refetch();
         toast({
-          variant: "destructive",
-          title: "Could not delete the operation",
-          description: data.response?.details ?? "Please try again",
+          title: 'Operation deleted successfully',
         });
-        return;
-      }
-
-      refetch();
-      toast({
-        title: "Operation deleted successfully",
-      });
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Could not delete the operation",
-        description: error.details.toString() ?? "Please try again",
-      });
-    },
-  });
-
-  const {
-    mutate: mutateCheckPersistedOperationTraffic,
-    isPending: isCheckPersistedOperationTrafficPending,
-  } = useMutation(checkPersistedOperationTraffic, {
-    onSuccess(data) {
-      if (
-        data.response?.code !== EnumStatusCode.OK ||
-        !data.operation?.operationId
-      ) {
+      },
+      onError: (error) => {
         toast({
-          variant: "destructive",
-          title: "Could not delete the operation",
-          description: data.response?.details ?? "Please try again",
+          variant: 'destructive',
+          title: 'Could not delete the operation',
+          description: error.details.toString() ?? 'Please try again',
         });
-        return;
-      }
+      },
+    },
+  );
 
-      if (data.operation?.hasTraffic) {
-        dispatch({
-          type: "delete-modal-show-with-traffic-warning",
-          id: data.operation.operationId,
-          names: data.operation.operationNames,
+  const { mutate: mutateCheckPersistedOperationTraffic, isPending: isCheckPersistedOperationTrafficPending } =
+    useMutation(checkPersistedOperationTraffic, {
+      onSuccess(data) {
+        if (data.response?.code !== EnumStatusCode.OK || !data.operation?.operationId) {
+          toast({
+            variant: 'destructive',
+            title: 'Could not delete the operation',
+            description: data.response?.details ?? 'Please try again',
+          });
+          return;
+        }
+
+        if (data.operation?.hasTraffic) {
+          dispatch({
+            type: 'delete-modal-show-with-traffic-warning',
+            id: data.operation.operationId,
+            names: data.operation.operationNames,
+          });
+        } else {
+          dispatch({
+            type: 'delete-modal-show',
+            id: data.operation.operationId,
+            names: data.operation.operationNames,
+          });
+        }
+      },
+      onError: (error) => {
+        toast({
+          variant: 'destructive',
+          title: 'Could not delete the operation',
+          description: error.details.toString() ?? 'Please try again',
         });
-      } else {
-        dispatch({
-          type: "delete-modal-show",
-          id: data.operation.operationId,
-          names: data.operation.operationNames,
-        });
-      }
-    },
-    onError: (error) => {
-      toast({
-        variant: "destructive",
-        title: "Could not delete the operation",
-        description: error.details.toString() ?? "Please try again",
-      });
-    },
-  });
+      },
+    });
 
   let content: React.ReactNode;
 
@@ -365,9 +306,7 @@ const ClientOperations = ({
         <EmptyState
           icon={<ExclamationTriangleIcon />}
           title="Could not retrieve operations"
-          description={
-            data?.response?.details || error?.message || "Please try again"
-          }
+          description={data?.response?.details || error?.message || 'Please try again'}
           actions={<Button onClick={() => refetch()}>Retry</Button>}
         />
       </div>
@@ -380,13 +319,11 @@ const ClientOperations = ({
           title="No operations found."
           description={
             <>
-              Push new operations to this client using the CLI.{" "}
+              Push new operations to this client using the CLI.{' '}
               <a
                 target="_blank"
                 rel="noreferrer"
-                href={
-                  docsBaseURL + "/router/persisted-queries/persisted-operations"
-                }
+                href={docsBaseURL + '/router/persisted-queries/persisted-operations'}
                 className="text-primary"
               >
                 Learn more.
@@ -394,22 +331,18 @@ const ClientOperations = ({
             </>
           }
           actions={
-            <CLI
-              command={`npx wgc operations push ${slug} -n ${namespace} -c ${clientName} -f <path-to-file>`}
-            />
+            <CLI command={`npx wgc operations push ${slug} -n ${namespace} -c ${clientName} -f <path-to-file>`} />
           }
         />
       </div>
     );
   } else if (data && graphContext?.graph) {
     const fuse = new Fuse(data.operations, {
-      keys: ["id", "operationNames"],
+      keys: ['id', 'operationNames'],
       minMatchCharLength: 1,
     });
 
-    const filteredOperations = search
-      ? fuse.search(search).map(({ item }) => item)
-      : data.operations;
+    const filteredOperations = search ? fuse.search(search).map(({ item }) => item) : data.operations;
 
     content = (
       <div>
@@ -429,8 +362,8 @@ const ClientOperations = ({
               variant="ghost"
               className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
               onClick={() => {
-                setSearch("");
-                applyParams("");
+                setSearch('');
+                applyParams('');
               }}
             >
               <Cross1Icon />
@@ -439,55 +372,44 @@ const ClientOperations = ({
         </div>
         <Accordion type="single" collapsible className="mt-4 w-full">
           {filteredOperations.map((op) => {
-            const [base, _] = window.location.href.split("?");
-            const link =
-              base +
-              `?clientId=${clientId}&clientName=${clientName}&search=${op.id}`;
+            const [base, _] = window.location.href.split('?');
+            const link = base + `?clientId=${clientId}&clientName=${clientName}&search=${op.id}`;
 
             const variables = extractVariablesFromGraphQL(op.contents, ast);
 
             const snippets = getSnippets({
-              clientName: clientName ?? "",
+              clientName: clientName ?? '',
               operationId: op.id,
               operationNames: op.operationNames,
-              routingURL: graphContext.graph?.routingURL ?? "",
+              routingURL: graphContext.graph?.routingURL ?? '',
               variables,
             });
 
             return (
               <AccordionItem key={op.id} value={op.id}>
                 <AccordionTrigger className="gap-x-4 truncate px-2 hover:bg-secondary/30 hover:no-underline">
-                  <Badge
-                    className="flex w-20 items-center justify-center"
-                    variant="secondary"
-                  >
+                  <Badge className="flex w-20 items-center justify-center" variant="secondary">
                     {op.id.slice(0, 6)}
                   </Badge>
                   <span
-                    className={cn("w-full truncate text-start", {
-                      "italic text-muted-foreground":
-                        op.operationNames.length === 0,
+                    className={cn('w-full truncate text-start', {
+                      'italic text-muted-foreground': op.operationNames.length === 0,
                     })}
                   >
                     {op.operationNames.length > 0
                       ? op.operationNames.length > 1
-                        ? `[ ${op.operationNames.join(", ")} ]`
+                        ? `[ ${op.operationNames.join(', ')} ]`
                         : op.operationNames[0]
-                      : "unnamed operation"}
+                      : 'unnamed operation'}
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="mt-2 px-2">
                   <div>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       {op.lastUpdatedAt ? (
-                        <p className="text-muted-foreground">
-                          Updated at{" "}
-                          {formatDateTime(new Date(op.lastUpdatedAt))}
-                        </p>
+                        <p className="text-muted-foreground">Updated at {formatDateTime(new Date(op.lastUpdatedAt))}</p>
                       ) : (
-                        <p className="text-muted-foreground">
-                          Created at {formatDateTime(new Date(op.createdAt))}
-                        </p>
+                        <p className="text-muted-foreground">Created at {formatDateTime(new Date(op.createdAt))}</p>
                       )}
                       <div className="flex items-center gap-x-2">
                         {isOrganizationAdminOrDeveloper && (
@@ -496,25 +418,24 @@ const ClientOperations = ({
                               <Button
                                 variant="outline"
                                 size="icon"
-                                disabled={
-                                  isCheckPersistedOperationTrafficPending ||
-                                  isDeletePersistedOperationPending
+                                disabled={isCheckPersistedOperationTrafficPending || isDeletePersistedOperationPending}
+                                onClick={
+                                  clientName
+                                    ? () => {
+                                        mutateCheckPersistedOperationTraffic({
+                                          operationId: op.id,
+                                          namespace,
+                                          fedGraphName: slug,
+                                          clientName,
+                                        });
+                                      }
+                                    : undefined
                                 }
-                                onClick={clientName ? () => {
-                                  mutateCheckPersistedOperationTraffic({
-                                    operationId: op.id,
-                                    namespace,
-                                    fedGraphName: slug,
-                                    clientName,
-                                  });
-                                } : undefined}
                               >
                                 <ArchiveBoxXMarkIcon className="h-4 w-4" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent>
-                              Delete the operation
-                            </TooltipContent>
+                            <TooltipContent>Delete the operation</TooltipContent>
                           </Tooltip>
                         )}
                         <Tooltip delayDuration={100}>
@@ -524,8 +445,7 @@ const ClientOperations = ({
                                 href={{
                                   pathname: `/[organizationSlug]/[namespace]/graph/[slug]/analytics`,
                                   query: {
-                                    organizationSlug:
-                                      router.query.organizationSlug,
+                                    organizationSlug: router.query.organizationSlug,
                                     namespace,
                                     slug: router.query.slug,
                                     filterState: createFilterState({
@@ -545,10 +465,8 @@ const ClientOperations = ({
                             <Button variant="outline" size="icon" asChild>
                               <Link
                                 href={`/${organizationSlug}/${namespace}/graph/${slug}/playground?operation=${encodeURIComponent(
-                                  op.contents || "",
-                                )}&variables=${encodeURIComponent(
-                                  JSON.stringify(variables),
-                                )}`}
+                                  op.contents || '',
+                                )}&variables=${encodeURIComponent(JSON.stringify(variables))}`}
                               >
                                 <PlayIcon />
                               </Link>
@@ -567,8 +485,7 @@ const ClientOperations = ({
                               onClick={() => {
                                 copy(op.id);
                                 toast({
-                                  description:
-                                    "Copied persisted ID of operation",
+                                  description: 'Copied persisted ID of operation',
                                 });
                               }}
                             >
@@ -578,7 +495,7 @@ const ClientOperations = ({
                               onClick={() => {
                                 copy(link);
                                 toast({
-                                  description: "Copied link to operation",
+                                  description: 'Copied link to operation',
                                 });
                               }}
                             >
@@ -588,7 +505,7 @@ const ClientOperations = ({
                               onClick={() => {
                                 copy(snippets.js);
                                 toast({
-                                  description: "Copied snippet",
+                                  description: 'Copied snippet',
                                 });
                               }}
                             >
@@ -598,7 +515,7 @@ const ClientOperations = ({
                               onClick={() => {
                                 copy(snippets.curl);
                                 toast({
-                                  description: "Copied snippet",
+                                  description: 'Copied snippet',
                                 });
                               }}
                             >
@@ -629,8 +546,8 @@ const ClientOperations = ({
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             const newQuery = { ...router.query };
-            delete newQuery["clientId"];
-            delete newQuery["clientName"];
+            delete newQuery['clientId'];
+            delete newQuery['clientName'];
             router.replace({
               query: newQuery,
             });
@@ -640,7 +557,7 @@ const ClientOperations = ({
         <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
           <SheetHeader className="mb-12">
             <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
-              Persisted Operations in{" "}
+              Persisted Operations in{' '}
               <code className="break-all rounded bg-secondary px-1.5 text-left text-secondary-foreground">
                 {clientName}
               </code>
@@ -655,7 +572,7 @@ const ClientOperations = ({
         operationHasTraffic={Boolean(persistedOperationDeleteState.hasTraffic)}
         metricsLink={`/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${encodeURIComponent(createFilterState({ operationPersistedId: persistedOperationDeleteState.id ?? undefined }))}`}
         onSubmitButtonClick={
-          (persistedOperationDeleteState.id && clientName)
+          persistedOperationDeleteState.id && clientName
             ? () => {
                 mutateDeletePeristedOperation({
                   operationId: persistedOperationDeleteState.id!,
@@ -663,18 +580,18 @@ const ClientOperations = ({
                   fedGraphName: slug,
                   clientName,
                 });
-                dispatch({ type: "delete-modal-hidden" });
+                dispatch({ type: 'delete-modal-hidden' });
               }
             : undefined
         }
-        onClose={() => dispatch({ type: "delete-modal-hidden" })}
+        onClose={() => dispatch({ type: 'delete-modal-hidden' })}
       />
     </>
   );
 };
 
 const FormSchema = z.object({
-  clientName: z.string().trim().min(1, "The name cannot be empty"),
+  clientName: z.string().trim().min(1, 'The name cannot be empty'),
 });
 
 type Input = z.infer<typeof FormSchema>;
@@ -698,18 +615,18 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
     onSuccess(data) {
       if (data.response?.code !== EnumStatusCode.OK) {
         toast({
-          variant: "destructive",
-          title: "Could not create client",
-          description: data.response?.details ?? "Please try again",
+          variant: 'destructive',
+          title: 'Could not create client',
+          description: data.response?.details ?? 'Please try again',
         });
         return;
       }
 
       toast({
-        title: "Client created successfully",
+        title: 'Client created successfully',
       });
 
-      form.setValue("clientName", "");
+      form.setValue('clientName', '');
       refresh();
       setIsOpen(false);
     },
@@ -725,7 +642,7 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
   };
 
   const isOrganizationAdminOrDeveloper = checkUserAccess({
-    rolesToBe: ["organization-admin", "organization-developer"],
+    rolesToBe: ['organization-admin', 'organization-developer'],
   });
 
   return (
@@ -739,10 +656,7 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create Client</DialogTitle>
-          <DialogDescription>
-            Create a new client to store persisted operations by providing a
-            name
-          </DialogDescription>
+          <DialogDescription>Create a new client to store persisted operations by providing a name</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <Form {...form}>
@@ -760,11 +674,7 @@ const CreateClient = ({ refresh }: { refresh: () => void }) => {
                   </FormItem>
                 )}
               />
-              <Button
-                disabled={!form.formState.isValid}
-                className="w-full"
-                type="submit"
-              >
+              <Button disabled={!form.formState.isValid} className="w-full" type="submit">
                 Submit
               </Button>
             </form>
@@ -784,7 +694,7 @@ const ClientsPage: NextPageWithLayout = () => {
   } = useWorkspace();
   const slug = router.query.slug as string;
 
-  const constructLink = (name: string, mode: "metrics" | "traces") => {
+  const constructLink = (name: string, mode: 'metrics' | 'traces') => {
     const filters = [];
     const value = {
       label: name,
@@ -793,19 +703,15 @@ const ClientsPage: NextPageWithLayout = () => {
     };
 
     const filter = {
-      id: "clientName",
+      id: 'clientName',
       value: [JSON.stringify(value)],
     };
     filters.push(filter);
 
-    if (mode === "metrics") {
-      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${JSON.stringify(
-        filters,
-      )}`;
+    if (mode === 'metrics') {
+      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics?filterState=${JSON.stringify(filters)}`;
     } else {
-      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics/traces?filterState=${JSON.stringify(
-        filters,
-      )}`;
+      return `/${organizationSlug}/${namespace}/graph/${slug}/analytics/traces?filterState=${JSON.stringify(filters)}`;
     }
   };
 
@@ -815,7 +721,7 @@ const ClientsPage: NextPageWithLayout = () => {
   });
 
   const isOrganizationAdminOrDeveloper = checkUserAccess({
-    rolesToBe: ["organization-admin", "organization-developer"],
+    rolesToBe: ['organization-admin', 'organization-developer'],
   });
 
   if (!data) return null;
@@ -825,9 +731,7 @@ const ClientsPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve changelog"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -840,14 +744,11 @@ const ClientsPage: NextPageWithLayout = () => {
           title="No clients found"
           description={
             <>
-              Create one and use the CLI tool to publish persisted operations to
-              it.{" "}
+              Create one and use the CLI tool to publish persisted operations to it.{' '}
               <a
                 target="_blank"
                 rel="noreferrer"
-                href={
-                  docsBaseURL + "/router/persisted-queries/persisted-operations"
-                }
+                href={docsBaseURL + '/router/persisted-queries/persisted-operations'}
                 className="text-primary"
               >
                 Learn more.
@@ -860,12 +761,9 @@ const ClientsPage: NextPageWithLayout = () => {
         <>
           <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
             <p className="text-sm text-muted-foreground">
-              Create and view clients to which you can publish persisted
-              operations.{" "}
+              Create and view clients to which you can publish persisted operations.{' '}
               <Link
-                href={
-                  docsBaseURL + "/router/persisted-queries/persisted-operations"
-                }
+                href={docsBaseURL + '/router/persisted-queries/persisted-operations'}
                 className="text-primary"
                 target="_blank"
                 rel="noreferrer"
@@ -873,9 +771,7 @@ const ClientsPage: NextPageWithLayout = () => {
                 Learn more
               </Link>
             </p>
-            {isOrganizationAdminOrDeveloper && (
-              <CreateClient refresh={() => refetch()} />
-            )}
+            {isOrganizationAdminOrDeveloper && <CreateClient refresh={() => refetch()} />}
           </div>
 
           <TableWrapper>
@@ -892,95 +788,73 @@ const ClientsPage: NextPageWithLayout = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.clients.map(
-                  ({
-                    id,
-                    name,
-                    createdAt,
-                    lastUpdatedAt,
-                    createdBy,
-                    lastUpdatedBy,
-                  }) => {
-                    return (
-                      <TableRow key={id}>
-                        <TableCell className="font-medium">
-                          <p className="flex w-48 items-center truncate">
-                            {name}
-                          </p>
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {createdBy || "unknown user"}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          <p
-                            className={cn({
-                              "flex w-20 items-center justify-center":
-                                lastUpdatedBy === "",
-                            })}
-                          >
-                            {lastUpdatedBy !== "" ? lastUpdatedBy : "-"}
-                          </p>
-                        </TableCell>
-                        <TableCell>
-                          {formatDistanceToNow(new Date(createdAt))}
-                        </TableCell>
-                        <TableCell>
-                          {lastUpdatedAt
-                            ? formatDistanceToNow(new Date(lastUpdatedAt))
-                            : "Never"}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="link"
-                            className="px-0 hover:no-underline"
-                            onClick={() => {
-                              router.replace({
-                                pathname: router.pathname,
-                                query: {
-                                  ...router.query,
-                                  clientId: id,
-                                  clientName: name,
-                                },
-                              });
-                            }}
-                          >
-                            View Operations
-                          </Button>
-                        </TableCell>
-                        <TableCell className="flex items-center gap-x-2 pr-8">
-                          <Tooltip delayDuration={0}>
-                            <TooltipTrigger>
-                              <Button variant="ghost" size="icon" asChild>
-                                <Link href={constructLink(name, "metrics")}>
-                                  <BiAnalyse className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Metrics</TooltipContent>
-                          </Tooltip>
-                          <Tooltip delayDuration={0}>
-                            <TooltipTrigger>
-                              <Button variant="ghost" size="icon" asChild>
-                                <Link href={constructLink(name, "traces")}>
-                                  <IoBarcodeSharp className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Traces</TooltipContent>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  },
-                )}
+                {data.clients.map(({ id, name, createdAt, lastUpdatedAt, createdBy, lastUpdatedBy }) => {
+                  return (
+                    <TableRow key={id}>
+                      <TableCell className="font-medium">
+                        <p className="flex w-48 items-center truncate">{name}</p>
+                      </TableCell>
+                      <TableCell className="font-medium">{createdBy || 'unknown user'}</TableCell>
+                      <TableCell className="font-medium">
+                        <p
+                          className={cn({
+                            'flex w-20 items-center justify-center': lastUpdatedBy === '',
+                          })}
+                        >
+                          {lastUpdatedBy !== '' ? lastUpdatedBy : '-'}
+                        </p>
+                      </TableCell>
+                      <TableCell>{formatDistanceToNow(new Date(createdAt))}</TableCell>
+                      <TableCell>{lastUpdatedAt ? formatDistanceToNow(new Date(lastUpdatedAt)) : 'Never'}</TableCell>
+                      <TableCell>
+                        <Button
+                          variant="link"
+                          className="px-0 hover:no-underline"
+                          onClick={() => {
+                            router.replace({
+                              pathname: router.pathname,
+                              query: {
+                                ...router.query,
+                                clientId: id,
+                                clientName: name,
+                              },
+                            });
+                          }}
+                        >
+                          View Operations
+                        </Button>
+                      </TableCell>
+                      <TableCell className="flex items-center gap-x-2 pr-8">
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger>
+                            <Button variant="ghost" size="icon" asChild>
+                              <Link href={constructLink(name, 'metrics')}>
+                                <BiAnalyse className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Metrics</TooltipContent>
+                        </Tooltip>
+                        <Tooltip delayDuration={0}>
+                          <TooltipTrigger>
+                            <Button variant="ghost" size="icon" asChild>
+                              <Link href={constructLink(name, 'traces')}>
+                                <IoBarcodeSharp className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Traces</TooltipContent>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </TableWrapper>
         </>
       )}
-      <ClientOperations
-        isOrganizationAdminOrDeveloper={isOrganizationAdminOrDeveloper}
-      />
+      <ClientOperations isOrganizationAdminOrDeveloper={isOrganizationAdminOrDeveloper} />
     </div>
   );
 };
@@ -988,10 +862,7 @@ const ClientsPage: NextPageWithLayout = () => {
 ClientsPage.getLayout = (page) =>
   getGraphLayout(
     <PageHeader title="Clients | Studio">
-      <GraphPageLayout
-        title="Clients"
-        subtitle="View registered clients and their persisted operations"
-      >
+      <GraphPageLayout title="Clients" subtitle="View registered clients and their persisted operations">
         {page}
       </GraphPageLayout>
     </PageHeader>,

@@ -1,41 +1,26 @@
-import { FieldUsageSheet } from "@/components/analytics/field-usage";
-import { ChangesTable } from "@/components/checks/changes-table";
-import { EmptyState } from "@/components/empty-state";
-import { GraphContext } from "@/components/layout/graph-layout";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { FieldUsageSheet } from '@/components/analytics/field-usage';
+import { ChangesTable } from '@/components/checks/changes-table';
+import { EmptyState } from '@/components/empty-state';
+import { GraphContext } from '@/components/layout/graph-layout';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Loader } from "@/components/ui/loader";
-import { useToast } from "@/components/ui/use-toast";
-import { formatDateTime } from "@/lib/format-date";
-import { cn } from "@/lib/utils";
-import { useMutation, useQuery } from "@connectrpc/connect-query";
-import {
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
-  NoSymbolIcon,
-} from "@heroicons/react/24/outline";
-import {
-  ChevronDownIcon,
-  Cross1Icon,
-  InfoCircledIcon,
-  MagnifyingGlassIcon,
-  Share1Icon,
-} from "@radix-ui/react-icons";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
+import { useToast } from '@/components/ui/use-toast';
+import { formatDateTime } from '@/lib/format-date';
+import { cn } from '@/lib/utils';
+import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { CheckCircleIcon, ExclamationTriangleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
+import { ChevronDownIcon, Cross1Icon, InfoCircledIcon, MagnifyingGlassIcon, Share1Icon } from '@radix-ui/react-icons';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   createIgnoreOverridesForAllOperations,
   createOperationIgnoreAllOverride,
@@ -44,25 +29,23 @@ import {
   removeOperationIgnoreAllOverride,
   removeOperationOverrides,
   toggleChangeOverridesForAllOperations,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import copy from "copy-to-clipboard";
-import Fuse from "fuse.js";
-import { useRouter } from "next/router";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useApplyParams } from "../analytics/use-apply-params";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { OperationContentDialog } from "./operation-content";
-import { Pagination } from "../ui/pagination";
-import { useDebounce } from "use-debounce";
-import { Switch } from "../ui/switch";
-import { Label } from "../ui/label";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import copy from 'copy-to-clipboard';
+import Fuse from 'fuse.js';
+import { useRouter } from 'next/router';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useApplyParams } from '../analytics/use-apply-params';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { OperationContentDialog } from './operation-content';
+import { Pagination } from '../ui/pagination';
+import { useDebounce } from 'use-debounce';
+import { Switch } from '../ui/switch';
+import { Label } from '../ui/label';
 
 const CopyableOperationHash = ({ hash }: { hash: string }) => {
   const [copied, setCopied] = useState(false);
-  const [tooltipOpen, setTooltipOpen] = useState<boolean | undefined>(
-    undefined,
-  );
+  const [tooltipOpen, setTooltipOpen] = useState<boolean | undefined>(undefined);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const secondTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -120,7 +103,7 @@ const CopyableOperationHash = ({ hash }: { hash: string }) => {
         </code>
       </TooltipTrigger>
       <TooltipContent>
-        <p>{copied ? "Copied!" : "Copy Operation Hash"}</p>
+        <p>{copied ? 'Copied!' : 'Copy Operation Hash'}</p>
       </TooltipContent>
     </Tooltip>
   );
@@ -130,10 +113,8 @@ export const CheckOperations = () => {
   const graphContext = useContext(GraphContext);
   const router = useRouter();
   const { toast } = useToast();
-  const pageNumber = router.query.page
-    ? parseInt(router.query.page as string)
-    : 1;
-  const limit = Number.parseInt((router.query.pageSize as string) || "10");
+  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
+  const limit = Number.parseInt((router.query.pageSize as string) || '10');
 
   const id = router.query.checkId as string;
 
@@ -156,174 +137,145 @@ export const CheckOperations = () => {
     },
   );
 
-  const { mutate: createOverrides, isPending: creatingOverrides } = useMutation(
-    createOperationOverrides,
-    {
-      onSuccess: (d) => {
-        if (d.response?.code === EnumStatusCode.OK) {
-          refetch();
-        } else {
-          toast({
-            description:
-              d.response?.details ??
-              "Could not update overrides. Please try again.",
-            duration: 3000,
-          });
-        }
-      },
-      onError: () => {
-        toast({
-          description: "Could not update overrides. Please try again.",
-          duration: 3000,
-        });
-      },
-    },
-  );
-
-  const { mutate: removeIgnoreAll, isPending: removing } = useMutation(
-    removeOperationIgnoreAllOverride,
-    {
-      onSuccess: (d) => {
-        if (d.response?.code === EnumStatusCode.OK) {
-          refetch();
-        } else {
-          toast({
-            description:
-              d.response?.details ??
-              "Could not remove ignore all override. Please try again.",
-            duration: 3000,
-          });
-        }
-      },
-      onError: () => {
-        toast({
-          description:
-            "Could not remove ignore all override. Please try again.",
-          duration: 3000,
-        });
-      },
-    },
-  );
-
-  const { mutate: createIgnoreAll, isPending: ignoring } = useMutation(
-    createOperationIgnoreAllOverride,
-    {
-      onSuccess: (d) => {
-        if (d.response?.code === EnumStatusCode.OK) {
-          refetch();
-        } else {
-          toast({
-            description:
-              d.response?.details ??
-              "Could not create ignore all override. Please try again.",
-            duration: 3000,
-          });
-        }
-      },
-      onError: () => {
-        toast({
-          description:
-            "Could not create ignore all override. Please try again.",
-          duration: 3000,
-        });
-      },
-    },
-  );
-
-  const { mutate: removeOverrides, isPending: removingOverrides } = useMutation(
-    removeOperationOverrides,
-    {
-      onSuccess: (d) => {
-        if (d.response?.code === EnumStatusCode.OK) {
-          refetch();
-        } else {
-          toast({
-            description:
-              d.response?.details ??
-              "Could not remove override. Please try again.",
-            duration: 3000,
-          });
-        }
-      },
-      onError: () => {
-        toast({
-          description: "Could not remove override. Please try again.",
-          duration: 3000,
-        });
-      },
-    },
-  );
-
-  const {
-    mutate: toggleGlobalChangeOverrides,
-    isPending: togglingGlobalChangeOverrides,
-  } = useMutation(toggleChangeOverridesForAllOperations, {
+  const { mutate: createOverrides, isPending: creatingOverrides } = useMutation(createOperationOverrides, {
     onSuccess: (d) => {
       if (d.response?.code === EnumStatusCode.OK) {
-        toast({
-          description: "All overrides have been toggled successfully",
-        });
         refetch();
       } else {
         toast({
-          description:
-            d.response?.details ??
-            "Could not toggle overrides. Please try again.",
+          description: d.response?.details ?? 'Could not update overrides. Please try again.',
           duration: 3000,
         });
       }
     },
     onError: () => {
       toast({
-        description: "Could not toggle override. Please try again.",
+        description: 'Could not update overrides. Please try again.',
         duration: 3000,
       });
     },
   });
 
-  const {
-    mutate: createGlobalIgnoreOverrides,
-    isPending: creatingGlobalIgnoreOverrides,
-  } = useMutation(createIgnoreOverridesForAllOperations, {
+  const { mutate: removeIgnoreAll, isPending: removing } = useMutation(removeOperationIgnoreAllOverride, {
     onSuccess: (d) => {
       if (d.response?.code === EnumStatusCode.OK) {
-        toast({
-          description:
-            "All listed operations will now be ignored for future checks",
-        });
         refetch();
       } else {
         toast({
-          description:
-            d.response?.details ??
-            "Could not toggle overrides. Please try again.",
+          description: d.response?.details ?? 'Could not remove ignore all override. Please try again.',
           duration: 3000,
         });
       }
     },
     onError: () => {
       toast({
-        description: "Could not toggle override. Please try again.",
+        description: 'Could not remove ignore all override. Please try again.',
         duration: 3000,
       });
     },
   });
+
+  const { mutate: createIgnoreAll, isPending: ignoring } = useMutation(createOperationIgnoreAllOverride, {
+    onSuccess: (d) => {
+      if (d.response?.code === EnumStatusCode.OK) {
+        refetch();
+      } else {
+        toast({
+          description: d.response?.details ?? 'Could not create ignore all override. Please try again.',
+          duration: 3000,
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        description: 'Could not create ignore all override. Please try again.',
+        duration: 3000,
+      });
+    },
+  });
+
+  const { mutate: removeOverrides, isPending: removingOverrides } = useMutation(removeOperationOverrides, {
+    onSuccess: (d) => {
+      if (d.response?.code === EnumStatusCode.OK) {
+        refetch();
+      } else {
+        toast({
+          description: d.response?.details ?? 'Could not remove override. Please try again.',
+          duration: 3000,
+        });
+      }
+    },
+    onError: () => {
+      toast({
+        description: 'Could not remove override. Please try again.',
+        duration: 3000,
+      });
+    },
+  });
+
+  const { mutate: toggleGlobalChangeOverrides, isPending: togglingGlobalChangeOverrides } = useMutation(
+    toggleChangeOverridesForAllOperations,
+    {
+      onSuccess: (d) => {
+        if (d.response?.code === EnumStatusCode.OK) {
+          toast({
+            description: 'All overrides have been toggled successfully',
+          });
+          refetch();
+        } else {
+          toast({
+            description: d.response?.details ?? 'Could not toggle overrides. Please try again.',
+            duration: 3000,
+          });
+        }
+      },
+      onError: () => {
+        toast({
+          description: 'Could not toggle override. Please try again.',
+          duration: 3000,
+        });
+      },
+    },
+  );
+
+  const { mutate: createGlobalIgnoreOverrides, isPending: creatingGlobalIgnoreOverrides } = useMutation(
+    createIgnoreOverridesForAllOperations,
+    {
+      onSuccess: (d) => {
+        if (d.response?.code === EnumStatusCode.OK) {
+          toast({
+            description: 'All listed operations will now be ignored for future checks',
+          });
+          refetch();
+        } else {
+          toast({
+            description: d.response?.details ?? 'Could not toggle overrides. Please try again.',
+            duration: 3000,
+          });
+        }
+      },
+      onError: () => {
+        toast({
+          description: 'Could not toggle override. Please try again.',
+          duration: 3000,
+        });
+      },
+    },
+  );
 
   const applyParams = useApplyParams();
 
   const copyLink = (hash: string) => {
-    const [base, _] = window.location.href.split("?");
+    const [base, _] = window.location.href.split('?');
     const link = base + `?search=${hash.slice(0, 6)}`;
     copy(link);
-    toast({ description: "Copied link to clipboard" });
+    toast({ description: 'Copied link to clipboard' });
   };
 
   const operations = data?.operations || [];
 
-  const doAllOperationsHaveIgnoreAllOverride =
-    data?.doAllOperationsHaveIgnoreAllOverride;
-  const doAllOperationsHaveAllTheirChangesMarkedSafe =
-    data?.doAllOperationsHaveAllTheirChangesMarkedSafe;
+  const doAllOperationsHaveIgnoreAllOverride = data?.doAllOperationsHaveIgnoreAllOverride;
+  const doAllOperationsHaveAllTheirChangesMarkedSafe = data?.doAllOperationsHaveAllTheirChangesMarkedSafe;
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -332,9 +284,7 @@ export const CheckOperations = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve affected operations"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -380,7 +330,7 @@ export const CheckOperations = () => {
               variant="ghost"
               className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
               onClick={() => {
-                setSearch("");
+                setSearch('');
                 applyParams({ search: null });
               }}
             >
@@ -409,21 +359,16 @@ export const CheckOperations = () => {
               }}
               className="cursor-pointer flex-col items-start gap-1"
             >
-              {doAllOperationsHaveAllTheirChangesMarkedSafe
-                ? "Remove all changes overrides"
-                : "Ignore all changes"}
+              {doAllOperationsHaveAllTheirChangesMarkedSafe ? 'Remove all changes overrides' : 'Ignore all changes'}
               <p className="max-w-xs text-xs text-muted-foreground">
                 {doAllOperationsHaveAllTheirChangesMarkedSafe
-                  ? "Future checks will fail if any of these changes are breaking."
-                  : "Toggle overrides on so future checks will not treat the listed changes as breaking."}
+                  ? 'Future checks will fail if any of these changes are breaking.'
+                  : 'Toggle overrides on so future checks will not treat the listed changes as breaking.'}
               </p>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              disabled={
-                creatingGlobalIgnoreOverrides ||
-                doAllOperationsHaveIgnoreAllOverride
-              }
+              disabled={creatingGlobalIgnoreOverrides || doAllOperationsHaveIgnoreAllOverride}
               onClick={() => {
                 createGlobalIgnoreOverrides({
                   checkId: id,
@@ -440,20 +385,14 @@ export const CheckOperations = () => {
               </p>
               {doAllOperationsHaveIgnoreAllOverride && (
                 <p className=" mt-2 flex items-center gap-x-2 text-xs">
-                  <InfoCircledIcon className="h-4 w-4" /> All listed operations
-                  are already ignored
+                  <InfoCircledIcon className="h-4 w-4" /> All listed operations are already ignored
                 </p>
               )}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <div className="flex items-center justify-between px-2 py-2">
-              <Label className="text-sm">
-                Apply only for filtered operations
-              </Label>
-              <Switch
-                checked={applyOnlyFiltered}
-                onCheckedChange={setApplyOnlyFiltered}
-              />
+              <Label className="text-sm">Apply only for filtered operations</Label>
+              <Switch checked={applyOnlyFiltered} onCheckedChange={setApplyOnlyFiltered} />
             </div>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -465,19 +404,8 @@ export const CheckOperations = () => {
           className="scrollbar-custom mt-4 max-h-[calc(100%_-_96px)] w-full overflow-auto"
         >
           {operations.map(
-            ({
-              hash,
-              name,
-              type,
-              firstSeenAt,
-              lastSeenAt,
-              impactingChanges,
-              hasIgnoreAllOverride,
-              isSafe,
-            }) => {
-              const doAllChangesHaveOverrides = !impactingChanges.some(
-                (c) => !c.hasOverride,
-              );
+            ({ hash, name, type, firstSeenAt, lastSeenAt, impactingChanges, hasIgnoreAllOverride, isSafe }) => {
+              const doAllChangesHaveOverrides = !impactingChanges.some((c) => !c.hasOverride);
 
               const firstSeenFormatted = formatDateTime(new Date(firstSeenAt));
               const lastSeenAtFormatted = formatDateTime(new Date(lastSeenAt));
@@ -489,24 +417,18 @@ export const CheckOperations = () => {
                       <div className="flex min-w-0 items-center gap-2">
                         <CopyableOperationHash hash={hash} />
                         <p
-                          className={cn("truncate", {
-                            "italic text-muted-foreground": name.length === 0,
+                          className={cn('truncate', {
+                            'italic text-muted-foreground': name.length === 0,
                           })}
                         >
-                          {name || "unnamed operation"}
+                          {name || 'unnamed operation'}
                         </p>
                       </div>
-                      <Badge
-                        className="!inline-block !decoration-[none]"
-                        variant="outline"
-                      >
+                      <Badge className="!inline-block !decoration-[none]" variant="outline">
                         {type}
                       </Badge>
                       {isSafe && (
-                        <Badge
-                          className="!inline-block !decoration-[none]"
-                          variant="success"
-                        >
+                        <Badge className="!inline-block !decoration-[none]" variant="success">
                           ignored in this check
                         </Badge>
                       )}
@@ -523,16 +445,12 @@ export const CheckOperations = () => {
                         <div className="flex items-center gap-x-2">
                           <OperationContentDialog
                             hash={hash}
-                            federatedGraphName={graphContext?.graph?.name ?? ""}
-                            namespace={graphContext?.graph?.namespace ?? ""}
+                            federatedGraphName={graphContext?.graph?.name ?? ''}
+                            namespace={graphContext?.graph?.namespace ?? ''}
                           />
                           <Tooltip delayDuration={100}>
                             <TooltipTrigger asChild>
-                              <Button
-                                size="icon-sm"
-                                variant="secondary"
-                                onClick={() => copyLink(hash)}
-                              >
+                              <Button size="icon-sm" variant="secondary" onClick={() => copyLink(hash)}>
                                 <Share1Icon />
                               </Button>
                             </TooltipTrigger>
@@ -548,36 +466,30 @@ export const CheckOperations = () => {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuItem
-                                  disabled={
-                                    removingOverrides || creatingOverrides
-                                  }
+                                  disabled={removingOverrides || creatingOverrides}
                                   onClick={() => {
                                     doAllChangesHaveOverrides
                                       ? removeOverrides({
-                                        graphName: graphContext?.graph?.name,
-                                        namespace:
-                                          graphContext?.graph?.namespace,
-                                        operationHash: hash,
-                                        changes: impactingChanges,
-                                      })
+                                          graphName: graphContext?.graph?.name,
+                                          namespace: graphContext?.graph?.namespace,
+                                          operationHash: hash,
+                                          changes: impactingChanges,
+                                        })
                                       : createOverrides({
-                                        graphName: graphContext?.graph?.name,
-                                        namespace:
-                                          graphContext?.graph?.namespace,
-                                        operationHash: hash,
-                                        operationName: name,
-                                        changes: impactingChanges,
-                                      });
+                                          graphName: graphContext?.graph?.name,
+                                          namespace: graphContext?.graph?.namespace,
+                                          operationHash: hash,
+                                          operationName: name,
+                                          changes: impactingChanges,
+                                        });
                                   }}
                                   className="cursor-pointer flex-col items-start gap-1"
                                 >
-                                  {doAllChangesHaveOverrides
-                                    ? "Remove changes overrides"
-                                    : "Ignore changes"}
+                                  {doAllChangesHaveOverrides ? 'Remove changes overrides' : 'Ignore changes'}
                                   <p className="max-w-xs text-xs text-muted-foreground">
                                     {doAllChangesHaveOverrides
-                                      ? "Disable overrides so future checks will fail on breaking listed changes."
-                                      : "Enable overrides so future checks will not fail on breaking listed changes."}
+                                      ? 'Disable overrides so future checks will fail on breaking listed changes.'
+                                      : 'Enable overrides so future checks will not fail on breaking listed changes.'}
                                   </p>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -605,12 +517,10 @@ export const CheckOperations = () => {
                       </div>
                       {hasIgnoreAllOverride && (
                         <Alert>
-                          <AlertTitle>
-                            Operation ignored in future checks
-                          </AlertTitle>
+                          <AlertTitle>Operation ignored in future checks</AlertTitle>
                           <AlertDescription>
-                            This operation will be excluded from future checks.
-                            Remove the override to include it again and manage individual change overrides.
+                            This operation will be excluded from future checks. Remove the override to include it again
+                            and manage individual change overrides.
                           </AlertDescription>
                           <Button
                             size="sm"
@@ -637,7 +547,7 @@ export const CheckOperations = () => {
                         caption={
                           <>
                             {impactingChanges.length} Impacting Change
-                            {impactingChanges.length === 1 ? "" : "s"}
+                            {impactingChanges.length === 1 ? '' : 's'}
                           </>
                         }
                         trafficCheckDays={data.trafficCheckDays}

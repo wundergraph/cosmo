@@ -1,11 +1,16 @@
-import { ReactNode, useState } from "react";
-import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { capitalize } from "@/lib/utils";
-import { roles as originalRoles } from "@/lib/constants";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ChevronRightIcon } from "@heroicons/react/24/outline";
+import { ReactNode, useState } from 'react';
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { capitalize } from '@/lib/utils';
+import { roles as originalRoles } from '@/lib/constants';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { ChevronRightIcon } from '@heroicons/react/24/outline';
 
-export function GroupRolesCommand({ roles, categories, rolesByCategory, onSelectRole }: {
+export function GroupRolesCommand({
+  roles,
+  categories,
+  rolesByCategory,
+  onSelectRole,
+}: {
   roles: (typeof originalRoles)[number][];
   categories: string[];
   rolesByCategory: Partial<Record<string, (typeof originalRoles)[number][]>>;
@@ -16,12 +21,15 @@ export function GroupRolesCommand({ roles, categories, rolesByCategory, onSelect
 
   const [selectedCategory, setSelectedCategory] = useState(categories[0]);
   const rolesForSelectedCategory = rolesByCategory[selectedCategory] ?? [];
-  const filteredRoles = trimmedSearchValue.length > 0
-    ? roles.filter((r) => Boolean(
-      r.displayName.toLowerCase().includes(trimmedSearchValue) ||
-      r.description?.toLowerCase().includes(trimmedSearchValue)
-    ))
-    : roles;
+  const filteredRoles =
+    trimmedSearchValue.length > 0
+      ? roles.filter((r) =>
+          Boolean(
+            r.displayName.toLowerCase().includes(trimmedSearchValue) ||
+              r.description?.toLowerCase().includes(trimmedSearchValue),
+          ),
+        )
+      : roles;
 
   return (
     <Command
@@ -31,10 +39,7 @@ export function GroupRolesCommand({ roles, categories, rolesByCategory, onSelect
       onValueChange={trimmedSearchValue.length > 0 ? undefined : setSelectedCategory}
     >
       <div className="w-full">
-        <CommandInput
-          placeholder="Filter by role"
-          onValueChange={setSearchValue}
-        />
+        <CommandInput placeholder="Filter by role" onValueChange={setSearchValue} />
       </div>
 
       {trimmedSearchValue.length > 0 ? (
@@ -45,15 +50,13 @@ export function GroupRolesCommand({ roles, categories, rolesByCategory, onSelect
                 <CommandRoleItem
                   key={`role-${role.category}-${role.key}`}
                   value={role.key}
-                  label={(
-                    <span className="flex justify-start items-center gap-x-1">
-                      <span>
-                        {capitalize(role.category).replace('-', ' ')}
-                      </span>
+                  label={
+                    <span className="flex items-center justify-start gap-x-1">
+                      <span>{capitalize(role.category).replace('-', ' ')}</span>
                       <ChevronRightIcon className="size-3 text-muted-foreground" />
                       <span className="truncate">{role.displayName}</span>
                     </span>
-                  )}
+                  }
                   description={role.description}
                   onSelect={() => onSelectRole(role.key)}
                 />
@@ -61,7 +64,7 @@ export function GroupRolesCommand({ roles, categories, rolesByCategory, onSelect
             </CommandGroup>
           </CommandList>
         ) : (
-          <div className="p-6 text-center text-muted-foreground text-sm pointer-events-none select-none">
+          <div className="pointer-events-none select-none p-6 text-center text-sm text-muted-foreground">
             No matches for &quot;{searchValue}&quot;.
           </div>
         )
@@ -70,11 +73,7 @@ export function GroupRolesCommand({ roles, categories, rolesByCategory, onSelect
           <CommandList cmdk-framer-left="">
             <CommandGroup heading="Categories">
               {categories.map((cat) => (
-                <CommandItem
-                  key={`category-${cat}`}
-                  value={cat}
-                  onSelect={() => {}}
-                >
+                <CommandItem key={`category-${cat}`} value={cat} onSelect={() => {}}>
                   {capitalize(cat.replace('-', ' '))}
                 </CommandItem>
               ))}
@@ -104,7 +103,10 @@ export function GroupRolesCommand({ roles, categories, rolesByCategory, onSelect
   );
 }
 
-export function GroupRolesAccordion({ rolesByCategory, onSelectRole }: {
+export function GroupRolesAccordion({
+  rolesByCategory,
+  onSelectRole,
+}: {
   rolesByCategory: Partial<Record<string, (typeof originalRoles)[number][]>>;
   onSelectRole(role: string): void;
 }) {
@@ -112,9 +114,7 @@ export function GroupRolesAccordion({ rolesByCategory, onSelectRole }: {
     <Accordion type="single" collapsible>
       {Object.entries(rolesByCategory).map(([cat, roles]) => (
         <AccordionItem key={`category-${cat}`} value={cat}>
-          <AccordionTrigger className="px-2">
-            {capitalize(cat).replace('-', ' ')}
-          </AccordionTrigger>
+          <AccordionTrigger className="px-2">{capitalize(cat).replace('-', ' ')}</AccordionTrigger>
 
           <AccordionContent className="px-1">
             <Command>
@@ -137,20 +137,21 @@ export function GroupRolesAccordion({ rolesByCategory, onSelectRole }: {
   );
 }
 
-function CommandRoleItem({ value, label, description, onSelect }: {
+function CommandRoleItem({
+  value,
+  label,
+  description,
+  onSelect,
+}: {
   value: string;
   label: ReactNode;
   description?: string;
   onSelect(): void;
 }) {
   return (
-    <CommandItem
-      value={value}
-      className="gap-y-1 flex-col justify-start items-start"
-      onSelect={onSelect}
-    >
+    <CommandItem value={value} className="flex-col items-start justify-start gap-y-1" onSelect={onSelect}>
       {label}
-      {description && <div className="text-muted-foreground text-sm">{description}</div>}
+      {description && <div className="text-sm text-muted-foreground">{description}</div>}
     </CommandItem>
   );
 }

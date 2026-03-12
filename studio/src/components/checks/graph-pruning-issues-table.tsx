@@ -1,34 +1,19 @@
-import { GraphContext } from "@/components/layout/graph-layout";
-import { useUser } from "@/hooks/use-user";
-import { cn } from "@/lib/utils";
-import {
-  CheckCircleIcon,
-  NoSymbolIcon
-} from "@heroicons/react/24/outline";
-import { Cross1Icon, CrossCircledIcon } from "@radix-ui/react-icons";
-import {
-  GraphPruningIssue,
-  LintSeverity,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { useContext } from "react";
-import { CiWarning } from "react-icons/ci";
-import { EmptyState } from "../empty-state";
-import { Button } from "../ui/button";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "../ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { GraphContext } from '@/components/layout/graph-layout';
+import { useUser } from '@/hooks/use-user';
+import { cn } from '@/lib/utils';
+import { CheckCircleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
+import { Cross1Icon, CrossCircledIcon } from '@radix-ui/react-icons';
+import { GraphPruningIssue, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useContext } from 'react';
+import { CiWarning } from 'react-icons/ci';
+import { EmptyState } from '../empty-state';
+import { Button } from '../ui/button';
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '../ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
 export const GraphPruningIssuesTable = ({
   pruneIssues,
@@ -44,7 +29,9 @@ export const GraphPruningIssuesTable = ({
   const router = useRouter();
   const user = useUser();
   const graphContext = useContext(GraphContext);
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const organizationSlug = useCurrentOrganization()?.slug;
 
   if (pruneIssues.length === 0 && !isGraphPruningEnabled) {
@@ -57,9 +44,7 @@ export const GraphPruningIssuesTable = ({
           <Button
             onClick={() => {
               router.push(
-                `/${user!.currentOrganization.slug}/policies?namespace=${
-                  graphContext?.graph?.namespace ?? namespace
-                }`,
+                `/${user!.currentOrganization.slug}/policies?namespace=${graphContext?.graph?.namespace ?? namespace}`,
               );
             }}
           >
@@ -102,22 +87,10 @@ export const GraphPruningIssuesTable = ({
         <TableBody>
           {pruneIssues.map((l, i) => (
             <TableRow key={l.severity + l.message} className="group">
-              <TableCell
-                className={cn(
-                  l.severity === LintSeverity.error
-                    ? "text-destructive"
-                    : "text-warning",
-                )}
-              >
+              <TableCell className={cn(l.severity === LintSeverity.error ? 'text-destructive' : 'text-warning')}>
                 <div className="flex items-center gap-x-2">
-                  {l.severity === LintSeverity.error ? (
-                    <Cross1Icon />
-                  ) : (
-                    <CiWarning className="h-[15px] w-[15px]" />
-                  )}
-                  <div className="block w-[300px] items-center truncate">
-                    {l.graphPruningRuleType}
-                  </div>
+                  {l.severity === LintSeverity.error ? <Cross1Icon /> : <CiWarning className="h-[15px] w-[15px]" />}
+                  <div className="block w-[300px] items-center truncate">{l.graphPruningRuleType}</div>
                 </div>
               </TableCell>
               <TableCell>{l.fieldPath}</TableCell>
@@ -127,23 +100,12 @@ export const GraphPruningIssuesTable = ({
                 <div className="flex items-center gap-x-2">
                   <Tooltip delayDuration={100}>
                     <TooltipTrigger asChild>
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="table-action"
-                      >
+                      <Button asChild variant="ghost" size="sm" className="table-action">
                         <Link
-                          href={`/${organizationSlug}/${
-                            namespace
-                          }/graph/${router.query.slug}/checks/${
+                          href={`/${organizationSlug}/${namespace}/graph/${router.query.slug}/checks/${
                             router.query.checkId
-                          }?tab=schema&${
-                            l.subgraphName ? `subgraph=${l.subgraphName}` : ""
-                          }${
-                            l.issueLocation?.line
-                              ? `#L${l.issueLocation?.line}`
-                              : ""
+                          }?tab=schema&${l.subgraphName ? `subgraph=${l.subgraphName}` : ''}${
+                            l.issueLocation?.line ? `#L${l.issueLocation?.line}` : ''
                           }`}
                         >
                           View

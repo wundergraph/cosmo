@@ -1,70 +1,39 @@
-import BarList from "@/components/analytics/barlist";
-import { ChartTooltip } from "@/components/analytics/charts";
-import { createFilterState } from "@/components/analytics/constructAnalyticsTableQueryState";
-import { DeltaBadge } from "@/components/analytics/delta-badge";
-import {
-  AnalyticsFilter,
-  AnalyticsFilters,
-} from "@/components/analytics/filters";
-import { optionConstructor } from "@/components/analytics/getDataTableFilters";
-import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { EmptyState } from "@/components/empty-state";
-import { InfoTooltip } from "@/components/info-tooltip";
-import { GraphContext } from "@/components/layout/graph-layout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader } from "@/components/ui/loader";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useToast } from "@/components/ui/use-toast";
-import useWindowSize from "@/hooks/use-window-size";
-import {
-  formatDurationMetric,
-  formatMetric,
-  formatPercentMetric,
-} from "@/lib/format-metric";
-import { useChartData } from "@/lib/insights-helpers";
-import { cn } from "@/lib/utils";
-import {
-  ChevronRightIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
-import { keepPreviousData } from "@tanstack/react-query";
-import { useQuery } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getMetricsErrorRate } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+import BarList from '@/components/analytics/barlist';
+import { ChartTooltip } from '@/components/analytics/charts';
+import { createFilterState } from '@/components/analytics/constructAnalyticsTableQueryState';
+import { DeltaBadge } from '@/components/analytics/delta-badge';
+import { AnalyticsFilter, AnalyticsFilters } from '@/components/analytics/filters';
+import { optionConstructor } from '@/components/analytics/getDataTableFilters';
+import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { EmptyState } from '@/components/empty-state';
+import { InfoTooltip } from '@/components/info-tooltip';
+import { GraphContext } from '@/components/layout/graph-layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Loader } from '@/components/ui/loader';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/components/ui/use-toast';
+import useWindowSize from '@/hooks/use-window-size';
+import { formatDurationMetric, formatMetric, formatPercentMetric } from '@/lib/format-metric';
+import { useChartData } from '@/lib/insights-helpers';
+import { cn } from '@/lib/utils';
+import { ChevronRightIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { keepPreviousData } from '@tanstack/react-query';
+import { useQuery } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { getMetricsErrorRate } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import {
   AnalyticsViewResultFilter,
   MetricsDashboardMetric,
   MetricsTopItem,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { differenceInHours, formatISO } from "date-fns";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import React, {
-  useCallback,
-  useContext,
-  useEffect,
-  useId,
-  useMemo,
-  useState,
-  useRef,
-} from "react";
-import {
-  Area,
-  AreaChart,
-  Legend,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-  Line,
-  LineChart,
-} from "recharts";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { differenceInHours, formatISO } from 'date-fns';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import React, { useCallback, useContext, useEffect, useId, useMemo, useState, useRef } from 'react';
+import { Area, AreaChart, Legend, ResponsiveContainer, XAxis, YAxis, Line, LineChart } from 'recharts';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
 export const MAX_URL_LENGTH = 10000;
 export const MAX_FILTER_SIZE = 10 * 1024; // 10KB in bytes
@@ -155,17 +124,15 @@ export const calculateUrlLength = (
     }
   }
 
-  const queryString = queryParts.join("&");
+  const queryString = queryParts.join('&');
 
   // Get the pathname (without existing query string)
-  const pathname = router.asPath.split("?")[0];
+  const pathname = router.asPath.split('?')[0];
 
   // Construct the full URL (origin + pathname + query string)
   // Browsers limit the full URL length, so we include origin
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const fullUrl = queryString
-    ? `${origin}${pathname}?${queryString}`
-    : `${origin}${pathname}`;
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const fullUrl = queryString ? `${origin}${pathname}?${queryString}` : `${origin}${pathname}`;
 
   return fullUrl.length;
 };
@@ -206,7 +173,7 @@ export const wouldExceedUrlLimit = (
   try {
     stringifiedFilters = JSON.stringify(newSelected);
   } catch {
-    stringifiedFilters = "[]";
+    stringifiedFilters = '[]';
   }
 
   // Use shared validation function
@@ -217,24 +184,21 @@ export const wouldExceedUrlLimit = (
 export const getInfoTip = (range?: number) => {
   switch (range) {
     case 72:
-      return "last 3 day";
+      return 'last 3 day';
     case 168:
-      return "last 1 week";
+      return 'last 1 week';
     case 720:
-      return "last 1 month";
+      return 'last 1 month';
     case 24:
-      return "last 1 day";
+      return 'last 1 day';
     default:
-      return "selected period";
+      return 'selected period';
   }
 };
 
 const useTimeRange = () => {
   const { range, dateRange } = useAnalyticsQueryState();
-  return (
-    (dateRange ? differenceInHours(dateRange.end, dateRange.start) : range) ??
-    24
-  );
+  return (dateRange ? differenceInHours(dateRange.end, dateRange.start) : range) ?? 24;
 };
 
 const useSelectedFilters = () => {
@@ -243,7 +207,7 @@ const useSelectedFilters = () => {
 
   const selectedFilters = useMemo(() => {
     try {
-      return JSON.parse(router.query.filterState?.toString() ?? "[]");
+      return JSON.parse(router.query.filterState?.toString() ?? '[]');
     } catch {
       return [];
     }
@@ -253,14 +217,11 @@ const useSelectedFilters = () => {
   useEffect(() => {
     if (!router.isReady || !router.query.filterState) return;
 
-    const { exceeded, reason } = checkFilterLimits(
-      router,
-      router.query.filterState as string,
-    );
+    const { exceeded, reason } = checkFilterLimits(router, router.query.filterState as string);
 
     if (exceeded) {
       toast({
-        title: "Filter limit reached",
+        title: 'Filter limit reached',
         description: `${reason}. Filters have been reset.`,
       });
 
@@ -287,9 +248,7 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
 
   const applyNewParams = useCallback(
     (newParams: Record<string, string | null>, unset?: string[]) => {
-      const mergedParams = Object.fromEntries(
-        Object.entries(router.query).filter(([key]) => !unset?.includes(key)),
-      );
+      const mergedParams = Object.fromEntries(Object.entries(router.query).filter(([key]) => !unset?.includes(key)));
 
       router.push({
         query: {
@@ -332,7 +291,7 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         try {
           stringifiedFilters = JSON.stringify(newSelected);
         } catch {
-          stringifiedFilters = "[]";
+          stringifiedFilters = '[]';
         }
 
         applyNewParams({
@@ -340,12 +299,10 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
         });
       },
       selectedOptions:
-        selectedFilters.find(
-          (f: { id: string; value: string[] }) => f.id === filter.columnName,
-        )?.value ?? [],
+        selectedFilters.find((f: { id: string; value: string[] }) => f.id === filter.columnName)?.value ?? [],
       options: filter.options.map((each) =>
         optionConstructor({
-          label: each.label || "-",
+          label: each.label || '-',
           operator: each.operator as unknown as string,
           value: each.value as unknown as string,
         }),
@@ -382,16 +339,9 @@ export const useMetricsFilters = (filters: AnalyticsViewResultFilter[]) => {
           const currentSelectedFilters = selectedFiltersRef.current;
 
           // Check if adding/modifying this filter would exceed the limit
-          if (
-            wouldExceedUrlLimit(
-              router,
-              currentSelectedFilters,
-              filter.id,
-              value,
-            )
-          ) {
+          if (wouldExceedUrlLimit(router, currentSelectedFilters, filter.id, value)) {
             toast({
-              title: "Filter limit reached",
+              title: 'Filter limit reached',
               description: `Maximum URL length of ${MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters before adding new ones.`,
             });
             return false; // Validation failed - prevents onSelect from being called
@@ -427,29 +377,26 @@ export const MetricsFilters: React.FC<MetricsFiltersProps> = (props) => {
   return <AnalyticsFilters filters={filtersList} />;
 };
 
-const getDeltaType = (
-  value: number,
-  { invert, neutral }: { invert?: boolean; neutral?: boolean },
-) => {
+const getDeltaType = (value: number, { invert, neutral }: { invert?: boolean; neutral?: boolean }) => {
   if (value === 0) {
-    return "neutral";
+    return 'neutral';
   }
 
-  const d = value > 0 ? "increase" : "decrease";
+  const d = value > 0 ? 'increase' : 'decrease';
 
   if (neutral) {
     return `${d}-neutral`;
   } else if (value > 0 && !invert) {
-    return "increase-positive";
+    return 'increase-positive';
   } else if (value > 0 && invert) {
-    return "increase-negative";
+    return 'increase-negative';
   } else if (value < 0 && !invert) {
-    return "decrease-negative";
+    return 'decrease-negative';
   } else if (value < 0 && invert) {
-    return "decrease-positive";
+    return 'decrease-positive';
   }
 
-  return "neutral";
+  return 'neutral';
 };
 
 const Change = ({
@@ -465,7 +412,7 @@ const Change = ({
   neutral?: boolean;
   deltaType?: string;
 }) => {
-  if (typeof value === "undefined" || typeof previousValue === "undefined") {
+  if (typeof value === 'undefined' || typeof previousValue === 'undefined') {
     return null;
   }
 
@@ -522,7 +469,7 @@ const TopList: React.FC<{
                       organizationSlug,
                       namespace,
                       slug: router.query.slug,
-                      filterState: router.query.filterState || "[]",
+                      filterState: router.query.filterState || '[]',
                       range,
                       dateRange,
                       ...queryParams,
@@ -543,15 +490,11 @@ const TopList: React.FC<{
         data={items.map((row) => ({
           ...row,
           key: row.hash + row.name,
-          value: Number.parseFloat(row.value ?? "0"),
+          value: Number.parseFloat(row.value ?? '0'),
           name: (
             <div className="flex items-center">
-              <span className="flex w-16 shrink-0">
-                {row.hash.slice(0, 6) || "-------"}
-              </span>
-              <span className="truncate">
-                {row.name === "" ? "-" : row.name}
-              </span>
+              <span className="flex w-16 shrink-0">{row.hash.slice(0, 6) || '-------'}</span>
+              <span className="truncate">{row.name === '' ? '-' : row.name}</span>
               {row.isPersisted && (
                 <Tooltip>
                   <TooltipTrigger>
@@ -603,41 +546,22 @@ const Sparkline: React.FC<SparklineProps> = (props) => {
   const { timeRange = 24, valueFormatter, syncId, className } = props;
   const id = useId();
 
-  const { data, ticks, domain, timeFormatter } = useChartData(
-    timeRange,
-    props.series,
-  );
+  const { data, ticks, domain, timeFormatter } = useChartData(timeRange, props.series);
 
-  const strokeColor = "hsl(var(--chart-primary))";
+  const strokeColor = 'hsl(var(--chart-primary))';
 
   return (
-    <div className={cn("-mx-6 h-20", className)}>
+    <div className={cn('-mx-6 h-20', className)}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={data}
-          margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
-          syncId={syncId}
-        >
+        <AreaChart data={data} margin={{ top: 10, right: 6, bottom: 8, left: 6 }} syncId={syncId}>
           <defs>
-            <linearGradient
-              id={`${id}-gradient-previous`}
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="1"
-            >
-              <stop
-                offset="5%"
-                stopColor={"hsl(var(--chart-primary-gradient))"}
-              />
-              <stop offset="95%" stopColor={"hsl(var(--background))"} />
+            <linearGradient id={`${id}-gradient-previous`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={'hsl(var(--chart-primary-gradient))'} />
+              <stop offset="95%" stopColor={'hsl(var(--background))'} />
             </linearGradient>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
-              <stop
-                offset="0%"
-                stopColor={"hsl(var(--chart-primary-gradient))"}
-              />
-              <stop offset="100%" stopColor={"hsl(var(--background))"} />
+              <stop offset="0%" stopColor={'hsl(var(--chart-primary-gradient))'} />
+              <stop offset="100%" stopColor={'hsl(var(--background))'} />
             </linearGradient>
           </defs>
           <Area
@@ -694,22 +618,22 @@ export const RequestMetricsCard = (props: {
 
   const top = data?.top ?? [];
 
-  const value = Number.parseFloat(data?.value || "0");
-  const previousValue = Number.parseFloat(data?.previousValue || "0");
+  const value = Number.parseFloat(data?.value || '0');
+  const previousValue = Number.parseFloat(data?.previousValue || '0');
 
   const formatter = (value: number) => {
     if (value < 1) {
       return (
         formatMetric(value, {
           maximumFractionDigits: 3,
-        }) + " RPM"
+        }) + ' RPM'
       );
     }
 
     return (
       formatMetric(value, {
         maximumFractionDigits: 0,
-      }) + " RPM"
+      }) + ' RPM'
     );
   };
 
@@ -726,9 +650,7 @@ export const RequestMetricsCard = (props: {
 
           <p className="text-xl font-semibold">{formatter(value)}</p>
 
-          <p className="text-sm text-muted-foreground">
-            vs {formatter(previousValue)} last period
-          </p>
+          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
         </div>
 
         <Change value={value} previousValue={previousValue} neutral />
@@ -747,7 +669,7 @@ export const RequestMetricsCard = (props: {
           title="Highest RPM"
           items={top}
           formatter={formatter}
-          queryParams={{ group: "OperationName" }}
+          queryParams={{ group: 'OperationName' }}
           isSubgraphAnalytics={props.isSubgraphAnalytics}
         />
       )}
@@ -767,8 +689,8 @@ export const LatencyMetricsCard = (props: {
 
   const top = data?.top ?? [];
 
-  const value = Number.parseInt(data?.value || "0");
-  const previousValue = Number.parseInt(data?.previousValue || "0");
+  const value = Number.parseInt(data?.value || '0');
+  const previousValue = Number.parseInt(data?.previousValue || '0');
 
   const formatter = (value: number) => {
     return formatDurationMetric(value, {
@@ -786,9 +708,7 @@ export const LatencyMetricsCard = (props: {
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
 
-          <p className="text-sm text-muted-foreground">
-            vs {formatter(previousValue)} last period
-          </p>
+          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
         </div>
 
         <Change value={value} previousValue={previousValue} invert />
@@ -807,7 +727,7 @@ export const LatencyMetricsCard = (props: {
           title="Highest latency"
           items={top}
           formatter={formatter}
-          queryParams={{ group: "OperationName", sort: "p95", sortDir: "desc" }}
+          queryParams={{ group: 'OperationName', sort: 'p95', sortDir: 'desc' }}
           isSubgraphAnalytics={props.isSubgraphAnalytics}
         />
       )}
@@ -827,8 +747,8 @@ export const ErrorMetricsCard = (props: {
 
   const top = data?.top ?? [];
 
-  const value = Number.parseFloat(data?.value || "0");
-  const previousValue = Number.parseFloat(data?.previousValue || "0");
+  const value = Number.parseFloat(data?.value || '0');
+  const previousValue = Number.parseFloat(data?.previousValue || '0');
 
   const formatter = (value: number) => formatPercentMetric(value);
 
@@ -838,14 +758,10 @@ export const ErrorMetricsCard = (props: {
         <div className="flex-1">
           <div className="flex space-x-2 text-sm">
             <h4>Error Percentage</h4>
-            <InfoTooltip>
-              Error percentage in {getInfoTip(timeRange)}
-            </InfoTooltip>
+            <InfoTooltip>Error percentage in {getInfoTip(timeRange)}</InfoTooltip>
           </div>
           <p className="text-xl font-semibold">{formatter(value)}</p>
-          <p className="text-sm text-muted-foreground">
-            vs {formatter(previousValue)} last period
-          </p>
+          <p className="text-sm text-muted-foreground">vs {formatter(previousValue)} last period</p>
         </div>
 
         <Change value={value} previousValue={previousValue} invert />
@@ -865,9 +781,9 @@ export const ErrorMetricsCard = (props: {
           items={top}
           formatter={formatter}
           queryParams={{
-            group: "OperationName",
-            sort: "errors",
-            sortDir: "desc",
+            group: 'OperationName',
+            sort: 'errors',
+            sortDir: 'desc',
           }}
           isSubgraphAnalytics={props.isSubgraphAnalytics}
         />
@@ -879,23 +795,16 @@ export const ErrorMetricsCard = (props: {
 const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
   const { timeRange = 24, valueFormatter, syncId, className } = props;
   const id = useId();
-  const { data, ticks, domain, timeFormatter } = useChartData(
-    timeRange,
-    props.series,
-  );
+  const { data, ticks, domain, timeFormatter } = useChartData(timeRange, props.series);
 
   return (
-    <div className={cn("-mx-6 h-20", className)}>
+    <div className={cn('-mx-6 h-20', className)}>
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart
-          data={data}
-          margin={{ top: 10, right: 6, bottom: 8, left: 6 }}
-          syncId={syncId}
-        >
+        <AreaChart data={data} margin={{ top: 10, right: 6, bottom: 8, left: 6 }} syncId={syncId}>
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={"hsl(var(--muted-foreground))"} />
-              <stop offset="95%" stopColor={"hsl(var(--muted))"} />
+              <stop offset="5%" stopColor={'hsl(var(--muted-foreground))'} />
+              <stop offset="95%" stopColor={'hsl(var(--muted))'} />
             </linearGradient>
           </defs>
           <Area
@@ -904,7 +813,7 @@ const ErrorPercentChart: React.FC<SparklineProps> = (props) => {
             dataKey="previousValue"
             activeDot={false}
             animationDuration={300}
-            stroke={"hsl(215.4 16.3% 46.9%)"}
+            stroke={'hsl(215.4 16.3% 46.9%)'}
             fill={`url(#${id}-gradient)`}
             fillOpacity="0.3"
             dot={false}
@@ -952,21 +861,20 @@ export const ErrorRateOverTimeCard = ({ syncId }: { syncId?: string }) => {
       return (
         formatMetric(value, {
           maximumFractionDigits: 3,
-        }) + " RPM"
+        }) + ' RPM'
       );
     }
 
     return (
       formatMetric(value, {
         maximumFractionDigits: 0,
-      }) + " RPM"
+      }) + ' RPM'
     );
   };
 
   const { isMobile } = useWindowSize();
 
-  const { filters, range, dateRange, refreshInterval } =
-    useAnalyticsQueryState();
+  const { filters, range, dateRange, refreshInterval } = useAnalyticsQueryState();
 
   let {
     data: responseData,
@@ -1000,20 +908,13 @@ export const ErrorRateOverTimeCard = ({ syncId }: { syncId?: string }) => {
   );
 
   let content;
-  if (
-    !isLoading &&
-    (error || responseData?.response?.code !== EnumStatusCode.OK)
-  ) {
+  if (!isLoading && (error || responseData?.response?.code !== EnumStatusCode.OK)) {
     content = (
       <EmptyState
         className="h-auto"
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve analytics data"
-        description={
-          responseData?.response?.details ||
-          error?.message ||
-          "Please try again"
-        }
+        description={responseData?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -1022,15 +923,11 @@ export const ErrorRateOverTimeCard = ({ syncId }: { syncId?: string }) => {
   } else {
     content = (
       <ResponsiveContainer width="99%" height="100%">
-        <AreaChart
-          data={data}
-          margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
-          syncId={syncId}
-        >
+        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 0 }} syncId={syncId}>
           <defs>
             <linearGradient id={`${id}-gradient`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={"hsl(var(--muted-foreground))"} />
-              <stop offset="95%" stopColor={"hsl(var(--muted))"} />
+              <stop offset="5%" stopColor={'hsl(var(--muted-foreground))'} />
+              <stop offset="95%" stopColor={'hsl(var(--muted))'} />
             </linearGradient>
           </defs>
           <Area
@@ -1064,19 +961,12 @@ export const ErrorRateOverTimeCard = ({ syncId }: { syncId?: string }) => {
             type="number"
             interval="preserveStart"
             minTickGap={60}
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
+            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: '13px' }}
           />
 
-          <YAxis
-            hide={isMobile}
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
-          />
+          <YAxis hide={isMobile} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: '13px' }} />
 
-          <Legend
-            verticalAlign="top"
-            align="right"
-            wrapperStyle={{ fontSize: "13px", marginTop: "-10px" }}
-          />
+          <Legend verticalAlign="top" align="right" wrapperStyle={{ fontSize: '13px', marginTop: '-10px' }} />
 
           <ChartTooltip formatter={formatter} />
         </AreaChart>
@@ -1089,9 +979,7 @@ export const ErrorRateOverTimeCard = ({ syncId }: { syncId?: string }) => {
       <CardHeader>
         <div className="flex space-x-2">
           <CardTitle>Error rate over time</CardTitle>
-          <InfoTooltip>
-            Error rate per minute in {getInfoTip(range)}
-          </InfoTooltip>
+          <InfoTooltip>Error rate per minute in {getInfoTip(range)}</InfoTooltip>
         </div>
       </CardHeader>
 
@@ -1100,13 +988,7 @@ export const ErrorRateOverTimeCard = ({ syncId }: { syncId?: string }) => {
   );
 };
 
-export const LatencyDistributionCard = ({
-  series,
-  syncId,
-}: {
-  series: any[];
-  syncId?: string;
-}) => {
+export const LatencyDistributionCard = ({ series, syncId }: { series: any[]; syncId?: string }) => {
   const [activeLatencies, setActiveLatencies] = useState({
     p50: false,
     p90: false,
@@ -1120,14 +1002,11 @@ export const LatencyDistributionCard = ({
   };
 
   const { isMobile } = useWindowSize();
-  const { data, ticks, domain, timeFormatter } = useChartData(
-    timeRange,
-    series,
-  );
+  const { data, ticks, domain, timeFormatter } = useChartData(timeRange, series);
 
-  const p50StrokeColor = "hsl(var(--chart-primary))";
-  const p90StrokeColor = "hsl(var(--warning))";
-  const p99StrokeColor = "hsl(var(--destructive))";
+  const p50StrokeColor = 'hsl(var(--chart-primary))';
+  const p90StrokeColor = 'hsl(var(--warning))';
+  const p99StrokeColor = 'hsl(var(--destructive))';
 
   return (
     <Card className="bg-transparent">
@@ -1140,11 +1019,7 @@ export const LatencyDistributionCard = ({
 
       <CardContent className="h-[240px]">
         <ResponsiveContainer width="99%" height="100%">
-          <LineChart
-            data={data}
-            margin={{ top: 8, right: 8, bottom: 8, left: 0 }}
-            syncId={syncId}
-          >
+          <LineChart data={data} margin={{ top: 8, right: 8, bottom: 8, left: 0 }} syncId={syncId}>
             <Line
               name="p99"
               type="monotone"
@@ -1184,20 +1059,20 @@ export const LatencyDistributionCard = ({
               type="number"
               interval="preserveStart"
               minTickGap={60}
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: '13px' }}
             />
 
             <YAxis
               hide={isMobile}
               tickFormatter={formatter}
-              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: "13px" }}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: '13px' }}
             />
 
             <Legend
               verticalAlign="top"
               align="right"
               inactiveColor="hsl(var(--muted-foreground) / 0.45)"
-              wrapperStyle={{ fontSize: "13px", marginTop: "-10px" }}
+              wrapperStyle={{ fontSize: '13px', marginTop: '-10px' }}
               onClick={({ dataKey, inactive }) => {
                 setActiveLatencies({
                   ...activeLatencies,

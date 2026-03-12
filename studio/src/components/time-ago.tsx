@@ -1,15 +1,6 @@
-import * as React from "react";
-import {
-  differenceInSeconds,
-  format,
-  formatDistanceToNowStrict,
-} from "date-fns";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "./ui/tooltip";
+import * as React from 'react';
+import { differenceInSeconds, format, formatDistanceToNowStrict } from 'date-fns';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 export interface TimeAgoProps {
   date: Date | number;
@@ -21,12 +12,12 @@ const formatTimeAgo = (date: Date | number, suffix?: boolean) => {
   const diff = differenceInSeconds(new Date(), date);
 
   if (diff < 60) {
-    return "just now";
+    return 'just now';
   }
 
   return formatDistanceToNowStrict(date, {
     addSuffix: suffix,
-    roundingMethod: "floor",
+    roundingMethod: 'floor',
   });
 };
 
@@ -54,7 +45,7 @@ export const TimeAgo: React.FC<TimeAgoProps> = (props) => {
       <TooltipProvider>
         <Tooltip delayDuration={300}>
           <TooltipTrigger>{timeAgo}</TooltipTrigger>
-          <TooltipContent>{format(date, "P p")}</TooltipContent>
+          <TooltipContent>{format(date, 'P p')}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );

@@ -1,38 +1,30 @@
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { EmptyState } from "@/components/empty-state";
-import { FeatureFlagsTable } from "@/components/feature-flags-table";
-import {
-  GraphContext,
-  GraphPageLayout,
-  getGraphLayout,
-} from "@/components/layout/graph-layout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Loader } from "@/components/ui/loader";
-import { NextPageWithLayout } from "@/lib/page";
-import { useQuery } from "@connectrpc/connect-query";
-import {
-  Cross1Icon,
-  ExclamationTriangleIcon,
-  MagnifyingGlassIcon,
-} from "@radix-ui/react-icons";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getFeatureFlagsByFederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useRouter } from "next/router";
-import { useContext, useState } from "react";
-import { useDebounce } from "use-debounce";
-import { useWorkspace } from "@/hooks/use-workspace";
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { EmptyState } from '@/components/empty-state';
+import { FeatureFlagsTable } from '@/components/feature-flags-table';
+import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
+import { NextPageWithLayout } from '@/lib/page';
+import { useQuery } from '@connectrpc/connect-query';
+import { Cross1Icon, ExclamationTriangleIcon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { getFeatureFlagsByFederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { useRouter } from 'next/router';
+import { useContext, useState } from 'react';
+import { useDebounce } from 'use-debounce';
+import { useWorkspace } from '@/hooks/use-workspace';
 
 const FeatureFlagsPage: NextPageWithLayout = () => {
   const graphData = useContext(GraphContext);
   const router = useRouter();
 
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
-  const pageNumber = router.query.page
-    ? parseInt(router.query.page as string)
-    : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || "10");
+  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
+  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
   const limit = pageSize > 50 ? 50 : pageSize;
   const offset = (pageNumber - 1) * limit;
 
@@ -41,15 +33,19 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
 
   const applyParams = useApplyParams();
 
-  const { data, isLoading, error, refetch } = useQuery(getFeatureFlagsByFederatedGraph, {
-    federatedGraphName: graphData?.graph?.name,
-    namespace,
-    query,
-    limit,
-    offset,
-  }, {
-    enabled: !!graphData,
-  });
+  const { data, isLoading, error, refetch } = useQuery(
+    getFeatureFlagsByFederatedGraph,
+    {
+      federatedGraphName: graphData?.graph?.name,
+      namespace,
+      query,
+      limit,
+      offset,
+    },
+    {
+      enabled: !!graphData,
+    },
+  );
 
   if (!graphData) return null;
 
@@ -62,25 +58,16 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve feature flags"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
   } else if (!data?.featureFlags) {
     content = null;
   } else {
-    const filteredFeatureFlags = data.featureFlags.slice(
-      offset,
-      limit + offset,
-    );
+    const filteredFeatureFlags = data.featureFlags.slice(offset, limit + offset);
     content = (
-      <FeatureFlagsTable
-        featureFlags={filteredFeatureFlags}
-        graph={graphData.graph}
-        totalCount={data.totalCount}
-      />
+      <FeatureFlagsTable featureFlags={filteredFeatureFlags} graph={graphData.graph} totalCount={data.totalCount} />
     );
   }
 
@@ -102,7 +89,7 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
             variant="ghost"
             className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
             onClick={() => {
-              setSearch("");
+              setSearch('');
               applyParams({ search: null });
             }}
           >
@@ -117,13 +104,10 @@ const FeatureFlagsPage: NextPageWithLayout = () => {
 
 FeatureFlagsPage.getLayout = (page) =>
   getGraphLayout(
-    <GraphPageLayout
-      title="Feature Flags"
-      subtitle="An overview of all feature flags"
-    >
+    <GraphPageLayout title="Feature Flags" subtitle="An overview of all feature flags">
       {page}
     </GraphPageLayout>,
-    { title: "Feature Flags" },
+    { title: 'Feature Flags' },
   );
 
 export default FeatureFlagsPage;

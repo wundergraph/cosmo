@@ -1,72 +1,36 @@
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import useWindowSize from "@/hooks/use-window-size";
-import { formatMetric } from "@/lib/format-metric";
-import {
-  createStringifiedDateRange,
-  useChartData,
-} from "@/lib/insights-helpers";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { CubeIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getFieldUsage } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { GetFieldUsageResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { differenceInHours, format, formatISO, fromUnixTime } from "date-fns";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { useRouter } from "next/router";
-import { useContext, useId, useMemo } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  DatePickerWithRange,
-  DateRangePickerChangeHandler,
-  getRange,
-} from "../date-picker-with-range";
-import { EmptyState } from "../empty-state";
-import { GraphContext } from "../layout/graph-layout";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Loader } from "../ui/loader";
-import { ChartTooltip } from "./charts";
-import { createFilterState } from "./constructAnalyticsTableQueryState";
-import { useApplyParams } from "./use-apply-params";
-import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import useWindowSize from '@/hooks/use-window-size';
+import { formatMetric } from '@/lib/format-metric';
+import { createStringifiedDateRange, useChartData } from '@/lib/insights-helpers';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { CubeIcon } from '@radix-ui/react-icons';
+import { useQuery } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { getFieldUsage } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { GetFieldUsageResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { differenceInHours, format, formatISO, fromUnixTime } from 'date-fns';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/router';
+import { useContext, useId, useMemo } from 'react';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import { DatePickerWithRange, DateRangePickerChangeHandler, getRange } from '../date-picker-with-range';
+import { EmptyState } from '../empty-state';
+import { GraphContext } from '../layout/graph-layout';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Loader } from '../ui/loader';
+import { ChartTooltip } from './charts';
+import { createFilterState } from './constructAnalyticsTableQueryState';
+import { useApplyParams } from './use-apply-params';
+import { useAnalyticsQueryState } from './useAnalyticsQueryState';
+import { useFeatureLimit } from '@/hooks/use-feature-limit';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
-export const FieldUsage = ({
-  usageData,
-}: {
-  usageData: GetFieldUsageResponse;
-}) => {
+export const FieldUsage = ({ usageData }: { usageData: GetFieldUsageResponse }) => {
   const router = useRouter();
   const {
     namespace: { name: namespace },
@@ -90,12 +54,9 @@ export const FieldUsage = ({
 
   const applyParams = useApplyParams();
 
-  const analyticsRetention = useFeatureLimit("analytics-retention", 7);
+  const analyticsRetention = useFeatureLimit('analytics-retention', 7);
 
-  const onDateRangeChange: DateRangePickerChangeHandler = ({
-    range,
-    dateRange,
-  }) => {
+  const onDateRangeChange: DateRangePickerChangeHandler = ({ range, dateRange }) => {
     if (range) {
       applyParams({
         range: range.toString(),
@@ -137,10 +98,7 @@ export const FieldUsage = ({
       </div>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart
-            data={data}
-            margin={isMobile ? undefined : { right: 60, top: 10 }}
-          >
+          <AreaChart data={data} margin={isMobile ? undefined : { right: 60, top: 10 }}>
             <defs>
               <linearGradient id={color1} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#0da2e7" stopOpacity={0.8} />
@@ -198,31 +156,24 @@ export const FieldUsage = ({
         <h2 className="text-lg font-semibold">Clients and Operations</h2>
         <p className="mt-2 text-muted-foreground">
           Used by {usageData.clients.length} client
-          {usageData.clients.length === 1 ? "" : "s"} and {totalOpsCount}{" "}
-          operation
-          {totalOpsCount === 1 ? "" : "s"}
+          {usageData.clients.length === 1 ? '' : 's'} and {totalOpsCount} operation
+          {totalOpsCount === 1 ? '' : 's'}
         </p>
         <Accordion type="single" collapsible className="mt-2 w-full">
           {usageData.clients.map((client) => {
-            const clientName = client.name || "unknown";
-            const clientVersion = client.version || "n/a";
+            const clientName = client.name || 'unknown';
+            const clientVersion = client.version || 'n/a';
             const totalRequests = client.operations.reduce((acc, op) => {
               acc += op.count;
               return acc;
             }, 0);
 
             return (
-              <AccordionItem
-                key={clientName + clientVersion}
-                value={clientName + clientVersion}
-              >
+              <AccordionItem key={clientName + clientVersion} value={clientName + clientVersion}>
                 <AccordionTrigger className="hover:bg-secondary/30 hover:no-underline">
                   <div className="flex w-full items-center justify-between gap-x-2 text-start">
                     <span className="break-all">
-                      {clientName}{" "}
-                      <span className="text-muted-foreground">
-                        (version: {clientVersion})
-                      </span>
+                      {clientName} <span className="text-muted-foreground">(version: {clientVersion})</span>
                     </span>
                     <Badge variant="secondary" className="mr-4 flex-shrink-0">
                       {totalRequests} Requests
@@ -237,9 +188,7 @@ export const FieldUsage = ({
                           <TableRow>
                             <TableHead className="w-24">Hash</TableHead>
                             <TableHead>Operation Name</TableHead>
-                            <TableHead className="w-24 text-center">
-                              Requests
-                            </TableHead>
+                            <TableHead className="w-24 text-center">Requests</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -260,9 +209,7 @@ export const FieldUsage = ({
                                           operationHash: op.hash,
                                         }),
                                         dateRange: range
-                                          ? createStringifiedDateRange(
-                                              getRange(range),
-                                            )
+                                          ? createStringifiedDateRange(getRange(range))
                                           : JSON.stringify({
                                               start: formatISO(dateRange.start),
                                               end: formatISO(dateRange.end),
@@ -271,12 +218,10 @@ export const FieldUsage = ({
                                     }}
                                     className="text-primary"
                                   >
-                                    {op.name || "-"}
+                                    {op.name || '-'}
                                   </Link>
                                 </TableCell>
-                                <TableCell className="text-center">
-                                  {op.count}
-                                </TableCell>
+                                <TableCell className="text-center">{op.count}</TableCell>
                               </TableRow>
                             );
                           })}
@@ -316,26 +261,18 @@ export const FieldUsage = ({
               </div>
             </div>
           )}
-          {usageData.meta.firstSeenTimestamp !== "0" &&
-            usageData.meta.latestSeenTimestamp !== "0" && (
-              <div className="text-sm">
-                <h2 className="text-lg font-semibold">Timestamps</h2>
-                <p className="mt-2 text-muted-foreground">
-                  First used:{" "}
-                  {format(
-                    fromUnixTime(Number(usageData.meta.firstSeenTimestamp)),
-                    "MMM dd yyyy HH:mm:ss",
-                  )}{" "}
-                </p>
-                <p className=" text-muted-foreground">
-                  Latest used:{" "}
-                  {format(
-                    fromUnixTime(Number(usageData.meta.latestSeenTimestamp)),
-                    "MMM dd yyyy HH:mm:ss",
-                  )}
-                </p>
-              </div>
-            )}
+          {usageData.meta.firstSeenTimestamp !== '0' && usageData.meta.latestSeenTimestamp !== '0' && (
+            <div className="text-sm">
+              <h2 className="text-lg font-semibold">Timestamps</h2>
+              <p className="mt-2 text-muted-foreground">
+                First used:{' '}
+                {format(fromUnixTime(Number(usageData.meta.firstSeenTimestamp)), 'MMM dd yyyy HH:mm:ss')}{' '}
+              </p>
+              <p className=" text-muted-foreground">
+                Latest used: {format(fromUnixTime(Number(usageData.meta.latestSeenTimestamp)), 'MMM dd yyyy HH:mm:ss')}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -348,16 +285,16 @@ export const FieldUsageSheet = () => {
   const searchParams = useSearchParams();
 
   const { range, dateRange } = useAnalyticsQueryState();
-  const isNamedType = searchParams.get("isNamedType") === "true";
-  const showUsage = searchParams.get("showUsage");
+  const isNamedType = searchParams.get('isNamedType') === 'true';
+  const showUsage = searchParams.get('showUsage');
 
-  const [type, field] = showUsage?.split(".") ?? [];
+  const [type, field] = showUsage?.split('.') ?? [];
 
   const graph = useContext(GraphContext);
   const featureFlagName = router.query.featureFlag as string;
 
   const category = router.query.category as string;
-  const isInput = category === "inputs";
+  const isInput = category === 'inputs';
 
   const { data, error, isLoading, refetch } = useQuery(
     getFieldUsage,
@@ -391,9 +328,7 @@ export const FieldUsageSheet = () => {
         <EmptyState
           icon={<ExclamationTriangleIcon />}
           title="Could not retrieve your usage data"
-          description={
-            data?.response?.details || error?.message || "Please try again"
-          }
+          description={data?.response?.details || error?.message || 'Please try again'}
           actions={<Button onClick={() => refetch()}>Retry</Button>}
         />
       </div>
@@ -409,8 +344,8 @@ export const FieldUsageSheet = () => {
       onOpenChange={(isOpen) => {
         if (!isOpen) {
           const newQuery = { ...router.query };
-          delete newQuery["showUsage"];
-          delete newQuery["isNamedType"];
+          delete newQuery['showUsage'];
+          delete newQuery['isNamedType'];
           router.replace({
             query: newQuery,
           });
@@ -420,7 +355,7 @@ export const FieldUsageSheet = () => {
       <SheetContent className="scrollbar-custom w-full max-w-full overflow-y-scroll sm:max-w-full md:max-w-2xl lg:max-w-3xl">
         <SheetHeader className="mb-12">
           <SheetTitle className="flex flex-wrap items-center gap-x-1.5">
-            Field Usage for{" "}
+            Field Usage for{' '}
             <code className="break-all rounded bg-secondary px-1.5 text-left text-secondary-foreground">
               {type}
               {field && `.${field}`}

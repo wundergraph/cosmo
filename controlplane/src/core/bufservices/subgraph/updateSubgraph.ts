@@ -8,8 +8,10 @@ import {
   UpdateSubgraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
@@ -21,7 +23,6 @@ import {
   handleError,
   isValidGrpcNamingScheme,
   isValidLabels,
-  newCompositionOptions,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -38,6 +39,7 @@ export function updateSubgraph(
     logger = enrichLogger(ctx, logger, authContext);
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const auditLogRepo = new AuditLogRepository(opts.db);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
@@ -186,6 +188,11 @@ export function updateSubgraph(
       throw new UnauthorizedError();
     }
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
+
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
       await subgraphRepo.update(
         {
@@ -208,7 +215,10 @@ export function updateSubgraph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
-        newCompositionOptions(req.disableResolvabilityValidation),
+        {
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        },
       );
 
     await auditLogRepo.addAuditLog({

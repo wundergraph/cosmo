@@ -6,7 +6,7 @@ import {
   MigrateFromApolloRequest,
   MigrateFromApolloResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { GraphApiKeyJwtPayload } from '../../../types/index.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID, GraphApiKeyJwtPayload } from '../../../types/index.js';
 import { audiences, signJwtHS256 } from '../../crypto/jwt.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
@@ -131,6 +131,11 @@ export function migrateFromApollo(
       }
     }
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
+
     await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
 
@@ -158,6 +163,7 @@ export function migrateFromApollo(
         chClient: opts.chClient!,
         compositionOptions: {
           disableResolvabilityValidation: true,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
         },
       });
     });

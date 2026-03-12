@@ -1,72 +1,67 @@
-import { countLintConfigsByCategory } from "../lib/utils";
-import {
-  LintConfig,
-  LintSeverity,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { expect, test } from "vitest";
+import { countLintConfigsByCategory } from '../lib/utils';
+import { LintConfig, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { expect, test } from 'vitest';
 
-test("return the correct types with deprecated fields or args", async () => {
+test('return the correct types with deprecated fields or args', async () => {
   const lintIssues = [
     {
-      ruleName: "FIELD_NAMES_SHOULD_BE_CAMEL_CASE",
+      ruleName: 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE',
       severityLevel: LintSeverity.error,
     },
     {
-      ruleName: "TYPE_NAMES_SHOULD_BE_PASCAL_CASE",
+      ruleName: 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "SHOULD_NOT_HAVE_TYPE_PREFIX",
+      ruleName: 'SHOULD_NOT_HAVE_TYPE_PREFIX',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "SHOULD_NOT_HAVE_TYPE_SUFFIX",
+      ruleName: 'SHOULD_NOT_HAVE_TYPE_SUFFIX',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "SHOULD_NOT_HAVE_INPUT_PREFIX",
+      ruleName: 'SHOULD_NOT_HAVE_INPUT_PREFIX',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "SHOULD_HAVE_INPUT_SUFFIX",
+      ruleName: 'SHOULD_HAVE_INPUT_SUFFIX',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "SHOULD_NOT_HAVE_ENUM_PREFIX",
+      ruleName: 'SHOULD_NOT_HAVE_ENUM_PREFIX',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "SHOULD_NOT_HAVE_ENUM_SUFFIX",
+      ruleName: 'SHOULD_NOT_HAVE_ENUM_SUFFIX',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "SHOULD_NOT_HAVE_INTERFACE_PREFIX",
+      ruleName: 'SHOULD_NOT_HAVE_INTERFACE_PREFIX',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "SHOULD_NOT_HAVE_INTERFACE_SUFFIX",
+      ruleName: 'SHOULD_NOT_HAVE_INTERFACE_SUFFIX',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "ENUM_VALUES_SHOULD_BE_UPPER_CASE",
+      ruleName: 'ENUM_VALUES_SHOULD_BE_UPPER_CASE',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "DISALLOW_CASE_INSENSITIVE_ENUM_VALUES",
+      ruleName: 'DISALLOW_CASE_INSENSITIVE_ENUM_VALUES',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "NO_TYPENAME_PREFIX_IN_TYPE_FIELDS",
+      ruleName: 'NO_TYPENAME_PREFIX_IN_TYPE_FIELDS',
       severityLevel: LintSeverity.warn,
     },
     {
-      ruleName: "REQUIRE_DEPRECATION_REASON",
+      ruleName: 'REQUIRE_DEPRECATION_REASON',
       severityLevel: LintSeverity.warn,
     },
   ];
-  const countByCategory = countLintConfigsByCategory(
-    lintIssues as LintConfig[],
-  );
+  const countByCategory = countLintConfigsByCategory(lintIssues as LintConfig[]);
 
   expect(countByCategory).not.toBeNull();
   expect(countByCategory.length).toBe(3);

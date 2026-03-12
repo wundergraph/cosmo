@@ -3,23 +3,19 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useResolvedTheme } from "@/hooks/use-resolved-theme";
-import { downloadStringAsFile } from "@/lib/download-string-as-file";
-import { cn } from "@/lib/utils";
-import {
-  ClipboardCopyIcon,
-  DotsHorizontalIcon,
-  DownloadIcon,
-} from "@radix-ui/react-icons";
-import { Virtualizer, useVirtualizer } from "@tanstack/react-virtual";
-import copy from "copy-to-clipboard";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import babelPlugin from "prettier/plugins/babel";
-import estreePlugin from "prettier/plugins/estree";
-import graphQLPlugin from "prettier/plugins/graphql";
-import * as prettier from "prettier/standalone";
+} from '@/components/ui/dropdown-menu';
+import { useResolvedTheme } from '@/hooks/use-resolved-theme';
+import { downloadStringAsFile } from '@/lib/download-string-as-file';
+import { cn } from '@/lib/utils';
+import { ClipboardCopyIcon, DotsHorizontalIcon, DownloadIcon } from '@radix-ui/react-icons';
+import { Virtualizer, useVirtualizer } from '@tanstack/react-virtual';
+import copy from 'copy-to-clipboard';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import babelPlugin from 'prettier/plugins/babel';
+import estreePlugin from 'prettier/plugins/estree';
+import graphQLPlugin from 'prettier/plugins/graphql';
+import * as prettier from 'prettier/standalone';
 import {
   Highlight,
   LineInputProps,
@@ -28,44 +24,39 @@ import {
   TokenInputProps,
   TokenOutputProps,
   themes,
-} from "prism-react-renderer";
-import * as Prism from "prismjs";
-import "prismjs/components/prism-graphql";
-import "prismjs/components/prism-json";
-import "prismjs/components/prism-protobuf";
-import { CSSProperties, useEffect, useRef, useState } from "react";
-import { Button } from "../ui/button";
-import { useToast } from "../ui/use-toast";
+} from 'prism-react-renderer';
+import * as Prism from 'prismjs';
+import 'prismjs/components/prism-graphql';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-protobuf';
+import { CSSProperties, useEffect, useRef, useState } from 'react';
+import { Button } from '../ui/button';
+import { useToast } from '../ui/use-toast';
 
 export const SDLViewerActions = ({
   sdl,
   className,
-  size = "icon",
+  size = 'icon',
   targetName,
-  language = "graphql",
+  language = 'graphql',
 }: {
   sdl: string;
   className?: string;
-  size?: "icon" | "icon-sm";
+  size?: 'icon' | 'icon-sm';
   targetName?: string;
-  language?: "graphql" | "protobuf";
+  language?: 'graphql' | 'protobuf';
 }) => {
   const { toast, dismiss } = useToast();
 
   const downloadSDL = () => {
-    const extension = language === "protobuf" ? "proto" : "graphql";
-    const mimeType =
-      language === "protobuf" ? "text/plain" : "application/graphql";
-    downloadStringAsFile(
-      sdl,
-      targetName ? `${targetName}.${extension}` : `schema.${extension}`,
-      mimeType,
-    );
+    const extension = language === 'protobuf' ? 'proto' : 'graphql';
+    const mimeType = language === 'protobuf' ? 'text/plain' : 'application/graphql';
+    downloadStringAsFile(sdl, targetName ? `${targetName}.${extension}` : `schema.${extension}`, mimeType);
   };
 
   const copySDL = () => {
     copy(sdl);
-    const { id } = toast({ description: "Copied contents to clipboard" });
+    const { id } = toast({ description: 'Copied contents to clipboard' });
 
     const t = setTimeout(() => {
       dismiss(id);
@@ -75,9 +66,7 @@ export const SDLViewerActions = ({
   };
 
   return (
-    <div
-      className={cn("flex w-full items-center gap-x-2 md:w-auto", className)}
-    >
+    <div className={cn('flex w-full items-center gap-x-2 md:w-auto', className)}>
       <Button variant="secondary" size={size} onClick={() => copySDL()}>
         <ClipboardCopyIcon />
       </Button>
@@ -106,9 +95,9 @@ const LineActions = ({ lineNo }: { lineNo: number }) => {
         <DropdownMenuItem
           onClick={(e) => {
             e.stopPropagation();
-            copy(`${window.location.href.split("#")[0]}#L${lineNo}`);
+            copy(`${window.location.href.split('#')[0]}#L${lineNo}`);
             toast({
-              description: "Copied link to clipboard",
+              description: 'Copied link to clipboard',
             });
           }}
         >
@@ -119,10 +108,7 @@ const LineActions = ({ lineNo }: { lineNo: number }) => {
   );
 };
 
-export const useScrollIntoView = (
-  virtualizer: Virtualizer<any, any>,
-  lineNo: number,
-) => {
+export const useScrollIntoView = (virtualizer: Virtualizer<any, any>, lineNo: number) => {
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -153,16 +139,16 @@ const Block = ({
 }) => {
   const router = useRouter();
 
-  const pathname = router.asPath.split("#")[0];
-  const hash = router.asPath.split("#")?.[1];
+  const pathname = router.asPath.split('#')[0];
+  const hash = router.asPath.split('#')?.[1];
 
   function calculateSectionWidth(n: number) {
     if (n >= 100000) {
-      return "w-16";
+      return 'w-16';
     } else if (n >= 1000) {
-      return "w-12";
+      return 'w-12';
     } else {
-      return "w-10";
+      return 'w-10';
     }
   }
 
@@ -183,22 +169,22 @@ const Block = ({
     <pre
       id="schema-container"
       ref={parentRef}
-      style={{ ...style, background: "", backgroundColor: "" }}
-      className={cn("h-full overflow-auto text-xs", className)}
+      style={{ ...style, background: '', backgroundColor: '' }}
+      className={cn('h-full overflow-auto text-xs', className)}
     >
       <div
         style={{
           height: virtualizer.getTotalSize(),
-          width: "100%",
-          position: "relative",
+          width: '100%',
+          position: 'relative',
         }}
       >
         <div
           style={{
-            position: "absolute",
+            position: 'absolute',
             top: 0,
             left: 0,
-            width: "100%",
+            width: '100%',
             transform: `translateY(${items[0]?.start ?? 0}px)`,
           }}
         >
@@ -214,26 +200,18 @@ const Block = ({
             const href = pathname + `#${lineNo}`;
 
             return (
-              <div
-                key={virtualRow.key}
-                data-index={virtualRow.index}
-                ref={virtualizer.measureElement}
-              >
+              <div key={virtualRow.key} data-index={virtualRow.index} ref={virtualizer.measureElement}>
                 <div
                   id={`id-${lineNo}`}
                   key={i.toString()}
                   {...getLineProps({ line })}
-                  className={cn(
-                    getLineProps({ line }).className,
-                    "group",
-                    hash === lineNo && "w-screen bg-secondary",
-                  )}
+                  className={cn(getLineProps({ line }).className, 'group', hash === lineNo && 'w-screen bg-secondary')}
                 >
                   <Link
                     href={href}
                     className={cn(
-                      "border-sr relative left-0 mr-4 inline-flex select-none items-center justify-end space-x-2 py-px pr-2 text-right text-muted-foreground",
-                      i === 0 && "pt-2",
+                      'border-sr relative left-0 mr-4 inline-flex select-none items-center justify-end space-x-2 py-px pr-2 text-right text-muted-foreground',
+                      i === 0 && 'pt-2',
                       numberSectionWidth,
                     )}
                   >
@@ -256,31 +234,31 @@ const Block = ({
 export const SDLViewer = ({
   sdl,
   className,
-  language = "graphql",
+  language = 'graphql',
 }: {
   sdl: string;
   className?: string;
-  language?: "graphql" | "protobuf";
+  language?: 'graphql' | 'protobuf';
 }) => {
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState('');
 
   useEffect(() => {
     const formatContent = async (source: string) => {
       // For GraphQL, use Prettier formatting
       try {
-        if (language === "protobuf") {
+        if (language === 'protobuf') {
           // For protobuf, don't format with Prettier since it doesn't support protobuf
           // Just use the raw content
           setContent(source);
         } else {
           const res = await prettier.format(source, {
-            parser: "graphql",
+            parser: 'graphql',
             plugins: [graphQLPlugin, estreePlugin, babelPlugin],
           });
           setContent(res);
         }
       } catch {
-        setContent("INVALID CONTENT");
+        setContent('INVALID CONTENT');
       }
     };
 
@@ -292,7 +270,7 @@ export const SDLViewer = ({
 
   return (
     <Highlight
-      theme={selectedTheme === "dark" ? themes.nightOwl : themes.nightOwlLight}
+      theme={selectedTheme === 'dark' ? themes.nightOwl : themes.nightOwlLight}
       code={content}
       language={language}
       prism={Prism}

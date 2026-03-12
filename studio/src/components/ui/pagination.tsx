@@ -1,19 +1,8 @@
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  DoubleArrowLeftIcon,
-  DoubleArrowRightIcon,
-} from "@radix-ui/react-icons";
-import { useRouter } from "next/router";
-import { useCallback } from "react";
-import { Button } from "./button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./select";
+import { ChevronLeftIcon, ChevronRightIcon, DoubleArrowLeftIcon, DoubleArrowRightIcon } from '@radix-ui/react-icons';
+import { useRouter } from 'next/router';
+import { useCallback } from 'react';
+import { Button } from './button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select';
 
 export const Pagination = ({
   limit,
@@ -49,7 +38,7 @@ export const Pagination = ({
           value={`${limit}`}
           onValueChange={(value) => {
             // Reset page when size changes because the number of pages may not be the same
-            applyNewParams({ pageSize: value, page: "1" });
+            applyNewParams({ pageSize: value, page: '1' });
           }}
         >
           <SelectTrigger className="h-8 w-[70px]">
@@ -65,14 +54,14 @@ export const Pagination = ({
         </Select>
       </div>
       <div className="flex items-center justify-center text-sm font-medium">
-        Page {noOfPages === 0 ? "0" : pageNumber} of {noOfPages}
+        Page {noOfPages === 0 ? '0' : pageNumber} of {noOfPages}
       </div>
       <div className="flex items-center space-x-2">
         <Button
           variant="outline"
           className="hidden h-8 w-8 p-0 lg:flex"
           onClick={() => {
-            applyNewParams({ page: "1" });
+            applyNewParams({ page: '1' });
           }}
           disabled={pageNumber === 1}
         >

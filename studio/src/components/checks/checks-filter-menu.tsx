@@ -1,17 +1,17 @@
-import { useContext } from "react";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { DataTablePrimaryFilterMenu } from "@/components/analytics/data-table-primary-filter-menu";
-import { GraphContext } from "@/components/layout/graph-layout";
-import { useRouter } from "next/router";
-import { SelectedChecksFilters } from "./selected-checks-filters";
+import { useContext } from 'react';
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { DataTablePrimaryFilterMenu } from '@/components/analytics/data-table-primary-filter-menu';
+import { GraphContext } from '@/components/layout/graph-layout';
+import { useRouter } from 'next/router';
+import { SelectedChecksFilters } from './selected-checks-filters';
 
 export const parseSelectedSubgraphs = (value: unknown) => {
-  if (typeof value === "string") {
-    return value.split(",").filter(Boolean);
+  if (typeof value === 'string') {
+    return value.split(',').filter(Boolean);
   }
 
   return [];
-}
+};
 
 export function ChecksFilterMenu() {
   const router = useRouter();
@@ -26,17 +26,17 @@ export function ChecksFilterMenu() {
           <DataTablePrimaryFilterMenu
             filters={[
               {
-                id: "subgraphs",
-                title: "Subgraphs",
+                id: 'subgraphs',
+                title: 'Subgraphs',
                 selectedOptions: selectedSubgraphs,
                 onSelect: (selected) => {
                   applyParams({ subgraphs: selected?.join(',') ?? null });
                 },
                 options: subgraphs.map((sg) => ({
                   label: sg.name,
-                  value: sg.id
+                  value: sg.id,
                 })),
-              }
+              },
             ]}
           />
 

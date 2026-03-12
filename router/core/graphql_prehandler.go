@@ -543,22 +543,34 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	// Compute the operation sha256 hash as soon as possible for observability reasons
 	if h.shouldComputeOperationSha256(operationKit, requestContext) {
-		if err := operationKit.ComputeOperationSha256(); err != nil {
-			return &httpGraphqlError{
-				message:    fmt.Sprintf("error hashing operation: %s", err),
-				statusCode: http.StatusInternalServerError,
+		if operationKit.parsedOperation.Request.Query == "" && operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
+			// No query body to hash; use the client-provided persisted hash for telemetry.
+			requestContext.operation.sha256Hash = operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash
+			requestContext.expressionContext.Request.Operation.Sha256Hash = requestContext.operation.sha256Hash
+
+			setTelemetryAttributes(req.Context(), requestContext, expr.BucketSha256)
+
+			requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
+		} else {
+			if err := operationKit.ComputeOperationSha256(); err != nil {
+				return &httpGraphqlError{
+					message:    fmt.Sprintf("error hashing operation: %s", err),
+					statusCode: http.StatusInternalServerError,
+				}
 			}
-		}
-		requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
-		requestContext.expressionContext.Request.Operation.Sha256Hash = operationKit.parsedOperation.Sha256Hash
+			requestContext.operation.sha256Hash = operationKit.parsedOperation.Sha256Hash
+			requestContext.expressionContext.Request.Operation.Sha256Hash = operationKit.parsedOperation.Sha256Hash
 
-		setTelemetryAttributes(req.Context(), requestContext, expr.BucketSha256)
+			setTelemetryAttributes(req.Context(), requestContext, expr.BucketSha256)
 
-		requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
-		if h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled {
-			// Set the request hash to the parsed hash, to see if it matches a persisted operation
-			operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{
-				Sha256Hash: operationKit.parsedOperation.Sha256Hash,
+			requestContext.telemetry.addCustomMetricStringAttr(ContextFieldOperationSha256, requestContext.operation.sha256Hash)
+			if h.operationBlocker.safelistEnabled || h.operationBlocker.logUnknownOperationsEnabled {
+				if !operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() {
+					// Set the request hash to the parsed hash, to see if it matches a persisted operation
+					operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery = &GraphQLRequestExtensionsPersistedQuery{
+						Sha256Hash: operationKit.parsedOperation.Sha256Hash,
+					}
+				}
 			}
 		}
 	}

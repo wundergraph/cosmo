@@ -1,4 +1,4 @@
-import { SideNav } from "./sidenav";
+import { SideNav } from './sidenav';
 
 export interface LayoutProps {
   children?: React.ReactNode;

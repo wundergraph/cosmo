@@ -5,13 +5,7 @@ type LogoProps = {
 
 export const Logo = ({ width = 24, height = 24 }: LogoProps) => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 1080 1080"
-      width={width}
-      height={height}
-      fill="none"
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width={width} height={height} fill="none">
       <path
         fill="currentColor"
         fillRule="evenodd"

@@ -1,12 +1,12 @@
-import * as React from "react";
-import { WorkspaceNamespace } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { CommandGroup, CommandItem } from "@/components/ui/command";
-import { useRouter } from "next/router";
-import { useMemo } from "react";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { CheckIcon } from "@radix-ui/react-icons";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+import * as React from 'react';
+import { WorkspaceNamespace } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { CommandGroup, CommandItem } from '@/components/ui/command';
+import { useRouter } from 'next/router';
+import { useMemo } from 'react';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+import { CheckIcon } from '@radix-ui/react-icons';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
 type GraphCommandGroupProps = {
   isFiltering: boolean;
@@ -15,7 +15,7 @@ type GraphCommandGroupProps = {
   activeGraphId?: string;
   activeSubgraphId?: string;
   setNamespace(namespace: string): void;
-}
+};
 
 export function GraphCommandGroup({
   isFiltering,
@@ -38,18 +38,19 @@ export function GraphCommandGroup({
             setNamespace={setNamespace}
           />
 
-          {(isFiltering || activeSubgraphId) && subgraphs.map((subgraph, subgraphIndex) => (
-            <GraphCommandItem
-              key={`subgraph-${namespaceIndex}-${graphIndex}-${subgraphIndex}`}
-              name={subgraph.name}
-              namespace={namespace}
-              isActive={activeSubgraphId === subgraph.id}
-              value={`${namespace.name}.${graph.id}.${subgraph.id}`}
-              isSubgraph
-              className="pl-8"
-              setNamespace={setNamespace}
-            />
-          ))}
+          {(isFiltering || activeSubgraphId) &&
+            subgraphs.map((subgraph, subgraphIndex) => (
+              <GraphCommandItem
+                key={`subgraph-${namespaceIndex}-${graphIndex}-${subgraphIndex}`}
+                name={subgraph.name}
+                namespace={namespace}
+                isActive={activeSubgraphId === subgraph.id}
+                value={`${namespace.name}.${graph.id}.${subgraph.id}`}
+                isSubgraph
+                className="pl-8"
+                setNamespace={setNamespace}
+              />
+            ))}
         </React.Fragment>
       ))}
     </CommandGroup>
@@ -73,7 +74,7 @@ const graphAreasWithParameters: readonly string[] = [
   'checks',
   'compositions',
   'feature-flags',
-  'proposals'
+  'proposals',
 ];
 
 function GraphCommandItem({
@@ -89,60 +90,51 @@ function GraphCommandItem({
   const router = useRouter();
   const organizationSlug = useCurrentOrganization()?.slug;
 
-  const pathname = useMemo(
-    () => {
-      const segmentSplit = router.pathname.split('/');
-      const segment = segmentSplit[3]?.toLowerCase();
-      if (isSubgraph) {
-        return segment === 'subgraph'
-          ? router.pathname
-          : `/[organizationSlug]/[namespace]/subgraph/[subgraphSlug]`;
-      }
+  const pathname = useMemo(() => {
+    const segmentSplit = router.pathname.split('/');
+    const segment = segmentSplit[3]?.toLowerCase();
+    if (isSubgraph) {
+      return segment === 'subgraph' ? router.pathname : `/[organizationSlug]/[namespace]/subgraph/[subgraphSlug]`;
+    }
 
-      if (segment !== 'graph') {
-        return defaultGraphTemplate;
-      }
+    if (segment !== 'graph') {
+      return defaultGraphTemplate;
+    }
 
-      const areaSegment = segmentSplit[5]?.toLowerCase();
-      return areaSegment && graphAreasWithParameters.includes(areaSegment) && segmentSplit.length > 5
-        ? `${defaultGraphTemplate}/${areaSegment}`
-        : router.pathname;
-    },
-    [router.pathname, isSubgraph],
-  );
+    const areaSegment = segmentSplit[5]?.toLowerCase();
+    return areaSegment && graphAreasWithParameters.includes(areaSegment) && segmentSplit.length > 5
+      ? `${defaultGraphTemplate}/${areaSegment}`
+      : router.pathname;
+  }, [router.pathname, isSubgraph]);
 
   return (
     <CommandItem
       key={`graph-${namespace.name}-${name}`}
-      className={cn(
-        "cursor-pointer pl-4 gap-2 justify-between w-full",
-        className
-      )}
+      className={cn('w-full cursor-pointer justify-between gap-2 pl-4', className)}
       value={value}
       onSelect={() => {
-        router.push({
-          pathname,
-          query: {
-            organizationSlug,
-            namespace: namespace.name,
-            ...(isSubgraph ? { subgraphSlug: name } : { slug: name }),
-          }
-        }).finally(() => setNamespace(namespace.name));
+        router
+          .push({
+            pathname,
+            query: {
+              organizationSlug,
+              namespace: namespace.name,
+              ...(isSubgraph ? { subgraphSlug: name } : { slug: name }),
+            },
+          })
+          .finally(() => setNamespace(namespace.name));
       }}
     >
-      <span className="flex justify-between items-center gap-2 w-full">
+      <span className="flex w-full items-center justify-between gap-2">
         {name}
         {!isSubgraph && isContract && (
-          <Badge variant="muted" className="flex-shrink-0">contract</Badge>
+          <Badge variant="muted" className="flex-shrink-0">
+            contract
+          </Badge>
         )}
       </span>
 
-      <CheckIcon
-        className={cn(
-          'w-4 h-4 flex-shrink-0',
-          isActive ? 'opacity-100' : 'opacity-0'
-        )}
-      />
+      <CheckIcon className={cn('h-4 w-4 flex-shrink-0', isActive ? 'opacity-100' : 'opacity-0')} />
     </CommandItem>
   );
 }

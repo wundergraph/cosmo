@@ -9,13 +9,14 @@ import {
   CreateFeatureFlagResponse,
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, isValidLabels, newCompositionOptions } from '../../util.js';
+import { enrichLogger, getLogger, handleError, isValidLabels } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
@@ -189,6 +190,10 @@ export function createFeatureFlag(
       namespaceId: namespace.id,
       excludeDisabled: true,
     });
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
 
     const compositionErrors: PlainMessage<CompositionError>[] = [];
     const deploymentErrors: PlainMessage<DeploymentError>[] = [];
@@ -205,7 +210,10 @@ export function createFeatureFlag(
         },
         blobStorage: opts.blobStorage,
         chClient: opts.chClient!,
-        compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+        compositionOptions: {
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        },
         federatedGraphs,
       });
 

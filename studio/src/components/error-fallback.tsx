@@ -1,7 +1,7 @@
-import { Logo } from "@/components/logo";
-import { EmptyState } from "@/components/empty-state";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
+import { Logo } from '@/components/logo';
+import { EmptyState } from '@/components/empty-state';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 const ErrorFallback: React.ReactElement = (
   <div className="flex h-screen items-center justify-center">
@@ -15,12 +15,7 @@ const ErrorFallback: React.ReactElement = (
     >
       <defs>
         <clipPath id="clip0_702_186">
-          <rect
-            width="854.167"
-            height="322.888"
-            fill="white"
-            transform="translate(0.5 0.0560303)"
-          />
+          <rect width="854.167" height="322.888" fill="white" transform="translate(0.5 0.0560303)" />
         </clipPath>
       </defs>
     </svg>
@@ -38,8 +33,8 @@ const ErrorFallback: React.ReactElement = (
          * uses onClick={() => (window.location.href = "/") to go back to home
          * The Link exists for the button styling
          */
-        <Button onClick={() => (window.location.href = "/")} asChild>
-          <Link href={"/"}>Take me home</Link>
+        <Button onClick={() => (window.location.href = '/')} asChild>
+          <Link href={'/'}>Take me home</Link>
         </Button>
       }
     />

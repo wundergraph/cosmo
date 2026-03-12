@@ -6,8 +6,8 @@ type Project {
   id: ID!
   name: String!
   description: String
-  startDate: String   # ISO date
-  endDate: String     # ISO date
+  startDate: String # ISO date
+  endDate: String # ISO date
   status: ProjectStatus!
   tags: [String]!
 }

@@ -1,19 +1,14 @@
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
-import { formatDateTime } from "@/lib/format-date";
-import { cn } from "@/lib/utils";
-import { useQuery } from "@connectrpc/connect-query";
-import {
-  Component2Icon,
-  Cross1Icon,
-  EnvelopeClosedIcon,
-  ExclamationTriangleIcon,
-} from "@radix-ui/react-icons";
-import { getBillingPlans } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { addDays } from "date-fns";
-import { useRouter } from "next/router";
-import { Dispatch, SetStateAction, useMemo } from "react";
-import { AiOutlineAudit } from "react-icons/ai";
-import { MdOutlineFeaturedPlayList, MdOutlinePolicy, MdOutlineExtension } from "react-icons/md";
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
+import { formatDateTime } from '@/lib/format-date';
+import { cn } from '@/lib/utils';
+import { useQuery } from '@connectrpc/connect-query';
+import { Component2Icon, Cross1Icon, EnvelopeClosedIcon, ExclamationTriangleIcon } from '@radix-ui/react-icons';
+import { getBillingPlans } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { addDays } from 'date-fns';
+import { useRouter } from 'next/router';
+import { Dispatch, SetStateAction, useMemo } from 'react';
+import { AiOutlineAudit } from 'react-icons/ai';
+import { MdOutlineFeaturedPlayList, MdOutlinePolicy, MdOutlineExtension } from 'react-icons/md';
 import {
   PiBell,
   PiChartDonut,
@@ -24,17 +19,17 @@ import {
   PiUserGear,
   PiUsers,
   PiWebhooksLogo,
-} from "react-icons/pi";
-import { PageHeader } from "./head";
-import { LayoutProps } from "./layout";
-import { NavLink, SideNav } from "./sidenav";
-import { TitleLayout } from "./title-layout";
-import { FaGripfire } from "react-icons/fa";
-import { UserGroupIcon } from "@heroicons/react/24/outline";
-import { useCheckUserAccess } from "@/hooks/use-check-user-access";
-import { useUser } from "@/hooks/use-user";
-import { useStarBannerDisabled } from "@/hooks/use-star-banner-disabled";
-import { useWorkspace } from "@/hooks/use-workspace";
+} from 'react-icons/pi';
+import { PageHeader } from './head';
+import { LayoutProps } from './layout';
+import { NavLink, SideNav } from './sidenav';
+import { TitleLayout } from './title-layout';
+import { FaGripfire } from 'react-icons/fa';
+import { UserGroupIcon } from '@heroicons/react/24/outline';
+import { useCheckUserAccess } from '@/hooks/use-check-user-access';
+import { useUser } from '@/hooks/use-user';
+import { useStarBannerDisabled } from '@/hooks/use-star-banner-disabled';
+import { useWorkspace } from '@/hooks/use-workspace';
 
 export const StarBanner = ({
   isDisabled,
@@ -44,7 +39,7 @@ export const StarBanner = ({
   setDisableStarBanner: Dispatch<SetStateAction<string>>;
 }) => {
   return (
-    <div className={cn("flex h-8 justify-center", isDisabled && "hidden")}>
+    <div className={cn('flex h-8 justify-center', isDisabled && 'hidden')}>
       <div className="flex w-screen bg-gradient-to-r from-purple-500 to-pink-400 text-xs lg:justify-center xl:text-sm">
         <a
           href="//github.com/wundergraph/cosmo"
@@ -58,15 +53,14 @@ export const StarBanner = ({
               <span className="relative inline-flex h-3 w-3 rounded-full bg-pink-400 dark:bg-white"></span>
             </span>
             <span className="flex gap-x-1 text-gray-950 dark:text-slate-100">
-              If you like WunderGraph Cosmo,{" "}
-              <span className="font-bold ">give it a star on GitHub! </span>
+              If you like WunderGraph Cosmo, <span className="font-bold ">give it a star on GitHub! </span>
               <span className="hidden font-bold lg:flex">⭐️</span>
             </span>
           </span>
         </a>
         <div
           onClick={() => {
-            setDisableStarBanner("true");
+            setDisableStarBanner('true');
           }}
           className="absolute right-3 top-2 cursor-pointer"
         >
@@ -89,21 +83,18 @@ export const OrganizationBanner = () => {
       <p className="flex items-center gap-x-2 px-4 py-2">
         <ExclamationTriangleIcon className="flex-shrink-0" />
         <span className="flex gap-x-1 font-bold text-gray-950 dark:text-primary-foreground">
-          {org.deactivation
-            ? (
-              <>
-                Your organization is deactivated and is in read-only mode.{" "}
-                {org.deactivation.reason ? `${org.deactivation.reason}.` : ""} It will
-                be permanently deleted on{" "}
-                {formatDateTime(addDays(new Date(org.deactivation.initiatedAt), 30))}
-              </>
-            )
-            : (
-              <>
-                Your organization is queued for deletion. It will be permanently deleted on{" "}
-                {formatDateTime(addDays(new Date(org.deletion!.queuedAt), 3))}
-              </>
-            )}
+          {org.deactivation ? (
+            <>
+              Your organization is deactivated and is in read-only mode.{' '}
+              {org.deactivation.reason ? `${org.deactivation.reason}.` : ''} It will be permanently deleted on{' '}
+              {formatDateTime(addDays(new Date(org.deactivation.initiatedAt), 30))}
+            </>
+          ) : (
+            <>
+              Your organization is queued for deletion. It will be permanently deleted on{' '}
+              {formatDateTime(addDays(new Date(org.deletion!.queuedAt), 3))}
+            </>
+          )}
         </span>
       </p>
     </div>
@@ -118,9 +109,9 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
   const [isStarBannerDisabled, setDisableStarBanner] = useStarBannerDisabled();
   const { namespace } = useWorkspace();
 
-  const isAdmin = checkUserAccess({ rolesToBe: ["organization-admin" ]});
-  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
-  const isApiKeyManager = checkUserAccess({ rolesToBe: ["organization-apikey-manager"] });
+  const isAdmin = checkUserAccess({ rolesToBe: ['organization-admin'] });
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
+  const isApiKeyManager = checkUserAccess({ rolesToBe: ['organization-apikey-manager'] });
   const isOrganizationDeactivated = !!user?.currentOrganization.deactivation;
   const isOrganizationPendingDeletion = !!user?.currentOrganization?.deletion;
 
@@ -140,17 +131,17 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
     const navigation: Partial<NavLink>[] = [
       {
-        title: "Graphs",
+        title: 'Graphs',
         href: basePath + `/graphs${nsQueryString}`,
         icon: <PiGraphLight className="size-4" />,
       },
       {
-        title: "Subgraphs",
+        title: 'Subgraphs',
         href: basePath + `/subgraphs${nsQueryString}`,
         icon: <Component2Icon className="size-4" />,
       },
       {
-        title: "Feature Flags",
+        title: 'Feature Flags',
         href: basePath + `/feature-flags${nsQueryString}`,
         icon: <MdOutlineFeaturedPlayList className="size-4" />,
         matchExact: false,
@@ -161,17 +152,17 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     if (isAdminOrDeveloper) {
       navigation.push(
         {
-          title: "Policies",
+          title: 'Policies',
           href: basePath + `/policies${nsQueryString}`,
           icon: <MdOutlinePolicy className="size-4" />,
         },
         {
-          title: "Check Extensions",
+          title: 'Check Extensions',
           href: basePath + `/check-extensions${nsQueryString}`,
           icon: <MdOutlineExtension className="size-4" />,
         },
         {
-          title: "Cache Warmer",
+          title: 'Cache Warmer',
           href: basePath + `/cache-warmer${nsQueryString}`,
           icon: <FaGripfire className="size-4" />,
           separator: true,
@@ -181,21 +172,21 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
     navigation.push(
       {
-        title: "Members",
-        href: basePath + "/members",
+        title: 'Members',
+        href: basePath + '/members',
         icon: <PiUsers className="size-4" />,
       },
       {
-        title: "Groups",
-        href: basePath + "/groups",
+        title: 'Groups',
+        href: basePath + '/groups',
         icon: <UserGroupIcon className="size-4" />,
       },
     );
 
     if (isAdminOrDeveloper || isApiKeyManager) {
       navigation.push({
-        title: "API Keys",
-        href: basePath + "/apikeys",
+        title: 'API Keys',
+        href: basePath + '/apikeys',
         icon: <PiKey className="size-4" />,
       });
     }
@@ -203,48 +194,44 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
     if (isAdminOrDeveloper) {
       navigation.push(
         {
-          title: "Notifications",
-          href: basePath + "/webhooks",
+          title: 'Notifications',
+          href: basePath + '/webhooks',
           icon: <PiBell className="size-4" />,
         },
         {
-          title: "Webhook History",
-          href: basePath + "/webhook-history",
+          title: 'Webhook History',
+          href: basePath + '/webhook-history',
           icon: <PiWebhooksLogo className="size-4" />,
         },
         {
-          title: "Usage",
-          href: basePath + "/usages",
+          title: 'Usage',
+          href: basePath + '/usages',
           icon: <PiChartDonut className="size-4" />,
         },
       );
     }
 
-    if (
-      plans.data?.plans?.length &&
-      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY &&
-      isAdmin
-    ) {
+    if (plans.data?.plans?.length && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY && isAdmin) {
       navigation.push({
-        title: "Billing",
-        href: basePath + "/billing",
+        title: 'Billing',
+        href: basePath + '/billing',
         icon: <PiReceipt className="size-4" />,
       });
     }
 
     if (isAdmin) {
       navigation.push({
-        title: "Audit log",
-        href: basePath + "/audit-log",
-        icon: <AiOutlineAudit className="size-4"/>,
+        title: 'Audit log',
+        href: basePath + '/audit-log',
+        icon: <AiOutlineAudit className="size-4" />,
         separator: !isAdminOrDeveloper,
       });
     }
 
     if (isAdminOrDeveloper) {
       navigation.push({
-        title: "Settings",
-        href: basePath + "/settings",
+        title: 'Settings',
+        href: basePath + '/settings',
         icon: <PiGear className="size-4" />,
         separator: true,
       });
@@ -252,7 +239,7 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
     navigation.push(
       {
-        title: "Account",
+        title: 'Account',
       },
       {
         title: (
@@ -266,13 +253,13 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
             ) : null}
           </>
         ),
-        href: "/account/invitations",
+        href: '/account/invitations',
         icon: <EnvelopeClosedIcon className="size-4" />,
         className: 'flex justify-between items-center w-full gap-x-1',
       },
       {
-        title: "Manage",
-        href: "/account/manage",
+        title: 'Manage',
+        href: '/account/manage',
         icon: <PiUserGear className="size-4" />,
       },
     );
@@ -291,17 +278,14 @@ export const DashboardLayout = ({ children }: LayoutProps) => {
 
   return (
     <div className="2xl:flex 2xl:flex-1 2xl:flex-col 2xl:items-center">
-      <StarBanner
-        isDisabled={isStarBannerDisabled}
-        setDisableStarBanner={setDisableStarBanner}
-      />
+      <StarBanner isDisabled={isStarBannerDisabled} setDisableStarBanner={setDisableStarBanner} />
       <OrganizationBanner />
       <div
         className={cn(
-          "flex w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_minmax(10px,1fr)] lg:divide-x",
+          'flex w-full flex-1 flex-col bg-background font-sans antialiased lg:grid lg:grid-cols-[auto_minmax(10px,1fr)] lg:divide-x',
           {
-            "min-h-[calc(100vh-36px)]": isBannerDisplayed,
-            "min-h-screen": !isBannerDisplayed,
+            'min-h-[calc(100vh-36px)]': isBannerDisplayed,
+            'min-h-screen': !isBannerDisplayed,
           },
         )}
       >

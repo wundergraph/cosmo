@@ -1,12 +1,12 @@
-import { CreateGraphForm } from "@/components/create-graph";
-import { FullscreenLayout } from "@/components/layout/fullscreen-layout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { NextPageWithLayout } from "@/lib/page";
-import { HomeIcon } from "@radix-ui/react-icons";
-import Link from "next/link";
-import { useState } from "react";
+import { CreateGraphForm } from '@/components/create-graph';
+import { FullscreenLayout } from '@/components/layout/fullscreen-layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NextPageWithLayout } from '@/lib/page';
+import { HomeIcon } from '@radix-ui/react-icons';
+import Link from 'next/link';
+import { useState } from 'react';
 
 const NewGraphPage: NextPageWithLayout = () => {
   const [isMonograph, setIsMonograph] = useState(false);
@@ -23,7 +23,7 @@ const NewGraphPage: NextPageWithLayout = () => {
       <div className="mx-auto my-8 max-w-screen-sm px-4 md:px-0">
         <Tabs
           onValueChange={(v) => {
-            setIsMonograph(v !== "federated");
+            setIsMonograph(v !== 'federated');
           }}
           defaultValue="federated"
           className="mb-4 w-max"
@@ -35,9 +35,7 @@ const NewGraphPage: NextPageWithLayout = () => {
         </Tabs>
         <Card>
           <CardHeader>
-            <CardTitle>
-              {isMonograph ? "Create Monograph" : "Create Federated Graph"}
-            </CardTitle>
+            <CardTitle>{isMonograph ? 'Create Monograph' : 'Create Federated Graph'}</CardTitle>
           </CardHeader>
           <CardContent>
             <CreateGraphForm isMonograph={isMonograph} />

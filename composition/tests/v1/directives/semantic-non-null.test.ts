@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import {
-  FieldData,
+  type FieldData,
   ID_SCALAR,
   invalidDirectiveError,
   parse,
@@ -10,8 +10,8 @@ import {
   semanticNonNullInconsistentLevelsError,
   semanticNonNullLevelsIndexOutOfBoundsErrorMessage,
   semanticNonNullLevelsNonNullErrorMessage,
-  Subgraph,
-  SubgraphName,
+  type Subgraph,
+  type SubgraphName,
 } from '../../../src';
 import {
   federateSubgraphsFailure,

@@ -1,7 +1,7 @@
-import { LintConfig } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-import { lintCategories } from "./constants";
+import { LintConfig } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+import { lintCategories } from './constants';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -25,13 +25,7 @@ export function distinctBy<T, TKey>(source: T[], keySelector: (item: T) => TKey)
   });
 }
 
-export const checkUserAccess = ({
-  rolesToBe,
-  userRoles,
-}: {
-  rolesToBe: string[];
-  userRoles: string[];
-}) => {
+export const checkUserAccess = ({ rolesToBe, userRoles }: { rolesToBe: string[]; userRoles: string[] }) => {
   for (const role of rolesToBe) {
     if (userRoles.includes(role)) {
       return true;
@@ -44,18 +38,14 @@ export const capitalize = (str: string) => {
   return str.charAt(0).toUpperCase() + str.slice(1);
 };
 
-export const getHighestPriorityRole = ({
-  userRoles,
-}: {
-  userRoles: string[];
-}) => {
-  if (userRoles.includes("admin")) {
-    return "admin";
+export const getHighestPriorityRole = ({ userRoles }: { userRoles: string[] }) => {
+  if (userRoles.includes('admin')) {
+    return 'admin';
   }
-  if (userRoles.includes("developer")) {
-    return "developer";
+  if (userRoles.includes('developer')) {
+    return 'developer';
   }
-  return "viewer";
+  return 'viewer';
 };
 
 export const countLintConfigsByCategory = (lintConfigs: LintConfig[]) => {
@@ -77,9 +67,5 @@ export const countLintConfigsByCategory = (lintConfigs: LintConfig[]) => {
     }
   }
 
-  return [
-    countNamingConventionRules,
-    countAlphabeticalSortRules,
-    countOtherRules,
-  ];
+  return [countNamingConventionRules, countAlphabeticalSortRules, countOtherRules];
 };

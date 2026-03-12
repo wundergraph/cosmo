@@ -144,6 +144,7 @@ type Employee implements Identifiable @key(fields: "id") {
   details: Details! @shareable
   id: Int!
   tag: String!
+  expertise: String!
   role: RoleType!
   notes: String @shareable
   updatedAt: String!

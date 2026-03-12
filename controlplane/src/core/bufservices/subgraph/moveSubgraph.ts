@@ -3,13 +3,15 @@ import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import { MoveGraphRequest, MoveGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { PublicError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError, newCompositionOptions } from '../../util.js';
+import { enrichLogger, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
 export function moveSubgraph(
@@ -25,6 +27,7 @@ export function moveSubgraph(
 
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
       authContext.organizationId,
@@ -82,6 +85,11 @@ export function moveSubgraph(
       authContext,
     });
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
+
     const { compositionErrors, updatedFederatedGraphs, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
         const auditLogRepo = new AuditLogRepository(tx);
@@ -117,7 +125,10 @@ export function moveSubgraph(
               jwtSecret: opts.admissionWebhookJWTSecret,
             },
             opts.chClient!,
-            newCompositionOptions(req.disableResolvabilityValidation),
+            {
+              disableResolvabilityValidation: req.disableResolvabilityValidation,
+              ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+            },
           );
 
         await auditLogRepo.addAuditLog({

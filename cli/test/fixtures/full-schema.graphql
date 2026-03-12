@@ -1,5 +1,22 @@
 extend schema
-@link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: [
+      "@authenticated"
+      "@composeDirective"
+      "@external"
+      "@extends"
+      "@inaccessible"
+      "@interfaceObject"
+      "@override"
+      "@provides"
+      "@key"
+      "@requires"
+      "@requiresScopes"
+      "@shareable"
+      "@tag"
+    ]
+  )
 
 schema {
   query: Query
@@ -24,8 +41,8 @@ type Mutation {
 input ProjectInput {
   name: String!
   description: String
-  startDate: String   # ISO date
-  endDate: String     # ISO date
+  startDate: String # ISO date
+  endDate: String # ISO date
   status: ProjectStatus!
 }
 
@@ -33,14 +50,14 @@ type Project @key(fields: "id") {
   id: ID!
   name: String!
   description: String
-  startDate: String   # ISO date
-  endDate: String     # ISO date
+  startDate: String # ISO date
+  endDate: String # ISO date
   status: ProjectStatus!
   # Federated references:
-  teamMembers: [Employee!]! 
-  relatedProducts: [Product!]!  # from products subgraph
+  teamMembers: [Employee!]!
+  relatedProducts: [Product!]! # from products subgraph
   # Project milestones or checkpoints
-  milestoneIds: [String!]  # Array of milestone identifiers
+  milestoneIds: [String!] # Array of milestone identifiers
 }
 
 enum ProjectStatus {
@@ -51,14 +68,13 @@ enum ProjectStatus {
 }
 
 type Employee @key(fields: "id") {
-  id: Int! 
+  id: Int!
   # New field resolved by this subgraph:
   projects: [Project!]
 }
 
 type Product @key(fields: "upc") {
-  upc: String! 
+  upc: String!
   # Projects contributing to this product:
   projects: [Project!]
 }
-

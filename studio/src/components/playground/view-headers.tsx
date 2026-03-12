@@ -1,14 +1,8 @@
-import { cn } from "@/lib/utils";
-import { CodeViewer } from "../code-viewer";
-import { Button } from "../ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { cn } from '@/lib/utils';
+import { CodeViewer } from '../code-viewer';
+import { Button } from '../ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
 export const ViewHeaders = ({
   requestHeaders,
@@ -21,16 +15,13 @@ export const ViewHeaders = ({
 }) => {
   return (
     <Dialog>
-      <DialogTrigger
-        asChild={asChild}
-        className={cn(!asChild && "text-primary")}
-      >
+      <DialogTrigger asChild={asChild} className={cn(!asChild && 'text-primary')}>
         {asChild ? (
           <Button variant="secondary" size="sm" className="flex-1">
             <span className="flex-shrink-0">View Headers</span>
           </Button>
         ) : (
-          "View Headers"
+          'View Headers'
         )}
       </DialogTrigger>
       <DialogContent className="max-w-2xl">
@@ -44,20 +35,12 @@ export const ViewHeaders = ({
           </TabsList>
           <TabsContent value="request">
             <div className="scrollbar-custom h-96 max-w-[calc(42rem_-_3rem)] overflow-auto rounded border">
-              <CodeViewer
-                code={requestHeaders}
-                language="json"
-                disableLinking
-              />
+              <CodeViewer code={requestHeaders} language="json" disableLinking />
             </div>
           </TabsContent>
           <TabsContent value="response">
             <div className="scrollbar-custom h-96 max-w-[calc(42rem_-_3rem)] overflow-auto rounded border">
-              <CodeViewer
-                code={responseHeaders}
-                language="json"
-                disableLinking
-              />
+              <CodeViewer code={responseHeaders} language="json" disableLinking />
             </div>
           </TabsContent>
         </Tabs>

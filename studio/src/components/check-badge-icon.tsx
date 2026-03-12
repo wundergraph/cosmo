@@ -1,5 +1,5 @@
-import { CheckCircledIcon, CrossCircledIcon } from "@radix-ui/react-icons";
-import { Badge } from "./ui/badge";
+import { CheckCircledIcon, CrossCircledIcon } from '@radix-ui/react-icons';
+import { Badge } from './ui/badge';
 
 const isCheckSuccessful = (
   isComposable: boolean,
@@ -22,8 +22,7 @@ const isCheckSuccessful = (
     isComposable &&
     // If no breaking changes found
     // OR Breaking changes are found, but no client traffic is found and traffic check is not skipped
-    (!isBreaking ||
-      (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
+    (!isBreaking || (isBreaking && !hasClientTraffic && !clientTrafficCheckSkipped)) &&
     !hasLintErrors &&
     !hasGraphPruningErrors &&
     !hasProposalMatchError &&
@@ -36,11 +35,7 @@ const getCheckBadge = (successful: boolean, isForced: boolean) => {
     return <Badge variant="outline">FORCED</Badge>;
   }
 
-  return successful ? (
-    <Badge variant="success">PASSED</Badge>
-  ) : (
-    <Badge variant="destructive">FAILED</Badge>
-  );
+  return successful ? <Badge variant="success">PASSED</Badge> : <Badge variant="destructive">FAILED</Badge>;
 };
 
 const getCheckIcon = (check: boolean) => {

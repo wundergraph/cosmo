@@ -69,7 +69,10 @@ type Config struct {
 	Propagators            []Propagator
 	ResourceAttributes     []attribute.KeyValue
 	// TestMemoryExporter is used for testing purposes. If set, the exporter will be used instead of the configured exporters.
-	TestMemoryExporter  sdktrace.SpanExporter
+	TestMemoryExporter sdktrace.SpanExporter
+	// TestErrorHandler is used for testing purposes. If set, the handler will be used to
+	// handle exporter errors locally instead of relying on the global otel.SetErrorHandler.
+	TestErrorHandler    func(error)
 	ResponseTraceHeader config.ResponseTraceHeader
 	Attributes          []config.CustomAttribute
 	// SanitizeUTF8 configures sanitization of invalid UTF-8 sequences in span attribute values

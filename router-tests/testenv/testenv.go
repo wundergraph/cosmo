@@ -65,6 +65,7 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
+	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 )
 
 var ErrEnvironmentClosed = errors.New("test environment closed")
@@ -89,8 +90,6 @@ var (
 	ConfigWithEdfsRedisJSONTemplate string
 	//go:embed testdata/configWithPlugins.json
 	ConfigWithPluginsJSONTemplate string
-	//go:embed testdata/configWithOCIPlugins.json
-	ConfigWithOCIPluginsJSONTemplate string
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
 
@@ -1531,6 +1530,7 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		})
 
 		c.TestMemoryExporter = testConfig.TraceExporter
+		c.TestErrorHandler = rtrace.NewOtelErrorHandler(testConfig.Logger)
 
 		routerOpts = append(routerOpts,
 			core.WithTracing(c),
@@ -2923,7 +2923,7 @@ func subgraphOptions(ctx context.Context, t testing.TB, logger *zap.Logger, nats
 	}
 	natsPubSubByProviderID := make(map[string]pubsubNats.Adapter, len(DemoNatsProviders))
 	for _, sourceName := range DemoNatsProviders {
-		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", datasource.ProviderOpts{
+		adapter, err := pubsubNats.NewAdapter(ctx, logger, natsData.Params[0].Url, natsData.Params[0].Opts, "hostname", "listenaddr", false, datasource.ProviderOpts{
 			StreamMetricStore: rmetric.NewNoopStreamMetricStore(),
 		})
 		require.NoError(t, err)

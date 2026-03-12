@@ -59,7 +59,8 @@
       "key": "id",
       "rpc": "LookupEmployeeById",
       "request": "LookupEmployeeByIdRequest",
-      "response": "LookupEmployeeByIdResponse"
+      "response": "LookupEmployeeByIdResponse",
+      "requiredFieldMappings": []
     }
   ],
   "typeFieldMappings": [

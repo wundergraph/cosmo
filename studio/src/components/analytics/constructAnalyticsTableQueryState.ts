@@ -1,4 +1,4 @@
-import { AnalyticsViewFilterOperator } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 export const constructAnalyticsTableQueryState = (state: {
   operationName?: string;
@@ -25,12 +25,10 @@ export const createFilterState = ({
 
   if (operationName !== undefined) {
     filterState.push({
-      id: "operationName",
+      id: 'operationName',
       value:
-        operationName === "" // empty string means "unknown operation"
-          ? [
-              `{"label":"-","operator":${AnalyticsViewFilterOperator.EQUALS},"value":""}`,
-            ]
+        operationName === '' // empty string means "unknown operation"
+          ? [`{"label":"-","operator":${AnalyticsViewFilterOperator.EQUALS},"value":""}`]
           : [
               `{"label":"${operationName}","operator":${AnalyticsViewFilterOperator.EQUALS},"value":"${operationName}"}`,
             ],
@@ -39,7 +37,7 @@ export const createFilterState = ({
 
   if (operationHash !== undefined) {
     filterState.push({
-      id: "operationHash",
+      id: 'operationHash',
       value: [
         `{"label":"${operationHash}","operator":${AnalyticsViewFilterOperator.EQUALS},"value":"${operationHash}"}`,
       ],
@@ -48,7 +46,7 @@ export const createFilterState = ({
 
   if (operationPersistedId !== undefined) {
     filterState.push({
-      id: "operationPersistedId",
+      id: 'operationPersistedId',
       value: [
         `{"label":"${operationPersistedId}","operator":${AnalyticsViewFilterOperator.EQUALS},"value":"${operationPersistedId}"}`,
       ],

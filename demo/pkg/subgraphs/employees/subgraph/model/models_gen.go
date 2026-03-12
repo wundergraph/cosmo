@@ -98,6 +98,7 @@ type Employee struct {
 	Details               *Details      `json:"details"`
 	ID                    int           `json:"id"`
 	Tag                   string        `json:"tag"`
+	Expertise             string        `json:"expertise"`
 	Role                  RoleType      `json:"role"`
 	Notes                 *string       `json:"notes,omitempty"`
 	UpdatedAt             string        `json:"updatedAt"`

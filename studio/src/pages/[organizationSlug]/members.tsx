@@ -1,8 +1,8 @@
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { EmptyState } from '@/components/empty-state';
+import { getDashboardLayout } from '@/components/layout/dashboard-layout';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,46 +10,30 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Loader } from "@/components/ui/loader";
-import { Pagination } from "@/components/ui/pagination";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Toolbar } from "@/components/ui/toolbar";
-import { useToast } from "@/components/ui/use-toast";
-import { useFeature } from "@/hooks/use-feature";
-import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useUser } from "@/hooks/use-user";
-import { NextPageWithLayout } from "@/lib/page";
-import {
-  createConnectQueryKey,
-  useMutation,
-  useQuery,
-} from "@connectrpc/connect-query";
-import {
-  EllipsisVerticalIcon,
-  ExclamationTriangleIcon,
-  UserPlusIcon,
-} from "@heroicons/react/24/outline";
-import { Cross1Icon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
-import { useQueryClient } from "@tanstack/react-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { OrgMember } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
+import { Pagination } from '@/components/ui/pagination';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Toolbar } from '@/components/ui/toolbar';
+import { useToast } from '@/components/ui/use-toast';
+import { useFeature } from '@/hooks/use-feature';
+import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { useUser } from '@/hooks/use-user';
+import { NextPageWithLayout } from '@/lib/page';
+import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
+import { EllipsisVerticalIcon, ExclamationTriangleIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { Cross1Icon, MagnifyingGlassIcon } from '@radix-ui/react-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { OrgMember } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import {
   getOrganizationMembers,
   getPendingOrganizationMembers,
@@ -57,17 +41,17 @@ import {
   isMemberLimitReached,
   removeInvitation,
   removeOrganizationMember,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { useState } from "react";
-import { useDebounce } from "use-debounce";
-import { z } from "zod";
-import { usePaginationParams } from "@/hooks/use-pagination-params";
-import { UpdateMemberGroupDialog } from "@/components/members/update-member-group-dialog";
-import { useIsAdmin } from "@/hooks/use-is-admin";
-import { formatDateTime } from "@/lib/format-date";
-import { MultiGroupSelect } from "@/components/multi-group-select";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useState } from 'react';
+import { useDebounce } from 'use-debounce';
+import { z } from 'zod';
+import { usePaginationParams } from '@/hooks/use-pagination-params';
+import { UpdateMemberGroupDialog } from '@/components/members/update-member-group-dialog';
+import { useIsAdmin } from '@/hooks/use-is-admin';
+import { formatDateTime } from '@/lib/format-date';
+import { MultiGroupSelect } from '@/components/multi-group-select';
 
 const emailInputSchema = z.object({
   email: z.string().email(),
@@ -85,7 +69,7 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
     reset,
     handleSubmit,
   } = useZodForm<EmailInput>({
-    mode: "onChange",
+    mode: 'onChange',
     schema: emailInputSchema,
   });
 
@@ -104,12 +88,12 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
       { email: data.email, groups: data.groups },
       {
         onSuccess: (d) => {
-          sendToast(d.response?.details || "Invited member successfully.");
+          sendToast(d.response?.details || 'Invited member successfully.');
           onSuccess();
           reset();
         },
         onError: (error) => {
-          sendToast("Could not invite the member. Please try again.");
+          sendToast('Could not invite the member. Please try again.');
         },
       },
     );
@@ -118,17 +102,8 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
   return (
     <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
       <div className="space-y-2">
-        <Input
-          placeholder="janedoe@example.com"
-          className="w-full"
-          type="text"
-          {...register("email")}
-        />
-        {errors.email && (
-          <span className="text-sm text-destructive">
-            {errors.email.message}
-          </span>
-        )}
+        <Input placeholder="janedoe@example.com" className="w-full" type="text" {...register('email')} />
+        {errors.email && <span className="text-sm text-destructive">{errors.email.message}</span>}
       </div>
 
       <div className="space-y-2">
@@ -136,26 +111,23 @@ const InviteForm = ({ onSuccess }: { onSuccess: () => void }) => {
         <MultiGroupSelect
           disabled={isPending}
           value={selectedGroups}
-          onValueChange={(groups) => setValue(
-            'groups',
-            groups.map((g) => g.groupId),
-            { shouldValidate: true, shouldDirty: true, shouldTouch: true },
-          )}
+          onValueChange={(groups) =>
+            setValue(
+              'groups',
+              groups.map((g) => g.groupId),
+              { shouldValidate: true, shouldDirty: true, shouldTouch: true },
+            )
+          }
         />
         {errors.groups && (
           <span className="text-sm text-destructive">
-            {errors.groups.message || "Please select at least one group."}
+            {errors.groups.message || 'Please select at least one group.'}
           </span>
         )}
       </div>
 
       <div className="text-right">
-        <Button
-          type="submit"
-          disabled={!isValid}
-          variant="default"
-          isLoading={isPending}
-        >
+        <Button type="submit" disabled={!isValid} variant="default" isLoading={isPending}>
           Invite
         </Button>
       </div>
@@ -191,19 +163,13 @@ const MemberCard = ({
   return (
     <TableRow>
       <TableCell>{email}</TableCell>
-      {acceptedInvite && (
-        <TableCell className="w-1 whitespace-nowrap">
-          {formatDateTime(new Date(joinedAt!))}
-        </TableCell>
-      )}
+      {acceptedInvite && <TableCell className="w-1 whitespace-nowrap">{formatDateTime(new Date(joinedAt!))}</TableCell>}
       {acceptedInvite ? (
         <TableCell>
-          {active ? (<Badge variant="success">Active</Badge>) : (<Badge variant="destructive">Disabled</Badge>)}
+          {active ? <Badge variant="success">Active</Badge> : <Badge variant="destructive">Disabled</Badge>}
         </TableCell>
       ) : (
-        <TableCell className="text-sm text-gray-800 dark:text-gray-400">
-          Pending
-        </TableCell>
+        <TableCell className="text-sm text-gray-800 dark:text-gray-400">Pending</TableCell>
       )}
       <TableCell>
         <div className="flex min-h-6 items-center justify-between gap-x-4 text-muted-foreground">
@@ -220,24 +186,21 @@ const MemberCard = ({
                     <DropdownMenuItem
                       onClick={() => {
                         const { id } = toast({
-                          description: "Inviting member...",
+                          description: 'Inviting member...',
                         });
                         resendInvitation(
                           { email },
                           {
                             onSuccess: (d) => {
                               update({
-                                description:
-                                  d.response?.details ||
-                                  "Invited member successfully.",
+                                description: d.response?.details || 'Invited member successfully.',
                                 duration: 2000,
                                 id: id,
                               });
                             },
                             onError: (error) => {
                               update({
-                                description:
-                                  "Could not invite the member. Please try again.",
+                                description: 'Could not invite the member. Please try again.',
                                 duration: 3000,
                                 id: id,
                               });
@@ -250,9 +213,7 @@ const MemberCard = ({
                     </DropdownMenuItem>
                   )}
                   {acceptedInvite && onSelect && (
-                    <DropdownMenuItem onClick={onSelect}>
-                      Update member group
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={onSelect}>Update member group</DropdownMenuItem>
                   )}
                   <DropdownMenuItem
                     onClick={() => {
@@ -262,17 +223,14 @@ const MemberCard = ({
                           {
                             onSuccess: (d) => {
                               toast({
-                                description:
-                                  d.response?.details ||
-                                  "Removed member successfully.",
+                                description: d.response?.details || 'Removed member successfully.',
                                 duration: 3000,
                               });
                               refresh();
                             },
                             onError: (error) => {
                               toast({
-                                description:
-                                  "Could not remove member. Please try again.",
+                                description: 'Could not remove member. Please try again.',
                                 duration: 3000,
                               });
                             },
@@ -284,17 +242,14 @@ const MemberCard = ({
                           {
                             onSuccess: (d) => {
                               toast({
-                                description:
-                                  d.response?.details ||
-                                  "Removed invitation successfully.",
+                                description: d.response?.details || 'Removed invitation successfully.',
                                 duration: 3000,
                               });
                               refresh();
                             },
                             onError: (error) => {
                               toast({
-                                description:
-                                  "Could not remove invitation. Please try again.",
+                                description: 'Could not remove invitation. Please try again.',
                                 duration: 3000,
                               });
                             },
@@ -303,7 +258,7 @@ const MemberCard = ({
                       }
                     }}
                   >
-                    {acceptedInvite ? "Remove member" : "Remove invitation"}
+                    {acceptedInvite ? 'Remove member' : 'Remove invitation'}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -323,16 +278,13 @@ const PendingInvitations = () => {
 
   const [debouncedSearch] = useDebounce(search, 500);
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getPendingOrganizationMembers,
-    {
-      pagination: {
-        limit: pageSize,
-        offset,
-      },
-      search: debouncedSearch,
+  const { data, isLoading, error, refetch } = useQuery(getPendingOrganizationMembers, {
+    pagination: {
+      limit: pageSize,
+      offset,
     },
-  );
+    search: debouncedSearch,
+  });
 
   const noOfPages = Math.ceil((data?.totalCount ?? 0) / pageSize);
 
@@ -343,9 +295,7 @@ const PendingInvitations = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve pending invites of this organization."
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -376,9 +326,7 @@ const PendingInvitations = () => {
               );
             })}
             {data.pendingInvitations.length === 0 && (
-              <p className="w-full p-8 text-center italic text-muted-foreground">
-                No invitations found
-              </p>
+              <p className="w-full p-8 text-center italic text-muted-foreground">No invitations found</p>
             )}
           </TableBody>
         </Table>
@@ -414,9 +362,7 @@ const AcceptedMembers = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve the members of this organization."
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -463,9 +409,7 @@ const AcceptedMembers = () => {
             })}
           </TableBody>
           {data.members.length === 0 && (
-            <p className="w-full p-8 text-center italic text-muted-foreground">
-              No members found
-            </p>
+            <p className="w-full p-8 text-center italic text-muted-foreground">No members found</p>
           )}
         </Table>
       </TableWrapper>
@@ -475,7 +419,7 @@ const AcceptedMembers = () => {
 };
 
 const MembersToolbar = () => {
-  const usersFeature = useFeature("users");
+  const usersFeature = useFeature('users');
   const user = useUser();
   const organizationSlug = user?.currentOrganization.slug;
   const isAdmin = useIsAdmin();
@@ -501,28 +445,23 @@ const MembersToolbar = () => {
         </DialogTrigger>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              {!limitReached ? "Invite Member" : "User limit reached"}
-            </DialogTitle>
+            <DialogTitle>{!limitReached ? 'Invite Member' : 'User limit reached'}</DialogTitle>
             <DialogDescription>
               {!limitReached
-                ? "Send an invite to an email id to invite them into your organization"
+                ? 'Send an invite to an email id to invite them into your organization'
                 : `You have added ${data?.memberCount} of ${usersFeature?.limit} users, please upgrade your account to increase your limits.`}
             </DialogDescription>
           </DialogHeader>
           {!limitReached && (
             <InviteForm
               onSuccess={() => {
-                const pendingKey = createConnectQueryKey(
-                  getPendingOrganizationMembers,
-                  {
-                    pagination: {
-                      limit: pageSize,
-                      offset,
-                    },
-                    search,
+                const pendingKey = createConnectQueryKey(getPendingOrganizationMembers, {
+                  pagination: {
+                    limit: pageSize,
+                    offset,
                   },
-                );
+                  search,
+                });
                 client.invalidateQueries({
                   queryKey: pendingKey,
                 });
@@ -542,10 +481,10 @@ const MembersToolbar = () => {
 
 const MembersPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const tab = router.query.tab || "current";
+  const tab = router.query.tab || 'current';
 
   const applyParams = useApplyParams();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [debouncedSearch] = useDebounce(search, 500);
 
   const { pageSize, offset } = usePaginationParams();
@@ -574,10 +513,7 @@ const MembersPage: NextPageWithLayout = () => {
           <TabsList>
             <TabsTrigger value="current">Current</TabsTrigger>
             <TabsTrigger value="pending" className="gap-x-1">
-              Pending{" "}
-              {(data?.totalCount ?? 0) > 0 && (
-                <Badge className="px-2">{data?.totalCount}</Badge>
-              )}
+              Pending {(data?.totalCount ?? 0) > 0 && <Badge className="px-2">{data?.totalCount}</Badge>}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -597,7 +533,7 @@ const MembersPage: NextPageWithLayout = () => {
               variant="ghost"
               className="absolute bottom-0 right-0 top-0 my-auto rounded-l-none"
               onClick={() => {
-                setSearch("");
+                setSearch('');
                 applyParams({ search: null });
               }}
             >
@@ -606,19 +542,13 @@ const MembersPage: NextPageWithLayout = () => {
           )}
         </div>
       </div>
-      {tab === "current" ? <AcceptedMembers /> : <PendingInvitations />}
+      {tab === 'current' ? <AcceptedMembers /> : <PendingInvitations />}
     </div>
   );
 };
 
 MembersPage.getLayout = (page) => {
-  return getDashboardLayout(
-    page,
-    "Members",
-    "Manage all the members of your organization",
-    null,
-    <MembersToolbar />,
-  );
+  return getDashboardLayout(page, 'Members', 'Manage all the members of your organization', null, <MembersToolbar />);
 };
 
 export default MembersPage;

@@ -1,62 +1,44 @@
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { getCheckIcon } from "@/components/check-badge-icon";
-import {
-  DatePickerWithRange,
-  DateRangePickerChangeHandler,
-} from "@/components/date-picker-with-range";
-import { EmptyState } from "@/components/empty-state";
-import {
-  GraphPageLayout,
-  getGraphLayout,
-} from "@/components/layout/graph-layout";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
-import { Pagination } from "@/components/ui/pagination";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import { Toolbar } from "@/components/ui/toolbar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useFeature } from "@/hooks/use-feature";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useUser } from "@/hooks/use-user";
-import { formatDateTime } from "@/lib/format-date";
-import { createDateRange } from "@/lib/insights-helpers";
-import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
-import { useQuery } from "@connectrpc/connect-query";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { InfoCircledIcon } from "@radix-ui/react-icons";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getProposalsByFederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { formatDistanceToNow, formatISO } from "date-fns";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { useWorkspace } from "@/hooks/use-workspace";
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useDateRangeQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { getCheckIcon } from '@/components/check-badge-icon';
+import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
+import { EmptyState } from '@/components/empty-state';
+import { GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Loader } from '@/components/ui/loader';
+import { Pagination } from '@/components/ui/pagination';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { Toolbar } from '@/components/ui/toolbar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useFeature } from '@/hooks/use-feature';
+import { useFeatureLimit } from '@/hooks/use-feature-limit';
+import { useUser } from '@/hooks/use-user';
+import { formatDateTime } from '@/lib/format-date';
+import { createDateRange } from '@/lib/insights-helpers';
+import { NextPageWithLayout } from '@/lib/page';
+import { cn } from '@/lib/utils';
+import { useQuery } from '@connectrpc/connect-query';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { InfoCircledIcon } from '@radix-ui/react-icons';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { getProposalsByFederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { formatDistanceToNow, formatISO } from 'date-fns';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useWorkspace } from '@/hooks/use-workspace';
 
 const ProposalsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const user = useUser();
-  const proposalsFeature = useFeature("proposals");
+  const proposalsFeature = useFeature('proposals');
   const federatedGraphName = router.query.slug as string;
-  const { namespace: { name: namespace } } = useWorkspace();
-  const pageNumber = router.query.page
-    ? parseInt(router.query.page as string)
-    : 1;
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
+  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
 
-  const limit = Number.parseInt((router.query.pageSize as string) || "10");
+  const limit = Number.parseInt((router.query.pageSize as string) || '10');
 
   const {
     dateRange: { start, end },
@@ -103,9 +85,7 @@ const ProposalsPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(
-                `/${user?.currentOrganization.slug}/policies?namespace=${router.query.namespace}#proposals`,
-              );
+              router.push(`/${user?.currentOrganization.slug}/policies?namespace=${router.query.namespace}#proposals`);
             }}
           >
             Configure Proposals
@@ -120,9 +100,7 @@ const ProposalsPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve proposals"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -150,19 +128,12 @@ const ProposalsPage: NextPageWithLayout = () => {
           <TableBody>
             {paginatedProposals.length !== 0 ? (
               paginatedProposals.map((proposal) => {
-                const {
-                  id,
-                  name,
-                  createdAt,
-                  createdByEmail,
-                  state,
-                  subgraphs,
-                } = proposal;
+                const { id, name, createdAt, createdByEmail, state, subgraphs } = proposal;
                 // These fields will be available after the RPC is updated
                 const latestCheckSuccess = (proposal as any).latestCheckSuccess;
                 const latestCheckId = (proposal as any).latestCheckId;
 
-                const path = `${router.asPath.split("?")[0]}/${id}`;
+                const path = `${router.asPath.split('?')[0]}/${id}`;
                 return (
                   <TableRow
                     key={id}
@@ -171,10 +142,7 @@ const ProposalsPage: NextPageWithLayout = () => {
                   >
                     <TableCell>
                       <div className="flex flex-col items-start">
-                        <Link
-                          href={path}
-                          className="font-medium text-foreground"
-                        >
+                        <Link href={path} className="font-medium text-foreground">
                           {id}
                         </Link>
                         <Tooltip>
@@ -185,9 +153,7 @@ const ProposalsPage: NextPageWithLayout = () => {
                               })}
                             </span>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            {formatDateTime(new Date(createdAt))}
-                          </TooltipContent>
+                          <TooltipContent side="bottom">{formatDateTime(new Date(createdAt))}</TooltipContent>
                         </Tooltip>
                       </div>
                     </TableCell>
@@ -196,15 +162,13 @@ const ProposalsPage: NextPageWithLayout = () => {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={cn("gap-2 py-1.5", {
-                          "border-success/20 bg-success/10 text-success hover:bg-success/20":
-                            state === "APPROVED",
-                          "border-warning/20 bg-warning/10 text-warning hover:bg-warning/20":
-                            state === "DRAFT",
-                          "border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20":
-                            state === "CLOSED",
-                          "border-purple-400/20 bg-purple-400/10 text-purple-400 hover:bg-purple-400/20":
-                            state === "PUBLISHED",
+                        className={cn('gap-2 py-1.5', {
+                          'border-success/20 bg-success/10 text-success hover:bg-success/20': state === 'APPROVED',
+                          'border-warning/20 bg-warning/10 text-warning hover:bg-warning/20': state === 'DRAFT',
+                          'border-destructive/20 bg-destructive/10 text-destructive hover:bg-destructive/20':
+                            state === 'CLOSED',
+                          'border-purple-400/20 bg-purple-400/10 text-purple-400 hover:bg-purple-400/20':
+                            state === 'PUBLISHED',
                         })}
                       >
                         <span>{state}</span>
@@ -218,23 +182,14 @@ const ProposalsPage: NextPageWithLayout = () => {
                           className="flex items-center gap-2"
                         >
                           {getCheckIcon(latestCheckSuccess)}
-                          <span>
-                            {latestCheckSuccess ? "Successful" : "Failed"}
-                          </span>
+                          <span>{latestCheckSuccess ? 'Successful' : 'Failed'}</span>
                         </Link>
                       ) : (
-                        <span className="text-muted-foreground">
-                          No checks run
-                        </span>
+                        <span className="text-muted-foreground">No checks run</span>
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      <Button
-                        asChild
-                        variant="ghost"
-                        size="sm"
-                        className="table-action"
-                      >
+                      <Button asChild variant="ghost" size="sm" className="table-action">
                         <Link href={path}>View</Link>
                       </Button>
                     </TableCell>
@@ -264,10 +219,7 @@ const ProposalToolbar = () => {
     range,
   } = useDateRangeQueryState(168);
 
-  const onDateRangeChange: DateRangePickerChangeHandler = ({
-    dateRange,
-    range,
-  }) => {
+  const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange, range }) => {
     if (range) {
       applyParams({
         range: range.toString(),
@@ -286,7 +238,7 @@ const ProposalToolbar = () => {
     }
   };
 
-  const proposalRetention = useFeatureLimit("proposal-retention", 30);
+  const proposalRetention = useFeatureLimit('proposal-retention', 30);
 
   return (
     <Toolbar>
@@ -302,15 +254,11 @@ const ProposalToolbar = () => {
 
 ProposalsPage.getLayout = (page) =>
   getGraphLayout(
-    <GraphPageLayout
-      title="Proposals"
-      subtitle="A record of schema change proposals"
-      toolbar={<ProposalToolbar />}
-    >
+    <GraphPageLayout title="Proposals" subtitle="A record of schema change proposals" toolbar={<ProposalToolbar />}>
       {page}
     </GraphPageLayout>,
     {
-      title: "Proposals",
+      title: 'Proposals',
     },
   );
 

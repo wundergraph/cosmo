@@ -1,4 +1,4 @@
-import { AnalyticsViewFilterOperator } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
+import { AnalyticsViewFilterOperator } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 export const defaultFilterFn = (row: any, id: any, value: any) => {
   let isFiltered = false;
@@ -32,15 +32,10 @@ export const defaultFilterFn = (row: any, id: any, value: any) => {
     if (filterOption.operator === AnalyticsViewFilterOperator.LESS_THAN) {
       isFiltered = targetValue < filterOption.value;
     }
-    if (
-      filterOption.operator ===
-      AnalyticsViewFilterOperator.GREATER_THAN_OR_EQUAL
-    ) {
+    if (filterOption.operator === AnalyticsViewFilterOperator.GREATER_THAN_OR_EQUAL) {
       isFiltered = targetValue >= filterOption.value;
     }
-    if (
-      filterOption.operator === AnalyticsViewFilterOperator.LESS_THAN_OR_EQUAL
-    ) {
+    if (filterOption.operator === AnalyticsViewFilterOperator.LESS_THAN_OR_EQUAL) {
       isFiltered = targetValue <= filterOption.value;
     }
     if (

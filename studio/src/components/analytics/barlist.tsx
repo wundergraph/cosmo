@@ -1,7 +1,7 @@
-import { cn } from "@/lib/utils";
-import React from "react";
-import Link from "next/link";
-import { Url } from "next/dist/shared/lib/router/router";
+import { cn } from '@/lib/utils';
+import React from 'react';
+import Link from 'next/link';
+import { Url } from 'next/dist/shared/lib/router/router';
 
 type Bar = {
   key: string;
@@ -65,12 +65,8 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
   }
 
   return (
-    <div
-      ref={ref}
-      className={cn("flex justify-between space-x-6", className)}
-      {...other}
-    >
-      <div className={cn("relative w-full")}>
+    <div ref={ref} className={cn('flex justify-between space-x-6', className)} {...other}>
+      <div className={cn('relative w-full')}>
         {data.map((item, idx) => {
           const Icon = item.icon;
 
@@ -78,25 +74,20 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
             <div
               key={item.key}
               className={cn(
-                "flex items-center rounded-sm bg-primary/30 text-secondary-foreground",
+                'flex items-center rounded-sm bg-primary/30 text-secondary-foreground',
                 `h-${rowHeight}`,
                 rowClassName,
-                idx === data.length - 1 ? "mb-0" : "mb-2",
+                idx === data.length - 1 ? 'mb-0' : 'mb-2',
               )}
               style={{
                 width: `${widths[idx]}%`,
-                transition: showAnimation ? "all 1s" : "",
+                transition: showAnimation ? 'all 1s' : '',
               }}
             >
-              <div className={cn("absolute left-2 flex w-full text-sm")}>
-                {Icon ? <Icon className={cn("mr-2 h-5 w-5")} /> : null}
+              <div className={cn('absolute left-2 flex w-full text-sm')}>
+                {Icon ? <Icon className={cn('mr-2 h-5 w-5')} /> : null}
                 {item.href ? (
-                  <Link
-                    href={item.href}
-                    target={item.target}
-                    rel="noreferrer"
-                    className={cn("flex-1 truncate")}
-                  >
+                  <Link href={item.href} target={item.target} rel="noreferrer" className={cn('flex-1 truncate')}>
                     {item.name}
                   </Link>
                 ) : (
@@ -107,19 +98,13 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
           );
         })}
       </div>
-      <div className={"min-w-min text-right"}>
+      <div className={'min-w-min text-right'}>
         {data.map((item, idx) => (
           <div
             key={item.key}
-            className={cn(
-              "flex items-center justify-end",
-              `h-${rowHeight}`,
-              idx === data.length - 1 ? "mb-0" : "mb-2",
-            )}
+            className={cn('flex items-center justify-end', `h-${rowHeight}`, idx === data.length - 1 ? 'mb-0' : 'mb-2')}
           >
-            <p className={cn("whitespace-nowrap text-sm text-foreground")}>
-              {valueFormatter(item.value)}
-            </p>
+            <p className={cn('whitespace-nowrap text-sm text-foreground')}>{valueFormatter(item.value)}</p>
           </div>
         ))}
       </div>
@@ -127,6 +112,6 @@ const BarList = React.forwardRef<HTMLDivElement, BarListProps>((props, ref) => {
   );
 });
 
-BarList.displayName = "BarList";
+BarList.displayName = 'BarList';
 
 export default BarList;

@@ -1,61 +1,47 @@
-import { cn } from "@/lib/utils";
-import { useQuery } from "@connectrpc/connect-query";
+import { cn } from '@/lib/utils';
+import { useQuery } from '@connectrpc/connect-query';
 import {
   ChartBarIcon,
   ClipboardIcon,
   CommandLineIcon,
   ExclamationTriangleIcon,
   ServerStackIcon,
-} from "@heroicons/react/24/outline";
-import {
-  CheckCircledIcon,
-  Component2Icon,
-  FileTextIcon,
-  HomeIcon,
-  PlayIcon,
-} from "@radix-ui/react-icons";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+} from '@heroicons/react/24/outline';
+import { CheckCircledIcon, Component2Icon, FileTextIcon, HomeIcon, PlayIcon } from '@radix-ui/react-icons';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getFederatedGraphByName,
   getFederatedGraphs,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import {
   GetFederatedGraphByNameResponse,
   GetFederatedGraphsResponse,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useRouter } from "next/router";
-import { Fragment, createContext, useMemo } from "react";
-import { MdOutlineFeaturedPlayList } from "react-icons/md";
-import {
-  PiBracketsCurlyBold,
-  PiCubeFocus,
-  PiDevices,
-  PiGitBranch,
-  PiToggleRight,
-} from "react-icons/pi";
-import { EmptyState } from "../empty-state";
-import { Button } from "../ui/button";
-import { Loader } from "../ui/loader";
-import { PageHeader } from "./head";
-import { LayoutProps } from "./layout";
-import { NavLink, SideNav } from "./sidenav";
-import { useFeature } from "@/hooks/use-feature";
-import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
-import { useWorkspace } from "@/hooks/use-workspace";
-import { useCurrentOrganization } from "@/hooks/use-current-organization";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { useRouter } from 'next/router';
+import { Fragment, createContext, useMemo } from 'react';
+import { MdOutlineFeaturedPlayList } from 'react-icons/md';
+import { PiBracketsCurlyBold, PiCubeFocus, PiDevices, PiGitBranch, PiToggleRight } from 'react-icons/pi';
+import { EmptyState } from '../empty-state';
+import { Button } from '../ui/button';
+import { Loader } from '../ui/loader';
+import { PageHeader } from './head';
+import { LayoutProps } from './layout';
+import { NavLink, SideNav } from './sidenav';
+import { useFeature } from '@/hooks/use-feature';
+import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
+import { useWorkspace } from '@/hooks/use-workspace';
+import { useCurrentOrganization } from '@/hooks/use-current-organization';
 
 export interface GraphContextProps {
-  graph: GetFederatedGraphByNameResponse["graph"];
-  subgraphs: GetFederatedGraphByNameResponse["subgraphs"];
-  graphs: GetFederatedGraphsResponse["graphs"];
+  graph: GetFederatedGraphByNameResponse['graph'];
+  subgraphs: GetFederatedGraphByNameResponse['subgraphs'];
+  graphs: GetFederatedGraphsResponse['graphs'];
   graphRequestToken: string;
-  featureFlagsInLatestValidComposition: GetFederatedGraphByNameResponse["featureFlagsInLatestValidComposition"];
-  featureSubgraphs: GetFederatedGraphByNameResponse["featureSubgraphs"];
+  featureFlagsInLatestValidComposition: GetFederatedGraphByNameResponse['featureFlagsInLatestValidComposition'];
+  featureSubgraphs: GetFederatedGraphByNameResponse['featureSubgraphs'];
 }
 
-export const GraphContext = createContext<GraphContextProps | undefined>(
-  undefined,
-);
+export const GraphContext = createContext<GraphContextProps | undefined>(undefined);
 
 export const GraphLayout = ({ children }: LayoutProps) => {
   const router = useRouter();
@@ -65,15 +51,12 @@ export const GraphLayout = ({ children }: LayoutProps) => {
   const organizationSlug = useCurrentOrganization()?.slug;
   const slug = router.query.slug as string;
 
-  const proposalsFeature = useFeature("proposals");
+  const proposalsFeature = useFeature('proposals');
 
-  const { data, isLoading, error, refetch } = useQuery(
-    getFederatedGraphByName,
-    {
-      name: slug,
-      namespace,
-    },
-  );
+  const { data, isLoading, error, refetch } = useQuery(getFederatedGraphByName, {
+    name: slug,
+    namespace,
+  });
 
   const { data: graphsData } = useQuery(getFederatedGraphs);
 
@@ -86,8 +69,7 @@ export const GraphLayout = ({ children }: LayoutProps) => {
       subgraphs: data.subgraphs,
       graphRequestToken: data.graphRequestToken,
       graphs: graphsData.graphs,
-      featureFlagsInLatestValidComposition:
-        data.featureFlagsInLatestValidComposition,
+      featureFlagsInLatestValidComposition: data.featureFlagsInLatestValidComposition,
       featureSubgraphs: data.featureSubgraphs,
     };
   }, [data, graphsData]);
@@ -97,81 +79,81 @@ export const GraphLayout = ({ children }: LayoutProps) => {
 
     const graphLinks = [
       {
-        title: "Overview",
+        title: 'Overview',
         href: basePath,
         icon: <HomeIcon className="h-4 w-4" />,
       },
       {
-        title: "Subgraphs",
-        href: basePath + "/subgraphs",
+        title: 'Subgraphs',
+        href: basePath + '/subgraphs',
         icon: <Component2Icon className="h-4 w-4" />,
       },
       {
-        title: "Feature Flags",
-        href: basePath + "/feature-flags",
+        title: 'Feature Flags',
+        href: basePath + '/feature-flags',
         icon: <MdOutlineFeaturedPlayList className="h-4 w-4" />,
         matchExact: false,
       },
       {
-        title: "Playground",
-        href: basePath + "/playground",
+        title: 'Playground',
+        href: basePath + '/playground',
         icon: <PlayIcon className="h-4 w-4" />,
       },
       {
-        title: "Schema",
-        href: basePath + "/schema",
+        title: 'Schema',
+        href: basePath + '/schema',
         matchExact: false,
         icon: <FileTextIcon className="h-4 w-4" />,
       },
       {
-        title: "Analytics",
-        href: basePath + "/analytics",
+        title: 'Analytics',
+        href: basePath + '/analytics',
         matchExact: false,
         icon: <ChartBarIcon className="h-4 w-4" />,
       },
       {
-        title: "Operations",
-        href: basePath + "/operations",
+        title: 'Operations',
+        href: basePath + '/operations',
         matchExact: false,
         icon: <CommandLineIcon className="h-4 w-4" />,
       },
       {
-        title: "Routers",
-        href: basePath + "/routers",
+        title: 'Routers',
+        href: basePath + '/routers',
         matchExact: false,
         icon: <ServerStackIcon className="h-4 w-4" />,
       },
       {
-        title: "Compositions",
-        href: basePath + "/compositions",
+        title: 'Compositions',
+        href: basePath + '/compositions',
         matchExact: false,
         icon: <PiCubeFocus className="h-4 w-4" />,
       },
       {
-        title: "Clients",
-        href: basePath + "/clients",
+        title: 'Clients',
+        href: basePath + '/clients',
         icon: <PiDevices className="h-4 w-4" />,
       },
       {
-        title: "Changelog",
-        href: basePath + "/changelog",
+        title: 'Changelog',
+        href: basePath + '/changelog',
         icon: <PiGitBranch className="h-4 w-4" />,
       },
       {
-        title: "Checks",
-        href: basePath + "/checks",
+        title: 'Checks',
+        href: basePath + '/checks',
         matchExact: false,
         icon: <CheckCircledIcon className="h-4 w-4" />,
       },
       {
-        title: "Overrides",
-        href: basePath + "/overrides",
+        title: 'Overrides',
+        href: basePath + '/overrides',
         matchExact: true,
         icon: <PiToggleRight className="h-4 w-4" />,
       },
       {
-        title: "Cache Operations",
-        href: basePath + "/cache-operations",
+        title: 'Cache Operations',
+        href: basePath + '/cache-operations',
         matchExact: false,
         icon: <PiBracketsCurlyBold className="h-4 w-4" />,
       },
@@ -179,8 +161,8 @@ export const GraphLayout = ({ children }: LayoutProps) => {
 
     if (proposalsFeature?.enabled) {
       graphLinks.push({
-        title: "Proposals",
-        href: basePath + "/proposals",
+        title: 'Proposals',
+        href: basePath + '/proposals',
         matchExact: false,
         icon: <ClipboardIcon className="h-4 w-4" />,
       });
@@ -199,19 +181,13 @@ export const GraphLayout = ({ children }: LayoutProps) => {
         <EmptyState
           icon={<ExclamationTriangleIcon />}
           title="Could not retrieve your federated graph"
-          description={
-            data?.response?.details || error?.message || "Please try again"
-          }
+          description={data?.response?.details || error?.message || 'Please try again'}
           actions={<Button onClick={() => refetch()}>Retry</Button>}
         />
       </div>
     );
   } else {
-    render = (
-      <GraphContext.Provider value={graphContextData}>
-        {children}
-      </GraphContext.Provider>
-    );
+    render = <GraphContext.Provider value={graphContextData}>{children}</GraphContext.Provider>;
   }
 
   return (
@@ -272,23 +248,18 @@ export const GraphPageLayout = ({
       <div className="flex w-full flex-wrap items-center justify-between gap-4 border-b bg-background py-4">
         <div
           className={cn(
-            "flex w-full flex-col justify-between gap-y-4 px-4 md:w-auto lg:flex-row lg:items-center lg:px-6 xl:px-8",
+            'flex w-full flex-col justify-between gap-y-4 px-4 md:w-auto lg:flex-row lg:items-center lg:px-6 xl:px-8',
             className,
           )}
         >
-          <WorkspaceSelector truncateNamespace={false}>
-            {breadcrumb}
-          </WorkspaceSelector>
+          <WorkspaceSelector truncateNamespace={false}>{breadcrumb}</WorkspaceSelector>
           <div className="justify-end">{items}</div>
         </div>
         {toolbar}
       </div>
       <div
         ref={scrollRef}
-        className={cn(
-          "scrollbar-custom h-auto flex-1 overflow-y-auto",
-          noPadding !== true && "px-4 py-6 lg:px-8",
-        )}
+        className={cn('scrollbar-custom h-auto flex-1 overflow-y-auto', noPadding !== true && 'px-4 py-6 lg:px-8')}
       >
         {children}
       </div>

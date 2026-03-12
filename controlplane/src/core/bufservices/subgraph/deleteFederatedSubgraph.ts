@@ -6,19 +6,15 @@ import {
   DeleteFederatedSubgraphRequest,
   DeleteFederatedSubgraphResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FeatureFlagRepository } from '../../repositories/FeatureFlagRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
+import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import {
-  enrichLogger,
-  getFederatedGraphRouterCompatibilityVersion,
-  getLogger,
-  handleError,
-  newCompositionOptions,
-} from '../../util.js';
+import { enrichLogger, getFederatedGraphRouterCompatibilityVersion, getLogger, handleError } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 import { ProposalRepository } from '../../repositories/ProposalRepository.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -38,6 +34,7 @@ export function deleteFederatedSubgraph(
     const proposalRepo = new ProposalRepository(opts.db, authContext.organizationId);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
+    const orgRepo = new OrganizationRepository(logger, opts.db, opts.billingDefaultPlanId);
     const orgWebhooks = new OrganizationWebhookService(
       opts.db,
       authContext.organizationId,
@@ -127,6 +124,11 @@ export function deleteFederatedSubgraph(
       }
     }
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
+
     const { affectedFederatedGraphs, compositionErrors, deploymentErrors, compositionWarnings } =
       await opts.db.transaction(async (tx) => {
         const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);
@@ -182,7 +184,10 @@ export function deleteFederatedSubgraph(
           },
           blobStorage: opts.blobStorage,
           chClient: opts.chClient!,
-          compositionOptions: newCompositionOptions(req.disableResolvabilityValidation),
+          compositionOptions: {
+            disableResolvabilityValidation: req.disableResolvabilityValidation,
+            ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+          },
           federatedGraphs: affectedFederatedGraphs,
         });
 

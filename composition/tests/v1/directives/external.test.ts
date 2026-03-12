@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   allExternalFieldInstancesError,
-  ConfigurationData,
+  type ConfigurationData,
   EXTERNAL,
   externalEntityExtensionKeyFieldWarning,
   externalInterfaceFieldsError,
@@ -14,8 +14,8 @@ import {
   parse,
   requiresDefinedOnNonEntityFieldWarning,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
-  TypeName,
+  type Subgraph,
+  type TypeName,
 } from '../../../src';
 import { EXTERNAL_DIRECTIVE, KEY_DIRECTIVE, OPENFED_FIELD_SET, SCHEMA_QUERY_DEFINITION } from '../utils/utils';
 import {

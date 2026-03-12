@@ -1,30 +1,17 @@
-import useWindowSize from "@/hooks/use-window-size";
-import { useChartData } from "@/lib/insights-helpers";
-import { formatMetric, formatPercentMetric } from "@/lib/format-metric";
-import {
-  OperationRequestCount,
-  RequestSeriesItem,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useId, useMemo } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from "recharts";
-import BarList from "./analytics/barlist";
-import { Badge } from "./ui/badge";
-import { Separator } from "./ui/separator";
-import { useRouter } from "next/router";
-import { constructAnalyticsTableQueryState } from "./analytics/constructAnalyticsTableQueryState";
-import { ChartTooltip } from "./analytics/charts";
-import { Loader } from "@/components/ui/loader";
-import {
-  useAnalyticsQueryState,
-  useDateRangeQueryState,
-} from "@/components/analytics/useAnalyticsQueryState";
+import useWindowSize from '@/hooks/use-window-size';
+import { useChartData } from '@/lib/insights-helpers';
+import { formatMetric, formatPercentMetric } from '@/lib/format-metric';
+import { OperationRequestCount, RequestSeriesItem } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { useId, useMemo } from 'react';
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from 'recharts';
+import BarList from './analytics/barlist';
+import { Badge } from './ui/badge';
+import { Separator } from './ui/separator';
+import { useRouter } from 'next/router';
+import { constructAnalyticsTableQueryState } from './analytics/constructAnalyticsTableQueryState';
+import { ChartTooltip } from './analytics/charts';
+import { Loader } from '@/components/ui/loader';
+import { useAnalyticsQueryState, useDateRangeQueryState } from '@/components/analytics/useAnalyticsQueryState';
 
 const valueFormatter = (number: number) => `${formatMetric(number)}`;
 
@@ -56,15 +43,12 @@ export const RequestChart = ({
 
   const { isMobile } = useWindowSize();
 
-  const { data, ticks, domain, timeFormatter } = useChartData(
-    range,
-    requestSeries,
-  );
+  const { data, ticks, domain, timeFormatter } = useChartData(range, requestSeries);
 
   const color1 = useId();
   const color2 = useId();
 
-  const requestsColor = "hsl(var(--chart-primary))";
+  const requestsColor = 'hsl(var(--chart-primary))';
 
   if (isLoading) {
     return (
@@ -78,13 +62,9 @@ export const RequestChart = ({
     <div className="flex h-full w-full flex-col gap-y-8 rounded-md border p-4 lg:gap-y-4">
       <div className="flex flex-col gap-x-6 gap-y-2 md:flex-row md:items-center">
         <h2 className="flex items-center gap-x-2">
-          <span className="font-semibold leading-none tracking-tight">
-            Requests
-          </span>
+          <span className="font-semibold leading-none tracking-tight">Requests</span>
           <Separator orientation="vertical" className="h-4" />
-          <span className="text-xs text-muted-foreground">
-            Incoming Router requests
-          </span>
+          <span className="text-xs text-muted-foreground">Incoming Router requests</span>
         </h2>
         <div className="flex items-center gap-x-2 text-sm md:ml-auto">
           <div className="h-3 w-3 rounded-full bg-sky-500" />
@@ -95,20 +75,12 @@ export const RequestChart = ({
           <div className="h-3 w-3 rounded-full bg-destructive/75" />
           Errored
           <Badge variant="secondary">
-            {formatPercentMetric((categorized.error / (count || 1)) * 100)} (
-            {formatMetric(categorized.error)})
+            {formatPercentMetric((categorized.error / (count || 1)) * 100)} ({formatMetric(categorized.error)})
           </Badge>
         </div>
       </div>
-      <ResponsiveContainer
-        width={"100%"}
-        height={250}
-        className="my-auto text-xs"
-      >
-        <AreaChart
-          data={data}
-          margin={isMobile ? undefined : { right: 60, top: 10 }}
-        >
+      <ResponsiveContainer width={'100%'} height={250} className="my-auto text-xs">
+        <AreaChart data={data} margin={isMobile ? undefined : { right: 60, top: 10 }}>
           <defs>
             <linearGradient id={color1} x1="0" y1="0" x2="0" y2="1">
               <stop offset="5%" stopColor="#0da2e7" stopOpacity={0.8} />
@@ -146,26 +118,14 @@ export const RequestChart = ({
             stroke={requestsColor}
             fill={`url(#${color1})`}
           />
-          <Area
-            name="Errors"
-            type="monotone"
-            dataKey="erroredRequests"
-            stroke="#ef4444"
-            fill={`url(#${color2})`}
-          />
+          <Area name="Errors" type="monotone" dataKey="erroredRequests" stroke="#ef4444" fill={`url(#${color2})`} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
   );
 };
 
-export const MostRequested = ({
-  data,
-  isLoading,
-}: {
-  data: OperationRequestCount[];
-  isLoading: boolean;
-}) => {
+export const MostRequested = ({ data, isLoading }: { data: OperationRequestCount[]; isLoading: boolean }) => {
   const { asPath } = useRouter();
   const dr = useDateRangeQueryState();
 
@@ -175,11 +135,11 @@ export const MostRequested = ({
         operationName: d.operationName,
         operationHash: d.operationHash,
       });
-      const currentPath = asPath.split?.("#")?.[0]?.split?.("?")?.[0];
+      const currentPath = asPath.split?.('#')?.[0]?.split?.('?')?.[0];
 
       return {
         hash: d.operationHash,
-        name: d.operationName || "-",
+        name: d.operationName || '-',
         value: d.totalRequests,
         href: `${currentPath}/analytics${filterQueryParam}`,
       };
@@ -197,13 +157,9 @@ export const MostRequested = ({
   return (
     <div className="flex h-full w-full flex-col gap-y-4 rounded-md border p-4">
       <h2 className="flex items-center gap-x-2">
-        <span className="font-semibold leading-none tracking-tight">
-          Top 10 Operations
-        </span>
+        <span className="font-semibold leading-none tracking-tight">Top 10 Operations</span>
         <Separator orientation="vertical" className="h-4" />
-        <span className="text-xs text-muted-foreground">
-          Most requested operations
-        </span>
+        <span className="text-xs text-muted-foreground">Most requested operations</span>
       </h2>
       <BarList
         rowClassName="bg-purple-400/20"
@@ -211,13 +167,11 @@ export const MostRequested = ({
           ...op,
           name: (
             <div className="flex">
-              <span className="w-16 text-muted-foreground">
-                {op.hash.slice(0, 6)}
-              </span>
+              <span className="w-16 text-muted-foreground">{op.hash.slice(0, 6)}</span>
               <span className="truncate">{op.name}</span>
             </div>
           ),
-          key: op.hash + "_" + op.name,
+          key: op.hash + '_' + op.name,
         }))}
         showAnimation={true}
         valueFormatter={valueFormatter}

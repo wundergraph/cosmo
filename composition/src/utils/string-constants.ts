@@ -1,5 +1,5 @@
 import { Kind } from 'graphql';
-import { DirectiveName } from '../types/types';
+import { type DirectiveName } from '../types/types';
 
 export const AS = 'as';
 export const AND_UPPER = 'AND';

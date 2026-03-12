@@ -705,21 +705,25 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 	}
 
 	// Currently, we only support custom attributes from the context for OTLP metrics
-	if len(srv.metricConfig.Attributes) > 0 {
+	if !computeSha256 && len(srv.metricConfig.Attributes) > 0 {
 		for _, customAttribute := range srv.metricConfig.Attributes {
 			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
 				computeSha256 = true
 				break
 			}
 		}
-	} else if srv.accessLogsConfig != nil {
+	}
+
+	if !computeSha256 && srv.accessLogsConfig != nil {
 		for _, customAttribute := range append(srv.accessLogsConfig.Attributes, srv.accessLogsConfig.SubgraphAttributes...) {
 			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
 				computeSha256 = true
 				break
 			}
 		}
-	} else if srv.persistedOperationsConfig.Safelist.Enabled || srv.persistedOperationsConfig.LogUnknown {
+	}
+
+	if srv.persistedOperationsConfig.Safelist.Enabled || srv.persistedOperationsConfig.LogUnknown {
 		// In these case, we'll want to compute the sha256 for every operation, in order to check that the operation
 		// is present in the Persisted Operation cache
 		computeSha256 = true

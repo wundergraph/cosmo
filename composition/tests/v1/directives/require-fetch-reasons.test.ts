@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import {
-  ConfigurationData,
-  FieldName,
+  type ConfigurationData,
+  type FieldName,
   INTERFACE,
   parse,
   QUERY,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
-  TypeName,
+  type Subgraph,
+  type TypeName,
 } from '../../../src';
 import { federateSubgraphsSuccess, normalizeString, schemaToSortedNormalizedString } from '../../utils/utils';
 import { REQUEST_FETCH_REASONS_DIRECTIVE, SCHEMA_QUERY_DEFINITION } from '../utils/utils';

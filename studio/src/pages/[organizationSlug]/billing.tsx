@@ -1,49 +1,44 @@
-import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
-import { Toolbar } from "@/components/ui/toolbar";
-import { useToast } from "@/components/ui/use-toast";
-import { useCurrentPlan } from "@/hooks/use-current-plan";
-import { useSubscription } from "@/hooks/use-subscription";
-import { useUser } from "@/hooks/use-user";
-import { formatDate } from "@/lib/format-date";
-import { NextPageWithLayout } from "@/lib/page";
-import { getStripe } from "@/lib/stripe";
-import { cn } from "@/lib/utils";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { AlertDialogDescription } from "@radix-ui/react-alert-dialog";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { EmptyState } from '@/components/empty-state';
+import { getDashboardLayout } from '@/components/layout/dashboard-layout';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Loader } from '@/components/ui/loader';
+import { Toolbar } from '@/components/ui/toolbar';
+import { useToast } from '@/components/ui/use-toast';
+import { useCurrentPlan } from '@/hooks/use-current-plan';
+import { useSubscription } from '@/hooks/use-subscription';
+import { useUser } from '@/hooks/use-user';
+import { formatDate } from '@/lib/format-date';
+import { NextPageWithLayout } from '@/lib/page';
+import { getStripe } from '@/lib/stripe';
+import { cn } from '@/lib/utils';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { AlertDialogDescription } from '@radix-ui/react-alert-dialog';
+import { useQuery, useMutation } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   createBillingPortalSession,
   createCheckoutSession,
   getBillingPlans,
   upgradePlan,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { GetBillingPlansResponse_BillingPlan } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useRouter } from "next/router";
-import React, { useEffect } from "react";
-import { PiCheck } from "react-icons/pi";
-import Link from "next/link";
-import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { GetBillingPlansResponse_BillingPlan } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { useRouter } from 'next/router';
+import React, { useEffect } from 'react';
+import { PiCheck } from 'react-icons/pi';
+import Link from 'next/link';
+import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 
 const billingContactLink = process.env.NEXT_PUBLIC_BILLING_CONTACT_LINK;
 
 const getPrice = (price?: number) => {
   switch (price) {
     case 0:
-      return "Free";
+      return 'Free';
     case -1:
-      return "Custom";
+      return 'Custom';
     default:
       return `$${price} / month`;
   }
@@ -59,9 +54,8 @@ const BillingPage: NextPageWithLayout = () => {
   useEffect(() => {
     if (router.query.success) {
       toast({
-        title: "Account upgraded",
-        description:
-          "Your payment was successful and your account has been upgraded.",
+        title: 'Account upgraded',
+        description: 'Your payment was successful and your account has been upgraded.',
       });
     }
   }, [router.query.success, toast]);
@@ -73,20 +67,15 @@ const BillingPage: NextPageWithLayout = () => {
   const subscription = user?.currentOrganization.subscription;
 
   let alert;
-  if (subscription?.status === "past_due") {
+  if (subscription?.status === 'past_due') {
     alert = (
       <Alert variant="destructive">
         <AlertTitle>Payment required</AlertTitle>
         <AlertDescription>
           <p className="mb-2">
-            Your payment is past due. Please update your payment method to
-            continue using WunderGraph Cosmo.
+            Your payment is past due. Please update your payment method to continue using WunderGraph Cosmo.
           </p>
-          <Button
-            variant="destructive"
-            onClick={() => openPortal()}
-            disabled={isPending}
-          >
+          <Button variant="destructive" onClick={() => openPortal()} disabled={isPending}>
             Update payment method
           </Button>
         </AlertDescription>
@@ -101,9 +90,7 @@ const BillingPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve billing information"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -124,24 +111,16 @@ const BillingPage: NextPageWithLayout = () => {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {data.plans.map((plan) => (
-          <div
-            key={plan.id}
-            className={cn("flex flex-col gap-4 rounded-md border p-4")}
-          >
+          <div key={plan.id} className={cn('flex flex-col gap-4 rounded-md border p-4')}>
             <div>
               <h4 className="text-sm">{plan.name}</h4>
               <p className="text-xl font-medium">{getPrice(plan.price)}</p>
             </div>
             <div className="space-y-1">
               {plan.features.map((feature) => (
-                <div
-                  key={feature.id}
-                  className="flex items-center gap-2 text-sm"
-                >
+                <div key={feature.id} className="flex items-center gap-2 text-sm">
                   <PiCheck className="h-4 w-4 text-success" />
-                  <span className="text-muted-foreground">
-                    {feature.description}
-                  </span>
+                  <span className="text-muted-foreground">{feature.description}</span>
                 </div>
               ))}
             </div>
@@ -160,13 +139,10 @@ const BillingPage: NextPageWithLayout = () => {
               )}
               <UpgradeButton
                 plan={plan}
-                hasSubscription={
-                  subscription && subscription?.status !== "canceled"
-                }
+                hasSubscription={subscription && subscription?.status !== 'canceled'}
                 isCurrent={currentPlan?.id === plan.id}
                 isDowngrade={
-                  currentPlan?.price === -1 ||
-                  (currentPlan?.price ? currentPlan?.price > plan.price : false)
+                  currentPlan?.price === -1 || (currentPlan?.price ? currentPlan?.price > plan.price : false)
                 }
               />
             </div>
@@ -207,11 +183,7 @@ const ManagePaymentButton = () => {
 
   return (
     <Toolbar className="flex-nowrap py-0 lg:w-auto">
-      <Button
-        variant="outline"
-        onClick={() => openPortal()}
-        disabled={isPending}
-      >
+      <Button variant="outline" onClick={() => openPortal()} disabled={isPending}>
         Manage your payment settings
       </Button>
     </Toolbar>
@@ -224,42 +196,32 @@ const SubscriptionStatus = () => {
 
   let status;
 
-  if (subscription?.status === "canceled") {
-    status = "Your subscription has been canceled.";
-  } else if (subscription?.status === "trialing") {
+  if (subscription?.status === 'canceled') {
+    status = 'Your subscription has been canceled.';
+  } else if (subscription?.status === 'trialing') {
     status = (
       <>
-        Your trial will end on{" "}
-        <span className="font-medium text-foreground">
-          {formatDate(new Date(subscription.trialEnd))}
-        </span>
-        .
+        Your trial will end on{' '}
+        <span className="font-medium text-foreground">{formatDate(new Date(subscription.trialEnd))}</span>.
       </>
     );
-  } else if (subscription?.status === "active") {
+  } else if (subscription?.status === 'active') {
     status = subscription.cancelAtPeriodEnd ? (
       <>
-        Your subscription will end on{" "}
-        <span className="font-medium text-foreground">
-          {formatDate(new Date(subscription.currentPeriodEnd))}
-        </span>
-        .
+        Your subscription will end on{' '}
+        <span className="font-medium text-foreground">{formatDate(new Date(subscription.currentPeriodEnd))}</span>.
       </>
     ) : (
       <>
-        Your subscription will renew on{" "}
-        <span className="font-medium text-foreground">
-          {formatDate(new Date(subscription.currentPeriodEnd))}
-        </span>
-        .
+        Your subscription will renew on{' '}
+        <span className="font-medium text-foreground">{formatDate(new Date(subscription.currentPeriodEnd))}</span>.
       </>
     );
   }
 
   return (
     <span>
-      You are currently on the{" "}
-      <Badge variant="outline">{currentPlan?.name}</Badge> plan. {status}
+      You are currently on the <Badge variant="outline">{currentPlan?.name}</Badge> plan. {status}
     </span>
   );
 };
@@ -279,8 +241,7 @@ const UpgradeButton = ({
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const { mutateAsync, isPending } = useMutation(createCheckoutSession);
-  const { mutateAsync: upgradeAsync, isPending: isUpgrading } =
-    useMutation(upgradePlan);
+  const { mutateAsync: upgradeAsync, isPending: isUpgrading } = useMutation(upgradePlan);
 
   const { toast } = useToast();
 
@@ -311,15 +272,15 @@ const UpgradeButton = ({
       setOpen(false);
 
       toast({
-        title: "Account upgraded",
-        description: "Your account has been upgraded.",
+        title: 'Account upgraded',
+        description: 'Your account has been upgraded.',
       });
 
       router.push({
         pathname: router.pathname,
         query: {
           ...router.query,
-          upgrade: "success",
+          upgrade: 'success',
         },
       });
     } catch (e: any) {
@@ -340,11 +301,7 @@ const UpgradeButton = ({
   if (plan.price === -1) {
     return (
       <Button variant="secondary" asChild>
-        <Link
-          href="https://wundergraph.com/contact/sales"
-          target="_blank"
-          rel="noreferrer"
-        >
+        <Link href="https://wundergraph.com/contact/sales" target="_blank" rel="noreferrer">
           Contact us
         </Link>
       </Button>
@@ -363,10 +320,7 @@ const UpgradeButton = ({
     <>
       <Button
         variant="secondary"
-        disabled={
-          isPending ||
-          !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
-        }
+        disabled={isPending || !checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] })}
         onClick={() => upgrade()}
       >
         Upgrade
@@ -376,17 +330,12 @@ const UpgradeButton = ({
         <AlertDialogContent>
           <AlertDialogTitle>Are you sure you want to upgrade?</AlertDialogTitle>
           <AlertDialogDescription>
-            Your account will be upgraded immediately to the{" "}
-            <strong>{plan.name}</strong> plan, and we will charge the price
-            difference to your existing payment method.
+            Your account will be upgraded immediately to the <strong>{plan.name}</strong> plan, and we will charge the
+            price difference to your existing payment method.
           </AlertDialogDescription>
           <div className="flex justify-end gap-2">
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <Button
-              variant="default"
-              onClick={() => confirmUpgrade()}
-              disabled={isUpgrading}
-            >
+            <Button variant="default" onClick={() => confirmUpgrade()} disabled={isUpgrading}>
               Upgrade
             </Button>
           </div>
@@ -397,13 +346,7 @@ const UpgradeButton = ({
 };
 
 BillingPage.getLayout = (page) => {
-  return getDashboardLayout(
-    page,
-    "Billing",
-    <SubscriptionStatus />,
-    undefined,
-    <ManagePaymentButton />,
-  );
+  return getDashboardLayout(page, 'Billing', <SubscriptionStatus />, undefined, <ManagePaymentButton />);
 };
 
 export default BillingPage;

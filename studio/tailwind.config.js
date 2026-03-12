@@ -1,23 +1,18 @@
-import defaultTheme from "tailwindcss/defaultTheme";
-import typography from "@tailwindcss/typography";
-import scrollbar from "tailwind-scrollbar";
-import animate from "tailwindcss-animate";
+import defaultTheme from 'tailwindcss/defaultTheme';
+import typography from '@tailwindcss/typography';
+import scrollbar from 'tailwind-scrollbar';
+import animate from 'tailwindcss-animate';
 
 /** @type {import('tailwindcss').Config} */
 export default {
-  darkMode: ["class"],
-  content: [
-    "./pages/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./app/**/*.{ts,tsx}",
-    "./src/**/*.{ts,tsx}",
-  ],
+  darkMode: ['class'],
+  content: ['./pages/**/*.{ts,tsx}', './components/**/*.{ts,tsx}', './app/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: '2rem',
       screens: {
-        "2xl": "1400px",
+        '2xl': '1400px',
       },
     },
     data: {
@@ -25,96 +20,96 @@ export default {
     },
     extend: {
       screens: {
-        "3xl": "1792px",
-        "4xl": "2048px",
+        '3xl': '1792px',
+        '4xl': '2048px',
       },
       fontFamily: {
-        sans: ["Inter", ...defaultTheme.fontFamily.sans],
+        sans: ['Inter', ...defaultTheme.fontFamily.sans],
       },
       colors: {
         border: {
-          DEFAULT: "hsl(var(--border))",
-          emphasized: "hsl(var(--border-emphasized))",
+          DEFAULT: 'hsl(var(--border))',
+          emphasized: 'hsl(var(--border-emphasized))',
         },
         input: {
-          DEFAULT: "hsl(var(--input))",
-          active: "hsl(var(--input-active))",
+          DEFAULT: 'hsl(var(--input))',
+          active: 'hsl(var(--input-active))',
         },
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
+        ring: 'hsl(var(--ring))',
+        background: 'hsl(var(--background))',
+        foreground: 'hsl(var(--foreground))',
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          DEFAULT: 'hsl(var(--primary))',
+          foreground: 'hsl(var(--primary-foreground))',
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: 'hsl(var(--secondary))',
+          foreground: 'hsl(var(--secondary-foreground))',
         },
         destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
+          DEFAULT: 'hsl(var(--destructive))',
+          foreground: 'hsl(var(--destructive-foreground))',
         },
         success: {
-          DEFAULT: "hsl(var(--success))",
-          foreground: "hsl(var(--success-foreground))",
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
         },
         warning: {
-          DEFAULT: "hsl(var(--warning))",
+          DEFAULT: 'hsl(var(--warning))',
         },
         muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
+          DEFAULT: 'hsl(var(--muted))',
+          foreground: 'hsl(var(--muted-foreground))',
         },
         accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
+          DEFAULT: 'hsl(var(--accent))',
+          foreground: 'hsl(var(--accent-foreground))',
         },
         popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
+          DEFAULT: 'hsl(var(--popover))',
+          foreground: 'hsl(var(--popover-foreground))',
         },
         tooltip: {
-          DEFAULT: "hsl(var(--tooltip))",
-          foreground: "hsl(var(--tooltip-foreground))",
+          DEFAULT: 'hsl(var(--tooltip))',
+          foreground: 'hsl(var(--tooltip-foreground))',
         },
         card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
+          DEFAULT: 'hsl(var(--card))',
+          foreground: 'hsl(var(--card-foreground))',
         },
         gray: {
-          50: "hsl(var(--gray-50))",
-          100: "hsl(var(--gray-100))",
-          200: "hsl(var(--gray-200))",
-          300: "hsl(var(--gray-300))",
-          400: "hsl(var(--gray-400))",
-          500: "hsl(var(--gray-500))",
-          600: "hsl(var(--gray-600))",
-          700: "hsl(var(--gray-700))",
-          800: "hsl(var(--gray-800))",
-          850: "hsl(var(--gray-850))",
-          900: "hsl(var(--gray-900))",
-          950: "hsl(var(--gray-950))",
+          50: 'hsl(var(--gray-50))',
+          100: 'hsl(var(--gray-100))',
+          200: 'hsl(var(--gray-200))',
+          300: 'hsl(var(--gray-300))',
+          400: 'hsl(var(--gray-400))',
+          500: 'hsl(var(--gray-500))',
+          600: 'hsl(var(--gray-600))',
+          700: 'hsl(var(--gray-700))',
+          800: 'hsl(var(--gray-800))',
+          850: 'hsl(var(--gray-850))',
+          900: 'hsl(var(--gray-900))',
+          950: 'hsl(var(--gray-950))',
         },
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: 'var(--radius)',
+        md: 'calc(var(--radius) - 2px)',
+        sm: 'calc(var(--radius) - 4px)',
       },
       keyframes: {
-        "accordion-down": {
+        'accordion-down': {
           from: { height: 0 },
-          to: { height: "var(--radix-accordion-content-height)" },
+          to: { height: 'var(--radix-accordion-content-height)' },
         },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
+        'accordion-up': {
+          from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: 0 },
         },
       },
       animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
+        'accordion-down': 'accordion-down 0.2s ease-out',
+        'accordion-up': 'accordion-up 0.2s ease-out',
       },
     },
   },
@@ -123,7 +118,7 @@ export default {
     animate,
     scrollbar({
       nocompatible: true,
-      preferredStrategy: "pseudoelements",
+      preferredStrategy: 'pseudoelements',
     }),
   ],
 };

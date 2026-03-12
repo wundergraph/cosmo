@@ -1,6 +1,6 @@
-import { FieldName, NodeName, SelectionPath, SubgraphName } from '../../../types/types';
-import { Edge, GraphNode } from '../../../graph-nodes';
-import { NodeResolutionData } from '../../../node-resolution-data/node-resolution-data';
+import { type FieldName, type NodeName, type SelectionPath, type SubgraphName } from '../../../types/types';
+import { type Edge, type GraphNode } from '../../../graph-nodes';
+import { type NodeResolutionData } from '../../../node-resolution-data/node-resolution-data';
 
 export type EntityWalkerParams = {
   encounteredEntityNodeNames: Set<NodeName>;

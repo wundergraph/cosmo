@@ -462,6 +462,8 @@ func TestCacheWarmup(t *testing.T) {
 						ValidationMisses:                  1,
 						PlanHits:                          4,
 						PlanMisses:                        1,
+						QueryHashMisses:                   2, // 2x miss for safelist queries (raw query body hashed for safelist check)
+						QueryHashHits:                     1, // 1x hit for repeated query body hash
 					},
 				},
 			}, func(t *testing.T, xEnv *testenv.Environment) {

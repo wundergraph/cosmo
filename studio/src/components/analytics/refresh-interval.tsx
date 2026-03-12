@@ -1,31 +1,26 @@
-import { ClockIcon } from "@radix-ui/react-icons";
-import { Button } from "../ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
+import { ClockIcon } from '@radix-ui/react-icons';
+import { Button } from '../ui/button';
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '../ui/dropdown-menu';
 
 export const refreshIntervals = [
   {
-    label: "Off",
+    label: 'Off',
     value: undefined,
   },
   {
-    label: "10s",
+    label: '10s',
     value: 10 * 1000,
   },
   {
-    label: "30s",
+    label: '30s',
     value: 30 * 1000,
   },
   {
-    label: "1m",
+    label: '1m',
     value: 60 * 1000,
   },
   {
-    label: "5m",
+    label: '5m',
     value: 5 * 60 * 1000,
   },
 ];

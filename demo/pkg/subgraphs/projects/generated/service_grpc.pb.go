@@ -44,6 +44,7 @@ const (
 	ProjectsService_QuerySearchProjects_FullMethodName                      = "/service.ProjectsService/QuerySearchProjects"
 	ProjectsService_QueryTasks_FullMethodName                               = "/service.ProjectsService/QueryTasks"
 	ProjectsService_QueryTasksByPriority_FullMethodName                     = "/service.ProjectsService/QueryTasksByPriority"
+	ProjectsService_RequireEmployeeTaggedProjectSummaryById_FullMethodName  = "/service.ProjectsService/RequireEmployeeTaggedProjectSummaryById"
 	ProjectsService_ResolveEmployeeAverageTaskCompletionDays_FullMethodName = "/service.ProjectsService/ResolveEmployeeAverageTaskCompletionDays"
 	ProjectsService_ResolveEmployeeCurrentWorkload_FullMethodName           = "/service.ProjectsService/ResolveEmployeeCurrentWorkload"
 	ProjectsService_ResolveMilestoneDaysUntilDue_FullMethodName             = "/service.ProjectsService/ResolveMilestoneDaysUntilDue"
@@ -94,6 +95,7 @@ type ProjectsServiceClient interface {
 	QuerySearchProjects(ctx context.Context, in *QuerySearchProjectsRequest, opts ...grpc.CallOption) (*QuerySearchProjectsResponse, error)
 	QueryTasks(ctx context.Context, in *QueryTasksRequest, opts ...grpc.CallOption) (*QueryTasksResponse, error)
 	QueryTasksByPriority(ctx context.Context, in *QueryTasksByPriorityRequest, opts ...grpc.CallOption) (*QueryTasksByPriorityResponse, error)
+	RequireEmployeeTaggedProjectSummaryById(ctx context.Context, in *RequireEmployeeTaggedProjectSummaryByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error)
 	ResolveEmployeeAverageTaskCompletionDays(ctx context.Context, in *ResolveEmployeeAverageTaskCompletionDaysRequest, opts ...grpc.CallOption) (*ResolveEmployeeAverageTaskCompletionDaysResponse, error)
 	ResolveEmployeeCurrentWorkload(ctx context.Context, in *ResolveEmployeeCurrentWorkloadRequest, opts ...grpc.CallOption) (*ResolveEmployeeCurrentWorkloadResponse, error)
 	ResolveMilestoneDaysUntilDue(ctx context.Context, in *ResolveMilestoneDaysUntilDueRequest, opts ...grpc.CallOption) (*ResolveMilestoneDaysUntilDueResponse, error)
@@ -366,6 +368,16 @@ func (c *projectsServiceClient) QueryTasksByPriority(ctx context.Context, in *Qu
 	return out, nil
 }
 
+func (c *projectsServiceClient) RequireEmployeeTaggedProjectSummaryById(ctx context.Context, in *RequireEmployeeTaggedProjectSummaryByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequireEmployeeTaggedProjectSummaryByIdResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_RequireEmployeeTaggedProjectSummaryById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *projectsServiceClient) ResolveEmployeeAverageTaskCompletionDays(ctx context.Context, in *ResolveEmployeeAverageTaskCompletionDaysRequest, opts ...grpc.CallOption) (*ResolveEmployeeAverageTaskCompletionDaysResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResolveEmployeeAverageTaskCompletionDaysResponse)
@@ -522,6 +534,7 @@ type ProjectsServiceServer interface {
 	QuerySearchProjects(context.Context, *QuerySearchProjectsRequest) (*QuerySearchProjectsResponse, error)
 	QueryTasks(context.Context, *QueryTasksRequest) (*QueryTasksResponse, error)
 	QueryTasksByPriority(context.Context, *QueryTasksByPriorityRequest) (*QueryTasksByPriorityResponse, error)
+	RequireEmployeeTaggedProjectSummaryById(context.Context, *RequireEmployeeTaggedProjectSummaryByIdRequest) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error)
 	ResolveEmployeeAverageTaskCompletionDays(context.Context, *ResolveEmployeeAverageTaskCompletionDaysRequest) (*ResolveEmployeeAverageTaskCompletionDaysResponse, error)
 	ResolveEmployeeCurrentWorkload(context.Context, *ResolveEmployeeCurrentWorkloadRequest) (*ResolveEmployeeCurrentWorkloadResponse, error)
 	ResolveMilestoneDaysUntilDue(context.Context, *ResolveMilestoneDaysUntilDueRequest) (*ResolveMilestoneDaysUntilDueResponse, error)
@@ -618,6 +631,9 @@ func (UnimplementedProjectsServiceServer) QueryTasks(context.Context, *QueryTask
 }
 func (UnimplementedProjectsServiceServer) QueryTasksByPriority(context.Context, *QueryTasksByPriorityRequest) (*QueryTasksByPriorityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryTasksByPriority not implemented")
+}
+func (UnimplementedProjectsServiceServer) RequireEmployeeTaggedProjectSummaryById(context.Context, *RequireEmployeeTaggedProjectSummaryByIdRequest) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequireEmployeeTaggedProjectSummaryById not implemented")
 }
 func (UnimplementedProjectsServiceServer) ResolveEmployeeAverageTaskCompletionDays(context.Context, *ResolveEmployeeAverageTaskCompletionDaysRequest) (*ResolveEmployeeAverageTaskCompletionDaysResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveEmployeeAverageTaskCompletionDays not implemented")
@@ -1126,6 +1142,24 @@ func _ProjectsService_QueryTasksByPriority_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_RequireEmployeeTaggedProjectSummaryById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequireEmployeeTaggedProjectSummaryByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).RequireEmployeeTaggedProjectSummaryById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_RequireEmployeeTaggedProjectSummaryById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).RequireEmployeeTaggedProjectSummaryById(ctx, req.(*RequireEmployeeTaggedProjectSummaryByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_ResolveEmployeeAverageTaskCompletionDays_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ResolveEmployeeAverageTaskCompletionDaysRequest)
 	if err := dec(in); err != nil {
@@ -1448,6 +1482,10 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "QueryTasksByPriority",
 			Handler:    _ProjectsService_QueryTasksByPriority_Handler,
+		},
+		{
+			MethodName: "RequireEmployeeTaggedProjectSummaryById",
+			Handler:    _ProjectsService_RequireEmployeeTaggedProjectSummaryById_Handler,
 		},
 		{
 			MethodName: "ResolveEmployeeAverageTaskCompletionDays",

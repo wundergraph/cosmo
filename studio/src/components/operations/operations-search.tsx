@@ -1,37 +1,19 @@
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  MagnifyingGlassIcon,
-  XMarkIcon,
-  BarsArrowDownIcon,
-  BarsArrowUpIcon,
-} from "@heroicons/react/24/outline";
-import { Cross2Icon } from "@radix-ui/react-icons";
-import { useCallback, useContext, useMemo } from "react";
-import { AnalyticsFilters } from "@/components/analytics/filters";
-import {
-  OperationsFetchBasedOn,
-  CustomOptions,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import type { AnalyticsFilter } from "@/components/analytics/filters";
-import { GraphContext } from "@/components/layout/graph-layout";
-import { useQuery } from "@connectrpc/connect-query";
-import { getClientsFromAnalytics } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useOperationsFilters } from "@/hooks/use-operations-filters";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { useRouter } from "next/router";
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { MagnifyingGlassIcon, XMarkIcon, BarsArrowDownIcon, BarsArrowUpIcon } from '@heroicons/react/24/outline';
+import { Cross2Icon } from '@radix-ui/react-icons';
+import { useCallback, useContext, useMemo } from 'react';
+import { AnalyticsFilters } from '@/components/analytics/filters';
+import { OperationsFetchBasedOn, CustomOptions } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { AnalyticsFilter } from '@/components/analytics/filters';
+import { GraphContext } from '@/components/layout/graph-layout';
+import { useQuery } from '@connectrpc/connect-query';
+import { getClientsFromAnalytics } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { useOperationsFilters } from '@/hooks/use-operations-filters';
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useRouter } from 'next/router';
 
 interface OperationsSearchProps {
   searchQuery: string;
@@ -46,9 +28,9 @@ interface OperationsSearchProps {
 }
 
 const SORT_OPTIONS = [
-  { value: OperationsFetchBasedOn.REQUESTS, label: "Requests" },
-  { value: OperationsFetchBasedOn.LATENCY, label: "P95 Latency" },
-  { value: OperationsFetchBasedOn.ERRORS, label: "Errors" },
+  { value: OperationsFetchBasedOn.REQUESTS, label: 'Requests' },
+  { value: OperationsFetchBasedOn.LATENCY, label: 'P95 Latency' },
+  { value: OperationsFetchBasedOn.ERRORS, label: 'Errors' },
 ];
 
 export const OperationsSearch = ({
@@ -85,37 +67,31 @@ export const OperationsSearch = ({
     return isNaN(page) || page < 1 ? 1 : page;
   }, [router.query.page]);
 
-  const clients = useMemo(
-    () => clientsData?.clients || [],
-    [clientsData?.clients],
-  );
+  const clients = useMemo(() => clientsData?.clients || [], [clientsData?.clients]);
 
   const handleClearSearch = useCallback(() => {
-    onSearchQueryChange("");
+    onSearchQueryChange('');
   }, [onSearchQueryChange]);
 
   const handleSortDirectionToggle = useCallback(() => {
-    const newDirection = sortDirection === "desc" ? "asc" : "desc";
+    const newDirection = sortDirection === 'desc' ? 'asc' : 'desc';
     onSortDirectionChange(newDirection);
   }, [sortDirection, onSortDirectionChange]);
 
   const handleDeprecatedFieldsFilterSelect = useCallback(
     (value?: string[]) => {
-      onIncludeOperationsWithDeprecatedFieldsOnlyChange(
-        !!value && value.length > 0,
-      );
+      onIncludeOperationsWithDeprecatedFieldsOnlyChange(!!value && value.length > 0);
     },
     [onIncludeOperationsWithDeprecatedFieldsOnlyChange],
   );
 
   const handleClientNameFilterSelect = useCallback(
     (value?: string[]) => {
-      const clientNamesValue =
-        value && value.length > 0 ? value.join(",") : null;
+      const clientNamesValue = value && value.length > 0 ? value.join(',') : null;
 
       applyParams({
         clientNames: clientNamesValue,
-        page: pageNumber !== 1 ? "1" : null,
+        page: pageNumber !== 1 ? '1' : null,
       });
     },
     [pageNumber, applyParams],
@@ -124,8 +100,8 @@ export const OperationsSearch = ({
   const filtersList: AnalyticsFilter[] = useMemo(
     () => [
       {
-        id: "clientName",
-        title: "Clients",
+        id: 'clientName',
+        title: 'Clients',
         options: clients.map((client) => ({
           label: client.name,
           value: client.name,
@@ -134,12 +110,10 @@ export const OperationsSearch = ({
         onSelect: handleClientNameFilterSelect,
       },
       {
-        id: "deprecatedFields",
-        title: "Operations with deprecated fields",
+        id: 'deprecatedFields',
+        title: 'Operations with deprecated fields',
         options: [],
-        selectedOptions: includeOperationsWithDeprecatedFieldsOnly
-          ? ["true"]
-          : [],
+        selectedOptions: includeOperationsWithDeprecatedFieldsOnly ? ['true'] : [],
         onSelect: handleDeprecatedFieldsFilterSelect,
         customOptions: CustomOptions.Boolean,
       },
@@ -160,16 +134,8 @@ export const OperationsSearch = ({
 
   // Check if any filters are active
   const hasActiveFilters = useMemo(() => {
-    return (
-      (clientNames && clientNames.length > 0) ||
-      includeOperationsWithDeprecatedFieldsOnly ||
-      hasSelectedOperation
-    );
-  }, [
-    clientNames,
-    includeOperationsWithDeprecatedFieldsOnly,
-    hasSelectedOperation,
-  ]);
+    return (clientNames && clientNames.length > 0) || includeOperationsWithDeprecatedFieldsOnly || hasSelectedOperation;
+  }, [clientNames, includeOperationsWithDeprecatedFieldsOnly, hasSelectedOperation]);
 
   // Reset all filters and operation selection
   const handleResetFilters = useCallback(() => {
@@ -179,7 +145,7 @@ export const OperationsSearch = ({
       includeOperationsWithDeprecatedFieldsOnly: null,
       operationHash: null,
       operationName: null,
-      page: pageNumber !== 1 ? "1" : null,
+      page: pageNumber !== 1 ? '1' : null,
     });
   }, [applyParams, pageNumber]);
 
@@ -213,12 +179,7 @@ export const OperationsSearch = ({
         <div className="flex flex-wrap items-center gap-2">
           <AnalyticsFilters filters={filtersList} className="w-[280px]" />
           {hasActiveFilters && (
-            <Button
-              onClick={handleResetFilters}
-              variant="outline"
-              size="sm"
-              className="border-dashed"
-            >
+            <Button onClick={handleResetFilters} variant="outline" size="sm" className="border-dashed">
               <Cross2Icon className="mr-2 h-4 w-4" />
               Reset
             </Button>
@@ -234,11 +195,9 @@ export const OperationsSearch = ({
                 size="icon"
                 onClick={handleSortDirectionToggle}
                 className="h-6 w-6"
-                aria-label={`Sort ${
-                  sortDirection === "desc" ? "ascending" : "descending"
-                }`}
+                aria-label={`Sort ${sortDirection === 'desc' ? 'ascending' : 'descending'}`}
               >
-                {sortDirection === "desc" ? (
+                {sortDirection === 'desc' ? (
                   <BarsArrowDownIcon className="h-4 w-4" />
                 ) : (
                   <BarsArrowUpIcon className="h-4 w-4" />
@@ -246,16 +205,12 @@ export const OperationsSearch = ({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>
-                Sort {sortDirection === "desc" ? "ascending" : "descending"}
-              </p>
+              <p>Sort {sortDirection === 'desc' ? 'ascending' : 'descending'}</p>
             </TooltipContent>
           </Tooltip>
           <Select
             value={fetchBasedOn.toString()}
-            onValueChange={(value) =>
-              onFetchBasedOnChange(Number(value) as OperationsFetchBasedOn)
-            }
+            onValueChange={(value) => onFetchBasedOnChange(Number(value) as OperationsFetchBasedOn)}
           >
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Sort by..." />

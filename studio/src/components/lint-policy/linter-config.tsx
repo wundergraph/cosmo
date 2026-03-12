@@ -1,47 +1,28 @@
-import { docsBaseURL, lintCategories } from "@/lib/constants";
-import { cn, countLintConfigsByCategory } from "@/lib/utils";
-import { useMutation } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { docsBaseURL, lintCategories } from '@/lib/constants';
+import { cn, countLintConfigsByCategory } from '@/lib/utils';
+import { useMutation } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   configureNamespaceLintConfig,
   enableLintingForTheNamespace,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
 import {
   GetNamespaceLintConfigResponse,
   LintConfig,
   LintSeverity,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import Link from "next/link";
-import { useState, useEffect } from "react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "../ui/accordion";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../ui/card";
-import { Checkbox } from "../ui/checkbox";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
-import { Switch } from "../ui/switch";
-import { useToast } from "../ui/use-toast";
-import { useCheckUserAccess } from "@/hooks/use-check-user-access";
-import { useWorkspace } from "@/hooks/use-workspace";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+import { Checkbox } from '../ui/checkbox';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '../ui/select';
+import { Switch } from '../ui/switch';
+import { useToast } from '../ui/use-toast';
+import { useCheckUserAccess } from '@/hooks/use-check-user-access';
+import { useWorkspace } from '@/hooks/use-workspace';
 
 export const SeverityDropdown = ({
   onChange,
@@ -49,7 +30,7 @@ export const SeverityDropdown = ({
   disabled,
 }: {
   onChange: (value: string) => void;
-  value: "error" | "warn";
+  value: 'error' | 'warn';
   disabled: boolean;
 }) => {
   return (
@@ -66,7 +47,7 @@ export const SeverityDropdown = ({
       <SelectContent>
         <SelectGroup>
           <SelectLabel>Lint Severity</SelectLabel>
-          {["warn", "error"].map((pageSize) => (
+          {['warn', 'error'].map((pageSize) => (
             <SelectItem key={pageSize} value={`${pageSize}`}>
               {pageSize}
             </SelectItem>
@@ -77,42 +58,28 @@ export const SeverityDropdown = ({
   );
 };
 
-const findRuleByName = (
-  rules: LintConfig[],
-  candidateName: string,
-): LintConfig | undefined => rules.find((l) => l.ruleName === candidateName);
+const findRuleByName = (rules: LintConfig[], candidateName: string): LintConfig | undefined =>
+  rules.find((l) => l.ruleName === candidateName);
 
 const ruleHasErrorSeverity = (rules: LintConfig[], name: string): boolean =>
   findRuleByName(rules, name)?.severityLevel === LintSeverity.error;
 
-const setDropdownValueForRule = (
-  rules: LintConfig[],
-  name: string,
-): "error" | "warn" => (ruleHasErrorSeverity(rules, name) ? "error" : "warn");
+const setDropdownValueForRule = (rules: LintConfig[], name: string): 'error' | 'warn' =>
+  ruleHasErrorSeverity(rules, name) ? 'error' : 'warn';
 
-export const LinterConfig = ({
-  data,
-  refetch,
-}: {
-  data: GetNamespaceLintConfigResponse;
-  refetch: () => void;
-}) => {
+export const LinterConfig = ({ data, refetch }: { data: GetNamespaceLintConfigResponse; refetch: () => void }) => {
   const checkUserAccess = useCheckUserAccess();
   const {
     namespace: { name: namespace },
   } = useWorkspace();
 
-  const { mutate: configureLintRules, isPending: isConfiguring } = useMutation(
-    configureNamespaceLintConfig,
-  );
+  const { mutate: configureLintRules, isPending: isConfiguring } = useMutation(configureNamespaceLintConfig);
   const { mutate } = useMutation(enableLintingForTheNamespace);
 
   const { toast } = useToast();
 
   const [linterEnabled, setLinterEnabled] = useState(data.linterEnabled);
-  const [selectedLintRules, setSelectedLintRules] = useState<LintConfig[]>(
-    data.configs,
-  );
+  const [selectedLintRules, setSelectedLintRules] = useState<LintConfig[]>(data.configs);
   const countByCategory = countLintConfigsByCategory(data.configs);
 
   const handleRuleSeverityDropdownChange = (name: string, value: string) => {
@@ -124,15 +91,10 @@ export const LinterConfig = ({
 
       const updatedRule = new LintConfig({
         ...prevState[index],
-        severityLevel:
-          value === "error" ? LintSeverity.error : LintSeverity.warn,
+        severityLevel: value === 'error' ? LintSeverity.error : LintSeverity.warn,
       });
 
-      const newRules = [
-        ...prevState.slice(0, index),
-        updatedRule,
-        ...prevState.slice(index + 1),
-      ];
+      const newRules = [...prevState.slice(0, index), updatedRule, ...prevState.slice(index + 1)];
       return newRules;
     });
   };
@@ -155,7 +117,7 @@ export const LinterConfig = ({
           checked={linterEnabled}
           disabled={
             !checkUserAccess({
-              rolesToBe: ["organization-admin", "organization-developer"],
+              rolesToBe: ['organization-admin', 'organization-developer'],
             })
           }
           onCheckedChange={(checked) => {
@@ -169,9 +131,7 @@ export const LinterConfig = ({
                 onSuccess: (d) => {
                   if (d.response?.code === EnumStatusCode.OK) {
                     toast({
-                      description: checked
-                        ? "Linter enabled successfully."
-                        : "Linter disabled successfully",
+                      description: checked ? 'Linter enabled successfully.' : 'Linter disabled successfully',
                       duration: 3000,
                     });
                   } else if (d.response?.details) {
@@ -185,8 +145,8 @@ export const LinterConfig = ({
                 onError: (error) => {
                   toast({
                     description: checked
-                      ? "Could not enable the linter. Please try again."
-                      : "Could not disable the linter. Please try again.",
+                      ? 'Could not enable the linter. Please try again.'
+                      : 'Could not disable the linter. Please try again.',
                     duration: 3000,
                   });
                 },
@@ -202,14 +162,9 @@ export const LinterConfig = ({
               <CardTitle>Lint Rules</CardTitle>
               <CardDescription className="text-sm text-muted-foreground">
                 {data.linterEnabled
-                  ? "Configure the linter rules and its severity levels for the lint check performed during each check operation of this namespace."
-                  : "Enable the linter to configure the lint rules."}{" "}
-                <Link
-                  href={docsBaseURL + "/studio/policies"}
-                  className="text-primary"
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                  ? 'Configure the linter rules and its severity levels for the lint check performed during each check operation of this namespace.'
+                  : 'Enable the linter to configure the lint rules.'}{' '}
+                <Link href={docsBaseURL + '/studio/policies'} className="text-primary" target="_blank" rel="noreferrer">
                   Learn more
                 </Link>
               </CardDescription>
@@ -222,7 +177,7 @@ export const LinterConfig = ({
               disabled={
                 !data.linterEnabled ||
                 !checkUserAccess({
-                  rolesToBe: ["organization-admin", "organization-developer"],
+                  rolesToBe: ['organization-admin', 'organization-developer'],
                 })
               }
               onClick={() => {
@@ -235,7 +190,7 @@ export const LinterConfig = ({
                     onSuccess: (d) => {
                       if (d.response?.code === EnumStatusCode.OK) {
                         toast({
-                          description: "Lint Policy applied succesfully.",
+                          description: 'Lint Policy applied successfully.',
                           duration: 3000,
                         });
                       } else if (d.response?.details) {
@@ -248,8 +203,7 @@ export const LinterConfig = ({
                     },
                     onError: (error) => {
                       toast({
-                        description:
-                          "Could not apply the lint policy. Please try again.",
+                        description: 'Could not apply the lint policy. Please try again.',
                         duration: 3000,
                       });
                     },
@@ -267,9 +221,8 @@ export const LinterConfig = ({
               return (
                 <AccordionItem value={index.toString()} key={index.toString()}>
                   <AccordionTrigger
-                    className={cn("hover:no-underline", {
-                      "cursor-not-allowed text-muted-foreground":
-                        !data.linterEnabled,
+                    className={cn('hover:no-underline', {
+                      'cursor-not-allowed text-muted-foreground': !data.linterEnabled,
                     })}
                     disabled={!data.linterEnabled}
                   >
@@ -277,14 +230,10 @@ export const LinterConfig = ({
                       <div className="flex items-center gap-x-2">
                         <span>{lintCategory.title}</span>
                         {countByCategory && (
-                          <Badge variant="muted">
-                            {`${countByCategory[index]} of ${lintCategory.rules.length}`}
-                          </Badge>
+                          <Badge variant="muted">{`${countByCategory[index]} of ${lintCategory.rules.length}`}</Badge>
                         )}
                       </div>
-                      <span className="text-left text-muted-foreground">
-                        {lintCategory.description}
-                      </span>
+                      <span className="text-left text-muted-foreground">{lintCategory.description}</span>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
@@ -299,15 +248,10 @@ export const LinterConfig = ({
                               <Checkbox
                                 id={rule.name}
                                 className="h-5 w-5"
-                                checked={selectedLintRules.some(
-                                  (l) => l.ruleName === rule.name,
-                                )}
+                                checked={selectedLintRules.some((l) => l.ruleName === rule.name)}
                                 disabled={
                                   !checkUserAccess({
-                                    rolesToBe: [
-                                      "organization-admin",
-                                      "organization-developer",
-                                    ],
+                                    rolesToBe: ['organization-admin', 'organization-developer'],
                                   })
                                 }
                                 onCheckedChange={(checked) => {
@@ -320,11 +264,7 @@ export const LinterConfig = ({
                                       } as LintConfig,
                                     ]);
                                   } else {
-                                    setSelectedLintRules(
-                                      selectedLintRules.filter(
-                                        (l) => l.ruleName !== rule.name,
-                                      ),
-                                    );
+                                    setSelectedLintRules(selectedLintRules.filter((l) => l.ruleName !== rule.name));
                                   }
                                 }}
                               />
@@ -335,28 +275,15 @@ export const LinterConfig = ({
                                 >
                                   {rule.name}
                                 </label>
-                                <span className="text-sm text-muted-foreground">
-                                  {rule.description}
-                                </span>
+                                <span className="text-sm text-muted-foreground">{rule.description}</span>
                               </div>
                             </div>
 
                             <div className="ml-8 md:ml-0">
                               <SeverityDropdown
-                                value={setDropdownValueForRule(
-                                  selectedLintRules,
-                                  rule.name,
-                                )}
-                                onChange={(value) =>
-                                  handleRuleSeverityDropdownChange(
-                                    rule.name,
-                                    value,
-                                  )
-                                }
-                                disabled={
-                                  !data.linterEnabled ||
-                                  !findRuleByName(selectedLintRules, rule.name)
-                                }
+                                value={setDropdownValueForRule(selectedLintRules, rule.name)}
+                                onChange={(value) => handleRuleSeverityDropdownChange(rule.name, value)}
+                                disabled={!data.linterEnabled || !findRuleByName(selectedLintRules, rule.name)}
                               />
                             </div>
                           </div>

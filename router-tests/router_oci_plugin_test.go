@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 
 	"github.com/wundergraph/cosmo/router-tests/testenv"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
 func TestOCIPlugin_PullAndRun(t *testing.T) {
@@ -28,7 +29,8 @@ func TestOCIPlugin_PullAndRun(t *testing.T) {
 	buildAndPushPluginImage(t, registryHost, "test-org/courses", "v1", coursesBinary)
 
 	testenv.Run(t, &testenv.Config{
-		RouterConfigJSONTemplate: testenv.ConfigWithOCIPluginsJSONTemplate,
+		RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+		ModifyRouterConfig:       addOCIImageReferences,
 		Plugins: testenv.PluginConfig{
 			Enabled:     true,
 			RegistryURL: registryHost,
@@ -53,7 +55,8 @@ func TestOCIPlugin_ImageNotFound(t *testing.T) {
 	// Don't push any images — registry is empty
 
 	testenv.FailsOnStartup(t, &testenv.Config{
-		RouterConfigJSONTemplate: testenv.ConfigWithOCIPluginsJSONTemplate,
+		RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+		ModifyRouterConfig:       addOCIImageReferences,
 		Plugins: testenv.PluginConfig{
 			Enabled:     true,
 			RegistryURL: registryHost,
@@ -75,7 +78,8 @@ func TestOCIPlugin_Restart(t *testing.T) {
 	buildAndPushPluginImage(t, registryHost, "test-org/courses", "v1", coursesBinary)
 
 	testenv.Run(t, &testenv.Config{
-		RouterConfigJSONTemplate: testenv.ConfigWithOCIPluginsJSONTemplate,
+		RouterConfigJSONTemplate: testenv.ConfigWithPluginsJSONTemplate,
+		ModifyRouterConfig:       addOCIImageReferences,
 		LogObservation: testenv.LogObservationConfig{
 			Enabled:  true,
 			LogLevel: zapcore.ErrorLevel,
@@ -105,4 +109,27 @@ func TestOCIPlugin_Restart(t *testing.T) {
 			require.Equal(c, `{"data":{"projects":[{"id":"1","name":"Cloud Migration Overhaul"},{"id":"2","name":"Microservices Revolution"},{"id":"3","name":"AI-Powered Analytics"},{"id":"4","name":"DevOps Transformation"},{"id":"5","name":"Security Overhaul"},{"id":"6","name":"Mobile App Development"},{"id":"7","name":"Data Lake Implementation"}]}}`, response.Body)
 		}, 20*time.Second, 2*time.Second)
 	})
+}
+
+// addOCIImageReferences adds imageReference fields to plugin datasources,
+// deriving the OCI config from the base plugins config at runtime.
+func addOCIImageReferences(routerConfig *nodev1.RouterConfig) {
+	for _, ds := range routerConfig.EngineConfig.DatasourceConfigurations {
+		plugin := ds.GetCustomGraphql().GetGrpc().GetPlugin()
+		if plugin == nil {
+			continue
+		}
+		switch plugin.Name {
+		case "projects":
+			plugin.ImageReference = &nodev1.ImageReference{
+				Repository: "test-org/projects",
+				Reference:  "v1",
+			}
+		case "courses":
+			plugin.ImageReference = &nodev1.ImageReference{
+				Repository: "test-org/courses",
+				Reference:  "v1",
+			}
+		}
+	}
 }

@@ -1,8 +1,4 @@
-export const downloadStringAsFile = (
-  content: string,
-  filename: string,
-  contentType: string
-) => {
+export const downloadStringAsFile = (content: string, filename: string, contentType: string) => {
   // Create a Blob object with the content, and the specified content type
   let blob = new Blob([content], { type: contentType });
 
@@ -10,7 +6,7 @@ export const downloadStringAsFile = (
   let url = URL.createObjectURL(blob);
 
   // Create a hidden anchor element
-  let link = document.createElement("a");
+  let link = document.createElement('a');
   link.href = url;
   link.download = filename;
 

@@ -1,4 +1,4 @@
-import Script from "next/script";
+import Script from 'next/script';
 
 const ACTIVE_CAMPAIGN_SCRIPT_SRC = 'https://diffuser-cdn.app-us1.com/diffuser/diffuser.js';
 

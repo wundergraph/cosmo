@@ -1,11 +1,11 @@
-import { Loader } from "@/components/ui/loader";
-import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@connectrpc/connect-query";
-import { getOperationClients } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useContext } from "react";
-import { GraphContext } from "@/components/layout/graph-layout";
-import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { formatISO, formatDistanceToNow } from "date-fns";
+import { Loader } from '@/components/ui/loader';
+import { Badge } from '@/components/ui/badge';
+import { useQuery } from '@connectrpc/connect-query';
+import { getOperationClients } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { useContext } from 'react';
+import { GraphContext } from '@/components/layout/graph-layout';
+import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { formatISO, formatDistanceToNow } from 'date-fns';
 import {
   Table,
   TableBody,
@@ -15,9 +15,9 @@ import {
   TableHeader,
   TableRow,
   TableWrapper,
-} from "@/components/ui/table";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { Button } from "../ui/button";
+} from '@/components/ui/table';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { Button } from '../ui/button';
 
 interface ClientUsage {
   name: string;
@@ -32,11 +32,7 @@ interface ClientUsageTableProps {
   className?: string;
 }
 
-export const ClientUsageTable = ({
-  operationHash,
-  operationName,
-  className,
-}: ClientUsageTableProps) => {
+export const ClientUsageTable = ({ operationHash, operationName, className }: ClientUsageTableProps) => {
   const graphContext = useContext(GraphContext);
   const { range, dateRange } = useAnalyticsQueryState();
 
@@ -56,26 +52,20 @@ export const ClientUsageTable = ({
           },
     },
     {
-      enabled:
-        !!operationHash &&
-        !!graphContext?.graph?.name &&
-        !!graphContext?.graph?.namespace,
+      enabled: !!operationHash && !!graphContext?.graph?.name && !!graphContext?.graph?.namespace,
     },
   );
 
   const clientUsageData: ClientUsage[] =
     data?.clients?.map((client) => ({
-      name: client.name || "",
-      version: client.version || "",
+      name: client.name || '',
+      version: client.version || '',
       requestCount: Number(client.requestCount || 0),
       lastUsed: new Date(client.lastUsed),
     })) || [];
 
   const totalClients = clientUsageData.length;
-  const totalRequests = clientUsageData.reduce(
-    (sum, client) => sum + client.requestCount,
-    0,
-  );
+  const totalRequests = clientUsageData.reduce((sum, client) => sum + client.requestCount, 0);
   const hasClients = clientUsageData.length > 0;
 
   return (
@@ -83,8 +73,7 @@ export const ClientUsageTable = ({
       <div className="mb-4">
         <h3 className="text-md font-semibold">Client Usage</h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Clients that have used this operation. Sorted by last used in
-          descending order.
+          Clients that have used this operation. Sorted by last used in descending order.
         </p>
       </div>
       <TableWrapper>
@@ -110,18 +99,10 @@ export const ClientUsageTable = ({
                 </TableRow>
               ) : error || data?.response?.code !== EnumStatusCode.OK ? (
                 <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center text-muted-foreground"
-                  >
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center p-2">
                       <h3 className="text-md">Failed to load clients</h3>
-                      <Button
-                        onClick={() => refetch()}
-                        className="mt-2"
-                        size="sm"
-                        variant="outline"
-                      >
+                      <Button onClick={() => refetch()} className="mt-2" size="sm" variant="outline">
                         Retry
                       </Button>
                     </div>
@@ -139,9 +120,7 @@ export const ClientUsageTable = ({
                       </Badge>
                     </TableCell>
                     <TableCell className="w-[15%] text-center">
-                      <span className="text-sm text-muted-foreground">
-                        {client.requestCount.toLocaleString()}
-                      </span>
+                      <span className="text-sm text-muted-foreground">{client.requestCount.toLocaleString()}</span>
                     </TableCell>
                     <TableCell className="w-[5%]"></TableCell>
                     <TableCell className="w-[20%]">
@@ -155,10 +134,7 @@ export const ClientUsageTable = ({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={5}
-                    className="text-center text-muted-foreground"
-                  >
+                  <TableCell colSpan={5} className="text-center text-muted-foreground">
                     No clients found
                   </TableCell>
                 </TableRow>
@@ -173,7 +149,7 @@ export const ClientUsageTable = ({
                 <TableCell colSpan={5}>
                   <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground">
                     <span>
-                      {totalClients} {totalClients === 1 ? "client" : "clients"}
+                      {totalClients} {totalClients === 1 ? 'client' : 'clients'}
                     </span>
                     <span>•</span>
                     <span>{totalRequests.toLocaleString()} total requests</span>

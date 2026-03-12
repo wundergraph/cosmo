@@ -1,20 +1,16 @@
-import { Loader } from "@/components/ui/loader";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { formatDurationMetric, formatMetric } from "@/lib/format-metric";
-import { cn } from "@/lib/utils";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import copy from "copy-to-clipboard";
-import _ from "lodash";
-import { useState, useEffect, useRef } from "react";
+import { Loader } from '@/components/ui/loader';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { formatDurationMetric, formatMetric } from '@/lib/format-metric';
+import { cn } from '@/lib/utils';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import copy from 'copy-to-clipboard';
+import _ from 'lodash';
+import { useState, useEffect, useRef } from 'react';
 
 interface Operation {
   hash: string;
   name: string;
-  type: "query" | "mutation" | "subscription";
+  type: 'query' | 'mutation' | 'subscription';
   latency: number;
   requestCount?: number;
   errorRate?: number;
@@ -36,25 +32,21 @@ interface OperationsListProps {
   sortField?: string;
 }
 
-const OperationTypeLetter = ({ type }: { type: Operation["type"] }) => {
+const OperationTypeLetter = ({ type }: { type: Operation['type'] }) => {
   const getLetter = () => {
     switch (type) {
-      case "query":
-        return "Q";
-      case "mutation":
-        return "M";
-      case "subscription":
-        return "S";
+      case 'query':
+        return 'Q';
+      case 'mutation':
+        return 'M';
+      case 'subscription':
+        return 'S';
       default:
-        return "?";
+        return '?';
     }
   };
 
-  return (
-    <span className="text-xs font-semibold text-muted-foreground">
-      {getLetter()}
-    </span>
-  );
+  return <span className="text-xs font-semibold text-muted-foreground">{getLetter()}</span>;
 };
 
 const OperationItem = ({
@@ -62,7 +54,7 @@ const OperationItem = ({
   isSelected,
   onClick,
   searchQuery,
-  sortField = "requests",
+  sortField = 'requests',
 }: {
   operation: Operation;
   isSelected: boolean;
@@ -71,9 +63,7 @@ const OperationItem = ({
   sortField?: string;
 }) => {
   const [copied, setCopied] = useState(false);
-  const [tooltipOpen, setTooltipOpen] = useState<boolean | undefined>(
-    undefined,
-  );
+  const [tooltipOpen, setTooltipOpen] = useState<boolean | undefined>(undefined);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const secondTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -81,7 +71,7 @@ const OperationItem = ({
     if (!query) return text;
 
     const safeQuery = _.escapeRegExp(query);
-    const regex = new RegExp(`(${safeQuery})`, "gi");
+    const regex = new RegExp(`(${safeQuery})`, 'gi');
     const parts = text.split(regex);
     const queryLower = query.toLowerCase();
 
@@ -137,30 +127,26 @@ const OperationItem = ({
 
   const getSelectedMetric = () => {
     switch (sortField) {
-      case "requests":
-        return operation.requestCount
-          ? `${formatMetric(operation.requestCount)} Req`
-          : null;
-      case "latency":
+      case 'requests':
+        return operation.requestCount ? `${formatMetric(operation.requestCount)} Req` : null;
+      case 'latency':
         return formatDurationMetric(operation.latency);
-      case "errors":
-        return operation.errorRate && operation.errorRate > 0
-          ? `${operation.errorRate.toFixed(2)}%`
-          : "-";
+      case 'errors':
+        return operation.errorRate && operation.errorRate > 0 ? `${operation.errorRate.toFixed(2)}%` : '-';
       default:
         return null;
     }
   };
 
   const selectedMetric = getSelectedMetric();
-  const isLatencyAtCap = sortField === "latency" && operation.latency >= 10000;
+  const isLatencyAtCap = sortField === 'latency' && operation.latency >= 10000;
 
   return (
     <div
       onClick={onClick}
       className={cn(
-        "group cursor-pointer rounded border px-3 py-2 transition-all hover:bg-muted/50",
-        isSelected && "border-primary bg-muted",
+        'group cursor-pointer rounded border px-3 py-2 transition-all hover:bg-muted/50',
+        isSelected && 'border-primary bg-muted',
       )}
     >
       <div className="flex items-center justify-between gap-2">
@@ -168,11 +154,8 @@ const OperationItem = ({
           <OperationTypeLetter type={operation.type} />
           <p className="truncate text-sm font-medium">
             {searchQuery
-              ? highlightText(
-                  operation.name || "Unnamed Operation",
-                  searchQuery,
-                )
-              : operation.name || "Unnamed Operation"}
+              ? highlightText(operation.name || 'Unnamed Operation', searchQuery)
+              : operation.name || 'Unnamed Operation'}
           </p>
           <Tooltip
             delayDuration={100}
@@ -191,13 +174,11 @@ const OperationItem = ({
                 onClick={handleHashClick}
                 className="flex-shrink-0 cursor-pointer rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:bg-muted-foreground/20"
               >
-                {searchQuery
-                  ? highlightText(operation.hash.slice(0, 4), searchQuery)
-                  : `${operation.hash.slice(0, 4)}`}
+                {searchQuery ? highlightText(operation.hash.slice(0, 4), searchQuery) : `${operation.hash.slice(0, 4)}`}
               </code>
             </TooltipTrigger>
             <TooltipContent>
-              <p>{copied ? "Copied!" : "Copy Operation Hash"}</p>
+              <p>{copied ? 'Copied!' : 'Copy Operation Hash'}</p>
             </TooltipContent>
           </Tooltip>
           {operation.hasDeprecatedFields && (
@@ -221,8 +202,8 @@ const OperationItem = ({
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>
-                    This operation may have taken longer than 10s. The displayed
-                    10s represents the maximum latency bucket (10s+).
+                    This operation may have taken longer than 10s. The displayed 10s represents the maximum latency
+                    bucket (10s+).
                   </p>
                 </TooltipContent>
               </Tooltip>
@@ -241,7 +222,7 @@ export const OperationsList = ({
   isLoading = false,
   searchQuery,
   className,
-  sortField = "requests",
+  sortField = 'requests',
 }: OperationsListProps) => {
   // Optimistic local state for immediate UI feedback
   const [optimisticSelection, setOptimisticSelection] = useState<{
@@ -259,9 +240,7 @@ export const OperationsList = ({
     const currentName = selectedOperation?.name;
 
     // Check if values actually changed
-    const hasChanged =
-      prevHashRef.current !== currentHash ||
-      prevNameRef.current !== currentName;
+    const hasChanged = prevHashRef.current !== currentHash || prevNameRef.current !== currentName;
 
     if (hasChanged) {
       if (selectedOperation) {
@@ -277,7 +256,7 @@ export const OperationsList = ({
 
   if (isLoading) {
     return (
-      <div className={cn("flex h-64 items-center justify-center", className)}>
+      <div className={cn('flex h-64 items-center justify-center', className)}>
         <Loader />
       </div>
     );
@@ -287,15 +266,9 @@ export const OperationsList = ({
     return (
       <div className="space-y-2 pt-6 text-center">
         <p className="text-sm text-muted-foreground">
-          {searchQuery
-            ? "No operations found matching your search"
-            : "No operations found"}
+          {searchQuery ? 'No operations found matching your search' : 'No operations found'}
         </p>
-        {searchQuery && (
-          <p className="text-xs text-muted-foreground">
-            Try adjusting your search terms or filters
-          </p>
-        )}
+        {searchQuery && <p className="text-xs text-muted-foreground">Try adjusting your search terms or filters</p>}
       </div>
     );
   }
@@ -310,20 +283,19 @@ export const OperationsList = ({
           // If selectedOperationName is an empty string, it means an unnamed operation was explicitly selected
           // In that case, only match operations with empty name
           // If selectedOperationName has a value, match operations with that exact name
-          const operationName = operation.name || "";
+          const operationName = operation.name || '';
 
           // Use optimistic selection for immediate feedback, fallback to prop
           const currentSelection = optimisticSelection || selectedOperation;
           const isSelected =
             currentSelection?.hash === operation.hash &&
-            (currentSelection?.name === null ||
-            currentSelection?.name === undefined
+            (currentSelection?.name === null || currentSelection?.name === undefined
               ? true // No name filter set, match by hash only
               : currentSelection?.name === operationName); // Name filter exists, match exact name
 
           return (
             <OperationItem
-              key={`${operation.hash}-${operation.name || ""}`}
+              key={`${operation.hash}-${operation.name || ''}`}
               operation={operation}
               isSelected={isSelected}
               onClick={() => {

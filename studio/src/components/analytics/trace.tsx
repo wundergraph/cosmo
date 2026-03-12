@@ -1,31 +1,15 @@
-import { docsBaseURL } from "@/lib/constants";
-import { nsToTime } from "@/lib/insights-helpers";
-import {
-  Service,
-  mapServiceName,
-  mapSpanKind,
-  mapStatusCode,
-  selectColor,
-} from "@/lib/trace-utils";
-import {
-  CubeIcon,
-  ExclamationTriangleIcon,
-  MinusIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline";
-import { Span } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import clsx from "clsx";
-import { useCallback, useEffect, useState } from "react";
-import { BsFillLightningChargeFill } from "react-icons/bs";
-import { useMovable } from "react-move-hook";
-import { Button } from "../ui/button";
-import { Card } from "../ui/card";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
+import { docsBaseURL } from '@/lib/constants';
+import { nsToTime } from '@/lib/insights-helpers';
+import { Service, mapServiceName, mapSpanKind, mapStatusCode, selectColor } from '@/lib/trace-utils';
+import { CubeIcon, ExclamationTriangleIcon, MinusIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { Span } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import clsx from 'clsx';
+import { useCallback, useEffect, useState } from 'react';
+import { BsFillLightningChargeFill } from 'react-icons/bs';
+import { useMovable } from 'react-move-hook';
+import { Button } from '../ui/button';
+import { Card } from '../ui/card';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
 
 interface SpanNode extends Span {
   children?: SpanNode[];
@@ -40,8 +24,7 @@ const Attribute = ({ name, value }: { name: string; value: any }) => {
       <Tooltip delayDuration={300}>
         <TooltipTrigger>
           <div className="flex items-center gap-x-1">
-            <span className="text-accent-foreground">{name}</span>{" "}
-            <span className="text-accent-foreground">=</span>{" "}
+            <span className="text-accent-foreground">{name}</span> <span className="text-accent-foreground">=</span>{' '}
             <span className="truncate text-accent-foreground/80">{value}</span>
           </div>
         </TooltipTrigger>
@@ -75,32 +58,19 @@ function Node({
 }) {
   const [showDetails, setShowDetails] = useState(false);
   const hasChildren = span.children && span.children.length > 0;
-  const parentChildrenCount = parentSpan?.children
-    ? parentSpan.children.length
-    : 0;
+  const parentChildrenCount = parentSpan?.children ? parentSpan.children.length : 0;
 
   // Work with smaller units (picosecond) on numerator to circumvent bigint division
   const elapsedDurationPs = (span.timestamp - globalStartTime) * bigintE3;
   const spanDurationPs = span.duration * bigintE3;
-  const visualOffsetPercentage = Number(
-    ((elapsedDurationPs / globalDuration) * bigintE2) / bigintE3,
-  );
-  const visualWidthPercentage = Number(
-    ((spanDurationPs / globalDuration) * bigintE2) / bigintE3,
-  );
+  const visualOffsetPercentage = Number(((elapsedDurationPs / globalDuration) * bigintE2) / bigintE3);
+  const visualWidthPercentage = Number(((spanDurationPs / globalDuration) * bigintE2) / bigintE3);
 
-  const [isOpen, setIsOpen] = useState(
-    () => level <= initialCollapsedSpanDepth,
-  );
-  const service = services.find(
-    (service) => service.name === mapServiceName(span.serviceName),
-  );
+  const [isOpen, setIsOpen] = useState(() => level <= initialCollapsedSpanDepth);
+  const service = services.find((service) => service.name === mapServiceName(span.serviceName));
 
   const hasChildrenError = (span: SpanNode) => {
-    if (
-      span.statusCode === "STATUS_CODE_ERROR" ||
-      !!span.attributes?.httpStatusCode.startsWith("4")
-    ) {
+    if (span.statusCode === 'STATUS_CODE_ERROR' || !!span.attributes?.httpStatusCode.startsWith('4')) {
       return true;
     }
     if (span.children) {
@@ -111,8 +81,8 @@ function Node({
 
   const [isError, setIsError] = useState<boolean>(
     () =>
-      span.statusCode === "STATUS_CODE_ERROR" ||
-      !!span.attributes?.httpStatusCode.startsWith("4") ||
+      span.statusCode === 'STATUS_CODE_ERROR' ||
+      !!span.attributes?.httpStatusCode.startsWith('4') ||
       (!isOpen && hasChildrenError(span)),
   );
 
@@ -135,10 +105,7 @@ function Node({
         if (prevOpen) {
           setIsError(hasChildrenError(span));
         } else {
-          setIsError(
-            span.statusCode === "STATUS_CODE_ERROR" ||
-              !!span.attributes?.httpStatusCode.startsWith("4"),
-          );
+          setIsError(span.statusCode === 'STATUS_CODE_ERROR' || !!span.attributes?.httpStatusCode.startsWith('4'));
         }
       }
       return !prevOpen;
@@ -151,18 +118,15 @@ function Node({
         marginLeft: `${16}px`,
         minWidth: `${1024 - level * 32}px`,
       }}
-      className={clsx(
-        `trace-ul relative before:-top-4 before:h-[34px] lg:max-w-none`,
-        {
-          "before:top-0 before:h-[18px]": isParentDetailsOpen,
-          "before:!h-full": parentChildrenCount > 1,
-          "pl-4": level > 1,
-        },
-      )}
+      className={clsx(`trace-ul relative before:-top-4 before:h-[34px] lg:max-w-none`, {
+        'before:top-0 before:h-[18px]': isParentDetailsOpen,
+        'before:!h-full': parentChildrenCount > 1,
+        'pl-4': level > 1,
+      })}
     >
       <li
-        className={clsx("group relative", {
-          "bg-accent pb-2": showDetails,
+        className={clsx('group relative', {
+          'bg-accent pb-2': showDetails,
         })}
       >
         <div className="relative flex w-full flex-wrap">
@@ -177,20 +141,13 @@ function Node({
               variant="outline"
               onClick={toggleTree}
               disabled={!hasChildren}
-              className={clsx(
-                "mt-1.5 h-min w-min rounded-sm border border-input p-px",
-                {
-                  "border-none": !hasChildren,
-                },
-              )}
+              className={clsx('mt-1.5 h-min w-min rounded-sm border border-input p-px', {
+                'border-none': !hasChildren,
+              })}
             >
               <>
-                {hasChildren && isOpen && (
-                  <MinusIcon className="h-3 w-3 flex-shrink-0" />
-                )}
-                {hasChildren && !isOpen && (
-                  <PlusIcon className="h-3 w-3 flex-shrink-0" />
-                )}
+                {hasChildren && isOpen && <MinusIcon className="h-3 w-3 flex-shrink-0" />}
+                {hasChildren && !isOpen && <PlusIcon className="h-3 w-3 flex-shrink-0" />}
                 {!hasChildren && <CubeIcon className="h-4 w-4 flex-shrink-0" />}
               </>
             </Button>
@@ -204,20 +161,16 @@ function Node({
                   <TooltipTrigger className="space-y-1">
                     <div className="flex flex-col">
                       <div className="flex items-center gap-x-1">
-                        {isError && (
-                          <ExclamationTriangleIcon className="mt-1 h-4 w-4 text-destructive" />
-                        )}
+                        {isError && <ExclamationTriangleIcon className="mt-1 h-4 w-4 text-destructive" />}
                         <div className="flex flex-1 items-center gap-x-1.5 truncate font-medium">
                           <div className="flex items-center gap-x-1">
-                            {span.attributes?.operationProtocol === "grpc" && (
+                            {span.attributes?.operationProtocol === 'grpc' && (
                               <BsFillLightningChargeFill className="h-[14px] w-[14px] flex-shrink-0 text-primary" />
                             )}
-                            <div>{service?.name}</div>{" "}
+                            <div>{service?.name}</div>{' '}
                           </div>
 
-                          <div className="text-xs text-muted-foreground">
-                            {mapSpanKind[span.spanKind]}
-                          </div>
+                          <div className="text-xs text-muted-foreground">{mapSpanKind[span.spanKind]}</div>
                         </div>
                       </div>
                     </div>
@@ -233,9 +186,9 @@ function Node({
                   <TooltipContent className="max-w-lg">
                     <div className="flex flex-col space-y-1">
                       <div>{span.spanName}</div>
-                      {span.attributes?.operationProtocol === "grpc" && (
+                      {span.attributes?.operationProtocol === 'grpc' && (
                         <div className="text-xs text-secondary">
-                          <span>Cosmo Connect</span>{" "}
+                          <span>Cosmo Connect</span>{' '}
                         </div>
                       )}
                     </div>
@@ -252,8 +205,8 @@ function Node({
             <div className="absolute h-px w-full bg-input" />
             <div
               style={{
-                minWidth: "2px",
-                maxWidth: "500px !important",
+                minWidth: '2px',
+                maxWidth: '500px !important',
                 width: `${visualWidthPercentage}%`,
                 left: `${visualOffsetPercentage}%`,
                 backgroundColor: service?.color,
@@ -264,9 +217,9 @@ function Node({
               style={{
                 left: getDurationOffset(),
               }}
-              className={clsx("z-8 absolute bg-transparent text-xs", {
-                "px-2": visualWidthPercentage < 8,
-                "!text-white": visualWidthPercentage >= 8,
+              className={clsx('z-8 absolute bg-transparent text-xs', {
+                'px-2': visualWidthPercentage < 8,
+                '!text-white': visualWidthPercentage >= 8,
               })}
             >
               {nsToTime(span.duration)}
@@ -285,32 +238,14 @@ function Node({
               <Attribute
                 key="timing"
                 name="startTime"
-                value={
-                  parentSpan
-                    ? nsToTime(span.timestamp - parentSpan.timestamp)
-                    : nsToTime(BigInt(0))
-                }
+                value={parentSpan ? nsToTime(span.timestamp - parentSpan.timestamp) : nsToTime(BigInt(0))}
               />
-              {span.statusCode && (
-                <Attribute
-                  key="status"
-                  name="status"
-                  value={mapStatusCode[span.statusCode]}
-                />
-              )}
+              {span.statusCode && <Attribute key="status" name="status" value={mapStatusCode[span.statusCode]} />}
             </div>
             <div className="grid grow grid-cols-2 place-content-between gap-x-4 gap-y-1 overflow-hidden border-0 px-4 text-xs">
-              {span.statusMessage && (
-                <Attribute
-                  key="statusMessage"
-                  name="statusMessage"
-                  value={span.statusMessage}
-                />
-              )}
+              {span.statusMessage && <Attribute key="statusMessage" name="statusMessage" value={span.statusMessage} />}
               {Object.entries(span.attributes ?? {})
-                .sort((a, b) =>
-                  a[0].toUpperCase().localeCompare(b[0].toUpperCase()),
-                )
+                .sort((a, b) => a[0].toUpperCase().localeCompare(b[0].toUpperCase()))
                 .filter(([key, value], _) => !!value)
                 .map(([key, value]) => {
                   return <Attribute key={key} name={key} value={value} />;
@@ -371,16 +306,16 @@ const Trace = ({ spans }: { spans: Span[] }) => {
 
     if (!moveData.moving) {
       setPaneWidth((width) => width + moveData.delta.x);
-      document.body.classList.remove("select-none");
+      document.body.classList.remove('select-none');
     } else {
-      document.body.classList.add("select-none");
+      document.body.classList.add('select-none');
     }
   }, []);
 
   const ref = useMovable({
     onChange: handleChange,
-    axis: "x",
-    bounds: "parent",
+    axis: 'x',
+    bounds: 'parent',
   });
 
   useEffect(() => {
@@ -456,19 +391,14 @@ const Trace = ({ spans }: { spans: Span[] }) => {
     const tree = buildSpanTree(spans);
     setTraceTree(tree);
 
-    setMissingRootSpan(
-      !!tree.parentSpanID &&
-        !spans.find((span) => tree.parentSpanID === span.spanID),
-    );
+    setMissingRootSpan(!!tree.parentSpanID && !spans.find((span) => tree.parentSpanID === span.spanID));
 
     setGlobalDuration(gEndTimeNano - gStartTimeNano);
     setGlobalStartTime(gStartTimeNano);
   }, [spans]);
 
   const verticalResizeStyle = {
-    left: mouseState.moving
-      ? paneWidth + mouseState.delta?.x
-      : mouseState.position.x,
+    left: mouseState.moving ? paneWidth + mouseState.delta?.x : mouseState.position.x,
   };
 
   return (
@@ -505,12 +435,9 @@ const Trace = ({ spans }: { spans: Span[] }) => {
                     <div className="flex flex-wrap gap-x-3">
                       {detectedService.map((service) => {
                         return (
-                          <span
-                            key={service.name}
-                            className="flex items-center gap-x-2"
-                          >
+                          <span key={service.name} className="flex items-center gap-x-2">
                             <div
-                              className={"h-4 w-4 rounded-sm bg-sky-300"}
+                              className={'h-4 w-4 rounded-sm bg-sky-300'}
                               style={{ backgroundColor: service.color }}
                             />
                             <span>{service.name}</span>
@@ -528,16 +455,12 @@ const Trace = ({ spans }: { spans: Span[] }) => {
                     <span>:</span>
                     {missingRootSpan ? (
                       <div>
-                        <ExclamationTriangleIcon className="inline h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />{" "}
-                        This trace has no root span. This can have several
-                        causes.{" "}
+                        <ExclamationTriangleIcon className="inline h-4 w-4 shrink-0 text-orange-600 dark:text-orange-400" />{' '}
+                        This trace has no root span. This can have several causes.{' '}
                         <a
                           target="_blank"
                           rel="noreferrer"
-                          href={
-                            docsBaseURL +
-                            "/router/open-telemetry#why-is-my-trace-incomplete"
-                          }
+                          href={docsBaseURL + '/router/open-telemetry#why-is-my-trace-incomplete'}
                           className="text-primary"
                         >
                           Learn more.
@@ -575,8 +498,8 @@ const Trace = ({ spans }: { spans: Span[] }) => {
                   ref={ref}
                   style={verticalResizeStyle}
                   className={clsx(
-                    mouseState.moving ? "bg-primary" : "bg-transparent",
-                    "absolute z-50 ml-[-9px] h-full w-[2px] cursor-col-resize border-l-2 border-transparent hover:bg-primary",
+                    mouseState.moving ? 'bg-primary' : 'bg-transparent',
+                    'absolute z-50 ml-[-9px] h-full w-[2px] cursor-col-resize border-l-2 border-transparent hover:bg-primary',
                   )}
                 ></div>
               </div>

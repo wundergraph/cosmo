@@ -1,48 +1,41 @@
-import { CacheDetailsSheet } from "@/components/cache/cache-details-sheet";
-import { CacheOperationsTable } from "@/components/cache/operations-table";
-import { EmptyState } from "@/components/empty-state";
-import {
-  GraphPageLayout,
-  getGraphLayout,
-} from "@/components/layout/graph-layout";
-import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
-import { useToast } from "@/components/ui/use-toast";
-import { useUser } from "@/hooks/use-user";
-import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
-import { useMutation, useQuery } from "@connectrpc/connect-query";
-import {
-  ExclamationTriangleIcon,
-  InfoCircledIcon,
-  UpdateIcon,
-} from "@radix-ui/react-icons";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { CacheDetailsSheet } from '@/components/cache/cache-details-sheet';
+import { CacheOperationsTable } from '@/components/cache/operations-table';
+import { EmptyState } from '@/components/empty-state';
+import { GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { Button } from '@/components/ui/button';
+import { Loader } from '@/components/ui/loader';
+import { useToast } from '@/components/ui/use-toast';
+import { useUser } from '@/hooks/use-user';
+import { NextPageWithLayout } from '@/lib/page';
+import { cn } from '@/lib/utils';
+import { useMutation, useQuery } from '@connectrpc/connect-query';
+import { ExclamationTriangleIcon, InfoCircledIcon, UpdateIcon } from '@radix-ui/react-icons';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   computeCacheWarmerOperations,
   getCacheWarmerOperations,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { formatDistanceToNow } from "date-fns";
-import debounce from "debounce";
-import { useRouter } from "next/router";
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
-import { docsBaseURL } from "@/lib/constants";
-import { useCheckUserAccess } from "@/hooks/use-check-user-access";
-import { useWorkspace } from "@/hooks/use-workspace";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { formatDistanceToNow } from 'date-fns';
+import debounce from 'debounce';
+import { useRouter } from 'next/router';
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { docsBaseURL } from '@/lib/constants';
+import { useCheckUserAccess } from '@/hooks/use-check-user-access';
+import { useWorkspace } from '@/hooks/use-workspace';
 
 const CacheOperationsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const federatedGraphName = router.query.slug as string;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
   const user = useUser();
   const checkUserAccess = useCheckUserAccess();
   const plan = user?.currentOrganization?.billing?.plan;
 
-  const pageNumber = router.query.page
-    ? parseInt(router.query.page as string)
-    : 1;
-  const pageSize = Number.parseInt((router.query.pageSize as string) || "10");
+  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
+  const pageSize = Number.parseInt((router.query.pageSize as string) || '10');
   const limit = pageSize > 50 ? 50 : pageSize;
   const offset = (pageNumber - 1) * limit;
 
@@ -60,15 +53,13 @@ const CacheOperationsPage: NextPageWithLayout = () => {
       offset,
     },
     {
-      enabled: plan === "enterprise",
+      enabled: plan === 'enterprise',
     },
   );
 
   useEffect(() => {
     if (!data) return;
-    const computedAt = data.operations.find(
-      (op) => op.isManuallyAdded === false,
-    )?.createdAt;
+    const computedAt = data.operations.find((op) => op.isManuallyAdded === false)?.createdAt;
     if (computedAt) {
       setLastComputedAt(new Date(computedAt));
     }
@@ -85,28 +76,25 @@ const CacheOperationsPage: NextPageWithLayout = () => {
         setRecomputeDisabled(true);
         debounceRecompute();
         toast({
-          description: "Cache warmer operations recomputed successfully.",
+          description: 'Cache warmer operations recomputed successfully.',
           duration: 1500,
         });
       } else {
         toast({
-          description:
-            d.response?.details ??
-            "Could not recompute cache warmer operations. Please try again.",
+          description: d.response?.details ?? 'Could not recompute cache warmer operations. Please try again.',
           duration: 3000,
         });
       }
     },
     onError: () => {
       toast({
-        description:
-          "Could not recompute cache warmer operations. Please try again.",
+        description: 'Could not recompute cache warmer operations. Please try again.',
         duration: 3000,
       });
     },
   });
 
-  if (plan !== "enterprise") {
+  if (plan !== 'enterprise') {
     return (
       <EmptyState
         icon={<InfoCircledIcon className="h-12 w-12" />}
@@ -138,9 +126,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
         actions={
           <Button
             onClick={() => {
-              router.push(
-                `/${user?.currentOrganization.slug}/cache-warmer?namespace=${namespace}`,
-              );
+              router.push(`/${user?.currentOrganization.slug}/cache-warmer?namespace=${namespace}`);
             }}
           >
             Configure Cache Warmer
@@ -153,13 +139,9 @@ const CacheOperationsPage: NextPageWithLayout = () => {
   if (error || data?.response?.code !== EnumStatusCode.OK) {
     return (
       <EmptyState
-        icon={
-          <ExclamationTriangleIcon className="h-12 w-12 text-destructive" />
-        }
+        icon={<ExclamationTriangleIcon className="h-12 w-12 text-destructive" />}
         title="Could not retrieve cache warmer operations."
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -170,11 +152,10 @@ const CacheOperationsPage: NextPageWithLayout = () => {
       <div className="flex items-center justify-between">
         <div className="items-start">
           <p className="text-sm text-muted-foreground">
-            Operations provided to the router to warm the cache. Manually added
-            operation have priority over the top 100 operations computed by
-            planning time.{" "}
+            Operations provided to the router to warm the cache. Manually added operation have priority over the top 100
+            operations computed by planning time.{' '}
             <Link
-              href={docsBaseURL + "/concepts/cache-warmer"}
+              href={docsBaseURL + '/concepts/cache-warmer'}
               className="text-primary"
               target="_blank"
               rel="noreferrer"
@@ -194,12 +175,12 @@ const CacheOperationsPage: NextPageWithLayout = () => {
               disabled={
                 isPending ||
                 recomputeDisabled ||
-                !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
+                !checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] })
               }
             >
               <UpdateIcon
-                className={cn("", {
-                  "animate-spin": isPending,
+                className={cn('', {
+                  'animate-spin': isPending,
                 })}
               />
               Recompute
@@ -210,9 +191,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
       <div className="grid auto-cols-fr grid-flow-col grid-rows-2 gap-4 py-4 md:grid-rows-none">
         <div className="flex h-full w-full flex-col gap-y-4 rounded-md border px-8 py-6">
           <h2 className="flex items-center gap-x-2">
-            <span className="leading-none tracking-tight text-muted-foreground">
-              Total Items
-            </span>
+            <span className="leading-none tracking-tight text-muted-foreground">Total Items</span>
           </h2>
           <div>
             <span className="text-xl font-semibold">{data.totalCount}</span>
@@ -220,13 +199,11 @@ const CacheOperationsPage: NextPageWithLayout = () => {
         </div>
         <div className="flex h-full w-full flex-col gap-y-4 rounded-md border px-8 py-6">
           <h2 className="flex items-center gap-x-2">
-            <span className="leading-none tracking-tight text-muted-foreground">
-              Last Computed
-            </span>
+            <span className="leading-none tracking-tight text-muted-foreground">Last Computed</span>
           </h2>
           <div>
             <span className="text-xl font-semibold">
-              {" "}
+              {' '}
               {lastComputedAt && (
                 <p>
                   {formatDistanceToNow(new Date(lastComputedAt), {
@@ -238,11 +215,7 @@ const CacheOperationsPage: NextPageWithLayout = () => {
           </div>
         </div>
       </div>
-      <CacheOperationsTable
-        operations={data.operations}
-        totalCount={data.totalCount}
-        refetch={refetch}
-      />
+      <CacheOperationsTable operations={data.operations} totalCount={data.totalCount} refetch={refetch} />
       <CacheDetailsSheet operations={data.operations} />
     </div>
   );
@@ -250,13 +223,10 @@ const CacheOperationsPage: NextPageWithLayout = () => {
 
 CacheOperationsPage.getLayout = (page) =>
   getGraphLayout(
-    <GraphPageLayout
-      title="Cache Operations"
-      subtitle="View the cache operations of the federated graph"
-    >
+    <GraphPageLayout title="Cache Operations" subtitle="View the cache operations of the federated graph">
       {page}
     </GraphPageLayout>,
-    { title: "Cache" },
+    { title: 'Cache' },
   );
 
 export default CacheOperationsPage;

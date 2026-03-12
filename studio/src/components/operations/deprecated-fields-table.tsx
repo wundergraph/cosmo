@@ -1,10 +1,10 @@
-import { Loader } from "@/components/ui/loader";
-import { useQuery } from "@connectrpc/connect-query";
-import { getOperationDeprecatedFields } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useContext } from "react";
-import { GraphContext } from "@/components/layout/graph-layout";
-import { useAnalyticsQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import { formatISO } from "date-fns";
+import { Loader } from '@/components/ui/loader';
+import { useQuery } from '@connectrpc/connect-query';
+import { getOperationDeprecatedFields } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { useContext } from 'react';
+import { GraphContext } from '@/components/layout/graph-layout';
+import { useAnalyticsQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { formatISO } from 'date-fns';
 import {
   Table,
   TableBody,
@@ -14,9 +14,9 @@ import {
   TableHeader,
   TableRow,
   TableWrapper,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/router";
+} from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/router';
 
 interface DeprecatedField {
   fieldName: string;
@@ -31,11 +31,7 @@ interface DeprecatedFieldsTableProps {
   className?: string;
 }
 
-export const DeprecatedFieldsTable = ({
-  operationHash,
-  operationName,
-  className,
-}: DeprecatedFieldsTableProps) => {
+export const DeprecatedFieldsTable = ({ operationHash, operationName, className }: DeprecatedFieldsTableProps) => {
   const graphContext = useContext(GraphContext);
   const { range, dateRange } = useAnalyticsQueryState();
   const router = useRouter();
@@ -62,26 +58,24 @@ export const DeprecatedFieldsTable = ({
 
   const deprecatedFields: DeprecatedField[] =
     data?.deprecatedFields?.map((field) => ({
-      fieldName: field.fieldName || "",
-      typeName: field.typeName || "",
-      path: field.path || "",
-      deprecationReason: field.deprecationReason || "-",
+      fieldName: field.fieldName || '',
+      typeName: field.typeName || '',
+      path: field.path || '',
+      deprecationReason: field.deprecationReason || '-',
     })) || [];
   const hasDeprecatedFields = deprecatedFields.length > 0;
 
   const handleShowUsage = (field: DeprecatedField) => {
     // Set query params to open FieldUsageSheet
     // Format: typeName.fieldName (e.g., "User.email")
-    const showUsageValue = field.typeName
-      ? `${field.typeName}.${field.fieldName}`
-      : field.fieldName;
+    const showUsageValue = field.typeName ? `${field.typeName}.${field.fieldName}` : field.fieldName;
 
     router.push({
       pathname: router.pathname,
       query: {
         ...router.query,
         showUsage: showUsageValue,
-        isNamedType: "false",
+        isNamedType: 'false',
       },
     });
   };
@@ -117,21 +111,13 @@ export const DeprecatedFieldsTable = ({
                 deprecatedFields.map((field, index) => (
                   <TableRow key={`${field.path}-${index}`}>
                     <TableCell className="w-[30%]">
-                      <code className="rounded bg-muted px-2 py-1 font-mono text-sm">
-                        {field.path}
-                      </code>
+                      <code className="rounded bg-muted px-2 py-1 font-mono text-sm">{field.path}</code>
                     </TableCell>
                     <TableCell className="w-[50%]">
-                      <span className="text-sm text-muted-foreground">
-                        {field.deprecationReason || "-"}
-                      </span>
+                      <span className="text-sm text-muted-foreground">{field.deprecationReason || '-'}</span>
                     </TableCell>
                     <TableCell className="w-[20%] text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleShowUsage(field)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => handleShowUsage(field)}>
                         Show Usage
                       </Button>
                     </TableCell>
@@ -139,10 +125,7 @@ export const DeprecatedFieldsTable = ({
                 ))
               ) : (
                 <TableRow>
-                  <TableCell
-                    colSpan={3}
-                    className="text-center text-muted-foreground"
-                  >
+                  <TableCell colSpan={3} className="text-center text-muted-foreground">
                     No deprecated fields found
                   </TableCell>
                 </TableRow>
@@ -157,10 +140,8 @@ export const DeprecatedFieldsTable = ({
                 <TableCell colSpan={3}>
                   <div className="flex items-center justify-center space-x-1 text-xs text-muted-foreground">
                     <span>
-                      Found {deprecatedFields.length}{" "}
-                      {deprecatedFields.length === 1
-                        ? "deprecated field"
-                        : "deprecated fields"}
+                      Found {deprecatedFields.length}{' '}
+                      {deprecatedFields.length === 1 ? 'deprecated field' : 'deprecated fields'}
                     </span>
                   </div>
                 </TableCell>

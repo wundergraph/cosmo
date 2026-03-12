@@ -1,6 +1,9 @@
 import { Warning } from '../../warnings/types';
 import { QUOTATION_JOIN } from '../../utils/string-constants';
-import { SingleFederatedInputFieldOneOfWarningParams, SingleSubgraphInputFieldOneOfWarningParams } from './params';
+import {
+  type SingleFederatedInputFieldOneOfWarningParams,
+  type SingleSubgraphInputFieldOneOfWarningParams,
+} from './params';
 
 export function invalidOverrideTargetSubgraphNameWarning(
   targetSubgraphName: string,

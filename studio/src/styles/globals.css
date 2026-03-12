@@ -3,20 +3,20 @@
 @tailwind utilities;
 
 @font-face {
-  font-family: "Inter";
+  font-family: 'Inter';
   font-weight: 100 900;
   font-display: block;
   font-style: normal;
-  font-named-instance: "Regular";
-  src: url("/fonts/Inter-roman.var.woff2") format("woff2");
+  font-named-instance: 'Regular';
+  src: url('/fonts/Inter-roman.var.woff2') format('woff2');
 }
 @font-face {
-  font-family: "Inter";
+  font-family: 'Inter';
   font-weight: 100 900;
   font-display: block;
   font-style: italic;
-  font-named-instance: "Italic";
-  src: url("/fonts/Inter-italic.var.woff2") format("woff2");
+  font-named-instance: 'Italic';
+  src: url('/fonts/Inter-italic.var.woff2') format('woff2');
 }
 
 @layer base {
@@ -141,9 +141,9 @@
   .table-action {
     @apply border border-transparent group-hover:border group-hover:border-border group-hover:bg-background data-[state=open]:border data-[state=open]:border-border data-[state=open]:bg-background group-hover:hover:bg-accent/50;
   }
-  input[type="number"]::-webkit-outer-spin-button,
-  input[type="number"]::-webkit-inner-spin-button,
-  input[type="number"] {
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button,
+  input[type='number'] {
     -webkit-appearance: none;
     margin: 0;
     -moz-appearance: textfield !important;
@@ -191,14 +191,14 @@
 }
 
 .feature-icon-tile-border-highlight::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 1px;
   border-radius: 7px;
   background: rgba(0, 0, 0, 0.5);
 }
 
-pre[class*="language-"] code {
+pre[class*='language-'] code {
   display: block;
 }
 

@@ -1,62 +1,32 @@
-import { EmptyState } from "@/components/empty-state";
-import {
-  GraphPageLayout,
-  getGraphLayout,
-  GraphContext,
-} from "@/components/layout/graph-layout";
-import Link from "next/link";
-import { ArrowRightIcon, SizeIcon } from "@radix-ui/react-icons";
-import { motion, AnimatePresence, easeInOut } from "framer-motion";
-import prettyBytes from "pretty-bytes";
-import {
-  CommandLineIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
-import { PageHeader } from "@/components/layout/head";
-import { MdCheckCircle } from "react-icons/md";
-import { Button } from "@/components/ui/button";
-import { NextPageWithLayout } from "@/lib/page";
-import {
-  FiArrowDown,
-  FiArrowRight,
-  FiArrowUp,
-  FiChevronDown,
-  FiChevronUp,
-} from "react-icons/fi";
-import { useQuery } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { Router } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { getRouters } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useRouter } from "next/router";
-import React, { useContext, useEffect, useState } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import { formatDistanceToNow, subSeconds } from "date-fns";
-import { useHotkeys } from "@saas-ui/use-hotkeys";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Kbd } from "@/components/ui/kbd";
-import { CopyButton } from "@/components/ui/copy-button";
-import { Spacer } from "@/components/ui/spacer";
-import { docsBaseURL } from "@/lib/constants";
-import { InfoTooltip } from "@/components/info-tooltip";
+import { EmptyState } from '@/components/empty-state';
+import { GraphPageLayout, getGraphLayout, GraphContext } from '@/components/layout/graph-layout';
+import Link from 'next/link';
+import { ArrowRightIcon, SizeIcon } from '@radix-ui/react-icons';
+import { motion, AnimatePresence, easeInOut } from 'framer-motion';
+import prettyBytes from 'pretty-bytes';
+import { CommandLineIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { PageHeader } from '@/components/layout/head';
+import { MdCheckCircle } from 'react-icons/md';
+import { Button } from '@/components/ui/button';
+import { NextPageWithLayout } from '@/lib/page';
+import { FiArrowDown, FiArrowRight, FiArrowUp, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { useQuery } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { Router } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { getRouters } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { useRouter } from 'next/router';
+import React, { useContext, useEffect, useState } from 'react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { formatDistanceToNow, subSeconds } from 'date-fns';
+import { useHotkeys } from '@saas-ui/use-hotkeys';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Kbd } from '@/components/ui/kbd';
+import { CopyButton } from '@/components/ui/copy-button';
+import { Spacer } from '@/components/ui/spacer';
+import { docsBaseURL } from '@/lib/constants';
+import { InfoTooltip } from '@/components/info-tooltip';
 import {
   ColumnDef,
   flexRender,
@@ -65,31 +35,29 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table";
-import { Loader } from "@/components/ui/loader";
-import { RunRouterCommand } from "@/components/federatedgraphs-cards";
+} from '@tanstack/react-table';
+import { Loader } from '@/components/ui/loader';
+import { RunRouterCommand } from '@/components/federatedgraphs-cards';
 
 const sizes = {
-  default: "lg:max-w-3xl xl:max-w-6xl",
-  full: "max-w-full",
+  default: 'lg:max-w-3xl xl:max-w-6xl',
+  full: 'max-w-full',
 };
 
 const RouterSheet: React.FC<any> = (props) => {
   const router = useRouter();
-  const [size, setSize] = useState<keyof typeof sizes>("default");
+  const [size, setSize] = useState<keyof typeof sizes>('default');
 
   const serviceInstanceId = router.query.serviceInstanceId as string;
 
-  const index = props.data.findIndex(
-    (r: any) => r.serviceInstanceId === serviceInstanceId,
-  );
+  const index = props.data.findIndex((r: any) => r.serviceInstanceId === serviceInstanceId);
 
   const routerData = props.data[index];
 
   const nextServer = () => {
     if (index + 1 < props.data.length) {
       const newQuery = { ...router.query };
-      newQuery["serviceInstanceId"] = props.data[index + 1].serviceInstanceId;
+      newQuery['serviceInstanceId'] = props.data[index + 1].serviceInstanceId;
       router.replace({
         query: newQuery,
       });
@@ -99,7 +67,7 @@ const RouterSheet: React.FC<any> = (props) => {
   const previousServer = () => {
     if (index - 1 >= 0) {
       const newQuery = { ...router.query };
-      newQuery["serviceInstanceId"] = props.data[index - 1].serviceInstanceId;
+      newQuery['serviceInstanceId'] = props.data[index - 1].serviceInstanceId;
       router.replace({
         query: newQuery,
       });
@@ -107,7 +75,7 @@ const RouterSheet: React.FC<any> = (props) => {
   };
 
   useHotkeys(
-    "K",
+    'K',
     () => {
       previousServer();
     },
@@ -116,7 +84,7 @@ const RouterSheet: React.FC<any> = (props) => {
   );
 
   useHotkeys(
-    "J",
+    'J',
     () => {
       nextServer();
     },
@@ -131,7 +99,7 @@ const RouterSheet: React.FC<any> = (props) => {
       onOpenChange={(isOpen) => {
         if (!isOpen) {
           const newQuery = { ...router.query };
-          delete newQuery["serviceInstanceId"];
+          delete newQuery['serviceInstanceId'];
 
           router.replace({
             query: newQuery,
@@ -143,21 +111,13 @@ const RouterSheet: React.FC<any> = (props) => {
         onOpenAutoFocus={(e) => e.preventDefault()}
         onPointerDownOutside={(e) => e.preventDefault()}
         hideOverlay
-        className={cn(
-          "scrollbar-custom w-full max-w-full overflow-y-scroll shadow-xl sm:max-w-full",
-          sizes[size],
-        )}
+        className={cn('scrollbar-custom w-full max-w-full overflow-y-scroll shadow-xl sm:max-w-full', sizes[size])}
       >
         <SheetHeader className="mb-12 flex flex-row items-center space-x-2 space-y-0">
           <div className="space-x-2">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => previousServer()}
-                  disabled={index === 0}
-                >
+                <Button variant="secondary" size="sm" onClick={() => previousServer()} disabled={index === 0}>
                   <FiChevronUp />
                 </Button>
               </TooltipTrigger>
@@ -184,9 +144,7 @@ const RouterSheet: React.FC<any> = (props) => {
           </div>
 
           <SheetTitle className="m-0 flex flex-wrap items-center gap-x-1.5 text-sm">
-            <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">
-              {serviceInstanceId}
-            </code>
+            <code className="break-all px-1.5 text-left text-sm text-secondary-foreground">{serviceInstanceId}</code>
             <CopyButton tooltip="Copy instance id" value={serviceInstanceId} />
           </SheetTitle>
 
@@ -198,15 +156,13 @@ const RouterSheet: React.FC<any> = (props) => {
                 variant="secondary"
                 size="sm"
                 className="hidden lg:flex"
-                onClick={() =>
-                  size === "default" ? setSize("full") : setSize("default")
-                }
+                onClick={() => (size === 'default' ? setSize('full') : setSize('default'))}
               >
-                {size === "default" ? <SizeIcon /> : <ArrowRightIcon />}
+                {size === 'default' ? <SizeIcon /> : <ArrowRightIcon />}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {size === "default" ? "Full size" : "Collapse"} • <Kbd>F</Kbd>
+              {size === 'default' ? 'Full size' : 'Collapse'} • <Kbd>F</Kbd>
             </TooltipContent>
           </Tooltip>
         </SheetHeader>
@@ -224,30 +180,19 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
         <div>
           <ul className="divide-y">
             <li className="flex justify-between py-4 text-sm">
-              <div className="font-semibold text-muted-foreground">
-                Process Uptime
-              </div>
+              <div className="font-semibold text-muted-foreground">Process Uptime</div>
               <div>
                 {router.uptimeSeconds
-                  ? formatDistanceToNow(
-                      subSeconds(new Date(), parseInt(router.uptimeSeconds)),
-                    )
-                  : "N/A"}
+                  ? formatDistanceToNow(subSeconds(new Date(), parseInt(router.uptimeSeconds)))
+                  : 'N/A'}
               </div>
             </li>
             <li className="flex justify-between py-4 text-sm">
-              <div className="font-semibold text-muted-foreground">
-                Server Uptime
-              </div>
+              <div className="font-semibold text-muted-foreground">Server Uptime</div>
               <div>
                 {router.serverUptimeSeconds
-                  ? formatDistanceToNow(
-                      subSeconds(
-                        new Date(),
-                        parseInt(router.serverUptimeSeconds),
-                      ),
-                    )
-                  : "N/A"}
+                  ? formatDistanceToNow(subSeconds(new Date(), parseInt(router.serverUptimeSeconds)))
+                  : 'N/A'}
               </div>
             </li>
             <li className="flex justify-between py-4 text-sm">
@@ -255,33 +200,23 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
               <div>{router.serviceInstanceId}</div>
             </li>
             <li className="flex justify-between py-4 text-sm">
-              <div className="font-semibold text-muted-foreground">
-                Service Name
-              </div>
+              <div className="font-semibold text-muted-foreground">Service Name</div>
               <div>{router.serviceName}</div>
             </li>
             <li className="flex justify-between py-4 text-sm">
-              <div className="font-semibold text-muted-foreground">
-                Service Version
-              </div>
+              <div className="font-semibold text-muted-foreground">Service Version</div>
               <div>{router.serviceVersion}</div>
             </li>
             <li className="flex justify-between py-4 text-sm">
-              <div className="font-semibold text-muted-foreground">
-                Cluster Name
-              </div>
-              <div>{router.clusterName || "-"}</div>
+              <div className="font-semibold text-muted-foreground">Cluster Name</div>
+              <div>{router.clusterName || '-'}</div>
             </li>
             <li className="flex justify-between py-4 text-sm">
-              <div className="font-semibold text-muted-foreground">
-                Hostname
-              </div>
+              <div className="font-semibold text-muted-foreground">Hostname</div>
               <div>{router.hostname}</div>
             </li>
             <li className="flex justify-between py-4 text-sm">
-              <div className="font-semibold text-muted-foreground">
-                Process ID
-              </div>
+              <div className="font-semibold text-muted-foreground">Process ID</div>
               <div>{router.processId}</div>
             </li>
           </ul>
@@ -292,9 +227,7 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
         <div>
           <ul className="divide-y">
             <li className="flex justify-between py-4 text-sm">
-              <div className="font-semibold text-muted-foreground">
-                Memory (Heap)
-              </div>
+              <div className="font-semibold text-muted-foreground">Memory (Heap)</div>
               <div>
                 {prettyBytes(router.memoryUsageMb * 1024 * 1024, {
                   maximumFractionDigits: 2,
@@ -316,7 +249,7 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
               target="_blank"
               rel="noreferrer"
               href={
-                "https://github.com/wundergraph/cosmo/issues/new?assignees=&labels=enhancement%2Cneeds+triage&projects=&template=feature_request.yaml"
+                'https://github.com/wundergraph/cosmo/issues/new?assignees=&labels=enhancement%2Cneeds+triage&projects=&template=feature_request.yaml'
               }
               className="text-primary"
             >
@@ -330,15 +263,11 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
           <div>
             <ul className="divide-y">
               <li className="flex justify-between py-4 text-sm">
-                <div className="font-semibold text-muted-foreground">
-                  Service Name
-                </div>
+                <div className="font-semibold text-muted-foreground">Service Name</div>
                 <div>Service Name</div>
               </li>
               <li className="flex justify-between py-4 text-sm">
-                <div className="font-semibold text-muted-foreground">
-                  Service Version
-                </div>
+                <div className="font-semibold text-muted-foreground">Service Version</div>
                 <div>Service Version</div>
               </li>
               <li className="flex justify-between py-4 text-sm">
@@ -346,21 +275,15 @@ const RouterPage: React.FC<{ router: Router }> = ({ router }) => {
                 <div>serviceInstanceId</div>
               </li>
               <li className="flex justify-between py-4 text-sm">
-                <div className="font-semibold text-muted-foreground">
-                  Cluster Name
-                </div>
+                <div className="font-semibold text-muted-foreground">Cluster Name</div>
                 <div> Cluster Name</div>
               </li>
               <li className="flex justify-between py-4 text-sm">
-                <div className="font-semibold text-muted-foreground">
-                  Hostname
-                </div>
+                <div className="font-semibold text-muted-foreground">Hostname</div>
                 <div>Hostname</div>
               </li>
               <li className="flex justify-between py-4 text-sm">
-                <div className="font-semibold text-muted-foreground">
-                  Process ID
-                </div>
+                <div className="font-semibold text-muted-foreground">Process ID</div>
                 <div>232332</div>
               </li>
             </ul>
@@ -391,11 +314,11 @@ const RoutersPage: NextPageWithLayout = () => {
 
   const columns: ColumnDef<Router, any>[] = [
     {
-      accessorKey: "serviceName",
+      accessorKey: 'serviceName',
       header: () => <div>Name</div>,
     },
     {
-      accessorKey: "serviceInstanceId",
+      accessorKey: 'serviceInstanceId',
       header: () => {
         return (
           <div className="flex items-center space-x-1">
@@ -408,7 +331,7 @@ const RoutersPage: NextPageWithLayout = () => {
       },
     },
     {
-      accessorKey: "status",
+      accessorKey: 'status',
       header: () => {
         return (
           <div className="flex items-center space-x-1">
@@ -421,15 +344,15 @@ const RoutersPage: NextPageWithLayout = () => {
       },
     },
     {
-      accessorKey: "serviceVersion",
+      accessorKey: 'serviceVersion',
       header: () => <div>Version</div>,
     },
     {
-      accessorKey: "onLatestComposition",
+      accessorKey: 'onLatestComposition',
       header: () => <div>Composition</div>,
     },
     {
-      accessorKey: "clusterName",
+      accessorKey: 'clusterName',
       header: () => {
         return (
           <div className="flex items-center space-x-1">
@@ -441,18 +364,15 @@ const RoutersPage: NextPageWithLayout = () => {
         );
       },
     },
-    { accessorKey: "uptimeSeconds", header: () => <div>Uptime</div> },
+    { accessorKey: 'uptimeSeconds', header: () => <div>Uptime</div> },
     {
-      accessorKey: "memCpu",
+      accessorKey: 'memCpu',
       header: () => {
         return (
           <div className="flex items-center space-x-1">
             <div>Mem / CPU</div>
             <div>
-              <InfoTooltip>
-                Current utilization of the instance. Arrows show the trend in
-                percentage.
-              </InfoTooltip>
+              <InfoTooltip>Current utilization of the instance. Arrows show the trend in percentage.</InfoTooltip>
             </div>
           </div>
         );
@@ -484,9 +404,7 @@ const RoutersPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve routers"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -498,12 +416,11 @@ const RoutersPage: NextPageWithLayout = () => {
         title="No active router found"
         description={
           <>
-            Turn on your router and wait a few seconds (~15 seconds) until the
-            metrics arrive.{" "}
+            Turn on your router and wait a few seconds (~15 seconds) until the metrics arrive.{' '}
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL + "/studio/cluster-management"}
+              href={docsBaseURL + '/studio/cluster-management'}
               className="text-primary"
             >
               Learn more.
@@ -513,7 +430,7 @@ const RoutersPage: NextPageWithLayout = () => {
         actions={
           <RunRouterCommand
             open={open}
-            graphName={graphData?.graph?.name ?? ""}
+            graphName={graphData?.graph?.name ?? ''}
             setOpen={setOpen}
             namespace={namespace}
             triggerLabel="Run Router locally"
@@ -532,9 +449,9 @@ const RoutersPage: NextPageWithLayout = () => {
     <div className="space-y-4">
       <div>
         <p className="text-sm text-muted-foreground">
-          Track and monitor your router cluster. This view will update itself.{" "}
+          Track and monitor your router cluster. This view will update itself.{' '}
           <Link
-            href={docsBaseURL + "/studio/cluster-management"}
+            href={docsBaseURL + '/studio/cluster-management'}
             className="text-primary"
             target="_blank"
             rel="noreferrer"
@@ -546,9 +463,7 @@ const RoutersPage: NextPageWithLayout = () => {
       <div className="grid auto-cols-fr grid-flow-col grid-rows-2 gap-4 md:grid-rows-none">
         <div className="flex h-full w-full flex-col gap-y-4 rounded-md border px-8 py-6">
           <h2 className="flex items-center gap-x-2">
-            <span className="leading-none tracking-tight text-muted-foreground">
-              Routers
-            </span>
+            <span className="leading-none tracking-tight text-muted-foreground">Routers</span>
           </h2>
           <div>
             <span className="text-xl font-semibold">{data.routers.length}</span>
@@ -557,9 +472,7 @@ const RoutersPage: NextPageWithLayout = () => {
 
         <div className="flex h-full w-full flex-col gap-y-4 rounded-md border px-8 py-6">
           <h2 className="flex items-center gap-x-2">
-            <span className="leading-none tracking-tight text-muted-foreground">
-              Memory Usage
-            </span>
+            <span className="leading-none tracking-tight text-muted-foreground">Memory Usage</span>
           </h2>
           <div>
             <span className="text-xl font-semibold">
@@ -572,9 +485,7 @@ const RoutersPage: NextPageWithLayout = () => {
 
         <div className="flex h-full w-full flex-col gap-y-4 rounded-md border px-8 py-6">
           <h2 className="flex items-center gap-x-2">
-            <span className="leading-none tracking-tight text-muted-foreground">
-              Clusters
-            </span>
+            <span className="leading-none tracking-tight text-muted-foreground">Clusters</span>
           </h2>
           <div>
             <span className="text-xl font-semibold">{clusters}</span>
@@ -590,12 +501,7 @@ const RoutersPage: NextPageWithLayout = () => {
                   {headerGroup.headers.map((header) => {
                     return (
                       <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
+                        {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                       </TableHead>
                     );
                   })}
@@ -617,45 +523,36 @@ const RoutersPage: NextPageWithLayout = () => {
                           transition: { duration: 0.5, ease: easeInOut },
                         }}
                         key={row.original.serviceInstanceId}
-                        data-state={row.getIsSelected() && "selected"}
+                        data-state={row.getIsSelected() && 'selected'}
                         onClick={() => {
                           router.push({
-                            pathname:
-                              "/[organizationSlug]/[namespace]/graph/[slug]/routers",
+                            pathname: '/[organizationSlug]/[namespace]/graph/[slug]/routers',
                             query: {
                               ...router.query,
-                              serviceInstanceId:
-                                row.getValue("serviceInstanceId"),
+                              serviceInstanceId: row.getValue('serviceInstanceId'),
                             },
                           });
                         }}
                         className={cn(
-                          "group cursor-pointer hover:bg-secondary/30",
-                          "border-b transition-colors data-[state=selected]:bg-muted",
+                          'group cursor-pointer hover:bg-secondary/30',
+                          'border-b transition-colors data-[state=selected]:bg-muted',
                           {
-                            "bg-secondary/50":
-                              row.original.serviceInstanceId ===
-                              router.query.serviceInstanceId,
+                            'bg-secondary/50': row.original.serviceInstanceId === router.query.serviceInstanceId,
                           },
                         )}
                       >
                         {row.getVisibleCells().map((cell) => {
                           let customCell: React.JSX.Element | String = (
                             <div className="flex items-center space-x-2">
-                              {flexRender(
-                                cell.column.columnDef.cell,
-                                cell.getContext(),
-                              )}
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
                             </div>
                           );
 
-                          if (cell.column.id === "serviceName") {
+                          if (cell.column.id === 'serviceName') {
                             customCell = (
                               <>
-                                {" "}
-                                <p className="flex w-48 items-center">
-                                  {cell.row.original.serviceName}
-                                </p>
+                                {' '}
+                                <p className="flex w-48 items-center">{cell.row.original.serviceName}</p>
                                 <div className="text-muted-foreground">
                                   <Tooltip delayDuration={200}>
                                     <TooltipTrigger asChild>
@@ -666,132 +563,80 @@ const RoutersPage: NextPageWithLayout = () => {
                                 </div>
                               </>
                             );
-                          } else if (cell.column.id === "clusterName") {
-                            customCell = cell.row.original.clusterName || "-";
-                          } else if (cell.column.id === "status") {
-                            customCell = (
-                              <MdCheckCircle className="h-5 w-5 text-success" />
-                            );
-                          } else if (cell.column.id === "onLatestComposition") {
+                          } else if (cell.column.id === 'clusterName') {
+                            customCell = cell.row.original.clusterName || '-';
+                          } else if (cell.column.id === 'status') {
+                            customCell = <MdCheckCircle className="h-5 w-5 text-success" />;
+                          } else if (cell.column.id === 'onLatestComposition') {
                             customCell = (
                               <div className="whitespace-nowrap">
-                                <Button
-                                  variant="link"
-                                  asChild
-                                  className="px-0 hover:no-underline"
-                                >
+                                <Button variant="link" asChild className="px-0 hover:no-underline">
                                   <Link
                                     href={{
                                       pathname:
-                                        "/[organizationSlug]/[namespace]/graph/[slug]/compositions/[compositionId]/",
+                                        '/[organizationSlug]/[namespace]/graph/[slug]/compositions/[compositionId]/',
                                       query: {
                                         ...router.query,
-                                        compositionId:
-                                          cell.row.original.compositionId,
+                                        compositionId: cell.row.original.compositionId,
                                       },
                                     }}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                     }}
                                   >
-                                    {
-                                      cell.row.original.compositionId.split(
-                                        "-",
-                                      )[0]
-                                    }{" "}
+                                    {cell.row.original.compositionId.split('-')[0]}{' '}
                                   </Link>
                                 </Button>
                                 <span className="whitespace-nowrap text-muted-foreground">
-                                  {" "}
-                                  (
-                                  {cell.row.original.onLatestComposition
-                                    ? "Latest"
-                                    : "Outdated"}
-                                  )
+                                  {' '}
+                                  ({cell.row.original.onLatestComposition ? 'Latest' : 'Outdated'})
                                 </span>
                               </div>
                             );
-                          } else if (cell.column.id === "uptimeSeconds") {
+                          } else if (cell.column.id === 'uptimeSeconds') {
                             customCell = (
                               <>
-                                {formatDistanceToNow(
-                                  subSeconds(
-                                    new Date(),
-                                    parseInt(cell.row.original.uptimeSeconds),
-                                  ),
-                                )}
+                                {formatDistanceToNow(subSeconds(new Date(), parseInt(cell.row.original.uptimeSeconds)))}
                               </>
                             );
-                          } else if (cell.column.id === "memCpu") {
-                            let memBadge = (
-                              <FiArrowRight className="h-4 w-4 text-muted-foreground" />
-                            );
-                            let cpuBadge = (
-                              <FiArrowRight className="h-4 w-4 text-muted-foreground" />
-                            );
-                            if (
-                              cell.row.original.memoryUsageChangePercent > 0
-                            ) {
-                              memBadge = (
-                                <FiArrowUp className="h-4 w-4 text-pink-500" />
-                              );
-                            } else if (
-                              cell.row.original.memoryUsageChangePercent < 0
-                            ) {
-                              memBadge = (
-                                <FiArrowDown className="h-4 w-4 text-success" />
-                              );
+                          } else if (cell.column.id === 'memCpu') {
+                            let memBadge = <FiArrowRight className="h-4 w-4 text-muted-foreground" />;
+                            let cpuBadge = <FiArrowRight className="h-4 w-4 text-muted-foreground" />;
+                            if (cell.row.original.memoryUsageChangePercent > 0) {
+                              memBadge = <FiArrowUp className="h-4 w-4 text-pink-500" />;
+                            } else if (cell.row.original.memoryUsageChangePercent < 0) {
+                              memBadge = <FiArrowDown className="h-4 w-4 text-success" />;
                             }
 
                             if (cell.row.original.cpuUsageChangePercent > 0) {
-                              cpuBadge = (
-                                <FiArrowUp className="h-4 w-4 text-pink-500" />
-                              );
-                            } else if (
-                              cell.row.original.cpuUsageChangePercent < 0
-                            ) {
-                              cpuBadge = (
-                                <FiArrowDown className="h-4 w-4 text-success" />
-                              );
+                              cpuBadge = <FiArrowUp className="h-4 w-4 text-pink-500" />;
+                            } else if (cell.row.original.cpuUsageChangePercent < 0) {
+                              cpuBadge = <FiArrowDown className="h-4 w-4 text-success" />;
                             }
                             customCell = (
                               <div className="space-x-2">
                                 <span className="flex whitespace-nowrap font-mono">
-                                  {prettyBytes(
-                                    cell.row.original.memoryUsageMb *
-                                      1024 *
-                                      1024,
-                                    {
-                                      maximumFractionDigits: 2,
-                                    },
-                                  )}{" "}
+                                  {prettyBytes(cell.row.original.memoryUsageMb * 1024 * 1024, {
+                                    maximumFractionDigits: 2,
+                                  })}{' '}
                                   <span className="h-4 w-4">{memBadge}</span>
                                   <span>/</span>
                                   <span className="h-4 w-4">{cpuBadge}</span>
-                                  <span>
-                                    {cell.row.original.cpuUsagePercent.toFixed(
-                                      2,
-                                    )}
-                                  </span>
+                                  <span>{cell.row.original.cpuUsagePercent.toFixed(2)}</span>
                                   <span>%</span>
                                 </span>
                               </div>
                             );
                           }
 
-                          return (
-                            <TableCell key={cell.id}>{customCell}</TableCell>
-                          );
+                          return <TableCell key={cell.id}>{customCell}</TableCell>;
                         })}
                       </motion.tr>
                     );
                   })
                 ) : (
                   <TableRow>
-                    <TableCell
-                      colSpan={columns.length}
-                      className="h-24 text-center"
-                    >
+                    <TableCell colSpan={columns.length} className="h-24 text-center">
                       <Loader />
                     </TableCell>
                   </TableRow>
@@ -811,10 +656,7 @@ const RoutersPage: NextPageWithLayout = () => {
 RoutersPage.getLayout = (page) =>
   getGraphLayout(
     <PageHeader title="Routers | Studio">
-      <GraphPageLayout
-        title="Routers"
-        subtitle="View and Observe all running routers of your graph."
-      >
+      <GraphPageLayout title="Routers" subtitle="View and Observe all running routers of your graph.">
         {page}
       </GraphPageLayout>
     </PageHeader>,

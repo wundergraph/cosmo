@@ -1818,7 +1818,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 					"service_name":             "service-name",                                                     // From request header
 					"operation_persisted_hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", // From context
 					"operation_hash":           "1163600561566987607",                                              // From context
-					"operation_sha256":         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // From context
+					"operation_sha256":         "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", // From context
 					"operation_name":           "Employees",                                                        // From context
 					"operation_type":           "query",                                                            // From context
 				}
@@ -2029,7 +2029,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 			)
 		})
 
-		t.Run("validate request.operation.sha256Hash expression with persisted hash and body", func(t *testing.T) {
+		t.Run("validate request.operation.sha256Hash expression with persisted hash only", func(t *testing.T) {
 			t.Parallel()
 
 			testenv.Run(t,
@@ -2062,7 +2062,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 
 					val, ok := requestContext["operation_sha256_expression"].(string)
 					require.True(t, ok)
-					require.Equal(t, "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", val)
+					require.Equal(t, "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f", val)
 				},
 			)
 		})

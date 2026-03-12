@@ -1,28 +1,30 @@
-import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
-import { NextPageWithLayout } from "@/lib/page";
-import { GraphPruningLintConfig } from "@/components/lint-policy/graph-pruning-config";
-import { LinterConfig } from "@/components/lint-policy/linter-config";
-import { ChecksConfig } from "@/components/checks/checks-config";
-import { useQuery } from "@connectrpc/connect-query";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { EmptyState } from '@/components/empty-state';
+import { getDashboardLayout } from '@/components/layout/dashboard-layout';
+import { Button } from '@/components/ui/button';
+import { Loader } from '@/components/ui/loader';
+import { NextPageWithLayout } from '@/lib/page';
+import { GraphPruningLintConfig } from '@/components/lint-policy/graph-pruning-config';
+import { LinterConfig } from '@/components/lint-policy/linter-config';
+import { ChecksConfig } from '@/components/checks/checks-config';
+import { useQuery } from '@connectrpc/connect-query';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   getNamespaceGraphPruningConfig,
   getNamespaceLintConfig,
   getNamespaceChecksConfig,
   getNamespaceProposalConfig,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { ProposalConfig } from "@/components/proposal/proposal-config";
-import { useFeature } from "@/hooks/use-feature";
-import { WorkspaceSelector } from "@/components/dashboard/workspace-selector";
-import { useWorkspace } from "@/hooks/use-workspace";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { ProposalConfig } from '@/components/proposal/proposal-config';
+import { useFeature } from '@/hooks/use-feature';
+import { WorkspaceSelector } from '@/components/dashboard/workspace-selector';
+import { useWorkspace } from '@/hooks/use-workspace';
 
 const PoliciesPage: NextPageWithLayout = () => {
-  const { namespace: { name: namespace } } = useWorkspace();
-  const proposalsFeature = useFeature("proposals");
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
+  const proposalsFeature = useFeature('proposals');
 
   const { data, isLoading, refetch, error } = useQuery(getNamespaceLintConfig, {
     namespace: namespace,
@@ -107,7 +109,7 @@ const PoliciesPage: NextPageWithLayout = () => {
           graphPruningConfigFetchError?.message ||
           proposalConfig?.response?.details ||
           proposalConfigFetchError?.message ||
-          "Please try again"
+          'Please try again'
         }
         actions={<Button onClick={refetchAll}>Retry</Button>}
       />
@@ -117,14 +119,11 @@ const PoliciesPage: NextPageWithLayout = () => {
   return (
     <div className="space-y-6">
       <LinterConfig data={data} refetch={refetch} />
-      <GraphPruningLintConfig
-        data={graphPruningConfig}
-        refetch={refetchGraphPruningConfig}
-      />
+      <GraphPruningLintConfig data={graphPruningConfig} refetch={refetchGraphPruningConfig} />
       <ChecksConfig namespace={namespace} data={checksConfig} />
       {proposalsFeature?.enabled && proposalConfig && (
         <ProposalConfig
-          key={proposalConfig.enabled ? "enabled" : "disabled"}
+          key={proposalConfig.enabled ? 'enabled' : 'disabled'}
           data={proposalConfig}
           refetch={refetchProposalConfig}
         />
@@ -136,8 +135,8 @@ const PoliciesPage: NextPageWithLayout = () => {
 PoliciesPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
-    "Policies",
-    "Configure various policies for subgraphs in the namespace.",
+    'Policies',
+    'Configure various policies for subgraphs in the namespace.',
     undefined,
     undefined,
     [<WorkspaceSelector key="0" />],

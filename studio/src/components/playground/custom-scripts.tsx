@@ -1,31 +1,17 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { useLocalStorage } from "@/hooks/use-local-storage";
-import { useResolvedTheme } from "@/hooks/use-resolved-theme";
-import { cn } from "@/lib/utils";
-import {
-  createConnectQueryKey,
-  useMutation,
-  useQuery,
-} from "@connectrpc/connect-query";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import Editor, { loader, useMonaco } from "@monaco-editor/react";
+} from '@/components/ui/dropdown-menu';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { useLocalStorage } from '@/hooks/use-local-storage';
+import { useResolvedTheme } from '@/hooks/use-resolved-theme';
+import { cn } from '@/lib/utils';
+import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import Editor, { loader, useMonaco } from '@monaco-editor/react';
 import {
   CheckIcon,
   CodeIcon,
@@ -34,40 +20,33 @@ import {
   Pencil1Icon,
   PlayIcon,
   PlusIcon,
-} from "@radix-ui/react-icons";
-import { useQueryClient } from "@tanstack/react-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+} from '@radix-ui/react-icons';
+import { useQueryClient } from '@tanstack/react-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   createPlaygroundScript,
   deletePlaygroundScript,
   getPlaygroundScripts,
   updatePlaygroundScript,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { PlaygroundScript } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import CryptoJS from "crypto-js";
-import _ from "lodash";
-import { editor } from "monaco-editor";
-import {
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { useDebouncedCallback } from "use-debounce";
-import { EmptyState } from "../empty-state";
-import { schemaViewerDarkTheme } from "../schema/monaco-dark-theme";
-import { Button } from "../ui/button";
-import { Checkbox } from "../ui/checkbox";
-import { Input } from "../ui/input";
-import { Loader } from "../ui/loader";
-import { Separator } from "../ui/separator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { useToast } from "../ui/use-toast";
-import { PlaygroundContext } from "./types";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { PlaygroundScript } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import CryptoJS from 'crypto-js';
+import _ from 'lodash';
+import { editor } from 'monaco-editor';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useDebouncedCallback } from 'use-debounce';
+import { EmptyState } from '../empty-state';
+import { schemaViewerDarkTheme } from '../schema/monaco-dark-theme';
+import { Button } from '../ui/button';
+import { Checkbox } from '../ui/checkbox';
+import { Input } from '../ui/input';
+import { Loader } from '../ui/loader';
+import { Separator } from '../ui/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { useToast } from '../ui/use-toast';
+import { PlaygroundContext } from './types';
 
-const envKey = "playground:env";
+const envKey = 'playground:env';
 
 const monacoExtendedAPI = `
   interface JSONObject {
@@ -140,14 +119,10 @@ const monacoExtendedAPI = `
   declare const playground: Playground;
 `;
 
-const getPlaygroundAPI = (
-  graphId: string,
-  requestBody?: any,
-  responseBody?: any,
-) => ({
+const getPlaygroundAPI = (graphId: string, requestBody?: any, responseBody?: any) => ({
   env: {
     set: (name: string, value: string) => {
-      const storedEnv = localStorage.getItem(envKey) || "{}";
+      const storedEnv = localStorage.getItem(envKey) || '{}';
       const parsed = JSON.parse(storedEnv);
       if (!parsed[graphId]) {
         parsed[graphId] = {};
@@ -155,13 +130,13 @@ const getPlaygroundAPI = (
       parsed[graphId][name] = value;
       localStorage.setItem(envKey, JSON.stringify(parsed));
       window.dispatchEvent(
-        new StorageEvent("local-storage", {
+        new StorageEvent('local-storage', {
           key: envKey,
         }),
       );
     },
     get: (name: string) => {
-      const storedEnv = localStorage.getItem(envKey) || "{}";
+      const storedEnv = localStorage.getItem(envKey) || '{}';
       const parsed = JSON.parse(storedEnv);
       return parsed[graphId]?.[name];
     },
@@ -178,40 +153,26 @@ const getPlaygroundAPI = (
   CryptoJS: CryptoJS,
 });
 
-export const attachPlaygroundAPI = (
-  graphId: string,
-  requestBody?: any,
-  responseBody?: any,
-) => {
-  (window as any).playground = getPlaygroundAPI(
-    graphId,
-    requestBody,
-    responseBody,
-  );
+export const attachPlaygroundAPI = (graphId: string, requestBody?: any, responseBody?: any) => {
+  (window as any).playground = getPlaygroundAPI(graphId, requestBody, responseBody);
 };
 
 export const detachPlaygroundAPI = () => {
   delete (window as any).playground;
 };
 
-type ScriptType = "pre-flight" | "pre-operation" | "post-operation";
+type ScriptType = 'pre-flight' | 'pre-operation' | 'post-operation';
 
 loader.config({
   paths: {
     // Load Monaco Editor from "public" directory
-    vs: "/monaco-editor/min/vs",
+    vs: '/monaco-editor/min/vs',
     // Load Monaco Editor from different CDN
     // vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs',
   },
 });
 
-const ScriptEditor = ({
-  script,
-  close,
-}: {
-  script: PlaygroundScript;
-  close: () => void;
-}) => {
+const ScriptEditor = ({ script, close }: { script: PlaygroundScript; close: () => void }) => {
   const selectedTheme = useResolvedTheme();
   const monaco = useMonaco();
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -256,10 +217,10 @@ const ScriptEditor = ({
 
   useEffect(() => {
     if (!monaco) return;
-    if (selectedTheme === "dark") {
-      monaco.editor.setTheme("wg-dark");
+    if (selectedTheme === 'dark') {
+      monaco.editor.setTheme('wg-dark');
     } else {
-      monaco.editor.setTheme("light");
+      monaco.editor.setTheme('light');
     }
   }, [selectedTheme, monaco]);
 
@@ -284,7 +245,7 @@ const ScriptEditor = ({
 
   const handleEnvChange = (value: string | undefined) => {
     try {
-      const parsedEnv = JSON.parse(value || "{}");
+      const parsedEnv = JSON.parse(value || '{}');
       setEnv({
         ...env,
         [context.graphId]: parsedEnv,
@@ -304,7 +265,7 @@ const ScriptEditor = ({
 
   const [scriptTabState, setScriptTabState] = useLocalStorage<{
     [key: string]: Record<string, any>;
-  }>("playground:script:tabState", {});
+  }>('playground:script:tabState', {});
 
   const updateOpScripts = useCallback(
     ({ upsert, updatedTitle }: { upsert: boolean; updatedTitle?: string }) => {
@@ -313,10 +274,7 @@ const ScriptEditor = ({
       tabs.forEach((tab) => {
         const tabId = tab.id;
 
-        if (
-          tempScriptTabState[tabId] &&
-          tempScriptTabState[tabId][script.type]?.id === script.id
-        ) {
+        if (tempScriptTabState[tabId] && tempScriptTabState[tabId][script.type]?.id === script.id) {
           // Update existing script entry
           tempScriptTabState[tabId][script.type] = {
             ...tempScriptTabState[tabId][script.type],
@@ -362,12 +320,12 @@ const ScriptEditor = ({
     console.log = (...args) => {
       const logString = args
         .map((arg) => {
-          if (arg === null) return "null";
-          if (arg === undefined) return "undefined";
-          if (typeof arg === "object") return JSON.stringify(arg, null, 2);
+          if (arg === null) return 'null';
+          if (arg === undefined) return 'undefined';
+          if (typeof arg === 'object') return JSON.stringify(arg, null, 2);
           return String(arg); // Handle all other types
         })
-        .join(" ");
+        .join(' ');
 
       capturedLogs.push(logString);
       setLogs((prevLogs) => [...prevLogs, logString]);
@@ -401,20 +359,20 @@ const ScriptEditor = ({
             onChange={() => {
               debouncedUpdate();
 
-              if (script.type !== "pre-flight") {
+              if (script.type !== 'pre-flight') {
                 updateOpScripts({ upsert: false });
               }
 
               updateSelectedScript();
             }}
-            theme={selectedTheme === "dark" ? "wg-dark" : "light"}
+            theme={selectedTheme === 'dark' ? 'wg-dark' : 'light'}
             className="scrollbar-custom h-full text-xs"
             language="javascript"
             defaultValue={script.content}
             loading={null}
             options={{
               automaticLayout: true,
-              language: "javascript",
+              language: 'javascript',
               minimap: {
                 enabled: false,
               },
@@ -432,19 +390,16 @@ const ScriptEditor = ({
             onMount={(editor, monaco) => {
               editorRef.current = editor;
 
-              monaco.editor.defineTheme("wg-dark", schemaViewerDarkTheme);
-              if (selectedTheme === "dark") {
-                monaco.editor.setTheme("wg-dark");
+              monaco.editor.defineTheme('wg-dark', schemaViewerDarkTheme);
+              if (selectedTheme === 'dark') {
+                monaco.editor.setTheme('wg-dark');
               }
 
               // Fetch and add the crypto-js type definitions
-              fetch("https://unpkg.com/@types/crypto-js@4.2.0/index.d.ts")
+              fetch('https://unpkg.com/@types/crypto-js@4.2.0/index.d.ts')
                 .then((response) => response.text())
                 .then((typeDefs) => {
-                  monaco.languages.typescript.javascriptDefaults.addExtraLib(
-                    typeDefs,
-                    "crypto-js.d.ts",
-                  );
+                  monaco.languages.typescript.javascriptDefaults.addExtraLib(typeDefs, 'crypto-js.d.ts');
 
                   monaco.languages.typescript.javascriptDefaults.addExtraLib(
                     `
@@ -452,15 +407,12 @@ const ScriptEditor = ({
                         export = CryptoJS;
                       }
                     `,
-                    "crypto-js-module.d.ts",
+                    'crypto-js-module.d.ts',
                   );
                 })
                 .catch((e) => console.error(e));
 
-              monaco.languages.typescript.javascriptDefaults.addExtraLib(
-                monacoExtendedAPI,
-                "playground.d.ts",
-              );
+              monaco.languages.typescript.javascriptDefaults.addExtraLib(monacoExtendedAPI, 'playground.d.ts');
             }}
           />
         </ResizablePanel>
@@ -515,27 +467,21 @@ const ScriptEditor = ({
                   <span>Environment Variables</span>
                   <Tooltip>
                     <TooltipTrigger>
-                      {!envError ? (
-                        <CheckIcon className="text-success" />
-                      ) : (
-                        <Cross1Icon className="text-destructive" />
-                      )}
+                      {!envError ? <CheckIcon className="text-success" /> : <Cross1Icon className="text-destructive" />}
                     </TooltipTrigger>
-                    <TooltipContent align="end">
-                      {!envError ? "Valid" : envError}
-                    </TooltipContent>
+                    <TooltipContent align="end">{!envError ? 'Valid' : envError}</TooltipContent>
                   </Tooltip>
                 </div>
                 <Editor
                   key="env-editor"
                   onChange={handleEnvChange}
-                  theme={selectedTheme === "dark" ? "wg-dark" : "light"}
+                  theme={selectedTheme === 'dark' ? 'wg-dark' : 'light'}
                   language="json"
                   value={JSON.stringify(env[context.graphId], null, 2)}
                   loading={null}
                   options={{
                     automaticLayout: true,
-                    language: "json",
+                    language: 'json',
                     minimap: {
                       enabled: false,
                     },
@@ -546,15 +492,15 @@ const ScriptEditor = ({
                       horizontalScrollbarSize: 6,
                       useShadows: false,
                     },
-                    lineNumbers: "off",
+                    lineNumbers: 'off',
                     folding: false,
                   }}
                   onMount={(editor, monaco) => {
                     envEditorRef.current = editor;
 
-                    monaco.editor.defineTheme("wg-dark", schemaViewerDarkTheme);
-                    if (selectedTheme === "dark") {
-                      monaco.editor.setTheme("wg-dark");
+                    monaco.editor.defineTheme('wg-dark', schemaViewerDarkTheme);
+                    if (selectedTheme === 'dark') {
+                      monaco.editor.setTheme('wg-dark');
                     }
                   }}
                 />
@@ -575,11 +521,7 @@ const ScriptEditor = ({
                 placeholder="Enter script title"
                 className="w-64"
               />
-              <Button
-                variant="secondary"
-                size="icon-sm"
-                onClick={() => setIsEditingTitle(false)}
-              >
+              <Button variant="secondary" size="icon-sm" onClick={() => setIsEditingTitle(false)}>
                 <Cross1Icon />
               </Button>
               <Button
@@ -601,7 +543,7 @@ const ScriptEditor = ({
                     });
                   }
 
-                  if (script.type !== "pre-flight") {
+                  if (script.type !== 'pre-flight') {
                     updateOpScripts({
                       upsert: true,
                       updatedTitle: editedTitle,
@@ -614,12 +556,8 @@ const ScriptEditor = ({
             </>
           ) : (
             <>
-              <span className="text-sm">{title || "untitled script"}</span>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setIsEditingTitle(true)}
-              >
+              <span className="text-sm">{title || 'untitled script'}</span>
+              <Button variant="ghost" size="icon-sm" onClick={() => setIsEditingTitle(true)}>
                 <Pencil1Icon />
               </Button>
             </>
@@ -643,7 +581,7 @@ const ScriptEditor = ({
                 updatedByTabId: currentTabId,
               });
 
-              if (script.type !== "pre-flight") {
+              if (script.type !== 'pre-flight') {
                 updateOpScripts({ upsert: true });
               }
 
@@ -678,7 +616,7 @@ const ScriptSelector = ({
 
   const [, setScriptTabState] = useLocalStorage<{
     [key: string]: Record<string, any>;
-  }>("playground:script:tabState", {});
+  }>('playground:script:tabState', {});
 
   const { data, isLoading, error, refetch } = useQuery(getPlaygroundScripts, {
     type,
@@ -688,9 +626,7 @@ const ScriptSelector = ({
     if (data) {
       if (data.scripts.length > 0) {
         // Find the updated active script
-        const updatedActiveScript = data.scripts.find(
-          (s) => s.id === activeScript?.id,
-        );
+        const updatedActiveScript = data.scripts.find((s) => s.id === activeScript?.id);
 
         if (updatedActiveScript) {
           // Update the active script with the latest data
@@ -707,27 +643,24 @@ const ScriptSelector = ({
     }
   }, [data, activeScript?.id, selectedScript?.id, setActiveScript]);
 
-  const { mutate: createScript, isPending: creatingScript } = useMutation(
-    createPlaygroundScript,
-    {
-      onSuccess: (data) => {
-        if (data.response?.code === EnumStatusCode.OK) {
-          refetch();
-        } else {
-          toast({
-            description: `Could not create script. ${data.response?.details}`,
-            duration: 3000,
-          });
-        }
-      },
-      onError: () => {
+  const { mutate: createScript, isPending: creatingScript } = useMutation(createPlaygroundScript, {
+    onSuccess: (data) => {
+      if (data.response?.code === EnumStatusCode.OK) {
+        refetch();
+      } else {
         toast({
-          description: "Could not create script. Please try again",
+          description: `Could not create script. ${data.response?.details}`,
           duration: 3000,
         });
-      },
+      }
     },
-  );
+    onError: () => {
+      toast({
+        description: 'Could not create script. Please try again',
+        duration: 3000,
+      });
+    },
+  });
 
   const { mutate: deleteScript } = useMutation(deletePlaygroundScript, {
     onSuccess: (data, variables) => {
@@ -760,7 +693,7 @@ const ScriptSelector = ({
     },
     onError: () => {
       toast({
-        description: "Could not delete script. Please try again",
+        description: 'Could not delete script. Please try again',
         duration: 3000,
       });
     },
@@ -775,9 +708,7 @@ const ScriptSelector = ({
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve scripts"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={
           <Button onClick={() => refetch()} variant="outline">
             Retry
@@ -816,41 +747,29 @@ const ScriptSelector = ({
           return (
             <div
               key={script.id}
-              className={cn(
-                "group flex w-full flex-grow-0 items-center rounded-md hover:bg-accent/80",
-                {
-                  "bg-accent/80": activeScript?.id === script.id,
-                },
-              )}
+              className={cn('group flex w-full flex-grow-0 items-center rounded-md hover:bg-accent/80', {
+                'bg-accent/80': activeScript?.id === script.id,
+              })}
             >
               <Button
-                className={cn(
-                  "w-full min-w-0 text-muted-foreground hover:bg-transparent",
-                  {
-                    "text-foreground": activeScript?.id === script.id,
-                  },
-                )}
+                className={cn('w-full min-w-0 text-muted-foreground hover:bg-transparent', {
+                  'text-foreground': activeScript?.id === script.id,
+                })}
                 variant="ghost"
                 onClick={() => setActiveScript(script)}
               >
-                {script.id === selectedScript?.id && (
-                  <CheckIcon className="mr-2 h-5 w-5" />
-                )}
+                {script.id === selectedScript?.id && <CheckIcon className="mr-2 h-5 w-5" />}
                 <div
-                  className={cn("w-full truncate text-start", {
+                  className={cn('w-full truncate text-start', {
                     italic: !script.title,
                   })}
                 >
-                  {script.title || "untitled script"}
+                  {script.title || 'untitled script'}
                 </div>
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    size="icon-sm"
-                    className="flex-shrink-0"
-                    variant="ghost"
-                  >
+                  <Button size="icon-sm" className="flex-shrink-0" variant="ghost">
                     <DotsVerticalIcon />
                   </Button>
                 </DropdownMenuTrigger>
@@ -890,9 +809,7 @@ const ScriptSelector = ({
 
 const ScriptsViewer = ({ type }: { type: ScriptType }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [activeScript, setActiveScript] = useState<
-    PlaygroundScript | undefined
-  >();
+  const [activeScript, setActiveScript] = useState<PlaygroundScript | undefined>();
 
   return (
     <Dialog
@@ -917,15 +834,11 @@ const ScriptsViewer = ({ type }: { type: ScriptType }) => {
           <DialogTitle className="capitalize">{type} Script</DialogTitle>
         </DialogHeader>
         <div
-          className={cn("grid h-full min-h-0 grid-cols-1 gap-4 divide-x", {
-            "grid-cols-[15rem_auto]": activeScript,
+          className={cn('grid h-full min-h-0 grid-cols-1 gap-4 divide-x', {
+            'grid-cols-[15rem_auto]': activeScript,
           })}
         >
-          <ScriptSelector
-            type={type}
-            activeScript={activeScript}
-            setActiveScript={setActiveScript}
-          />
+          <ScriptSelector type={type} activeScript={activeScript} setActiveScript={setActiveScript} />
           {activeScript && (
             <ScriptEditor
               script={activeScript}
@@ -941,19 +854,13 @@ const ScriptsViewer = ({ type }: { type: ScriptType }) => {
 };
 
 const ScriptSetting = ({ type }: { type: ScriptType }) => {
-  const [selectedScript] = useLocalStorage<PlaygroundScript | null>(
-    `playground:${type}:selected`,
-    null,
-  );
+  const [selectedScript] = useLocalStorage<PlaygroundScript | null>(`playground:${type}:selected`, null);
 
-  const [preFlightEnabled, setPreFlightEnabled] = useLocalStorage(
-    `playground:pre-flight:enabled`,
-    true,
-  );
+  const [preFlightEnabled, setPreFlightEnabled] = useLocalStorage(`playground:pre-flight:enabled`, true);
 
   const [scriptsTabState, setScriptsTabState] = useLocalStorage<{
     [key: string]: Record<string, any>;
-  }>("playground:script:tabState", {});
+  }>('playground:script:tabState', {});
 
   const {
     tabsState: { activeTabIndex, tabs },
@@ -991,9 +898,9 @@ const ScriptSetting = ({ type }: { type: ScriptType }) => {
   return (
     <div className="flex items-center gap-4">
       <Checkbox
-        checked={type === "pre-flight" ? preFlightEnabled : isOpEnabled}
+        checked={type === 'pre-flight' ? preFlightEnabled : isOpEnabled}
         onCheckedChange={(state) => {
-          if (type === "pre-flight") {
+          if (type === 'pre-flight') {
             setPreFlightEnabled(!!state);
           } else {
             setOpEnabled(!!state);
@@ -1003,9 +910,7 @@ const ScriptSetting = ({ type }: { type: ScriptType }) => {
       <div className="w-28 flex-shrink-0 capitalize">{type}</div>:
       <div className="flex w-full items-center justify-between gap-4 rounded-lg border pl-2">
         <div className="select-none text-sm italic">
-          {selectedScript && selectedScript.id
-            ? selectedScript.title || "untitled script"
-            : "None Selected"}
+          {selectedScript && selectedScript.id ? selectedScript.title || 'untitled script' : 'None Selected'}
         </div>
         <ScriptsViewer type={type} />
       </div>
@@ -1021,7 +926,7 @@ export const CustomScripts = () => {
 
   const [scriptsTabState, setScriptsTabState] = useLocalStorage<{
     [key: string]: Record<string, any>;
-  }>("playground:script:tabState", {});
+  }>('playground:script:tabState', {});
 
   useEffect(() => {
     // safe check to avoid race condition
@@ -1071,32 +976,18 @@ export const CustomScripts = () => {
 
     const activeTabScripts = scriptsTabState[activeTabId];
 
-    if (!_.isEqual(selectedPreOp, activeTabScripts?.["pre-operation"])) {
-      if (
-        selectedPreOp?.updatedByTabId &&
-        selectedPreOp?.updatedByTabId !== activeTabId
-      ) {
-        setSelectedPreOp(activeTabScripts?.["pre-operation"]);
+    if (!_.isEqual(selectedPreOp, activeTabScripts?.['pre-operation'])) {
+      if (selectedPreOp?.updatedByTabId && selectedPreOp?.updatedByTabId !== activeTabId) {
+        setSelectedPreOp(activeTabScripts?.['pre-operation']);
       }
     }
 
-    if (!_.isEqual(selectedPostOp, activeTabScripts?.["post-operation"])) {
-      if (
-        selectedPostOp?.updatedByTabId &&
-        selectedPostOp?.updatedByTabId !== activeTabId
-      ) {
-        setSelectedPostOp(activeTabScripts?.["post-operation"]);
+    if (!_.isEqual(selectedPostOp, activeTabScripts?.['post-operation'])) {
+      if (selectedPostOp?.updatedByTabId && selectedPostOp?.updatedByTabId !== activeTabId) {
+        setSelectedPostOp(activeTabScripts?.['post-operation']);
       }
     }
-  }, [
-    tabs,
-    activeTabIndex,
-    scriptsTabState,
-    selectedPreOp,
-    selectedPostOp,
-    setSelectedPreOp,
-    setSelectedPostOp,
-  ]);
+  }, [tabs, activeTabIndex, scriptsTabState, selectedPreOp, selectedPostOp, setSelectedPreOp, setSelectedPostOp]);
 
   return (
     <div className="flex h-full flex-1 flex-col gap-2 pl-1.5">

@@ -1,6 +1,7 @@
 /* eslint-disable import/named */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import {
+  CompositionOptions,
   federateSubgraphs,
   FederationResult,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -179,9 +180,9 @@ export const introspectSubgraph = async ({
 /**
  * Composes a list of subgraphs into a single schema.
  */
-export function composeSubgraphs(subgraphs: Subgraph[], disableResolvabilityValidation?: boolean): FederationResult {
+export function composeSubgraphs(subgraphs: Subgraph[], options?: CompositionOptions): FederationResult {
   // @TODO get router compatibility version programmatically
-  return federateSubgraphs({ disableResolvabilityValidation, subgraphs, version: ROUTER_COMPATIBILITY_VERSION_ONE });
+  return federateSubgraphs({ options, subgraphs, version: ROUTER_COMPATIBILITY_VERSION_ONE });
 }
 
 export type ConfigData = Partial<KeycloakToken & { organizationSlug: string; lastUpdateCheck: number }>;

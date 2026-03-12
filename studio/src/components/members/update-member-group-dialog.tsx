@@ -4,26 +4,29 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogDescription
-} from "@/components/ui/dialog";
-import { OrgMember } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { Button } from "@/components/ui/button";
-import {
-  updateOrgMemberGroup,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { useMutation } from "@connectrpc/connect-query";
-import { useEffect, useState } from "react";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { useToast } from "@/components/ui/use-toast";
-import { MultiGroupSelect } from "@/components/multi-group-select";
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { OrgMember } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { Button } from '@/components/ui/button';
+import { updateOrgMemberGroup } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { useMutation } from '@connectrpc/connect-query';
+import { useEffect, useState } from 'react';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { useToast } from '@/components/ui/use-toast';
+import { MultiGroupSelect } from '@/components/multi-group-select';
 
-export function UpdateMemberGroupDialog({ open, member, onOpenChange, refresh }: {
+export function UpdateMemberGroupDialog({
+  open,
+  member,
+  onOpenChange,
+  refresh,
+}: {
   open: boolean;
   member?: OrgMember;
   onOpenChange(open: boolean): void;
   refresh(): Promise<unknown>;
 }) {
-  const [selectedGroups, setSelectedGroups] = useState<{ groupId: string; name: string; }[]>([]);
+  const [selectedGroups, setSelectedGroups] = useState<{ groupId: string; name: string }[]>([]);
   useEffect(() => {
     if (member?.groups) {
       setSelectedGroups(member.groups);
@@ -82,9 +85,7 @@ export function UpdateMemberGroupDialog({ open, member, onOpenChange, refresh }:
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Update member groups</DialogTitle>
-          <DialogDescription>
-            Update groups for {member?.email}
-          </DialogDescription>
+          <DialogDescription>Update groups for {member?.email}</DialogDescription>
         </DialogHeader>
 
         <div>
@@ -96,11 +97,7 @@ export function UpdateMemberGroupDialog({ open, member, onOpenChange, refresh }:
         </div>
 
         <DialogFooter>
-          <Button
-            disabled={selectedGroups.length === 0}
-            isLoading={isPending}
-            onClick={onSubmit}
-          >
+          <Button disabled={selectedGroups.length === 0} isLoading={isPending} onClick={onSubmit}>
             Apply
           </Button>
         </DialogFooter>

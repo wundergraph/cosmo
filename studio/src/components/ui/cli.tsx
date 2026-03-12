@@ -1,8 +1,8 @@
-import { cn } from "@/lib/utils";
-import { CheckIcon, CopyIcon } from "@radix-ui/react-icons";
-import copy from "copy-to-clipboard";
-import { useEffect, useState } from "react";
-import { Button } from "./button";
+import { cn } from '@/lib/utils';
+import { CheckIcon, CopyIcon } from '@radix-ui/react-icons';
+import copy from 'copy-to-clipboard';
+import { useEffect, useState } from 'react';
+import { Button } from './button';
 
 interface CLIStep {
   description: string;
@@ -30,26 +30,12 @@ export const CLI = ({
 
   return (
     <Button
-      className={cn(
-        "h-auto w-full justify-between text-muted-foreground",
-        className,
-      )}
+      className={cn('h-auto w-full justify-between text-muted-foreground', className)}
       variant="outline"
       onClick={() => setCopied(true)}
     >
-      <span
-        className={cn(
-          "mr-2 whitespace-pre-wrap font-mono text-xs",
-          spanClassName,
-        )}
-      >
-        {command}
-      </span>
-      {copied ? (
-        <CheckIcon className="h-4 w-4 flex-shrink-0" />
-      ) : (
-        <CopyIcon className="h-4 w-4 flex-shrink-0" />
-      )}
+      <span className={cn('mr-2 whitespace-pre-wrap font-mono text-xs', spanClassName)}>{command}</span>
+      {copied ? <CheckIcon className="h-4 w-4 flex-shrink-0" /> : <CopyIcon className="h-4 w-4 flex-shrink-0" />}
     </Button>
   );
 };
@@ -63,10 +49,7 @@ export const CLISteps = ({ steps }: { steps: CLIStep[] }) => {
             <p>
               {index + 1}. {step.description}
             </p>
-            <CLI
-              command={step.command}
-              className="w-full max-w-full md:w-full"
-            />
+            <CLI command={step.command} className="w-full max-w-full md:w-full" />
           </div>
         );
       })}

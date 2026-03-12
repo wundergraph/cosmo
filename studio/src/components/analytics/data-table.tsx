@@ -1,27 +1,16 @@
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useSessionStorage } from "@/hooks/use-session-storage";
-import { cn } from "@/lib/utils";
-import {
-  ChevronDownIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
-import { UpdateIcon } from "@radix-ui/react-icons";
+} from '@/components/ui/dropdown-menu';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { useFeatureLimit } from '@/hooks/use-feature-limit';
+import { useSessionStorage } from '@/hooks/use-session-storage';
+import { cn } from '@/lib/utils';
+import { ChevronDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { UpdateIcon } from '@radix-ui/react-icons';
 import {
   ColumnFiltersState,
   PaginationState,
@@ -36,52 +25,31 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table";
+} from '@tanstack/react-table';
 import {
   AnalyticsViewColumn,
   AnalyticsViewFilterOperator,
   AnalyticsViewGroupName,
   AnalyticsViewResultFilter,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { formatISO, subHours } from "date-fns";
-import { useRouter } from "next/router";
-import {
-  ReactNode,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useState,
-  useCallback,
-} from "react";
-import useDeepCompareEffect from "use-deep-compare-effect";
-import {
-  DatePickerWithRange,
-  DateRange,
-  DateRangePickerChangeHandler,
-  Range,
-} from "../date-picker-with-range";
-import { Loader } from "../ui/loader";
-import { DataTableGroupMenu } from "./data-table-group-menu";
-import { DataTablePagination } from "./data-table-pagination";
-import { AnalyticsFilters, AnalyticsSelectedFilters } from "./filters";
-import { getColumnData } from "./getColumnData";
-import { getDataTableFilters } from "./getDataTableFilters";
-import { RefreshInterval, refreshIntervals } from "./refresh-interval";
-import { useApplyParams } from "./use-apply-params";
-import { getDefaultSort, useSyncTableWithQuery } from "./useSyncTableWithQuery";
-import { HiOutlineCheck } from "react-icons/hi2";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useToast } from "@/components/ui/use-toast";
-import {
-  calculateUrlLength,
-  checkFilterLimits,
-  MAX_URL_LENGTH,
-} from "./metrics";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { formatISO, subHours } from 'date-fns';
+import { useRouter } from 'next/router';
+import { ReactNode, useEffect, useImperativeHandle, useMemo, useState, useCallback } from 'react';
+import useDeepCompareEffect from 'use-deep-compare-effect';
+import { DatePickerWithRange, DateRange, DateRangePickerChangeHandler, Range } from '../date-picker-with-range';
+import { Loader } from '../ui/loader';
+import { DataTableGroupMenu } from './data-table-group-menu';
+import { DataTablePagination } from './data-table-pagination';
+import { AnalyticsFilters, AnalyticsSelectedFilters } from './filters';
+import { getColumnData } from './getColumnData';
+import { getDataTableFilters } from './getDataTableFilters';
+import { RefreshInterval, refreshIntervals } from './refresh-interval';
+import { useApplyParams } from './use-apply-params';
+import { getDefaultSort, useSyncTableWithQuery } from './useSyncTableWithQuery';
+import { HiOutlineCheck } from 'react-icons/hi2';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/components/ui/use-toast';
+import { calculateUrlLength, checkFilterLimits, MAX_URL_LENGTH } from './metrics';
 
 export function AnalyticsDataTable<T>({
   tableRef,
@@ -104,20 +72,14 @@ export function AnalyticsDataTable<T>({
 }) {
   const router = useRouter();
 
-  const [, setRouteCache] = useSessionStorage("analytics.route", router.query);
+  const [, setRouteCache] = useSessionStorage('analytics.route', router.query);
 
-  const [refreshInterval, setRefreshInterval] = useState(
-    refreshIntervals[0].value,
-  );
+  const [refreshInterval, setRefreshInterval] = useState(refreshIntervals[0].value);
 
-  const [sorting, setSorting] = useState<SortingState>(
-    getDefaultSort(router.query.group?.toString()),
-  );
+  const [sorting, setSorting] = useState<SortingState>(getDefaultSort(router.query.group?.toString()));
 
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
-  const [selectedGroup, setSelectedGroup] = useState<AnalyticsViewGroupName>(
-    AnalyticsViewGroupName.None,
-  );
+  const [selectedGroup, setSelectedGroup] = useState<AnalyticsViewGroupName>(AnalyticsViewGroupName.None);
 
   const [selectedRange, setRange] = useState<Range | undefined>();
   const [selectedDateRange, setDateRange] = useState<DateRange>({
@@ -135,8 +97,7 @@ export function AnalyticsDataTable<T>({
       return acc;
     }, {});
 
-  const [columnVisibility, setColumnVisibility] =
-    useState<VisibilityState>(defaultHiddenColumns);
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(defaultHiddenColumns);
 
   useDeepCompareEffect(() => {
     setColumnVisibility(defaultHiddenColumns);
@@ -174,14 +135,11 @@ export function AnalyticsDataTable<T>({
   useEffect(() => {
     if (!router.isReady || !router.query.filterState) return;
 
-    const { exceeded, reason } = checkFilterLimits(
-      router,
-      router.query.filterState as string,
-    );
+    const { exceeded, reason } = checkFilterLimits(router, router.query.filterState as string);
 
     if (exceeded) {
       toast({
-        title: "Filter limit reached",
+        title: 'Filter limit reached',
         description: `${reason}. Filters have been reset.`,
       });
 
@@ -213,7 +171,7 @@ export function AnalyticsDataTable<T>({
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     onPaginationChange: (t) => {
-      if (typeof t === "function") {
+      if (typeof t === 'function') {
         const newVal = functionalUpdate(t, state.pagination);
         applyNewParams({
           page: newVal.pageIndex.toString(),
@@ -222,7 +180,7 @@ export function AnalyticsDataTable<T>({
       }
     },
     onColumnFiltersChange: (t) => {
-      if (typeof t === "function") {
+      if (typeof t === 'function') {
         const newVal = functionalUpdate(t, state.columnFilters);
 
         // Check if we're removing filters (allow) vs adding (check limit)
@@ -235,27 +193,22 @@ export function AnalyticsDataTable<T>({
           const val = f.value as string[] | undefined;
           return sum + (val?.length ?? 0);
         }, 0);
-        const isRemoving =
-          newTotalValues < oldTotalValues ||
-          newVal.length < state.columnFilters.length;
+        const isRemoving = newTotalValues < oldTotalValues || newVal.length < state.columnFilters.length;
 
         let stringifiedFilters;
         try {
           stringifiedFilters = JSON.stringify(newVal);
         } catch {
-          stringifiedFilters = "[]";
+          stringifiedFilters = '[]';
         }
 
         // Check URL length and filter size before applying (only if adding/modifying, not removing)
         if (!isRemoving) {
-          const { exceeded, reason } = checkFilterLimits(
-            router,
-            stringifiedFilters,
-          );
+          const { exceeded, reason } = checkFilterLimits(router, stringifiedFilters);
 
           if (exceeded) {
             toast({
-              title: "Filter limit reached",
+              title: 'Filter limit reached',
               description: `${reason}. Please remove some filters before adding new ones.`,
             });
             return; // Early return prevents filter from being applied
@@ -268,24 +221,24 @@ export function AnalyticsDataTable<T>({
       }
     },
     onSortingChange: (t) => {
-      if (typeof t === "function") {
+      if (typeof t === 'function') {
         const newVal = functionalUpdate(t, state.sorting);
         const defaultSort = getDefaultSort();
         if (newVal.length) {
           applyNewParams({
             sort: newVal[0]?.id,
-            sortDir: newVal[0]?.desc ? "desc" : "asc",
+            sortDir: newVal[0]?.desc ? 'desc' : 'asc',
           });
         } else if (defaultSort[0].id === state.sorting[0].id) {
           applyNewParams(
             {
               sort: defaultSort[0].id,
-              sortDir: defaultSort[0]?.desc ? "asc" : "desc",
+              sortDir: defaultSort[0]?.desc ? 'asc' : 'desc',
             },
-            ["sort", "sortDir"],
+            ['sort', 'sortDir'],
           );
         } else {
-          applyNewParams({}, ["sort", "sortDir"]);
+          applyNewParams({}, ['sort', 'sortDir']);
         }
       }
     },
@@ -298,14 +251,11 @@ export function AnalyticsDataTable<T>({
       {
         group: AnalyticsViewGroupName[val],
       },
-      ["sort", "sortDir"],
+      ['sort', 'sortDir'],
     );
   };
 
-  const onDateRangeChange: DateRangePickerChangeHandler = ({
-    range,
-    dateRange,
-  }) => {
+  const onDateRangeChange: DateRangePickerChangeHandler = ({ range, dateRange }) => {
     if (range) {
       applyNewParams({
         dateRange: null,
@@ -362,17 +312,14 @@ export function AnalyticsDataTable<T>({
           try {
             stringifiedFilters = JSON.stringify(newSelectedFilters);
           } catch {
-            stringifiedFilters = "[]";
+            stringifiedFilters = '[]';
           }
 
-          const { exceeded, reason } = checkFilterLimits(
-            router,
-            stringifiedFilters,
-          );
+          const { exceeded, reason } = checkFilterLimits(router, stringifiedFilters);
 
           if (exceeded) {
             toast({
-              title: "Filter limit reached",
+              title: 'Filter limit reached',
               description: `${reason}. Please remove some filters before adding new ones.`,
             });
             return false; // Validation failed - prevents onSelect from being called
@@ -408,21 +355,21 @@ export function AnalyticsDataTable<T>({
 
     const setFilterOn = (columnName: string) => {
       const col = table.getColumn(columnName);
-      const val = row.getValue(col?.id ?? "") as string;
+      const val = row.getValue(col?.id ?? '') as string;
 
       const stringifiedFilters = JSON.stringify([
         {
           id: columnName,
           value: [
             JSON.stringify({
-              label: val || "-",
+              label: val || '-',
               operator: AnalyticsViewFilterOperator.EQUALS,
-              value: val || "",
+              value: val || '',
             }),
           ],
         },
       ]);
-      newQueryParams["filterState"] = stringifiedFilters;
+      newQueryParams['filterState'] = stringifiedFilters;
     };
 
     switch (selectedGroup) {
@@ -431,30 +378,29 @@ export function AnalyticsDataTable<T>({
         setRouteCache(router.query);
 
         applyNewParams({
-          traceID: row.getValue("traceId"),
-          spanID: row.getValue("spanId"),
+          traceID: row.getValue('traceId'),
+          spanID: row.getValue('spanId'),
         });
         return;
       }
       case AnalyticsViewGroupName.Client: {
-        setFilterOn("clientName");
+        setFilterOn('clientName');
         break;
       }
       case AnalyticsViewGroupName.HttpStatusCode: {
-        setFilterOn("httpStatusCode");
+        setFilterOn('httpStatusCode');
         break;
       }
       default: {
-        setFilterOn("operationName");
+        setFilterOn('operationName');
       }
     }
-    newQueryParams["group"] =
-      AnalyticsViewGroupName[AnalyticsViewGroupName.None];
+    newQueryParams['group'] = AnalyticsViewGroupName[AnalyticsViewGroupName.None];
 
-    applyNewParams(newQueryParams, ["sort", "sortDir"]);
+    applyNewParams(newQueryParams, ['sort', 'sortDir']);
   };
 
-  const tracingRetention = useFeatureLimit("tracing-retention", 7);
+  const tracingRetention = useFeatureLimit('tracing-retention', 7);
 
   return (
     <div>
@@ -475,9 +421,8 @@ export function AnalyticsDataTable<T>({
                 </div>
               </TooltipTrigger>
               <TooltipContent>
-                Maximum URL length of {MAX_URL_LENGTH.toLocaleString()}{" "}
-                characters reached. Please remove some filters before adding new
-                ones.
+                Maximum URL length of {MAX_URL_LENGTH.toLocaleString()} characters reached. Please remove some filters
+                before adding new ones.
               </TooltipContent>
             </Tooltip>
           )}
@@ -488,19 +433,19 @@ export function AnalyticsDataTable<T>({
             onChange={onGroupChange}
             items={[
               {
-                label: "None",
+                label: 'None',
                 value: AnalyticsViewGroupName.None,
               },
               {
-                label: "Operation Name",
+                label: 'Operation Name',
                 value: AnalyticsViewGroupName.OperationName,
               },
               {
-                label: "Client",
+                label: 'Client',
                 value: AnalyticsViewGroupName.Client,
               },
               {
-                label: "HTTP Status Code",
+                label: 'HTTP Status Code',
                 value: AnalyticsViewGroupName.HttpStatusCode,
               },
             ]}
@@ -520,29 +465,18 @@ export function AnalyticsDataTable<T>({
                     <DropdownMenuCheckboxItem
                       key={column.id}
                       checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
                     >
-                      {columnsList.find((each) => each.name === column.id)
-                        ?.title ?? column.id}
+                      {columnsList.find((each) => each.name === column.id)?.title ?? column.id}
                     </DropdownMenuCheckboxItem>
                   );
                 })}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            isLoading={isLoading || isFetching}
-            size="icon"
-            variant="outline"
-            onClick={() => refresh()}
-          >
+          <Button isLoading={isLoading || isFetching} size="icon" variant="outline" onClick={() => refresh()}>
             <UpdateIcon />
           </Button>
-          <RefreshInterval
-            value={refreshInterval}
-            onChange={onRefreshIntervalChange}
-          />
+          <RefreshInterval value={refreshInterval} onChange={onRefreshIntervalChange} />
         </div>
       </div>
       <div className="flex flex-row flex-wrap items-start gap-y-2 py-2">
@@ -560,12 +494,7 @@ export function AnalyticsDataTable<T>({
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   );
                 })}
@@ -578,34 +507,27 @@ export function AnalyticsDataTable<T>({
                 return (
                   <TableRow
                     key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
+                    data-state={row.getIsSelected() && 'selected'}
                     onClick={() => relinkTable(row)}
-                    className={cn(
-                      "group cursor-pointer hover:bg-secondary/30",
-                      {
-                        "bg-secondary/50":
-                          row.original.traceId === router.query.traceID &&
-                          row.original.spanId === router.query.spanID,
-                        "bg-destructive/10":
-                          row.original.statusCode === "STATUS_CODE_ERROR",
-                      },
-                    )}
+                    className={cn('group cursor-pointer hover:bg-secondary/30', {
+                      'bg-secondary/50':
+                        row.original.traceId === router.query.traceID && row.original.spanId === router.query.spanID,
+                      'bg-destructive/10': row.original.statusCode === 'STATUS_CODE_ERROR',
+                    })}
                   >
                     {row.getVisibleCells().map((cell) => {
                       let icon = null;
-                      let text: ReactNode = "";
+                      let text: ReactNode = '';
 
-                      if (cell.column.id === "statusCode") {
-                        if (cell.getValue() === "STATUS_CODE_ERROR") {
+                      if (cell.column.id === 'statusCode') {
+                        if (cell.getValue() === 'STATUS_CODE_ERROR') {
                           icon = (
                             <TooltipProvider>
                               <Tooltip delayDuration={300}>
                                 <TooltipTrigger>
                                   <ExclamationTriangleIcon className="h-5 w-5 text-destructive" />
                                 </TooltipTrigger>
-                                <TooltipContent className="max-w-lg">
-                                  {row.getValue("statusMessage")}
-                                </TooltipContent>
+                                <TooltipContent className="max-w-lg">{row.getValue('statusMessage')}</TooltipContent>
                               </Tooltip>
                             </TooltipProvider>
                           );
@@ -613,10 +535,7 @@ export function AnalyticsDataTable<T>({
                           icon = <HiOutlineCheck className="h-5 w-5" />;
                         }
                       } else {
-                        text = flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        );
+                        text = flexRender(cell.column.columnDef.cell, cell.getContext());
                       }
 
                       return (
@@ -633,19 +552,13 @@ export function AnalyticsDataTable<T>({
               })
             ) : isLoading ? (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={columns.length} className="h-24 text-center">
                   <Loader />
                 </TableCell>
               </TableRow>
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={columns.length} className="h-24 text-center">
                   No results.
                 </TableCell>
               </TableRow>

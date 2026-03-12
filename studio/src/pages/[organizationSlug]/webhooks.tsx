@@ -1,15 +1,10 @@
-import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import {
-  EventsMeta,
-  Meta,
-  NotificationToolbar,
-  notificationEvents,
-} from "@/components/notifications/components";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { EmptyState } from '@/components/empty-state';
+import { getDashboardLayout } from '@/components/layout/dashboard-layout';
+import { EventsMeta, Meta, NotificationToolbar, notificationEvents } from '@/components/notifications/components';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -18,56 +13,34 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Loader } from "@/components/ui/loader";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import { useToast } from "@/components/ui/use-toast";
-import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { docsBaseURL } from "@/lib/constants";
-import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+} from '@/components/ui/dialog';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Loader } from '@/components/ui/loader';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { useToast } from '@/components/ui/use-toast';
+import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { docsBaseURL } from '@/lib/constants';
+import { NextPageWithLayout } from '@/lib/page';
+import { cn } from '@/lib/utils';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { Pencil1Icon, PlusIcon, TrashIcon } from '@radix-ui/react-icons';
+import { useQuery, useMutation } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   createOrganizationWebhookConfig,
   deleteOrganizationWebhookConfig,
   getOrganizationWebhookConfigs,
   getOrganizationWebhookMeta,
   updateOrganizationWebhookConfig,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { PiWebhooksLogo } from "react-icons/pi";
-import { z } from "zod";
-import { useCheckUserAccess } from "@/hooks/use-check-user-access";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { PiWebhooksLogo } from 'react-icons/pi';
+import { z } from 'zod';
+import { useCheckUserAccess } from '@/hooks/use-check-user-access';
 
-const DeleteWebhook = ({
-  id,
-  refresh,
-}: {
-  id: string;
-  refresh: () => void;
-}) => {
+const DeleteWebhook = ({ id, refresh }: { id: string; refresh: () => void }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
@@ -81,21 +54,19 @@ const DeleteWebhook = ({
       {
         onSuccess: (d) => {
           if (d.response?.code === EnumStatusCode.OK) {
-            toast({ description: "Webhook deleted", duration: 3000 });
+            toast({ description: 'Webhook deleted', duration: 3000 });
             refresh();
             setIsOpen(false);
           } else {
             toast({
-              description:
-                d.response?.details ??
-                "Could not delete webhook. Please try again.",
+              description: d.response?.details ?? 'Could not delete webhook. Please try again.',
               duration: 3000,
             });
           }
         },
         onError: () => {
           toast({
-            description: "Could not delete webhook. Please try again.",
+            description: 'Could not delete webhook. Please try again.',
             duration: 3000,
           });
         },
@@ -113,18 +84,10 @@ const DeleteWebhook = ({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Delete Webhook</DialogTitle>
-          <DialogDescription>
-            This action cannot be undone. Are you sure?
-          </DialogDescription>
+          <DialogDescription>This action cannot be undone. Are you sure?</DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button
-            className="w-full"
-            variant="destructive"
-            type="button"
-            onClick={onDelete}
-            isLoading={isPending}
-          >
+          <Button className="w-full" variant="destructive" type="button" onClick={onDelete} isLoading={isPending}>
             Delete
           </Button>
         </DialogFooter>
@@ -138,11 +101,8 @@ const FormSchema = z.object({
     .string()
     .url()
     .refine(
-      (url) =>
-        process.env.NODE_ENV === "production"
-          ? url.startsWith("https://")
-          : true,
-      "The endpoint must use https",
+      (url) => (process.env.NODE_ENV === 'production' ? url.startsWith('https://') : true),
+      'The endpoint must use https',
     ),
   key: z.string().optional(),
   events: z.array(z.string()).optional(),
@@ -155,7 +115,7 @@ const Webhook = ({
   refresh,
   existing,
 }: {
-  mode: "create" | "update";
+  mode: 'create' | 'update';
   refresh: () => void;
   buttonText?: React.ReactNode;
   existing?: {
@@ -168,29 +128,25 @@ const Webhook = ({
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
 
-  const { mutate: create, isPending: isCreating } = useMutation(
-    createOrganizationWebhookConfig,
-  );
+  const { mutate: create, isPending: isCreating } = useMutation(createOrganizationWebhookConfig);
 
-  const { mutate: update, isPending: isUpdating } = useMutation(
-    updateOrganizationWebhookConfig,
-  );
+  const { mutate: update, isPending: isUpdating } = useMutation(updateOrganizationWebhookConfig);
 
   const [shouldUpdateKey, setShouldUpdateKey] = useState(false);
 
   const form = useZodForm<Input>({
-    mode: "onBlur",
+    mode: 'onBlur',
     schema: FormSchema,
   });
 
   const { data, isLoading, error, refetch } = useQuery(
     getOrganizationWebhookMeta,
     {
-      id: existing?.id ?? "",
+      id: existing?.id ?? '',
     },
     {
       gcTime: 0,
-      enabled: !!existing?.id && mode === "update" && isOpen,
+      enabled: !!existing?.id && mode === 'update' && isOpen,
     },
   );
 
@@ -204,7 +160,7 @@ const Webhook = ({
   }, [data?.eventsMeta, meta]);
 
   const onSubmit: SubmitHandler<Input> = (data) => {
-    if (mode === "create") {
+    if (mode === 'create') {
       create(
         {
           endpoint: data.endpoint,
@@ -215,27 +171,25 @@ const Webhook = ({
         {
           onSuccess: (d) => {
             if (d.response?.code === EnumStatusCode.OK) {
-              toast({ description: "Webhook created", duration: 3000 });
+              toast({ description: 'Webhook created', duration: 3000 });
               refresh();
               setIsOpen(false);
             } else {
               toast({
-                description:
-                  d.response?.details ??
-                  "Could not create webhook. Please try again.",
+                description: d.response?.details ?? 'Could not create webhook. Please try again.',
                 duration: 3000,
               });
             }
           },
           onError: () => {
             toast({
-              description: "Could not create webhook. Please try again.",
+              description: 'Could not create webhook. Please try again.',
               duration: 3000,
             });
           },
         },
       );
-    } else if (mode === "update" && existing?.id) {
+    } else if (mode === 'update' && existing?.id) {
       update(
         {
           id: existing.id,
@@ -248,22 +202,20 @@ const Webhook = ({
         {
           onSuccess: (d) => {
             if (d.response?.code === EnumStatusCode.OK) {
-              toast({ description: "Webhook updated", duration: 3000 });
+              toast({ description: 'Webhook updated', duration: 3000 });
               refresh();
               setShouldUpdateKey(false);
               setIsOpen(false);
             } else {
               toast({
-                description:
-                  d.response?.details ??
-                  "Could not update webhook. Please try again.",
+                description: d.response?.details ?? 'Could not update webhook. Please try again.',
                 duration: 3000,
               });
             }
           },
           onError: () => {
             toast({
-              description: "Could not update webhook. Please try again.",
+              description: 'Could not update webhook. Please try again.',
               duration: 3000,
             });
           },
@@ -285,13 +237,11 @@ const Webhook = ({
     >
       <DialogTrigger asChild>
         <Button
-          variant={mode === "create" ? "default" : "secondary"}
-          size={mode === "create" ? "default" : "icon"}
-          disabled={
-            !checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] })
-          }
+          variant={mode === 'create' ? 'default' : 'secondary'}
+          size={mode === 'create' ? 'default' : 'icon'}
+          disabled={!checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] })}
         >
-          {mode === "create" ? (
+          {mode === 'create' ? (
             <>
               <PlusIcon className="mr-2" /> Create
             </>
@@ -302,30 +252,21 @@ const Webhook = ({
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>
-            {mode === "create" ? "Create" : "Update"} webhook
-          </DialogTitle>
-          <DialogDescription>
-            A POST request will be sent to the provided endpoint
-          </DialogDescription>
+          <DialogTitle>{mode === 'create' ? 'Create' : 'Update'} webhook</DialogTitle>
+          <DialogDescription>A POST request will be sent to the provided endpoint</DialogDescription>
         </DialogHeader>
-        {error && mode === "update" && (
+        {error && mode === 'update' && (
           <EmptyState
             icon={<ExclamationTriangleIcon />}
             title="Could not retrieve webhook"
-            description={
-              data?.response?.details || error?.message || "Please try again"
-            }
+            description={data?.response?.details || error?.message || 'Please try again'}
             actions={<Button onClick={() => refetch()}>Retry</Button>}
           />
         )}
-        {isLoading && mode === "update" && <Loader className="my-8" />}
-        {(data?.eventsMeta !== undefined || mode === "create") && (
+        {isLoading && mode === 'update' && <Loader className="my-8" />}
+        {(data?.eventsMeta !== undefined || mode === 'create') && (
           <Form {...form}>
-            <form
-              className="flex w-full flex-col gap-y-6"
-              onSubmit={form.handleSubmit(onSubmit)}
-            >
+            <form className="flex w-full flex-col gap-y-6" onSubmit={form.handleSubmit(onSubmit)}>
               <FormField
                 defaultValue={existing?.endpoint}
                 control={form.control}
@@ -334,10 +275,7 @@ const Webhook = ({
                   <FormItem>
                     <FormLabel>Endpoint</FormLabel>
                     <FormControl>
-                      <Input
-                        placeholder="https://example.com/webhook"
-                        {...field}
-                      />
+                      <Input placeholder="https://example.com/webhook" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -346,17 +284,12 @@ const Webhook = ({
 
               <Alert
                 className={cn({
-                  hidden: mode === "create" || shouldUpdateKey,
+                  hidden: mode === 'create' || shouldUpdateKey,
                 })}
               >
                 <AlertDescription>
-                  If you have lost or forgotten this secret key, you can change
-                  it.{" "}
-                  <button
-                    className="text-primary"
-                    type="button"
-                    onClick={() => setShouldUpdateKey(true)}
-                  >
+                  If you have lost or forgotten this secret key, you can change it.{' '}
+                  <button className="text-primary" type="button" onClick={() => setShouldUpdateKey(true)}>
                     Change secret key
                   </button>
                 </AlertDescription>
@@ -368,7 +301,7 @@ const Webhook = ({
                 render={({ field }) => (
                   <FormItem
                     className={cn({
-                      hidden: mode === "update" && !shouldUpdateKey,
+                      hidden: mode === 'update' && !shouldUpdateKey,
                     })}
                   >
                     <FormLabel>Secret key</FormLabel>
@@ -376,12 +309,11 @@ const Webhook = ({
                       <Input placeholder="************" {...field} />
                     </FormControl>
                     <FormDescription>
-                      This can be used to verify if the events are originating
-                      from Cosmo.{" "}
+                      This can be used to verify if the events are originating from Cosmo.{' '}
                       <a
                         target="_blank"
                         rel="noreferrer"
-                        href={docsBaseURL + "/studio/alerts-and-notifications/webhooks#verification"}
+                        href={docsBaseURL + '/studio/alerts-and-notifications/webhooks#verification'}
                         className="text-primary"
                       >
                         Learn more.
@@ -400,9 +332,7 @@ const Webhook = ({
                   <FormItem>
                     <div className="mb-4">
                       <FormLabel className="text-base">Events</FormLabel>
-                      <FormDescription>
-                        Select the events for which you want webhooks to fire
-                      </FormDescription>
+                      <FormDescription>Select the events for which you want webhooks to fire</FormDescription>
                     </div>
                     {notificationEvents.map((event) => (
                       <FormField
@@ -418,31 +348,18 @@ const Webhook = ({
                                     checked={field.value?.includes(event.name)}
                                     onCheckedChange={(checked) => {
                                       return checked
-                                        ? field.onChange([
-                                            ...(field.value ?? []),
-                                            event.name,
-                                          ])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== event.name,
-                                            ),
-                                          );
+                                        ? field.onChange([...(field.value ?? []), event.name])
+                                        : field.onChange(field.value?.filter((value) => value !== event.name));
                                     }}
                                   />
                                 </FormControl>
                                 <FormLabel className="text-sm font-normal">
                                   {event.label}
-                                  <FormDescription>
-                                    {event.description}
-                                  </FormDescription>
+                                  <FormDescription>{event.description}</FormDescription>
                                 </FormLabel>
                               </FormItem>
                               <div className="ml-7">
-                                <Meta
-                                  id={event.id}
-                                  meta={meta}
-                                  setMeta={setMeta}
-                                />
+                                <Meta id={event.id} meta={meta} setMeta={setMeta} />
                               </div>
                             </div>
                           );
@@ -458,9 +375,9 @@ const Webhook = ({
                 type="submit"
                 disabled={!form.formState.isValid}
                 variant="default"
-                isLoading={mode === "create" ? isCreating : isUpdating}
+                isLoading={mode === 'create' ? isCreating : isUpdating}
               >
-                {mode === "create" ? "Create" : "Save"}
+                {mode === 'create' ? 'Create' : 'Save'}
               </Button>
             </form>
           </Form>
@@ -472,11 +389,9 @@ const Webhook = ({
 
 const WebhooksPage: NextPageWithLayout = () => {
   const checkUserAccess = useCheckUserAccess();
-  const { data, isLoading, error, refetch } = useQuery(
-    getOrganizationWebhookConfigs,
-  );
+  const { data, isLoading, error, refetch } = useQuery(getOrganizationWebhookConfigs);
 
-  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ["organization-admin", "organization-developer"] });
+  const isAdminOrDeveloper = checkUserAccess({ rolesToBe: ['organization-admin', 'organization-developer'] });
 
   if (isLoading) return <Loader fullscreen />;
 
@@ -485,9 +400,7 @@ const WebhooksPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve webhooks"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -499,11 +412,11 @@ const WebhooksPage: NextPageWithLayout = () => {
         title="Create a new webhook"
         description={
           <>
-            Receive data when certain events occur.{" "}
+            Receive data when certain events occur.{' '}
             <a
               target="_blank"
               rel="noreferrer"
-              href={docsBaseURL + "/studio/alerts-and-notifications/webhooks"}
+              href={docsBaseURL + '/studio/alerts-and-notifications/webhooks'}
               className="text-primary"
             >
               Learn more.
@@ -519,9 +432,9 @@ const WebhooksPage: NextPageWithLayout = () => {
     <div className="flex flex-col gap-y-6">
       <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <p className="ml-1 text-sm text-muted-foreground">
-          Webhooks are used to receive certain events from the platform.{" "}
+          Webhooks are used to receive certain events from the platform.{' '}
           <Link
-            href={docsBaseURL + "/studio/alerts-and-notifications/webhooks"}
+            href={docsBaseURL + '/studio/alerts-and-notifications/webhooks'}
             className="text-primary"
             target="_blank"
             rel="noreferrer"
@@ -554,9 +467,7 @@ const WebhooksPage: NextPageWithLayout = () => {
                           </Badge>
                         );
                       })}
-                      {events.length === 0 && (
-                        <p className="italic">No events</p>
-                      )}
+                      {events.length === 0 && <p className="italic">No events</p>}
                     </div>
                   </TableCell>
                   {isAdminOrDeveloper && (
@@ -586,8 +497,8 @@ const WebhooksPage: NextPageWithLayout = () => {
 WebhooksPage.getLayout = (page) => {
   return getDashboardLayout(
     page,
-    "Webhooks",
-    "Configure webhooks for your organization",
+    'Webhooks',
+    'Configure webhooks for your organization',
     null,
     <NotificationToolbar tab="webhooks" />,
   );
