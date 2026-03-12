@@ -906,6 +906,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		return nil, nil, err
 	}
 	opContext.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
+	reqCtx.expressionContext.Request.Operation.NormalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	cached, _, err := operationKit.NormalizeVariables()
 	if err != nil {
@@ -913,6 +914,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		return nil, nil, err
 	}
 	opContext.variablesNormalizationCacheHit = cached
+	reqCtx.expressionContext.Request.Operation.VariablesNormalizationCacheHit = cached
 
 	cached, err = operationKit.RemapVariables(h.disableVariablesRemapping)
 	if err != nil {
@@ -920,6 +922,7 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 		return nil, nil, err
 	}
 	opContext.variablesRemappingCacheHit = cached
+	reqCtx.expressionContext.Request.Operation.VariablesRemappingCacheHit = cached
 
 	opContext.hash = operationKit.parsedOperation.ID
 	opContext.internalHash = operationKit.parsedOperation.InternalID

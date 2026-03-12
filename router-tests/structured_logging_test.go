@@ -2910,6 +2910,225 @@ func TestFlakyAccessLogs(t *testing.T) {
 				})
 			})
 		})
+
+		t.Run("validate request.operation.normalizationCacheHit expression", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "normalization_cache_hit",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.normalizationCacheHit",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					// First request: cache miss
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["normalization_cache_hit"].(bool)
+					require.True(t, ok)
+					require.False(t, val)
+
+					// Second request: cache hit
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog = xEnv.Observer().FilterMessage("/graphql")
+					requestContext = requestLog.All()[1].ContextMap()
+					val, ok = requestContext["normalization_cache_hit"].(bool)
+					require.True(t, ok)
+					require.True(t, val)
+				},
+			)
+		})
+
+		t.Run("validate request.operation.variablesNormalizationCacheHit expression", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "variables_normalization_cache_hit",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.variablesNormalizationCacheHit",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					// First request: cache miss
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["variables_normalization_cache_hit"].(bool)
+					require.True(t, ok)
+					require.False(t, val)
+
+					// Second request: cache hit
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog = xEnv.Observer().FilterMessage("/graphql")
+					requestContext = requestLog.All()[1].ContextMap()
+					val, ok = requestContext["variables_normalization_cache_hit"].(bool)
+					require.True(t, ok)
+					require.True(t, val)
+				},
+			)
+		})
+
+		t.Run("validate request.operation.variablesRemappingCacheHit expression", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "variables_remapping_cache_hit",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.variablesRemappingCacheHit",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					// First request: cache miss
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["variables_remapping_cache_hit"].(bool)
+					require.True(t, ok)
+					require.False(t, val)
+
+					// Second request: cache hit
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog = xEnv.Observer().FilterMessage("/graphql")
+					requestContext = requestLog.All()[1].ContextMap()
+					val, ok = requestContext["variables_remapping_cache_hit"].(bool)
+					require.True(t, ok)
+					require.True(t, val)
+				},
+			)
+		})
+
+		t.Run("validate request.operation.persistedOperationCacheHit expression", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "persisted_operation_cache_hit",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.persistedOperationCacheHit",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					// First request with persisted operation: cache miss
+					res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employees"`),
+						Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+						Header:        map[string][]string{"graphql-client-name": {"my-client"}},
+					})
+					require.NoError(t, err)
+					require.JSONEq(t, employeesIDData, res.Body)
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["persisted_operation_cache_hit"].(bool)
+					require.True(t, ok)
+					require.False(t, val)
+
+					// Second request: cache hit
+					res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+						OperationName: []byte(`"Employees"`),
+						Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+						Header:        map[string][]string{"graphql-client-name": {"my-client"}},
+					})
+					require.NoError(t, err)
+					require.JSONEq(t, employeesIDData, res.Body)
+					requestLog = xEnv.Observer().FilterMessage("/graphql")
+					requestContext = requestLog.All()[1].ContextMap()
+					val, ok = requestContext["persisted_operation_cache_hit"].(bool)
+					require.True(t, ok)
+					require.True(t, val)
+				},
+			)
+		})
+
+		t.Run("validate request.operation.planCacheHit expression", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t,
+				&testenv.Config{
+					AccessLogFields: []config.CustomAttribute{
+						{
+							Key: "plan_cache_hit",
+							ValueFrom: &config.CustomDynamicAttribute{
+								Expression: "request.operation.planCacheHit",
+							},
+						},
+					},
+					LogObservation: testenv.LogObservationConfig{
+						Enabled:  true,
+						LogLevel: zapcore.InfoLevel,
+					},
+				},
+				func(t *testing.T, xEnv *testenv.Environment) {
+					// First request: cache miss
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog := xEnv.Observer().FilterMessage("/graphql")
+					requestContext := requestLog.All()[0].ContextMap()
+					val, ok := requestContext["plan_cache_hit"].(bool)
+					require.True(t, ok)
+					require.False(t, val)
+
+					// Second request: cache hit
+					xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+						Query: `query employees { employees { id } }`,
+					})
+					requestLog = xEnv.Observer().FilterMessage("/graphql")
+					requestContext = requestLog.All()[1].ContextMap()
+					val, ok = requestContext["plan_cache_hit"].(bool)
+					require.True(t, ok)
+					require.True(t, val)
+				},
+			)
+		})
+
 	})
 
 	t.Run("verify error codes from engine and not subgraph", func(t *testing.T) {
