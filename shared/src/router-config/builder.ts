@@ -41,21 +41,19 @@ import { invalidRouterCompatibilityVersion, normalizationFailureError } from './
 import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 
 function costsToCostConfiguration(costs: Costs): CostConfiguration | undefined {
-  const hasDirectiveArgWeights =
-    costs.directiveArgumentWeights && Object.keys(costs.directiveArgumentWeights).length > 0;
   if (
     costs.fieldWeights.size === 0 &&
     costs.listSizes.size === 0 &&
-    Object.keys(costs.typeWeights).length === 0 &&
-    !hasDirectiveArgWeights
+    costs.typeWeights.size === 0 &&
+    costs.directiveArgumentWeights.size === 0
   ) {
     return undefined;
   }
   return new CostConfiguration({
     fieldWeights: [...costs.fieldWeights.values()].map((fw) => new FieldWeightConfiguration(fw)),
     listSizes: [...costs.listSizes.values()].map((ls) => new FieldListSizeConfiguration(ls)),
-    typeWeights: costs.typeWeights,
-    directiveArgumentWeights: costs.directiveArgumentWeights ?? {},
+    typeWeights: Object.fromEntries(costs.typeWeights),
+    directiveArgumentWeights: Object.fromEntries(costs.directiveArgumentWeights),
   });
 }
 

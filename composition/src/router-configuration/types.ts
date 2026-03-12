@@ -101,14 +101,10 @@ export type ConfigurationData = {
 };
 
 export type Costs = {
-  // Key: "TypeName.fieldName" (lookup handle for O(1) merge during normalization)
   fieldWeights: Map<FieldCoords, FieldWeightConfiguration>;
-
-  // Key: "TypeName.fieldName" (lookup handle for O(1) merge during normalization)
   listSizes: Map<FieldCoords, FieldListSizeConfiguration>;
-
-  typeWeights: Record<TypeName, number>;
-  directiveArgumentWeights?: Record<DirectiveArgumentCoords, number>;
+  typeWeights: Map<TypeName, number>;
+  directiveArgumentWeights: Map<DirectiveArgumentCoords, number>;
 };
 
 export type FieldWeightConfiguration = {

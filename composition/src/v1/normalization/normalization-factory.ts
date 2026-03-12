@@ -432,7 +432,12 @@ export class NormalizationFactory {
   concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
   conditionalFieldDataByCoords = new Map<string, ConditionalFieldData>();
   configurationDataByTypeName = new Map<TypeName, ConfigurationData>();
-  costs: Costs = { fieldWeights: new Map(), listSizes: new Map(), typeWeights: {} };
+  costs: Costs = {
+    fieldWeights: new Map(),
+    listSizes: new Map(),
+    typeWeights: new Map(),
+    directiveArgumentWeights: new Map(),
+  };
   customDirectiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
   definedDirectiveNames = new Set<string>();
   directiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
@@ -1163,10 +1168,7 @@ export class NormalizationFactory {
           continue;
         }
         const weightValue = parseInt((weightArg.value as IntValueNode).value, 10);
-        if (!this.costs.directiveArgumentWeights) {
-          this.costs.directiveArgumentWeights = {};
-        }
-        this.costs.directiveArgumentWeights[`${directiveName}.${argNode.name.value}`] = weightValue;
+        this.costs.directiveArgumentWeights.set(`${directiveName}.${argNode.name.value}`, weightValue);
       }
     }
   }
@@ -2406,7 +2408,7 @@ export class NormalizationFactory {
       case Kind.OBJECT_TYPE_DEFINITION:
       case Kind.SCALAR_TYPE_DEFINITION:
       case Kind.ENUM_TYPE_DEFINITION:
-        this.costs.typeWeights[data.name] = weightValue;
+        this.costs.typeWeights.set(data.name, weightValue);
         break;
       case Kind.FIELD_DEFINITION: {
         const typeName = data.renamedParentTypeName || data.originalParentTypeName;

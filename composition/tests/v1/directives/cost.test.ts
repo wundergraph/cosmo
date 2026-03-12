@@ -452,8 +452,8 @@ describe('@cost directive tests', () => {
   describe('directive argument cost tests', () => {
     test('that @cost on a custom directive argument is extracted into costs.directiveArgumentWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnDirectiveArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(costs.directiveArgumentWeights).toBeDefined();
-      expect(costs.directiveArgumentWeights!['myDirective.arg1']).toBe(5);
+      expect(costs.directiveArgumentWeights.size).toBeGreaterThan(0);
+      expect(costs.directiveArgumentWeights.get('myDirective.arg1')).toBe(5);
     });
 
     test('that @cost on multiple directive arguments is extracted correctly', () => {
@@ -461,14 +461,14 @@ describe('@cost directive tests', () => {
         subgraphWithCostOnMultipleDirectiveArguments,
         ROUTER_COMPATIBILITY_VERSION_ONE,
       );
-      expect(costs.directiveArgumentWeights).toBeDefined();
-      expect(costs.directiveArgumentWeights!['myDirective.arg1']).toBe(3);
-      expect(costs.directiveArgumentWeights!['myDirective.arg2']).toBe(7);
+      expect(costs.directiveArgumentWeights.size).toBeGreaterThan(0);
+      expect(costs.directiveArgumentWeights.get('myDirective.arg1')).toBe(3);
+      expect(costs.directiveArgumentWeights.get('myDirective.arg2')).toBe(7);
     });
 
-    test('that costs without directive argument weights has undefined directiveArgumentWeights', () => {
+    test('that costs without directive argument weights has empty directiveArgumentWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnField, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(costs.directiveArgumentWeights).toBeUndefined();
+      expect(costs.directiveArgumentWeights.size).toBe(0);
     });
   });
 
@@ -510,17 +510,17 @@ describe('@cost directive tests', () => {
 
     test('that @cost on an object type populates typeWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnObject, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(costs.typeWeights['User']).toBe(100);
+      expect(costs.typeWeights.get('User')).toBe(100);
     });
 
     test('that @cost on a scalar populates typeWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnScalar, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(costs.typeWeights['JSON']).toBe(50);
+      expect(costs.typeWeights.get('JSON')).toBe(50);
     });
 
     test('that @cost on an enum populates typeWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnEnum, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(costs.typeWeights['Status']).toBe(1);
+      expect(costs.typeWeights.get('Status')).toBe(1);
     });
 
     test('that @cost with negative weight populates fieldWeights correctly', () => {
@@ -552,8 +552,8 @@ describe('@cost directive tests', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithNoCostDirectives, ROUTER_COMPATIBILITY_VERSION_ONE);
       expect(costs.fieldWeights.size).toBe(0);
       expect(costs.listSizes.size).toBe(0);
-      expect(Object.keys(costs.typeWeights).length).toBe(0);
-      expect(costs.directiveArgumentWeights).toBeUndefined();
+      expect(costs.typeWeights.size).toBe(0);
+      expect(costs.directiveArgumentWeights.size).toBe(0);
     });
   });
 
@@ -569,7 +569,7 @@ describe('@cost directive tests', () => {
 
     test('that @cost on an extend type populates typeWeights', () => {
       const { costs } = normalizeSubgraphSuccess(subgraphWithCostOnExtensionType, ROUTER_COMPATIBILITY_VERSION_ONE);
-      expect(costs.typeWeights['User']).toBe(50);
+      expect(costs.typeWeights.get('User')).toBe(50);
     });
   });
 });
