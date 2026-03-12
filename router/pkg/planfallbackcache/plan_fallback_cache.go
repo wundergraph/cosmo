@@ -89,6 +89,9 @@ func (c *Cache[V]) Get(key uint64) (V, bool) {
 // Set enqueues a write to the cache. The write is applied asynchronously.
 // If the write buffer is full, the entry is silently dropped.
 func (c *Cache[V]) Set(key uint64, value V, duration time.Duration) {
+	if c == nil {
+		return
+	}
 	select {
 	case c.writeCh <- setRequest[V]{key: key, value: value, dur: duration}:
 	default:
@@ -174,6 +177,9 @@ func (c *Cache[V]) IterValues(cb func(v V) bool) {
 // Close stops the background goroutine and releases resources.
 // Pending writes in the buffer may be dropped.
 func (c *Cache[V]) Close() {
+	if c == nil {
+		return
+	}
 	close(c.stop)
 	<-c.done
 

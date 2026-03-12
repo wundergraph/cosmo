@@ -620,7 +620,7 @@ type operationContext struct {
 	preparedPlan     *planWithMetaData
 	traceOptions     resolve.TraceOptions
 	executionOptions resolve.ExecutionOptions
-	planCacheHit          bool
+	planCacheHit     bool
 	initialPayload   []byte
 	extensions       []byte
 	persistedID      string

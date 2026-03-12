@@ -54,6 +54,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
+	"github.com/wundergraph/cosmo/router/pkg/planfallbackcache"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -542,10 +543,9 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 }
 
 type graphMux struct {
-	mux *chi.Mux
-
-	operationPlanner            *OperationPlanner
+	mux                         *chi.Mux
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
+	planFallbackCache           *planfallbackcache.Cache[*planWithMetaData]
 	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache          *ristretto.Cache[uint64, NormalizationCacheEntry]
 	complexityCalculationCache  *ristretto.Cache[uint64, ComplexityCacheEntry]
@@ -585,10 +585,7 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 		}
 		if srv.cacheWarmup != nil && srv.cacheWarmup.Enabled && srv.cacheWarmup.InMemoryFallback {
 			planCacheConfig.OnEvict = func(item *ristretto.Item[*planWithMetaData]) {
-				if s.operationPlanner == nil || s.operationPlanner.fallbackCache == nil {
-					return
-				}
-				s.operationPlanner.fallbackCache.Set(item.Key, item.Value, item.Value.planningDuration)
+				s.planFallbackCache.Set(item.Key, item.Value, item.Value.planningDuration)
 			}
 		}
 		s.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
@@ -792,7 +789,7 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
 	s.planCache.Close()
-	s.operationPlanner.Close()
+	s.planFallbackCache.Close()
 	s.persistedOperationCache.Close()
 	s.normalizationCache.Close()
 	s.variablesNormalizationCache.Close()
@@ -1342,19 +1339,24 @@ func (s *graphServer) buildGraphMux(
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
 	})
 
-	operationPlanner, err := NewOperationPlanner(
+	if opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled() {
+		var err error
+		gm.planFallbackCache, err = planfallbackcache.New[*planWithMetaData](
+			int(s.engineExecutionConfiguration.PlanFallbackCacheSize),
+			s.engineExecutionConfiguration.PlanFallbackThreshold,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create plan fallback cache: %w", err)
+		}
+	}
+
+	operationPlanner := NewOperationPlanner(
 		s.logger,
 		executor,
 		gm.planCache,
-		opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled(),
-		int(s.engineExecutionConfiguration.PlanFallbackCacheSize),
-		s.engineExecutionConfiguration.PlanFallbackThreshold,
+		gm.planFallbackCache,
 	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create operation planner: %w", err)
-	}
 	operationPlanner.planningDurationOverride = s.planningDurationOverride
-	gm.operationPlanner = operationPlanner
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
@@ -1382,20 +1384,19 @@ func (s *graphServer) buildGraphMux(
 		}
 
 		warmupConfig.AfterOperation = func(item *CacheWarmupOperationPlanResult) {
-			attrs := []attribute.KeyValue{
-				otel.WgOperationName.String(item.OperationName),
-				otel.WgClientName.String(item.ClientName),
-				otel.WgClientVersion.String(item.ClientVersion),
-				otel.WgFeatureFlag.String(opts.FeatureFlagName),
-				otel.WgOperationHash.String(item.OperationHash),
-				otel.WgOperationType.String(item.OperationType),
-				otel.WgEnginePlanCacheHit.Bool(false),
-			}
 			gm.metricStore.MeasureOperationPlanningTime(ctx,
 				item.PlanningTime,
 				nil,
 				otelmetric.WithAttributes(
-					append(attrs, baseMetricAttributes...)...,
+					append([]attribute.KeyValue{
+						otel.WgOperationName.String(item.OperationName),
+						otel.WgClientName.String(item.ClientName),
+						otel.WgClientVersion.String(item.ClientVersion),
+						otel.WgFeatureFlag.String(opts.FeatureFlagName),
+						otel.WgOperationHash.String(item.OperationHash),
+						otel.WgOperationType.String(item.OperationType),
+						otel.WgEnginePlanCacheHit.Bool(false),
+					}, baseMetricAttributes...)...,
 				),
 			)
 		}
@@ -1414,7 +1415,7 @@ func (s *graphServer) buildGraphMux(
 			// We first utilize the existing plan cache (if it was already set, i.e., not on the first start) to create a list of queries
 			// and then reset the plan cache to the new plan cache for this start afterwards.
 			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
-			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, operationPlanner.fallbackCache)
+			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planFallbackCache)
 		case s.cacheWarmup.Source.CdnSource.Enabled:
 			if s.graphApiToken == "" {
 				return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
@@ -1424,7 +1425,7 @@ func (s *graphServer) buildGraphMux(
 			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
 			if s.cacheWarmup.InMemoryFallback {
 				warmupConfig.FallbackSource = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
-				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, operationPlanner.fallbackCache)
+				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planFallbackCache)
 			}
 			cdnSource, err := NewCDNSource(s.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {

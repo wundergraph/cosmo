@@ -56,32 +56,15 @@ type ExecutionPlanCache[K any, V any] interface {
 	Close()
 }
 
-func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], inMemoryPlanCacheFallback bool, fallbackCacheSize int, threshold time.Duration) (*OperationPlanner, error) {
-	p := &OperationPlanner{
+func NewOperationPlanner(logger *zap.Logger, executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], fallbackCache *planfallbackcache.Cache[*planWithMetaData]) *OperationPlanner {
+	return &OperationPlanner{
 		logger:         logger,
 		planCache:      planCache,
 		executor:       executor,
 		trackUsageInfo: executor.TrackUsageInfo,
-		useFallback:    inMemoryPlanCacheFallback,
+		useFallback:    fallbackCache != nil,
+		fallbackCache:  fallbackCache,
 	}
-
-	if inMemoryPlanCacheFallback {
-		var err error
-		p.fallbackCache, err = planfallbackcache.New[*planWithMetaData](fallbackCacheSize, threshold)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return p, nil
-}
-
-// Close releases fallback cache resources.
-func (p *OperationPlanner) Close() {
-	if p == nil || !p.useFallback {
-		return
-	}
-	p.fallbackCache.Close()
 }
 
 // planOperation performs the core planning work: parse, plan, and postprocess.
