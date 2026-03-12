@@ -343,6 +343,8 @@ describe('@listSize directive tests', () => {
         typeName: 'Query',
         fieldName: 'users',
         assumedSize: 100,
+        sizedFields: [],
+        slicingArguments: [],
       });
     });
 
@@ -351,6 +353,7 @@ describe('@listSize directive tests', () => {
       expect(costs.listSizes.get('Query.users')).toEqual({
         typeName: 'Query',
         fieldName: 'users',
+        sizedFields: [],
         slicingArguments: ['first', 'last'],
       });
     });

@@ -117,8 +117,8 @@ export type FieldWeightConfiguration = {
 export type FieldListSizeConfiguration = {
   typeName: TypeName;
   fieldName: FieldName;
+  slicingArguments: Array<ArgumentName>;
+  sizedFields: Array<FieldName>;
   assumedSize?: number;
-  slicingArguments?: Array<ArgumentName>;
-  sizedFields?: Array<FieldName>;
   requireOneSlicingArgument?: boolean;
 };

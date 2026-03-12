@@ -2489,6 +2489,8 @@ export class NormalizationFactory {
     const listSizeConfig: FieldListSizeConfiguration = {
       typeName,
       fieldName: data.name,
+      slicingArguments: [],
+      sizedFields: [],
     };
 
     for (const argumentNode of args) {
@@ -2513,9 +2515,6 @@ export class NormalizationFactory {
             argumentValues = [argumentNode.value];
           } else {
             continue;
-          }
-          if (!listSizeConfig.slicingArguments) {
-            listSizeConfig.slicingArguments = [];
           }
           for (const valueNode of argumentValues) {
             if (valueNode.kind !== Kind.STRING) {
@@ -2554,9 +2553,6 @@ export class NormalizationFactory {
             continue;
           }
           hasSizedFields = true;
-          if (!listSizeConfig.sizedFields) {
-            listSizeConfig.sizedFields = [];
-          }
           const returnTypeName = data.namedTypeName;
           const returnTypeData = this.parentDefinitionDataByTypeName.get(returnTypeName);
           if (!returnTypeData || !isParentDataCompositeOutputType(returnTypeData)) {
@@ -2599,11 +2595,7 @@ export class NormalizationFactory {
       );
     }
 
-    if (
-      listSizeConfig.assumedSize !== undefined &&
-      listSizeConfig.slicingArguments &&
-      listSizeConfig.slicingArguments.length > 0
-    ) {
+    if (listSizeConfig.assumedSize !== undefined && listSizeConfig.slicingArguments.length > 0) {
       if (listSizeConfig.requireOneSlicingArgument !== false) {
         errorMessages.push(listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords));
       } else {
