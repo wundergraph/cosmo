@@ -65,7 +65,7 @@ func NewClient(opts *Options) (*Client, error) {
 }
 
 func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
-	if c.apqClient != nil && c.apqClient.Enabled() {
+	if c.APQEnabled() {
 		resp, apqErr := c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
 		if len(resp) > 0 || apqErr != nil {
 			return resp, true, apqErr
@@ -92,7 +92,7 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 
 	if c.providerClient == nil {
 		// This can happen if we are using APQ client, without any persisted operation client. Otherwise, we should have a provider client and shouldn't reach here.
-		return nil, c.apqClient != nil, nil
+		return nil, c.APQEnabled(), nil
 	}
 
 	var (
@@ -123,6 +123,15 @@ func (c *Client) SaveOperation(ctx context.Context, clientName, sha256Hash, oper
 
 func (c *Client) APQEnabled() bool {
 	return c.apqClient != nil && c.apqClient.Enabled()
+}
+
+// ManifestRevision returns the current PQL manifest revision, or "" if no manifest is loaded.
+// Used to include in cache keys so entries naturally invalidate when the manifest changes.
+func (c *Client) ManifestRevision() string {
+	if c.pqlStore == nil {
+		return ""
+	}
+	return c.pqlStore.Revision()
 }
 
 func (c *Client) Close() {

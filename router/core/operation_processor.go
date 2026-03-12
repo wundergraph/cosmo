@@ -1240,6 +1240,10 @@ func (o *OperationKit) generatePersistedOperationCacheKey(clientName string, ski
 		_, _ = o.kit.keyGen.WriteString(o.parsedOperation.Request.OperationName)
 	}
 	_, _ = o.kit.keyGen.WriteString(clientName)
+	// Include manifest revision so cache entries naturally invalidate when the manifest changes
+	if o.operationProcessor.persistedOperationClient != nil {
+		_, _ = o.kit.keyGen.WriteString(o.operationProcessor.persistedOperationClient.ManifestRevision())
+	}
 	o.writeSkipIncludeCacheKeyToKeyGen(skipIncludeVariableNames)
 	sum := o.kit.keyGen.Sum64()
 	o.kit.keyGen.Reset()

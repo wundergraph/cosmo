@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -351,6 +354,113 @@ func TestPQLManifest(t *testing.T) {
 			require.Len(t, logEntries, 1)
 			requestContext := logEntries[0].ContextMap()
 			require.Equal(t, nonPersistedQuery, requestContext["query"])
+		})
+	})
+
+	t.Run("manifest update invalidates normalization cache", func(t *testing.T) {
+		t.Parallel()
+
+		employeesHash := "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"
+		employeesQuery := "query Employees {\n  employees {\n    id\n    }\n}"
+
+		// manifestV1 has the Employees operation
+		manifestV1, _ := json.Marshal(map[string]interface{}{
+			"version":     1,
+			"revision":    "rev-v1",
+			"generatedAt": "2024-01-01T00:00:00Z",
+			"operations": map[string]string{
+				employeesHash: employeesQuery,
+			},
+		})
+		// manifestV2 removes the Employees operation
+		manifestV2, _ := json.Marshal(map[string]interface{}{
+			"version":     1,
+			"revision":    "rev-v2",
+			"generatedAt": "2024-01-02T00:00:00Z",
+			"operations":  map[string]string{},
+		})
+
+		var currentManifest atomic.Value
+		currentManifest.Store(manifestV1)
+
+		cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasSuffix(r.URL.Path, "/operations/manifest.json") {
+				// Read the request body to check revision
+				body, _ := io.ReadAll(r.Body)
+				var reqBody struct {
+					Revision string `json:"revision"`
+				}
+				_ = json.Unmarshal(body, &reqBody)
+
+				manifest := currentManifest.Load().([]byte)
+
+				// Parse manifest to get its revision
+				var m struct {
+					Revision string `json:"revision"`
+				}
+				_ = json.Unmarshal(manifest, &m)
+
+				if reqBody.Revision == m.Revision {
+					w.WriteHeader(http.StatusNotModified)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write(manifest)
+				return
+			}
+
+			// For non-manifest requests, return 404
+			w.WriteHeader(http.StatusNotFound)
+		}))
+		defer cdnServer.Close()
+
+		testenv.Run(t, &testenv.Config{
+			CdnSever: cdnServer,
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Manifest: config.PQLManifestConfig{
+						Enabled:      true,
+						PollInterval: 100 * time.Millisecond,
+						PollJitter:   5 * time.Millisecond,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			// 1. Operation succeeds with manifest v1
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, expectedEmployeesBody, res.Body)
+
+			// 2. Make the same request again to populate the normalization cache
+			res, err = xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, expectedEmployeesBody, res.Body)
+
+			// 3. Swap to manifest v2 (which removes the operation)
+			currentManifest.Store(manifestV2)
+
+			// 4. Wait for poller to pick up the new manifest and cache to be invalidated
+			require.EventuallyWithT(t, func(ct *assert.CollectT) {
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					OperationName: []byte(`"Employees"`),
+					Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "` + employeesHash + `"}}`),
+					Header:        header,
+				})
+				assert.Equal(ct, persistedNotFoundResp, res.Body)
+			}, 5*time.Second, 100*time.Millisecond)
 		})
 	})
 }
