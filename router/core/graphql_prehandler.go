@@ -628,6 +628,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		span.End()
 
 		requestContext.operation.persistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
+		requestContext.expressionContext.Request.Operation.PersistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
 	}
 
 	// If the persistent operation is already in the cache, we skip the parse step
@@ -810,6 +811,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
+	requestContext.expressionContext.Request.Operation.NormalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	/**
 	* Normalize the variables
@@ -832,6 +834,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	}
 	engineNormalizeSpan.SetAttributes(otel.WgVariablesNormalizationCacheHit.Bool(cached))
 	requestContext.operation.variablesNormalizationCacheHit = cached
+	requestContext.expressionContext.Request.Operation.VariablesNormalizationCacheHit = cached
 
 	// Update file upload paths if they were used in the nested field of the extracted variables.
 	for mapping := range slices.Values(uploadsMapping) {
@@ -883,6 +886,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	engineNormalizeSpan.SetAttributes(otel.WgVariablesRemappingCacheHit.Bool(cached))
 	requestContext.operation.variablesRemappingCacheHit = cached
+	requestContext.expressionContext.Request.Operation.VariablesRemappingCacheHit = cached
 	requestContext.operation.hash = operationKit.parsedOperation.ID
 	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
@@ -1100,6 +1104,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.expressionContext.Request.Operation.PlanningTime = requestContext.operation.planningTime
 	setTelemetryAttributes(planCtx, requestContext, expr.BucketPlanningTime)
 
+	requestContext.expressionContext.Request.Operation.PlanCacheHit = requestContext.operation.planCacheHit
 	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 	enginePlanSpan.End()
 
