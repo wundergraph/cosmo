@@ -57,6 +57,7 @@ import {
 import { BlobStorage } from '../blobstorage/index.js';
 import {
   BaseCompositionData,
+  buildRouterExecutionConfig,
   ComposedSubgraph,
   Composer,
   ContractBaseCompositionData,
@@ -1616,13 +1617,24 @@ export class FederatedGraphRepository {
           }
 
           const federatedSchemaVersionId = randomUUID();
+          const baseComposedGraph = deserializeComposedGraphArtifact(federatedGraph, compositionResult.base);
+          let routerExecutionConfig;
+          if (compositionResult.base.success) {
+            if (!compositionResult.base.routerExecutionConfigJson) {
+              throw new Error(
+                `Successful composition for federated graph "${federatedGraph.name}" does not contain a router execution config.`,
+              );
+            }
 
-          const routerExecutionConfig = deserializeRouterExecutionConfig(
-            compositionResult.base.routerExecutionConfigJson,
-          );
+            routerExecutionConfig = deserializeRouterExecutionConfig(compositionResult.base.routerExecutionConfigJson);
+          }
+
+          if (routerExecutionConfig) {
+            routerExecutionConfig.version = federatedSchemaVersionId;
+          }
 
           const baseComposition = await composer.saveComposition({
-            composedGraph: deserializeComposedGraphArtifact(federatedGraph, compositionResult.base),
+            composedGraph: baseComposedGraph,
             composedById: actorId,
             isFeatureFlagComposition: compositionResult.isFeatureFlagComposition,
             federatedSchemaVersionId,
@@ -1630,7 +1642,7 @@ export class FederatedGraphRepository {
             featureFlagId: compositionResult.featureFlagId,
           });
 
-          if (!compositionResult.base.success || !baseComposition.schemaVersionId || !routerExecutionConfig) {
+          if (!compositionResult.base.success || !baseComposition.schemaVersionId) {
             /* If the base composition failed to compose or deploy, return to the parent loop, because
              * contracts are not composed if the base composition fails.
              */
@@ -1639,12 +1651,22 @@ export class FederatedGraphRepository {
             }
             // Record the feature flag composition to upload (if there are no errors)
           } else if (compositionResult.isFeatureFlagComposition) {
+            if (!routerExecutionConfig) {
+              throw new Error(
+                `Successful feature flag composition for federated graph "${federatedGraph.name}" does not contain a router execution config.`,
+              );
+            }
             baseCompositionData.featureFlagRouterExecutionConfigByFeatureFlagName.set(
               compositionResult.featureFlagName,
               routerConfigToFeatureFlagExecutionConfig(routerExecutionConfig),
             );
             // Otherwise, this is the base composition, so store the schema version id
           } else {
+            if (!routerExecutionConfig) {
+              throw new Error(
+                `Successful composition for federated graph "${federatedGraph.name}" does not contain a router execution config.`,
+              );
+            }
             baseCompositionData.schemaVersionId = baseComposition.schemaVersionId;
             baseCompositionData.routerExecutionConfig = routerExecutionConfig;
           }
@@ -1680,11 +1702,23 @@ export class FederatedGraphRepository {
             );
 
             const contractSchemaVersionId = randomUUID();
-
-            const contractRouterExecutionConfig = deserializeRouterExecutionConfig(artifact.routerExecutionConfigJson);
+            const contractComposedGraph = deserializeComposedGraphArtifact(contractGraph, artifact);
+            let contractRouterExecutionConfig;
+            if (artifact.success) {
+              contractRouterExecutionConfig = buildRouterExecutionConfig(
+                contractComposedGraph,
+                contractSchemaVersionId,
+                contractGraph.routerCompatibilityVersion,
+              );
+              if (!contractRouterExecutionConfig) {
+                throw new Error(
+                  `Successful contract composition for federated graph "${contractGraph.name}" did not produce a router execution config.`,
+                );
+              }
+            }
 
             const contractComposition = await composer.saveComposition({
-              composedGraph: deserializeComposedGraphArtifact(contractGraph, artifact),
+              composedGraph: contractComposedGraph,
               composedById: actorId,
               isFeatureFlagComposition: compositionResult.isFeatureFlagComposition,
               federatedSchemaVersionId: contractSchemaVersionId,
@@ -1692,8 +1726,13 @@ export class FederatedGraphRepository {
               featureFlagId: compositionResult.featureFlagId,
             });
 
-            if (!artifact.success || !contractComposition.schemaVersionId || !contractRouterExecutionConfig) {
+            if (!artifact.success || !contractComposition.schemaVersionId) {
               continue;
+            }
+            if (!contractRouterExecutionConfig) {
+              throw new Error(
+                `Successful contract composition for federated graph "${contractGraph.name}" did not produce a router execution config.`,
+              );
             }
 
             /* If the base composition for which this contract has been made is NOT a feature flag composition,

@@ -227,18 +227,21 @@ function mapResultToComposedGraph(
   };
 }
 
+// Serialize the worker-side composition result into a structured-clone-safe
+// artifact for the main thread. This keeps the boundary limited to plain data,
+// and the main thread is responsible for rebuilding richer runtime objects
+// such as RouterConfig instances before persistence and upload.
 function serializeComposedGraphArtifact(
   task: ComposeGraphsTaskInput,
   graph: FederatedGraphDTO,
   subgraphs: SubgraphDTO[],
   result: FederationResult,
+  includeRouterExecutionConfig = true,
 ): SerializedComposedGraphArtifact {
   const composedGraph = mapResultToComposedGraph(graph, subgraphs, result);
-  const routerExecutionConfig = buildRouterExecutionConfig(
-    composedGraph,
-    randomUUID(),
-    task.federatedGraph.routerCompatibilityVersion,
-  );
+  const routerExecutionConfig = includeRouterExecutionConfig
+    ? buildRouterExecutionConfig(composedGraph, randomUUID(), task.federatedGraph.routerCompatibilityVersion)
+    : undefined;
 
   return {
     success: result.success,
@@ -319,6 +322,7 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
               },
               subgraphsToCompose.subgraphs,
               contractResult,
+              false,
             ),
           });
         }
