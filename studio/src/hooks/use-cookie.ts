@@ -1,14 +1,10 @@
-import { useState, useCallback } from "react";
-import Cookies from "js-cookie";
+import { useState, useCallback } from 'react';
+import Cookies from 'js-cookie';
 
 const useCookie = (
   name: string,
-  defaultValue: string = "",
-): [
-  string | null,
-  (newValue: string, options: Cookies.CookieAttributes) => void,
-  (newValue: string) => void,
-] => {
+  defaultValue: string = '',
+): [string | null, (newValue: string, options: Cookies.CookieAttributes) => void, (newValue: string) => void] => {
   const [value, setValue] = useState<string | null>(() => {
     const cookie = Cookies.get(name);
     if (cookie) return cookie;

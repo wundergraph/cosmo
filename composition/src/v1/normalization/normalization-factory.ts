@@ -1,48 +1,48 @@
 import {
   BREAK,
-  ConstDirectiveNode,
-  ConstValueNode,
-  DefinitionNode,
-  DirectiveDefinitionNode,
-  DocumentNode,
-  EnumValueDefinitionNode,
-  FieldDefinitionNode,
-  InputValueDefinitionNode,
-  InterfaceTypeDefinitionNode,
-  InterfaceTypeExtensionNode,
-  IntValueNode,
+  type ConstDirectiveNode,
+  type ConstValueNode,
+  type DefinitionNode,
+  type DirectiveDefinitionNode,
+  type DocumentNode,
+  type EnumValueDefinitionNode,
+  type FieldDefinitionNode,
+  type InputValueDefinitionNode,
+  type InterfaceTypeDefinitionNode,
+  type InterfaceTypeExtensionNode,
+  type IntValueNode,
   Kind,
-  ListValueNode,
-  NamedTypeNode,
-  ObjectTypeDefinitionNode,
-  ObjectTypeExtensionNode,
-  OperationTypeDefinitionNode,
+  type ListValueNode,
+  type NamedTypeNode,
+  type ObjectTypeDefinitionNode,
+  type ObjectTypeExtensionNode,
+  type OperationTypeDefinitionNode,
   OperationTypeNode,
   print,
-  SchemaDefinitionNode,
-  SchemaExtensionNode,
-  StringValueNode,
-  TypeDefinitionNode,
-  TypeExtensionNode,
-  TypeNode,
+  type SchemaDefinitionNode,
+  type SchemaExtensionNode,
+  type StringValueNode,
+  type TypeDefinitionNode,
+  type TypeExtensionNode,
+  type TypeNode,
   visit,
 } from 'graphql';
 import {
-  EnumTypeNode,
+  type EnumTypeNode,
   extractExecutableDirectiveLocations,
   formatDescription,
-  InputObjectTypeNode,
-  InterfaceTypeNode,
+  type InputObjectTypeNode,
+  type InterfaceTypeNode,
   isKindAbstract,
   nodeKindToDirectiveLocation,
-  ObjectTypeNode,
+  type ObjectTypeNode,
   operationTypeNodeToDefaultType,
   safeParse,
-  ScalarTypeNode,
-  SchemaNode,
+  type ScalarTypeNode,
+  type SchemaNode,
   setToNamedTypeNodeArray,
   stringToNamedTypeNode,
-  UnionTypeNode,
+  type UnionTypeNode,
 } from '../../ast/utils';
 import {
   getConditionalFieldSetDirectiveName,
@@ -187,16 +187,16 @@ import {
 } from '../constants/strings';
 import { buildASTSchema } from '../../buildASTSchema/buildASTSchema';
 import {
-  CacheInvalidateConfig,
-  CachePopulateConfig,
-  ConfigurationData,
-  EntityCacheConfig,
-  EntityKeyMappingConfig,
-  EventConfiguration,
-  FieldMappingConfig,
-  NatsEventType,
-  RequiredFieldConfiguration,
-  RootFieldCacheConfig,
+  type CacheInvalidateConfig,
+  type CachePopulateConfig,
+  type ConfigurationData,
+  type EntityCacheConfig,
+  type EntityKeyMappingConfig,
+  type EventConfiguration,
+  type FieldMappingConfig,
+  type NatsEventType,
+  type RequiredFieldConfiguration,
+  type RootFieldCacheConfig,
 } from '../../router-configuration/types';
 import { printTypeNode } from '@graphql-tools/merge';
 import { recordSubgraphName } from '../subgraph/subgraph';
@@ -215,28 +215,28 @@ import {
 } from '../warnings/warnings';
 import { upsertDirectiveSchemaAndEntityDefinitions, upsertParentsAndChildren } from './walkers';
 import {
-  ArgumentData,
-  AuthorizationData,
-  CompositeOutputData,
-  ConditionalFieldData,
-  ConfigureDescriptionData,
-  EntityData,
-  EntityInterfaceSubgraphData,
-  EnumDefinitionData,
-  EnumValueData,
+  type ArgumentData,
+  type AuthorizationData,
+  type CompositeOutputData,
+  type ConditionalFieldData,
+  type ConfigureDescriptionData,
+  type EntityData,
+  type EntityInterfaceSubgraphData,
+  type EnumDefinitionData,
+  type EnumValueData,
   ExtensionType,
-  ExternalFieldData,
-  FieldData,
-  InputObjectDefinitionData,
-  InputValueData,
-  InterfaceDefinitionData,
-  NodeData,
-  ObjectDefinitionData,
-  ParentDefinitionData,
-  PersistedDirectiveDefinitionData,
-  ScalarDefinitionData,
-  SchemaData,
-  UnionDefinitionData,
+  type ExternalFieldData,
+  type FieldData,
+  type InputObjectDefinitionData,
+  type InputValueData,
+  type InterfaceDefinitionData,
+  type NodeData,
+  type ObjectDefinitionData,
+  type ParentDefinitionData,
+  type PersistedDirectiveDefinitionData,
+  type ScalarDefinitionData,
+  type SchemaData,
+  type UnionDefinitionData,
 } from '../../schema-building/types';
 import {
   areDefaultValuesCompatible,
@@ -254,7 +254,7 @@ import {
   newPersistedDirectivesData,
 } from '../../schema-building/utils';
 import {
-  CompositeOutputNode,
+  type CompositeOutputNode,
   getMutableEnumNode,
   getMutableFieldNode,
   getMutableInputObjectNode,
@@ -266,14 +266,14 @@ import {
   getMutableUnionNode,
   getNamedTypeNode,
   getTypeNodeNamedTypeName,
-  MutableTypeNode,
+  type MutableTypeNode,
 } from '../../schema-building/ast';
-import { InvalidRootTypeFieldEventsDirectiveData } from '../../errors/types';
+import { type InvalidRootTypeFieldEventsDirectiveData } from '../../errors/types';
 import { Graph } from '../../resolvability-graph/graph';
 import { DEFAULT_CONSUMER_INACTIVE_THRESHOLD } from '../constants/integers';
-import { InternalSubgraph, Subgraph } from '../../subgraph/types';
-import { Warning } from '../../warnings/types';
-import { BatchNormalizationResult, NormalizationResult } from '../../normalization/types';
+import { type InternalSubgraph } from '../../subgraph/types';
+import { type Warning } from '../../warnings/types';
+import { type BatchNormalizationResult, type NormalizationResult } from '../../normalization/types';
 import {
   ARGUMENT,
   AUTHENTICATED,
@@ -379,43 +379,57 @@ import {
   numberToOrdinal,
 } from '../../utils/utils';
 import {
-  AddInputValueDataByNodeParams,
-  ConditionalFieldSetValidationResult,
-  ExtractArgumentDataResult,
-  FieldSetData,
-  FieldSetParentResult,
-  HandleOverrideDirectiveParams,
-  HandleRequiresScopesDirectiveParams,
-  HandleSemanticNonNullDirectiveParams,
-  KeyFieldSetData,
-  UpsertInputObjectResult,
-  ValidateDirectiveParams,
+  type AddInputValueDataByNodeParams,
+  type ConditionalFieldSetValidationResult,
+  type ExtractArgumentDataResult,
+  type FieldSetData,
+  type FieldSetParentResult,
+  type HandleOverrideDirectiveParams,
+  type HandleRequiresScopesDirectiveParams,
+  type HandleSemanticNonNullDirectiveParams,
+  type KeyFieldSetData,
+  type UpsertInputObjectResult,
+  type ValidateDirectiveParams,
 } from './types';
 import { newConfigurationData, newFieldSetConditionData } from '../../router-configuration/utils';
-import { ImplementationErrors, InvalidFieldImplementation } from '../../utils/types';
-import { DirectiveName, FieldName, SubgraphName, TypeName } from '../../types/types';
+import { type ImplementationErrors, type InvalidFieldImplementation } from '../../utils/types';
+import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../../types/types';
 import {
-  HandleFieldInheritableDirectivesParams,
-  HandleNonExternalConditionalFieldParams,
-  ValidateOneOfDirectiveParams,
+  type BatchNormalizeParams,
+  type HandleFieldInheritableDirectivesParams,
+  type HandleNonExternalConditionalFieldParams,
+  type NormalizationFactoryParams,
+  type NormalizeSubgraphFromStringParams,
+  type NormalizeSubgraphParams,
+  type ValidateOneOfDirectiveParams,
 } from './params';
 import { EDFS_NATS_STREAM_CONFIGURATION_DEFINITION } from '../constants/non-directive-definitions';
+import type { CompositionOptions } from '../../types/params';
 
-export function normalizeSubgraphFromString(subgraphSDL: string, noLocation = true): NormalizationResult {
-  const { error, documentNode } = safeParse(subgraphSDL, noLocation);
+export function normalizeSubgraphFromString({
+  noLocation,
+  options,
+  sdlString,
+}: NormalizeSubgraphFromStringParams): NormalizationResult {
+  const { error, documentNode } = safeParse(sdlString, noLocation);
   if (error || !documentNode) {
     return { errors: [subgraphInvalidSyntaxError(error)], success: false, warnings: [] };
   }
-  const normalizationFactory = new NormalizationFactory(new Graph());
+  const normalizationFactory = new NormalizationFactory({ internalGraph: new Graph(), options });
   return normalizationFactory.normalize(documentNode);
 }
 
-export function normalizeSubgraph(
-  document: DocumentNode,
-  subgraphName?: string,
-  internalGraph?: Graph,
-): NormalizationResult {
-  const normalizationFactory = new NormalizationFactory(internalGraph || new Graph(), subgraphName);
+export function normalizeSubgraph({
+  document,
+  internalGraph,
+  options,
+  subgraphName,
+}: NormalizeSubgraphParams): NormalizationResult {
+  const normalizationFactory = new NormalizationFactory({
+    internalGraph: internalGraph || new Graph(),
+    options,
+    subgraphName,
+  });
   return normalizationFactory.normalize(document);
 }
 
@@ -448,6 +462,7 @@ export class NormalizationFactory {
   keyFieldSetDatasByTypeName = new Map<string, Map<string, KeyFieldSetData>>();
   lastParentNodeKind: Kind = Kind.NULL;
   lastChildNodeKind: Kind = Kind.NULL;
+  options: CompositionOptions;
   parentTypeNamesWithAuthDirectives = new Set<string>();
   keyFieldSetsByEntityTypeNameByFieldCoords = new Map<string, Map<string, Set<string>>>();
   keyFieldNamesByParentTypeName = new Map<string, Set<string>>();
@@ -466,12 +481,13 @@ export class NormalizationFactory {
   usesEdfsNatsStreamConfiguration: boolean = false;
   warnings: Array<Warning> = [];
 
-  constructor(internalGraph: Graph, subgraphName?: SubgraphName) {
+  constructor({ internalGraph, options, subgraphName }: NormalizationFactoryParams) {
+    this.options = options ?? {};
     this.subgraphName = subgraphName || NOT_APPLICABLE;
     this.internalGraph = internalGraph;
     this.internalGraph.setSubgraphName(this.subgraphName);
     this.schemaData = {
-      directivesByName: new Map<string, ConstDirectiveNode[]>(),
+      directivesByName: new Map<DirectiveName, Array<ConstDirectiveNode>>(),
       kind: Kind.SCHEMA_DEFINITION,
       name: SCHEMA,
       operationTypes: new Map<OperationTypeNode, OperationTypeDefinitionNode>(),
@@ -4027,7 +4043,7 @@ export class NormalizationFactory {
     this.validateDirectives(this.schemaData, SCHEMA);
     const schemaNode = this.getSchemaNodeByData(this.schemaData);
     /* Schema extension orphans are not supported on old routers.
-     * Consequently, it is a breaking change that requires a new composition version, and hat composition version
+     * Consequently, it is a breaking change that requires a new composition version, and that composition version
      * would only be compatible with newer routers that support schema extension orphans.
      * For now, only a valid schema definition node is pushed.
      */
@@ -4330,13 +4346,13 @@ export class NormalizationFactory {
   }
 }
 
-export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult {
+export function batchNormalize({ options, subgraphs }: BatchNormalizeParams): BatchNormalizationResult {
   const authorizationDataByParentTypeName = new Map<TypeName, AuthorizationData>();
   const concreteTypeNamesByAbstractTypeName = new Map<TypeName, Set<TypeName>>();
   const entityDataByTypeName = new Map<TypeName, EntityData>();
   const internalSubgraphBySubgraphName = new Map<SubgraphName, InternalSubgraph>();
-  const allOverridesByTargetSubgraphName = new Map<string, Map<string, Set<string>>>();
-  const overrideSourceSubgraphNamesByFieldPath = new Map<string, string[]>();
+  const allOverridesByTargetSubgraphName = new Map<SubgraphName, Map<TypeName, Set<FieldName>>>();
+  const overrideSourceSubgraphNamesByFieldPath = new Map<string, Array<SubgraphName>>();
   const duplicateOverriddenFieldPaths = new Set<string>();
   const parentDefinitionDataMapsBySubgraphName = new Map<SubgraphName, Map<TypeName, ParentDefinitionData>>();
   const subgraphNames = new Set<SubgraphName>();
@@ -4359,7 +4375,12 @@ export function batchNormalize(subgraphs: Subgraph[]): BatchNormalizationResult 
     if (!subgraph.name) {
       invalidNameErrorMessages.push(invalidSubgraphNameErrorMessage(i, subgraphName));
     }
-    const normalizationResult = normalizeSubgraph(subgraph.definitions, subgraph.name, internalGraph);
+    const normalizationResult = normalizeSubgraph({
+      document: subgraph.definitions,
+      internalGraph,
+      options,
+      subgraphName,
+    });
     if (normalizationResult.warnings.length > 0) {
       warnings.push(...normalizationResult.warnings);
     }

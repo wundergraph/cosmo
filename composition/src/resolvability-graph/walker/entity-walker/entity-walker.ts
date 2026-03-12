@@ -1,13 +1,13 @@
 import { NodeResolutionData } from '../../node-resolution-data/node-resolution-data';
 import type { NodeName, SelectionPath, SubgraphName, VisitNodeResult } from '../../types/types';
 import {
-  AddUnresolvablePathsParams,
-  EntityWalkerParams,
-  GetNodeResolutionDataParams,
-  PropagateVisitedFieldParams,
-  RemoveUnresolvablePathsParams,
-  VisitEntityDescendantEdgeParams,
-  VisitEntityDescendantNodeParams,
+  type AddUnresolvablePathsParams,
+  type EntityWalkerParams,
+  type GetNodeResolutionDataParams,
+  type PropagateVisitedFieldParams,
+  type RemoveUnresolvablePathsParams,
+  type VisitEntityDescendantEdgeParams,
+  type VisitEntityDescendantNodeParams,
 } from './types/params';
 import { add, getValueOrDefault } from '../../../utils/utils';
 

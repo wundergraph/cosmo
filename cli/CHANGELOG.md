@@ -4,6 +4,26 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.109.1](https://github.com/wundergraph/cosmo/compare/wgc@0.109.0...wgc@0.109.1) (2026-03-11)
+
+**Note:** Version bump only for package wgc
+
+# [0.109.0](https://github.com/wundergraph/cosmo/compare/wgc@0.108.0...wgc@0.109.0) (2026-03-10)
+
+### Features
+
+* json output support for monograph/subgraph check ([#2590](https://github.com/wundergraph/cosmo/issues/2590)) ([5131bba](https://github.com/wundergraph/cosmo/commit/5131bbac8d24115a61468e8ebf9731b4250830eb)) (@comatory)
+
+# [0.108.0](https://github.com/wundergraph/cosmo/compare/wgc@0.107.1...wgc@0.108.0) (2026-03-10)
+
+### Features
+
+* add composition options ([#2595](https://github.com/wundergraph/cosmo/issues/2595)) ([1cba9ab](https://github.com/wundergraph/cosmo/commit/1cba9ab997a64e8bea18a7f6f01507f2ec2dd82b)) (@Aenimus)
+
+## [0.107.1](https://github.com/wundergraph/cosmo/compare/wgc@0.107.0...wgc@0.107.1) (2026-03-07)
+
+**Note:** Version bump only for package wgc
+
 # [0.107.0](https://github.com/wundergraph/cosmo/compare/wgc@0.106.0...wgc@0.107.0) (2026-03-05)
 
 ### Features

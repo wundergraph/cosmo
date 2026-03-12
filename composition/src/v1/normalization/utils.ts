@@ -1,6 +1,6 @@
-import { BREAK, ConstDirectiveNode, DocumentNode, Kind, OperationTypeNode, print, visit } from 'graphql';
+import { BREAK, type ConstDirectiveNode, type DocumentNode, Kind, OperationTypeNode, print, visit } from 'graphql';
 import { isKindAbstract, lexicographicallySortDocumentNode } from '../../ast/utils';
-import { NormalizationFactory } from './normalization-factory';
+import { type NormalizationFactory } from './normalization-factory';
 import {
   abstractTypeInKeyFieldSetErrorMessage,
   argumentsInKeyFieldSetErrorMessage,
@@ -17,8 +17,12 @@ import {
   unparsableFieldSetSelectionErrorMessage,
 } from '../../errors/errors';
 import { BASE_SCALARS, EDFS_ARGS_REGEXP } from '../constants/constants';
-import { RequiredFieldConfiguration } from '../../router-configuration/types';
-import { CompositeOutputData, DirectiveDefinitionData, InputValueData } from '../../schema-building/types';
+import { type RequiredFieldConfiguration } from '../../router-configuration/types';
+import {
+  type CompositeOutputData,
+  type DirectiveDefinitionData,
+  type InputValueData,
+} from '../../schema-building/types';
 import { getTypeNodeNamedTypeName } from '../../schema-building/ast';
 import {
   AUTHENTICATED_DEFINITION_DATA,
@@ -100,7 +104,7 @@ import {
   TYPENAME,
 } from '../../utils/string-constants';
 import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
-import { FieldSetData, KeyFieldSetData } from './types';
+import { type FieldSetData, type KeyFieldSetData } from './types';
 
 export function newFieldSetData(): FieldSetData {
   return {
@@ -240,7 +244,7 @@ export function validateKeyFieldSets(
             !externalFieldData.isUnconditionallyProvided
           ) {
             const conditionalData = nf.conditionalFieldDataByCoords.get(fieldCoords);
-            if (!conditionalData) {
+            if (!conditionalData && !nf.options.ignoreExternalKeys) {
               isUnconditionallyExternalKey = true;
               const edge = graphNode.headToTailEdges.get(fieldName);
               if (edge) {

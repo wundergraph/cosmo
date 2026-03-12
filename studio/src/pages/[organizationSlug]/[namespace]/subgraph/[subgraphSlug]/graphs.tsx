@@ -1,45 +1,29 @@
-import { EmptyState } from "@/components/empty-state";
-import {
-  SubgraphPageLayout,
-  getSubgraphLayout,
-} from "@/components/layout/subgraph-layout";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CLI } from "@/components/ui/cli";
-import { Loader } from "@/components/ui/loader";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useSubgraph } from "@/hooks/use-subgraph";
-import { docsBaseURL } from "@/lib/constants";
-import { NextPageWithLayout } from "@/lib/page";
-import { useQuery } from "@connectrpc/connect-query";
-import {
-  CommandLineIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getFederatedGraphsBySubgraphLabels } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { FederatedGraph } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { formatDistanceToNow } from "date-fns";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { PiWarningCircle } from "react-icons/pi";
-import { useWorkspace } from "@/hooks/use-workspace";
+import { EmptyState } from '@/components/empty-state';
+import { SubgraphPageLayout, getSubgraphLayout } from '@/components/layout/subgraph-layout';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CLI } from '@/components/ui/cli';
+import { Loader } from '@/components/ui/loader';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSubgraph } from '@/hooks/use-subgraph';
+import { docsBaseURL } from '@/lib/constants';
+import { NextPageWithLayout } from '@/lib/page';
+import { useQuery } from '@connectrpc/connect-query';
+import { CommandLineIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { getFederatedGraphsBySubgraphLabels } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { FederatedGraph } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { formatDistanceToNow } from 'date-fns';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { PiWarningCircle } from 'react-icons/pi';
+import { useWorkspace } from '@/hooks/use-workspace';
 
 export const Empty = ({ labels }: { labels: string[] }) => {
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   return (
     <EmptyState
@@ -47,12 +31,11 @@ export const Empty = ({ labels }: { labels: string[] }) => {
       title="Create a federated graph which includes this subgraph."
       description={
         <>
-          No federated graphs include this subgraph. Create a federated graph
-          with subgraph labels{" "}
+          No federated graphs include this subgraph. Create a federated graph with subgraph labels{' '}
           <a
             target="_blank"
             rel="noreferrer"
-            href={docsBaseURL + "/cli/federated-graph/create"}
+            href={docsBaseURL + '/cli/federated-graph/create'}
             className="text-primary"
           >
             Learn more.
@@ -61,10 +44,8 @@ export const Empty = ({ labels }: { labels: string[] }) => {
       }
       actions={
         <CLI
-          command={`npx wgc federated-graph create production --namespace ${
-            namespace
-          } --label-matcher ${labels.join(
-            " ",
+          command={`npx wgc federated-graph create production --namespace ${namespace} --label-matcher ${labels.join(
+            ' ',
           )} --routing-url http://localhost:4000/graphql`}
         />
       }
@@ -110,16 +91,7 @@ export const FederatedGraphsTable = ({
         </TableHeader>
         <TableBody>
           {graphs.map(
-            ({
-              federatedGraph: {
-                name,
-                routingURL,
-                lastUpdatedAt,
-                labelMatchers,
-                namespace,
-              },
-              isConnected,
-            }) => {
+            ({ federatedGraph: { name, routingURL, lastUpdatedAt, labelMatchers, namespace }, isConnected }) => {
               const path = `/${organizationSlug}/${namespace}/graph/${name}`;
               return (
                 <TableRow
@@ -133,10 +105,7 @@ export const FederatedGraphsTable = ({
                       {isConnected === false && (
                         <Tooltip delayDuration={200}>
                           <TooltipTrigger>
-                            <Badge
-                              variant="destructive"
-                              className="flex items-center gap-x-2"
-                            >
+                            <Badge variant="destructive" className="flex items-center gap-x-2">
                               <>Action required</>
                               <PiWarningCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
                             </Badge>
@@ -150,18 +119,13 @@ export const FederatedGraphsTable = ({
                       )}
                     </>
                   </TableCell>
-                  <TableCell className="px-4 text-muted-foreground">
-                    {routingURL}
-                  </TableCell>
+                  <TableCell className="px-4 text-muted-foreground">{routingURL}</TableCell>
                   <TableCell className="px-4">
                     <div className="flex space-x-2">
                       {labelMatchers.length === 0 && (
                         <Tooltip delayDuration={200}>
                           <TooltipTrigger>-</TooltipTrigger>
-                          <TooltipContent>
-                            This graph will only compose subgraphs without
-                            labels
-                          </TooltipContent>
+                          <TooltipContent>This graph will only compose subgraphs without labels</TooltipContent>
                         </Tooltip>
                       )}
                       {labelMatchers.map((l) => {
@@ -178,15 +142,10 @@ export const FederatedGraphsTable = ({
                       ? formatDistanceToNow(new Date(lastUpdatedAt), {
                           addSuffix: true,
                         })
-                      : "Never"}
+                      : 'Never'}
                   </TableCell>
                   <TableCell className="flex">
-                    <Button
-                      asChild
-                      variant="ghost"
-                      size="sm"
-                      className="table-action"
-                    >
+                    <Button asChild variant="ghost" size="sm" className="table-action">
                       <Link href={path}>View</Link>
                     </Button>
                   </TableCell>
@@ -203,7 +162,9 @@ export const FederatedGraphsTable = ({
 const FederatedGraphsPage: NextPageWithLayout = () => {
   const router = useRouter();
   const subgraphSlug = router.query.subgraphSlug as string;
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const { data, error, refetch, isLoading } = useQuery(
     getFederatedGraphsBySubgraphLabels,
@@ -225,9 +186,7 @@ const FederatedGraphsPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve the federated graphs that include this subgraph."
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -246,13 +205,10 @@ const FederatedGraphsPage: NextPageWithLayout = () => {
 
 FederatedGraphsPage.getLayout = (page) =>
   getSubgraphLayout(
-    <SubgraphPageLayout
-      title="Graphs"
-      subtitle="View the federated graph that include this subgraph."
-    >
+    <SubgraphPageLayout title="Graphs" subtitle="View the federated graph that include this subgraph.">
       {page}
     </SubgraphPageLayout>,
-    { title: "Federated Graphs" },
+    { title: 'Federated Graphs' },
   );
 
 export default FederatedGraphsPage;

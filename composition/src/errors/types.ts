@@ -1,5 +1,5 @@
-import { FieldData, InputValueData, ParentDefinitionData } from '../schema-building/types';
-import { DirectiveName, FieldName, SubgraphName, TypeName } from '../types/types';
+import { type FieldData, type InputValueData, type ParentDefinitionData } from '../schema-building/types';
+import { type DirectiveName, type FieldName, type SubgraphName, type TypeName } from '../types/types';
 
 export type InvalidRootTypeFieldEventsDirectiveData = {
   definesDirectives: boolean;

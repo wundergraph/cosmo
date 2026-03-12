@@ -1,7 +1,7 @@
 import type { NodeName, RootFieldData, SelectionPath, SubgraphName } from './types';
 
-import { NodeResolutionData } from '../node-resolution-data/node-resolution-data';
-import { RootFieldWalker } from '../walker/root-field-walkers/root-field-walker';
+import { type NodeResolutionData } from '../node-resolution-data/node-resolution-data';
+import { type RootFieldWalker } from '../walker/root-field-walkers/root-field-walker';
 
 export type VisitEntityParams = {
   encounteredEntityNodeNames: Set<NodeName>;

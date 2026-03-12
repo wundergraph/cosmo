@@ -20,7 +20,7 @@
       "properties": {
         "token": {
           "type": "string",
-          "description": "The token used to authenticate with other component from Cosmo. Can be ommitted if the router is started with a static execution config."
+          "description": "The token used to authenticate with other component from Cosmo. Can be omitted if the router is started with a static execution config."
         },
         "sign_key": {
           "type": "string",
@@ -2580,6 +2580,11 @@
                         }
                       }
                     ]
+                  },
+                  "experiment_delete_durable_consumers_on_shutdown": {
+                    "type": "boolean",
+                    "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down normally. Defaults to false. NOTE: This option is experimental and may change in future versions.",
+                    "default": false
                   }
                 }
               }

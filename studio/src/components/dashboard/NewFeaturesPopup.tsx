@@ -1,9 +1,9 @@
-import React from "react";
-import Link from "next/link";
-import { Cross2Icon } from "@radix-ui/react-icons";
-import { Button } from "../ui/button";
-import { MdArrowOutward } from "react-icons/md";
-import { useNewFeaturesPopupDisabled } from "@/hooks/use-new-features-popup-disabled";
+import React from 'react';
+import Link from 'next/link';
+import { Cross2Icon } from '@radix-ui/react-icons';
+import { Button } from '../ui/button';
+import { MdArrowOutward } from 'react-icons/md';
+import { useNewFeaturesPopupDisabled } from '@/hooks/use-new-features-popup-disabled';
 
 export default function NewFeaturesPopup() {
   const [isPopupDisabled, setDisablePopup] = useNewFeaturesPopupDisabled();
@@ -11,7 +11,7 @@ export default function NewFeaturesPopup() {
   const handleClosePopup = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setDisablePopup("true");
+    setDisablePopup('true');
   };
 
   // Don't render the popup if it's been dismissed
@@ -38,8 +38,8 @@ export default function NewFeaturesPopup() {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 35%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.03) 65%, transparent 100%)",
-            animation: "popup-shine 3s ease-in-out 2 forwards",
+              'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.03) 35%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.03) 65%, transparent 100%)',
+            animation: 'popup-shine 3s ease-in-out 2 forwards',
           }}
         />
       </div>
@@ -59,8 +59,7 @@ export default function NewFeaturesPopup() {
             </Button>
           </div>
           <p className="text-sm leading-snug text-muted-foreground">
-            A smarter way to design schemas, collaborate, and govern changes —
-            all in one place.
+            A smarter way to design schemas, collaborate, and govern changes — all in one place.
           </p>
         </div>
         <span className="flex items-center gap-x-1 text-sm font-medium text-card-foreground group-hover:underline">
@@ -206,12 +205,7 @@ export default function NewFeaturesPopup() {
           </g>
           <defs>
             <clipPath id="clip0_354_8">
-              <rect
-                width="171"
-                height="112"
-                fill="currentColor"
-                transform="translate(0.625)"
-              />
+              <rect width="171" height="112" fill="currentColor" transform="translate(0.625)" />
             </clipPath>
           </defs>
         </svg>

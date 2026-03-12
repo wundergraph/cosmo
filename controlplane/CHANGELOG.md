@@ -4,6 +4,40 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.201.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.200.0...controlplane@0.201.0) (2026-03-11)
+
+### Features
+
+* add composedSchemaBreakingChanges to UpdateProposalResponse ([#2627](https://github.com/wundergraph/cosmo/issues/2627)) ([2375cd8](https://github.com/wundergraph/cosmo/commit/2375cd845a9da0bd1933d6f3596b9a495a9228bd)) (@JivusAyrus)
+
+# [0.200.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.199.0...controlplane@0.200.0) (2026-03-10)
+
+### Features
+
+* **keycloak:** update to 26.5.4 ([#2612](https://github.com/wundergraph/cosmo/issues/2612)) ([47a0fb5](https://github.com/wundergraph/cosmo/commit/47a0fb5ce166d2e489b8214fcd7da2e6c0b7f11d)) (@pepol)
+
+# [0.199.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.198.0...controlplane@0.199.0) (2026-03-10)
+
+### Features
+
+* add composition options ([#2595](https://github.com/wundergraph/cosmo/issues/2595)) ([1cba9ab](https://github.com/wundergraph/cosmo/commit/1cba9ab997a64e8bea18a7f6f01507f2ec2dd82b)) (@Aenimus)
+
+# [0.198.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.197.0...controlplane@0.198.0) (2026-03-09)
+
+### Features
+
+* add ignore external keys feature ([#2616](https://github.com/wundergraph/cosmo/issues/2616)) ([f29f5aa](https://github.com/wundergraph/cosmo/commit/f29f5aa3b93dfd5332de9aaeed066e86b86bb624)) (@Aenimus)
+
+# [0.197.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.196.0...controlplane@0.197.0) (2026-03-07)
+
+### Bug Fixes
+
+* formatting drift + CI improvements ([#2599](https://github.com/wundergraph/cosmo/issues/2599)) ([dc6dc2d](https://github.com/wundergraph/cosmo/commit/dc6dc2df088a392e01d0582c8e3dcf82a21666cf)) (@comatory)
+
+### Features
+
+* improve invitation handling ([#2581](https://github.com/wundergraph/cosmo/issues/2581)) ([d5b3b45](https://github.com/wundergraph/cosmo/commit/d5b3b45b83355aaadf2557f2455b81c050348b93)) (@wilsonrivera)
+
 # [0.196.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.195.0...controlplane@0.196.0) (2026-03-05)
 
 ### Features

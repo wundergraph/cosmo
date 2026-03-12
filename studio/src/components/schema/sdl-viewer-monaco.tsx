@@ -1,13 +1,13 @@
-import { Loader } from "@/components/ui/loader";
-import { useResolvedTheme } from "@/hooks/use-resolved-theme";
-import Editor, { DiffEditor, loader, useMonaco } from "@monaco-editor/react";
-import { editor } from "monaco-editor";
-import babelPlugin from "prettier/plugins/babel";
-import estreePlugin from "prettier/plugins/estree";
-import graphQLPlugin from "prettier/plugins/graphql";
-import * as prettier from "prettier/standalone";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { schemaViewerDarkTheme } from "./monaco-dark-theme";
+import { Loader } from '@/components/ui/loader';
+import { useResolvedTheme } from '@/hooks/use-resolved-theme';
+import Editor, { DiffEditor, loader, useMonaco } from '@monaco-editor/react';
+import { editor } from 'monaco-editor';
+import babelPlugin from 'prettier/plugins/babel';
+import estreePlugin from 'prettier/plugins/estree';
+import graphQLPlugin from 'prettier/plugins/graphql';
+import * as prettier from 'prettier/standalone';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { schemaViewerDarkTheme } from './monaco-dark-theme';
 
 /*
  * In order to load the Monaco Editor locally and avoid fetching it from a CDN
@@ -23,7 +23,7 @@ import { schemaViewerDarkTheme } from "./monaco-dark-theme";
 loader.config({
   paths: {
     // Load Monaco Editor from "public" directory
-    vs: "/monaco-editor/min/vs",
+    vs: '/monaco-editor/min/vs',
     // Load Monaco Editor from different CDN
     // vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs',
   },
@@ -49,12 +49,12 @@ export interface DecorationCollection {
 const set = async (source: string, setter: (val: string) => void) => {
   try {
     const res = await prettier.format(source, {
-      parser: "graphql",
+      parser: 'graphql',
       plugins: [graphQLPlugin, estreePlugin, babelPlugin],
     });
     setter(res);
   } catch {
-    setter("INVALID CONTENT");
+    setter('INVALID CONTENT');
   }
 };
 
@@ -75,8 +75,8 @@ export const SDLViewerMonaco = ({
 }) => {
   const selectedTheme = useResolvedTheme();
 
-  const [content, setContent] = useState("");
-  const [newContent, setNewContent] = useState("");
+  const [content, setContent] = useState('');
+  const [newContent, setNewContent] = useState('');
   const [didMoveToLine, setDidMoveToLine] = useState(false);
 
   useEffect(() => {
@@ -108,9 +108,7 @@ export const SDLViewerMonaco = ({
 
     const editorModel = editor.getModel();
     if (editorModel) {
-      const existingDecorations = editor.getDecorationsInRange(
-        editorModel.getFullModelRange(),
-      );
+      const existingDecorations = editor.getDecorationsInRange(editorModel.getFullModelRange());
 
       if (existingDecorations) {
         editor.removeDecorations(existingDecorations.map((d) => d.id));
@@ -129,7 +127,7 @@ export const SDLViewerMonaco = ({
         },
         options: {
           isWholeLine: true,
-          className: "bg-success bg-opacity-40 w-full h-32 z-25",
+          className: 'bg-success bg-opacity-40 w-full h-32 z-25',
         },
       });
 
@@ -150,17 +148,17 @@ export const SDLViewerMonaco = ({
 
   useEffect(() => {
     if (!monaco) return;
-    if (selectedTheme === "dark") {
-      monaco.editor.setTheme("wg-dark");
+    if (selectedTheme === 'dark') {
+      monaco.editor.setTheme('wg-dark');
     } else {
-      monaco.editor.setTheme("light");
+      monaco.editor.setTheme('light');
     }
   }, [selectedTheme, monaco]);
 
   if (newSchema) {
     return (
       <DiffEditor
-        theme={selectedTheme === "dark" ? "wg-dark" : "light"}
+        theme={selectedTheme === 'dark' ? 'wg-dark' : 'light'}
         className="scrollbar-custom h-full flex-shrink font-mono text-xs"
         language="graphql"
         original={content}
@@ -182,9 +180,9 @@ export const SDLViewerMonaco = ({
           },
         }}
         onMount={(_, monaco) => {
-          monaco.editor.defineTheme("wg-dark", schemaViewerDarkTheme);
-          if (selectedTheme === "dark") {
-            monaco.editor.setTheme("wg-dark");
+          monaco.editor.defineTheme('wg-dark', schemaViewerDarkTheme);
+          if (selectedTheme === 'dark') {
+            monaco.editor.setTheme('wg-dark');
           }
         }}
       />
@@ -193,7 +191,7 @@ export const SDLViewerMonaco = ({
 
   return (
     <Editor
-      theme={selectedTheme === "dark" ? "wg-dark" : "light"}
+      theme={selectedTheme === 'dark' ? 'wg-dark' : 'light'}
       className="scrollbar-custom h-full text-xs"
       language="graphql"
       value={content}
@@ -203,7 +201,7 @@ export const SDLViewerMonaco = ({
         readOnly: true,
         domReadOnly: true,
         contextmenu: false,
-        language: "graphql",
+        language: 'graphql',
         minimap: {
           enabled: false,
         },
@@ -224,9 +222,9 @@ export const SDLViewerMonaco = ({
 
         resetDecorations();
 
-        monaco.editor.defineTheme("wg-dark", schemaViewerDarkTheme);
-        if (selectedTheme === "dark") {
-          monaco.editor.setTheme("wg-dark");
+        monaco.editor.defineTheme('wg-dark', schemaViewerDarkTheme);
+        if (selectedTheme === 'dark') {
+          monaco.editor.setTheme('wg-dark');
         }
 
         if (!enableLinking) {
@@ -237,24 +235,22 @@ export const SDLViewerMonaco = ({
           const lineNumber = e.target.position?.lineNumber;
 
           if (e.target.position && lineNumber) {
-            const existingAnchor = document.getElementById(
-              `anchor-${lineNumber}`,
-            );
+            const existingAnchor = document.getElementById(`anchor-${lineNumber}`);
             if (!existingAnchor) {
               editor.changeViewZones((changeAccessor) => {
-                const domNode = document.createElement("div");
+                const domNode = document.createElement('div');
 
-                const marginDomNode = document.createElement("div");
-                marginDomNode.className = "mdn z-30";
+                const marginDomNode = document.createElement('div');
+                marginDomNode.className = 'mdn z-30';
 
-                const wrapper = document.createElement("div");
-                wrapper.className = "pl-2";
+                const wrapper = document.createElement('div');
+                wrapper.className = 'pl-2';
                 marginDomNode.appendChild(wrapper);
 
-                const anchor = document.createElement("a");
+                const anchor = document.createElement('a');
                 anchor.href = `#L${lineNumber}`;
-                anchor.id = "anchor-" + lineNumber;
-                anchor.className = "h-10 cursor-pointer w-full";
+                anchor.id = 'anchor-' + lineNumber;
+                anchor.className = 'h-10 cursor-pointer w-full';
                 anchor.innerHTML = `
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-4">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
@@ -273,11 +269,11 @@ export const SDLViewerMonaco = ({
             }
 
             // remove anchors that are not for the currently hovered over line
-            Array.from(document.getElementsByClassName("mdn z-30"))
+            Array.from(document.getElementsByClassName('mdn z-30'))
               .filter((ele) => {
                 const anchor = ele.firstElementChild?.firstElementChild;
                 if (anchor) {
-                  const line = Number(anchor.id.split("-")[1]);
+                  const line = Number(anchor.id.split('-')[1]);
                   if (line === lineNumber) {
                     return false;
                   }

@@ -7,7 +7,6 @@ import {
   PublishMonographResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { buildSchema } from '../../composition/composition.js';
-import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace, NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -34,7 +33,6 @@ export function publishMonograph(
       opts.logger,
       opts.billingDefaultPlanId,
     );
-    const auditLogRepo = new AuditLogRepository(opts.db);
     const namespaceRepo = new NamespaceRepository(opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const federatedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
@@ -70,7 +68,12 @@ export function publishMonograph(
     let isV2Graph: boolean | undefined;
 
     try {
-      // Here we check if the schema is valid as a subgraph SDL
+      /* Here we check if the schema is valid as a subgraph SDL
+       * `buildSchema` only calls normalization in isolation.
+       * The `disableResolvabilityChecks` flag is only used in the federation step.
+       * The `ignoreExternalKeys` flag is propagated in normalization but only used in the federation step.
+       * Consequently, there is currently no reason to propagate the options within `buildSchema`.
+       */
       const result = buildSchema(subgraphSchemaSDL, true, graph.routerCompatibilityVersion);
       if (!result.success) {
         return {
