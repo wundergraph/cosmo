@@ -1230,7 +1230,7 @@ describe('Publish subgraph tests', () => {
   });
 
   describe('Publish response counts tests', () => {
-    test('that counts are returned in the response on successful publish', async () => {
+    test('Should return counts in the response on successful publish', async () => {
       const { client, server } = await SetupTest({ dbname });
 
       const subgraphName = genID('subgraph');
@@ -1251,7 +1251,7 @@ describe('Publish subgraph tests', () => {
       await server.close();
     });
 
-    test('that counts reflect actual composition errors', async () => {
+    test('Should reflect actual composition errors in counts', async () => {
       const { client, server } = await SetupTest({ dbname });
 
       const federatedGraphName = genID('fedGraph');
@@ -1308,7 +1308,7 @@ describe('Publish subgraph tests', () => {
       await server.close();
     });
 
-    test('that limit parameter restricts the number of returned composition errors', async () => {
+    test('Should restrict the number of returned composition errors when limit parameter is set', async () => {
       const { client, server } = await SetupTest({ dbname });
 
       const federatedGraphName = genID('fedGraph');

@@ -742,11 +742,11 @@ export function publishFederatedSubgraph(
     }
 
     // If req.limit is not provided, use maxRowLimitForChecks as default
-    const returnLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
+    const boundedLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
 
-    const limitedCompositionErrors = compositionErrors.slice(0, returnLimit);
-    const limitedCompositionWarnings = compositionWarnings.slice(0, returnLimit);
-    const limitedDeploymentErrors = deploymentErrors.slice(0, returnLimit);
+    const boundedCompositionErrors = compositionErrors.slice(0, boundedLimit);
+    const boundedCompositionWarnings = compositionWarnings.slice(0, boundedLimit);
+    const boundedDeploymentErrors = deploymentErrors.slice(0, boundedLimit);
 
     const counts = {
       compositionErrors: compositionErrors.length,
@@ -759,8 +759,8 @@ export function publishFederatedSubgraph(
         response: {
           code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
         },
-        compositionErrors: limitedCompositionErrors,
-        compositionWarnings: limitedCompositionWarnings,
+        compositionErrors: boundedCompositionErrors,
+        compositionWarnings: boundedCompositionWarnings,
         deploymentErrors: [],
         proposalMatchMessage,
         counts,
@@ -773,8 +773,8 @@ export function publishFederatedSubgraph(
           code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
         },
         compositionErrors: [],
-        deploymentErrors: limitedDeploymentErrors,
-        compositionWarnings: limitedCompositionWarnings,
+        deploymentErrors: boundedDeploymentErrors,
+        compositionWarnings: boundedCompositionWarnings,
         proposalMatchMessage,
         counts,
       };
@@ -787,7 +787,7 @@ export function publishFederatedSubgraph(
       compositionErrors: [],
       deploymentErrors: [],
       hasChanged: subgraphChanged,
-      compositionWarnings: limitedCompositionWarnings,
+      compositionWarnings: boundedCompositionWarnings,
       proposalMatchMessage,
       counts,
     };
