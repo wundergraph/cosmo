@@ -208,11 +208,7 @@ export function incompleteQueryCacheKeyMappingWarning(
   });
 }
 
-export function redundantIsDirectiveWarning(
-  subgraphName: string,
-  argumentName: string,
-  fieldCoords: string,
-): Warning {
+export function redundantIsDirectiveWarning(subgraphName: string, argumentName: string, fieldCoords: string): Warning {
   return new Warning({
     message:
       `Argument "${argumentName}" on field "${fieldCoords}" already matches @key field "${argumentName}" by name` +

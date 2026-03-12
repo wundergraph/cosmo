@@ -51,9 +51,7 @@ describe('Entity caching directive tests', () => {
       const { errors } = normalizeSubgraphFailure(entityCacheWithoutKeySubgraph, version);
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
-        invalidDirectiveError(ENTITY_CACHE, 'Product', FIRST_ORDINAL, [
-          entityCacheWithoutKeyErrorMessage('Product'),
-        ]),
+        invalidDirectiveError(ENTITY_CACHE, 'Product', FIRST_ORDINAL, [entityCacheWithoutKeyErrorMessage('Product')]),
       );
     });
 
@@ -257,9 +255,7 @@ describe('Entity caching directive tests', () => {
     test('that a warning is returned if @is is redundant because argument name matches key field', () => {
       const { warnings } = normalizeSubgraphSuccess(isRedundantSubgraph, version);
       expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toStrictEqual(
-        redundantIsDirectiveWarning('subgraph-a', 'id', 'Query.product'),
-      );
+      expect(warnings[0]).toStrictEqual(redundantIsDirectiveWarning('subgraph-a', 'id', 'Query.product'));
     });
 
     test('that @is normalizes successfully with a valid key field mapping', () => {
@@ -271,7 +267,7 @@ describe('Entity caching directive tests', () => {
 
   describe('configuration tests', () => {
     test('that @entityCache produces the correct EntityCacheConfig', () => {
-      const result = batchNormalize([validEntityCacheSubgraph]) as BatchNormalizationSuccess;
+      const result = batchNormalize({ subgraphs: [validEntityCacheSubgraph] }) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       const subgraph = result.internalSubgraphBySubgraphName.get('subgraph-a');
       expect(subgraph).toBeDefined();
@@ -289,7 +285,7 @@ describe('Entity caching directive tests', () => {
     });
 
     test('that @entityCache with all options produces the correct EntityCacheConfig', () => {
-      const result = batchNormalize([entityCacheAllOptionsSubgraph]) as BatchNormalizationSuccess;
+      const result = batchNormalize({ subgraphs: [entityCacheAllOptionsSubgraph] }) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       const subgraph = result.internalSubgraphBySubgraphName.get('subgraph-a');
       expect(subgraph).toBeDefined();
@@ -307,7 +303,7 @@ describe('Entity caching directive tests', () => {
     });
 
     test('that @queryCache produces the correct RootFieldCacheConfig with auto-mapped key', () => {
-      const result = batchNormalize([validQueryCacheSubgraph]) as BatchNormalizationSuccess;
+      const result = batchNormalize({ subgraphs: [validQueryCacheSubgraph] }) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       const subgraph = result.internalSubgraphBySubgraphName.get('subgraph-a');
       expect(subgraph).toBeDefined();
@@ -331,7 +327,7 @@ describe('Entity caching directive tests', () => {
     });
 
     test('that @queryCache with @is produces the correct key mappings', () => {
-      const result = batchNormalize([validIsSubgraph]) as BatchNormalizationSuccess;
+      const result = batchNormalize({ subgraphs: [validIsSubgraph] }) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       const subgraph = result.internalSubgraphBySubgraphName.get('subgraph-a');
       expect(subgraph).toBeDefined();
@@ -355,7 +351,7 @@ describe('Entity caching directive tests', () => {
     });
 
     test('that @cacheInvalidate produces the correct CacheInvalidateConfig', () => {
-      const result = batchNormalize([validCacheInvalidateSubgraph]) as BatchNormalizationSuccess;
+      const result = batchNormalize({ subgraphs: [validCacheInvalidateSubgraph] }) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       const subgraph = result.internalSubgraphBySubgraphName.get('subgraph-a');
       expect(subgraph).toBeDefined();
@@ -371,7 +367,7 @@ describe('Entity caching directive tests', () => {
     });
 
     test('that @cachePopulate without maxAge produces the correct CachePopulateConfig', () => {
-      const result = batchNormalize([validCachePopulateNoMaxAgeSubgraph]) as BatchNormalizationSuccess;
+      const result = batchNormalize({ subgraphs: [validCachePopulateNoMaxAgeSubgraph] }) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       const subgraph = result.internalSubgraphBySubgraphName.get('subgraph-a');
       expect(subgraph).toBeDefined();
@@ -387,7 +383,7 @@ describe('Entity caching directive tests', () => {
     });
 
     test('that @cachePopulate with maxAge produces the correct CachePopulateConfig', () => {
-      const result = batchNormalize([validCachePopulateWithMaxAgeSubgraph]) as BatchNormalizationSuccess;
+      const result = batchNormalize({ subgraphs: [validCachePopulateWithMaxAgeSubgraph] }) as BatchNormalizationSuccess;
       expect(result.success).toBe(true);
       const subgraph = result.internalSubgraphBySubgraphName.get('subgraph-a');
       expect(subgraph).toBeDefined();
@@ -404,7 +400,7 @@ describe('Entity caching directive tests', () => {
 
     test('that @cachePopulate with invalid maxAge does not produce a config', () => {
       // Regression test for Bug 1: invalid maxAge should not push config
-      const result = batchNormalize([cachePopulateMaxAgeZeroSubgraph]);
+      const result = batchNormalize({ subgraphs: [cachePopulateMaxAgeZeroSubgraph] });
       // batchNormalize may still succeed (errors are on the subgraph level)
       // but the Mutation config should not have cachePopulateConfigurations
       if (result.success) {
