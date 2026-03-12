@@ -57,7 +57,7 @@ import {
 import { BlobStorage } from '../blobstorage/index.js';
 import {
   BaseCompositionData,
-  ComposedSubgraph,
+  CompositionSubgraphRecord,
   Composer,
   ContractBaseCompositionData,
   routerConfigToFeatureFlagExecutionConfig,
@@ -796,7 +796,7 @@ export class FederatedGraphRepository {
     clientSchema?: string;
     compositionErrors?: Error[];
     compositionWarnings?: Warning[];
-    composedSubgraphs: ComposedSubgraph[];
+    composedSubgraphs: CompositionSubgraphRecord[];
     composedById: string;
     isFeatureFlagComposition: boolean;
     featureFlagId: string;

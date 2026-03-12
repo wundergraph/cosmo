@@ -111,6 +111,19 @@ export function buildRouterExecutionConfig(
   });
 }
 
+/**
+ * The minimal subgraph fields required for composition persistence (changelog, composition records).
+ * The full ComposedSubgraph carries additional runtime data (url, sdl, schema, gRPC metadata, etc.)
+ * that is only needed for building router execution configs.
+ */
+export interface CompositionSubgraphRecord {
+  id: string;
+  name: string;
+  targetId: string;
+  schemaVersionId: string;
+  isFeatureSubgraph: boolean;
+}
+
 export type ComposedSubgraph = (IComposedSubgraph | ComposedSubgraphPlugin | ComposedSubgraphGRPC) & {
   targetId: string;
   isFeatureSubgraph: boolean;
@@ -558,7 +571,7 @@ export class Composer {
     routerExecutionConfig,
     featureFlagId,
   }: {
-    composedGraph: ComposedFederatedGraph;
+    composedGraph: Omit<ComposedFederatedGraph, 'subgraphs'> & { subgraphs: CompositionSubgraphRecord[] };
     composedById: string;
     isFeatureFlagComposition: boolean;
     federatedSchemaVersionId: UUID;

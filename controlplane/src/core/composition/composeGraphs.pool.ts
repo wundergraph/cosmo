@@ -13,7 +13,7 @@ import { Warning } from '@wundergraph/composition';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import WorkerPool from 'tinypool';
 import { FederatedGraphDTO } from '../../types/index.js';
-import { ComposedFederatedGraph, ComposedSubgraph } from './composer.js';
+import { ComposedFederatedGraph, CompositionSubgraphRecord } from './composer.js';
 import {
   ComposeGraphsTaskInput,
   ComposeGraphsTaskResult,
@@ -76,10 +76,14 @@ function deserializeWarning(message: string, subgraphName?: string) {
   });
 }
 
+export type DeserializedComposedGraph = Omit<ComposedFederatedGraph, 'subgraphs'> & {
+  subgraphs: CompositionSubgraphRecord[];
+};
+
 export function deserializeComposedGraphArtifact(
   federatedGraph: Pick<FederatedGraphDTO, 'id' | 'targetId' | 'name' | 'namespace' | 'namespaceId'>,
   artifact: SerializedComposedGraphArtifact,
-): ComposedFederatedGraph {
+): DeserializedComposedGraph {
   return {
     id: federatedGraph.id,
     targetID: federatedGraph.targetId,
@@ -91,7 +95,7 @@ export function deserializeComposedGraphArtifact(
     shouldIncludeClientSchema: artifact.shouldIncludeClientSchema,
     errors: artifact.errors.map((message) => new Error(message)),
     fieldConfigurations: artifact.fieldConfigurations,
-    subgraphs: artifact.subgraphs as ComposedSubgraph[],
+    subgraphs: artifact.subgraphs,
     warnings: artifact.warnings.map((warning) => deserializeWarning(warning.message, warning.subgraphName)),
   };
 }
