@@ -185,7 +185,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | keycloak.http.relativePath | string | `"/"` |  |
 | keycloak.image.pullPolicy | string | `"IfNotPresent"` |  |
 | keycloak.image.repository | string | `"ghcr.io/wundergraph/cosmo/keycloak"` |  |
-| keycloak.image.tag | string | `"0.12.0"` |  |
+| keycloak.image.tag | string | `"0.13.0"` |  |
 | keycloak.metrics.enabled | bool | `true` |  |
 | keycloak.podAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.keycloak.wundergraph.com/deployment"` | Support for k14s.io. This annotation will form a group to coordinate deployments with kapp. |
 | keycloak.podAnnotations."kapp.k14s.io/change-rule.postgresql" | string | `"upsert after upserting cosmo.apps.postgresql.wundergraph.com/deployment"` | Support for k14s.io. This annotation will wait for the postgresql deployments to be ready before deploying. |
@@ -193,6 +193,7 @@ This is the official Helm Chart for WunderGraph Cosmo - The Full Lifecycle Graph
 | keycloak.secrets.bootstrap.stringData.adminPassword | string | `"{{ .Values.global.keycloak.adminPassword }}"` |  |
 | keycloak.secrets.bootstrap.stringData.adminUser | string | `"{{ .Values.global.keycloak.adminUser }}"` |  |
 | keycloak.service.httpPort | int | `8080` |  |
+| keycloak.statefulsetAnnotations."kapp.k14s.io/update-strategy" | string | `"fallback-on-replace"` |  |
 | minio.auth.rootPassword | string | `"changeme"` |  |
 | minio.auth.rootUser | string | `"minio"` |  |
 | minio.commonAnnotations."kapp.k14s.io/change-group" | string | `"cosmo.apps.minio.wundergraph.com/deployment"` |  |
