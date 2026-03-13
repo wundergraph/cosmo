@@ -351,6 +351,8 @@ graphqlmetrics:
 # Keycloak for the Cosmo Controlplane & Studio
 # https://artifacthub.io/packages/helm/codecentric/keycloakx
 keycloak:
+  statefulsetAnnotations:
+    kapp.k14s.io/update-strategy: fallback-on-replace
   replicas: 1
   image:
     repository: ghcr.io/wundergraph/cosmo/keycloak
