@@ -476,6 +476,26 @@ func TestRouterPluginRequests(t *testing.T) {
 			expected: `{"data":{"project":null}}`,
 		},
 		{
+			name:     "query project taskCount no-arg field resolver",
+			query:    `query { project(id: "1") { id taskCount } }`,
+			expected: `{"data":{"project":{"id":"1","taskCount":4}}}`,
+		},
+		{
+			name:     "query projects with no-arg field resolvers",
+			query:    `query { projects { id taskCount activeMilestoneCount } }`,
+			expected: `{"data":{"projects":[{"id":"1","taskCount":4,"activeMilestoneCount":2},{"id":"2","taskCount":2,"activeMilestoneCount":2},{"id":"3","taskCount":2,"activeMilestoneCount":0},{"id":"4","taskCount":1,"activeMilestoneCount":0},{"id":"5","taskCount":1,"activeMilestoneCount":0},{"id":"6","taskCount":2,"activeMilestoneCount":0},{"id":"7","taskCount":2,"activeMilestoneCount":1}]}}`,
+		},
+		{
+			name:     "query employees with totalProjectCount no-arg field resolver",
+			query:    `query { employees { id totalProjectCount } }`,
+			expected: `{"data":{"employees":[{"id":1,"totalProjectCount":2},{"id":2,"totalProjectCount":3},{"id":3,"totalProjectCount":2},{"id":4,"totalProjectCount":1},{"id":5,"totalProjectCount":2},{"id":7,"totalProjectCount":1},{"id":8,"totalProjectCount":1},{"id":10,"totalProjectCount":1},{"id":11,"totalProjectCount":1},{"id":12,"totalProjectCount":1}]}}`,
+		},
+		{
+			name:     "query project mixing no-arg and with-arg field resolvers",
+			query:    `query { project(id: "1") { id taskCount activeMilestoneCount completionRate(includeSubtasks: false) filteredTasks(limit: 2) { name } } }`,
+			expected: `{"data":{"project":{"id":"1","taskCount":4,"activeMilestoneCount":2,"completionRate":50,"filteredTasks":[{"name":"Current Infrastructure Audit"},{"name":"Cloud Provider Selection"}]}}}`,
+		},
+		{
 			name:     "query employee @requires field resolved with expertise",
 			query:    `{ employee(id: 1) { id taggedProjectSummary } }`,
 			expected: `{"data":{"employee":{"id":1,"taggedProjectSummary":"expertise: Backend Architecture, project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]"}}}`,

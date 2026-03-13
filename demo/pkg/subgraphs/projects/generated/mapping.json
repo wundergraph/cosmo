@@ -651,6 +651,16 @@
               "mapped": "category"
             }
           ]
+        },
+        {
+          "original": "taskCount",
+          "mapped": "task_count",
+          "argumentMappings": []
+        },
+        {
+          "original": "activeMilestoneCount",
+          "mapped": "active_milestone_count",
+          "argumentMappings": []
         }
       ]
     },
@@ -959,6 +969,11 @@
               "mapped": "priority"
             }
           ]
+        },
+        {
+          "original": "totalProjectCount",
+          "mapped": "total_project_count",
+          "argumentMappings": []
         }
       ]
     },
@@ -1224,6 +1239,34 @@
     {
       "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "taskCount",
+          "mapped": "task_count",
+          "argumentMappings": []
+        }
+      },
+      "rpc": "ResolveProjectTaskCount",
+      "request": "ResolveProjectTaskCountRequest",
+      "response": "ResolveProjectTaskCountResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "activeMilestoneCount",
+          "mapped": "active_milestone_count",
+          "argumentMappings": []
+        }
+      },
+      "rpc": "ResolveProjectActiveMilestoneCount",
+      "request": "ResolveProjectActiveMilestoneCountRequest",
+      "response": "ResolveProjectActiveMilestoneCountResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
         "type": "Milestone",
         "fieldMapping": {
           "original": "isAtRisk",
@@ -1342,6 +1385,20 @@
       "rpc": "ResolveEmployeeAverageTaskCompletionDays",
       "request": "ResolveEmployeeAverageTaskCompletionDaysRequest",
       "response": "ResolveEmployeeAverageTaskCompletionDaysResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Employee",
+        "fieldMapping": {
+          "original": "totalProjectCount",
+          "mapped": "total_project_count",
+          "argumentMappings": []
+        }
+      },
+      "rpc": "ResolveEmployeeTotalProjectCount",
+      "request": "ResolveEmployeeTotalProjectCountRequest",
+      "response": "ResolveEmployeeTotalProjectCountResponse"
     }
   ]
 }
