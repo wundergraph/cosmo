@@ -1,0 +1,76 @@
+---
+title: "Subscriptions Configuration"
+description: "This section explains how you can configure Subscriptions both for local development and using Cosmo Studio."
+icon: router
+sidebarTitle: "Configuration"
+---
+
+When using Subscriptions with Cosmo Router locally or through Cosmo Studio, you'd need to configure the correct protocol to talk to your Subgraphs. Cosmo Router Supports WebSockets as well as the SSE (Server-Sent Events) for transport. When using WebSockets, the Router automatically negotiates with the Subgraph what protocol to use. The protocols "graphql-ws" and "graphql-transport-ws" are both supported.
+
+## Configure Subscriptions for local development
+
+When composing a Graph locally, you can supply the protocol using the following configuration.
+
+```yaml
+version: 1
+subgraphs:
+  - name: employees
+    routing_url: "http://localhost:4001/graphql"
+    subscription:
+      protocol: "ws"
+```
+
+If your Subgraph uses SSE, use the following configuration.
+
+```yaml
+version: 1
+subgraphs:
+  - name: employees
+    routing_url: "http://localhost:4001/graphql"
+    subscription:
+      protocol: "sse"
+```
+
+If your Subgraph uses SSE over HTTP POST, the config should look like this.
+
+```yaml
+version: 1
+subgraphs:
+  - name: employees
+    routing_url: "http://localhost:4001/graphql"
+    subscription:
+      protocol: "sse_post"
+```
+
+If your Subscriptions Endpoint differs from the default routing URL, you can use the following configuration.
+
+```yaml
+version: 1
+subgraphs:
+  - name: employees
+    routing_url: "http://localhost:4001/graphql"
+    subscription:
+      url: "http://localhost:4001/subscriptions"
+      protocol: "sse_post"
+```
+
+## Configure Subscriptions using wgc
+
+When using Cosmo Studio as a target to publish your Subgraphs, you'll be using "wgc publish" to upload the Subgraph configuration to the Studio. In this case, you can supply the protocol using the following config.
+
+### Setting a custom Subscriptions protocol on wgc publish
+
+```bash
+npx wgc subgraph publish products --subscription-protocol sse --schema ../demo/subgraphs/products/products.graphql
+```
+
+Available options are "sse", "sse\_post", and "ws".
+
+### Setting a custom Subscriptions URL on wgc publish
+
+```bash
+npx wgc subgraph publish products --subscription-url "http://localhost:4001/subscriptions" --schema ../demo/subgraphs/products/products.graphql
+```
+
+You can also use \`wgc subgraph update ...\` to update the Subscriptions protocol or URL for a specific Subgraph.
+

@@ -1,0 +1,52 @@
+---
+title: "Cluster Management"
+description: "Router Cluster Management allows you to monitor and track your active routers via automated metrics instrumentation."
+icon: "layer-group"
+---
+
+<Info>
+  Requires a router with version >= 0.66.1
+</Info>
+
+As part of our OpenTelemetry instrumentation, the router sends periodically data to Cosmo Cloud. We use this information to display all running routers and to evaluate their vitals.
+
+## Routers
+
+<Frame caption="Cluster overview">
+  <img 
+    src="/images/studio/router-cluster-with-memory-stats.png" 
+    alt="Router cluster view showing 3 routers, memory usage, and cluster details" 
+    title="Router cluster with memory stats" 
+  />
+</Frame>
+
+The list displays all running router instances. Upon closer inspection, you can verify the currently deployed graph composition and vital metrics such as CPU and memory utilization. Here is a summary of all provided information:
+
+* **Name:** The application name specified under the `TELEMETRY_SERVICE_NAME` option. By default, it is set to `cosmo-router`. Below we show the `hostname` where the router is running on.
+
+* **Instance ID:** If not specified as `INSTANCE_ID` environment variable, a new ID will be generated with each router start. A stable ID ensures that metrics with the same ID are grouped together and no new router appears.
+
+* **Status:** Identify if the server is up and running. In the future, we will conduct advanced validation that takes various metrics into consideration.
+
+* **Version:** The deployed binary version of the router.
+
+* **Cluster:** The logical cluster name. Is specified by the `CLUSTER_NAME` environment variable. By default it is an empty string.
+
+* **Uptime:** The duration indicates how long the process has been operational. By clicking on details, you can view the server's uptime as well. Typically, this time represents how long a specific version of the graph has been running when polling from the controlplane is enabled.
+
+* **Mem / CPU:** The utilization of the router instance. Arrows signal the trend between two data samples.
+
+<Note>
+  If your router fails to push uptime metrics for any reason, the instance will disappear. As long as one metric sample reaches us within 45 seconds, we assume the router is operational.
+</Note>
+
+
+<Frame caption="Instance details">
+  <img 
+    src="/images/studio/router-details-with-uptime-and-cpu-stats.png" 
+    alt="Router details view showing uptime, memory, and CPU usage in Cosmo Docs" 
+    title="Router details with uptime and CPU stats" 
+  />
+</Frame>
+
+If you click on a router instance, a summary displaying all the metrics available for your router instance will be shown. We will reserve this space to add additional metrics and diagrams in the future. If you have any ideas or requirements, please don't hesitate to make a [feature request](https://github.com/wundergraph/cosmo/issues/new?assignees=\&labels=enhancement%2Cneeds+triage\&projects=\&template=feature_request.yaml).

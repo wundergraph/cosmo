@@ -1,0 +1,36 @@
+---
+title: "Introspect"
+description: "Introspects a subgraph."
+icon: eye
+---
+
+## Usage
+
+```bash
+npx wgc subgraph introspect --routing-url [url] --header [headers...]
+```
+
+## Description
+
+The `npx wgc subgraph introspect` command allows you to introspect a subgraph and returns the schema of the subgraph.
+
+## **Options**
+
+* `--routing-url`: Set the URL for the subgraph's data source. This URL defines the endpoint where the subgraph will fetch data from.
+
+  * Example: `--routing-url http://localhost:4001/graphql`
+
+* `--header`: The headers to apply when the subgraph is introspected. This is used for authentication and authorization. The headers are passed in the format \<key>=\<value> \<key>=\<value>. Use quotes if there exists space in the key/value.
+
+  * Example: `--header Authorization='Bearer <token>'`
+
+* `-o, --out` : Destination file for the SDL. Prints to standard output if not provided.
+
+## **Example**
+
+1. Introspect a subgraph with routing URL "[http://localhost:4001/graphql](http://localhost:4001/graphql)":
+
+   ```bash
+   npx wgc subgraph introspect --routing-url http://localhost:4001/graphql
+   ```
+

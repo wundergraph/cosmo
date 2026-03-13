@@ -193,16 +193,30 @@ jobs:
   integration_test:
     runs-on: ubuntu-latest-l
     timeout-minutes: 30
+    env:
+      GOMAXPROCS: 4
     strategy:
       fail-fast: false
       matrix:
-        test_target:
-          [
-            './. ./fuzzquery ./lifecycle ./modules',
-            './telemetry',
-            './events',
-            './connectrpc',
-          ]
+        include:
+          - test_target: './observability'
+            label: observability
+          - test_target: './security'
+            label: security
+          - test_target: './operations'
+            label: operations
+          - test_target: './subscriptions'
+            label: subscriptions
+          - test_target: './protocol'
+            label: protocol
+          - test_target: './fuzzquery ./lifecycle ./modules'
+            label: fuzzquery_lifecycle_modules
+          - test_target: './telemetry'
+            label: telemetry
+          - test_target: './events'
+            label: events
+          - test_target: './connectrpc'
+            label: connectrpc
     services:
       nats:
         image: ghcr.io/wundergraph/cosmo/nats:2.11.0-alpine
@@ -270,10 +284,10 @@ jobs:
       kafka:
         image: bitnamilegacy/kafka:3.7.0
         options: >-
-          --health-cmd "kafka-broker-api-versions.sh --version"
+          --health-cmd "kafka-broker-api-versions.sh --bootstrap-server localhost:9092 | grep ApiVersion"
           --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-timeout 10s
+          --health-retries 10
         env:
           KAFKA_ENABLE_KRAFT: yes
           KAFKA_CFG_PROCESS_ROLES: controller,broker
@@ -368,34 +382,26 @@ jobs:
           docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" ping
           docker exec "$cid" redis-cli -u "redis://cosmo:test@redis-0:6379" cluster nodes
 
-      - name: Run Integration tests ${{ matrix.test_target }}
+      - name: Run Integration tests ${{ matrix.label }}
         working-directory: ./router-tests
-        run: make test-coverage test_retry_count=0 test_params="-run '^Test[^(Flaky)]' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
-
-      - name: Compute artifact name for codecov upload
-        id: artifact_name
-        run: |
-          # Sanitize test target: remove './', replace spaces and special chars with underscores
-          target="${{ matrix.test_target }}"
-          sanitized=$(echo "$target" | sed 's|\.\/||g' | sed 's|[^a-zA-Z0-9]|_|g' | sed 's|_\+|_|g' | sed 's|^_||' | sed 's|_$||')
-          echo "sanitized=$sanitized" >> $GITHUB_OUTPUT
+        run: make test-coverage test_retry_count=0 test_params="-run '^Test' -skip '^TestFlaky' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
 
       - name: Upload integration results to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
-          artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-nonFlaky
+          artifact-name: router-${{ matrix.label }}-nonFlaky
           coverage-path: router-tests/coverage.out
           retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Run Flaky Integration tests ${{ matrix.test_target }}
+      - name: Run Flaky Integration tests ${{ matrix.label }}
         working-directory: ./router-tests
-        run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=5m -p 1 --parallel 10" test_target="${{ matrix.test_target }}"
+        run: make test-coverage test_retry_count=3 test_params="-run '^TestFlaky' --timeout=8m -p 1 --parallel 2" test_target="${{ matrix.test_target }}"
 
       - name: Upload flaky integration results to Codecov
         uses: ./.github/actions/codecov-upload-pr
         with:
-          artifact-name: router-${{ steps.artifact_name.outputs.sanitized }}-flaky
+          artifact-name: router-${{ matrix.label }}-flaky
           coverage-path: router-tests/coverage.out
           retention-days: 14
           codecov-token: ${{ secrets.CODECOV_TOKEN }}

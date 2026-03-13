@@ -1,0 +1,173 @@
+---
+title: "Circuit Breaker"
+description: "Configure circuit breakers to protect your subgraphs from cascading failures."
+icon: "plug-circle-bolt"
+---
+
+A **circuit breaker** is a reliability pattern that prevents cascading failures in distributed systems. Think of it like an electrical circuit breaker in your home—when there's a problem, it automatically cuts off the connection to prevent damage.
+
+When a subgraph or upstream service starts failing, the circuit breaker stops sending requests to it temporarily. This gives the failing service time to recover while protecting your router from wasting resources on requests that will likely fail. The result is that your router responds faster to clients and maintains stability during partial outages.
+
+## How It Works
+
+### Circuit Breaker Grouping
+
+Circuit breakers are created and managed based on unique URLs. Each unique full URL, including the complete path, gets its own dedicated circuit breaker. This means that multiple subgraphs sharing the same URL will also share the same circuit breaker instance. However, there's an important exception to this rule: if a subgraph has its own specific circuit breaker configuration defined, it will get a dedicated circuit breaker even when sharing a URL with other subgraphs.
+
+### Time-Based Sliding Window
+
+The circuit breaker uses a time-based sliding window with buckets to track request statistics over time. When you configure the circuit breaker with `num_buckets` set to 5 and `rolling_duration` set to 60 seconds, the router creates 5 buckets of 12 seconds each (calculated as 60 divided by 5). This bucketing system allows for granular tracking of request patterns and outcomes.
+
+When you make a request, the router records both the request itself and its outcome—whether it succeeded or failed—in the current time bucket. The circuit breaker then continuously evaluates error rates and request counts across all active buckets within the specified rolling duration.
+
+After 60 seconds have elapsed, the circuit breaker has collected a full window of data across all 5 buckets, as illustrated in the diagram below:
+
+<img src="./images/buckets-1.png" className="block dark:hidden" />
+<img src="./images/buckets-1-dark.png" className="hidden dark:block" />
+
+With this data collection system in place, the circuit breaker can answer critical questions about the health of your subgraphs. It can determine how many requests have failed versus succeeded, whether the minimum request threshold has been met, what the current error rate is, and most importantly, whether the circuit should open to protect the system from further failures.
+
+As time progresses, the sliding window continues to move forward. After another 12 seconds pass, you can see what happens in the next diagram:
+
+<img src="./images/buckets-2.png"  className="block dark:hidden" />
+<img src="./images/buckets-2-dark.png" className="hidden dark:block" />
+
+Notice how the oldest bucket gets discarded as new data comes in. The circuit breaker only keeps statistics for the most recent buckets within the rolling window, ensuring that decisions are based on current system behavior rather than stale historical data.
+
+### Circuit Breaker States
+
+The circuit breaker operates in three distinct states, each serving a specific purpose in the failure detection and recovery process:
+
+<img src="./images/states.png" className="block dark:hidden" />
+<img src="./images/states-dark.png" className="hidden dark:block" />
+
+**Closed State (Normal Operation)**: In this state, the subgraph is considered healthy and functioning normally. All requests pass through to the subgraph without any interference from the circuit breaker. However, the circuit breaker continues to monitor error rates and request patterns in the background.
+
+**Open State (Protection Mode)**: When the subgraph becomes unhealthy and meets the failure criteria, the circuit breaker transitions to the open state. In this protective mode, all incoming requests are immediately rejected without even being sent to the subgraph. This behavior serves two important purposes: it prevents the failing subgraph from being overwhelmed with additional requests that would likely fail, and it allows your router to respond quickly to clients instead of waiting for timeouts. The circuit remains in this state for the duration specified by the `sleep_window` configuration.
+
+**Half-Open State (Testing Recovery)**: After the sleep window expires, the circuit breaker enters a cautious testing phase called the half-open state. During this phase, the circuit breaker allows a limited number of test requests (defined by `half_open_attempts`) to pass through to the subgraph. The purpose is to probe whether the subgraph has recovered and is ready to handle traffic again. Based on the results of these test requests, the circuit breaker will either close (if enough requests succeed as defined by `required_successful`) or return to the open state if the requests continue to fail.
+
+### State Transition Logic
+
+The circuit breaker's state transitions follow a carefully designed logic that balances protection with availability.
+
+**Transition from Closed to Open**: The circuit breaker will only transition from closed to open when both of two critical conditions are met simultaneously. First, the minimum number of requests specified by `request_threshold` must have been received within the rolling window. Second, the error rate must exceed the percentage defined by `error_threshold_percentage`. This dual-condition approach is crucial because it prevents the circuit from opening due to a few isolated failures when there isn't enough data to make a reliable decision. For example, even if you have a 100% error rate, the circuit won't open until the request threshold is met, preventing premature circuit opening during low-traffic periods.
+
+**Transition from Open to Half-Open**: This transition happens automatically after the `sleep_window` duration expires. The circuit breaker doesn't require any external trigger—it simply moves to the half-open state to begin testing whether the downstream service has recovered.
+
+**Transition from Half-Open to Closed or Open**: From the half-open state, the circuit can transition in two directions. If the required number of successful requests (as defined by `required_successful`) are achieved during the testing phase, the circuit transitions back to closed, allowing normal traffic flow to resume. However, if any of the test requests fail, the circuit immediately returns to the open state and waits for another sleep window before attempting to test recovery again.
+
+## Identifying Failures
+
+The circuit breaker determines what constitutes a failure based on Go's HTTP RoundTripper behavior and specific timeout conditions.
+
+### What Counts as a Failure
+
+The circuit breaker considers the following scenarios as failures:
+
+**Network-Level Failures**
+When Go's RoundTripper returns an error, the circuit breaker treats this as a failure. According to the [Go source](https://github.com/golang/go/blob/8131635e5a9c7ae2fd2c083bed9e841d27226500/src/net/http/client.go#L120-L126):
+
+> RoundTrip should not attempt to interpret the response. In particular, RoundTrip must return err == nil if it obtained a response, regardless of the response's HTTP status code. A non-nil err should be reserved for failure to obtain a response.
+
+This means that any situation where a response is received from the subgraph—regardless of HTTP status code—will not be considered a failure. However, network-level issues that prevent obtaining a response are counted as failures, including but not limited to:
+
+* **Connection failures**: DNS resolution errors, network unreachable, connection refused, connection timeout
+* **TLS/SSL errors**: certificate verification failures, handshake timeouts, protocol negotiation issues  
+* **Transport errors**: broken connections, premature connection closure, read/write timeouts during data transfer
+
+**Execution Timeouts**
+The circuit breaker also considers execution timeouts as failures. When a request exceeds the configured `execution_timeout`, it gets marked as an error for circuit breaker statistics. This timeout is independent from request cancellations or client-side timeouts.
+
+### What Does NOT Count as a Failure
+
+**HTTP Error Status Codes**
+Since the circuit breaker relies on Go's RoundTripper behavior, HTTP error responses (4xx, 5xx status codes) are not considered failures as long as a response is received. The circuit breaker focuses on connectivity and availability rather than application-level errors.
+
+**Request Cancellations and Timeouts**
+When a request is cancelled or times out due to client-side constraints, this will not be recorded as a failure for the circuit breaker. These scenarios are treated differently from execution timeouts, which are circuit breaker-specific.
+
+
+## Example YAML Configuration
+
+You can find information on each individual configuration option [here](/router/configuration#circuit-breaker)
+
+```yaml
+traffic_shaping:
+  all:
+    circuit_breaker:
+      enabled: true
+      request_threshold: 20           # Need 20+ requests before evaluating
+      error_threshold_percentage: 50  # Open circuit at 50% error rate
+      sleep_window: 30s               # Block requests for 30 seconds
+      half_open_attempts: 5           # Allow 5 test requests
+      required_successful: 3          # Need 3 successes to close circuit
+      rolling_duration: 60s           # 60-second evaluation window
+      num_buckets: 10                 # 10 buckets = 6 seconds per bucket
+      execution_timeout: 60s          # Max time before marking as error
+  subgraphs:
+    employees:
+      circuit_breaker:
+        enabled: false  # Disable for this specific subgraph
+    products:
+      circuit_breaker:
+        enabled: true
+        request_threshold: 30         # Override global setting
+```
+
+
+## Configuration Scopes
+
+### Global Configuration
+
+You can apply circuit breaker settings to all subgraphs by default using the `all` scope in your configuration. This approach provides a consistent baseline protection level across your entire graph:
+
+```yaml
+traffic_shaping:
+  all:
+    circuit_breaker:
+      ...
+```
+
+### Subgraph-Specific Configuration
+
+Individual subgraphs can have their circuit breaker behavior customized or completely disabled by adding specific configuration blocks. This granular control allows you to tailor protection levels based on the reliability characteristics and criticality of different services:
+
+<Info>
+It is important to note that when you coinfigure a circuit breaker at the subgraph level, it will also result in the creation of a distinct subgraph transport with the default values (unless specified).
+</Info>
+
+```yaml
+traffic_shaping:
+  subgraphs:
+    test-service:
+      circuit_breaker:
+        enabled: false          # If you are using an "all" configuration, this will make sure test-service will not have it's circuit breaker
+    another-service:
+      circuit_breaker:
+        enabled: true
+        ...
+```
+
+## Important Considerations
+
+**Retry Interaction**<br/>
+Circuit breakers work in conjunction with the router's retry mechanism, and their interaction is important to understand. When you have retries configured and a circuit opens during the retry attempts for a request, no further retries will be attempted for that specific request.
+
+**Multi-Window Recovery Scenarios**<br/>
+When you configure `half_open_attempts` to be less than `required_successful`, the recovery process will span multiple sleep windows. Consider an example where you have `half_open_attempts` set to 3, `required_successful` set to 5, and `sleep_window` set to 300 milliseconds. In this scenario, when the circuit enters the half-open state, it will allow 3 test requests to pass through. Even if all 3 requests succeed, the circuit still needs 2 more successful requests to meet the `required_successful` threshold. Since the half-open attempts are exhausted, the circuit remains half-open and waits for another sleep window to expire before allowing the next batch of test requests.
+
+**Timeout Behavior**<br/>
+The `execution_timeout` serves as an internal timer specifically for circuit breaker error tracking. When a request exceeds this timeout, it gets marked as an error for circuit breaker statistical purposes. However, it's crucial to understand that the actual request might still succeed and return a response to the client before the circuit breaker trips. This separation allows the circuit breaker to track slow requests as potential indicators of service degradation.
+
+**Num Buckets and Rolling Duration**<br/>
+The rolling duration must be evenly divisible by the number of buckets—if the modulo operation of rolling_duration % num_buckets is not zero, the router will return a configuration error.
+
+
+## Monitoring and Observability
+
+Circuit breakers provide metrics for understanding your system's resilience patterns and fine-tuning your configuration. These metrics include detailed information about circuit breaker short circuits and the current status of the circuit breaker.
+
+For more details, see the [circuit breaker-specific metrics](/router/metrics-and-monitoring#circuit-breaker-specific-metrics) documentation. 
+
+
