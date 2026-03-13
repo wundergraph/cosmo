@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	integration "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -34,7 +34,7 @@ func TestConnectionMetrics(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			scopeMetric := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
+			scopeMetric := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
 			require.Nil(t, scopeMetric)
 		})
 	})
@@ -62,7 +62,7 @@ func TestConnectionMetrics(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
 			excludePortFromMetrics(t, rm.ScopeMetrics)
 
 			require.Len(t, scopeMetric.Metrics, 3)
@@ -159,11 +159,11 @@ func TestConnectionMetrics(t *testing.T) {
 
 		trafficConfig := config.TrafficShapingRules{
 			All: config.GlobalSubgraphRequestRule{
-				RequestTimeout: integration.ToPtr(200 * time.Millisecond),
+				RequestTimeout: testutils.ToPtr(200 * time.Millisecond),
 			},
 			Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 				"availability": {
-					RequestTimeout: integration.ToPtr(300 * time.Millisecond),
+					RequestTimeout: testutils.ToPtr(300 * time.Millisecond),
 				},
 			},
 		}
@@ -186,7 +186,7 @@ func TestConnectionMetrics(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
 			require.Len(t, scopeMetric.Metrics, 3)
 			excludePortFromMetrics(t, rm.ScopeMetrics)
 
@@ -273,7 +273,7 @@ func TestConnectionMetrics(t *testing.T) {
 			err = metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.connections")
 			excludePortFromMetrics(t, rm.ScopeMetrics)
 
 			require.Len(t, scopeMetric.Metrics, 3)
