@@ -1420,8 +1420,7 @@ func BenchmarkSequential(b *testing.B) {
 		expect := `{"data":{"employee":{"id":1,"details":{"forename":"Jens","surname":"Neuse"}}}}`
 		b.SetBytes(int64(len(expect)))
 		b.ReportAllocs()
-		b.ResetTimer()
-		for ii := 0; ii < b.N; ii++ {
+		for b.Loop() {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query:         `query Employee ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
 				OperationName: []byte(`"Employee"`),
@@ -1545,8 +1544,7 @@ func BenchmarkSequentialBig(b *testing.B) {
 	testenv.Bench(b, &testenv.Config{}, func(b *testing.B, xEnv *testenv.Environment) {
 		b.SetBytes(int64(len(bigEmployeesResponse)))
 		b.ReportAllocs()
-		b.ResetTimer()
-		for ii := 0; ii < b.N; ii++ {
+		for b.Loop() {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: bigEmployeesQuery,
 			})
@@ -1569,8 +1567,7 @@ func BenchmarkSequentialBigCostControl(b *testing.B) {
 	}, func(b *testing.B, xEnv *testenv.Environment) {
 		b.SetBytes(int64(len(bigEmployeesResponse)))
 		b.ReportAllocs()
-		b.ResetTimer()
-		for ii := 0; ii < b.N; ii++ {
+		for b.Loop() {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: bigEmployeesQuery,
 			})

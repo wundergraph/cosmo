@@ -167,6 +167,9 @@ telemetry:
       connection_stats: true
       engine_stats:
         subscriptions: true
+      cost_stats:
+        estimated_enabled: false
+        actual_enabled: false
       exclude_metric_labels: []
       exclude_metrics: []
       # If no exporters are defined, the default one is used
@@ -192,6 +195,9 @@ telemetry:
       connection_stats: true
       engine_stats:
         subscriptions: true
+      cost_stats:
+        estimated_enabled: false
+        actual_enabled: false
       exclude_metrics: []
       exclude_metric_labels: []
       exclude_scope_info: true

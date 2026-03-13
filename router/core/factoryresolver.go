@@ -705,13 +705,11 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration) *plan.Da
 		}
 		if ls.AssumedSize != nil {
 			listSizes.AssumedSize = int(*ls.AssumedSize)
-		} else {
-			listSizes.AssumedSize = 0
 		}
 		if ls.RequireOneSlicingArgument != nil {
 			listSizes.RequireOneSlicingArgument = *ls.RequireOneSlicingArgument
 		} else {
-			// By default, it is enabled and it should be explicitly disabled.
+			// By default, it is enabled. It should be explicitly disabled.
 			listSizes.RequireOneSlicingArgument = true
 		}
 		coordinate := plan.FieldCoordinate{TypeName: ls.GetTypeName(), FieldName: ls.GetFieldName()}

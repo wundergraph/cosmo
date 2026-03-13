@@ -413,7 +413,10 @@ describe('@cost directive tests', () => {
     });
 
     test('that @cost with string weight on a field argument produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(subgraphWithStringCostWeightOnArgument, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithStringCostWeightOnArgument,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(COST, 'Query.search(query: ...)', FIRST_ORDINAL, [
