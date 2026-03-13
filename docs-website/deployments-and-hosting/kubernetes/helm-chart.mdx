@@ -1,0 +1,35 @@
+---
+title: "Helm Chart"
+description: "Navigating the stars with the Cosmo Helm Chart. This chart is a collection of sub-charts that make up the Cosmo Platform. You can deploy it both locally and in production."
+sidebarTitle: "Overview"
+icon: circle-info
+---
+
+Please checkout to the Helm [directory](https://github.com/wundergraph/cosmo/tree/main/helm/cosmo) in the OpenSource repository. The structure is as follows:
+
+1. [Local Development](https://github.com/wundergraph/cosmo/blob/main/helm/README.md) (`helm/README.md`): Instructions about how to develop the chart locally with Minikube or any other Kubernetes cluster.
+
+2. [How to use the Chart](https://github.com/wundergraph/cosmo/blob/main/helm/cosmo/README.md)(`helm/cosmo/DEV.md`): Explains how the umbrella chart is constructed.
+
+3. [Sub-charts](https://github.com/wundergraph/cosmo/tree/main/helm/cosmo/charts)(`helm/cosmo/charts`) The Cosmo Umbrella charts consist of multiple sub-charts.
+
+<CardGroup>
+   <Card title="Controlplane" icon="square-1" horizontal />
+   <Card title="GraphqlMetrics" icon="square-2" horizontal />
+   <Card title="OTELCollector" icon="square-3" horizontal />
+   <Card title="Studio" icon="square-4" horizontal />
+   <Card title="Router" icon="square-5" horizontal />
+   <Card title="CDN" icon="square-6" horizontal />
+</CardGroup>
+
+Every helm chart contains a [README.md](https://github.com/wundergraph/cosmo/blob/main/helm/cosmo/README.md) that describes the available configuration options with default values and documentation. We auto-generate this on every update.
+
+Storage components are managed through external Helm Charts from [Bitnami](https://artifacthub.io/packages/search?repo=bitnami\&sort=relevance\&page=1).
+
+<CardGroup>
+   <Card title="PostgresSQL" icon="square-1" horizontal />
+   <Card title="Keycloak" icon="square-2" horizontal />
+   <Card title="ClickHouse" icon="square-3" horizontal />
+   <Card title="Minio" icon="square-4" horizontal />
+   <Card title="Redis" icon="square-5" horizontal />
+</CardGroup>

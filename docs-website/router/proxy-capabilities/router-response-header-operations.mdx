@@ -1,0 +1,43 @@
+---
+title: "Router Response Header Operations"
+description: "Set custom response headers at the router level that apply to the final response sent to clients."
+icon: "arrow-right-from-bracket"
+---
+
+## Router Response Header Setting
+
+The router allows you to set custom response headers that are applied to the final HTTP response sent to the client. These headers are set at the **router level**, meaning they are applied after all subgraph requests have been completed and their responses have been aggregated.
+
+This is different from subgraph response headers, which are processed for each individual subgraph request—router response header operations run exactly once per request, after all subgraph responses have been returned and processed, but before the final response is sent to the client.
+
+### Configuration Example
+
+You can configure router response headers in your router configuration file using expressions:
+
+```yaml
+# config.yaml
+headers:
+  router:
+    response:
+      - name: X-Demo-Header
+        expression: "request.header.Get('X-Get-Status') == 'demo' ? 'demo-value' : ''"
+```
+
+### How it works
+
+After all subgraph requests are completed and their responses aggregated, the router evaluates the expression. In this example:
+
+1. The router checks if the incoming request contains a header `X-Get-Status` with the value `"demo"`
+2. If true, it sets the response header `X-Demo-Header` to `"demo-value"`
+3. If false, the expression returns an empty string, and the header is not set (the router will not set headers with empty string values)
+
+This allows you to conditionally set response headers based on request context, making it useful for scenarios like feature flags, A/B testing, or environment-specific configurations.
+
+<Warning>
+  Router response headers will override any response headers with the same name that were set or propagated at the subgraph level. However, if the router response header expression evaluates to an empty string (`""`), the existing response header value won't be unset—it will remain unchanged.
+</Warning>
+
+<Note>
+  Currently, it is not possible to access headers propagated from subgraphs within router-level expressions, or programmatically unset any headers that were propagated at the subgraph level. Router-level expressions can only access request context (like incoming request headers), not the outgoing response headers set by subgraphs.
+</Note>
+

@@ -1,0 +1,79 @@
+---
+title: "Groups"
+description: "Manage who can access the resources of your organization."
+icon: circle-info
+sidebarTitle: Overview
+---
+
+<Note>
+    To create, modify, or delete groups, you need to have RBAC enabled for your organization. This feature is available starting on the Scale plan.
+</Note>
+
+Groups let you manage team access to specific resources without manual setup, and include the benefits of SCIM integration.
+
+Groups can be linked to both your organization members and your [API Keys](/studio/api-keys), enabling flexible and centralized access management.
+
+<Frame>
+  <img
+    src="/images/studio/groups-default-roles-overview.png"
+    alt="Cosmo Studio Groups page showing admin, developer, and viewer roles with member counts."
+    title="Groups — default roles overview"
+  />
+</Frame>
+
+### How to create a group
+
+* Click on the New Group button.
+* Give the group a name, an optional description and then click on **Create group**.
+
+<Frame>
+  <img
+    src="/images/studio/create-group-dialog.png"
+    alt="Create group dialog with name, description, and create button."
+    title="Create group dialog"
+  />
+</Frame>
+
+Once the group has been created, the group modification screen will show up. Here you can configure the [group rules](/studio/groups/group-rules).
+
+### How to modify a group
+
+<Info>
+    Groups marked as `builtin` cannot be modified.
+</Info>
+
+* Click on the three dots to the right of the groups table and click **Edit**
+
+To learn more about managing group rules refer to the [group rules](/studio/groups/group-rules) page.
+
+### How to delete a group
+
+<Info>
+    Groups marked as `builtin` cannot be deleted.
+</Info>
+
+To delete an existing group, click on the three dots to the right of the groups table and click **Delete**. From there, one of two scenarios may occur.
+
+**Scenario 1**: The group has not been assigned to any member, API key and/or OIDC mapper.
+
+This is the simplest scenario, as you'll only need to fill the confirmation input and press the **Delete group** button.
+
+<Frame>
+  <img
+    src="/images/studio/group-deletion-confirmation-dialog.png"
+    alt="Confirmation dialog for deleting a group with password entry."
+    title="Group deletion confirmation dialog"
+  />
+</Frame>
+
+**Scenario 2**: The group is being used by a member, API key and/or OIDC mapper.
+
+For this scenario, you'll be shown what is using the group and you'll need to select a group to move the objects using the group to. After that, you'll just have to fill the confirmation and press the **Delete group** button.
+
+<Frame>
+  <img
+    src="/images/studio/group-deletion-with-reassignment-option.png"
+    alt="Confirmation dialog for deleting a group that requires selecting a new group. One member has been assigned to this group. One API key has been assigned to this group."
+    title="Group deletion with reassignment option"
+  />
+</Frame>

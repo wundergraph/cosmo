@@ -1,0 +1,49 @@
+---
+title: "Delete Feature Flag"
+description: "How to delete a feature flag"
+icon: trash
+---
+
+## Description
+
+Deletes an existing feature flag within the specified namespace (or the "default" namespace if unspecified).
+
+## Minimum Requirements
+
+|Package|Minimum version|
+|---|---|
+|[wgc](/cli/intro)|[0.58.0](https://github.com/wundergraph/cosmo/compare/wgc@0.57.7...wgc@0.58.0)|
+|[router](/router/intro)|[0.95.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.95.0)|
+
+## Usage
+
+<Info>
+  If a feature flag is deleted, the feature subgraphs part of the feature flag is not deleted.
+</Info>
+
+```bash
+wgc feature-flag delete my-flag
+```
+
+The alias for `feature-flag` is `ff`.
+
+Note that unless specified by the `--namespace` parameter, the namespace will be automatically passed as "default".
+
+## Parameters
+
+* `<name>`: The name of the feature flag to delete. Returns an error if the feature flag does not exist in the specified (otherwise "default") namespace.
+
+## Options
+
+* `-n, --namespace` : The namespace of the feature flag (defaults to "default"). Returns an error if the feature flag does not exist in that namespace.
+
+* `-f, --force`: An optional flag that allows you to force delete the feature flag without being prompted for confirmation. Use this option if you want to delete the feature flag without additional prompts.
+
+## Examples
+
+Enable the existing feature flag "my-flag" in the namespace "prod":
+
+```bash
+wgc feature-flag delete my-flag -n prod
+```
+

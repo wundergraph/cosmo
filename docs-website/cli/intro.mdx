@@ -1,0 +1,43 @@
+---
+title: "Cosmo CLI"
+icon: hand-wave
+description: "The cosmo CLI tool: wgc. Used to manage the cosmo platform e.g. pushing schema, checking schemas, creating new projects, managing users, etc. It interacts with the control plane."
+---
+
+## Installation
+
+<Info>
+  Please ensure you have installed at least one version of Node.js that is in "long-term support" ([LTS](https://nodejs.org/en/about/previous-releases)).
+</Info>
+
+The CLI tool is part of the npm registry. You can start using it by simply running the following command.
+
+```bash
+npm install -g wgc@latest
+```
+
+or
+
+```bash
+npx -y wgc@latest
+```
+
+<Warning>
+  **When using `bunx`**
+
+  Running `bunx wgc@latest` doesn't guarantee that you are going to run the latest version of the package (you can check the status of the [issue here](https://github.com/oven-sh/bun/issues/4989)). For this reason, we recommend using `npx` or `pnpm dlx`.
+</Warning>
+
+Cosmo CLI Tool, or `wgc`, is an essential companion for developers leveraging the powerful capabilities of the Cosmo platform. It simplifies the management of GraphQL schemas, projects, and users, making the process of building and maintaining GraphQL APIs a seamless and efficient experience. Empowered by `wgc`, developers can focus on delivering innovative GraphQL solutions while taking full advantage of Cosmo's advanced features and functionalities.
+
+### Authentication
+
+The CLI uses the following environment variables to authenticate with the control plane:
+
+* `COSMO_API_KEY` - API key for the control plane (For Cosmo Cloud you get this token after account provisioning)
+
+* `COSMO_API_URL` - URL of the control plane (Points to Cosmo Cloud by default but can be changed for self-hosted)
+
+## Proxy Usage
+
+Starting with version 0.63.0, the CLI can be used behind a company proxy. To enable this, set either the `HTTPS_PROXY` or `HTTP_PROXY` environment variable to your company’s proxy (e.g., `https://username:password@proxy.com`).

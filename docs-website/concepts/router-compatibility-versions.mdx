@@ -1,0 +1,58 @@
+---
+title: "Router Compatibility Versions"
+icon: handshake
+description: "This page provides an overview on router compatibility versions."
+---
+
+<Note>
+  If you are looking how to upgrade your router or migrate from one router compatibility version to another, please see [Upgrading the Router](/router/upgrading-the-router).
+</Note>
+
+## What is a router compatibility version?
+
+In short, a new router compatibility version designates a breaking change or breaking behaviour within the contract between composition, the router execution configuration, and the router version.
+
+When composing a federated graph, Cosmo relies on its composition library (within the same mono-repository), to perform the following:
+
+1. Validate that all the subgraphs composing that federated graph are compatible and produce a fully-functioning federated graph.
+
+2. Produce a [router execution configuration](/router/configuration#execution-config).
+
+Each router execution configuration that is produced also defines the `compatibilityVersion` property. Older router execution configurations will not include this property, but those configuration are still simply considered to be version `1`.
+
+The `compatibilityVersion` property itself comprises two distinct items, delimited by a colon (`:`).
+
+1. The router compatibility version.
+
+2. The composition library package version.
+
+For instance, the following (reduced) router execution configuration JSON defines router compatibility version `1` and composition library package version `0.1.0`.
+
+```json
+{
+ ...
+ "compatibilityVersion": "1:0.1.0"
+}
+```
+
+Each version of the router internally defines a threshold for the router compatibility version with which it can function. If a router execution configuration with a higher router compatibility version than the the threshold of the router is provided, the router will produce an error and will not start.
+
+This relationship between a router compatibility version defined in a router execution configuration and the router compatibility version threshold defined in a router can be considered as a handshake between a router and its execution configuration. Proper functionality and behaviour of the router can only be guaranteed when this handshake is successful.
+
+## Why are router compatibility versions necessary?
+
+New router compatibility versions are not intended to be regular occurrences. They will only be released when absolutely necessary—*i.e.*, when backwards compatibility would be unfeasible. A typical circumstance would be when the router execution configuration requires a structural change; or the data provided would affect how older router versions would handle and execute that data.
+
+## How does Cosmo Cloud store different execution configurations with different router compatibility versions?
+
+In short, router execution configurations are discretely stored by their router compatibility version. A router will only retrieve and poll the execution configuration stored at the address corresponding with its router compatibility version threshold.
+
+For instance, before upgrading your valid federated graph to router compatibility version `2`, it will have been successfully composed under version `1`. The [Cosmo CDN](/router/compliance-and-data-management#router-cdn) stores the latest router execution configuration created under router compatibility version `1` (or earlier configurations with no versions) at one address, and "versioned" configurations at different bespoke addresses.
+
+The router compatibility version threshold of a router dictates from where that router will receive and poll its execution configuration. So, a router with a threshold of `<=1`will receive and poll its execution config from the original storage address, and a router with a threshold of `2` will receive and poll its execution config from the corresponding version address.
+
+Please see wgc federated-graph version set for full details.
+
+## Which router compatibility versions are currently supported?
+
+Please see the router compatibility-version list command.

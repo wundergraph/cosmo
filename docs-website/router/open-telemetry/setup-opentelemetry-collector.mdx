@@ -1,0 +1,134 @@
+---
+title: "Setup OpenTelemetry Collector"
+description: "In this section we will be taking a look on how to setup and configure your own collector to export metrics to cosmo cloud."
+icon: "server"
+---
+
+## Introduction
+
+Centralizing metric collection and export simplifies observability by consolidating data from various sources into a unified system. Users might prefer configuring a single exporter in the router while leveraging the OpenTelemetry Collector to establish multiple pipelines. This setup enables seamless export to platforms like Cosmo Cloud, as well as internal tools such as Jaeger, Prometheus, and Graphite. By doing so, it enhances the capability to monitor, analyze, and derive insights effectively from application metrics and traces.
+
+## Prerequisites
+
+To effectively set up and configure the metric collection and export system, ensure you review the following prerequisites:
+
+1. **Understand the OpenTelemetry Collector**: Start by familiarizing yourself with the [quick start guide](https://opentelemetry.io/docs/collector/quick-start/) for the OpenTelemetry Collector. This will provide an essential overview and help you get started quickly.
+
+2. **Review Configuration Details**: It's crucial to understand the configuration process. Visit the [configuration section](https://opentelemetry.io/docs/collector/configuration/) to learn how to tailor the OpenTelemetry Collector to suit your needs.
+
+3. **Follow Environment-Specific Guides**: Depending on your specific setup, consult the appropriate [installation guides](https://opentelemetry.io/docs/collector/installation/) to ensure a smooth and efficient implementation.
+
+
+## Advanced Setup
+
+For users requiring more tailored configurations, there is an option to build a custom collector using the OpenTelemetry Collector Builder tool. This approach can be advantageous if you need:
+
+* Specific component integrations that aren't available in the default distribution.
+
+* Optimized performance tailored to your particular environment or workload.
+
+* A reduced footprint by including only the necessary components.
+
+For detailed instructions on creating a custom collector, please visit the [OpenTelemetry Custom Collector documentation](https://opentelemetry.io/docs/collector/custom-collector/).
+
+
+## Required Configuration for Cosmo Cloud
+
+The following configuration is essential for exporting data to Cosmo Cloud. Make sure to configure the router token for authorization purposes. It is important to use `otelhttp` as the exporter instead of `otel`, since `otel` relies on gRPC and HTTP is required for this setup.
+
+```yaml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 1024
+
+exporters:
+  otlphttp:
+    endpoint: "https://cosmo-otel.wundergraph.com:443"
+    headers:
+      "Authorization": "<token>"
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp]
+
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp]
+
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlphttp]
+
+  telemetry:
+    metrics:
+      address: ":8888"
+```
+
+## Advanced: Configure Multiple Pipeline Elements
+
+To configure multiple elements in your setup, such as `receivers`, `processors`, `exporters`, or `pipelines`, you can use a slash `/` in the configuration. This technique allows you to define various components within the same section, providing flexible data routing and processing options tailored to your needs.
+
+```yaml
+# Example
+
+receivers:
+  otlp/cosmo:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+  otlp/other:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:55690
+
+processors:
+  batch:
+
+exporters:
+  otlphttp/cosmo:
+    endpoint: "https://cosmo-otel.wundergraph.com:443"
+    headers:
+      "Authorization": "<token>"
+  otlphttp/other:
+    endpoint: "https://my-otel.example.com:443"
+    headers:
+      "Authroization": "<other-token>"
+
+service:
+  pipelines:
+    traces/cosmo:
+      receivers: [otlp/cosmo]
+      processors: [batch]
+      exporters: [otlphttp/cosmo]
+    traces/other:
+      receivers: [otlp/other]
+      processors: [batch]
+      exporters: [otlphttp/other]
+    metrics/cosmo:
+      receivers: [otlp/cosmo]
+      processors: [batch]
+      exporters: [otlphttp/cosmo]
+    metrics/cosmotointernal:
+      receivers: [otlp/cosmo]
+      processors: [batch]
+      exporters: [otlphttp/other]
+```
+
+For more detailed examples and further information, you can refer to the [OpenTelemetry Collector Configuration Basics](https://opentelemetry.io/docs/collector/configuration/#basics).
+

@@ -1,0 +1,807 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "WunderGraph",
+  "colors": {
+    "primary": "#ea4899",
+    "light": "#ea4899",
+    "dark": "#ea4899"
+  },
+  "favicon": "/favicon.png",
+  "fonts": {
+    "body": {
+      "family": "Inter"
+    },
+    "heading": {
+      "family": "Inter"
+    }
+  },
+  "background": {
+    "decoration": "windows"
+  },
+  "appearance": {
+    "default": "dark"
+  },
+  "styling": {
+    "codeblocks": "system",
+    "eyebrows": "breadcrumbs"
+  },
+  "contextual": {
+    "options": ["copy", "view", "chatgpt", "claude"]
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "icon": "book-open",
+        "groups": [
+          {
+            "group": " ",
+            "pages": [
+              "overview",
+              "architecture",
+              "enterprise",
+              "security-and-compliance",
+              "self-hosted"
+            ]
+          },
+          {
+            "group": "Getting Started",
+            "pages": [
+              "getting-started/cosmo-cloud-onboarding",
+              "getting-started/switch-from-apollo-to-cosmo",
+              "tutorial/mastering-local-development-for-graphql-federation"
+            ]
+          },
+          {
+            "group": "Concepts",
+            "pages": [
+              "concepts/proposals",
+              "concepts/feature-flags",
+              "concepts/namespaces",
+              "concepts/schema-contracts",
+              "concepts/cache-warmer",
+              "concepts/router-compatibility-versions"
+            ]
+          },
+          {
+            "group": "Cosmo Connect",
+            "pages": [
+              "connect/overview",
+              "connect/plugins",
+              "connect/grpc-services"
+            ]
+          },
+          {
+            "group": "Cosmo ConnectRPC",
+            "pages": [
+              "connect-rpc/overview",
+              "connect-rpc/produce-define-contracts",
+              "connect-rpc/produce-configure-router",
+              "connect-rpc/produce-generate-distribute-sdks",
+              "connect-rpc/consume-via-sdks",
+              "connect-rpc/consume-via-rest-openapi",
+              "connect-rpc/consume-via-grpc"
+            ]
+          },
+          {
+            "group": "Router",
+            "pages": [
+              "router/intro",
+              "router/download-and-install",
+              {
+                "group": "Configuration",
+                "icon": "sliders-up",
+                "pages": [
+                  "router/configuration",
+                  "router/configuration/config-design",
+                  "router/configuration/template-expressions"
+                ]
+              },
+              "router/mcp",
+              {
+                "group": "Custom Modules",
+                "icon": "cubes",
+                "pages": [
+                  "router/custom-modules",
+                  "router/custom-modules-migration"
+                ]
+              },
+              {
+                "group": "Cosmo Connect",
+                "icon": "network-wired",
+                "pages": [
+                  "router/gRPC/concepts",
+                  {
+                    "group": "Plugins",
+                    "icon": "plug",
+                    "pages": [
+                      "router/gRPC/plugins",
+                      "router/gRPC/plugins/debugging",
+                      {
+                        "group": "Go Plugins",
+                        "icon": "golang",
+                        "pages": [
+                          "router/gRPC/plugins/go-plugin/overview",
+                          "router/gRPC/plugins/go-plugin/http-client",
+                          "router/gRPC/plugins/go-plugin/telemetry",
+                          "router/gRPC/plugins/go-plugin/logging"
+                        ]
+                      },
+                      {
+                        "group": "TypeScript Plugins",
+                        "icon": "t",
+                        "pages": ["router/gRPC/plugins/ts-plugin/overview"]
+                      }
+                    ]
+                  },
+                  "router/gRPC/grpc-services",
+                  "router/gRPC/graphql-support",
+                  "router/gRPC/field-resolvers"
+                ]
+              },
+              "router/authentication-and-authorization",
+              "router/advanced-data-privacy",
+              {
+                "group": "Subscriptions",
+                "icon": "webhook",
+                "pages": [
+                  "router/subscriptions",
+                  "router/subscriptions/server-sent-events-sse",
+                  "router/subscriptions/multipart-http-requests",
+                  "router/subscriptions/websocket-subprotocols",
+                  "router/subscriptions/router-configuration-for-subscriptions"
+                ]
+              },
+              {
+                "group": "Persisted Queries",
+                "icon": "cloud-binary",
+                "pages": [
+                  "router/persisted-queries",
+                  "router/persisted-queries/persisted-operations",
+                  "router/persisted-queries/automatic-persisted-queries-apq"
+                ]
+              },
+              {
+                "group": "Open Telemetry",
+                "icon": "binary-circle-check",
+                "pages": [
+                  "router/open-telemetry",
+                  "router/open-telemetry/custom-attributes",
+                  "router/open-telemetry/prometheus-otlp-ingestion",
+                  "router/open-telemetry/setup-opentelemetry-collector"
+                ]
+              },
+              {
+                "group": "Metrics & Monitoring",
+                "icon": "projector",
+                "pages": [
+                  "router/metrics-and-monitoring",
+                  "router/metrics-and-monitoring/prometheus-metric-reference",
+                  "router/metrics-and-monitoring/grafana"
+                ]
+              },
+              {
+                "group": "Proxy capabilities",
+                "icon": "bridge-circle-check",
+                "pages": [
+                  "router/proxy-capabilities",
+                  "router/proxy-capabilities/subgraph-request-header-operations",
+                  "router/proxy-capabilities/subgraph-response-header-operations",
+                  "router/proxy-capabilities/forward-client-extensions",
+                  "router/proxy-capabilities/adjusting-cache-control",
+                  "router/proxy-capabilities/override-subgraph-config",
+                  "router/proxy-capabilities/router-response-header-operations"
+                ]
+              },
+              {
+                "group": "Traffic shaping",
+                "icon": "road-circle-check",
+                "pages": [
+                  "router/traffic-shaping",
+                  "router/traffic-shaping/retry",
+                  "router/traffic-shaping/timeout",
+                  "router/traffic-shaping/circuit-breaker"
+                ]
+              },
+              "router/storage-providers",
+              {
+                "group": "Deployment",
+                "icon": "truck-ramp-couch",
+                "pages": [
+                  "router/deployment",
+                  "router/deployment/config-hot-reload"
+                ]
+              },
+              {
+                "group": "Security",
+                "icon": "shield-quartered",
+                "pages": [
+                  "router/security",
+                  "router/security/tls",
+                  "router/security/config-validation-and-signing",
+                  "router/security/hardening-guide"
+                ]
+              },
+              {
+                "group": "Development",
+                "icon": "flask-round-potion",
+                "pages": [
+                  "router/development",
+                  "router/development/debugging",
+                  "router/development/development-mode"
+                ]
+              },
+              "router/request-deduplication",
+              "router/performance-debugging",
+              "router/advanced-request-tracing-art",
+              {
+                "group": "Query Plan",
+                "icon": "file-contract",
+                "pages": [
+                  "router/query-plan",
+                  "router/query-plan/batch-generate-query-plans"
+                ]
+              },
+              {
+                "group": "Cosmo Streams (EDFS)",
+                "icon": "wave",
+                "pages": [
+                  "router/cosmo-streams",
+                  {
+                    "group": "NATS",
+                    "icon": "puzzle-piece",
+                    "pages": [
+                      "router/cosmo-streams/nats",
+                      "router/cosmo-streams/nats/stream-and-consumer-configuration"
+                    ]
+                  },
+                  "router/cosmo-streams/kafka",
+                  "router/cosmo-streams/redis",
+                  {
+                    "group": "Custom Modules",
+                    "icon": "cubes",
+                    "pages": [
+                      "router/cosmo-streams/custom-modules",
+                      "router/cosmo-streams/custom-modules/subscription-on-start",
+                      "router/cosmo-streams/custom-modules/on-receive-event",
+                      "router/cosmo-streams/custom-modules/on-publish-event"
+                    ]
+                  }
+                ]
+              },
+              "router/compliance-and-data-management",
+              "router/query-batching",
+              "router/feature-flags",
+              "router/subgraph-error-propagation",
+              "router/relaxed-field-selection-merging-nullability",
+              "router/file-upload",
+              "router/access-logs",
+              "router/profiling",
+              "router/upgrading-the-router"
+            ]
+          },
+          {
+            "group": "Studio",
+            "pages": [
+              "studio/intro",
+              "studio/overview-page",
+              "studio/schema-explorer",
+              "studio/schema-registry",
+              "studio/schema-checks",
+              {
+                "group": "Check Extensions",
+                "icon": "puzzle-piece-simple",
+                "pages": [
+                  "studio/subgraph-check-extensions",
+                  "studio/sce/request-payload-structure",
+                  "studio/sce/response-structure",
+                  "studio/sce/file-content",
+                  "studio/sce/handler-example"
+                ]
+              },
+              "studio/schema-contracts",
+              "studio/overrides",
+              "studio/changelog",
+              {
+                "group": "Playground++",
+                "icon": "rectangle-code",
+                "pages": [
+                  "studio/playground",
+                  "studio/playground/custom-scripts",
+                  "studio/playground/shared-playground-state"
+                ]
+              },
+              "studio/studio",
+              "studio/compositions",
+              {
+                "group": "Analytics",
+                "icon": "chart-line",
+                "pages": [
+                  "studio/analytics",
+                  "studio/analytics/metrics",
+                  "studio/analytics/traces",
+                  "studio/analytics/distributed-tracing",
+                  "studio/analytics/schema-field-usage",
+                  "studio/analytics/client-identification"
+                ]
+              },
+              "studio/operations",
+              {
+                "group": "API Keys",
+                "icon": "key",
+                "pages": [
+                  "studio/api-keys",
+                  "studio/api-keys/api-key-permissions",
+                  "studio/api-keys/api-key-resources"
+                ]
+              },
+              "studio/migrate-from-apollo",
+              {
+                "group": "Alerts and notifications",
+                "icon": "alarm-snooze",
+                "pages": [
+                  "studio/alerts-and-notifications",
+                  "studio/alerts-and-notifications/webhooks",
+                  "studio/alerts-and-notifications/slack-integration"
+                ]
+              },
+              "studio/graph-access-control",
+              "studio/cluster-management",
+              "studio/sessions",
+              "studio/rbac",
+              {
+                "group": "Groups",
+                "icon": "users-rectangle",
+                "pages": ["studio/groups", "studio/groups/group-rules"]
+              },
+              {
+                "group": "SSO",
+                "icon": "building-lock",
+                "pages": [
+                  "studio/sso",
+                  "studio/sso/okta",
+                  "studio/sso/auth0",
+                  "studio/sso/keycloak",
+                  "studio/sso/microsoft-entra"
+                ]
+              },
+              {
+                "group": "SCIM",
+                "icon": "file-user",
+                "pages": [
+                  "studio/scim",
+                  "studio/scim/okta",
+                  "studio/scim/okta-oin-version"
+                ]
+              },
+              "studio/audit-log",
+              "studio/cosmo-ai",
+              {
+                "group": "Policies",
+                "icon": "user-police-tie",
+                "pages": ["studio/policies", "studio/lint-policy/linter-rules"]
+              },
+              "studio/graph-pruning",
+              "studio/invitations"
+            ]
+          },
+          {
+            "group": "Control Plane",
+            "pages": [
+              "control-plane/intro",
+              "control-plane/configuration",
+              "control-plane/webhooks"
+            ]
+          },
+          {
+            "group": "GraphQL / Federation",
+            "pages": [
+              "federation/federation-compatibility-matrix",
+              {
+                "group": "Directives",
+                "icon": "sign-post",
+                "pages": [
+                  "federation/federation-directives-index",
+                  "federation/directives/shareable",
+                  "federation/directives/authenticated",
+                  "federation/directives/requiresscopes",
+                  "federation/directives/openfed__subscriptionfilter",
+                  "federation/directives/openfed__configuredescription"
+                ]
+              },
+              {
+                "group": "Event-Driven Federated Subscriptions",
+                "icon": "conveyor-belt-boxes",
+                "pages": [
+                  "federation/event-driven-federated-subscriptions",
+                  "federation/event-driven-federated-subscriptions/nats",
+                  "federation/event-driven-federated-subscriptions/kafka",
+                  "federation/event-driven-federated-subscriptions/redis",
+                  "federation/event-driven-federated-subscriptions/composition-rules"
+                ]
+              },
+              "federation/composition-errors"
+            ]
+          },
+          {
+            "group": "Deployments and Hosting",
+            "pages": [
+              "deployments-and-hosting/intro",
+              {
+                "group": "Kubernetes",
+                "icon": "layer-group",
+                "pages": [
+                  "deployments-and-hosting/kubernetes",
+                  {
+                    "group": "Helm Chart",
+                    "icon": "chart-line",
+                    "pages": [
+                      "deployments-and-hosting/kubernetes/helm-chart",
+                      "deployments-and-hosting/kubernetes/helm-chart/cosmo-platform",
+                      "deployments-and-hosting/kubernetes/helm-chart/router"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Terraform",
+                "icon": "road-bridge",
+                "pages": [
+                  "deployments-and-hosting/terraform",
+                  "deployments-and-hosting/terraform/aws-fargate"
+                ]
+              },
+              "deployments-and-hosting/docker",
+              "deployments-and-hosting/release-management",
+              "deployments-and-hosting/cosmo-cloud"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI",
+        "icon": "terminal",
+        "groups": [
+          {
+            "group": "CLI",
+            "pages": [
+              "cli/intro",
+              "cli/essentials",
+              "cli/api-keys",
+              {
+                "group": "Namespace",
+                "icon": "object-ungroup",
+                "pages": [
+                  "cli/namespace",
+                  "cli/namespace/create",
+                  "cli/namespace/delete",
+                  "cli/namespace/rename",
+                  "cli/namespace/list"
+                ]
+              },
+              {
+                "group": "Subgraph",
+                "icon": "share-nodes",
+                "pages": [
+                  "cli/subgraph",
+                  "cli/subgraph/create",
+                  "cli/subgraph/publish",
+                  "cli/subgraph/list",
+                  "cli/subgraph/check",
+                  "cli/subgraph/update",
+                  "cli/subgraph/delete",
+                  "cli/subgraph/fetch",
+                  "cli/subgraph/move",
+                  "cli/subgraph/introspect",
+                  "cli/subgraph/fix",
+                  "cli/subgraph/link",
+                  "cli/subgraph/unlink"
+                ]
+              },
+              {
+                "group": "Federated Graph",
+                "icon": "vector-circle",
+                "pages": [
+                  "cli/federated-graph",
+                  "cli/federated-graph/create",
+                  "cli/federated-graph/list",
+                  "cli/federated-graph/check",
+                  "cli/federated-graph/update",
+                  "cli/federated-graph/delete",
+                  "cli/federated-graph/fetch",
+                  "cli/federated-graph/fetch-schema",
+                  "cli/federated-graph/move",
+                  "cli/federated-graph/changelog",
+                  {
+                    "group": "Version",
+                    "icon": "code-branch",
+                    "pages": [
+                      "cli/federated-graph/version",
+                      "cli/federated-graph/version/get",
+                      "cli/federated-graph/version/set"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Monograph",
+                "icon": "share-nodes",
+                "pages": [
+                  "cli/monograph",
+                  "cli/monograph/create",
+                  "cli/monograph/publish",
+                  "cli/monograph/update",
+                  "cli/monograph/check",
+                  "cli/monograph/delete",
+                  "cli/monograph/list",
+                  "cli/monograph/move",
+                  "cli/monograph/fetch",
+                  "cli/monograph/changelog",
+                  "cli/monograph/migrate",
+                  {
+                    "group": "Version",
+                    "icon": "code-branch",
+                    "pages": [
+                      "cli/monograph/version",
+                      "cli/monograph/version/get",
+                      "cli/monograph/version/set"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Router",
+                "icon": "router",
+                "pages": [
+                  "cli/router",
+                  {
+                    "group": "Cache",
+                    "icon": "database",
+                    "pages": ["cli/router/cache", "cli/router/cache/push"]
+                  },
+                  {
+                    "group": "Token",
+                    "icon": "key",
+                    "pages": [
+                      "cli/router/token",
+                      "cli/router/token/create",
+                      "cli/router/token/list",
+                      "cli/router/token/delete"
+                    ]
+                  },
+                  "cli/router/fetch",
+                  "cli/router/compose",
+                  "cli/router/download-binary",
+                  {
+                    "group": "Compatibility version",
+                    "icon": "code-compare",
+                    "pages": [
+                      "cli/router/compatibility-version",
+                      "cli/router/compatibility-version/list"
+                    ]
+                  },
+                  {
+                    "group": "Router Plugin",
+                    "icon": "plug",
+                    "pages": [
+                      "cli/router/plugin",
+                      "cli/router/plugin/init",
+                      "cli/router/plugin/create",
+                      "cli/router/plugin/delete",
+                      "cli/router/plugin/build",
+                      "cli/router/plugin/generate",
+                      "cli/router/plugin/publish",
+                      "cli/router/plugin/test"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "gRPC Service",
+                "icon": "network-wired",
+                "pages": [
+                  "cli/grpc-service",
+                  "cli/grpc-service/init",
+                  "cli/grpc-service/list-templates",
+                  "cli/grpc-service/generate",
+                  "cli/grpc-service/create",
+                  "cli/grpc-service/publish",
+                  "cli/grpc-service/delete"
+                ]
+              },
+              {
+                "group": "Auth",
+                "icon": "key",
+                "pages": [
+                  "cli/auth",
+                  "cli/auth/login",
+                  "cli/auth/whoami",
+                  "cli/auth/logout"
+                ]
+              },
+              {
+                "group": "Operations",
+                "icon": "get-pocket",
+                "pages": ["cli/operations", "cli/operations/push"]
+              },
+              {
+                "group": "Schema Contracts",
+                "icon": "file-signature",
+                "pages": [
+                  "cli/schema-contracts",
+                  "cli/schema-contracts/create",
+                  "cli/schema-contracts/update",
+                  "cli/schema-contracts/delete-list-fetch-and-more"
+                ]
+              },
+              {
+                "group": "Feature Subgraph",
+                "icon": "feather",
+                "pages": [
+                  "cli/feature-subgraph",
+                  "cli/feature-subgraph/create-feature-subgraph",
+                  "cli/feature-subgraph/publish-feature-subgraph",
+                  "cli/feature-subgraph/update-feature-subgraph",
+                  "cli/feature-subgraph/delete-feature-subgraph"
+                ]
+              },
+              {
+                "group": "Feature Flags",
+                "icon": "flask-vial",
+                "pages": [
+                  "cli/feature-flags",
+                  "cli/feature-flags/create-feature-flag",
+                  "cli/feature-flags/disable-feature-flag",
+                  "cli/feature-flags/enable-feature-flag",
+                  "cli/feature-flags/update-feature-flag",
+                  "cli/feature-flags/delete-feature-flag"
+                ]
+              },
+              "cli/mcp",
+              {
+                "group": "Proposal",
+                "icon": "file-circle-plus",
+                "pages": [
+                  "cli/proposal",
+                  "cli/proposal/create",
+                  "cli/proposal/update"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Tutorials",
+        "icon": "newspaper",
+        "groups": [
+          {
+            "group": "Tutorials",
+            "pages": [
+              "tutorial",
+              "tutorial/mastering-local-development-for-graphql-federation",
+              "tutorial/from-zero-to-federation-in-5-steps-using-cosmo",
+              "tutorial/using-grpc-plugins",
+              "tutorial/grpc-service-quickstart",
+              "tutorial/deploy-federated-graphql-with-confidence",
+              "tutorial/composing-graphs",
+              "tutorial/pr-based-workflow-for-federation",
+              "tutorial/otel-instrumentation-on-subgraphs",
+              "tutorial/using-persisted-operations",
+              "tutorial/using-apollo-router-gateway-with-cosmo-oss-schema-registry",
+              "tutorial/supergraph-previews-for-every-pull-request",
+              "tutorial/gradual-and-experimental-feature-rollout-with-feature-flags"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Platform Status",
+          "href": "https://status.wundergraph.com/",
+          "icon": "signal"
+        },
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/wundergraph/cosmo",
+          "icon": "github"
+        },
+        {
+          "anchor": "Blog",
+          "href": "https://wundergraph.com/blog",
+          "icon": "newspaper"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://cosmo-docs.wundergraph.com/"
+  },
+  "navbar": {
+    "primary": {
+      "type": "button",
+      "label": "Talk to an Expert",
+      "href": "https://wundergraph.com/contact/sales"
+    },
+    "links": [
+      {
+        "label": "Cloud Login",
+        "href": "https://cosmo.wundergraph.com/login"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "x": "https://twitter.com/wundergraphcom",
+      "discord": "https://wundergraph.com/discord",
+      "github": "https://github.com/wundergraph",
+      "youtube": "https://www.youtube.com/@wundergraph"
+    },
+    "links": [
+      {
+        "header": "Legal",
+        "items": [
+          {
+            "label": "Privacy Policy",
+            "href": "https://wundergraph.com/privacy-policy"
+          },
+          {
+            "label": "Cookie Policy",
+            "href": "https://wundergraph.com/cookies"
+          },
+          {
+            "label": "Website Terms",
+            "href": "https://wundergraph.com/terms"
+          },
+          {
+            "label": "Cosmo Managed Terms",
+            "href": "https://wundergraph.com/cosmo-managed-service-terms"
+          }
+        ]
+      },
+      {
+        "header": "Trust",
+        "items": [
+          {
+            "label": "Trust Center",
+            "href": "https://trust.wundergraph.com/"
+          }
+        ]
+      }
+    ]
+  },
+  "integrations": {
+    "koala": {
+      "publicApiKey": "pk_c7477bfbf86479d918562f7add220a2d7098"
+    },
+    "plausible": {
+      "domain": "cosmo-docs.wundergraph.com"
+    },
+    "posthog": {
+      "apiKey": "phc_CEnvoyw3KcTuC5E1seDPrgvAamgGRDLfzPi1e7RU1G1",
+      "apiHost": "https://eu.i.posthog.com"
+    },
+    "gtm": {
+      "tagId": "GTM-5GPL7DQH"
+    }
+  },
+  "redirects": [
+    {
+      "source": "/router/event-driven-federated-subscriptions-edfs/:path*",
+      "destination": "/router/cosmo-streams/:path*"
+    },
+    {
+      "source": "/router/proxy-capabilities/request-headers-operations",
+      "destination": "/router/proxy-capabilities/subgraph-request-header-operations"
+    },
+    {
+      "source": "/router/proxy-capabilities/response-header-operations",
+      "destination": "/router/proxy-capabilities/subgraph-response-header-operations"
+    }
+  ]
+}

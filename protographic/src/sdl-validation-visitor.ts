@@ -346,7 +346,15 @@ export class SDLValidationVisitor {
    * @private
    */
   private validateInvalidResolverContext(ctx: VisitContext<FieldDefinitionNode>): void {
-    if (ctx.node.name.value.startsWith('_') || (ctx.node.arguments?.length ?? 0) === 0) {
+    if (ctx.node.name.value.startsWith('_')) {
+      return;
+    }
+
+    const hasArgs = (ctx.node.arguments?.length ?? 0) > 0;
+    const hasResolverDirective = ctx.node.directives?.some((d) => d.name.value === CONNECT_FIELD_RESOLVER) ?? false;
+
+    // Skip fields without args unless they have the @connect__fieldResolver directive
+    if (!hasArgs && !hasResolverDirective) {
       return;
     }
 
@@ -369,10 +377,17 @@ export class SDLValidationVisitor {
       return;
     }
 
-    this.addWarning(
-      `No @${CONNECT_FIELD_RESOLVER} directive found on the field ${ctx.node.name.value} - falling back to ID field`,
-      ctx.node.loc,
-    );
+    if (hasResolverDirective) {
+      this.addWarning(
+        `@${CONNECT_FIELD_RESOLVER} directive on the field ${ctx.node.name.value} has no context provided - falling back to ID field`,
+        ctx.node.loc,
+      );
+    } else {
+      this.addWarning(
+        `No @${CONNECT_FIELD_RESOLVER} directive found on the field ${ctx.node.name.value} - falling back to ID field`,
+        ctx.node.loc,
+      );
+    }
     const idFields =
       parent.fields?.filter((field) => this.getUnderlyingType(field.type).name.value === GraphQLID.name) ?? [];
     switch (idFields.length) {

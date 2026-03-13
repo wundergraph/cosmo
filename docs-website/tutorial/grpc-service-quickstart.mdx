@@ -1,0 +1,410 @@
+---
+title: "Deploy Your First gRPC Service"
+description: "This tutorial will walk you through the process of integrating a gRPC service into your router using Cosmo CLI templates."
+sidebarTitle: Deploy Your First gRPC Service
+icon: server
+---
+<Tip>
+This tutorial demonstrates a **[Cosmo Connect](/connect/overview)** workflow: federating a [gRPC Service](/router/gRPC/grpc-services) into your supergraph without needing to build a GraphQL server.
+</Tip>
+
+## Prerequisites
+
+- [Cosmo CLI](/cli/intro) installed and configured
+
+## Overview
+
+This tutorial shows you how to create a gRPC subgraph from scratch using the Cosmo CLI templates.
+You'll start with a project template that includes all the necessary files and code generation to get up and running quickly.
+
+The tutorial supports both TypeScript and Go implementations using Connect RPC,
+which is a modern gRPC framework with a great developer experience and performance.
+
+## Step 1: Initialize a gRPC Service Template
+
+First, list the available gRPC templates:
+
+```bash
+wgc grpc-service list-templates
+```
+
+This will show you the available templates:
+- `golang-connect-rpc` - Go implementation using Connect RPC
+- `typescript-connect-rpc-fastify` - TypeScript implementation using Connect RPC and Fastify
+
+Initialize your preferred template:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```bash
+    wgc grpc-service init --template typescript-connect-rpc-fastify --directory ./my-grpc-service
+    cd my-grpc-service
+    ```
+  </Tab>
+  <Tab title="Go">
+    ```bash
+    wgc grpc-service init --template golang-connect-rpc --directory ./my-grpc-service
+    cd my-grpc-service
+    ```
+  </Tab>
+</Tabs>
+
+## Step 2: Define Your GraphQL Schema
+
+The template includes a simple "hello" schema. Let's replace it with a more comprehensive project management schema. Edit the schema file:
+
+<Tabs>
+  <Tab title="TypeScript">
+    Edit `src/graph/schema.graphql`:
+  </Tab>
+  <Tab title="Go">
+    Edit `pkg/graph/schema.graphql`:
+  </Tab>
+</Tabs>
+
+```graphql
+type Query {
+  getProject(id: ID!): Project
+  listProjects: [Project!]!
+}
+
+type Mutation {
+  createProject(input: CreateProjectInput!): Project!
+  updateProject(id: ID!, input: UpdateProjectInput!): Project!
+}
+
+type Project {
+  id: ID!
+  name: String!
+  description: String
+  status: ProjectStatus!
+  createdAt: String!
+  updatedAt: String!
+}
+
+input CreateProjectInput {
+  name: String!
+  description: String
+}
+
+input UpdateProjectInput {
+  name: String
+  description: String
+  status: ProjectStatus
+}
+
+enum ProjectStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+```
+
+## Step 3: Generate Code and Configuration
+
+The template includes build scripts that handle all code generation:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```bash
+    # Install dependencies and bootstrap the project
+    npm install
+    npm run bootstrap
+    ```
+    
+    This runs:
+    - `npm run generate:proto` - Generates protobuf files from GraphQL schema
+    - `npm run generate:buf` - Generates Connect RPC TypeScript code
+    - `npm run generate:router` - Generates router execution config
+    - `npm run router:download` - Downloads the Cosmo Router binary
+  </Tab>
+  <Tab title="Go">
+    ```bash
+    # Generate all files and download router
+    make
+    ```
+    
+    This runs:
+    - `make generate-proto` - Generates protobuf files from GraphQL schema
+    - `make generate-buf` - Generates Connect RPC Go code
+    - `make compose` - Generates router execution config
+    - `make download-router` - Downloads the Cosmo Router binary
+  </Tab>
+</Tabs>
+
+## Step 4: Implement Your Service Logic
+
+Now implement the business logic for your gRPC service:
+
+<Tabs>
+  <Tab title="TypeScript">
+    Edit `src/routes.ts`:
+    
+    ```typescript
+    import type { ConnectRouter } from "@connectrpc/connect";
+    import { Service } from "./proto/service/v1/service_pb.js";
+
+    export default (router: ConnectRouter) => {
+      router.service(Service, {
+        queryGetProject: async (req) => {
+          return {
+            getProject: {
+              id: req.id,
+              name: "Sample Project",
+              description: "A sample project",
+              status: "ACTIVE",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          };
+        },
+        
+        queryListProjects: async () => {
+          return {
+            listProjects: [
+              {
+                id: "1",
+                name: "Project One",
+                description: "First project",
+                status: "ACTIVE",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+              {
+                id: "2", 
+                name: "Project Two",
+                description: "Second project",
+                status: "INACTIVE",
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+            ],
+          };
+        },
+        
+        mutationCreateProject: async (req) => {
+          return {
+            createProject: {
+              id: Math.random().toString(36).substr(2, 9),
+              name: req.input?.name || "",
+              description: req.input?.description || "",
+              status: "ACTIVE",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          };
+        },
+        
+        mutationUpdateProject: async (req) => {
+          return {
+            updateProject: {
+              id: req.id,
+              name: req.input?.name || "Updated Project",
+              description: req.input?.description || "",
+              status: req.input?.status || "ACTIVE",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            },
+          };
+        },
+      });
+    };
+    ```
+  </Tab>
+  <Tab title="Go">
+    Edit `pkg/service/service.go`:
+    
+    ```go
+    package service
+
+    import (
+        "context"
+        "fmt"
+        "math/rand"
+        "time"
+
+        "connectrpc.com/connect"
+        pb "github.com/wundergraph/service/pkg/generated/service/v1"
+    )
+
+    type Service struct{}
+
+    func (s *Service) QueryGetProject(ctx context.Context, req *connect.Request[pb.QueryGetProjectRequest]) (*connect.Response[pb.QueryGetProjectResponse], error) {
+        now := time.Now().Format(time.RFC3339)
+        project := &pb.Project{
+            Id:          req.Msg.Id,
+            Name:        "Sample Project",
+            Description: "A sample project",
+            Status:      pb.ProjectStatus_PROJECT_STATUS_ACTIVE,
+            CreatedAt:   now,
+            UpdatedAt:   now,
+        }
+        
+        return connect.NewResponse(&pb.QueryGetProjectResponse{
+            GetProject: project,
+        }), nil
+    }
+
+    func (s *Service) QueryListProjects(ctx context.Context, req *connect.Request[pb.QueryListProjectsRequest]) (*connect.Response[pb.QueryListProjectsResponse], error) {
+        now := time.Now().Format(time.RFC3339)
+        projects := []*pb.Project{
+            {
+                Id:          "1",
+                Name:        "Project One", 
+                Description: "First project",
+                Status:      pb.ProjectStatus_PROJECT_STATUS_ACTIVE,
+                CreatedAt:   now,
+                UpdatedAt:   now,
+            },
+            {
+                Id:          "2",
+                Name:        "Project Two",
+                Description: "Second project", 
+                Status:      pb.ProjectStatus_PROJECT_STATUS_INACTIVE,
+                CreatedAt:   now,
+                UpdatedAt:   now,
+            },
+        }
+        
+        return connect.NewResponse(&pb.QueryListProjectsResponse{
+            ListProjects: projects,
+        }), nil
+    }
+
+    func (s *Service) MutationCreateProject(ctx context.Context, req *connect.Request[pb.MutationCreateProjectRequest]) (*connect.Response[pb.MutationCreateProjectResponse], error) {
+        now := time.Now().Format(time.RFC3339)
+        project := &pb.Project{
+            Id:          fmt.Sprintf("%d", rand.Intn(10000)),
+            Name:        req.Msg.Input.Name,
+            Description: req.Msg.Input.Description,
+            Status:      pb.ProjectStatus_PROJECT_STATUS_ACTIVE,
+            CreatedAt:   now,
+            UpdatedAt:   now,
+        }
+        
+        return connect.NewResponse(&pb.MutationCreateProjectResponse{
+            CreateProject: project,
+        }), nil
+    }
+
+    func (s *Service) MutationUpdateProject(ctx context.Context, req *connect.Request[pb.MutationUpdateProjectRequest]) (*connect.Response[pb.MutationUpdateProjectResponse], error) {
+        now := time.Now().Format(time.RFC3339)
+        project := &pb.Project{
+            Id:          req.Msg.Id,
+            Name:        req.Msg.Input.Name,
+            Description: req.Msg.Input.Description,
+            Status:      req.Msg.Input.Status,
+            CreatedAt:   now,
+            UpdatedAt:   now,
+        }
+        
+        return connect.NewResponse(&pb.MutationUpdateProjectResponse{
+            UpdateProject: project,
+        }), nil
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Step 5: Run Your gRPC Service and Router
+
+Start both the gRPC service and the Cosmo Router:
+
+<Tabs>
+  <Tab title="TypeScript">
+    ```bash
+    # Start both service and router
+    npm run start
+    ```
+    
+    This runs both services concurrently:
+    - gRPC service on port 50051
+    - Cosmo Router on port 3002
+  </Tab>
+  <Tab title="Go">
+    ```bash
+    # Start both service and router
+    make start
+    ```
+    
+    This runs both services concurrently:
+    - gRPC service on port 50051  
+    - Cosmo Router on port 3002
+  </Tab>
+</Tabs>
+
+## Step 6: Test Your Integration
+
+Open your browser to [http://localhost:3002](http://localhost:3002) to access the GraphQL Playground.
+
+Try these queries:
+
+```graphql
+query ListProjects {
+  listProjects {
+    id
+    name
+    description
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+query GetProject {
+  getProject(id: "1") {
+    id
+    name
+    description
+    status
+    createdAt
+    updatedAt
+  }
+}
+
+mutation CreateProject {
+  createProject(input: {
+    name: "New Project"
+    description: "A new project"
+  }) {
+    id
+    name
+    description
+    status
+    createdAt
+    updatedAt
+  }
+}
+```
+
+## Understanding the Generated Files
+
+The template creates several important files:
+
+<Tabs>
+  <Tab title="TypeScript">
+    - `src/graph/schema.graphql` - Your GraphQL schema (source of truth)
+    - `src/proto/service/v1/` - Generated protobuf files
+    - `router.compose.yaml` - Router composition configuration  
+    - `router.config.yaml` - Router runtime configuration
+    - `router.execution.config.json` - Generated router execution config
+    - `package.json` - Build scripts and dependencies
+  </Tab>
+  <Tab title="Go">
+    - `pkg/graph/schema.graphql` - Your GraphQL schema (source of truth)
+    - `pkg/proto/service/v1/` - Generated protobuf files
+    - `pkg/generated/service/v1/` - Generated Go code
+    - `router.compose.yaml` - Router composition configuration
+    - `router.config.yaml` - Router runtime configuration  
+    - `router.execution.config.json` - Generated router execution config
+    - `Makefile` - Build targets and commands
+  </Tab>
+</Tabs>
+
+## Further Information
+
+- [Concepts](/router/gRPC/concepts)
+- [gRPC Services](/router/gRPC/grpc-services)
+- [Router Configuration Reference](/router/configuration)
+
+

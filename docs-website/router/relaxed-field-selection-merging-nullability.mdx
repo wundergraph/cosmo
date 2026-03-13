@@ -1,0 +1,99 @@
+---
+title: "Relaxed Field Selection Merging Nullability"
+icon: "merge"
+description: "Allow fields with differing nullability across union member types in federated graphs."
+---
+
+In a federated graph, different subgraphs may define the same field on different concrete union member types with differing nullability. For example, one subgraph might define `upc: ID!` on `Cosmo` while another defines `upc: ID` (nullable) on `Consultancy`, both members of a `Products` union.
+
+By default, the router rejects queries that select such fields across union members with a validation error like:
+
+```
+fields 'upc' conflict because they return conflicting types 'ID' and 'ID!'
+```
+
+The `relax_subgraph_operation_field_selection_merging_nullability` option relaxes this validation when the enclosing types are **non-overlapping concrete object types** (i.e., different union members). This is useful when subgraphs legitimately disagree on nullability for the same field.
+
+## Examples
+
+### Scalar fields with differing nullability
+
+Given two union member types where `upc` has different nullability:
+
+```graphql
+# Subgraph A
+type Cosmo {
+  upc: ID!
+}
+
+# Subgraph B
+type Consultancy {
+  upc: ID  # nullable
+}
+
+union Products = Cosmo | Consultancy
+```
+
+The following query selects `upc` on both types:
+
+```graphql
+{
+  products {
+    ... on Consultancy { upc }
+    ... on Cosmo { upc }
+  }
+}
+```
+
+**Default behavior:** The router rejects this with a field conflict error.
+
+**With relaxed nullability enabled:** The query is accepted because `Consultancy` and `Cosmo` are non-overlapping concrete types — a result can only ever be one or the other.
+
+### Object fields with differing nullability
+
+The same applies to object-typed fields:
+
+```graphql
+# Subgraph A
+type Cosmo {
+  lead: Employee!
+}
+
+# Subgraph B
+type Consultancy {
+  lead: Employee  # nullable
+}
+```
+
+```graphql
+{
+  products {
+    ... on Consultancy { lead { id } }
+    ... on Cosmo { lead { id } }
+  }
+}
+```
+
+**Default behavior:** The router rejects this with a type conflict error.
+
+**With relaxed nullability enabled:** The query is accepted.
+
+## Configuration
+
+<Tabs>
+  <Tab title="Environment Variable">
+    ```bash
+    ENGINE_RELAX_SUBGRAPH_OPERATION_FIELD_SELECTION_MERGING_NULLABILITY=true
+    ```
+  </Tab>
+  <Tab title="YAML">
+    ```yaml config.yaml
+    version: "1"
+
+    engine:
+      relax_subgraph_operation_field_selection_merging_nullability: true
+    ```
+  </Tab>
+</Tabs>
+
+This option is disabled by default. It only affects validation of field selections where the enclosing inline fragment types are non-overlapping concrete union members. See the [Router Configuration reference](/router/configuration#router-engine-configuration) for all engine flags.

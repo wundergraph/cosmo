@@ -1,0 +1,98 @@
+---
+title: "Request Deduplication"
+description: "How the Cosmo Router deduplicates identical concurrent requests to improve performance."
+icon: "clone"
+---
+
+The Cosmo Router includes two layers of request deduplication to avoid redundant work when multiple concurrent requests resolve to identical subgraph fetches.
+
+## Layer 1: Subgraph Request Deduplication
+
+Deduplicates identical fetches to the same subgraph across concurrent operations. The deduplication key is:
+
+```
+xxhash64(DataSourceID + ":" + requestBody + preComputedHeaderHash)
+```
+
+- **DataSourceID**: identifies the target subgraph
+- **requestBody**: the complete JSON payload (query + variables)
+- **preComputedHeaderHash**: xxhash64 of all headers that will be forwarded to this subgraph, as determined by your header forwarding rules
+
+Only `Query` operations are eligible. Mutations and subscriptions are never deduplicated.
+
+## Layer 2: Inbound Request Deduplication
+
+Deduplicates identical client requests before the engine even starts resolving. The key is:
+
+```
+xxhash64(normalizedOperationHash + variablesHash + combinedSubgraphHeadersHash)
+```
+
+If two concurrent clients send the same query with the same variables and the same forwarded headers, only one resolution is performed and the result is shared.
+
+## How Header Hashes Are Computed
+
+The header hashes for both layers are computed by `SubgraphHeadersBuilder`, which:
+
+1. Iterates over every subgraph involved in the execution plan
+2. Applies all configured header forwarding rules (global + per-subgraph) against the **current inbound request headers**
+3. Produces a deterministic `uint64` hash per subgraph
+4. Combines all per-subgraph hashes into a single `allHash`
+
+This happens **after** `RouterOnRequestHandler` and `RouterMiddlewareHandler` hooks run, but **before** `EnginePreOriginHandler.OnOriginRequest` hooks run.
+
+## Request Pipeline and Hook Ordering
+
+```
+Incoming HTTP Request
+    │
+    ├── [1] RouterOnRequestHandler hooks          ← can set headers here
+    │       (before auth, before request parsing)
+    │
+    ├── [2] graphqlPreHandler                     ← parses, authenticates, validates, plans
+    │
+    ├── [3] RouterMiddlewareHandler hooks          ← can set headers here
+    │       (after parse/auth, ctx.Operation() available)
+    │
+    ├── [4] graphqlHandler.ServeHTTP
+    │   ├── SubgraphHeadersBuilder()              ← HEADER HASHES COMPUTED HERE
+    │   │   (reads current request headers, applies forwarding rules, hashes result)
+    │   │
+    │   └── Engine Resolver
+    │       ├── Inbound Request Deduplication      (uses allHash from step [4])
+    │       └── Per-subgraph fetches:
+    │           ├── Subgraph Request Deduplication  (uses per-subgraph hash from step [4])
+    │           ├── ────────────────────────────
+    │           ├── EnginePreOriginHandler hooks    ← TOO LATE for dedup key
+    │           ├── ────────────────────────────
+    │           ├── HTTP transport (circuit breaker, retry, actual fetch)
+    │           └── EnginePostOriginHandler hooks
+    │
+    └── Response to client
+```
+
+## Configuration Reference
+
+```yaml
+engine:
+  # Enable subgraph request deduplication (default: true)
+  # Deduplicates identical fetches to the same subgraph across concurrent operations
+  enable_single_flight: true
+
+  # Force-enable subgraph dedup even when EnginePreOriginHandler is registered (default: false)
+  # Only use this if your OnOriginRequest hook does NOT set identity-affecting headers
+  force_enable_single_flight: false
+
+  # Enable inbound request deduplication (default: true)
+  # Deduplicates identical client requests before the engine starts resolving
+  enable_inbound_request_deduplication: true
+
+  # Force-enable inbound dedup even when EnginePreOriginHandler is registered (default: false)
+  force_enable_inbound_request_deduplication: false
+```
+
+Environment variable equivalents:
+- `ENGINE_ENABLE_SINGLE_FLIGHT`
+- `ENGINE_FORCE_ENABLE_SINGLE_FLIGHT`
+- `ENGINE_ENABLE_INBOUND_REQUEST_DEDUPLICATION`
+- `ENGINE_FORCE_ENABLE_INBOUND_REQUEST_DEDUPLICATION`

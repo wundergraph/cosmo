@@ -1,0 +1,259 @@
+---
+title: "Open Telemetry"
+description: "Use OpenTelemetry with traces and metrics"
+sidebarTitle: Overview
+icon: "circle-info"
+---
+
+Cosmo router supports exporting tracing and metrics via OpenTelemetry. By default, both are exported to Cosmo Cloud, but these can be configured with additional exporters or disable the default ones. Both `http` and `grpc` are supported.
+
+<CodeGroup>
+  ```bash config.yaml
+  telemetry:
+    service_name: "cosmo-router" # Service name for traces and metrics
+    tracing:
+      enabled: true
+      # If no exporters are configured, telemetry is exported to Cosmo Cloud
+      exporters:
+      - endpoint: https://cosmo-otel.wundergraph.com # The default
+        exporter: "http" # or "grpc" with port 4317
+        headers: {Authorization: Bearer ${ROUTER_TOKEN}}
+    metrics:
+      otlp:
+        enabled: true
+        # If no exporters are configured, telemetry is exported to Cosmo Cloud
+        exporters:
+        - endpoint: https://cosmo-otel.wundergraph.com # The default
+          exporter: "http" # or "grpc" with port 4317
+          headers: {Authorization: Bearer ${ROUTER_TOKEN}}
+  ```
+</CodeGroup>
+
+<Info>
+  If no exporters are configured, the default one is used instead (set by the `DEFAULT_TELEMETRY_EXPORTER` environment variable)
+</Info>
+
+The router can also expose Prometheus metrics. It works with the same OTEL metrics we export over OTEL. See [Metrics & Monitoring](/router/metrics-and-monitoring)
+
+## Exclude certain metrics and labels
+
+Excluding certain metrics and labels can significantly reduce the cardinality of the collected telemetry data, allowing for a tailored setup that aligns with your specific monitoring needs and minimizes unnecessary data collection. These exclusion options can be easily configured within the `otlp` section of the router config.
+
+We support a Go Regex strings. You can test your Regex at [https://regex101.com/](https://regex101.com/).
+
+### Escaping dots in metric names
+
+OpenTelemetry metrics use dots (`.`) as separators in metric names (e.g., `wg.operation.hash`, `router.http.request.duration`). When writing regular expressions to match these metric names, you must escape the dot character since it has special meaning in regex (matches any character).
+
+<Tip>
+Using single quotes in YAML prevents the need to double-escape backslashes, making your regex patterns more readable and less error-prone.
+</Tip>
+
+<CodeGroup>
+  ```bash config.yaml
+  telemetry:
+    metrics:
+      otlp:
+        exclude_metrics:
+          # ❌ Incorrect - matches any character, not literal dots
+          # - "wg.operation.hash"
+          
+          # ✅ Correct - double escaping for literal dots
+          - "wg\\.operation\\.hash"
+          
+          # 💡 Best practice - single quotes, cleaner syntax
+          - '^router\.http\.request\.duration_milliseconds$'
+        exclude_metric_labels:
+          - '^wg\.client\.version$'
+  ```
+</CodeGroup>
+
+## Metrics Log Exporter
+
+The metrics log exporter is a standalone OTLP exporter that prints all collected metrics directly to the router's log output. It operates independently from your configured OTLP exporters and does not wrap them — it simply logs the metrics at each export interval. This gives you direct, local visibility into the metrics pipeline without needing an external collector. It is particularly useful when metrics are not appearing in your collector or dashboard — enabling the log exporter lets you quickly determine whether the issue is on the router side or downstream. You can also use it to verify the full structure of each metric (type, temporality, attributes, values), validate that your `exclude_metrics` or `exclude_metric_labels` rules are filtering correctly, or simply inspect what the router emits during local development. Use the `exclude_metrics` or `include_metrics` options on the log exporter itself to reduce noise and focus on the specific metrics you are investigating.
+
+<Warning>
+  Enabling this exporter will increase log volume. It is recommended for investigation and troubleshooting rather than long-term production use.
+</Warning>
+
+### Configuration
+
+The log exporter is configured under `telemetry.metrics.otlp.log_exporter`:
+
+```yaml config.yaml
+telemetry:
+  metrics:
+    otlp:
+      log_exporter:
+        enabled: true
+        exclude_metrics:
+          - 'process\.'
+          - 'server\.uptime'
+          - 'router\.info'
+      # alternatively use include_metrics to only include certain metrics
+```
+
+<Info>
+  `exclude_metrics` and `include_metrics` cannot be used together. Use only one to filter which metrics are logged.
+</Info>
+
+
+### Log output
+
+When enabled, the exporter logs a summary line at each export interval showing the number of scope metrics and total metrics, followed by individual log entries for each metric. Each entry includes the metric name, unit, type (e.g., `sum:int64`, `histogram:float64`, `gauge:int64`), and data points with their attributes and values.
+
+## Limits
+
+High metric cardinality can lead to performance issues by consuming excessive resources and slowing down data processing. When too many distinct metric labels are generated, the system might struggle to manage the data efficiently. To mitigate this, we have set a default hard cardinality limit of 2000. This limit helps to ensure that the metrics remain manageable and that the performance of our system is not adversely affected.
+
+**Once the limit is reached, all further datapoints to a metric will be stored without attributes.**
+
+<Info>
+  The default OpenTelemetry Collector ingests requests up to 4 MB by default via gRPC. If you are experiencing high cardinality in your metrics, it's necessary to adjust the collector's gRPC limits to accommodate larger requests by setting the `max_recv_msg_size_mib` property.  If you are using Datadog, this can be done by setting the `DD_OTLP_CONFIG_RECEIVER_PROTOCOLS_GRPC_MAX_RECV_MSG_SIZE_MIB` agent environment variable.
+
+  We recommend at least 12 MB
+</Info>
+
+## Tracing
+
+### Multiple exporters
+
+You can configure multiple exporters. A common case is to forward telemetry data to Cosmo Cloud and e.g. Datadog Agent which has native support to ingest [OpenTelemetry](https://docs.datadoghq.com/opentelemetry/) data.
+
+<CodeGroup>
+  ```bash config.yaml
+  telemetry:
+    service_name: "cosmo-router" # Service name for traces and metrics
+
+    # OpenTelemetry Tracing
+    tracing:
+      enabled: true
+      # If no exporters are defined, the default one is used
+      exporters:
+      # Cosmo Cloud
+      - endpoint: https://cosmo-otel.wundergraph.com
+        exporter: "http"
+        headers: {Authorization: Bearer ${MY_AUTH_TOKEN}}
+      # Datadog Agent
+      - endpoint: http://datadog-agent:4318
+        exporter: "http"
+
+    # OpenTelemetry Metrics
+    metrics:
+      otlp:
+        enabled: true
+        # If no exporters are defined, the default one is used
+        exporters:
+          - exporter: http # or grpc
+            disabled: false
+            endpoint: https://my-otel-collector.example.com
+  ```
+</CodeGroup>
+
+### Trace Propagation
+
+Propagation is the mechanism that allows the movement of data between services and processes. As a user of the router, you will interact with them in the form of headers to pass the trace context across service boundaries. By default, we enable the widely-used [Trace-Context](https://www.w3.org/TR/trace-context/) specification. You can disable or enable different specifications according to your needs.
+
+<CodeGroup>
+  ```bash config.yaml
+  telemetry:
+    tracing:
+      propagation:
+        # https://www.w3.org/TR/trace-context/
+        trace_context: true
+        # https://www.w3.org/TR/baggage/
+        baggage: false
+        # https://www.jaegertracing.io/ (compliant with opentracing)
+        jaeger: false
+        # https://github.com/openzipkin/b3-propagation (zipkin)
+        b3: false
+  ```
+</CodeGroup>
+
+#### Example: Enable B3 propagation
+
+If you want to enable [B3](https://github.com/openzipkin/b3-propagation) for example, you can set `b3` to `true` but you also need to add the trace headers to the CORS config to not run into issues.
+
+<CodeGroup>
+  ```bash config.yaml
+  # Cross-Origin Resource Sharing (CORS)
+  cors:
+    allow_headers:
+      - b3
+  ```
+</CodeGroup>
+
+### GraphQL variables
+
+GraphQL variables are useful for debugging to replay queries but they can pose a potential risk because they include request data. To mitigate this, you have to explicitly opt in. In the future, we will provide tools to redact specific arguments.
+
+```
+telemetry:
+  tracing:
+      export_graphql_variables: true # TRACING_EXPORT_GRAPHQL_VARIABLES
+```
+
+This enables the option to replay GraphQL queries with variables in the Studio.
+
+### Subscriptions
+
+Tracing has not yet been implemented for subscriptions. If you require this feature, please do not hesitate to contact us.
+
+### Trace ID Response header
+
+This configuration allows you to include trace ID in the response headers, where the name of the header would be the value provided.
+
+```yaml
+telemetry:
+  tracing:
+    response_trace_id:
+      enabled: true
+      header_name: "my-trace-id" # default: "x-wg-trace-id"
+```
+
+### Sanitize UTF-8
+
+OTLP uses Protocol Buffers for serialization, and protobuf's `string` type requires valid UTF-8. When subgraphs or upstream services return responses containing invalid UTF-8 byte sequences (e.g., from binary data or legacy encodings), these invalid bytes can end up in span attributes, causing the protobuf marshaler to fail with errors like `"string field contains invalid UTF-8"`. This results in the entire span export failing and trace data being silently dropped.
+
+Enabling `sanitize_utf8` replaces any invalid UTF-8 sequences in string span attributes with the Unicode replacement character (`U+FFFD`). This ensures that traces are always exported successfully, even when upstream data contains encoding issues.
+
+<Info>
+  This feature is disabled by default. Enable it if you observe missing traces caused by OTEL export errors related to invalid UTF-8 in string fields.
+</Info>
+
+<CodeGroup>
+  ```bash config.yaml
+  telemetry:
+    tracing:
+      sanitize_utf8:
+        enabled: true
+        # Optional: log a warning for each sanitized attribute (useful for debugging)
+        log_sanitizations: false
+  ```
+</CodeGroup>
+
+<Note>
+  In addition to span attributes, the router also sanitizes invalid UTF-8 in span status descriptions (e.g., error messages). This happens automatically and does not require any configuration.
+</Note>
+
+## FAQ
+
+<AccordionGroup>
+  <Accordion title="Can I export OTEL data from my application?" >
+
+Yes, but this is currently limited to private backend applications e.g. subgraphs because we don't provide a secure mechanism to issue short-lived tokens in public applications like Web-Apps. Never expose your GRAPH\_TOKEN to the public. A possible solution to make this work is to run an [otelcollector](https://docs.newrelic.com/docs/more-integrations/open-source-telemetry-integrations/opentelemetry/collector/opentelemetry-collector-intro/) and utilize the export functionality to forward telemetry data to Cosmo Cloud. This will enable you to configure your own authentication layer and observe malicious behaviors. It is also a recommended approach to ingest data to multiple OTEL platforms.
+</Accordion>
+
+<Accordion title="Why is my trace incomplete?">
+
+In certain conditions, it can happen that spans are not listed in the Studio. We have observed these cases.
+
+    1. Platforms like Google Cloud Run automatically propagate trace headers according to the Trace-Context specification in every service call.
+
+    2. Your client request has already set a trace context, but it did not send the span to Cosmo Cloud.
+
+    3. External, uncontrolled clients sent trace headers.
+
+In all cases, the issue is that not all spans will be sent to the Cosmo Platform. You have to ensure that all spans are sent to us so we can reconstruct the full trace.
+  </Accordion>
+</AccordionGroup>

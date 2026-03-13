@@ -1,0 +1,109 @@
+---
+title: "Advanced Data Privacy"
+description: ""
+icon: fingerprint
+---
+
+With [Cusom Module](/router/custom-modules) you can fully customize how data is rendered in the response.
+
+## Use cases: Obfuscating sensitive information for developers, data scientists, or AI models
+
+This can be useful to implement advanced data privacy features like obfuscating sensitive information,
+e.g. when developers are trying to debug an issue,
+or when a data scientist wants to analyze data in a secure way.
+
+Another use case could be to limit data access when interacting with AI models.
+Depending on the request context, you can implement a custom value renderer to limit what data is available to the AI model.
+For example, you could obfuscate fields in the Schema that you consider sensitive,
+like credit card numbers, social security numbers, or other personal information.
+
+## How to implement a custom value renderer
+
+To implement a custom value renderer,
+please follow the guide in the [Custom Module](/router/custom-modules) documentation.
+
+Below is an example implementation that implements a custom value renderer to obfuscate fields of type `String`, `Int`, and `Float`.
+In addition, the example shows how to use the `RouterOnRequest` hook to conditionally apply the custom value renderer,
+in this case only for users with the role `developer`.
+
+```go
+package custom_value_renderer
+
+import (
+	"io"
+	"net/http"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/core"
+)
+
+const myModuleID = "routerCustomValueRenderer"
+
+type RouterCustomValueRendererModule struct {
+	Logger *zap.Logger
+}
+
+func (m *RouterCustomValueRendererModule) Provision(ctx *core.ModuleContext) error {
+	// Assign the logger to the module for non-request related logging
+	m.Logger = ctx.Logger
+	return nil
+}
+
+type CustomTestValueRenderer struct {
+}
+
+func (c *CustomTestValueRenderer) RenderFieldValue(ctx *resolve.Context, value resolve.FieldValue, out io.Writer) (err error) {
+	switch value.Type {
+	case "String":
+		// for String values, we obfuscate the value by replacing it with "xxx"
+		_, err = out.Write([]byte(`"xxx"`))
+	case "Int", "Float":
+		// for Int and Float values, we obfuscate the value by replacing it with 123
+		_, err = out.Write([]byte(`123`))
+	default:
+		// for other types, we just write the raw value to the response
+		_, err = out.Write(value.Data)
+	}
+	return err
+}
+
+func (m *RouterCustomValueRendererModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
+	defer next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+	auth := ctx.Authentication()
+	if auth == nil {
+		return
+	}
+	claims := auth.Claims()
+	if claims == nil {
+		return
+	}
+	if role, ok := claims["role"]; ok && role == "developer" {
+		// if the user is a developer, we set a custom value renderer
+		// this will obfuscate String, Int, and Float values in the response
+		ctx.SetCustomFieldValueRenderer(&CustomTestValueRenderer{})
+	}
+    // if we don't set a custom field value renderer, the default renderer will be used
+    // which will just write the raw value to the response without any obfuscation
+}
+
+func (m *RouterCustomValueRendererModule) Module() core.ModuleInfo {
+	return core.ModuleInfo{
+		// This is the ID of your module, it must be unique
+		ID: myModuleID,
+		// The priority of your module, lower numbers are executed first
+		Priority: 1,
+		New: func() core.Module {
+			return &RouterCustomValueRendererModule{}
+		},
+	}
+}
+
+// Interface guard
+// This is required to ensure that the module implements the required interfaces
+var (
+	_ core.RouterOnRequestHandler = (*RouterCustomValueRendererModule)(nil)
+	_ core.Provisioner            = (*RouterCustomValueRendererModule)(nil)
+)
+```

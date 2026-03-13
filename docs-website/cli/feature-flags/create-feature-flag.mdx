@@ -1,0 +1,63 @@
+---
+title: "Create Feature Flag"
+description: "How to create a feature flag."
+icon: plus
+---
+
+## Description
+
+Create a new feature flag within the specified namespace (or the "default" namespace if unspecified). A feature flag is a group of one or more [feature subgraphs](/cli/feature-subgraph). Each feature subgraph represents a replacement of a specific base subgraph that composes a federated graph.
+
+## Minimum Requirements
+
+|Package|Minimum version|
+|---|---|
+|[wgc](/cli/intro)|[0.58.0](https://github.com/wundergraph/cosmo/compare/wgc@0.57.7...wgc@0.58.0)|
+|[router](/router/intro)|[0.95.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.95.0)|
+
+## Usage
+
+<Note>
+  A feature flag is disabled when created by default. To create and immediately enable a feature flag, include the `--enabled` flag. To enable after creation, see [`wgc ff enable`](/cli/feature-flags/enable-feature-flag).
+</Note>
+
+```bash
+wgc feature-flag create my-flag --feature-subgraphs my-graph-one my-graph-two
+```
+
+The alias for `feature-flag` is `ff`.
+
+Note that unless specified by the `--namespace` parameter, the namespace will be automatically passed as "default".
+
+<Warning>
+  If either the base composition (the Federated Graph with the original Subgraphs) or the Feature Flag composition fail, the Router Config will not be updated with the Feature Flag configuration.
+</Warning>
+## Parameters
+
+* `<name>`: The name of the Feature Flag to create. Must be unique among all feature flags in the specified (otherwise "default") namespace.
+
+## Required Options
+
+`--fs, --feature-subgraphs:` A list of names of the feature subgraphs that compose the feature flag. At least one feature subgraph name must be included, and multiple names are space delimited. Including a non-feature subgraph or a feature subgraph that does not exist in the specified (otherwise "default") namespace will produce an error.
+
+## Options
+
+* `-n, --namespace` : The namespace of the feature flag (defaults to "default"). Returns an error if the feature flag does not exist in that namespace.
+
+* `-e --enabled`: Activates the feature flag immediately upon creation. A new feature flag is disabled by default to prevent accidental compositions.
+
+* `--label [labels...]:`The labels to apply to the feature flag. The labels are passed in the format `key=value`, and multiple values are space delimited.
+
+* `-j, --json` : Outputs the information in JSON format.
+
+## Example
+
+Create the feature flag "my-flag" in the namespace "prod" with multiple feature subgraphs and the labels `team=A` and `team=B`:
+
+```bash
+wgc feature-flag create my-flag \
+    --feature-subgraphs my-graph my-other-graph \
+    -n prod
+    --label team=A team=B
+```
+

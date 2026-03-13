@@ -1,0 +1,21 @@
+---
+title: "Custom Modules"
+sidebarTitle: Overview
+description: "Customize Streams behavior with powerful handlers for subscription lifecycle, event processing, and data transformation."
+icon: "circle-info"
+---
+
+Cosmo Router provides powerful handlers to hook into the event processing of Cosmo Streams.
+These handlers allow you to implement custom logic for subscription lifecycle management, event processing and data transformation.
+
+<Info>
+Custom Modules in Cosmo Streams are available since Router version 0.266.0
+</Info>
+
+## Available Hooks
+
+The Cosmo Streams system provides three main hook interfaces that you can implement with [Custom Modules](/router/custom-modules):
+
+- [`SubscriptionOnStartHandler`](/router/cosmo-streams/custom-modules/subscription-on-start): Called when a client subscribes
+- [`OnReceiveEventHandler`](/router/cosmo-streams/custom-modules/on-receive-event): Called when events are received from a message broker
+- [`OnPublishEventHandler`](/router/cosmo-streams/custom-modules/on-publish-event): Called when events are going to be sent to a message broker

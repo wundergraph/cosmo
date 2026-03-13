@@ -1,0 +1,143 @@
+---
+title: "Batch Generate Query Plans"
+description: "You can generate query plans using the ./router query-plan command"
+icon: "layer-group"
+---
+
+<Info>
+Available since Router 0.185.0
+</Info>
+
+## Prerequisites
+
+To generate query plans, you will need the following:
+
+* Router executable (version 0.185.0 or later)
+
+* Router execution configuration file
+
+* Queries folder
+
+* Output folder
+
+Generate the execution config using `wgc`:
+
+```bash
+wgc router fetch $graphname -o execution-config.json
+```
+
+To generate query plans locally or test subgraphs modifications before deployment, use `wgc router compose`.
+
+For detailed steps, follow the first two steps outlined here: [Mastering Local Development for GraphQL Federation](/tutorial/mastering-local-development-for-graphql-federation).
+
+## Generating query plans
+
+In the following example, we assume the following directory structure:
+
+```bash
+./operations/query1.graphql
+./operations/query2.graphql
+./execution-config.json
+./plans
+```
+
+You can generate query plans using the following command:
+
+```bash
+./router query-plan -execution-config execution-config.json -operations operations -plans plans
+```
+
+This command will create one file per query inside the plans folder. Each file will have the same name as the corresponding query and will contain a text representation of the query plan.
+
+If a query is not plannable, the error message will be written inside the respective file. Files containing errors will always begin with the text:
+
+```bash
+Error:
+```
+
+For the given example, the output will generate two files:
+
+```bash
+plans/query1.graphql
+plans/query2.graphql
+```
+
+### Report generation
+
+<Info>
+The report structure changed since Router 0.189.0
+</Info>
+
+You can use the `-print-report` option to generate a report in addition to the individual query plan files. The report will be saved in the plans folder as `report.json` and will follow this structure:
+
+```bash
+{
+    "error": "[...]",
+    "plans": [
+        {
+            "file_name": "[...]",
+            "plan": "[...]",
+            "timings":{
+                "ParseTime":1000,
+                "NormalizeTime":1000,
+                "ValidateTime":1000,
+                "PlanTime":1000
+            }
+        },
+        {
+            "file_name": "[...]",
+            "error": "[...]"
+        }
+    ]
+}
+```
+
+If you only need the report, you can add the following option to the command `-print-per-file=false`.
+
+The `error` field on the first level will contain a value only if there is an error that is not directly related to a single plan (eg: timeout error, missing or corrupted router config).
+
+The fields inside `timings`, added since router version `0.265.0`, contains the time taken (in nanoseconds) for each phase of the query planning process. If you use the values to track performance over time, make sure to run the command in similar conditions to get comparable results and to allow some variance in the data.
+
+### Fail on planning error
+
+If you want the command to exit with an error if at least one query fails to be planned, you can use the option `-fail-on-error`.
+
+### Output Format
+
+By default the query plan format is text based, but you can view the json version by using `-print-format json`
+
+## Other options
+
+You can see all the options available launching the command without any arguments:
+
+```bash
+./router query-plan
+  -concurrency int
+        how many query plan run concurrently
+  -execution-config string
+        required, execution config file location
+  -fail-fast
+        stop as soon as possible if a plan fails
+  -fail-on-error
+        if at least one plan fails, the command exit code will be 1
+  -filter string
+        operation filter file location which should contain file names of operations to include
+  -help
+        Prints the help message
+  -log-level string
+        log level to use (debug, info, warn, error, panic, fatal) (default "warn")
+  -max-collectors uint
+        max number of concurrent data source collectors, if unset or 0, no limit will be enforced
+  -operations string
+        required, source operations folder location
+  -plans string
+        required, output plans folder location
+  -print-format value
+        output format of the query plan (text, json) (default "text")
+  -print-per-file
+        write a file for each query, with inside the plan or the query plan error (default true)
+  -print-report
+        write a report.json file, with all the query plans and errors sorted by file name
+  -timeout string
+        timeout (default "30s")
+```

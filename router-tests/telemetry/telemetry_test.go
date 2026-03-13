@@ -34,7 +34,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 	"go.opentelemetry.io/otel/trace"
 
-	integration "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 )
 
 const (
@@ -141,6 +141,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 			}, func(data string) {
 				defer wg2.Done()
 				xEnv.WaitForSubscriptionCount(2, time.Second*5)
+				xEnv.WaitForTriggerCount(1, time.Second*5)
 
 				sentMessages.Add(1)
 				xEnv.WaitForMinMessagesSent(uint64(sentMessages.Load()), time.Second*5)
@@ -166,6 +167,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				defer wg1.Done()
 
 				xEnv.WaitForSubscriptionCount(2, time.Second*5)
+				xEnv.WaitForTriggerCount(1, time.Second*5)
 
 				sentMessages.Add(1)
 				xEnv.WaitForMinMessagesSent(uint64(sentMessages.Load()), time.Second*5)
@@ -212,6 +214,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 			})
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForTriggerCount(1, time.Second*5)
 			xEnv.AssertEngineStatistics(t, metricReader, testenv.EngineStatisticAssertion{
 				Subscriptions: 1,
 				Connections:   1,
@@ -396,6 +399,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 			require.NoError(t, err)
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*5)
+			xEnv.WaitForTriggerCount(1, time.Second*5)
 
 			rm := metricdata.ResourceMetrics{}
 			err = metricReader.Collect(context.Background(), &rm)
@@ -408,7 +412,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				otel.WgRouterVersion.String("dev"),
 			}
 
-			engineScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.engine")
+			engineScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.engine")
 			connectionMetrics := metricdata.Metrics{
 				Name:        "router.engine.connections",
 				Description: "Number of connections in the engine. Contains both websocket and http connections",
@@ -425,7 +429,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, connectionMetrics, *integration.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, connectionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
 
 			subscriptionMetrics := metricdata.Metrics{
 				Name:        "router.engine.subscriptions",
@@ -442,7 +446,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, subscriptionMetrics, *integration.GetMetricByName(engineScope, "router.engine.subscriptions"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, subscriptionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.subscriptions"), metricdatatest.IgnoreTimestamp())
 
 			triggerMetrics := metricdata.Metrics{
 				Name:        "router.engine.triggers",
@@ -459,7 +463,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, triggerMetrics, *integration.GetMetricByName(engineScope, "router.engine.triggers"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, triggerMetrics, *testutils.GetMetricByName(engineScope, "router.engine.triggers"), metricdatatest.IgnoreTimestamp())
 
 			messagesSentMetrics := metricdata.Metrics{
 				Name:        "router.engine.messages.sent",
@@ -475,7 +479,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, messagesSentMetrics, *integration.GetMetricByName(engineScope, "router.engine.messages.sent"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, messagesSentMetrics, *testutils.GetMetricByName(engineScope, "router.engine.messages.sent"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 }
@@ -528,7 +532,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
-			cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+			cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
 
 			require.Len(t, cacheScope.Metrics, 4)
@@ -646,7 +650,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, hitStatMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -797,7 +801,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -900,7 +904,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -950,7 +954,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
 		})
 	})
 
@@ -1028,7 +1032,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
-			cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+			cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
 
 			require.Len(t, cacheScope.Metrics, 4)
@@ -1146,7 +1150,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, hitStatMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -1297,7 +1301,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -1400,7 +1404,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -1450,7 +1454,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
 		})
 	})
 
@@ -1492,7 +1496,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
-			cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+			cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
 
 			require.Len(t, cacheScope.Metrics, 4)
@@ -1610,7 +1614,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, hitStatMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -1761,7 +1765,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -1864,7 +1868,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -1914,7 +1918,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
 		})
 	})
 
@@ -1958,7 +1962,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
-			cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+			cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
 
 			require.Len(t, cacheScope.Metrics, 4)
@@ -2076,7 +2080,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, requestStatsMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -2227,7 +2231,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -2330,7 +2334,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -2380,7 +2384,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
 		})
 	})
 
@@ -2445,7 +2449,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
-			cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+			cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
 
 			require.Len(t, cacheScope.Metrics, 4)
@@ -2668,7 +2672,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, requestStatsMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -2971,7 +2975,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -3177,7 +3181,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -3273,7 +3277,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *integration.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
 		})
 	})
 }
@@ -3310,11 +3314,11 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 
 			// Runtime metrics
 
-			runtimeScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.runtime")
+			runtimeScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.runtime")
 			require.NotNil(t, runtimeScope)
 			require.Len(t, runtimeScope.Metrics, 15)
 
-			metricRuntimeUptime := integration.GetMetricByName(runtimeScope, "process.uptime")
+			metricRuntimeUptime := testutils.GetMetricByName(runtimeScope, "process.uptime")
 			require.NotNil(t, metricRuntimeUptime)
 			metricRuntimeUptimeDataType := metricRuntimeUptime.Data.(metricdata.Gauge[int64])
 			require.Len(t, metricRuntimeUptimeDataType.DataPoints, 1)
@@ -3358,9 +3362,9 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processCpuUsageMetric, *integration.GetMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, processCpuUsageMetric, *testutils.GetMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp())
 
-			metricServerUptime := integration.GetMetricByName(runtimeScope, "server.uptime")
+			metricServerUptime := testutils.GetMetricByName(runtimeScope, "server.uptime")
 			require.NotNil(t, metricServerUptime)
 			metricServerUptimeDataType := metricServerUptime.Data.(metricdata.Gauge[int64])
 			require.Len(t, metricServerUptimeDataType.DataPoints, 1)
@@ -3406,7 +3410,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapAllocMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_alloc"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapAllocMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_alloc"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			processRuntimeGoMemHeapIdleMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_idle",
@@ -3429,7 +3433,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapIdleMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_idle"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapIdleMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_idle"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			processRuntimeGoMemHeapInUseMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_inuse",
@@ -3452,7 +3456,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapInUseMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_inuse"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapInUseMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_inuse"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			processRuntimeGoMemHeapObjectsMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_objects",
@@ -3475,7 +3479,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapObjectsMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapObjectsMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			processRuntimeGoMemHeapReleasedMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_released",
@@ -3498,7 +3502,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapReleasedMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_released"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapReleasedMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_released"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			processRuntimeGoMemHeapSysMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_sys",
@@ -3521,7 +3525,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapSysMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_sys"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapSysMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_sys"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			processRuntimeGoMemLiveObjectsMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.live_objects",
@@ -3544,7 +3548,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemLiveObjectsMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.mem.live_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemLiveObjectsMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.live_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			processRuntimeGoGcCountMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.gc.count",
@@ -3567,7 +3571,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGcCountMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.gc.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGcCountMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			processRuntimeGoGoRoutinesCountMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.goroutines.count",
@@ -3590,7 +3594,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGoRoutinesCountMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.goroutines.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGoRoutinesCountMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.goroutines.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			processRuntimeGoInfoMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.info",
@@ -3614,7 +3618,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoInfoMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.info"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoInfoMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.info"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			processRuntimeGoGcPauseTotalMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.gc.pause_total",
@@ -3637,7 +3641,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseTotalMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause_total"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseTotalMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause_total"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
 			processRuntimeGoGcPauseMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.gc.pause",
@@ -3651,7 +3655,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseMetric, *integration.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 		})
 	})
 }
@@ -4343,7 +4347,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -4386,11 +4390,11 @@ func TestFlakyTelemetry(t *testing.T) {
 				core.WithSubgraphTransportOptions(
 					core.NewSubgraphTransportOptions(config.TrafficShapingRules{
 						All: config.GlobalSubgraphRequestRule{
-							RequestTimeout: integration.ToPtr(10 * time.Second),
+							RequestTimeout: testutils.ToPtr(10 * time.Second),
 						},
 						Subgraphs: map[string]config.GlobalSubgraphRequestRule{
 							"hobbies": {
-								RequestTimeout: integration.ToPtr(3 * time.Second),
+								RequestTimeout: testutils.ToPtr(3 * time.Second),
 							},
 						},
 					})),
@@ -4774,7 +4778,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 		})
 	})
@@ -5489,7 +5493,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -5844,7 +5848,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -6186,7 +6190,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -6619,7 +6623,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -7048,7 +7052,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -7442,7 +7446,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -7857,7 +7861,7 @@ func TestFlakyTelemetry(t *testing.T) {
 		t.Parallel()
 
 		metricReader := metric.NewManualReader()
-		authenticators, _ := integration.ConfigureAuth(t)
+		authenticators, _ := testutils.ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
 			Authenticators:         authenticators,
 			AuthenticationRequired: true,
@@ -7881,21 +7885,21 @@ func TestFlakyTelemetry(t *testing.T) {
 			err = metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 			statusCode401 := semconv.HTTPStatusCode(http.StatusUnauthorized)
 
 			// Verify http_status_code=401 on router.http.requests
-			requestsMetric := integration.GetMetricByName(&scopeMetric, "router.http.requests")
+			requestsMetric := testutils.GetMetricByName(&scopeMetric, "router.http.requests")
 			require.NotNil(t, requestsMetric)
 			requestsData := requestsMetric.Data.(metricdata.Sum[int64])
-			require.True(t, integration.HasDataPointWithAttribute(requestsData.DataPoints, statusCode401))
+			require.True(t, testutils.HasDataPointWithAttribute(requestsData.DataPoints, statusCode401))
 
 			// Verify http_status_code=401 on router.http.request.duration_milliseconds
-			durationMetric := integration.GetMetricByName(&scopeMetric, "router.http.request.duration_milliseconds")
+			durationMetric := testutils.GetMetricByName(&scopeMetric, "router.http.request.duration_milliseconds")
 			require.NotNil(t, durationMetric)
 			durationData := durationMetric.Data.(metricdata.Histogram[float64])
-			require.True(t, integration.HasHistogramDataPointWithAttribute(durationData.DataPoints, statusCode401))
+			require.True(t, testutils.HasHistogramDataPointWithAttribute(durationData.DataPoints, statusCode401))
 		})
 	})
 
@@ -8251,7 +8255,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			err := metricReaderFull.Collect(context.Background(), &rmFull)
 			require.NoError(t, err)
 
-			scopeMetrics := *integration.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
+			scopeMetrics := *testutils.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
 			require.Len(t, rmFull.ScopeMetrics, defaultExposedScopedMetricsCount)
 			require.Len(t, scopeMetrics.Metrics, defaultCosmoRouterMetricsCount)
 
@@ -8295,9 +8299,9 @@ func TestFlakyTelemetry(t *testing.T) {
 			err := metricReaderFiltered.Collect(context.Background(), &rmFiltered)
 			require.NoError(t, err)
 
-			rmFilteredScopeMetrics := *integration.GetMetricScopeByName(rmFiltered.ScopeMetrics, "cosmo.router")
+			rmFilteredScopeMetrics := *testutils.GetMetricScopeByName(rmFiltered.ScopeMetrics, "cosmo.router")
 
-			rmFullScopeMetrics := *integration.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
+			rmFullScopeMetrics := *testutils.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
 
 			require.Len(t, rmFiltered.ScopeMetrics, defaultExposedScopedMetricsCount)
 			require.Len(t, rmFilteredScopeMetrics.Metrics, 6)
@@ -8312,26 +8316,26 @@ func TestFlakyTelemetry(t *testing.T) {
 			rdFiltered, ok := rmFilteredScopeMetrics.Metrics[0].Data.(metricdata.Histogram[float64])
 			require.True(t, ok)
 
-			integration.AssertAttributeNotInSet(t, rdFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
-			integration.AssertAttributeNotInSet(t, rdFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
-			integration.AssertAttributeNotInSet(t, rdFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
-			integration.AssertAttributeNotInSet(t, rdFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
+			testutils.AssertAttributeNotInSet(t, rdFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
+			testutils.AssertAttributeNotInSet(t, rdFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
+			testutils.AssertAttributeNotInSet(t, rdFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
+			testutils.AssertAttributeNotInSet(t, rdFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
 
 			rclFiltered, ok := rmFilteredScopeMetrics.Metrics[1].Data.(metricdata.Sum[int64])
 			require.True(t, ok)
 
-			integration.AssertAttributeNotInSet(t, rclFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
-			integration.AssertAttributeNotInSet(t, rclFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
-			integration.AssertAttributeNotInSet(t, rclFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
-			integration.AssertAttributeNotInSet(t, rclFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
+			testutils.AssertAttributeNotInSet(t, rclFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
+			testutils.AssertAttributeNotInSet(t, rclFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
+			testutils.AssertAttributeNotInSet(t, rclFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
+			testutils.AssertAttributeNotInSet(t, rclFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
 
 			resClFiltered, ok := rmFilteredScopeMetrics.Metrics[2].Data.(metricdata.Sum[int64])
 			require.True(t, ok)
 
-			integration.AssertAttributeNotInSet(t, resClFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
-			integration.AssertAttributeNotInSet(t, resClFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
-			integration.AssertAttributeNotInSet(t, resClFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
-			integration.AssertAttributeNotInSet(t, resClFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
+			testutils.AssertAttributeNotInSet(t, resClFiltered.DataPoints[0].Attributes, otel.WgClientName.String("unknown"))
+			testutils.AssertAttributeNotInSet(t, resClFiltered.DataPoints[1].Attributes, otel.WgClientName.String("unknown"))
+			testutils.AssertAttributeNotInSet(t, resClFiltered.DataPoints[0].Attributes, otel.WgOperationName.String(""))
+			testutils.AssertAttributeNotInSet(t, resClFiltered.DataPoints[1].Attributes, otel.WgOperationName.String(""))
 		})
 	})
 
@@ -8417,7 +8421,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 				require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount+1)
 
 				httpRequestsMetric := metricdata.Metrics{
@@ -8994,7 +8998,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 				require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount+1)
 
 				httpRequestsMetric := metricdata.Metrics{
@@ -9530,7 +9534,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				found := false
 
-				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 				for _, point := range scopeMetric.Metrics[1].Data.(metricdata.Sum[int64]).DataPoints {
 
 					require.Equal(t, int64(1), point.Value)
@@ -9659,7 +9663,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes.Body)
 
-				testSpan := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryTotalFields.Int(2))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -9670,7 +9674,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes2.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The total number of fields 2 exceeds the limit allowed (1)"}]}`, failedRes2.Body)
 
-				testSpan2 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan2 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				assert.Contains(t, testSpan2.Attributes(), otel.WgQueryTotalFields.Int(2))
 				assert.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				assert.Equal(t, codes.Unset, testSpan2.Status().Code)
@@ -9681,7 +9685,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes.Body)
-				testSpan3 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan3 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryTotalFields.Int(1))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -9690,7 +9694,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes2.Body)
-				testSpan4 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan4 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryTotalFields.Int(1))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})
@@ -9723,7 +9727,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root fields 3 exceeds the root field limit allowed (2)"}]}`, failedRes.Body)
 
-				testSpan := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryRootFields.Int(3))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -9734,7 +9738,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes2.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root fields 3 exceeds the root field limit allowed (2)"}]}`, failedRes2.Body)
 
-				testSpan2 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan2 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryRootFields.Int(3))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				exporter.Reset()
@@ -9743,7 +9747,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes.Body)
-				testSpan3 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan3 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryRootFields.Int(1))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -9752,7 +9756,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes2.Body)
-				testSpan4 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan4 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryRootFields.Int(1))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})
@@ -9785,7 +9789,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root field aliases 2 exceeds the root field aliases limit allowed (1)"}]}`, failedRes.Body)
 
-				testSpan := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryRootFieldAliases.Int(2))
 				require.Contains(t, testSpan.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -9796,7 +9800,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Equal(t, 400, failedRes2.Response.StatusCode)
 				require.Equal(t, `{"errors":[{"message":"The number of root field aliases 2 exceeds the root field aliases limit allowed (1)"}]}`, failedRes2.Body)
 
-				testSpan2 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan2 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryRootFieldAliases.Int(2))
 				require.Contains(t, testSpan2.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 				exporter.Reset()
@@ -9805,7 +9809,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes.Body)
-				testSpan3 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan3 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryRootFieldAliases.Int(0))
 				require.Contains(t, testSpan3.Attributes(), otel.WgQueryDepthCacheHit.Bool(false))
 				exporter.Reset()
@@ -9814,7 +9818,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					Query: `query { employees { id } }`,
 				})
 				require.JSONEq(t, employeesIDData, successRes2.Body)
-				testSpan4 := integration.RequireSpanWithName(t, exporter, "Operation - Validate")
+				testSpan4 := testutils.RequireSpanWithName(t, exporter, "Operation - Validate")
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryRootFieldAliases.Int(0))
 				require.Contains(t, testSpan4.Attributes(), otel.WgQueryDepthCacheHit.Bool(true))
 			})
@@ -9830,7 +9834,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
-			authenticators, authServer := integration.ConfigureAuth(t)
+			authenticators, authServer := testutils.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
 				Authenticators:           authenticators,
 				AuthenticationRequired:   false,
@@ -9870,7 +9874,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.NoError(t, err)
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -9888,7 +9892,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			t.Parallel()
 
 			metricReader := metric.NewManualReader()
-			authenticators, authServer := integration.ConfigureAuth(t)
+			authenticators, authServer := testutils.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
 				Authenticators:           authenticators,
 				AuthenticationRequired:   false,
@@ -9925,7 +9929,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.NoError(t, err)
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -9944,7 +9948,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			claimKey := "extraclaim"
 
 			metricReader := metric.NewManualReader()
-			authenticators, authServer := integration.ConfigureAuth(t)
+			authenticators, authServer := testutils.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
 				Authenticators:           authenticators,
 				AuthenticationRequired:   false,
@@ -9979,7 +9983,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.NoError(t, err)
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -10025,7 +10029,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			exporter := tracetest.NewInMemoryExporter(t)
 			metricReader := metric.NewManualReader()
-			authenticators, authServer := integration.ConfigureAuth(t)
+			authenticators, authServer := testutils.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
 				Authenticators:           authenticators,
 				AuthenticationRequired:   false,
@@ -10094,7 +10098,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -10113,7 +10117,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			exporter := tracetest.NewInMemoryExporter(t)
 			metricReader := metric.NewManualReader()
-			authenticators, authServer := integration.ConfigureAuth(t)
+			authenticators, authServer := testutils.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
 				Authenticators:           authenticators,
 				AuthenticationRequired:   false,
@@ -10159,7 +10163,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -10179,7 +10183,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			claimVal := "extravalue"
 			metricReader := metric.NewManualReader()
 			exporter := tracetest.NewInMemoryExporter(t)
-			authenticators, authServer := integration.ConfigureAuth(t)
+			authenticators, authServer := testutils.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
 				Authenticators:           authenticators,
 				AuthenticationRequired:   false,
@@ -10222,7 +10226,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 				rm := metricdata.ResourceMetrics{}
 				err = metricReader.Collect(context.Background(), &rm)
-				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
 				require.NoError(t, err)
 				require.Greater(t, len(rm.ScopeMetrics), 0)
@@ -10277,7 +10281,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-			scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 			routerInfoMetric := metricdata.Metrics{
@@ -10388,7 +10392,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			headerVal := "extravalue2"
 
 			exporter := tracetest.NewInMemoryExporter(t)
-			authenticators, authServer := integration.ConfigureAuth(t)
+			authenticators, authServer := testutils.ConfigureAuth(t)
 			accessController, err := core.NewAccessController(core.AccessControllerOptions{
 				Authenticators:           authenticators,
 				AuthenticationRequired:   false,
@@ -11034,7 +11038,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					err := metricReader.Collect(context.Background(), &rm)
 					require.NoError(t, err)
 
-					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 					require.Greater(t, len(rm.ScopeMetrics), 0)
 					require.Greater(t, len(scopeMetric.Metrics), 0)
 
@@ -11095,7 +11099,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					err := metricReader.Collect(context.Background(), &rm)
 					require.NoError(t, err)
 
-					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 					require.Greater(t, len(rm.ScopeMetrics), 0)
 					require.Greater(t, len(scopeMetric.Metrics), 0)
 
@@ -11153,7 +11157,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					err := metricReader.Collect(context.Background(), &rm)
 					require.NoError(t, err)
 
-					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 					require.Greater(t, len(rm.ScopeMetrics), 0)
 					require.Greater(t, len(scopeMetric.Metrics), 0)
 
@@ -11224,7 +11228,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				err := metricReader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
 
-				scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 				require.Greater(t, len(rm.ScopeMetrics), 0)
 				require.Greater(t, len(scopeMetric.Metrics), 0)
 
@@ -11532,7 +11536,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 							},
 						}
 
-						scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+						scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 						require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 						require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
@@ -11632,7 +11636,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 
 					require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
 
-					scopeMetric := *integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
+					scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 					require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
 					metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -11674,11 +11678,11 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 
 					require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
-					runtimeScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.runtime")
+					runtimeScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.runtime")
 					require.NotNil(t, runtimeScope)
 					require.Len(t, runtimeScope.Metrics, 15)
 
-					metricRuntimeUptime := integration.GetMetricByName(runtimeScope, "process.uptime")
+					metricRuntimeUptime := testutils.GetMetricByName(runtimeScope, "process.uptime")
 					require.NotNil(t, metricRuntimeUptime)
 					metricRuntimeUptimeDataType := metricRuntimeUptime.Data.(metricdata.Gauge[int64])
 					require.Len(t, metricRuntimeUptimeDataType.DataPoints, 1)
@@ -11746,6 +11750,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					require.NoError(t, err)
 
 					xEnv.WaitForSubscriptionCount(1, time.Second*5)
+					xEnv.WaitForTriggerCount(1, time.Second*5)
 
 					rm := metricdata.ResourceMetrics{}
 					err = metricReader.Collect(context.Background(), &rm)
@@ -11762,7 +11767,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						baseAttributes = append(baseAttributes, routerConfigVersion)
 					}
 
-					engineScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.engine")
+					engineScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.engine")
 					connectionMetrics := metricdata.Metrics{
 						Name:        "router.engine.connections",
 						Description: "Number of connections in the engine. Contains both websocket and http connections",
@@ -11779,7 +11784,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						},
 					}
 
-					metricdatatest.AssertEqual(t, connectionMetrics, *integration.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
+					metricdatatest.AssertEqual(t, connectionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
 				})
 			})
 
@@ -11824,7 +11829,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					require.NoError(t, err)
 					require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
 
-					cacheScope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
+					cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 					require.NotNil(t, cacheScope)
 					require.Len(t, cacheScope.Metrics, 4)
 
@@ -12031,7 +12036,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						},
 					}
 
-					metrics := *integration.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats")
+					metrics := *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats")
 					metricdatatest.AssertEqual(t, requestStatsMetrics, metrics, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 				})
 			})

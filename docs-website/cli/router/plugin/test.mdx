@@ -1,0 +1,88 @@
+---
+title: 'Test'
+description: 'Run tests for a gRPC router plugin'
+icon: 'vial'
+---
+
+# wgc router plugin test
+
+The `test` command runs tests for your gRPC router plugin to verify its functionality.
+
+## Usage
+
+```bash
+wgc router plugin test [options] [directory]
+```
+
+## Arguments
+
+| Argument | Description | Default |
+|----------|-------------|---------|
+| `directory` | Directory of the plugin | `.` (current directory) |
+
+## Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--skip-tools-installation` | Skip tool installation | `false` |
+| `--force-tools-installation` | Force tools installation regardless of version check or confirmation | `false` |
+
+## Description
+
+This command runs the tests for your plugin. For Go plugins, it executes the Go test runner against the test files in your source directory.
+
+The test command will:
+
+1. Check and install required tools if needed
+2. Run the tests in the `src` directory
+3. Report the test results
+
+Testing your plugin is an important step to ensure that your resolvers work correctly before deploying the plugin to your router.
+
+## Required Tools
+
+The build command will automatically check for and install the necessary toolchain (like protoc, protoc-gen-go, etc.) when required tools can't be found in the right version on your system. You can control this behavior with the `--skip-tools-installation` and `--force-tools-installation` flags.
+
+For debugging your plugin, use the `--debug` flag to build with debug symbols. This enables debugging with tools like Delve, GoLand, or VS Code. See the [debugging guide](/router/gRPC/plugins/debugging) for detailed instructions.
+
+You can also install the dependencies manually and use an IDE with Go support. The following table shows the current versions and download links for the required tools:
+
+| Tool | Version | Installation Link |
+|------|---------|---------------|
+| Go | >=1.22.0 (Last 2 versions) | [Releases](https://go.dev/doc/install) |
+| Protocol Buffers (protoc) | ^29.3 | [Releases](https://protobuf.dev/installation/) |
+| protoc-gen-go | ^1.34.2 | [GitHub Releases](https://github.com/protocolbuffers/protobuf-go/releases) |
+| protoc-gen-go-grpc | ^1.5.1 | [GitHub Releases](https://github.com/grpc/grpc-go/releases) |
+| bun | ^1.2.15 | [GitHub Releases](https://github.com/oven-sh/bun/releases) |
+
+<Note>
+  When building TypeScript plugins, the protoc TS/JS equivalents of the above are obtained via the `.bin` folder in your plugins `node_modules`, these versions can be customized by the `package.json` of the TS plugin.
+</Note>
+
+## Test File
+
+When you initialize a new plugin with `wgc router plugin init`, a test file is automatically created at `src/main_test.go`. This file includes a basic test setup that you can expand with your own test cases.
+
+The default test file tests the plugin's ability to handle basic GraphQL queries. You should add additional tests to cover your custom resolver logic.
+
+## Examples
+
+### Run tests for a plugin
+
+```bash
+wgc router plugin test ./my-plugin
+```
+
+## Best Practices
+
+When writing tests for your router plugin:
+
+1. **Test all resolvers**: Make sure to create test cases for all your GraphQL resolvers
+2. **Test edge cases**: Include tests for error conditions and edge cases
+3. **Mock dependencies**: If your plugin interacts with external systems, use mocks in your tests
+4. **Test arguments**: Verify that your resolvers correctly handle different argument values
+5. **Benchmark performance**: Add benchmarks for performance-critical resolvers
+
+By thoroughly testing your plugin, you can ensure it behaves correctly when integrated with the Cosmo Router. 
+
+See also: [Plugins](/router/gRPC/plugins) · [GraphQL Support for gRPC Integration](/router/gRPC/graphql-support)

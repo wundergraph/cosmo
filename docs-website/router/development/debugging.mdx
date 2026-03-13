@@ -1,0 +1,48 @@
+---
+title: "Debugging"
+description: "The router can be debugged and tested in multiple ways."
+icon: "bug"
+---
+
+## Load a static execution config from file
+
+Instead of letting the router fetch the config from the platform, you can also point to a local file. This is handy for local development. Your production config can be fetched by running [wgc router fetch](/cli/router/fetch) or [wgc router compose](/cli/router/compose) to generate a execution config without the need to interact with the controlplane.
+
+```bash
+docker run \
+    -e EXECUTION_CONFIG_FILE_PATH=/app/router.json \
+    -v ./router.json:/app/router.json \
+    --env-file ./.env router
+```
+
+The command above will mount your local file `config.json` into the router's working directory.
+
+Docker `--env-file` allows you to specify all environment variables in your `.env` file instead of passing all of them through `-e` flags.
+
+## Watch for config changes
+
+You can enable the watch mode to perform a hot-reload of the router whenever you make changes to the configuration.
+
+```yaml
+version: "1"
+
+execution_config:
+  file:
+    path: "router.json"
+    watch: true
+```
+
+## Debug log level
+
+Enable debug mode by setting the environment variable `LOG_LEVEL=debug` or via configuration file.
+
+```yaml config.yaml
+version: "1"
+
+dev_mode: true
+```
+
+## Debug metrics
+
+To inspect which OTLP metrics are being collected and exported by the router, you can enable the [Metrics Log Exporter](/router/open-telemetry#metrics-log-exporter). It prints all collected metrics to the router's log output, making it easy to verify metric names, types, attributes, and values without needing an external collector.
+

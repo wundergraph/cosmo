@@ -1,0 +1,55 @@
+---
+title: "Unlink"
+description: "Unlinks a subgraph from another subgraph on the control plane."
+icon: unlink
+---
+
+## Usage
+
+```bash
+npx wgc subgraph unlink <source-subgraph-name>
+```
+
+## Description
+
+The `npx wgc subgraph unlink` command allows you to unlink a source subgraph from its linked target subgraph on the control plane. This removes the connection that was previously established using the [wgc subgraph link](/cli/subgraph/link) command.
+
+After unlinking, schema checks performed on the source subgraph will no longer include validation against the previously linked target subgraph. This is useful when you want to stop cross-environment validation or when the linking relationship is no longer needed.
+
+## Parameters
+
+- `<source-subgraph-name>`: The name of the subgraph that you want to unlink. This should be the same subgraph that was previously linked using the `link` command.
+
+## Options
+
+- `-n, --namespace <string>`: The namespace of the source subgraph (Default: "default").
+
+## Examples
+
+1. Unlink a subgraph named "products" in the default namespace:
+
+   ```bash
+   npx wgc subgraph unlink products
+   ```
+
+2. Unlink a subgraph named "inventory" in the "staging" namespace:
+
+   ```bash
+   npx wgc subgraph unlink inventory -n staging
+   ```
+
+3. Unlink a subgraph with explicit namespace specification:
+
+   ```bash
+   npx wgc subgraph unlink orders --namespace development
+   ```
+
+## Notes
+
+- The unlink operation only affects the source subgraph specified in the command. If you have multiple subgraphs linked to different targets, you need to unlink each one individually.
+
+- After unlinking, the subgraph will continue to function normally, but schema validation will no longer include checks against the previously linked target subgraph.
+
+- You can re-link the same subgraph to the same or different target subgraph at any time using the [wgc subgraph link](/cli/subgraph/link) command.
+
+- Ensure you have the necessary permissions to unlink subgraphs in the specified namespace.

@@ -1,0 +1,762 @@
+---
+title: "Prometheus Metric Reference"
+description: "Overview of Prometheus metrics with explanations, queries, use cases, and error detection details"
+icon: "gauge-high"
+---
+
+
+## Recommended Metrics for Production
+
+In a production environment, prioritize monitoring the following metrics to ensure system reliability and performance:
+
+### Router Metrics
+
+These metrics ensure efficient request handling, operation planning, and system responsiveness:
+
+* [`router_http_requests_total`](/router/metrics-and-monitoring/prometheus-metric-reference#router_http_requests_total): Observes overall HTTP traffic trends and rates.
+
+  * Using this with a `rate` function will show a change in traffic.
+
+  * A high rate indicates a lot of traffic on the router which could lead to higher latency.
+
+* [`router_http_requests_in_flight`](/router/metrics-and-monitoring/prometheus-metric-reference#router_http_requests_in_flight): Tracks concurrent in-flight requests to avoid overloads.
+
+  * **Increased Latency:** A high number of in-flight requests can lead to delayed responses as server resources become constrained, resulting in slower processing of new requests.
+
+  * **Potential Overload:** Excessive in-flight requests can overwhelm the application, causing resource exhaustion, degraded performance, or even service outages.
+
+* [`router_http_request_duration_milliseconds`](/router/metrics-and-monitoring/prometheus-metric-reference#router_http_request_duration_milliseconds_-sum-count): Measures average request duration to detect latency issues. The top boundary of the buckets is 10s.
+
+  * **Backend Performance Issues:** Prolonged durations can signal bottlenecks in the application or database, requiring investigation and optimization.
+
+* [`router_graphql_operation_planning_time`](/router/metrics-and-monitoring/prometheus-metric-reference#router_graphql_operation_planning_time): Tracks GraphQL query planning time to identify performance inefficiencies.
+
+  * **Increased Query Latency:** High planning times can delay the execution of GraphQL queries, negatively affecting response times.
+
+  * **Scalability Challenges:** Excessive operation planning durations can lead to resource contention under heavy workloads, limiting scalability.
+
+  * **Operation Design:** Complex queries can also lead to increased planning time as those are parsed and validated.
+
+* [`router_info`](/router/metrics-and-monitoring/prometheus-metric-reference#router_info): Info metric that provides metadata about every running router configuration.
+
+  * There will be an instance for the base router configuration as well as every feature flag configuration.
+
+  * The value will always be 1.
+
+#### Circuit Breaker Metrics
+
+* `router_circuit_breaker_state`: Info metric that provides information on the current state of the circuit breaker.
+
+  * This indicates the current state of a circuit: `0` represents closed, and `1` represents open.
+
+* `router_circuit_breaker_short_circuits`: Metric for the number of short-circuited requests.
+
+  * This indicates how many requests for this circuit have failed without even being processed because the circuit was open.
+
+### GraphQL Operation Cache Metrics
+
+These metrics provide insights into the efficiency and effectiveness of caching GraphQL operations:
+
+#### Enable Cache Metrics
+
+Depending on your setup you can enable cache metrics for Prometheus and for Open Telemetry in the router configuration
+
+```bash
+telemetry:
+  metrics:
+    prometheus:
+      graphql_cache: true
+    otlp:
+      graphql_cache: true
+```
+
+#### Metrics
+
+* [`router_graphql_cache_cost_max`](/router/metrics-and-monitoring/prometheus-metric-reference#router_graphql_cache_cost_max): Measures the maximum cost of cached operations to optimize cache usage.
+
+  * **Cache Optimization:** High values may indicate excessive caching costs, necessitating analysis to improve cache strategy.
+
+  * **Cost Management:** Helps in understanding and managing potential high-cost queries effectively.
+
+* [`router_graphql_cache_cost_stats_total`](/router/metrics-and-monitoring/prometheus-metric-reference#router_graphql_cache_cost_stats_total): Tracks total cost statistics of cached operations to ensure balanced resource allocation.
+
+  * **Resource Allocation:** Ensures cached operations do not consume disproportionate resources, affecting performance.
+
+  * **Contention Risks:** Identifies potential cases where caching may not be as beneficial as expected.
+
+* [`router_graphql_cache_keys_stats_total`](/router/metrics-and-monitoring/prometheus-metric-reference#router_graphql_cache_keys_stats_total): Counts the total number of unique cache keys to monitor cache utilization.
+
+  * **Cache Utilization:** Aids in determining if the cache is effectively utilized or if there are opportunities for improvement.
+
+  * **Key Bloat:** Helps detect issues with excessive unique keys that might lead to cache inefficiencies.
+
+* [`router_graphql_cache_request_stats_total`](/router/metrics-and-monitoring/prometheus-metric-reference#router_graphql_cache_request_stats_total): Monitors the total number of requests served from the cache to assess cache hit rates.
+
+  * **Cache Hit Rate:** High values indicate effective cache performance, reducing backend load.
+
+  * **Improvement Areas:** Low cache request stats highlight the need for potential optimization or caching strategy updates.
+
+### Engine Metrics
+
+We expose subscription statistics from the router and the internal engine. By utilizing these metrics users can figure out the usage of subscriptions.
+
+#### Enable Engine Metrics
+
+You can enable engine metrics for Prometheus with the following router configuration
+
+```yaml config.yaml
+telemetry:
+  metrics:
+    prometheus:
+      engine_stats:
+        subscriptions: true
+```
+
+#### Metrics
+
+* [`router_engine_connections`](#router-engine-connections): This contains the number of connections active from the client to the router.
+
+* `router_engine_subscriptions`: The number of currently active subscriptions, this number will differ from `router_engine_connections` if the client reuses connections.
+
+* `router_engine_triggers`: The number of currently active triggers. Subscriptions from the router to the subgraphs are grouped by triggers, which includes query, headers, variables and such. If two subscriptions initiated contain the same parameters, it will utilize the same trigger, and as a result the same connection from the router to the subgraph.
+
+* [`router_engine_messages_sent_total`](#router-engine-messages-sent-total): The number of total messages for subscriptions sent over from the subgraph to the router.
+
+### Cosmo Streams Metrics
+We expose metrics for [Cosmo Streams](/router/cosmo-streams), these statistics are collected at the level when the message is sent to the messaging backend or directly received from the messaging backend.
+
+```yaml config.yaml
+telemetry:
+  metrics:
+    prometheus:
+      streams: true
+```
+
+#### Metrics
+
+* `router_streams_sent_messages_total`: Counter of messages produced/sent to the messaging backend
+* `router_streams_received_messages_total`: Counter of messages consumed/received directly by the router from the messaging backend.
+
+The following attributes are attached to both metrics:
+
+* `wg_stream_operation_name`:
+This contains the operation type used to send a message to the message backend. This is useful to differentiate when a Cosmo Streams adapter has multiple ways of sending messages, like in the case of "nats", with `publish`, and `request`.
+The following values are possible, based on the messaging backend
+
+    - nats: `publish`, `request`, `receive`
+
+    - kafka: `produce`, `receive`
+
+    - redis: `publish`, `receive`
+
+* `wg_provider_type`:
+One of the supported Cosmo Streams provider types, which includes `kafka`, `nats`, `redis`
+
+* `wg_destination_name`:
+The name of the destination of the messaging backend (topic, queue, etc)
+
+* `wg_provider_id`:
+The provider id as specified in the router configuration
+
+* `wg_error_type`:
+A generic error type to indicate an error occurred. This is available only for `router.streams.sent.messages` at this moment, as we do not catch message receive errors.
+
+#### Examples
+
+You can find more examples here under [`Streams`](/router/metrics-and-monitoring#example-prometheus-queries)
+
+
+### Connection Metrics
+
+These metrics provide lower level metrics which helps track connection and pool metrics. By utilizing these metrics users can figure out when the router's connection pool is full and when connections are misbehaving by for example observing spikes in time to acquire connections.
+
+#### Enable Connection Metrics
+
+Depending on your setup you can enable connection metrics for Prometheus in the router configuration
+
+```bash
+telemetry:
+  metrics:
+    prometheus:
+      connection_stats: true
+```
+
+#### Metrics
+
+* `router_http_client_max_connections`: Static configuration values with the maximum connections allowed per host with a subgraph dimension.
+
+* `router_http_client_active_connections`: The number of currently active connections, grouped by both subgraph and host. A connection is considered active once it has completed DNS resolution, TLS handshake, and dialing. While it's less common, multiple subgraphs can share the same host, which is why both dimensions are included.
+
+* `router_http_client_connection_acquire_duration`: The duration in ms that a connection took to be initialized, which includes all of DNS, TLS Handshakes, and Dialing the host.
+
+#### Examples
+
+You can find more examples here under [`Connection`](/router/metrics-and-monitoring#example-prometheus-queries)
+
+### Go Runtime Metrics
+
+These metrics help monitor application memory usage, concurrency, and garbage collection efficiency:
+
+* [`go_memstats_sys_bytes`](/router/metrics-and-monitoring/prometheus-metric-reference#go_memstats_sys_bytes): Monitors memory obtained from the system across all instances.
+
+  * **Excessive Memory Usage:** High values suggest that the application is consuming more system memory than expected, which can impact other processes.
+
+  * **Inefficient Allocation:** A mismatch between allocated and used memory may indicate suboptimal memory usage patterns.
+
+* [`go_memstats_heap_alloc_bytes`](/router/metrics-and-monitoring/prometheus-metric-reference#go_memstats_heap_alloc_bytes): Number of heap bytes allocated and still in use across all instances. Focuses on heap memory usage for efficient memory management. The value is same as [**go_memstats_alloc_bytes**](/router/metrics-and-monitoring/prometheus-metric-reference#go_memstats_alloc_bytes).
+
+  * **Heap Saturation Risk:** High heap memory usage can lead to increased garbage collection frequency and performance degradation.
+
+* [`go_gc_duration_seconds`](/router/metrics-and-monitoring/prometheus-metric-reference#go_gc_duration_seconds): Tracks garbage collection duration to identify performance bottlenecks.
+
+  * **Performance Bottlenecks:** Long garbage collection pauses can cause application slowdowns, especially under high load.
+
+  * **Request Latency:** Increased GC durations may directly impact request processing times, degrading user experience.
+
+* [`go_goroutines`](/router/metrics-and-monitoring/prometheus-metric-reference#go_goroutines): Monitors active goroutines to prevent resource exhaustion.
+
+  * **Resource Leaks:** An unexpected increase in goroutines can signal a leak, leading to excessive memory and CPU usage.
+
+  * **Concurrency Bottlenecks:** High goroutine counts may indicate insufficient handling of concurrency or blocking operations
+
+Focusing on these metrics enables comprehensive monitoring and proactive issue detection in a production environment.
+
+
+Below is the extended documentation for common Prometheus metrics. Each section is structured with a clear explanation of the metric, an example PromQL query, and the importance of the metric, including potential error cases.
+
+For more information and handy tips on writing PromQL queries, take a look at this [PromQL Cheat Sheet](https://promlabs.com/promql-cheat-sheet/).
+
+## `router_graphql_operation_planning_time`
+
+**Description:**
+
+The `router_graphql_operation_planning_time` metric is a histogram. It consists of three different metric types, namely:
+
+1. `_count:` This represents the total number of observed events.
+
+2. `_sum:` This is the sum of all observed values, providing the cumulative planning time.
+
+3. `_bucket:` This defines the range of values (buckets) into which observations can fall, useful for calculating percentiles and distribution.
+
+### Get average operation planning performance
+
+**Example PromQL Query:**
+
+```bash
+rate(router_graphql_operation_planning_time_sum[5m]) /
+rate(router_graphql_operation_planning_time_count[5m])
+```
+
+**Reason for Monitoring:** Monitoring the average operation planning time helps optimize GraphQL query planning performance and detect slowdowns.
+
+**Error Cases Addressed:**
+
+* High planning latency.
+
+* Performance regressions.
+
+* Possible inefficent query design
+
+### `Analyze upper boundary of latency`
+
+**Description:** The `router_graphql_operation_planning_time_bucket` metric is used to compute quantiles for operation planning time, providing deeper insights into the distribution of planning times rather than just averages.
+
+**Example PromQL Query for Quantile:**
+
+```bash
+histogram_quantile(0.95, sum by (wg_operation_name, le)(rate(router_graphql_operation_planning_time_bucket[5m])))
+```
+
+**Explanation:** This query calculates the 95th percentile (or quantile) of the operation planning time over a 5-minute window. It helps identify the upper boundary of latency experienced by the 95% of operations, which is crucial for understanding tail latencies and ensuring performance consistency.
+
+**Reason for Monitoring Quantiles:** Utilizing quantiles can help in understanding the worst-case scenarios and pinpointing latency outliers that might affect user experience.
+
+**Error Cases Addressed:**
+
+* High variation in operation planning times.
+
+* Identifying latency spikes for certain operations.
+
+* Tail latency issues that might not be visible with average metrics alone.
+
+***
+
+## `router_http_request_duration_milliseconds_{sum,count}`
+
+**Description:** The request duration in milliseconds. The top boundary of the buckets is 10s.
+
+**Example PromQL Query:**
+
+```bash
+avg by(wg_operation_name) (
+  rate(router_http_request_duration_milliseconds_sum[5m]) /
+  rate(router_http_request_duration_milliseconds_count[5m])
+)
+```
+
+**Reason for Monitoring:** This metric provides the average request duration, grouped by operation name, helping to identify slow requests and optimize application performance.
+
+**Error Cases Addressed:**
+
+* High latency requests.
+
+* Request duration anomalies.
+
+***
+
+## `router_http_requests_in_flight`
+
+**Description:** The number of requests currently in flight.
+
+**Example PromQL Query:**
+
+```bash
+avg by(wg_federated_graph_id) (router_http_requests_in_flight)
+```
+
+**Reason for Monitoring:** Tracking in-flight requests ensures that the application can handle concurrent requests effectively without overloading.
+
+**Error Cases Addressed:**
+
+* Resource exhaustion due to high concurrency.
+
+* Application overloads.
+
+## `router_http_requests_total`
+
+**Description:** The total number of HTTP requests.
+
+**Example PromQL Query:**
+
+```bash
+rate(router_http_requests_total[5m])
+```
+
+**Reason for Monitoring:** This metric provides the rate of HTTP requests over a 5-minute interval, helping to monitor traffic trends and detect unusual spikes or drops.
+
+**Error Cases Addressed:**
+
+* Sudden traffic surges.
+
+* Unexpected drops in request rates.
+
+## `router_graphql_cache_cost_max`
+
+**Description:**
+
+Tracks the maximum configured cost for a cache. Useful to investigate differences between the number of keys and the current cost of items in a cache.
+
+Cost defines how many items can be inserted into the cache. Upon insertion a cost for an item is provided and calcuated against the remaining cost. If the insertion would exceed the cost, the cache wil start evicting items.
+
+**Example PromQL Query:**
+
+```bash
+router_graphql_cache_cost_max{cache_type="execution"}
+```
+
+**Reason for Monitoring:**
+
+Monitoring the maximum configured cost for a cache is crucial for ensuring optimal performance and resource utilization. By tracking this metric, you can:
+
+1. **Optimize Resource Allocation:** Ensure that the cache is not underutilized or overrun, which can lead to inefficient use of resources.
+
+2. **Improve Cache Efficiency:** Identify misconfigurations or anomalies in cost distribution that could affect cache efficiency.
+
+3. **Prevent Cache Evictions:** Monitor the cost to prevent excessive evictions that could degrade application performance.
+
+4. **Adjust Cache Strategies:** Inform decisions on adjusting cache strategies and configurations to align with changing demand patterns.
+
+## `router_graphql_cache_cost_stats_total`
+
+**Description**:
+
+This metric tracks the total cache cost statistics, encompassing various operations such as adding and evicting cache entries. By aggregating these costs, it provides a holistic view of the cache system's dynamics and helps stakeholders identify inefficiencies or areas for improvement in cache operations.
+
+**Example PromQL Query:**
+
+```bash
+sum(router_graphql_cache_cost_stats_total{cache_type="execution",operation="added"})
+-
+sum(router_graphql_cache_cost_stats_total{cache_type="execution",operation="evicted"})
+```
+
+**Reason for Monitoring:**
+
+Monitoring the total cache cost statistics is essential for comprehensive performance analysis and optimization. By tracking this metric, you can:
+
+1. **Assess Overall Cache Utilization:** Gain insights into the total cost incurred by cache operations, helping in understanding the cache load.
+
+2. **Identify Trends:** Spot trends or patterns in cache usage over time, which can inform future scaling and resource allocation plans.
+
+3. **Diagnose Issues:** Detect and troubleshoot issues related to high cache costs that might impact system performance.
+
+4. **Guide Optimization Efforts:** Use insights from total cost statistics to optimize cache configuration and improve application efficiency.
+
+## `router_graphql_cache_keys_stats_total`
+
+**Description:**
+
+This metric is crucial for understanding the dynamics of cache key operations within the system. Monitoring the total number of cache keys can help identify potential issues and optimize caching strategies.
+
+**Example PromQL Query:**
+
+```bash
+sum(router_graphql_cache_keys_stats_total{cache_type="execution",operation="added"}) -
+sum(router_graphql_cache_keys_stats_total{cache_type="execution",operation="evicted"})
+```
+
+**Reason for Monitoring:**
+
+1. **Optimizing Cache Efficiency:** By evaluating the total number of cache keys added and evicted, you can optimize the cache configuration to enhance application performance.
+
+2. **Trend Analysis:** Keep track of cache key trends over time to anticipate changes in usage patterns and adjust resources as necessary.
+
+3. **Performance Troubleshooting:** Identifying anomalies or spikes in cache key operations can lead to quicker diagnosis and resolution of performance bottlenecks.
+
+**Addressed Error Cases:**
+
+* **Unexpected Evictions:** A high number of evicted keys could indicate insufficient cache space or inefficient caching strategies.
+
+* **Unbounded Growth:** A consistent increase in the total number of added keys without corresponding evictions might signal potential memory issues.
+
+## `router_graphql_cache_request_stats_total`
+
+**Description:**
+
+This metric tracks the total number of GraphQL cache requests, storing hits and misses. This metric is crucial for understanding cache performance and optimizing caching strategies.
+
+**Example PromQL Query:**
+
+```bash
+sum(rate(router_graphql_cache_requests_stats_total{cache_type="execution", type="hits"}[2h])) /
+sum(rate(router_graphql_cache_requests_stats_total{cache_type="execution"}[2h]))
+```
+
+**Reason for Monitoring:**
+
+1. **Cache Hit Rate Analysis:** Monitoring the ratio of cache hits to total requests helps in evaluating the effectiveness of caching mechanisms and can guide improvements in cache configuration.
+
+2. **Resource Allocation:** By analyzing cache usage patterns, you can allocate resources more effectively and ensure that cache capacity aligns with demand.
+
+**Addressed Error Cases:**
+
+* **Low Cache Hit Rate:** A decreased hit rate may indicate misconfigured cache settings or suboptimal data retrieval strategies, necessitating immediate attention to improve performance.
+
+* **Unpredictable Request Patterns:** Anomalous or erratic request patterns can signal potential application or user behavior issues, requiring prompt investigation to maintain system reliability.
+
+## `router_info`
+
+**Description:**
+
+Get router runtime information as well as detect whenever the router configuration changes. This metric is a gauge that provides metadata about the running base router configuration and feature flag router configurations.
+
+**Example PromQL Query To Detect When The Router Config Changed:**
+
+```bash
+count(count(count_over_time(router_info{wg_feature_flag=""}[20s])) by (wg_router_config_version)) > 1
+```
+
+Whenever the router execution config is updated (via a schema change for example), the router will internally restart with the new execution config version. This means that the old config version would not be available in the `router_info` metric.
+This means that we can assume for the last N (in this case 20) seconds that there would have been two router_info metrics detected for the base configuration.
+
+**Reason for Monitoring:**
+
+1. **Router Change Detection:** Monitoring whenever a new router execution configuration was pushed to the router.
+2. **Uptime Detection:** Whenever the router is running the `router_info` metric will be available. This can be used to detect whenever the router is down.
+
+## `router_circuit_breaker_state`
+
+**Description:**
+
+Indicates the current state of the circuit breaker for a subgraph. `0` means the circuit is closed (requests are allowed), and `1` means the circuit is open (requests are blocked). Includes the `wg_subgraph` and `wg_feature_flag` dimensions for granular monitoring.
+
+**Example PromQL Query:**
+
+```bash
+max by(wg_subgraph) (router_circuit_breaker_state)
+```
+
+**Reason for Monitoring:**
+
+- Alert when a subgraph's circuit breaker is open (value is `1`).
+- Track the health of subgraphs and feature-flagged variants.
+
+**Error Cases Addressed:**
+
+* Subgraph is unhealthy or experiencing repeated failures.
+* Circuit breaker is open for extended periods.
+
+## `router_circuit_breaker_short_circuits`
+
+**Description:**
+
+Counts how many requests have been immediately failed (short-circuited) because the circuit was open. Includes the `wg_subgraph` and `wg_feature_flag` dimensions for granular monitoring.
+
+**Example PromQL Query:**
+
+```bash
+increase(router_circuit_breaker_short_circuits[5m])
+```
+
+**Reason for Monitoring:**
+
+- Alert if many requests are being short-circuited, indicating persistent subgraph issues.
+- Understand the impact of circuit breaker activity on request flow over time.
+
+**Error Cases Addressed:**
+
+* High rate of short-circuited requests due to subgraph instability.
+* Circuit breaker is frequently protecting the system from cascading failures.
+
+## `router_engine_connections`
+
+Number of client to router connections active
+
+**Example PromQL Query:**
+
+Monitor the peak number of connections at any given time
+
+```bash
+max_over_time(router_engine_connections[15m])
+```
+
+**Reason for Monitoring:**
+
+- Understand the number of connection resources utilized in production
+
+**Error Cases Addressed:**
+
+- Correlate connection exhaustion issues in the router with number of connections used
+
+## `router_engine_messages_sent_total`
+
+**Example PromQL Query:**
+
+Monitor the peak number of messages sent from all subgraphs at any given time
+
+```bash
+sum by (wg_subgraph) (rate(router_engine_messages_sent_total[1m]))
+```
+
+**Reason for Monitoring:**
+
+- Understand the number of messages sent to the router from all subgraphs.
+
+**Error Cases Addressed:**
+
+- Correlate failures with number of messages sent
+
+## `go_memstats_alloc_bytes`
+
+**Description:** The number of bytes allocated and still in use.
+
+**Example PromQL Query:**
+
+```bash
+avg by (job) (go_memstats_alloc_bytes)
+```
+
+**Reason for Monitoring:** This metric provides an average of the memory currently reserved by the application. It helps track memory usage trends and can indicate potential memory leaks if the value grows unexpectedly over time.
+
+**Error Cases Addressed:**
+
+* Memory leaks.
+
+* Inefficient memory utilization.
+
+
+## `go_memstats_sys_bytes`
+
+**Description:** The number of bytes obtained from the system.
+
+**Example PromQL Query:**
+
+```bash
+avg by(job)(go_memstats_sys_bytes)
+```
+
+**Reason for Monitoring:** This metric reflects the total memory reserved across all process instances of a job. It is useful for identifying trends in memory consumption and ensuring the application does not exceed expected system memory usage.
+
+**Error Cases Addressed:**
+
+* Excessive memory consumption.
+
+* Discrepancies in memory usage across instances.
+
+## `go_memstats_alloc_bytes_total`
+
+**Description:** The total number of bytes allocated, even if freed.
+
+**Example PromQL Query:**
+
+```bash
+rate(go_memstats_alloc_bytes_total[5m])
+```
+
+**Reason for Monitoring:** Tracking the rate of memory allocations over a 5-minute interval helps identify periods of high memory allocation, which could indicate spikes in application load or inefficient memory allocation patterns.
+
+**Error Cases Addressed:**
+
+* Spikes in memory allocation.
+
+* Potential over-allocation issues.
+
+## `go_memstats_heap_objects`
+
+**Description:** The number of allocated objects in the heap.
+
+**Example PromQL Query:**
+
+```bash
+go_memstats_heap_objects
+```
+
+**Reason for Monitoring:** Monitoring the heap object count provides insights into the total number of objects currently in use. This is important for detecting memory fragmentation or inefficient object management.
+
+**Error Cases Addressed:**
+
+* Excessive heap object creation.
+
+* Unreleased heap objects.
+
+## `go_memstats_heap_alloc_bytes`
+
+**Description:** The number of heap bytes allocated and still in use.
+
+**Example PromQL Query:**
+
+```bash
+avg by(job) (go_memstats_heap_alloc_bytes)
+```
+
+**Reason for Monitoring:** This metric tracks heap memory usage. Monitoring its trend can reveal abnormal memory consumption, such as potential memory leaks or increased memory usage during peak loads.
+
+**Error Cases Addressed:**
+
+* Memory leaks.
+
+* Abnormal heap memory growth.
+
+## `go_memstats_heap_inuse_bytes`
+
+**Description:** The number of heap bytes currently in use.
+
+**Example PromQL Query:**
+
+```bash
+avg by(job) (go_memstats_heap_inuse_bytes)
+```
+
+**Reason for Monitoring:** This metric provides visibility into the active usage of heap memory, helping to ensure the application is operating efficiently.
+
+**Error Cases Addressed:**
+
+* Unexpected increases in active memory usage.
+
+* Inefficient memory allocation patterns.
+
+## `go_memstats_heap_idle_bytes`
+
+**Description:** The number of heap bytes waiting to be used.
+
+**Example PromQL Query:**
+
+```bash
+avg by(job) (go_memstats_heap_idle_bytes)
+```
+
+**Reason for Monitoring:** This metric shows idle heap memory, indicating memory availability and potential over-allocation issues.
+
+**Error Cases Addressed:**
+
+* Excessive unused memory allocation.
+
+* Inefficient memory provisioning.
+
+## `go_memstats_next_gc_bytes`
+
+**Description:** The number of heap bytes at which the next garbage collection will take place.
+
+**Example PromQL Query:**
+
+```bash
+avg by(job) (go_memstats_next_gc_bytes)
+```
+
+**Reason for Monitoring:** Understanding when garbage collection is triggered can help optimize memory management strategies and detect potential inefficiencies.
+
+**Error Cases Addressed:**
+
+* Suboptimal garbage collection configurations.
+
+* Unexpected memory growth leading to increased GC frequency.
+
+## `go_memstats_mallocs_total`
+
+**Description:** The total number of `malloc` calls.
+
+**Example PromQL Query:**
+
+```bash
+rate(go_memstats_mallocs_total[5m])
+```
+
+**Reason for Monitoring:** This metric provides insights into memory allocation rates over time. It is particularly useful for identifying changes in application behavior that result in increased memory allocations.
+
+**Error Cases Addressed:**
+
+* Inefficient allocation patterns.
+
+* Potential performance degradation due to excessive `malloc` calls.
+
+## `go_gc_duration_seconds`
+
+**Description:** The `go_gc_duration_seconds` metric is a summary that captures the distribution of garbage collection pause times. It helps to analyze how frequently pauses of different durations occur.
+
+**Example PromQL Query:**
+
+```bash
+rate(go_gc_duration_seconds_sum[5m]) / rate(go_gc_duration_seconds_count[5m])
+```
+
+**Reason for Monitoring:** Monitoring garbage collection duration helps ensure it does not negatively impact application performance, particularly during high load.
+
+**Error Cases Addressed:**
+
+* Prolonged garbage collection pauses.
+
+* Performance bottlenecks during peak usage.
+
+#### Using Percentiles for `go_gc_duration_seconds` Summary
+
+**Example PromQL Query:**
+
+```bash
+avg by (job) (go_gc_duration_seconds{quantile="1.0"})
+```
+
+Using a quantile of "1.0" for the `go_gc_duration_seconds` metric provides the maximum observed value of garbage collection duration. This is useful for identifying the worst-case performance scenario, allowing you to address any outliers or exceptionally long garbage collection pauses which could impact the application's responsiveness and performance.
+
+Adjust the quantile to your needs.
+
+## `go_goroutines`
+
+**Description:** The number of goroutines that currently exist.
+
+**Example PromQL Query:**
+
+```bash
+go_goroutines
+```
+
+**Reason for Monitoring:** This metric tracks the number of active goroutines, ensuring that no goroutine leaks occur, which can lead to resource exhaustion.
+
+**Error Cases Addressed:**
+
+* Goroutine leaks.
+
+* Unexpected growth in active goroutines.
+
+<Note>
+  **Note:** When crafting PromQL queries using range vectors, ensure that you adjust the time range according to your specific monitoring needs and system performance characteristics for accurate observability.
+</Note>

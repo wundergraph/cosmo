@@ -1,0 +1,23 @@
+.osano-cm-dialog--type_box {
+  border-radius: 0.375rem;
+  --box-shadow: 0 10px 15px -3px rgb(248 248 251 / 0.3),
+    0 4px 6px -4px rgb(248 248 251 / 0.3);
+
+  -webkit-box-shadow: var(--box-shadow);
+  -moz-box-shadow: var(--box-shadow);
+  box-shadow: var(--box-shadow);
+}
+
+.osano-cm-info {
+  --box-shadow: 0 10px 15px -3px rgb(248 248 251 / 0.3),
+    0 4px 6px -4px rgb(248 248 251 / 0.3);
+
+  -webkit-box-shadow: var(--box-shadow);
+  -moz-box-shadow: var(--box-shadow);
+  box-shadow: var(--box-shadow);
+}
+
+
+.osano-cm-widget:focus {
+    outline: none;
+}

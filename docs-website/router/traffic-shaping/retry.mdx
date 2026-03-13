@@ -1,0 +1,137 @@
+---
+title: "Retry"
+description: "Configure retries to increase reliability."
+icon: "arrow-rotate-left"
+---
+
+By default, the router retries GraphQL operations of type `query` on specific network errors and HTTP status codes (502, 503, 504). We don't retry after the body is consumed. The default retry strategy is `Backoff and Jitter`. You can read more about our default retry strategy on the [AWS Architecture Blog](https://aws.amazon.com/de/blogs/architecture/exponential-backoff-and-jitter/).
+
+<Note>
+  Mutations won't be retried because they aren't idempotent.
+</Note>
+
+```yaml
+# config.yaml
+
+# See https://cosmo-docs.wundergraph.com/router/configuration#config-file
+# for the full list of configuration options.
+
+traffic_shaping:
+  all: # Rules are applied to all subgraph requests.
+    retry: # Rule is only applied to GraphQL operations of type "query"
+      enabled: true
+      algorithm: "backoff_jitter"
+      max_attempts: 5
+      interval: 3s
+      max_duration: 10s
+      expression: "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
+```
+
+* `enabled`: Enables the retry mechanism for GraphQL query operations.
+
+* `algorithm`: Select the algorithm for the retry. Currently, only `backoff_jitter` is supported. Additional fields depend on the algorithm selection.
+
+* `expression`: The evaluated result of this expression is used to determine if a failed subgraph request should be retried.
+
+* **backoff_jitter**
+
+  * `max_attempts`: The maximum number of attempts before the operation is considered a failure.
+
+  * `interval`: The time duration between each retry attempt. Increase with every retry.
+
+  * `max_duration`: The maximum allowable duration between retries (random).
+
+When retrying, note that mutations are not retried because they may be non-idempotent and must be explicitly re-triggered by the client upon failure.
+
+We use expressions written in exprlang to determine retry conditions; however, we also retry any errors containing the string "unexpected EOF" regardless of expression if retries are enabled, as EOF errors usually indicate connection issues. This typically references the error described [here](https://github.com/golang/go/blob/bfd130db02336a174dab781185be369f089373ba/src/io/io.go#L48).
+
+### Retries on 429 Errors
+We do not retry on 429 errors by default, as 429 means "Too Many Requests", indicating that the subgraph wants the router to slow down sending requests. If you wish to retry on 429 requests, you can modify the default expression as seen [here](#retry-on-429-requests).
+
+If you have explicitly enabled retrying on HTTP 429 and the subgraph responds with 429, we attempt to follow the specification described [here](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/429). If a `Retry-After` header is present with a valid, non-zero value, we will not use the default backoff algorithm duration and instead use that value as the interval duration. If the duration from `Retry-After` exceeds the router configuration's `max_duration`, we will default to using `max_duration`. 
+
+<Note>
+  HTTP 429 used to be retried by default, but is not retried by default as of `router@0.247.0`. If you want to retry on 429, set an explicit expression in <code>retry.expression</code>.
+</Note>
+
+### Conditional retry with expressions
+
+You can control when retries should occur using exprlang expressions. Unlike expressions used throughout the router, which can be found [here](/router/configuration/template-expressions), the structure of retry expressions is different.
+
+Set `retry.expression` to a boolean expression evaluated on each subgraph attempt. When the expression returns `true`, the router will retry (subject to the configured algorithm limits).
+
+#### Retry expression reference
+
+Retry expressions are evaluated per subgraph attempt and provide a focused context. The following fields are available:
+
+- `statusCode` (int): The status code (if present) of the subgraph response
+- `error` (string): The specific error that was returned because a response could not be received from the subgraph. Note that these errors are the direct errors reported by Go (as our router is based in Go)
+
+<Note>
+  The GitHub references to Go source in this section are best-effort and not exhaustive.
+  They are included to give you useful context so you can tailor retry error expressions to your needs.
+</Note>
+
+
+In addition, we provide a set of helper functions you can use.
+
+- `IsHttpReadTimeout()`: Returns true if the error is an HTTP-specific timeout waiting for response headers. Internally, we check for "timeout awaiting response headers" as referenced in the Go standard library [here](https://github.com/golang/go/blob/bfd130db02336a174dab781185be369f089373ba/src/net/http/transport.go#L2724).
+
+- `IsTimeout()`: Returns true for any timeout error (HTTP read timeouts, network timeouts, deadline exceeded, or direct syscall timeouts).
+  - Read timeout as described in `IsHttpReadTimeout()`.
+  - Any timeout error: In Go, the `net.Error` interface exposes a `Timeout()` method; if it returns `true`, the error is considered a timeout.
+  - "i/o timeout": Deadline exceeded; see [reference](https://github.com/golang/go/blob/bfd130db02336a174dab781185be369f089373ba/src/internal/poll/fd.go#L60C8-L60C9).
+  - `syscall.ETIMEDOUT`: Low-level error indicating a connection timeout.
+
+- `IsConnectionRefused()`: Returns true for connection refused errors (`ECONNREFUSED`).
+  - Internally: check `syscall.ECONNREFUSED`; otherwise, match "connection refused" ([reference](https://github.com/golang/go/blob/bfd130db02336a174dab781185be369f089373ba/src/syscall/tables_wasip1.go#L110)).
+
+- `IsConnectionReset()`: Returns true for connection reset errors (`ECONNRESET`).
+  - Internally: check `syscall.ECONNRESET`; otherwise, match "connection reset" ([reference](https://github.com/golang/go/blob/bfd130db02336a174dab781185be369f089373ba/src/syscall/tables_wasip1.go#L110)).
+
+- `IsConnectionError()`: Returns true for connection-related errors (refused, reset, DNS resolution failures, TLS handshake errors).
+  - Internally: if `IsConnectionRefused()` or `IsConnectionReset()` is true; otherwise, check:
+    - "no such host": Hostname could not be resolved ([reference](https://github.com/golang/go/blob/bfd130db02336a174dab781185be369f089373ba/src/net/net.go#L649)).
+    - "handshake failure": TLS handshake failed ([reference](https://github.com/golang/go/blob/bfd130db02336a174dab781185be369f089373ba/src/crypto/tls/alert.go#L71)).
+    - "handshake timeout": TLS handshake timed out ([reference](https://github.com/golang/go/blob/bfd130db02336a174dab781185be369f089373ba/src/net/http/transport.go#L3074)).
+
+- `IsRetryableStatusCode()`: Returns true if the status code is one of:
+  - 500: Internal Server Error
+  - 502: Bad Gateway
+  - 503: Service Unavailable
+  - 504: Gateway Timeout
+
+
+### Examples
+
+#### Default retry expression
+The following is the default retry expression used when retry is enabled, but no expression condition is explicitly specified.
+```yaml config.yaml
+traffic_shaping:
+  all:
+    retry:
+      expression: "IsRetryableStatusCode() || IsConnectionError() || IsTimeout()"
+```
+
+#### Don't retry on HTTP read timeouts
+Sometimes you might wish to allow only lower-level timeouts (connection timeouts, etc.) to trigger retries. The following expression will allow you to do this by ignoring HTTP read timeouts. A good reason you might want this is because the subgraph takes time to respond because it is running some business logic that takes a long time, for which you do not want to retry as it will only result in the same business logic running again.
+
+```yaml config.yaml
+traffic_shaping:
+  all:
+    retry:
+      expression: "!IsHttpReadTimeout() && IsTimeout()"
+```
+
+#### Retry on 429 Requests
+If you wish to retry on 429 requests, you could append `statusCode == 429` to the default expression.
+```yaml config.yaml
+traffic_shaping:
+  all:
+    retry:
+      expression: "IsRetryableStatusCode() || IsConnectionError() || IsTimeout() || statusCode == 429"
+```
+
+### Debugging
+
+You can see retry attempts by enabling [debug](/router/development/debugging#debug-log-level) mode.

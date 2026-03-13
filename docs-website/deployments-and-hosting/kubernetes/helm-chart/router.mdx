@@ -1,0 +1,128 @@
+---
+title: "Router"
+icon: "router"
+description: "The following instructions help you install the Router Chart on Kubernetes."
+---
+
+<Card title="Chart Repository" icon="share-nodes" horizontal href="https://ghcr.io/wundergraph/cosmo/helm-charts/router">
+ `ghcr.io/wundergraph/cosmo/helm-charts/router`
+</Card>
+
+<Card title="ArtifactHub" icon="link" horizontal href="https://artifacthub.io/packages/helm/cosmo-router/router">
+[https://artifacthub.io/packages/helm/cosmo-router/router](https://artifacthub.io/packages/helm/cosmo-router/router)
+</Card>
+
+<Card title="Source" icon="github" horizontal href="https://github.com/wundergraph/cosmo/tree/main/helm/cosmo/charts/router">
+[Repository](https://github.com/wundergraph/cosmo/tree/main/helm/cosmo/charts/router)
+</Card>
+
+<Info>
+  Helm releases are currently not part of any release automation. We update them as recent as possible in the repository above. Please reach out to us if you need something else.
+</Info>
+
+## Install the Router
+
+Install the router through our official [`OCI`](https://helm.sh/docs/topics/registries/) chart. Note that [Helm 3.8](https://helm.sh/docs/topics/registries/) or later is required.
+
+Create the following file to not bother with cli flags.
+
+```bash values.yaml
+configuration:
+  # -- The router token is used to authenticate against the Cosmo platform (required)
+  graphApiToken: "replace-me"
+```
+
+After that you can install the chart with the release name `router`. You can use the command also to upgrade a release e.g. after a configuration update.
+
+```bash
+helm upgrade --install router oci://ghcr.io/wundergraph/cosmo/helm-charts/router \
+    --version 0.0.1 \
+    --values ./values.yaml
+```
+
+### Use a custom Router config
+
+Managing environment variables can be tedious. We also support providing a custom [router configuration](/router/configuration#config-file). To do so, you only need to create one and specify its name in the chart values. The config must exist in the same namespace as the router.
+
+```bash router-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: router-config
+  # Must be same as the router
+  namespace: default
+data:
+  # key is important
+  config.yaml: |
+    log_level: debug
+```
+
+Now, specify the configuration name in the `existingConfigmap` of the chart values. Keep in mind that secrets should be passed as Kubernetes Secrets. Use `extraEnvVars` or `extraEnvVarsSecret` to pass additional ones.
+
+```bash values.yaml
+existingConfigmap: "router-config"
+```
+
+### Inline router configuration
+
+Instead of creating a separate configmap, you can also inline the configuration values as part of the router chart values. This is handy but should not be used for secrets. Secrets should be passed in the `configuration` section or through a custom secret map.
+
+```bash values.yaml
+# Use this section to pass the graphApiToken or to configure simple settings.
+# -- You can use this to provide the router configuration via yaml. Values here have precedence over the configurations section.
+# -- For a full list of available configuration options, see https://cosmo-docs.wundergraph.com/router/configuration
+commonConfiguration: |-
+  version: "1"
+  log_level: "info"
+```
+
+### File-based router configuration
+
+You can also specify a path to a configuration file that will be embedded into the chart. This is useful for managing complex configurations or when you want to keep configuration separate from the values file.
+
+```bash values.yaml
+# Path to a configuration file to embed. If set, this takes precedence over commonConfiguration.
+# The file path is relative to the chart directory and will be processed with the helm `tpl` function.
+commonConfigurationPath: "configs/router-config.yaml"
+```
+
+Create your configuration file:
+
+```bash configs/router-config.yaml
+version: "1"
+log_level: "info"
+# You can use Helm template variables in the file
+controlplane_url: "{{ .Values.configuration.controlplaneUrl }}"
+```
+
+<Info>
+The file will be processed with Helm's `tpl` function, allowing you to use template variables and functions within the configuration file.
+</Info>
+
+### Install with a static Router Execution Config
+
+If you follow the default instructions the execution config is polled from the controlplane. Sometimes this is not desired e.g. when you have a strict CI/CD workflow or SLA requirements. The following instructions, shows you how to deploy a Router with a static router execution config.
+
+<Steps>
+  <Step title="Download the latest valid execution config">
+
+```bash
+wgc router fetch <graph-name> -n <namespace> -o router.json
+```
+</Step>
+
+<Step title="Set the file content on the helm value">
+
+```bash
+helm upgrade router oci://ghcr.io/wundergraph/cosmo/helm-charts/router \
+    --version 0.0.1 \
+    --set-file configuration.executionConfig=./router.json
+    --values ./values.yaml
+```
+
+<Info>
+  Install the router with a static execution config is a legitimate way to deploy the schema but requires automation to update the router continuously.
+
+</Info>
+</Step>
+</Steps>

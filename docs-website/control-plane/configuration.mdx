@@ -1,0 +1,57 @@
+---
+title: "Configuration"
+description: "Here you can set all available environment variables of the Control Plane."
+icon: sliders-up
+---
+
+Check the [WunderGraph Demo](https://github.com/wundergraph/cosmo) for a [setup configuration](https://github.com/wundergraph/cosmo/blob/main/controlplane/.env.example).
+
+| Environment variable | Description | Default | Required |
+|---------------------|-------------|---------|----------|
+| HOST | The host of the server | localhost |<Icon icon="square" />|
+| DATABASE_URL | The connection URL of the database | postgresql://postgres:changeme@localhost:5432/controlplane |<Icon icon="square-check" />|
+| PORT | The port on which the controlplane runs | 3001 |<Icon icon="square-check" />|
+| ALLOWED_ORIGINS | The controlplane url | http://localhost:3000 |<Icon icon="square-check" />|
+| LOG_LEVEL | Configures the log level | info |<Icon icon="square-check" />|
+| DEBUG_SQL | Configures the logs of SQL | false |<Icon icon="square-check" />|
+| CLICKHOUSE_DSN | The connection URL of clickhouse | "" |<Icon icon="square-check" />|
+| AUTH_REDIRECT_URI | The authorized redirect URLs | http://localhost:3001/v1/auth/callback |<Icon icon="square-check" />|
+| WEB_BASE_URL | The URL of studio | "" |<Icon icon="square-check" />|
+| AUTH_JWT_SECRET | The JWT secret used for verifying and signing JWTs (32 characters) | "" |<Icon icon="square-check" />|
+| OPENAI_API_KEY | The api key of OPEN API | "" |<Icon icon="square-check" />|
+| KC_LOGIN_REALM | The realm of the login credentials | "master" |<Icon icon="square" />|
+| KC_REALM | The keycloak realm of your Client | "" |<Icon icon="square-check" />|
+| KC_CLIENT_ID | The keycloak client ID | "" |<Icon icon="square-check" />|
+| KC_ADMIN_USER | The admin username | "" |<Icon icon="square-check" />|
+| KC_ADMIN_PASSWORD | The admin password | "" |<Icon icon="square-check" />|
+| KC_API_URL | The URL to your keycloak API endpoint. Used internally for administration | "" |<Icon icon="square-check" />|
+| KC_FRONTEND_URL | The public URL of your keycloak instance. Used for redirects | "" |<Icon icon="square-check" />|
+| WEBHOOK_URL | The endpoint to which you want to fire platform webhooks | "" |<Icon icon="square" />|
+| WEBHOOK_SECRET | The secret key to verify webhook requests | "" |<Icon icon="square" />|
+| DB_URL | Postgres connection string | "" |<Icon icon="square-check" />|
+| DB_CERT_PATH | Path to certificate file | "" |<Icon icon="square" />|
+| DB_CA_PATH | Path to the CA file | "" |<Icon icon="square" />|
+| DB_KEY_PATH | Path to the private key file | "" |<Icon icon="square" />|
+| GITHUB_APP_CLIENT_ID | GitHub App client id | "" |<Icon icon="square" />|
+| GITHUB_APP_CLIENT_SECRET | GitHub App client secret | "" |<Icon icon="square" />|
+| GITHUB_APP_ID | GitHub App id | "" |<Icon icon="square" />|
+| GITHUB_APP_PRIVATE_KEY | Private key of your GitHub App | "" |<Icon icon="square" />|
+| GITHUB_APP_WEBHOOK_SECRET | Webhook secret of your GitHub App | "" |<Icon icon="square" />|
+| SLACK_APP_CLIENT_ID | Slack app client id | "" |<Icon icon="square" />|
+| SLACK_APP_CLIENT_SECRET | Slack app client secret | "" |<Icon icon="square" />|
+| S3_STORAGE_URL | URL to your s3 storage provider (either include credentials or use S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY) | "" |<Icon icon="square-check" />|
+| S3_REGION | The region to be used for the s3 bucket | "auto" |<Icon icon="square" />|
+| S3_ENDPOINT | The endpoint to be used falls back to url.Origin | "" |<Icon icon="square" />|
+| S3_ACCESS_KEY_ID | Access key id for the bucket (AWS_ACCESS_KEY_ID) | "" |<Icon icon="square" />|
+| S3_SECRET_ACCESS_KEY | Secress Access key for the bucket (AWS_SECRET_ACCESS_KEY) | "" |<Icon icon="square" />|
+| S3_FORCE_PATH_STYLE | Used to enforce path style url resolution | true |<Icon icon="square" />|
+| SMTP_ENABLED | Enable the smtp integration | false |<Icon icon="square" />|
+| SMTP_USERNAME | Smtp username | "" |<Icon icon="square" />|
+| SMTP_PASSWORD | Smtp password | "" |<Icon icon="square" />|
+| SMTP_PORT | The port the smtp server listens to |  |<Icon icon="square" />|
+| SMTP_HOST | The host to connect to | "" |<Icon icon="square" />|
+| SMTP_SECURE | Defines if the connection should use SSL |  |<Icon icon="square" />|
+| SMTP_REQUIRE_TLS | Forces the client to use STARTTLS | |<Icon icon="square" />|
+| STRIPE_SECRET_KEY | Stripe secret | "" |<Icon icon="square" />|
+| STRIPE_WEBHOOK_SECRET | Stripe webhook secret | "" |<Icon icon="square" />|
+| DEFAULT_PLAN | Based on your custom plans, the name of the default plan | "" |<Icon icon="square" />|

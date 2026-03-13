@@ -1,0 +1,111 @@
+---
+title: "Consume SDKs"
+description: "Learn how to install and use the pre-generated, type-safe client libraries for TypeScript and Go"
+icon: "brackets-curly"
+---
+
+This page demonstrates the developer experience your platform team enables for API consumers using generated SDKs.
+
+Platform teams can adapt the examples on this page when creating consumer-facing documentation to ensure a consistent and supported API consumption experience.
+
+Once your platform team has generated and distributed the client SDKs, consuming the API is straightforward.
+
+You do not need to deal with GraphQL queries, Protocol Buffer definitions, or generation tooling. You simply install a library and interact with strongly typed objects and methods native to your programming language.
+
+This guide assumes you have been provided with the package name or repository URL for the generated SDKs.
+
+<Note>
+The examples below demonstrate TypeScript and Go SDKs. ConnectRPC supports many other languages including Python, Swift, Kotlin, and more. For a complete list of supported languages and their SDKs, see the [official Buf documentation](https://buf.build/docs/bsr/generated-sdks/#supported-languages).
+</Note>
+
+## TypeScript / JavaScript example
+
+The generated TypeScript client provides full type safety for requests and responses, along with autocomplete in your IDE.
+
+### 1. Installation
+
+Install the generated SDK package provided by your platform team, along with the required Connect runtime libraries.
+
+Note: Replace `@my-org/sdk` with the actual package name provided by your team.
+
+```bash
+npm install @my-org/sdk @connectrpc/connect @connectrpc/connect-web
+```
+
+### 2. Usage Example
+
+To make a request, you create a transport (configuring the base URL) and then instantiate the client for the desired service.
+
+```ts
+import { createClient } from "@connectrpc/connect";
+import { createConnectTransport } from "@connectrpc/connect-web";
+// Import the service definition from your generated SDK package
+import { HrService } from "@my-org/sdk/employees/v1/service_connect";
+
+const transport = createConnectTransport({
+  baseUrl: "http://localhost:5026",
+});
+
+const client = createClient(HrService, transport);
+
+async function fetchEmployee() {
+  // Request and response objects are fully typed
+  const response = await client.getEmployeeById({ id: 1 });
+  console.log(`Fetched employee: ${response.employee?.details?.forename}`);
+}
+
+fetchEmployee();
+```
+
+## Go example
+
+The generated Go SDK provides idiomatic Go structs and interfaces for interacting with the API.
+
+### 1. Installation
+
+Download the generated Go module provided by your platform team, along with the required Connect runtime.
+
+Note: Replace `github.com/my-org/sdk` with the actual module path provided by your team.
+
+```bash
+go get github.com/my-org/sdk
+```
+
+### 2. Usage Example
+
+Instantiate the service client using a standard HTTP client and the base URL of the router.
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "log"
+    "net/http"
+
+    "connectrpc.com/connect"
+    // Import the generated packages from your SDK module
+    employeesv1 "github.com/my-org/sdk/gen/go/employees/v1"
+    "github.com/my-org/sdk/gen/go/employees/v1/employeesv1connect"
+)
+
+func main() {
+    client := employeesv1connect.NewHrServiceClient(
+        http.DefaultClient,
+        "http://localhost:5026",
+    )
+
+    req := connect.NewRequest(&employeesv1.GetEmployeeByIdRequest{
+        Id: 1,
+    })
+
+    res, err := client.GetEmployeeById(context.Background(), req)
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Response data is strongly typed
+    fmt.Printf("Fetched employee: %s\n", res.Msg.Employee.Details.Forename)
+}
+```

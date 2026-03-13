@@ -1,0 +1,68 @@
+---
+title: "Policies"
+description: Enforce conventions and best practices through the lint policy.
+icon: circle-info
+sidebarTitle: Overview
+---
+
+## Lint Policy
+Schema linting capabilities enable developers to uphold GraphQL schema quality and adhere to established conventions effortlessly. By integrating schema linting into your development workflow, you can ensure consistency, enhance code maintainability, and catch issues early in the development process.
+
+<Frame>
+  <img 
+    src="/images/studio/lint-policy-enabled-with-apply-option.png" 
+    alt="Lint Policy section showing Linter enabled and Apply button in Cosmo Docs" 
+    title="Lint Policy enabled with Apply option" 
+  />
+</Frame>
+
+### How to configure schema lintings
+
+<Steps>
+<Step>
+Navigate to the Lint Policy page on Cosmo.
+</Step>
+<Step>
+Select the namespace.
+<Frame>
+  <img 
+    src="/images/studio/lint-policy-default-tab-active.png" 
+    alt="Lint Policy section showing Default tab selected and Apply button available" 
+    title="Lint Policy default tab active" 
+  />
+</Frame>
+</Step>
+<Step>
+Enable the linter.
+</Step>
+<Step>
+Configure the lint rules and their respective severity levels once enabled.
+</Step>
+</Steps>
+Once the linter is enabled and the rules are configured, the lint check will be performed on every [check](/cli/subgraph/check) operation of that namespace.
+
+### Severity Level
+
+* Error:- If any configured rules are violated, it causes the check operation to fail.
+
+* Warning:- If any configured rules are violated, they are flagged as warnings, but they don't cause the check operation to fail.
+
+## Schema Checks
+
+To configure how far back in date the operation checks look at traffic follow these steps:
+
+- Navigate to the Policies page on Cosmo.
+- Select the namespace.
+- Select the desired timeframe from the **Checks days to consider** dropdown
+
+<Frame>
+  <img 
+    src="/images/studio/schema-check-days-to-consider.png" 
+    alt="Schema Checks section showing dropdown with selectable check days in Cosmo Docs" 
+    title="Schema Checks with selectable check days" 
+  />
+</Frame>
+
+<Info>
+The limit of days you can configure is directly tied to your plan. If you need a larger range, please upgrade to a higher plan or contact us.
+</Info>

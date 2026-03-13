@@ -1,0 +1,56 @@
+---
+title: "Download & Install"
+description: "Learn how to download and install the router"
+icon: "sign-posts-wrench"
+---
+
+## Download
+
+On every router release, we attach official binaries for all available platforms. [Here](https://github.com/wundergraph/cosmo/releases?q=router&expanded=true) is the list of available router releases.
+
+<Frame caption="The red arrow points to the expandable Assets menu, under which the list of binaries can be found">
+  <img
+    src="/images/router/router-release-assets-github.png"
+    alt="GitHub release page showing the router version with the expandable Assets section highlighted." 
+    title="Router release page with downloadable binaries under Assets."
+  />
+</Frame>
+
+If you are unsure which binary is for what platform please take the following table as a reference.
+
+| Binary        | OS/Architecture                    |
+| ------------- | ---------------------------------- |
+| darwin-amd64  | MacOS (Intel 64 bit)               |
+| darwin-arm64  | MacOS (Apple Silicon 64 bit [M1+]) |
+| linux-386     | Linux 32 bit                       |
+| linux-amd64   | Linux AMD 64 bit                   |
+| linux-arm64   | Linux ARM 64 bit                   |
+| windows-386   | Windows 32 bit                     |
+| windows-amd64 | Windows 64 bit                     |
+
+## Docker
+
+You can also run the router with docker. On every release, we also push a docker image. [Here](https://github.com/wundergraph/cosmo/pkgs/container/cosmo%2Frouter) is the docker repository of the router. If you are looking for an easy way to find the right docker instructions, navigate to your dashboard and click on "Run router locally".
+
+<Frame caption="Click the “Run Router locally” button to copy the Docker instructions. Graph name and token will be filled with your values.">
+  <img 
+    src="/images/router/cosmo-dashboard-run-router-locally.png" 
+    alt="Cosmo dashboard showing the Graph Overview page with the “Run Router locally” button highlighted."
+    title="Cosmo dashboard option to run the router locally."
+  />
+</Frame>
+
+The output will look like this but with your own `GRAPH_API_TOKEN`.
+
+```bash
+docker run \
+  --name cosmo-router \
+  --rm \
+  -p 3002:3002 \
+  --add-host=host.docker.internal:host-gateway \
+  --pull always \
+  -e DEV_MODE=true \
+  -e LISTEN_ADDR=0.0.0.0:3002 \
+  -e GRAPH_API_TOKEN=<graph-api-token> \
+  ghcr.io/wundergraph/cosmo/router:latest
+```

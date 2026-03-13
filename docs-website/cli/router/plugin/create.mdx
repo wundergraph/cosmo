@@ -1,0 +1,58 @@
+---
+title: "Create"
+description: "Creates a federated plugin subgraph on the control plane."
+icon: plus
+---
+
+## Usage
+
+<Note>
+  A plugin subgraph name must be unique within a namespace.
+</Note>
+
+```bash
+npx wgc router plugin create [pluginName] --label [labelName]
+```
+
+<Info>
+  After creating a plugin subgraph, you can publish it with [wgc router plugin
+  publish](/cli/router/plugin/publish).
+</Info>
+
+## Description
+
+The `npx wgc router plugin create` command allows you to create a new plugin subgraph within the Cosmo platform. Plugin subgraphs are specialized GraphQL schemas that extend the functionality of your federated graph through plugins. The `[pluginName]` argument specifies the name of the new plugin subgraph. Use `npx wgc router plugin create -h` to see all the available options.
+
+## **Parameters**
+
+- `[pluginName]`: The name of the plugin subgraph you want to create. It should be a unique identifier (within the namespace) and is used to uniquely identify your plugin subgraph.
+
+## **Options**
+
+- `-n, --namespace` : The namespace of the plugin subgraph (Default: "default").
+
+- `--label`: Assign multiple labels to the new plugin subgraph. Labels are used to categorize and organize subgraphs based on specific criteria (e.g., team, department, project).
+
+  - Example: `--label team=A`
+
+- `--readme <path-to-readme>:` The path to the markdown file which describes the plugin subgraph.
+
+## **Examples**
+
+- Create a new plugin subgraph named "projects" with the label "team=A":
+
+```bash
+npx wgc router plugin create projects --label team=A
+```
+
+- Create a new plugin subgraph with a readme file:
+
+```bash
+npx wgc router plugin create projects --label team=infrastructure --readme ./plugin-readme.md
+```
+
+- Create a plugin subgraph in a specific namespace:
+
+```bash
+npx wgc router plugin create projects --namespace production --label env=prod
+```

@@ -1,0 +1,34 @@
+---
+title: "Router Plugins"
+description: "Lightweight extensions that run alongside the router as local processes for quick integrations"
+icon: "plug"
+---
+
+## Overview
+
+Router Plugins are part of Cosmo Connect. They run as local processes managed by the router, giving you the lowest latency and the simplest deployment path to bring external APIs and services into your federated graph—no extra infrastructure or CI/CD required.
+
+Plugins extend the router’s federation functionality and are best for straightforward integrations that don’t need independent scaling or dedicated service management.
+
+## When to Use Router Plugins
+
+- **Simple integrations** with external APIs
+- **Lightweight services** that don’t need independent scaling
+- **Unified deployment** alongside the router for the lowest latency
+
+## How It Works
+
+Plugins communicate with the router over gRPC and are lifecycle-managed by the router (including hot reloads). For protocol details and shared concepts, see the [gRPC Concepts](/router/gRPC/concepts).
+
+For end-to-end configuration and capabilities, refer to the router documentation: **[Router Plugins](/router/gRPC/plugins)**.
+
+## Choosing Between Plugins and gRPC Services
+
+- **Use [Router Plugins](/router/gRPC/plugins)** when you want the simplest deployment and lowest latency with local processes managed by the router
+- **Use [gRPC Services](/router/gRPC/grpc-services)** when you need independent deployments, scaling, or language flexibility
+
+## Getting Started
+
+<CardGroup>
+  <Card title="Deploy Your First Router Plugin" icon="plug" href="/tutorial/using-grpc-plugins" horizontal/>
+</CardGroup>

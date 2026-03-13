@@ -1,0 +1,23 @@
+---
+title: "Feature Flags"
+description: 'An overview of feature-flag (alias "ff") commands.'
+icon: circle-info
+sidebarTitle: Overview
+---
+
+A feature flag is a group of one or more [feature subgraphs](/cli/feature-subgraph). Each feature subgraph represents a replacement of a specific base subgraph that composes a federated graph. Feature flags define labels that dictate the federated graphs to which they will apply when enabled. Setting the corresponding feature-flag header or cookie value allows different graph constellations to be served to clients.
+
+## Minimum Requirements
+
+|Package|Minimum version|
+|---|---|
+|[wgc](/cli/intro)|[0.58.0](https://github.com/wundergraph/cosmo/compare/wgc@0.57.7...wgc@0.58.0)|
+|[router](/router/intro)|[0.95.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.95.0)|
+
+<CardGroup>
+<Card title="Create Feature Flag" href="/cli/feature-flags/create-feature-flag" icon="plus" horizontal/>
+<Card title="Disable Feature Flag" href="/cli/feature-flags/disable-feature-flag" icon="minus" horizontal/>
+<Card title="Enable Feature Flag" href="/cli/feature-flags/enable-feature-flag" icon="check" horizontal/>
+<Card title="Update Feature Flag" href="/cli/feature-flags/update-feature-flag" icon="pen-to-square" horizontal/>
+<Card title="Delete Feature Flag" href="/cli/feature-flags/delete-feature-flag" icon="trash" horizontal/>
+</CardGroup>

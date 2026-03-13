@@ -1,0 +1,379 @@
+---
+title: "Linter Rules"
+icon: "code"
+---
+
+### Naming Convention
+
+These rules enforce naming conventions.
+
+<AccordionGroup>
+  <Accordion title="FIELD_NAMES_SHOULD_BE_CAMEL_CASE">
+    Field names should always use camelCase.
+
+    ```js Violation
+    type User {
+      First_Name: String
+    }
+    ```
+
+    Correct:
+
+    ```js Correct
+    type User {
+      firstName: String
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="TYPE_NAMES_SHOULD_BE_PASCAL_CASE">
+    Type names should always use PascalCase.
+
+    ```js Violation
+    type userProject {
+      id: ID!
+    }
+    ```
+
+    ```js Correct
+    type UserProject {
+      id: ID!
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="SHOULD_NOT_HAVE_TYPE_PREFIX">
+    A type's name should never be prefixed with 'Type'.
+
+    ```js Violation
+    type TypeUser {
+      id: ID!
+    }
+    ```
+
+    ```js Correct
+    type User {
+      id: ID!
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="SHOULD_NOT_HAVE_TYPE_SUFFIX">
+    A type's name should never be suffixed with 'Type'.
+
+    ```js Violation
+    type UserType {
+      id: ID!
+    }
+    ```
+
+    ```js Correct
+    type User {
+      id: ID!
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="SHOULD_NOT_HAVE_INPUT_PREFIX">
+    An input's name should never be prefixed with 'Input'.
+
+    ```js Violation
+    input InputUser {
+      id: ID!
+    }
+    ```
+
+    ```js Correct
+    input UserInput {
+      id: ID!
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="SHOULD_HAVE_INPUT_SUFFIX">
+    An input's name should always be suffixed with 'Input'.
+
+    ```js Violation
+    input User {
+      id: ID!
+    }
+    ```
+
+    ```js Correct
+    input UserInput {
+      id: ID!
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="SHOULD_NOT_HAVE_ENUM_PREFIX">
+    An enum's name should never be prefixed with 'Enum'.
+
+    ```js Violation
+    enum EnumUserStatus {
+      ADMIN
+      USER
+    }
+    ```
+
+    ```js Correct
+    enum UserStatus {
+      ADMIN
+      USER
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="SHOULD_NOT_HAVE_ENUM_SUFFIX">
+    An enum's name should never be suffixed with 'Enum'.
+
+    ```js Violation
+    enum UserStatusEnum {
+      ADMIN
+      USER
+    }
+    ```
+
+    ```js Correct
+    enum UserStatus {
+      ADMIN
+      USER
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="SHOULD_NOT_HAVE_INTERFACE_PREFIX">
+    An interface type's name should never be prefixed with 'Interface'.
+
+    ```js Violation
+    interface InterfaceUser {
+      id: ID!
+    }
+    ```
+
+    ```js Correct
+    interface User {
+      id: ID!
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="SHOULD_NOT_HAVE_INTERFACE_SUFFIX">
+    An interface type's name should never be suffixed with 'Interface'.
+
+    ```js Violation
+    interface UserInterface {
+      id: ID!
+    }
+    ```
+
+    ```js Correct
+    interface User {
+      id: ID!
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="ENUM_VALUES_SHOULD_BE_UPPER_CASE">
+    Enum values should always use UPPER\_CASE.
+
+    ```js Violation
+    enum UserRole {
+      admin
+      user
+    }
+    ```
+
+    ```js Correct
+    enum UserRole {
+      ADMIN
+      USER
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Alphabetical Sort
+
+These rules enforce the arrangement of types, fields and so on in the schema.
+
+<AccordionGroup>
+  <Accordion title="ORDER_FIELDS">
+    Ensures all fields are sorted in alphabetical order.
+
+    ```js Violation
+    type User {
+      lastName: String
+      firstName: String
+    }
+    ```
+
+    ```js Correct
+    type User {
+      firstName: String
+      lastName: String
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="ORDER_ENUM_VALUES">
+    Ensures all enum values are sorted in alphabetical order.
+
+    ```js Violation
+    enum UserRole {
+      USER
+      ADMIN
+    }
+    ```
+
+    ```js Correct
+    enum UserRole {
+      ADMIN
+      USER
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="ORDER_DEFINITIONS">
+    Ensures all definitions are sorted in alphabetical order.
+
+    Violation:
+
+    ```js Violation
+    type User{
+      id: ID;
+      name: String;
+    }
+
+    type Member {
+      id: ID;
+      name: String;
+    }
+    ```
+
+    Correct:
+
+    ```js Correct
+    type Member {
+      id: ID;
+      name: String;
+    }
+
+    type User{
+      id: ID;
+      name: String;
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+### Others
+
+<AccordionGroup>
+  <Accordion title="ALL_TYPES_REQUIRE_DESCRIPTION">
+    Ensures all type definitions are accompanied by a description.
+
+    The types include:-
+
+    * ObjectTypeDefinition
+
+    * InterfaceTypeDefinition
+
+    * EnumTypeDefinition
+
+    * ScalarTypeDefinition
+
+    * InputObjectTypeDefinition
+
+    * UnionTypeDefinition
+
+    ```js Violation
+    type User {
+      id: ID!
+    }
+
+    interface Member {
+      id: ID!
+    }
+    ```
+
+    ```js Correct
+    # Represents a user in the system
+    type User {
+      id: ID!
+    }
+
+    # Represents a member in the system
+    interface Member {
+      id: ID!
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="DISALLOW_CASE_INSENSITIVE_ENUM_VALUES">
+    Ensures enum values eliminate duplicates by disallowing case insensitivity.
+
+    ```js Violation
+    enum UserRole {
+      ADMIN
+      admin
+    }
+    ```
+
+    ```js Correct
+    enum UserRole {
+      ADMIN
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="NO_TYPENAME_PREFIX_IN_TYPE_FIELDS">
+    Ensures field names do not include their type's name as a prefix.
+
+    ```js Violation
+    type User {
+      userId: ID!
+    }
+    ```
+
+    ```js Correct
+    type User {
+      id: ID!
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="REQUIRE_DEPRECATION_REASON">
+    Requires providing a reason for the @deprecated directive.
+
+    ```js Violation
+    type User {
+      id: ID! @deprecated
+    }
+    ```
+
+
+    ```js Correct
+    type User {
+      id: ID! @deprecated(reason: "No longer in use")
+    }
+    ```
+  </Accordion>
+
+  <Accordion title="REQUIRE_DEPRECATION_DATE">
+    Requires providing a deletion date for the @deprecated directive.
+
+    ```js Violation
+    type User {
+      id: ID! @deprecated(reason: "No longer in use")
+    }
+    ```
+
+    ```js Correct
+    type User {
+      id: ID! @deprecated(reason: "No longer in use", date: "2023-01-01")
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+

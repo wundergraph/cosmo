@@ -1,0 +1,198 @@
+---
+title: "Init"
+description: "Scaffold a new gRPC router plugin"
+icon: "file-circle-plus"
+---
+# wgc router plugin init
+
+The `init` command scaffolds a new gRPC router plugin project with all the necessary files and directory structure.
+
+## Usage
+
+```bash
+wgc router plugin init [options] <name>
+```
+
+## Arguments
+
+| Argument | Description        |
+| -------- | ------------------ |
+| `name`   | Name of the plugin |
+
+## Options
+
+| Option                        | Description                                                                                                            | Default                 |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `-p, --project <project>`     | Project name. When provided, a minimal router project is bootstrapped and the plugin is created at `<project>/<name>`. | (none)                  |
+| `-d, --directory <directory>` | Directory to create the plugin or project in                                                                           | `.` (current directory) |
+| `-l, --language <language>`   | Programming language to use for the plugin (currently only `go` and `ts` is supported)                                          | `go`                    |
+
+## Description
+
+This command creates a new plugin directory with the specified name and scaffolds the basic plugin structure, including:
+
+- A GraphQL schema file (`src/schema.graphql`)
+- Language specific implementation files
+  - For Go: `src/main.go`, `src/main_test.go`
+  - For TS: `src/plugin.ts`, `src/plugin.test.ts`
+- Generated mapping and protocol files (`generated/mapping.json`, `generated/service.proto`, `generated/service.proto.lock.json`)
+- Language specific configuration (`go.mod`)
+  - For Go: `go.mod`
+  - For TS: `package.json`, `tsconfig.json`
+- Makefile and Dockerfile (`Makefile`, `Dockerfile`)
+- Documentation (`README.md`)
+
+When `--project` is provided, a minimal router project is created in the project directory with:
+
+- Router configuration files in the project root (`config.yaml`, `graph.yaml`)
+- Project-level files (`README.md`, `Makefile`, `.gitignore`)
+- The plugin located at `<project>/<name>`
+
+If you want to create a plugin in an existing project directory, omit `--project` and use `-d/--directory` to choose where the plugin directory should be created.
+
+## Directory Structure
+
+### With `--project`
+
+<CodeGroup>
+```text Go
+my-project/
+├── README.md                 # Project documentation
+├── Makefile                  # Project Makefile
+├── config.yaml               # Router configuration
+├── graph.yaml                # Supergraph configuration
+├── .gitignore
+└── my-plugin/                # Your plugin directory
+    ├── README.md
+    ├── Makefile
+    ├── go.mod
+    ├── .gitignore
+    ├── .cursorignore
+    ├── .cursor/
+    │   └── rules/
+    │       └── plugin-development.mdc
+    ├── src/
+    │   ├── schema.graphql
+    │   ├── main.go
+    │   └── main_test.go
+    ├── generated/
+    │   ├── mapping.json
+    │   ├── service.proto
+    │   └── service.proto.lock.json
+    └── Dockerfile
+```
+
+```text TypeScript
+my-project/
+├── README.md                 # Project documentation
+├── Makefile                  # Project Makefile
+├── config.yaml               # Router configuration
+├── graph.yaml                # Supergraph configuration
+├── .gitignore
+└── my-plugin/                # Your plugin directory
+    ├── README.md
+    ├── Makefile
+    ├── package.json
+    ├── tsconfig.json
+    ├── .gitignore
+    ├── .cursorignore
+    ├── .cursor/
+    │   └── rules/
+    │       └── plugin-development.mdc
+    ├── src/
+    │   ├── schema.graphql
+    │   ├── plugin.ts
+    │   ├── plugin-server.ts
+    │   └── plugin.test.ts
+    ├── generated/
+    │   ├── mapping.json
+    │   ├── service.proto
+    │   └── service.proto.lock.json
+    └── Dockerfile
+```
+</CodeGroup>
+
+
+### Without `--project`
+
+The plugin is created directly under the chosen directory:
+
+<CodeGroup>
+```text Go
+my-plugin/
+├── README.md
+├── Makefile
+├── go.mod
+├── .gitignore
+├── .cursorignore
+├── .cursor/
+│   └── rules/
+│       └── plugin-development.mdc
+├── src/
+│   ├── schema.graphql
+│   ├── plugin.ts
+│   ├── plugin-server.ts
+│   └── plugin.test.ts
+├── generated/
+│   ├── mapping.json
+│   ├── service.proto
+│   └── service.proto.lock.json
+└── Dockerfile
+```
+```text TypeScript
+my-plugin/
+├── README.md
+├── Makefile
+├── package.json
+├── tsconfig.json
+├── .gitignore
+├── .cursorignore
+├── .cursor/
+│   └── rules/
+│       └── plugin-development.mdc
+├── src/
+│   ├── schema.graphql
+│   ├── main.go
+│   └── main_test.go
+├── generated/
+│   ├── mapping.json
+│   ├── service.proto
+│   └── service.proto.lock.json
+└── Dockerfile
+```
+</CodeGroup>
+
+## Examples
+
+### Basic usage
+
+```bash
+wgc router plugin init users
+```
+
+### Create a new project and plugin
+
+```bash
+wgc router plugin init users -p cosmo
+```
+
+### Specify a custom directory
+
+```bash
+wgc router plugin init users -d ./plugins
+```
+
+## Next Steps
+
+<CardGroup>
+  <Card title="Build Plugin" icon="hammer" href="/cli/router/plugin/build" horizontal/>
+  <Card title="Test Plugin" icon="vial" href="/cli/router/plugin/test" horizontal/>
+</CardGroup>
+
+After initializing your plugin, you should:
+
+1. Customize the GraphQL schema in `src/schema.graphql`
+2. Generate code with `wgc router plugin generate` or `make generate`
+3. Implement your resolvers in `src/main.go` or `src/plugin.ts`
+4. Implement your tests in `src/main_test.go` or `src/plugin.test.ts` and run them with `make test`
+5. Build your plugin with `make build` 
