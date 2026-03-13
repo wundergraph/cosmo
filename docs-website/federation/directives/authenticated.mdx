@@ -1,0 +1,313 @@
+---
+title: "@authenticated"
+icon: "lock"
+description: "The @authenticated directive declares a GraphQL definition to require the agent (person, service, or device) to be authenticated. Lack of authentication will yield an authorization error."
+---
+
+## Minimum requirements
+
+| Package      | Minimum version                                                                   |
+| ------------ | --------------------------------------------------------------------------------- |
+| controlplane | [0.58.0](https://github.com/wundergraph/cosmo/releases/tag/controlplane%400.58.0) |
+| router       | [0.60.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.60.0)       |
+| wgc          | [0.39.0](https://github.com/wundergraph/cosmo/releases/tag/wgc%400.39.0)          |
+
+Make sure you have correctly set up [Authentication & Authorization](/router/authentication-and-authorization).
+
+## Definition
+
+```graphql
+directive @authenticated on ENUM | FIELD_DEFINITION | INTERFACE | OBJECT | SCALAR
+```
+
+## Declaration
+
+The `@authenticated` directive can be declared on Enums, field definitions, Interfaces, Objects, and Scalars.
+
+### Declaration on field definitions (Interface and Object fields)
+
+When `@authenticated` is declared on an Object field definition, that specific field will be protected (require
+authentication).
+
+For example, given the following federated schema:
+
+```graphql
+type Object {
+  id: ID! @authenticated
+  name: String!
+}
+
+type Query {
+  objects: [Object!]!
+}
+```
+
+The field `Object.id` would be protected in the following operation:
+
+```graphql
+query {
+  objects {
+    id # this field requires authentication
+    name # this field would not require authentication
+  }
+}
+```
+
+The behavior is similar for Interfaces.
+For example, given the following federated schema:
+
+```graphql
+interface Interface {
+  id: ID! @authenticated
+  name: String!
+}
+
+type Object implements Interface {
+  id: ID!
+  name: String!
+}
+
+type Query {
+  interfaces: [Interface!]!
+  objects: [Object!]!
+}
+```
+
+The field `Interface.id` would be protected in the following operation
+(but note that `@authenticated` declared on an Interface field does _not_ protect the fields of its implementations):
+```graphql
+query {
+  interface {
+    id # this field requires authentication
+    name # this field would not require authentication
+  }
+  objects {
+    id # this field would not require authentication
+    name # this field would not require authentication
+  }
+}
+```
+
+### Declaration on the "type level" (Enums, Interfaces, Objects, and Scalars)
+
+When `@authenticated` is declared on the "type level", _all_ field definitions with that named type (the innermost
+response type name) will require authentication to access.
+For example, consider the following federated schema:
+
+```graphql
+enum Enum @authenticated {
+  A
+}
+
+interface Interface @authenticated {
+  id: ID
+}
+
+type ObjectA implements Interface {
+  enum: Enum!
+  id: ID
+  scalar: Scalar!
+}
+
+type ObjectB @authenticated {
+  id: ID
+  name: String!
+}
+
+scalar Scalar @authenticated
+
+type Query {
+  enums: [Enum!]!
+  interfaces: [Interface!]!
+  objectAs: [ObjectA!]!
+  objectBs: [ObjectB!]!
+  scalars:[Scalar!]!
+}
+```
+
+Above, `@authenticated` has been declared on:
+
+1. The Enum "Enum"
+2. The Interface "Interface"
+3. The Object "ObjectB"
+4. The Scalar "Scalar"
+
+Consider now the following operation:
+```graphql
+query {
+  enums # requires authentication
+  interfaces { # requires authentication
+    id # does not require authentication
+  }
+  objectAs {
+    enum # requires authentication
+    id # does not require authentication
+    scalar # requires authentication
+  }
+  objectBs { # requires authentication
+    id # does not require authentication
+    name # does not require authentication
+  }
+  scalars # requires authentication
+}
+```
+
+1. `Query.enums` requires authentication because it returns type "Enum", which is declared `@authenticated`.
+2. `Query.interfaces` requires authentication because it returns type "Interface", which is declared `@authenticated`.
+3. `Query.objectAs.enum` requires authentication because it returns type "Enum", which is declared `@authenticated`.
+4. `Query.objectAs.scalar` requires authentication because it returns type "Scalar", which is declared `@authenticated`.
+5. `Query.objectBs` requires authentication because it returns type "ObjectB", which is declared `@authenticated`.
+6. `Query.scalars` requires authentication because it returns type "Scalar", which is declared `@authenticated`.
+
+## Federation
+
+The `@authenticated` directive will always persist in the federated schema.
+Consequently, if `@authenticated` is declared on a field definition in one subgraph, and another instance of the same
+field definition (a shared field) is defined in another subgraph _without_ `@authenticated`, then `@authenticated` will
+still be declared on the federated field.
+This also means that selecting this field will always require authentication, regardless of whether it would be
+resolved from a subgraph that did not declare `@authenticated`.
+This is shown in the example below:
+
+```graphql
+# subgraph-a
+type Query @shareable {
+  ids: [ID!]! @authenticated
+}
+```
+
+```graphql
+# subgraph-b
+type Query @shareable {
+  ids: [ID!]!
+}
+```
+
+```graphql
+# federated graph
+type Query {
+  ids: [ID!]! @authenticated # @authenticated is persisted from subgraph-a
+}
+```
+
+## Errors
+
+In the event that an unauthenticated agent selects a **_non-nullable_** field that is declared @authenticated, an
+authorization error will be returned, and the **_entire_** data will be null (see
+[Non-nullable authenticated data requested among unauthenticated data](/federation/directives/authenticated#non-nullable-authenticated-data-requested-among-unauthenticated-data)).
+
+```json
+{
+"errors":[{
+  "message":"Unauthorized to load field 'Query.enumField'. Reason: not authenticated",
+  "path":["enumField"]
+}],
+  "data":null
+}
+```
+
+In the event that an unauthenticated agent selects a **_nullable_** field that is declared @authenticated, an
+authorization error will be returned, and the **_specific field_** will be null (see
+[Partial data](/federation/directives/authenticated#partial-data-nullable-authenticated-data)):
+
+```json
+{
+"errors":[{
+  "message":"Unauthorized to load field 'Query.enumField'. Reason: not authenticated",
+  "path":["enumField"]
+}],
+  "data":{
+    "enumField":null
+  }
+}
+```
+
+### Partial data (nullable authenticated data)
+
+Imagine an unauthenticated agent selects a field that is declared `@authenticated` and the response type of that field is
+nullable.
+However, the agent also queries a field that is not declared `@authenticated` (nor are any potential nested fields).
+In this event, an authorization error will still be returned, but the specific data that requires authentication will
+be null, while the data not requiring authentication will be returned.
+Consider the following federated graph and corresponding query:
+
+```graphql
+# federated graph
+type Query {
+  intField: Int @authenticated # note that this field is nullable
+  floatField: Float! @authenticated # note that this field is non-nullable
+  stringField: String! # note that this field is not declared @authenticated
+}
+```
+
+```graphql
+query {
+  intField
+  stringField
+}
+```
+
+An unauthenticated agent sending the query above would receive something like the following:
+
+```json
+{
+  "errors":[{
+    "message":"Unauthorized to load field 'Query.intField'. Reason: not authenticated",
+    "path":["intField"]
+  }],
+  "data":{
+    "intField":null,
+    "stringField":"I'm a string!"
+  }
+}
+```
+
+### Non-nullable authenticated data requested among unauthenticated data
+
+In the event an unauthenticated agent selects any non-nullable fields that require authentication, an authorization
+error will be returned, and the **_entire_** data will return null.
+This is true even if one or more field selections did not require authentication or are nullable.
+Consider the following federated graph and corresponding query:
+
+```graphql
+# federated graph
+type Query {
+  objectField: Object!
+  stringField: String!
+}
+
+type Object {
+  unauthenticatedObjectField: String!
+  unauthenticatedNestedObject: NestedObject!
+}
+
+type NestedObject {
+  authenticatedIntField: Int! @authenticated # note that this field is non-nullable
+  unauthenticatedStringField: String!
+}
+```
+
+```graphql
+query {
+  stringField
+  objectField {
+    unauthenticatedObjectField
+    unauthenticatedNestedObjectField {
+      authenticatedNonNullableIntField # only this field requires authentication
+      unauthenticatedStringField
+    }
+  }
+}
+```
+
+An unauthenticated agent sending the query above would receive something like the following:
+
+```json
+{
+  "errors":[{
+    "message":"Unauthorized to load field 'Query.objectField.unauthenticatedNestedObjectField.authenticatedNonNullableIntField'. Reason: not authenticated",
+    "path":["objectField","unauthenticatedNestedObectField","authenticatedNonNullableIntField"]
+  }],
+  "data":null
+}
+```

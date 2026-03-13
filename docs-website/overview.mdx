@@ -1,0 +1,38 @@
+---
+title: "WunderGraph Cosmo"
+description: "WunderGraph Cosmo is the Full Lifecycle GraphQL API Management Solution to manage Federated Graphs at scale. Composition checks, routing, analytics, and distributed tracing all in one platform."
+icon: note
+---
+
+<Frame>
+<img src="/images/image-1.png" />
+</Frame>
+
+## Built for any scale
+
+Cosmo enables teams and organizations to manage and scale (federated) GraphQL architectures with ease. Quickly iterate without breaking anything through composition checks.
+
+WunderGraph Cosmo can easily run locally, on-premises, or in the cloud as a managed service. Cosmo is a batteries-included solution, covering everything from routing to analytics.
+
+Cosmo supports monolithic GraphQL APIs as well as Federation v1 and v2, including Subscriptions.
+
+<Frame caption="The Core Components">
+<img src="/images/image-2.png" />
+</Frame>
+
+## **The Cosmo stack**
+
+<CardGroup>
+  <Card title="CLI" icon="terminal" href="/cli/intro" >
+   The Cosmo command line interface, referred to as `wgc`, plays a crucial role in managing the Cosmo platform. Its functions include pushing schemas, validating schemas, initiating new projects, and managing users, among others. It communicates directly with the Control Plane to perform these operations.
+  </Card>
+  <Card title="Control Plane" icon="server" href="/control-plane/intro">
+  The Control Plane forms the heart of the Cosmo platform and comprises two core elements: The Platform API and the Node API. The Platform API is utilized by the Cosmo CLI tool and Studio for platform management. On the other hand, the Node API facilitates fleet-specific operations, carried out by the Router nodes.
+  </Card>
+  <Card title="Router" icon="router" href="/router/intro">
+  The Router is the component that understands the GraphQL Federation protocol. It is responsible for routing requests to the correct subgraphs and for aggregating the responses. While it maintains a connection with the Control Plane, its operation is independent and does not depend on the Control Plane's functionality for maximum availability.
+  </Card>
+  <Card title="Studio" icon="microphone-lines" href="/studio/intro">
+  The Studio serves as the web interface for the Cosmo platform, providing a user-friendly medium for platform management and collaboration on GraphQL Federation. It maintains a connection with the Control Plane through the admin API, enabling efficient platform management.
+  </Card>
+</CardGroup>

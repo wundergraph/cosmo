@@ -1,0 +1,402 @@
+```
+generated
+├── mapping.json
+├── service.proto
+├── service.proto.lock.json
+├── service_grpc_pb.d.ts
+├── service_grpc_pb.js
+├── service_pb.d.ts
+└── service_pb.js
+```
+
+In short, these files are generated helpers based on the schema we wrote. They help either translate GraphQL operations to gRPC or let you write type-safe resolvers in the plugin itself.
+
+
+<Note>
+  We recommend checking this folder into version control (e.g. Git).
+</Note>
+
+Now, let's start implementing our resolvers. After generating, if you open `plugin.ts`, you will see some errors about undefined types. These are remnants from the example schema's resolver, and you can safely delete them to start from scratch.
+
+Here's a starting point for implementing our new resolvers:
+
+```ts plugin.ts
+import * as grpc from '@grpc/grpc-js';
+import axios, { type AxiosInstance } from "axios";
+import {
+  StarwarsServiceService,
+  IStarwarsServiceServer
+} from '../generated/service_grpc_pb.js';
+import {
+  QueryPeopleRequest,
+  QueryPeopleResponse,
+} from '../generated/service_pb.js';
+import { PluginServer } from './plugin-server.js';
+
+export class StarwarsService implements IStarwarsServiceServer {
+  [name: string]: grpc.UntypedHandleCall;
+
+  #starWarsClient: AxiosInstance;
+
+  constructor() {
+    // You can inject dependencies here later if needed
+    this.#starWarsClient = axios.create({
+      baseURL: "https://swapi.info/api/",
+      timeout: 30_000,
+      headers: { Accept: "application/json" },
+    });
+  }
+
+  queryPeople(
+      call: grpc.ServerUnaryCall<QueryPeopleRequest, QueryPeopleResponse>,
+      callback: grpc.sendUnaryData<QueryPeopleResponse>
+  ) {
+    // TODO: Implement logic
+    process.exit(1);
+  }
+}
+
+function run() {
+  // Create the plugin server (health check automatically initialized)
+  const pluginServer = new PluginServer();
+  
+  // Add the StarwarsService service
+  pluginServer.addService(StarwarsServiceService, new StarwarsService());
+
+  // Start the server
+  pluginServer.serve().catch((error) => {
+    console.error('Failed to start plugin server:', error);
+    process.exit(1);
+  });
+}
+
+run();
+```
+
+This updates the `plugin.ts` that comes with the initial plugin template in a few ways:
+
+1. We removed the old `QueryHello` methods and replaced it with the `StarwarsService` class.
+2. We create an instance of the `StarwarsService` class.
+3. In the `StarwarsService` class constructor, we create an axios `#starWarsClient`
+    - This will hold a persistent HTTP client that our endpoints can use for the whole lifetime of the plugin process.
+
+
+If you published this now, the plugin would just exit ungracefully when we tried to use the `people` query because of the `process.exit(1);` in the RPC resolver. The plugin would be automatically restarted, but the request would fail. Let's fix that.
+
+Next, let's define a TypeScript type to help us work with SWAPI responses. 
+
+```ts plugin.ts
+
+interface SWAPIPerson {
+  name: string;
+  height: string;
+  mass: string;
+  hair_color: string;
+  skin_color: string;
+  eye_color: string;
+  birth_year: string;
+  gender: string;
+}
+
+export class StarwarsService implements IStarwarsServiceServer {
+	...
+}
+
+...
+```
+
+These types are very similar to those generated for our service, close enough that we could potentially use the generated types directly. But for this example, we'll create a separate type to show what happens if you need more complex mapping from the wrapped API to your service.
+
+Now, let's implement the resolver for our `QueryPeople` RPC. Right now, your resolver should look like this:
+
+```go plugin.ts
+queryPeople(
+  call: grpc.ServerUnaryCall<QueryPeopleRequest, QueryPeopleResponse>,
+  callback: grpc.sendUnaryData<QueryPeopleResponse>
+) {
+  // TODO: Implement logic
+  process.exit(1);
+}
+```
+
+Here's an implemented version of the `QueryPeople` RPC resolver:
+
+```ts plugin.ts
+...
+
+export class StarwarsService implements IStarwarsServiceServer {
+  #starWarsClient: AxiosInstance;
+
+  queryPeople(
+      call: grpc.ServerUnaryCall<QueryPeopleRequest, QueryPeopleResponse>,
+      callback: grpc.sendUnaryData<QueryPeopleResponse>
+  ) {
+      // 1. Send the request and handle the response
+      this.#starWarsClient.get<SWAPIPerson[]>("/people")
+          // 2. Response status is automatically validated by axios (throws on non-2xx)
+          .then((resp) => {
+            const people = resp.data;
+
+            // 3. Convert the SWAPIPerson[] to Person[] (the type needed for our RPC's return type)
+            const protoPeople = people.map((person) => {
+              const protoPerson = new Person();
+              protoPerson.setName(person.name);
+              protoPerson.setHeight(person.height);
+              protoPerson.setMass(person.mass);
+              protoPerson.setHairColor(person.hair_color);
+              protoPerson.setSkinColor(person.skin_color);
+              protoPerson.setEyeColor(person.eye_color);
+              protoPerson.setBirthYear(person.birth_year);
+              protoPerson.setGender(person.gender);
+              return protoPerson;
+            });
+
+            // 4. Return a response containing the converted people objects
+            const response = new QueryPeopleResponse();
+            response.setPeopleList(protoPeople);
+            callback(null, response);
+          })
+          .catch((error) => {
+            // 5. Return errors as gRPC errors
+            const grpcError = {
+              code: grpc.status.INTERNAL,
+              message: `failed to fetch people: ${error.message}`
+            };
+            callback(grpcError, null);
+          });
+  }
+}
+
+...
+```
+
+Let's go over it step by step:
+
+1. Start by sending up a request to fetch the list of people from the SWAPI with HTTP GET to `/people`.
+2. If the response status code is not 200, we return an error.
+3. Transform the array of `SWAPIPerson` into an array of `Person` (this type comes from the generated code for your schema)
+    - In a more complex program, this is where you would do any transformations needed to produce the expected response from your backend, database, or other source.
+    - This method lets you write the GraphQL schema for your client‑facing federated graph in a way that fits that ecosystem, while handling translation from other formats in a fully featured language like Go.
+4. Finally, we return a response containing the converted people objects
+5. In case of errors we return a gRPC error
+
+<Tip>
+The errors here come from `google.golang.org/grpc/status` and `google.golang.org/grpc/codes`. They're an idiomatic way to return errors in a gRPC API.
+</Tip>
+
+## Publish and Deploy
+
+Now, our plugin is in a semi-working state, and we can publish it to test it out as part of our federated graph.
+
+Using our CLI `wgc`, publish the plugin:
+
+```bash
+wgc router plugin publish ./starwars
+```
+
+<Accordion icon="circle-question-mark" title="How does deployment work?">
+    When you run the deploy command, your plugin is built and packaged using the `Dockerfile` in the plugin directory. We then send this image containing your plugin and any other files it may need off to our Cosmo Cloud Registry where it can be pulled by your routers.
+    
+    Importantly, the router does not run plugins using Docker or in a container, instead we unpack the final target of the image into a working directory and run the plugin directly. This means if your plugin depends on a system dependency, it must be present in your Router image, not the plugin image.
+</Accordion>
+
+Congratulations! You've created your first gRPC plugin.  
+
+You'll see the output from a Docker build and push, followed by a successful completion.
+
+If you have a router deployed serving your federated graph, you can now query `people` via GraphQL.
+
+```graphql graphql query
+query People {
+  people {
+    name
+    hair_color
+  }
+}
+```
+
+It should return something like:
+
+```json json response
+{
+  "data": {
+    "people": [
+      {
+        "name": "Luke Skywalker",
+        "hair_color": "blond"
+      },
+      ...
+    ]
+  }
+}
+```
+
+<Warning>
+If you get an error, check your router logs to see where it might be coming from. If you can't solve it, a complete version of the plugin is linked in the [Appendix](#Appendix).
+</Warning>
+
+### Updating the plugin
+
+You can update the schema or the implementation of the plugin by modifying the `schema.graphql` file or the `plugin.ts` file, respectively.
+
+If you update the schema, you need to regenerate the code by running `wgc router plugin generate`.
+
+## What's next?
+
+You can find the full technical documentation for gRPC plugins [here](/router/gRPC/plugins).
+
+Well, in our case, the SWAPI has much more information than just people. It also includes data about vehicles, planets, and species. We could add these entities to our schema and resolve them using our plugin.
+
+In your case, you might add entity resolvers to your plugin's GraphQL schema to see how federation works with gRPC, or create more plugins for other purposes. Plugins aren't just for wrapping HTTP APIs either; you can use the full power of Go to query databases, implement business logic, or do anything else you need.
+
+You can also implement tests for your plugin to ensure it works correctly, you can find an example test in the `src/plugin.test.ts`, you can try updating it to work with the new schema.
+
+## Appendix
+
+<Accordion icon="code" title="Full plugin code">
+```graphql src/schema.graphql
+    type Person {
+      """
+      The name of this person
+      """
+      name: String!
+    
+      """
+      The height of the person in centimeters
+      """
+      height: String!
+    
+      """
+      The mass of the person in kilograms
+      """
+      mass: String!
+    
+      """
+      The hair color of this person. Will be "unknown" if not known or "n/a" if the person does not have hair
+      """
+      hair_color: String!
+    
+      """
+      The skin color of this person
+      """
+      skin_color: String!
+    
+      """
+      The eye color of this person. Will be "unknown" if not known or "n/a" if the person does not have an eye
+      """
+      eye_color: String!
+    
+      """
+      The birth year of the person, using BBY or ABY (Before/After Battle of Yavin)
+      """
+      birth_year: String!
+    
+      """
+      The gender of this person. Either "Male", "Female" or "unknown", "n/a" if no gender
+      """
+      gender: String!
+    }
+    
+    type Query {
+      """
+      get all the people
+      """
+      people: [Person!]!
+    }
+    ```
+```ts src/plugin.ts
+import * as grpc from '@grpc/grpc-js';
+import axios, { type AxiosInstance } from "axios";
+import {
+  StarwarsServiceService,
+  IStarwarsServiceServer
+} from '../generated/service_grpc_pb.js';
+import {
+  QueryPeopleRequest,
+  QueryPeopleResponse,
+  Person
+} from '../generated/service_pb.js';
+import { PluginServer } from './plugin-server.js';
+
+interface SWAPIPerson {
+  name: string;
+  height: string;
+  mass: string;
+  hair_color: string;
+  skin_color: string;
+  eye_color: string;
+  birth_year: string;
+  gender: string;
+}
+
+export class StarwarsService implements IStarwarsServiceServer {
+  [name: string]: grpc.UntypedHandleCall;
+
+  #starWarsClient: AxiosInstance;
+
+  constructor() {
+    // You can inject dependencies here later if needed
+    this.#starWarsClient = axios.create({
+      baseURL: "https://swapi.info/api/",
+      timeout: 30_000,
+      headers: { Accept: "application/json" },
+    });
+  }
+
+  queryPeople(
+      call: grpc.ServerUnaryCall<QueryPeopleRequest, QueryPeopleResponse>,
+      callback: grpc.sendUnaryData<QueryPeopleResponse>
+  ) {
+      // 1. Send the request and handle the response
+      this.#starWarsClient.get<SWAPIPerson[]>("/people")
+          // 2. Response status is automatically validated by axios (throws on non-2xx)
+          .then((resp) => {
+            const people = resp.data;
+
+            // 3. Convert the SWAPIPerson[] to Person[] (the type needed for our RPC's return type)
+            const protoPeople = people.map((person) => {
+              const protoPerson = new Person();
+              protoPerson.setName(person.name);
+              protoPerson.setHeight(person.height);
+              protoPerson.setMass(person.mass);
+              protoPerson.setHairColor(person.hair_color);
+              protoPerson.setSkinColor(person.skin_color);
+              protoPerson.setEyeColor(person.eye_color);
+              protoPerson.setBirthYear(person.birth_year);
+              protoPerson.setGender(person.gender);
+              return protoPerson;
+            });
+
+            // 4. Return a response containing the converted people objects
+            const response = new QueryPeopleResponse();
+            response.setPeopleList(protoPeople);
+            callback(null, response);
+          })
+          .catch((error) => {
+            // 5. Return errors as gRPC errors
+            const grpcError = {
+              code: grpc.status.INTERNAL,
+              message: `failed to fetch list of people: ${error.message}`
+            };
+            callback(grpcError, null);
+          });
+  }
+}
+
+function run() {
+  // Create the plugin server (health check automatically initialized)
+  const pluginServer = new PluginServer();
+  
+  // Add the StarwarsService service
+  pluginServer.addService(StarwarsServiceService, new StarwarsService());
+
+  // Start the server
+  pluginServer.serve().catch((error) => {
+    console.error('Failed to start plugin server:', error);
+    process.exit(1);
+  });
+}
+
+run();
+    ```
+</Accordion>

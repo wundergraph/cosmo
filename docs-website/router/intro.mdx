@@ -1,0 +1,14 @@
+---
+title: "Cosmo Router"
+description: "Cosmo Router is an Apache 2.0 licensed Router compatible with GraphQL Federation v1 & v2. The Router is implemented in Golang with a focus on performance, maintainability."
+icon: "door-open"
+---
+
+The Router is the component that understands the GraphQL Federation protocol. It is responsible for routing requests to the correct service and for aggregating the responses. While it maintains a connection with the Control Plane, its operation is independent and does not hinge on the Control Plane's functionality.
+
+Technically, it fetches the latest valid router configuration from the CDN and creates a highly-optimized query planner. This query planner is cached across requests. In certain intervals, it checks the CDN for new updates and reconfigures its engine on the fly.
+
+It uses the control plane API to register itself, which enables reporting on the status and health of the router fleet.
+
+The router is driven by [https://github.com/wundergraph/graphql-go-tools](https://github.com/wundergraph/graphql-go-tools) a mature and highly-optimized GraphQL engine that implements GraphQL Federation V1 and V2.
+

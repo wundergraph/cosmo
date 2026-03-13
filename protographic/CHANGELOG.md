@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.18.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.17.3...@wundergraph/protographic@0.18.0) (2026-03-13)
+
+### Features
+
+* allow field resolvers on fields without arguments ([#2629](https://github.com/wundergraph/cosmo/issues/2629)) ([56859f0](https://github.com/wundergraph/cosmo/commit/56859f0d7375aa0076b0b1b3a4ace235bae983b4)) (@Noroth)
+
 ## [0.17.3](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.17.2...@wundergraph/protographic@0.17.3) (2026-03-12)
 
 ### Bug Fixes

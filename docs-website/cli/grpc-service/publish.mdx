@@ -1,0 +1,165 @@
+---
+title: "Publish"
+description: "Publishes a gRPC subgraph on the control plane. If the gRPC subgraph doesn't exist, it will be created."
+icon: upload
+---
+
+## Usage
+
+```bash
+wgc grpc-service publish <name> --schema <path-to-schema> --generated <path-to-generated-folder> [options]
+```
+
+<Note>
+  **Prerequisites**: Before publishing, you must first generate your protobuf
+  definitions using `wgc grpc-service generate` to create the required schema,
+  mapping, and lock files.
+</Note>
+
+<Warning>
+  **Publish** is an irreversible action. However, the change will only be
+  visible to the routers once the composition has been successful. Until then,
+  the routers will operate with the most recent valid composition. Please use
+  [subgraph check](/cli/subgraph/check) to understand the impact of your change.
+</Warning>
+
+## Description
+
+The `wgc grpc-service publish` command enables you to publish a gRPC subgraph to the Cosmo platform. Publishing a gRPC subgraph makes it available for use by federated graphs, allowing them to extend functionality through gRPC service integration. If the gRPC subgraph doesn't exist, it will be created automatically.
+
+If the publication leads to composition errors, the errors will be visible in the Studio. The router will continue to work with the latest valid schema. Consider using the `wgc subgraph check` command to check for composition errors before publishing.
+
+## Parameters
+
+- `<name>`: The name of the gRPC subgraph to publish.
+
+## Options
+
+### Required Options
+
+- `--schema <path-to-schema>`: The schema file to upload to the subgraph.
+
+- `--generated <path-to-generated-folder>`: The path to the generated folder which contains the proto schema, mapping and lock files.
+
+### Optional Options
+
+<Note>
+  If the gRPC subgraph has already been created previously, the `routing-url`
+  and `label` parameters will be ignored. Use [subgraph
+  update](/cli/subgraph/update) to update these values.
+</Note>
+
+- `-n, --namespace [string]`: The namespace of the gRPC subgraph (Default: "default").
+
+- `-r, --routing-url <url>`: The routing URL of the gRPC subgraph. This is the URL at which the gRPC subgraph will be accessible. This parameter is always ignored if the subgraph has already been created.
+
+- `--label [labels...]`: The labels to apply to the gRPC subgraph. The labels are passed in the format `<key>=<value> <key>=<value>`. This parameter is always ignored if the gRPC subgraph has already been created.
+
+  - Example: `--label team=backend environment=production`
+
+<Note>
+  If you are *creating* a gRPC subgraph for the first time with `grpc-service publish`, the `routing-url` and `label` parameters can be used to set these values. Note that a subgraph will only be considered for a federated graph composition if the subgraph's labels match the labels matcher of that federated graph.
+
+If you are not creating a gRPC subgraph for the first time, the `routing-url` and `label` parameters will be ignored. To update these values for an existing gRPC subgraph, use [subgraph update](/cli/subgraph/update).
+
+</Note>
+
+- `--fail-on-composition-error`: If set, the command will fail if the composition of the federated graph fails.
+
+- `--fail-on-admission-webhook-error`: If set, the command will fail if the admission webhook fails.
+
+- `--suppress-warnings`: This flag suppresses any warnings produced by composition.
+
+## Required Files
+
+The generated folder must contain the following files (created automatically by `wgc grpc-service generate`):
+
+- `service.proto`: The protobuf schema file
+- `mapping.json`: The GraphQL-to-protobuf mapping file
+- `service.proto.lock.json`: The protobuf lock file
+
+## Examples
+
+### Publish a gRPC subgraph
+
+```bash
+wgc grpc-service publish users-service \
+  --schema ./src/schema.graphql \
+  --generated ./generated
+```
+
+### Create and publish a gRPC subgraph with routing URL and labels
+
+```bash
+wgc grpc-service publish users-service \
+  --schema ./src/schema.graphql \
+  --generated ./generated \
+  --routing-url http://localhost:4001/graphql \
+  --label team=backend environment=production
+```
+
+### Publish with custom namespace
+
+```bash
+wgc grpc-service publish users-service \
+  --schema ./src/schema.graphql \
+  --generated ./generated \
+  --namespace production
+```
+
+### Publish with error handling flags
+
+```bash
+wgc grpc-service publish users-service \
+  --schema ./src/schema.graphql \
+  --generated ./generated \
+  --fail-on-composition-error \
+  --fail-on-admission-webhook-error
+```
+
+## Typical Workflow
+
+Here's the recommended workflow for developing and publishing a gRPC subgraph:
+
+1. **Create your GraphQL schema**:
+
+   Create a `schema.graphql` file with your GraphQL schema definition.
+
+2. **Generate the protobuf definitions**:
+
+   ```bash
+   wgc grpc-service generate -i ./schema.graphql -o ./generated
+   ```
+
+   This creates the required protobuf files: `service.proto`, `mapping.json`, and `service.proto.lock.json`.
+
+3. **Develop your gRPC service**: Implement your service based on the generated protobuf definitions
+
+4. **Test your service locally**: Ensure your gRPC service works correctly
+
+5. **Publish the subgraph**:
+
+   ```bash
+   wgc grpc-service publish users-service \
+     --schema ./schema.graphql \
+     --generated ./generated
+   ```
+
+## Process Overview
+
+The publish command performs the following steps:
+
+1. **File Validation**: Validates that the schema file and all required generated files exist and contain valid content
+2. **Subgraph Creation**: Creates the subgraph if it doesn't exist (using routing URL and labels if provided)
+3. **Schema Publication**: Publishes the GraphQL schema and protobuf definitions to the control plane
+4. **Composition**: Triggers composition with other subgraphs in the federated graph
+
+## Notes
+
+- The `wgc grpc-service publish` command interacts with the Cosmo platform's control plane to publish the specified gRPC subgraph.
+
+- All required files (schema file and generated folder contents) must exist and contain valid content before publishing.
+
+- If composition errors occur during publication, the subgraph will still be published, but the router will continue to work with the latest valid schema until the composition issues are resolved.
+
+- The routing URL and labels are only used when creating a new subgraph - they're ignored for existing subgraphs.
