@@ -40,6 +40,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/nats-io/nats.go"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -63,6 +64,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
+	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	pubsubNats "github.com/wundergraph/cosmo/router/pkg/pubsub/nats"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
@@ -93,6 +95,11 @@ var (
 	//go:embed testdata/configWithGRPC.json
 	ConfigWithGRPCJSONTemplate string
 
+	// routerTestsDir is the absolute path to the router-tests directory,
+	// derived from this source file's location. Used internally by testexec.go
+	// to locate the router binary.
+	routerTestsDir string
+
 	DemoNatsProviders  = []string{natsDefaultSourceName, myNatsProviderID}
 	DemoKafkaProviders = []string{myKafkaProviderID}
 	DemoRedisProviders = []string{myRedisProviderID}
@@ -100,6 +107,9 @@ var (
 
 func init() {
 	freeport.SetLogLevel(freeport.ERROR)
+
+	_, thisFile, _, _ := runtime.Caller(0)
+	routerTestsDir = filepath.Dir(filepath.Dir(thisFile))
 }
 
 // Run runs the test and fails the test if an error occurs
@@ -1641,6 +1651,9 @@ func configureRouter(listenerAddr string, testConfig *Config, routerConfig *node
 		routerOpts = append(routerOpts, core.WithGraphQLPath(testConfig.OverrideGraphQLPath))
 	}
 
+	syncReporter := NewSyncReporter(context.Background(), testConfig.Logger)
+	routerOpts = append(routerOpts, core.WithEngineStats(syncReporter))
+
 	if !testConfig.DisableWebSockets {
 		wsConfig := &config.WebSocketConfiguration{
 			Enabled: true,
@@ -2012,6 +2025,15 @@ func (e *Environment) WaitForServer(ctx context.Context, url string, timeoutMs i
 	for {
 		if maxAttempts == 0 {
 			return errors.New("max attempts reached, timed out waiting for server to be ready")
+		}
+		// If we're running a router binary process, check if it has exited
+		// by testing the process context (cancelled by cmd.Wait goroutine in testexec.go)
+		if e.routerCmd != nil && e.Context != nil {
+			select {
+			case <-e.Context.Done():
+				return fmt.Errorf("router process exited unexpectedly: %v", context.Cause(e.Context))
+			default:
+			}
 		}
 		select {
 		case <-ctx.Done():
@@ -2571,28 +2593,32 @@ func (e *Environment) InitAbsintheWebSocketConnection(header http.Header, initia
 	return conn
 }
 
+func (e *Environment) syncReporter() *SyncReporter {
+	sr, ok := e.Router.EngineStats.(*SyncReporter)
+	if !ok {
+		e.t.Fatal("EngineStats is not a *SyncReporter; test environment misconfigured")
+		return nil
+	}
+	return sr
+}
+
 func (e *Environment) WaitForSubscriptionCount(desiredCount uint64, timeout time.Duration) {
 	e.t.Helper()
 
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Subscriptions == desiredCount {
-		return
-	}
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.Subscriptions == desiredCount
+	})
 
-	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", report.Subscriptions, desiredCount)
-			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.Subscriptions == desiredCount {
-				return
-			}
+	if report == nil || report.Subscriptions != desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.Subscriptions
 		}
+		e.t.Fatalf("timed out waiting for subscription count, got %d, want %d", got, desiredCount)
 	}
 }
 
@@ -2602,22 +2628,17 @@ func (e *Environment) WaitForConnectionCount(desiredCount uint64, timeout time.D
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Connections == desiredCount {
-		return
-	}
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.Connections == desiredCount
+	})
 
-	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for connection count, got %d, want %d", report.Connections, desiredCount)
-			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.Connections == desiredCount {
-				return
-			}
+	if report == nil || report.Connections != desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.Connections
 		}
+		e.t.Fatalf("timed out waiting for connection count, got %d, want %d", got, desiredCount)
 	}
 }
 
@@ -2673,21 +2694,131 @@ func (e *Environment) WaitForMessagesSent(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.MessagesSent == desiredCount {
-		return
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.MessagesSent >= desiredCount
+	})
+
+	if report == nil || report.MessagesSent < desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.MessagesSent
+		}
+		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", got, desiredCount)
 	}
+}
+
+// NATSPublishUntilReceived publishes a NATS message and retries until
+// the subscription processes it. Handles the race between NATS ChanSubscribe
+// (which buffers the SUB command) and server-side subscription registration.
+func (e *Environment) NATSPublishUntilReceived(conn *nats.Conn, subject string, data []byte, _ uint64, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sr := e.syncReporter()
 
 	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for messages sent, got %d, want %d", report.MessagesSent, desiredCount)
+		err := conn.Publish(subject, data)
+		require.NoError(e.t, err)
+		err = conn.Flush()
+		require.NoError(e.t, err)
+
+		// Wait for SubscriptionUpdateSent event confirming message delivery
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
+		ok := sr.WaitForEvent(shortCtx, EventSubscriptionUpdateSent)
+		shortCancel()
+
+		if ok {
 			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.MessagesSent == desiredCount {
-				return
-			}
+		}
+
+		if ctx.Err() != nil {
+			e.t.Fatalf("timed out: no SubscriptionUpdateSent received after publish")
+		}
+	}
+}
+
+// KafkaPublishUntilReceived produces a Kafka message and retries until
+// the subscription processes it. Handles the race between Kafka consumer
+// group join/partition assignment and message production.
+func (e *Environment) KafkaPublishUntilReceived(topicName string, message string, _ uint64, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sr := e.syncReporter()
+
+	for {
+		pErrCh := make(chan error, 1)
+		e.KafkaClient.Produce(ctx, &kgo.Record{
+			Topic: e.GetPubSubName(topicName),
+			Value: []byte(message),
+		}, func(_ *kgo.Record, err error) {
+			pErrCh <- err
+		})
+
+		select {
+		case pErr := <-pErrCh:
+			require.NoError(e.t, pErr)
+		case <-ctx.Done():
+			e.t.Fatalf("timed out producing Kafka message")
+		}
+
+		// Wait for SubscriptionUpdateSent event confirming message delivery
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
+		ok := sr.WaitForEvent(shortCtx, EventSubscriptionUpdateSent)
+		shortCancel()
+
+		if ok {
+			return
+		}
+
+		if ctx.Err() != nil {
+			e.t.Fatalf("timed out: no SubscriptionUpdateSent received after Kafka produce")
+		}
+	}
+}
+
+// RedisPublishUntilReceived publishes a Redis message and retries until
+// the subscription processes it. Handles the race between Redis subscription
+// setup and message publishing, similar to NATSPublishUntilReceived.
+func (e *Environment) RedisPublishUntilReceived(topicName string, message string, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sr := e.syncReporter()
+
+	parsedURL, err := url.Parse(e.RedisHosts[0])
+	require.NoError(e.t, err, "failed to parse Redis URL")
+
+	var redisConn redis.UniversalClient
+	if !e.RedisWithClusterMode {
+		redisConn = redis.NewClient(&redis.Options{
+			Addr: parsedURL.Host,
+		})
+	} else {
+		redisConn = redis.NewClusterClient(&redis.ClusterOptions{
+			Addrs: []string{parsedURL.Host},
+		})
+	}
+	defer redisConn.Close()
+
+	for {
+		intCmd := redisConn.Publish(ctx, e.GetPubSubName(topicName), message)
+		require.NoError(e.t, intCmd.Err())
+
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
+		ok := sr.WaitForEvent(shortCtx, EventSubscriptionUpdateSent)
+		shortCancel()
+
+		if ok {
+			return
+		}
+
+		if ctx.Err() != nil {
+			e.t.Fatalf("timed out: no SubscriptionUpdateSent received after Redis publish")
 		}
 	}
 }
@@ -2698,22 +2829,17 @@ func (e *Environment) WaitForMinMessagesSent(minCount uint64, timeout time.Durat
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.MessagesSent >= minCount {
-		return
-	}
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.MessagesSent >= minCount
+	})
 
-	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", report.MessagesSent, minCount)
-			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.MessagesSent >= minCount {
-				return
-			}
+	if report == nil || report.MessagesSent < minCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.MessagesSent
 		}
+		e.t.Fatalf("timed out waiting for messages sent, got %d, want at least %d", got, minCount)
 	}
 }
 
@@ -2723,21 +2849,53 @@ func (e *Environment) WaitForTriggerCount(desiredCount uint64, timeout time.Dura
 	ctx, cancel := context.WithTimeout(e.Context, timeout)
 	defer cancel()
 
-	report := e.Router.EngineStats.GetReport()
-	if report.Triggers == desiredCount {
-		return
-	}
+	sr := e.syncReporter()
+	report := sr.Wait(ctx, func(r *statistics.UsageReport) bool {
+		return r.Triggers >= desiredCount
+	})
 
+	if report == nil || report.Triggers < desiredCount {
+		got := uint64(0)
+		if report != nil {
+			got = report.Triggers
+		}
+		e.t.Fatalf("timed out waiting for trigger count, got %d, want at least %d", got, desiredCount)
+	}
+}
+
+// NATSPublishUntilMinMessagesSent publishes a NATS message repeatedly until the
+// total MessagesSent count reaches minCount. This handles fan-out scenarios where
+// multiple subscriptions must all receive the message: if some consumers aren't
+// fully wired when the first publish goes out, subsequent publishes cover them.
+func (e *Environment) NATSPublishUntilMinMessagesSent(conn *nats.Conn, subject string, data []byte, minCount uint64, timeout time.Duration) {
+	e.t.Helper()
+	ctx, cancel := context.WithTimeout(e.Context, timeout)
+	defer cancel()
+
+	sr := e.syncReporter()
 	for {
-		select {
-		case <-ctx.Done():
-			e.t.Fatalf("timed out waiting for trigger count, got %d, want %d", report.Triggers, desiredCount)
+		err := conn.Publish(subject, data)
+		require.NoError(e.t, err)
+		err = conn.Flush()
+		require.NoError(e.t, err)
+
+		shortCtx, shortCancel := context.WithTimeout(ctx, 2*time.Second)
+		report := sr.Wait(shortCtx, func(r *statistics.UsageReport) bool {
+			return r.MessagesSent >= minCount
+		})
+		shortCancel()
+
+		if report != nil && report.MessagesSent >= minCount {
 			return
-		case <-time.After(100 * time.Millisecond):
-			report = e.Router.EngineStats.GetReport()
-			if report.Triggers == desiredCount {
-				return
+		}
+
+		if ctx.Err() != nil {
+			got := uint64(0)
+			if report != nil {
+				got = report.MessagesSent
 			}
+			e.t.Fatalf("timed out: messages sent count %d did not reach %d after publishing", got, minCount)
+			return
 		}
 	}
 }
@@ -2785,6 +2943,35 @@ func WSReadMessage(t testing.TB, conn *websocket.Conn) (messageType int, p []byt
 	return 0, nil, fmt.Errorf("failed to read from WebSocket: %w", err)
 }
 
+// ReadSSELine reads the next non-comment line from an SSE stream.
+// SSE comment lines (starting with ':') like heartbeats are silently skipped.
+func ReadSSELine(t testing.TB, reader *bufio.Reader) string {
+	t.Helper()
+	for {
+		line, _, err := reader.ReadLine()
+		require.NoError(t, err)
+		s := string(line)
+		if !strings.HasPrefix(s, ":") {
+			return s
+		}
+	}
+}
+
+// ReadSSEField reads the next SSE field line, skipping comments and empty lines.
+// Use this instead of ReadSSELine when reading "event:" or "data:" fields,
+// as heartbeats produce both a comment line and a trailing empty delimiter.
+func ReadSSEField(t testing.TB, reader *bufio.Reader) string {
+	t.Helper()
+	for {
+		line, _, err := reader.ReadLine()
+		require.NoError(t, err)
+		s := string(line)
+		if s != "" && !strings.HasPrefix(s, ":") {
+			return s
+		}
+	}
+}
+
 func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 	b := backoff.New(5*time.Second, 100*time.Millisecond)
 
@@ -2801,7 +2988,7 @@ func WSReadJSON(t testing.TB, conn *websocket.Conn, v interface{}) (err error) {
 			return err
 		}
 
-		require.NoError(t, ReadAndCheckJSON(t, conn, v))
+		err = ReadAndCheckJSON(t, conn, v)
 
 		// Reset the deadline to prevent future operations from timing out
 		if resetErr := conn.SetReadDeadline(time.Time{}); resetErr != nil {
