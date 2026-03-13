@@ -31,10 +31,10 @@ Install the [Mintlify CLI](https://www.npmjs.com/package/mintlify):
 pnpm add -g mintlify
 ```
 
-Start the local dev server (run from this directory, where `docs.json` is):
+Start the local dev server:
 
 ```
-mintlify dev
+pnpm --filter=./docs-website dev
 ```
 
 ## Adding a New Page
