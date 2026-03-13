@@ -1,0 +1,210 @@
+---
+title: "Handler example"
+sidebarTitle: Handler example
+icon: puzzle-piece-simple
+description: "Implementing a simple handler for Subgraph Check Extensions."
+---
+
+For this example, we are using `fastify` and `tsx` to run a local server on port `4000`. Before running any checks,
+we need to configure the check extension to point to our local server and set the secret key. For this example, we are
+using the following values:
+
+- Endpoint: `http://localhost:4000/check-schema`
+- Secret key: `...`
+
+## Setting up the project
+First, create a new directory for the project and navigate into it.
+```shell
+mkdir <project-name>
+cd <project-name>
+````
+
+Once inside the project directory, initialize the project using your preferred package manager and install the required dependencies.
+<CodeGroup>
+  ```shell NPM
+  npm init -y
+  npm install --save-dev fastify tsx
+  ```
+
+  ```shell Yarn
+  yarn init -y
+  yarn add --dev fastify tsx
+  ```
+
+  ```shell PNPM
+  pnpm init
+  pnpm add --save-dev fastify
+  ```
+</CodeGroup>
+
+Finally, create a script in the `package.json` file to run the project.
+  ```json
+  {
+    ...
+    "scripts": {
+      "dev": "tsx watch server.ts"
+    }
+    ...
+  }
+  ```
+
+## Handler implementation
+The following example includes the handler implementation, a helper for validating the request signature, and type definitions for the payload and reply.
+
+<CodeGroup>
+  ```typescript server.ts
+  import Fastify, { type FastifyInstance } from 'fastify';
+
+  import { SubgraphCheckExtensionPayload, SubgraphCheckExtensionReply } from './types';
+  import { verifySignature } from './utils';
+
+  const YOUR_SECRET = '...';
+  const server: FastifyInstance = Fastify({ logger: true });
+
+  server.post<{
+    Body: SubgraphCheckExtensionPayload,
+    Reply: SubgraphCheckExtensionReply,
+  }>(
+    '/check-schema',
+    {
+      config: { rawBody: true }
+    },
+    async (req, res) => {
+      if (!req.body) {
+        res.code(400);
+        return { errorMessage: 'Bad request' };
+      }
+
+      const { body } = req;
+      const cosmoSignature = req.headers['x-cosmo-signature-256'];
+      if (!verifySignature(body, cosmoSignature, YOUR_SECRET)) {
+        res.code(400);
+        return { errorMessage: 'Bad request' };
+      }
+
+      // Run checks conditionally
+      if (body.namespace.name !== 'default' || body.subgraph?.name !== 'family') {
+        // Only overwrite lint issues for the `family` subgraph in the `default` namespace
+        res.code(204);
+        return;
+      }
+
+      return {
+        lintIssues: {
+          // The key is the name of the subgraph the lint issues apply for
+          'my-subgraph': [
+            {
+              lintRuleType: 'TYPE_SUFFIX',
+              severity: 1,
+              message: 'Type names should use the prefix `Type`',
+              issueLocation: {
+                line: 9,
+                column: 6,
+                endLine: 9,
+                endColumn: 11,
+              },
+            },
+          ]
+        },
+      };
+    },
+  );
+
+  const start = async () => {
+    try {
+      await server.listen({ port: 4000 })
+
+      const address = server.server.address()
+      const port = typeof address === 'string' ? address : address?.port
+    } catch (err) {
+      server.log.error(err)
+      process.exit(1)
+    }
+  };
+
+  start()
+  ```
+
+  ```typescript utils.ts
+  import crypto from 'node:crypto';
+
+  export function verifySignature(body: unknown, receivedSignature: string, secret: string) {
+    const computedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(JSON.stringify(body))
+      .digest('hex');
+
+    return computedSignature === receivedSignature;
+  }
+  ```
+
+  ```typescript types.ts
+  export interface OrganizationInfo {
+    id: string;
+    slug: string;
+  }
+
+  export interface NamespaceInfo {
+    id: string;
+    name: string;
+  }
+
+  export interface VCSContext {
+    author: string;
+    commitSha: string;
+    branch: string;
+  }
+
+  export interface AffectedGraphInfo {
+    id: string;
+    name: string;
+    namespace: NamespaceInfo;
+  }
+
+  export interface SubgraphInfo {
+    id: string;
+    labels: LabelInfo[];
+    name: string;
+    isDeleted: boolean;
+  }
+
+  export interface Label {
+    key: string;
+    value: string;
+  }
+
+  export interface SubgraphCheckExtensionPayload {
+    actorId: string;
+    checkId: string;
+    labels: Label[] | undefined;
+    organization: OrganizationInfo;
+    namespace: NamespaceInfo;
+    vcsContext: VCSContext | undefined;
+    affectedGraphs: AffectedGraphInfo[];
+    url: string;
+    subgraphs: SubgraphInfo[] | undefined;
+  }
+
+  enum LintSeverity {
+    Warning = 0,
+    Error = 1
+  }
+
+  export interface LintIssue {
+    lintRuleType: string;
+    severity: LintSeverity;
+    message: string;
+    issueLocation: {
+      line: number;
+      column: number;
+      endLine?: number;
+      endColumn?: number;
+    };
+  }
+
+  export interface SubgraphCheckExtensionReply {
+    errors?: string[];
+    lintIssues?: Record<string, LintIssue[]>;
+  }
+  ```
+</CodeGroup>

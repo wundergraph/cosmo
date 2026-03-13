@@ -1,0 +1,55 @@
+---
+title: "Cosmo Platform"
+description: "The following instructions help you to install the Cosmo platform through our official Umbrella Chart on Kubernetes."
+icon: "dharmachakra"
+---
+
+<Card title="Chart Repository" icon="share-nodes" horizontal>
+ `ghcr.io/wundergraph/cosmo/helm-charts/cosmo`
+</Card>
+
+<Card title="ArtifactHub" icon="link" horizontal href="https://artifacthub.io/packages/helm/cosmo-platform/cosmo">
+[https://artifacthub.io/packages/helm/cosmo-platform/cosmo](https://artifacthub.io/packages/helm/cosmo-platform/cosmo)
+</Card>
+
+<Card title="Source" icon="github" horizontal href="https://github.com/wundergraph/cosmo/tree/main/helm/cosmo">
+[Repository](https://github.com/wundergraph/cosmo/tree/main/helm/cosmo)
+</Card>
+
+<Info>
+    Helm releases are currently not part of any release automation. We update them as recent as possible in the repository above. Please reach out to us if you need something else.
+</Info>
+
+## Install Cosmo
+
+Install the chart through our official [`OCI`](https://helm.sh/docs/topics/registries/) chart. Note that [Helm 3.8](https://helm.sh/docs/topics/registries/) or later is required. Please copy the following chart [`values`](https://github.com/wundergraph/cosmo/blob/main/helm/cosmo/values.yaml) and adjust them according to your needs.
+
+While we use only production-grade Helm Charts, we did not configure all of them for production. You can adjust them to your needs yourself, or you can [contact us](https://wundergraph.com/contact/sales) for assistance in configuration and deployment options.
+
+After that, you can install the full Cosmo Platform with the following command.
+
+```bash
+helm upgrade --install cosmo oci://ghcr.io/wundergraph/cosmo/helm-charts/cosmo \
+    --version 0.0.1 \
+    --values ./values.yaml
+```
+
+This can take up to a minute depending on the hardware. It will provision all components and bootstrap the platform with a demo organization. The following credentials can be used to log into the Studio:
+
+```bash
+Username: foo@wundergraph.com
+Password: wunder@123
+```
+
+If you want to interact from `wgc` with the controlplane, you can use the following credentials:
+
+```bash
+export COSMO_API_KEY="cosmo_669b576aaadc10ee1ae81d9193425705"
+export COSMO_API_URL="<url-to-your-controlplane>"
+export CDN_URL="<url-to-your-cdn>"
+npx wgc -h
+```
+
+<Note>
+    Don't forget to change the credentials before going into production.
+</Note>

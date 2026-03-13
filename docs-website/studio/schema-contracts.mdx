@@ -1,0 +1,120 @@
+---
+title: "Schema Contracts"
+icon: file-contract
+description: "Schema Contracts enable you to build a multi-purpose, multi-audience graph, which can be split into subsets for different use cases. This simplifies development and keeps your graph maintainable."
+---
+
+## Use Cases
+
+### Tailored APIs for Specific Consumers
+
+Federation aims to combine all your services into a unified graph, making each more accessible and easier to consume than it otherwise would be in isolation. However, as your graph grows in size, potentially across different domains, supporting ever-varying use-cases, eventually you may want to tailor the API experience for specific user groups. Schema Contracts provide a powerful solution to do just that--filtering out unnecessary parts of the graph for some API consumers--giving them a tailored developer experience that's in-line with their expectations and not bloated with fields that are irrelevant for their purposes--while maintaining full access to the entire graph for others.
+
+### Improved Security and Data Privacy
+
+For graphs that serve different stakeholders across the organization, third-party partners, and/or even the public, security is a top concern. It goes without saying that getting the right information into the right hands and keeping sensitive information out of the wrong hands is table stakes when it comes to multi-stakeholder graphs. Schema Contracts, with its ability to filter in and out portions of the graph that should only be accessible to specific audiences, is a natural fit for this purpose.
+
+## Overview
+
+Getting started with Schema Contracts is simple. Simply annotate your schema with `tags` and begin delineating the portions of your graph that you wish to keep separate. It's that easy.
+
+<Frame caption="Example of dividing a Composed Schema into two Client Schemas using Schema Contracts">
+  <img
+    src="/images/studio/client-schemas-filtering-refunds-and-shipments.png"
+    alt="Client schemas filtering refunds and shipments"
+    title="Client schemas filtering refunds and shipments"
+  />
+</Frame>
+
+## Terminology
+
+* `Source Graph`: A federated graph or monograph whose schema is to be filtered out.
+
+* `Contract Graph / Contract` : A federated graph or monograph that is the filtered version of the source graph.
+
+## Schema Design
+
+Schema Contracts use the `@tag` directive to detect which schema elements need to be removed. You can apply the directive to objects, interfaces, inputs, types and fields. Here is an example: Consider the below subgraph to be published.
+
+```bash
+type Query {
+  employees: [Employee!]!
+}
+
+
+type Employee @key(fields: "id") {
+  id: ID!
+  name: String!
+  phoneNumber: String! @tag(name: "internal")
+}
+```
+
+We do not want to expose the phone number to certain clients. Therefore we tag that field as `internal`. The composed schema will additionally add the `@inaccessible` directive to the field.
+
+## Creating and managing Contracts
+
+### Create
+
+A contract is created with the [`wgc contract create`](/cli/schema-contracts/create) command. You need to supply the list of tags that will be used to perform the filtering of the schema. An example for the above subgraph would be
+
+```bash
+npx wgc contract create prod-external \
+    --source production \
+    --exclude internal \
+    --routing-url http://router.example.com/graphql
+```
+
+### Update Tags
+
+You can update the tags to be filtered out for the contract using the [`wgc contract update`](/cli/schema-contracts/update) command. This will trigger a recomposition of the contract graph and generate new schemas.
+
+### Caveats to remember
+
+* A contract will be of the same type as the source graph i.e federated graph or monograph.
+
+* Federated graph/monograph commands will work with a contract graph. (Exceptions are move and monograph publish. More details below)
+
+* If the monograph is migrated into a federated graph, all connected contracts will also be migrated.
+
+* If it is a federated graph, the label matchers will be the same as the source graph and cannot be updated. This ensures that both the source graph and contract compose the same subgraphs. Hovever, an update to the label matchers to the base federated graph will be propogated to all its contract graphs.
+
+* A contract graph cannot be moved to another namespace on it's own. it will automatically be moved when the source graph is moved.
+
+* You cannot directly publish to the contract if it is a monograph. It will automatically recompose if the source graph is published.
+
+* **A contract is automatically deleted if the source graph is deleted**
+
+## Generated Schemas
+
+When composing a graph, 2 schemas are generated.
+
+1. `Router Schema`: This schema is utilized internally by the router to plan your operations. It encompasses all necessary fields, including ones with @inaccessible as they are still vital for accurate query planning.
+
+2. `Client Schema`: Derived from the Router Schema, this schema excludes elements tagged for removal. It serves as the schema accessible to clients for utilization and is also the one exposed for introspection queries.
+
+## Compositions
+
+A contract schema is recomposed when the following events occur
+
+* The contract is created.
+
+* In case of federated graphs, if any subgraph is moved, updated, added or deleted.
+
+* If the source federated graph is moved to a new namespace.
+
+* If the label matchers of the source federated graph is changed.
+
+* In case of monograph, if the source monograph is published with a new schema.
+
+* The contract routing URL has changed.
+
+## Schema checks
+
+* Since contracts compose the same subgraphs as the source graphs, schema checks are automatically run against all of them.
+
+* A schema check will fail if there are composition errors or if client usage is detected for any of the contract graphs.
+
+## Router deployments
+
+Since the contract is a graph of its own, they will have their own router which will serve their respective graphs. This also means that things like analytics and persisted operations are scoped to each graph and its router.
+

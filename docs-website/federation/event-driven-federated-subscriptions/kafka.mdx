@@ -1,0 +1,46 @@
+---
+title: "Kafka"
+icon: sitemap
+---
+
+## Definitions
+
+<Note>
+  The `providerId` argument, including the default value "default", *must* correspond to an equivalent property in *events.providers.kafka* entry of the router config.yml.
+</Note>
+
+### @edfs\_kafkaPublish
+
+```js
+directive @edfs__kafkaPublish(
+  topic: String!,
+  providerId: String! = "default"
+) on FIELD_DEFINITION
+
+type edfs__PublishResult {
+    success: Boolean!
+}
+```
+
+|Argument name|Type|Value|
+|---|---|---|
+|topic|String!|The event topic.|
+|providerId|String!|The provider ID, which identifies the connection in the router config.yaml. <br/>If unsupplied, the provider ID "default" will be used.|
+
+
+### @edfs\_\_kafkaSubscribe
+
+```js
+directive @edfs__kafkaSubscribe(
+  topics: [String!]!,
+  providerId: String! = "default"
+) on FIELD_DEFINITION
+```
+
+|Argument name|Type|Value|
+|---|---|---|
+|topics|[String!]!|The event topics (it is possible to subscribe to multiple topics).|
+|providerId|String!|The provider ID, which identifies the connection in the router config.yaml. <br/>If unsupplied, the provider ID "default" will be used.|
+<CardGroup>
+  <Card title="Kafka" href="/router/event-driven-federated-subscriptions-edfs/kafka"  icon="sitemap" horizontal/>
+</CardGroup>

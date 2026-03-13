@@ -1,0 +1,138 @@
+---
+title: "Redis"
+icon: "sitemap"
+descripton: "Redis event provider support for Cosmo Streams"
+---
+
+<Frame caption="Interconnected system with Redis and routers">
+  <img 
+    src="/images/router/event-driven-federated-subscriptions-edfs/interconnected-system-with-redis-and-routers.png"
+    alt="System architecture with CMS, CRM, ERP, Redis, and routers interconnecting them"
+  />
+</Frame>
+
+## Minimum requirements
+
+| Package      | Minimum version |
+| ------------ | --------------- |
+| controlplane | 0.150.7         |
+| router       | 0.226.0         |
+| wgc          | 0.85.2          |
+
+## Full schema example
+
+Below is a comprehensive example of how to use Redis with Cosmo Streams. This guide covers publish, subscribe, and the filter directive. All examples can be modified to suit your specific needs. The schema directives and `edfs__*` types belong to the Cosmo Streams schema contract and must not be modified.
+
+```js
+# Cosmo Streams
+
+directive @edfs__redisPublish(channel: String!, providerId: String! = "default") on FIELD_DEFINITION
+directive @edfs__redisSubscribe(channels: [String!]!, providerId: String! = "default") on FIELD_DEFINITION
+
+# OpenFederation
+
+directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
+
+scalar openfed__SubscriptionFilterValue
+
+input openfed__SubscriptionFieldCondition {
+    fieldPath: String!
+    values: [openfed__SubscriptionFilterValue]!
+}
+
+input openfed__SubscriptionFilterCondition {
+    AND: [openfed__SubscriptionFilterCondition!]
+    IN: openfed__SubscriptionFieldCondition
+    NOT: openfed__SubscriptionFilterCondition
+    OR: [openfed__SubscriptionFilterCondition!]
+}
+
+# Custom
+
+input UpdateEmployeeInput {
+    name: String
+    email: String
+}
+
+type Mutation {
+   updateEmployeeMyRedis(employeeID: Int!, update: UpdateEmployeeInput!): edfs__PublishResult! @edfs__redisPublish(topic: "employeeUpdated", providerId: "my-redis")
+}
+
+type Subscription {
+    filteredEmployeeUpdatedMyRedis(employeeID: ID!): Employee!
+        @edfs__redisSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-redis")
+        @openfed__subscriptionFilter(condition: { IN: { fieldPath: "id", values: [1, 3, 4, 7, 11] } })
+    filteredEmployeeUpdatedMyRedisWithListFieldArguments(firstIds: [ID!]!, secondIds: [ID!]!): Employee!
+        @edfs__redisSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-redis")
+    filteredEmployeeUpdatedMyRedisWithNestedListFieldArgument(input: RedisInput!): Employee!
+        @edfs__redisSubscribe(topics: ["employeeUpdated", "employeeUpdatedTwo"], providerId: "my-redis")
+        @openfed__subscriptionFilter(condition: {
+            OR: [
+                { IN: { fieldPath: "id", values: ["{{ args.input.ids }}"] } },
+                { IN: { fieldPath: "id", values: [1] } },
+            ],
+        })
+}
+
+input RedisInput {
+    ids: [Int!]!
+}
+
+# Subgraph schema
+
+type Employee @key(fields: "id", resolvable: false) {
+  id: Int! @external
+}
+
+type edfs__PublishResult {
+    success: Boolean!
+}
+```
+
+You can create the above Event-Driven Graph (EDG—an abstract subgraph) with the following [wgc](/cli/intro) command:
+
+```js
+wgc subgraph publish edg --namespace default --schema eedg.graphqls
+```
+
+## Router configuration
+
+Based on the example above, you will need a compatible router configuration.
+
+<CodeGroup>
+
+```yaml config.yaml
+events:
+  providers:
+    redis:
+      - id: my-redis # Needs to match with the providerID in the directive
+        urls:
+        - "redis://localhost:6379/"
+```
+
+</CodeGroup>
+
+## Example Query
+
+In the example query below, one or more subgraphs have been implemented alongside the Event-Driven Graph to resolve any other fields defined on `Employee`, e.g., `tag` and `details.surname`.
+
+```js
+subscription {
+  filteredEmployeeUpdatedMyRedis(employeeID: 1) {
+    id # resolved by the Event-Driven Graph (through the event)
+    tag # resolved by another subgraph
+    details { # resolved by another subgraph
+      surname
+    }
+  }
+}
+```
+
+## System diagram
+
+<Frame caption="Redis–Router–Client subscription process">
+  <img 
+    src="/images/router/event-driven-federated-subscriptions-edfs/redis-router-client-subscription-process.png"
+    alt="Service interaction with Redis, router, and clients for subscriptions and broadcasts"
+  />
+</Frame>

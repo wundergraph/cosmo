@@ -1,0 +1,37 @@
+---
+title: "RBAC"
+description: "Role-based access control allows you to limit access to resources based on a user's role."
+icon: "user-tie"
+---
+
+Role-Based Access Control (RBAC) is a security model that plays a crucial role in managing access to resources within an organization. RBAC simplifies access control by assigning permissions to roles rather than individuals. Users are then associated with specific roles, and their access rights are determined by the permissions linked to those roles. RBAC is widely used in various industries to establish a robust and structured access control system.
+
+You have the option to modify the roles of all users not integrated with Single Sign-On (SSO). This serves as a precaution to ensure consistent synchronization with your authorization server, such as Okta or Auth0. For additional details on Single Sign-On (SSO), please refer to the [SSO](/studio/sso) page.
+
+<Info>
+  Please [contact us](https://wundergraph.com/contact/sales) if the current permission model cannot be aligned with your organization's structure.
+</Info>
+
+## Enable Access-Control
+
+<Frame>
+  <img 
+    src="/images/studio/rbac-settings-with-enable-option.png" 
+    alt="RBAC settings page showing enable or disable toggle option in organization settings" 
+    title="RBAC settings with enable option" 
+  />
+</Frame>
+
+Go to your organization settings page and navigate to "Resource Based Access Control (RBAC)". After you have enabled it, you'll be able to manage [groups](/studio/groups).
+
+This becomes useful when you want to issue keys for different systems (CI, IaC) and teams.
+
+## Roles
+
+To learn about the Cosmo roles and how you can leverage them to improve the security of your organization, visit the [group rules](/studio/groups/group-rules#roles) page.
+This is a simple overview of all the roles provided by Cosmo.
+
+## Roadmap
+
+- **Allow direct federated graph selection**: Enable organizations to limit subgraph access to specific federated graphs, the same way it works for namespaces.
+- **Groups require at least one rule**: Groups should always contain at least one rule.

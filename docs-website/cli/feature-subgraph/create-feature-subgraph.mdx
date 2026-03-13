@@ -1,0 +1,81 @@
+---
+title: "Create Feature Subgraph"
+description: "How to create a feature subgraph."
+icon: plus
+---
+
+## Description
+
+Create a feature subgraph based on an existing subgraph for your federated graph within the specified (otherwise "default") namespace. A feature subgraph is an "override" of an existing subgraph. One or more feature subgraphs are used to compose a [feature flag](/cli/feature-flags).
+
+## Minimum Requirements
+
+|Package|Minimum version|
+|---|---|
+|[wgc](/cli/intro)|[0.58.0](https://github.com/wundergraph/cosmo/compare/wgc@0.57.7...wgc@0.58.0)|
+|[router](/router/intro)|[0.95.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.95.0)|
+
+## Usage
+
+<Note>
+  A feature subgraph does not function in isolation. One or more feature subgraphs must compose a [feature flag](/cli/feature-flags), which itself must be enabled to take effect.
+</Note>
+```bash
+wgc feature-subgraph create my-feature-subgraph --subgraph my-subgraph --routing-url http://localhost:4000
+```
+
+The alias for `feature-subgraph` is `fs`.
+
+Note that unless specified by the `--namespace` parameter, the namespace will be automatically passed as "default".
+
+<Note>
+  The type of the feature subgraph is determined by the type of the base subgraph. For example, if the base subgraph is a plugin subgraph, the feature subgraph will also be a plugin subgraph.
+</Note>
+
+## Parameters
+
+* `<name>`: The name of the feature subgraph to create. Must be unique among all subgraphs and feature subgraphs within the specified (otherwise "default") namespace.
+
+## Required Options
+
+<Note>
+  If the base subgraph does not exist in the specified (otherwise "default") namespace, the command will fail.
+</Note>
+
+`--subgraph`: The name of the existing base subgraph for which the feature subgraph is to be created.
+
+## Options
+
+<Info>
+  Feature subgraphs do not use labels directly; labels are set by the [feature flag](/cli/feature-flags) that the feature subgraph(s) compose.
+</Info>
+
+<Note>
+  If the base subgraph is not a plugin subgraph, the routing url is required.
+</Note>
+
+* `-r , --routing-url`: Set the URL for the subgraph's data source. This URL defines the endpoint from which the subgraph will fetch data.
+
+* `-n, --namespace` : The namespace of the feature subgraph (defaults to "default"). Returns an error if the feature flag does not exist in that namespace.
+
+* `--subscription-url:` Use a different URL for subscription requests. If no subscription URL is provided, the router URL is used for subscriptions.
+
+* `--subscription-protocol:` Set a protocol to use for subscriptions. The available options are:
+
+  * `ws` (default): Negotiate an appropriate protocol over websockets. Both `graphql-ws` and `subscription-transport-ws` are supported.
+
+  * `sse`: Use Server-Sent Events with a GET request.
+
+  * `sse_post`: Use Server-Sent events with a POST request.
+
+## Examples
+
+- Create the feature subgraph "my-feature-subgraph" based on the existing subgraph "my-subgraph" in the namespace "prod".
+
+```bash
+wgc feature-subgraph create my-feature-subgraph \
+	--subgraph my-subgraph \
+	--namespace prod \
+	--routing-url http://localhost:4000
+```
+
