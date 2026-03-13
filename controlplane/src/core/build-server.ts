@@ -178,6 +178,16 @@ export default async function build(opts: BuildConfig) {
   });
 
   /**
+   * CVE-2026-25223 prevention
+   */
+  fastify.addHook('onRequest', async (request, reply) => {
+    const contentType = request.headers['content-type']
+    if (contentType && contentType.includes('\t')) {
+      reply.code(400).send({ error: 'Invalid Content-Type header' })
+    }
+  })
+
+  /**
    * Plugin registration
    */
 
