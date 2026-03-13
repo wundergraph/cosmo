@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -284,6 +285,21 @@ func TestGRPCSubgraph(t *testing.T) {
 				query:    `{ project(id: 999) { id name urgent: topPriorityItem(category: "task") { __typename } nextDeadline: criticalDeadline(withinDays: 10000) { __typename } subsub: subProjects { id name status otherSubs: subProjects { id name } } } }`,
 				expected: `{"data":{"project":null}}`,
 			},
+			{
+				name:     "query employee @requires field resolved with expertise",
+				query:    `{ employee(id: 1) { id taggedProjectSummary } }`,
+				expected: `{"data":{"employee":{"id":1,"taggedProjectSummary":"expertise: Backend Architecture, project tags: [cloud, migration, priority, devops, ci-cd, infrastructure]"}}}`,
+			},
+			{
+				name:     "query employee @requires field resolved with expertise (employee 2)",
+				query:    `{ employee(id: 2) { id taggedProjectSummary } }`,
+				expected: `{"data":{"employee":{"id":2,"taggedProjectSummary":"expertise: Fullstack Development, project tags: [cloud, migration, priority, microservices, architecture, security, zero-trust]"}}}`,
+			},
+			{
+				name:     "query non-existent employee with @requires field returns null",
+				query:    `{ employee(id: 999) { id taggedProjectSummary } }`,
+				expected: `{"data":{"employee":null}}`,
+			},
 		}
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: testenv.ConfigWithGRPCJSONTemplate,
@@ -298,7 +314,7 @@ func TestGRPCSubgraph(t *testing.T) {
 							Query: test.query,
 						})
 
-						require.Equal(t, test.expected, response.Body)
+						assert.Equal(t, test.expected, response.Body)
 					})
 				}
 			})

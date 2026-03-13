@@ -3,8 +3,8 @@ on:
   pull_request:
     paths:
       - 'pnpm-lock.yaml'
-      - "protographic/**/*"
-      - ".github/workflows/protographic.yaml"
+      - 'protographic/**/*'
+      - '.github/workflows/protographic.yaml'
 
 concurrency:
   group: ${{github.workflow}}-${{github.head_ref}}
@@ -29,6 +29,10 @@ jobs:
       - name: Generate code
         run: pnpm generate
 
+      # We run linter + formatting and fail CI if uncommitted changes are detected
+      - name: Lint & format
+        run: pnpm run --filter ./protographic lint:fix
+
       - uses: ./.github/actions/git-dirty-check
         with:
           package-name: protographic
@@ -38,9 +42,6 @@ jobs:
 
       - name: Test
         run: pnpm run --filter ./protographic test:coverage
-
-      - name: Lint
-        run: pnpm run --filter ./protographic lint
 
       - name: Upload test results to Codecov
         uses: ./.github/actions/codecov-upload-pr
