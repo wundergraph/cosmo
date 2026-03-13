@@ -1,0 +1,205 @@
+---
+title: "Publish"
+description: "Publishes a plugin subgraph on the control plane. If the plugin subgraph doesn't exist, it will be created and the Docker image will be built and pushed to the registry."
+icon: upload
+---
+
+## **Usage**
+
+```bash
+npx wgc router plugin publish [directory]
+```
+
+<Note>
+  **Prerequisites**: Before publishing, you must first scaffold your plugin using `npx wgc router plugin init <name>` to create the required directory structure and files.
+</Note>
+
+<Note>
+  **Publish** is an irreversible action. However, the change will only be
+  visible to the routers once the composition has been successful. Until then,
+  the routers will operate with the most recent valid composition. Please use
+  [subgraph check](/cli/subgraph/check) to understand the impact of your change.
+</Note>
+
+## **Description**
+
+The `npx wgc router plugin publish` command enables you to publish a plugin subgraph to the Cosmo platform. Publishing a plugin subgraph makes it available for use by federated graphs, allowing them to extend functionality through custom plugins. The command builds and pushes a Docker image containing your plugin to the registry, then publishes the subgraph schema to the control plane.
+
+The command expects a specific directory structure for your plugin and automatically locates the necessary files within the plugin directory. The plugin name is derived from the directory name. You should first run `npx wgc router plugin init <name>` to scaffold the proper directory structure.
+
+## **Parameters**
+
+- `[directory]`: The path to the plugin directory (optional, defaults to current directory). The plugin name is automatically derived from the directory name.
+
+## **Options**
+
+### **Plugin Directory Structure**
+
+The plugin directory must contain the following files in their expected locations (created automatically by `npx wgc router plugin init`):
+
+- `src/schema.graphql`: The GraphQL schema definition for your plugin
+- `Dockerfile`: The Dockerfile that defines how to build the plugin container image
+- `generated/service.proto`: The protocol buffer schema file
+- `generated/mapping.json`: The protocol buffer mapping file
+- `generated/service.proto.lock.json`: The protocol buffer lock file
+
+### **Optional Options**
+
+<Note>
+  If the plugin subgraph has already been created previously, the `label`
+  parameter will be ignored. Use [subgraph update](/cli/subgraph/update) to
+  update these values.
+</Note>
+- `--name [string]`: The name of the plugin subgraph. If not provided, the name will
+be derived from the directory name.
+
+- `-n, --namespace [string]`: The namespace of the plugin subgraph (Default: "default").
+
+- `--platform [platforms...]`: The platforms used to build the Docker image. Pass multiple platforms separated by spaces. Supported formats: `linux/amd64`, `linux/arm64`, `darwin/amd64`, `darwin/arm64`, `windows/amd64`. Defaults to `linux/amd64` and includes your current platform if supported.
+
+  - Example: `--platform linux/amd64 linux/arm64`
+
+- `--label [labels...]`: Assign multiple labels to the new plugin subgraph. Labels are used to categorize and organize subgraphs based on specific criteria (e.g., team, department, project). The labels are passed in the format `<key>=<value>`.
+
+  - Example: `--label team=backend --label environment=production`
+
+<Note>
+  If you are *creating* a plugin subgraph for the first time with `router plugin publish`, the `label` parameter can be used to set labels. Note that a subgraph will only be considered for a federated graph composition if the subgraph's labels match the labels matcher of that federated graph.
+
+If you are not creating a plugin subgraph for the first time, the `label` parameter will be ignored. To update the labels of an existing plugin subgraph, use [subgraph update](/cli/subgraph/update).
+
+</Note>
+
+- `--fail-on-composition-error`: If set, the command will fail if the composition of the federated graph fails.
+
+- `--fail-on-admission-webhook-error`: If set, the command will fail if the admission webhook fails.
+
+- `--suppress-warnings`: This flag suppresses any warnings produced by composition.
+
+## **Examples**
+
+### Publish a plugin subgraph
+
+```bash
+npx wgc router plugin publish ./plugins/my-plugin
+```
+
+### **Create and publish a plugin subgraph with labels and multi-platform support**
+
+```bash
+npx wgc router plugin publish ./plugins/my-plugin \
+  --label team=backend --label environment=production \
+  --platform linux/amd64 linux/arm64
+```
+
+### **Publish with custom name**
+
+<Note>
+  If the plugin name is not provided, the name will be derived from the
+  directory name. This is mainly used to publish plugin feature subgraphs, as
+  the directory will still be the base subgraph.
+</Note>
+
+```bash
+npx wgc router plugin publish ./plugins/my-plugin \
+  --name my-custom-name
+```
+
+### **Publish with custom namespace**
+
+```bash
+npx wgc router plugin publish ./plugins/my-plugin \
+  --namespace production
+```
+
+## **Typical Workflow**
+
+Here's the recommended workflow for developing and publishing a plugin:
+
+1. **Initialize the plugin**:
+
+   ```bash
+   npx wgc router plugin init my-plugin
+   ```
+
+   This creates the plugin in the `plugins/my-plugin/` directory.
+
+2. **Develop your plugin**: Modify the generated files as needed:
+
+   - Edit `src/schema.graphql` to define your GraphQL schema
+   - Implement your plugin logic in `src/main.go`
+   - Update the `Dockerfile` if needed for custom build requirements
+
+3. **Test your plugin locally**: Use the generated `Makefile` commands to build and test
+
+4. **Publish the plugin**:
+
+   ```bash
+   # Option 1: Specify the directory path
+   npx wgc router plugin publish ./plugins/my-plugin
+
+   # Option 2: Run from within the plugin directory
+   cd ./plugins/my-plugin
+   npx wgc router plugin publish
+   ```
+
+## **Docker Requirements**
+
+Docker Buildx with a container builder is required for publishing plugins.
+
+### Recommended Installation
+
+- **macOS**: [Docker Desktop](https://www.docker.com/products/docker-desktop/) or [OrbStack](https://orbstack.dev/)
+- **Windows**: [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- **Linux**: [Docker Engine](https://docs.docker.com/engine/install/)
+
+<Warning>
+  Before publishing plugins, ensure you have:
+
+  - Docker Buildx enabled
+  - A container builder configured
+
+  To verify your setup, run:
+  ```bash
+  docker buildx version
+  docker buildx inspect
+  ```
+
+  **Important:** The `docker buildx inspect` output must show the `docker-container` driver. If you don't see this, create a builder:
+  ```bash
+  docker buildx create --name container-builder --use
+  docker buildx inspect --bootstrap
+  ```
+</Warning>
+
+## **Build Process**
+
+The publish command performs the following steps:
+
+1. **Validation**: Validates that all required files exist in the plugin directory at their expected locations
+2. **Image Build**: Builds the Docker image using `docker buildx build` with the specified platforms
+3. **Image Push**: Pushes the built image to the plugin registry
+4. **Schema Publish**: Publishes the GraphQL schema to the control plane
+
+## **Notes**
+
+- The `npx wgc router plugin publish` command interacts with the Cosmo platform's control plane to publish the specified plugin subgraph and builds a Docker image that gets pushed to the plugin registry.
+
+- Ensure that Docker is installed and running on your system, as the command builds and pushes Docker images as part of the publication process.
+
+- The command expects a specific directory structure with files in predetermined locations. Make sure your plugin follows this structure (created by running `npx wgc router plugin init <name>`):
+
+  ```
+  my-plugin/
+  ├── src/
+  │   └── schema.graphql
+  ├── generated/
+  │   ├── service.proto
+  │   ├── mapping.json
+  │   └── service.proto.lock.json
+  └── Dockerfile
+  ```
+
+- The plugin name is automatically derived from the directory name (e.g., if your plugin is in `./plugins/my-awesome-plugin`, the plugin name will be `my-awesome-plugin`).
+
+- If the build process fails at any step, the command will exit with an error and provide details about what went wrong.

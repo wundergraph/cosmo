@@ -1,0 +1,172 @@
+---
+title: 'GraphQL Support'
+description: 'Supported features and known limitations for gRPC integration in Cosmo Router'
+icon: 'shield-check'
+---
+## Overview
+
+This page outlines the supported features and known limitations for the gRPC integration (both plugins and services) with the Cosmo Router. Development is in progress to expand support and address these limitations.
+## Feature Support Overview
+
+The following table lists each gRPC integration feature, its current status, and a brief description.
+
+| Feature | Status | Description |
+|---------|---------|-------------|
+| **Query Operations** | ✅ | Full support for all query patterns |
+| **Mutation Operations** | ✅ | Complete mutation functionality |
+| **Federation Entity Lookups (Single Key)** | ✅ | Standard entity resolution |
+| **Federation Entity Lookups (Multiple Keys)** | ✅ | Multi-key entity resolution |
+| **Federation Entity Lookups (Compound Keys)** | ✅ | Complex key combinations |
+| **Federation Entity Lookups (Nested Keys)** | ❌ | Complex nested key resolution not yet supported |
+| **@requires Directive** | ❌ | Field dependencies across services not implemented |
+| **Scalar Arguments** | ✅ | All standard scalars supported |
+| **Complex Input Types** | ✅ | Nested input structures |
+| **Nullable Scalar Types** | ✅ | Optional fields supported |
+| **Custom Scalar Conversion** | ❌ | Limited to fixed mappings only |
+| **Enum Values** | ✅ | Bidirectional mapping support |
+| **Interface Types** | ✅ | With implementing types |
+| **Union Types** | ✅ | With member types |
+| **Recursive Types** | ✅ | Self-referencing structures |
+| **Nested Object Types** | ✅ | Complex relationships |
+| **Lists** | ✅ | Nullable and non-nullable |
+| **Nested Lists** | ✅ | Multi-dimensional arrays |
+| **Complex List Structures** | ✅ | Lists of objects and interfaces |
+| **Nullable List Items** | ❌ | Not supported due to Protobuf constraints |
+| **Entity Definitions** | ✅ | Standard federation entities |
+| **Key Directives** | ✅ | Single and compound keys |
+| **External Fields** | ✅ | Cross-service field references |
+| **Field Resolvers** | ✅ | Custom field resolution supported with batching capabilities |
+| **GraphQL Subscriptions** | ❌ | Real-time data subscriptions not yet supported |
+
+## 🔄 Roadmap
+
+Development is in progress to address these limitations and expand gRPC integration capabilities, with the following features planned for future releases.
+
+| Feature | Category | Description |
+|---------|----------|-------------|
+| **@requires Directive Support** | Federation | Field dependencies across services |
+| **Nested Key Entity Lookups** | Federation | Complex nested key resolution |
+| **Cross-service Field Dependencies** | Federation | Advanced field dependency management |
+| **Lazy Loading** | Performance | Lazy loading capabilities for better performance |
+| **GraphQL Subscriptions** | Real-time | Real-time data subscriptions |
+| **Event-driven Updates** | Real-time | Event-based data updates |
+| **Advanced gRPC Configuration** | Configuration | Retry policies and custom timeouts |
+| **Enhanced Scalar Support** | Type System | Improved scalar type handling |
+| **Custom Type Mappings** | Type System | Advanced type mapping features |
+| **Dynamic Scalar Conversion** | Type System | Runtime scalar conversion |
+| **JSON Scalar Mappings** | Type System | JSON-based scalar handling |
+
+## Schema Linting
+
+When designing your GraphQL schema, you might encounter some of the limitations mentioned above. To ensure compatibility with the Cosmo Router's gRPC integration, we provide schema linting through protographic that validates your GraphQL schema against gRPC compatibility requirements.
+
+### How Linting Works
+
+The linting process analyzes your GraphQL schema and identifies potential compatibility issues with gRPC:
+
+- **Warnings**: Non-breaking issues that highlight features that may not work as expected
+- **Errors**: Breaking issues that prevent successful gRPC integration and must be fixed
+
+### Warnings vs Errors
+
+#### Warnings
+Warnings allow the generation process to complete but inform you about potential limitations:
+
+- **Process continues**: The protobuf generation will finish successfully
+- **Feature limitations**: Highlights GraphQL features that may not be fully supported in gRPC
+- **Non-breaking**: Your plugin will still function, but certain features may behave differently
+
+**Example Warning**: Using nullable list items like `[String]!` will generate a warning since this pattern isn't directly supported in protobuf.
+
+#### Errors
+Errors halt the generation process and require immediate attention:
+
+- **Process stops**: The protobuf generation will fail and must be resolved
+- **Breaking issues**: Indicates schema patterns that cannot be translated to gRPC
+- **Must be fixed**: You need to modify your schema before proceeding
+
+**Example Error**: Using unsupported GraphQL features that have no protobuf equivalent.
+
+### Linting Output
+
+When you run the generation command, you'll see output similar to:
+
+```bash
+[!] Schema validation warnings:
+ │
+ ├──────── file: /Users/ludwig/git/go/cosmo/demo/pkg/subgraphs/projects/src/schema.graphql
+ ├──── warnings: 14
+ │
+ ├─ warn: Nullable items are not supported in list types: [Project] at line 13, column 45
+ ├─ warn: Nullable items are not supported in list types: [String] at line 21, column 16
+ ├─ warn: Nullable items are not supported in list types: [Project] at line 22, column 21
+ ├─ warn: Nullable items are not supported in list types: [Task] at line 23, column 37
+ ├─ warn: Nullable items are not supported in list types: [String] at line 98, column 9
+ ├─ warn: Nullable items are not supported in list types: [Project] at line 99, column 24
+ ├─ warn: Nullable items are not supported in list types: [Milestone] at line 103, column 21
+ ├─ warn: Nullable items are not supported in list types: [Milestone] at line 119, column 17
+ ├─ warn: Nullable items are not supported in list types: [Task] at line 120, column 13
+ ├─ warn: Nullable items are not supported in list types: [String] at line 139, column 11
+ └─ ...and more warnings...
+
+[✕] Schema validation errors:
+ │
+ ├──────── file: /Users/ludwig/git/go/cosmo/demo/pkg/subgraphs/projects/src/schema.graphql
+ ├────── errors: 1
+ │
+ └─ error: Nested key directives are not supported yet at line 79, column 49
+ │
+ └─ Generation stopped due to validation errors.
+```
+
+### Feature Gates
+
+Some linting rules are controlled by feature gates and may evolve over time:
+
+- **Experimental features**: Some rules may be relaxed as gRPC integration capabilities expand
+- **Backward compatibility**: Existing linting behavior is maintained for stability
+- **Future improvements**: Rules may be removed or modified as new features become available
+
+<Info>
+**Tip**: Pay attention to warnings during development. While they don't prevent your plugin from working, they help you understand which GraphQL features may have limitations in the gRPC context.
+</Info>
+
+### Best Practices
+
+1. **Address errors first**: Fix all linting errors before proceeding with development
+2. **Review warnings carefully**: Understand the implications of warnings for your use case
+3. **Test thoroughly**: When warnings are present, test the affected functionality carefully
+4. **Stay updated**: Check for updates to linting rules as the gRPC integration evolves
+
+### Common Linting Issues
+
+| Issue | Type | Description | Resolution |
+|-------|------|-------------|------------|
+| Nullable list items `[String]!` | Warning | Not directly supported in protobuf | Consider alternative patterns |
+| Custom scalars | Warning | Limited to fixed mappings | Use built-in scalars or string types |
+| Union types | Error | Not supported in current integration | Refactor to use interfaces or separate types |
+| Complex nested inputs | Warning | May have performance implications | Consider flattening input structures | 
+
+## Resources & Community
+
+For questions, updates, and community support:
+
+<CardGroup cols={2}>
+  <Card title="GitHub Repository" icon="github" href="https://github.com/wundergraph/cosmo">
+    ⭐ View the repository for updates and issue tracking
+  </Card>
+  
+  <Card title="Release Notes" icon="rocket" href="https://github.com/wundergraph/cosmo/releases">
+    📢 Latest feature updates and changes in each release
+  </Card>
+  
+  <Card title="Discord Community" icon="comments" href="https://wundergraph.com/discord">
+    💬 Get help and join discussions with the community
+  </Card>
+  
+  <Card title="gRPC Concepts" icon="lightbulb" href="/router/gRPC/concepts">
+    📚 Learn about gRPC concepts and patterns
+  </Card>
+</CardGroup>
+
+See also: [gRPC Services](/router/gRPC/grpc-services) · [Plugins](/router/gRPC/plugins)
