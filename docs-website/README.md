@@ -31,17 +31,17 @@ Install the [Mintlify CLI](https://www.npmjs.com/package/mintlify):
 pnpm add -g mintlify
 ```
 
-Start the local dev server (run from this directory, where `docs.json` is):
+Start the local dev server:
 
-```
-mintlify dev
+```bash
+pnpm --filter=./docs-website dev
 ```
 
 ## Adding a New Page
 
 1. Create an MDX file in the appropriate directory
 2. Add the page to the `navigation` array in `docs.json`
-3. Preview locally with `mintlify dev`
+3. Preview locally with `pnpm dev`
 
 ## Publishing Changes
 
