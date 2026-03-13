@@ -2,7 +2,6 @@ package statistics
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	"go.uber.org/atomic"
@@ -21,7 +20,6 @@ type EngineStatistics interface {
 }
 
 type EngineStats struct {
-	mu            sync.Mutex
 	ctx           context.Context
 	logger        *zap.Logger
 	reportStats   bool
@@ -43,7 +41,6 @@ func NewEngineStats(ctx context.Context, logger *zap.Logger, reportStats bool) *
 	stats := &EngineStats{
 		ctx:         ctx,
 		logger:      logger,
-		mu:          sync.Mutex{},
 		reportStats: reportStats,
 	}
 	if reportStats {
