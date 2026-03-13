@@ -33,7 +33,7 @@ pnpm add -g mintlify
 
 Start the local dev server:
 
-```
+```bash
 pnpm --filter=./docs-website dev
 ```
 
@@ -41,7 +41,7 @@ pnpm --filter=./docs-website dev
 
 1. Create an MDX file in the appropriate directory
 2. Add the page to the `navigation` array in `docs.json`
-3. Preview locally with `mintlify dev`
+3. Preview locally with `pnpm dev`
 
 ## Publishing Changes
 
