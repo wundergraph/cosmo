@@ -1,5 +1,4 @@
 import {
-  ArgumentNode,
   DirectiveNode,
   GraphQLEnumType,
   GraphQLField,
@@ -40,7 +39,7 @@ import {
   formatKeyElements,
   OperationTypeName,
 } from './naming-conventions.js';
-import { REQUIRES_DIRECTIVE_NAME } from './string-constants.js';
+import { CONNECT_FIELD_RESOLVER, REQUIRES_DIRECTIVE_NAME } from './string-constants.js';
 import { RequiredFieldsVisitor } from './required-fields-visitor.js';
 /**
  * Visitor that converts a GraphQL schema to gRPC mapping definitions
@@ -313,7 +312,8 @@ export class GraphQLToMappingVisitor {
       const fields = type.getFields();
 
       for (const field of Object.values(fields)) {
-        if (field.args.length === 0) {
+        const hasDirective = field.astNode?.directives?.some((d) => d.name.value === CONNECT_FIELD_RESOLVER);
+        if (field.args.length === 0 && !hasDirective) {
           continue;
         }
 
