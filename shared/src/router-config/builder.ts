@@ -53,10 +53,13 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
     return undefined;
   }
   return new CostConfiguration({
-    fieldWeights: [...costs.fieldWeights.values()].map((fw) => new FieldWeightConfiguration({
-      ...fw,
-      argumentWeights: Object.fromEntries(fw.argumentWeights),
-    })),
+    fieldWeights: [...costs.fieldWeights.values()].map(
+      (fw) =>
+        new FieldWeightConfiguration({
+          ...fw,
+          argumentWeights: Object.fromEntries(fw.argumentWeights),
+        }),
+    ),
     listSizes: [...costs.listSizes.values()].map((ls) => new FieldListSizeConfiguration(ls)),
     typeWeights: Object.fromEntries(costs.typeWeights),
     directiveArgumentWeights: Object.fromEntries(costs.directiveArgumentWeights),
