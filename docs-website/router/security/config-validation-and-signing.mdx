@@ -1,0 +1,175 @@
+---
+title: "Config Validation & Signing"
+description: 'The router configuration, updatable via CDN or file, employs a "Config Validation & Signing" feature to safeguard against tampering through external validation and signing.'
+icon: "signature"
+---
+
+<Info>
+  Available since version [0.74.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.74.0)
+</Info>
+
+<Frame caption="Validated & Signed composition">
+  <img
+    src="/images/router/security/composition-ready-to-fetch-status.png"
+    alt="Cosmo Docs screenshot showing composition with green Ready to fetch status and View button"
+  />
+</Frame>
+
+The router configuration includes a Graph Plan, which encapsulates all the necessary information for planning and executing queries. It also specifies the URLs of your subgraphs. This configuration can be periodically fetched from the CDN or downloaded via `wgc` cli to the file system. In either scenario, the content originates from our platform. It is crucial to detect and mitigate tampering attacks, where an adversary might alter the configuration to reroute your traffic to an unauthorized server. To address this concern, we have developed a feature named "Config Validation & Signing" to identify and prevent such attacks.
+
+When setting up a federated graph, you must use the `--admission-webhook-url` option, pointing it to your publicly accessible admission server. Example: `https://admission.example.com` (without the `/validate-config` path name).
+
+<Note>
+  For security reasons, ensure your admission server uses HTTPS as transport prototcol.
+</Note>
+
+Our system will invoke the `/validate-config` handler on your server each time a composition occurs. Only in case of a successful composition and proper response of your admission hook the config is made available to your router.
+
+The payload for this operation will be structured as follows:
+
+<CodeGroup>
+  ```json POST - /validate-config
+  {
+      "federatedGraphId": "1cab819a-c319-4fe1-a644-5360970eb083",
+      "organizationId": "1e49b02a-72fb-458b-8d05-bb89cba2af05",
+      "privateConfigUrl": "https://cdn.wundergraph.com/orgId/graphId/routerconfigs/draft.json?token=..."
+  }
+  ```
+</CodeGroup>
+
+It is your responsibility to retrieve the router configuration by making a GET request to the `privateConfigUrl` validate the configuration, and then return a [HMAC-SHA256](https://en.wikipedia.org/wiki/HMAC) of the configuration, encoded in BASE64. The `privateConfigUrl` contains a token that is short-lived (5min).
+
+<Info>
+  Once validation is successful, the configuration will no longer be availabe at the above URL and will return a `404` status code.
+</Info>
+
+Webhook signature verification serves the same purpose as the signature verification of the router config. We want to ensure that the router config has not been tampered with after delivery. This procedure is very common today, almost all major webhook providers use the SHA-256 hash function in the [SHA-2](https://en.wikipedia.org/wiki/SHA-2) series for signature verification of their webhooks. These webhook providers include Stripe, GitHub and Okta.
+
+After you have calculated the hash, the expected response must have a 200 status code and contain the **HMAC-SHA256** signature:
+
+<CodeGroup>
+  ```json 200 OK
+  {
+      "signatureSha256": "3QYmdUS25ONvhWlm7K5ply65uvqoeGs4qxKWto5napo="
+  }
+  ```
+</CodeGroup>
+
+Alternatively, you can return a 400 status code with an error property to signal a validation error:
+
+<CodeGroup>
+  ```json 400 BAD REQUEST
+  {
+      "error": "Invalid subgraph url detected"
+  }
+  ```
+</CodeGroup>
+
+This will prevent the controlplane to deploy the composition. The error will be visible on the composition detail page in the Studio.
+
+## Sign Incoming Requests
+
+To ensure that requests made to your admission webhook url are intended to you. You can set a secret using the `--admission-webhook-secret` option when creating your graph. For existing graphs, the update command also allows you to set it. You need to compute the HMAC signature on your server and compare it to the signature in the `X-Cosmo-Signature-256` header. Below is an example in Node.js
+
+```js
+import crypto from 'crypto';
+
+function verifySignature(body, receivedSignature, secret) {
+  const computedSignature = crypto
+    .createHmac('sha256', secret)
+    .update(body)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(computedSignature, receivedSignature);
+}
+
+// Usage:
+const isVerified = verifySignature(JSON.stringify(req.body), req.headers['x-cosmo-signature-256'], YOUR_SECRET);
+```
+
+## Router configuration
+
+Upon receiving the signature, we will associate it with the artifact. The subsequent step involves initializing your router with the same signature key used during the hashing process on the admission server.
+
+**Example configuration:**
+
+```yaml config.yaml
+version: '1'
+graph:
+  sign_key: 'sign_key' # or GRAPH_CONFIG_SIGN_KEY
+```
+
+The router will then calculate the artifact's hash locally and compare it to the signature received from the CDN or filesystem. If the two match, the configuration is applied; otherwise, the router rejects it and terminates. If the router was already running successfully, it will continue to operate but will refuse to apply configurations that do not match the expected signature.
+
+Instead of polling for updates from the CDN, the Graph Plan can also be passed via a file to the router. To leverage the same validation and signing mechanism in this approach, you must supply the `--graph-sign-key` parameter to the [`wgc router fetch`](https://cosmo-docs.wundergraph.com/cli/router/fetch) command as well. This ensures consistency in security measures, whether the configuration is obtained from the CDN or directly from a file.
+
+## Config Validation
+
+An attacker has various methods to influence the router's behavior. Depending on their intent, they might aim to cause downtime or steal data. From an economic perspective, it is more likely that an attacker seeks to steal sensitive information. Therefore, we will focus on sections detailing how to validate the most important configuration settings.
+
+### Scenario - Manipulation of subgraph datasource URL's
+
+**Description:**
+
+An attacker change the subgraph URL to redirect customer traffic to a different server.
+
+**Impact:**
+
+High <Icon icon="exclamation" iconType="solid" /> (Possible outage with data leak)
+
+**Action:**
+
+Implement a check that ensures all subgraph URLs belong to the same domain of your organization. If not, return a non-200 status code with a descriptive error message. The error message will be visible in the studio. The exact check depends on your service configuration. If your subgraphs don't belong to the same domain, you can maintain an allowlist and compare it with all the urls we encounter in the config.
+
+<Accordion title="Example implementation">
+```js
+import { routerConfigFromJsonString } from '@wundergraph/cosmo-shared';
+
+const config = routerConfigFromJsonString(configAsText);
+const companyDomain = "wundergraph.com";
+
+const datasources = config.engineConfig?.datasourceConfigurations || [];
+
+try {
+  for (const ds of datasources) {
+    const url = ds.customGraphql?.fetch?.url?.staticVariableContent;
+    if (url) {
+      validateUrl(url);
+    }
+
+    if (ds.customGraphql?.subscription?.enabled) {
+      const url = ds.customGraphql.subscription.url?.staticVariableContent;
+      if (url) {
+        validateUrl(url);
+      }
+    }
+  }
+} catch (e: any) {
+  return c.json({ error: e.message }, 400);
+}
+
+function validateUrl(url: string): boolean {
+  const u = new URL('', url)
+
+  // Validate if https is used
+  if (!u.protocol.startsWith('https')) {
+     throw new Error('Invalid url, must be https');
+  }
+
+  // Validate if the hostname belongs to the organization
+  if (u.hostname !== companyDomain) {
+      throw new Error('Invalid url, must be a wundergraph url');
+  }
+
+  return false
+}
+```
+</Accordion>
+
+<Info>
+  We plan to encapsulate the most common validation rules into an NPM package, so you don't have to deal with the internal configuration structure. For now, please take inspiration from the examples and seek for help when things are not clear.
+</Info>
+
+## Example Server Implementation
+
+The admission webhook handler has to be publicly available. We provide an [example](https://github.com/wundergraph/cosmo/tree/main/admission-server) implementation In Hono, a framework that can be deployed to multiple platform like Cloudflare Worker, Fastly, Deno, Bun or Node.js.

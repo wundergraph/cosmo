@@ -1,0 +1,122 @@
+---
+title: "Terraform"
+icon: circle-info
+sidebarTitle: "Overview"
+description: "Terraform allows the provisioning of infrastructure in a declarative way. You can use Terraform to deploy to multiple platforms."
+---
+
+# Terraform Provider for Cosmo
+
+Terraform is an open-source infrastructure as code (IaC) tool that enables you to safely and predictably create, change, and improve infrastructure. With the Cosmo Terraform provider, you can manage your Cosmo Cloud resources programmatically, ensuring consistent and repeatable deployments.
+
+## Installation
+
+To get started with Terraform, you'll need to install it first. Please follow the [official installation guide](https://developer.hashicorp.com/terraform/tutorials/aws-get-started/install-cli) for detailed instructions.
+
+
+## Provider Configuration
+
+To use the Cosmo provider, you'll need to configure it in your Terraform configuration. Here's a basic example:
+
+```hcl
+terraform {
+  required_providers {
+    cosmo = {
+      source = "wundergraph/cosmo"
+      version = "~> 0.4.1"
+    }
+  }
+}
+
+provider "cosmo" {
+  api_key = var.api_key
+}
+```
+
+You can find complete examples in the [examples](https://github.com/wundergraph/terraform-provider-cosmo/tree/main/examples) directory.
+
+
+## Why Use Terraform with Cosmo?
+
+- **Infrastructure as Code**: Define your Cosmo Cloud infrastructure using declarative configuration files
+- **Version Control**: Track changes to your infrastructure in version control
+- **Automation**: Automate the provisioning and management of Cosmo resources
+- **Consistency**: Ensure consistent deployments across different environments
+- **Collaboration**: Enable team collaboration through shared infrastructure code
+
+## Available Resources
+
+<CardGroup>
+  <Card title="Namespaces" icon="layer-group" href="/cli/namespace">
+    Organize and isolate resources using namespaces
+  </Card>
+  <Card title="Monographs" icon="book" href="/cli/monograph">
+    Define and manage GraphQL schema documentation
+  </Card>
+  <Card title="Federated Graphs" icon="diagram-project" href="/cli/federated-graph">
+    Manage federated GraphQL schema configurations
+  </Card>
+  <Card title="Subgraphs" icon="diagram-project" href="/cli/subgraph">
+    Configure and manage GraphQL subgraphs
+  </Card>
+  <Card title="Feature Flags" icon="flag" href="/concepts/feature-flags">
+    Control feature availability across your GraphQL API
+  </Card>
+  <Card title="Feature Subgraphs" icon="diagram-project" href="/cli/feature-subgraph">
+    Configure subgraphs for specific features
+  </Card>
+  <Card title="Contracts" icon="file-contract" href="/concepts/schema-contracts">
+    Define and manage GraphQL contracts between your services
+  </Card>
+  <Card title="Router Tokens" icon="key" href="/cli/router/token">
+    Manage authentication tokens for your GraphQL router
+  </Card>
+</CardGroup>
+
+
+## Considerations
+
+### Why should I use Terraform to manage my Cosmo Cloud resources?
+
+Using Terraform provides several benefits:
+- **Reproducibility**: Your infrastructure can be recreated exactly as defined
+- **State Management**: Terraform tracks the state of your resources
+- **Change Management**: Preview changes before applying them
+- **Multi-environment Support**: Easily manage different environments (dev, staging, prod)
+
+### How does Terraform work with Cosmo Cloud?
+
+The Cosmo Terraform provider allows you to:
+- Define your GraphQL infrastructure as code
+- Automate the creation and management of resources
+- Version control your infrastructure configurations
+- Collaborate with team members on infrastructure changes
+
+### What are the prerequisites for using the Cosmo Terraform provider?
+
+To get started, you'll need:
+- Terraform installed (version 1.0.0 or later)
+- A Cosmo Cloud account
+- Appropriate authentication credentials
+- Basic understanding of Terraform concepts
+
+### Can I use Terraform with existing Cosmo Cloud resources?
+
+Yes, you can import existing Cosmo Cloud resources into your Terraform state. This allows you to manage both new and existing resources using Terraform.
+
+### How do I get started with the Cosmo Terraform provider?
+
+1. Install Terraform
+2. Configure the Cosmo provider in your Terraform configuration
+3. Define your resources using the available resource types
+4. Initialize Terraform and apply your configuration
+
+For detailed setup instructions, refer to our [provider documentation](https://registry.terraform.io/providers/wundergraph/cosmo/latest/docs).
+
+# Additional Resources
+
+## Terraform Modules
+
+<CardGroup>
+  <Card title="AWS Fargate" icon="aws" horizontal href="/deployments-and-hosting/terraform/aws-fargate" />
+</CardGroup>

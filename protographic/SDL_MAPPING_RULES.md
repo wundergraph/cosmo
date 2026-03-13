@@ -41,6 +41,7 @@ Query operations (fields on the Query type) are mapped to RPC methods:
 - Response message names: `Query{CapitalizedFieldName}Response`
 
 Example:
+
 ```graphql
 type Query {
   user(id: ID!): User
@@ -48,6 +49,7 @@ type Query {
 ```
 
 Maps to an operation with:
+
 - `original: "user"`
 - `mapped: "QueryUser"`
 - `request: "QueryUserRequest"`
@@ -73,6 +75,7 @@ type Product @key(fields: "id") {
 ```
 
 Generates entity mappings with:
+
 - `typeName: "Product"`
 - `kind: "entity"`
 - `key: "id"` (first key field from directive)
@@ -92,6 +95,7 @@ enum Role {
 ```
 
 Maps to enum mappings with values:
+
 - `original: "ADMIN"` → `mapped: "ROLE_ADMIN"`
 - `original: "USER"` → `mapped: "ROLE_USER"`
 
@@ -119,6 +123,7 @@ input UserInput {
 ```
 
 Maps to field mappings with:
+
 - `original: "name"` → `mapped: "name"`
 - `original: "emailAddress"` → `mapped: "email_address"`
 
@@ -134,4 +139,4 @@ Maps to field mappings with:
 - Generated RPC service methods follow `{OperationType}{CapitalizedFieldName}` pattern
 - Request/response message types follow `{Method}Request` and `{Method}Response` pattern
 
-This mapping structure provides a complete representation of the GraphQL schema that can be used to generate valid Protocol Buffer definitions while maintaining semantic equivalence. 
+This mapping structure provides a complete representation of the GraphQL schema that can be used to generate valid Protocol Buffer definitions while maintaining semantic equivalence.

@@ -1,0 +1,401 @@
+---
+title: "Overview"
+description: "Customize your router by writing just a few lines of Go code and compiling it with a single command. Eliminate the complexities associated with writing scripts and use the existing Go ecosystem."
+icon: "cubes"
+---
+
+The Cosmo Router can be easily extended by providing custom modules. Modules are pure Go code and can implement one or multiple interfaces. The following interfaces are provided:
+
+- `core.RouterOnRequestHandler` Implements a custom middleware that runs before most internal middleware in the router for each client request. Most importantly this is called before tracing and authentication logic for each request. **Use case:** Custom Authentication Logic, Custom Tracing Logic, Early return, Request Validation.
+- `core.RouterMiddlewareHandler` Implements a custom middleware on the router. The middleware is called for every client request. It allows you to modify the request before it is processed by the GraphQL engine. **Use case:** Logging, Caching, Early return, Request Validation, Header manipulation.
+- `core.EnginePreOriginHandler` Implements a custom handler that is executed before the request is sent to the subgraph. This handler is called for every subgraph request. **Use case:** Logging, Request signing, Short-circuiting with mock responses. For setting headers that affect request identity (e.g. tenant IDs), use `RouterOnRequestHandler` or `RouterMiddlewareHandler` instead — see [Request Deduplication](/router/request-deduplication).
+- `core.EnginePostOriginHandler` Implement a custom handler executed after the request to the subgraph but before the response is passed to the GraphQL engine. This handler is called for every subgraph response. **Use cases:** Logging, Caching.
+- `core.Provisioner` Implements a Module lifecycle hook that is executed when the module is instantiated. Use it to prepare your module and validate the configuration.
+- `core.Cleaner` Implements a Module lifecycle hook that is executed after the server is shutdown. Use it to close connections gracefully or for any other cleanup.
+
+<Info>
+  `*OriginHandler` handlers are called concurrently when your GraphQL operation
+  results in multiple subgraph requests. Due to that circumstance, you should
+  handle the initial router request/response objects `ctx.Request()` and
+  `ctx.ResponseWriter()` as read-only objects. Any modification without
+  protecting them from concurrent writes, e.g., by a mutex, results in a race
+  condition.
+</Info>
+
+<Info>
+  `RouterOnRequestHander` is only available since Router
+  [0.188.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.188.0)
+</Info>
+
+<Warning>
+  If you are upgrading from a Router version prior to [0.278.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.278.0) and use `EnginePreOriginHandler`, the request deduplication behavior has changed. Headers set in `OnOriginRequest` are no longer included in the deduplication key. See the [Custom Modules Migration Guide](/router/custom-modules-migration) for details on how to adapt your modules.
+</Warning>
+
+## Learn by Example
+
+If you want to see how to develop your own modules, check out our examples repository. It contains examples to build and upgrade your own router.
+
+<Card
+  title="Router Examples"
+  icon="github"
+  href="https://github.com/wundergraph/router-examples"
+  arrow="true"
+  cta="View on GitHub"
+>
+  Explore production-ready examples of custom modules and router setups.
+</Card>
+
+## Concepts
+
+The following sections will guide you through important concepts and best practices for developing custom modules.
+
+### Priority Loading of Modules
+
+When loading multiple modules, the order is not inherently guaranteed. To ensure a specific loading order, you can use the `Priority` option. Modules with lower priority numbers are loaded first. Below is an example configuration:
+
+```go
+core.ModuleInfo{
+	// This is the ID of your module, it must be unique
+	ID: "myModule",
+	// The priority of your module, lower the number higher the priority
+	// Value should be > 0
+	Priority: 1,
+	New: func() app.Module {
+		return MyModule{}
+	},
+}
+```
+
+In this example, the module `myModule` has a priority of 1, meaning it will be loaded before modules with higher priority values.
+
+### Access the GraphQL operation
+
+During the client request, you have access to the actual GraphQL operation. Simply call:
+
+```go
+// ctx core.RequestContext
+
+operation := ctx.Operation()
+c.Name() // MyOperation
+c.Type() // Query
+c.OperationHash() // 81671788718
+c.Content() // query MyOperation { ... }
+```
+
+### Access sha256Hash
+
+You can access the sha256Hash of the operation using the following:
+
+```go
+ctx.Operation().Sha256Hash() // ctx core.RequestContext
+```
+
+However, the sha256Hash is not computed by default and is only computed if it is required by the router. Some of the scenarios where it will be required by the router are:
+* When the sha256Hash is used in expressions
+* When the sha256Hash is added as a custom attribute for telemetry or access logs
+* When using Persisted Operations
+* If `persisted_operations.log_unknown` or `persisted_operations.safelist.enabled` is set to `true`
+
+However, if you are only using the sha256Hash in custom modules, you will need to explicitly force it to be computed. You can do this by calling `SetForceSha256Compute()` in the `RouterOnRequestHandler` hook, as it's the only hook that runs before the sha256Hash is computed by the router:
+
+```go
+ctx.SetForceSha256Compute() // ctx core.RequestContext
+```
+
+You can verify whether the sha256Hash has already been computed by the router by checking if the value is empty, without calling the `SetForceSha256Compute()` method above.
+
+The following example shows how you can access and use the `sha256Hash` in custom modules:
+
+```go
+// This runs before the sha256Hash is computed, and SetForceSha256Compute should only be called here
+func (m *Sha256VerifierModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
+	// Tell the router that the sha256Hash is required, in case it's not computed via other means
+	ctx.SetForceSha256Compute()
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+
+func (m *Sha256VerifierModule) Middleware(ctx core.RequestContext, next http.Handler) {
+	// Print the sha256Hash
+	fmt.Println(ctx.Operation().Sha256Hash())
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+### Access query plan information
+
+In Middleware, you can access some stats about the query plan that will be used for the operation.
+
+```go
+func (m *MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
+	qps, err := ctx.Operation().QueryPlanStats()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("subgraphs contacted: %v\n", qps.SubgraphFetches)
+	fmt.Printf("total subgraphs contacted: %d\n", qps.TotalSubgraphFetches)
+
+	// Call the next handler in the chain or return early by calling w.Write()
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+QueryPlanStats includes the following info:
+
+- Total count of subgraph fetches
+- A map of subgraph names to the number of times they will be fetched
+
+Middleware is executed before any of the fetches are made, so you can use this information as a heuristic cost for rate limiting, etc.
+
+### Access operation timings
+
+In Middleware, you can access timing information for the various stages of operation processing. This is useful for capturing per-request performance metrics in custom telemetry pipelines.
+
+```go
+func (m *MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
+	timings := ctx.Operation().Timings()
+
+	fmt.Printf("parsing: %s\n", timings.ParsingTime)
+	fmt.Printf("validation: %s\n", timings.ValidationTime)
+	fmt.Printf("normalization: %s\n", timings.NormalizationTime)
+	fmt.Printf("planning: %s\n", timings.PlanningTime)
+
+	// Call the next handler in the chain or return early by calling w.Write()
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+`OperationTimings` includes the following fields (all `time.Duration`):
+
+- `ParsingTime` – Time spent parsing the GraphQL operation
+- `ValidationTime` – Time spent validating the operation against the schema
+- `NormalizationTime` – Time spent normalizing the operation
+- `PlanningTime` – Time spent generating the query plan
+
+<Info>
+  If called too early in the request chain, timing values may be inaccurate. Using `Timings()` in the `Middleware` handler is recommended.
+</Info>
+
+### Access Request Context
+
+In every handler, you can add/remove, or modify response headers. We also provide a convenient, safe way to share data across handlers.
+
+```go
+// ctx core.RequestContext
+
+// Sets a custom header on the final response
+ctx.ResponseWriter().Header().Set("myHeader", c.GetString("myKey"))
+
+// Provides access to the request logger
+ctx.Logger().Info("My log line")
+
+// Sets a value on the context. Use c.GetString to access the underlying value
+// in any other handler you want
+ctx.Set("myKey", "myValue")
+```
+
+### Access Subgraph through Request Context
+
+Through the request context you can retrieve the active subgraph for the current request. This can be done in the OnOriginRequest hook as show below
+
+```go
+func (m MyModule) OnOriginRequest(request *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+	subgraph := ctx.ActiveSubgraph(request)
+	subgraph.Name // Subgraph name
+	subgraph.Id   // Subgraph ID from the controlplane
+	subgraph.Url  // Stored subgraph URL from the router config
+}
+```
+
+<Info>
+  A more complex example including tests is accessible at
+  https://github.com/wundergraph/cosmo/tree/main/router/cmd/custom
+</Info>
+
+### Access authentication information
+
+Authentication information, including claims and the provider that authenticated the request, can be accessed through `core.RequestContext.Authentication()`
+
+<Info>
+  For a full example, please check out
+  https://github.com/wundergraph/cosmo/tree/main/router/cmd/custom-jwt
+</Info>
+
+### Change Authentication Information
+
+Above, we showed how to access Authentication information. There can be cases where your authentication could depend partly on another system, and you want to set elements for use with other directives, such as [@requiresScopes](/federation/directives/requiresscopes). In order to do that, you can use `auth.SetScopes()` to manually change the authentication's scopes.
+
+```go
+func (m *SetScopesModule) Middleware(ctx core.RequestContext, next http.Handler) {
+	auth := ctx.Authentication()
+	if auth != nil {
+		// You can set the scopes for a request, based on an
+		// external system, and then utilize that for the @requiresScope
+		// directive
+		auth.SetScopes([]string{"read:employee"})
+	}
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+`.SetScopes()` overwrites the existing scopes. If you'd like to append/preserve the built-in scopes, you can first use `auth.Claims()` to get the existing scopes, and incorporate that into the updates scopes.
+
+```go
+func (m *SetScopesModule) Middleware(ctx core.RequestContext, next http.Handler) {
+	auth := ctx.Authentication()
+	if auth != nil {
+		claims := auth.Claims()
+		existingScopes := claims["scopes"].(string)
+		scopesSlice := strings.Split(existingScopes, " ")
+		updatedScopes := append(scopesSlice, m.Scopes...)
+		auth.SetScopes(updatedScopes)
+	}
+
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+If you have to set the authentication scopes, but the authentication could be not set, you can call the method `ctx.SetAuthenticationScopes(scopes []string)` that, if the Authentication is not set, it will initialize it with an empty object and set the scopes. If the authentication is already set, it will just override the scopes.
+
+```go
+func (m *SetScopesModule) Middleware(core.RequestContext, next http.Handler) {
+	// Initialize the scopes
+	customScopes := []string{"scope1", "scope2"}
+
+	// Set the authentication scopes
+	ctx.SetAuthenticationScopes(customScopes)
+
+	next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+The scopes will be available to subsequent custom modules, just like when using `SetScopes()`.
+
+#### Do Changes Before Authentication Occurs
+
+In the previous section, the `Middleware` runs after the authentication of the request. However, sometimes you might want to run authentication related logic before the authentication actually happens. For example, let's say that your client sends the `Authorization` header without the `Bearer` part in the header and you want to add `Bearer` to the header, for this you can use the `RouterOnRequestHandler` hook.
+
+```go
+func (m *SetScopesModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
+    authHeader := ctx.Request().Header.Get("Authorization")
+
+    if authHeader != "" && !strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
+       ctx.Request().Header.Set("Authorization", "Bearer "+authHeader)
+    }
+
+    next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+### Return GraphQL conform errors
+
+Please always use `core.WriteResponseError` to return an error. It ensures that the request is properly tracked for tracing and metrics.
+
+```go
+func (m *MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
+    // Exit early
+    core.WriteResponseError(ctx, fmt.Errorf("my custom error: %w", err))
+    // or pass on
+    next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+### Access The Error Set In The Router
+
+We expose the `Error()` method as part of the context, which when called will return the error set to `request.error` in expressions.
+
+Note that if you call `Error()` in the hooks, you are most likely to get `nil`. This is because when the hook is called, the error has not been set internally yet. The recommended approach is to use a custom response writer, which will be called after the error has been set internally, thus the value from `Error()` will be non-nil when called from the custom response writer. When using a custom response writer, we recommend wrapping the writer in the `RouterOnRequest` hook (see example below), as this is the first hook that is called in a request lifecycle.
+
+<Note>
+The `Write` method in the custom response writer can be called multiple times from the router for the same request.
+</Note>
+
+```go
+type headerCapturingWriter struct {
+	http.ResponseWriter
+	ctx             core.RequestContext
+}
+
+// This will be called by the router when it is calling Write
+// Do note that this can be called multiple times for the same request
+func (w *headerCapturingWriter) Write(b []byte) (int, error) {
+	if err := w.ctx.Error(); err != nil {
+		// error has been successfully set
+		fmt.Println("error detected")
+	}
+	return w.ResponseWriter.Write(b)
+}
+
+func (m *CustomModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
+	// Wrap the response writer to intercept writes
+	wrappedWriter := &headerCapturingWriter{
+		ResponseWriter:  ctx.ResponseWriter(),
+		ctx:             ctx,
+	}
+
+	// Call the next handler with the wrapped writer
+	next.ServeHTTP(wrappedWriter, ctx.Request())
+}
+```
+
+### Request Handler lifecycle
+
+The current module handler allow to intercept and modify request / response subgraphs.
+
+```
+Incoming client request
+    │
+    └─▶ core.RouterOnRequestHandler (Early return, Custom Authentication Logic)
+    │
+    └─▶ core.RouterMiddlewareHandler (Early return, Validation)
+       │
+       └─▶ core.EnginePreOriginHandler (Request signing, Custom Response, Logging)
+       │
+       └─▶ "Request to the subgraph"
+       │
+       └─▶ core.EnginePostOriginHandler (Logging, Response mods)
+       │
+       └─▶ "Fulfill subgraph response"
+```
+
+### Module Configuration
+
+If you need to pass external configuration values to your module, you can do so easily by annotating the fields in your module struct. Fields must start with an uppercase letter to make them accessible.
+
+```go
+const myModuleID = "myModule"
+
+type MyModule struct {
+	// Properties that are set by the config file are automatically populated based on the `mapstructure` tag
+	// Create a new section under `modules.<name>` in the config file with the same name as your module.
+	// Don't forget in Go the first letter of a property must be uppercase to be exported
+
+	Value uint64 `mapstructure:"value"`
+
+	Logger *zap.Logger
+}
+```
+
+#### Example Config file
+
+Based on the example above we will populate the field `Value` with the value `1`. You can also validate your config in the `core.Provisioner` handler.
+
+```bash config.yaml
+version: '1'
+
+modules:
+  myModule: # Id of your module
+    Value: 1
+```
+
+## Migrations
+
+### From pre-0.278.0 to 0.278.0+: Request Deduplication
+
+Starting with Router [0.278.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.278.0), request deduplication moved from the HTTP transport layer to the engine/loader layer. If your custom modules use `EnginePreOriginHandler` to set headers that affect request identity (e.g. tenant IDs, user tokens), you need to migrate them to earlier hooks.
+
+See the full [migration guide](/router/custom-modules-migration) for step-by-step instructions.
+
+## Future Plans
+
+We're currently working on the iteration of the module system. It will allow you to fully customize the router with a complete overhaul of the development experience. The new module system will be available in the next major release of the router. If you have any questions or suggestions, please reach out to us on the [GitHub](https://github.com/wundergraph/cosmo/blob/main/adr/custom-modules-v1.md) ADR.

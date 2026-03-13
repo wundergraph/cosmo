@@ -1,0 +1,148 @@
+---
+title: "Auth0"
+icon: "user-lock"
+description: "Setting up SSO with Auth0"
+---
+
+### Steps to set Auth0 as an OIDC identity provider
+
+<Steps>
+  <Step>
+    Navigate to the Applications view within your Auth0 account.
+  </Step>
+  <Step>
+    Either use the default application or create a new application by clicking on the **Create Application** button.
+  </Step>
+  <Step>
+  A dialog will open, give the app a name, select the type of application and then click on the **Create** button.
+
+<Frame>
+  <img
+    src="/images/studio/sso/create-native-app-named-my-app.png"
+    alt="Creating a new Native application named My App"
+    title="Create Native app named My App"
+  />
+</Frame>
+
+</Step>
+<Step>
+  Once the app is created, navigate to the Setting tab. Now copy the **Domain**, **Client ID** and **Client Secret**.
+
+<Frame>
+  <img
+    src="/images/studio/sso/app-basic-info-with-name-and-domain.png"
+    alt="Basic Information section showing app name My App and development domain"
+    title="App basic info with name and domain"
+  />
+</Frame>
+
+</Step>
+<Step>
+  Navigate to the settings page on Cosmo.
+</Step>
+<Step>
+* Click on **Connect.**
+
+<Frame>
+  <img
+    src="/images/studio/sso/organization-settings-with-ai-rbac-scim.png"
+    alt="Organization settings showing name, slug, and status of AI, RBAC, and SCIM features"
+    title="Organization settings with AI, RBAC, SCIM"
+  />
+</Frame>
+
+</Step>
+<Step>
+  Give the connection a name, the **Discovery Endpoint** will be  `https://YOUR_AUTH0_DOMAIN/.well-known/openid-configuration` **,** and paste the **Client ID** and  **Client secret**copied before into the **Client ID** and  **Client Secret fields respectively,** &#x61;nd then click on **Connect.**
+
+<Frame>
+  <img
+    src="/images/studio/sso/oidc-provider-configuration-form.png"
+    alt="Connect OpenID Connect Provider form with fields for name, endpoint, and credentials"
+    title="OIDC provider configuration form"
+  />
+</Frame>
+
+</Step>
+<Step>
+ Configure the mapping between the roles in Cosmo and the user roles in Auth0. The field **Group in the provider** can be populated with the name of the role or a regex to match the user roles. Once all the mappers are configured, click on **Save**.
+
+  <Frame>
+    <img 
+    src="/images/studio/sso/group-to-role-mapping-dialog.png" 
+    alt="Group mapper configuration dialog linking provider groups to Cosmo roles"
+    title="Group-to-role mapping dialog"
+    />
+  </Frame>
+</Step>
+<Step>
+ Copy the sign-in and sign-out redirect URIs displayed in the dialog.
+
+<Frame>
+  <img
+    src="/images/studio/sso/oidc-provider-configuration-steps.png"
+    alt="Steps to configure OIDC provider with sign-in and sign-out redirect URLs"
+    title="OIDC provider configuration steps"
+  />
+</Frame>
+</Step>
+<Step>
+  Navigate back to the settings tab of the application created on Auth0 and populate the **Allowed Callback URLs** and **Allowed Logout URLs** redirect URIs with the above-copied sign-in and sign-out URLs respectively. Click on **Save Changes**.
+
+<Frame>
+  <img
+    src="/images/studio/sso/application-uri-configuration.png"
+    alt="Application URI settings for callback and logout URLs in Cosmo Docs"
+    title="Application URI configuration"
+  />
+</Frame>
+
+</Step>
+<Step>
+  Now navigate to **Actions** -> **Library,** and then click on  **the Build Custom**butto&#x6E;**.**
+
+<Frame>
+  <img
+    src="/images/studio/sso/empty-library-page.png"
+    alt="Cosmo Docs library page showing no installed actions or configurations"
+    title="Empty library page"
+  />
+</Frame>
+
+</Step>
+
+<Step>
+  Give the action a name, select **Login/Post Login** as the **Trigger** and **Node 18** as the **Runtime** and then click the  **Create**butto&#x6E;**.**
+
+</Step>
+<Step>
+Copy the below code and paste it into the editor shown, then click the **Deploy** button.
+
+```js
+exports.onExecutePostLogin = async (event, api) => {
+  if(event.authorization){
+    api.idToken.setCustomClaim(`ssoGroups`, event.authorization.roles);
+  }
+};
+```
+</Step>
+
+<Step>
+  Now navigate to **Actions** -> **Flows,** and then click on  the  **Login**flo&#x77;**.**
+
+</Step>
+<Step>
+Navigate to the **Custom** tab on the right side of the page. Now drag the action and place it between Start and Complete as shown below, and then click on **Apply**.
+
+<Frame>
+  <img
+    src="/images/studio/sso/login-flow-customization.png"
+    alt="Login flow customization showing Start, test, and Complete actions"
+    title="Login flow customization"
+  />
+</Frame>
+</Step>
+<Step>
+Now you can assign users/groups to the application, and those users will be able to log into Cosmo using the URL provided on setting up the provider.
+</Step>
+</Steps>

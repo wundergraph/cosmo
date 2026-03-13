@@ -1,0 +1,20 @@
+{
+  "skill_name": "docs-update-check",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I just added a new `rate_limit.retry_after_header` boolean option to the router config in `router/pkg/config/`. It defaults to `true` and controls whether the router sends a `Retry-After` header on rate-limited responses. Can you check if the docs need updating?",
+      "expected_output": "Should identify router/configuration.mdx and router/traffic-shaping/ docs as needing updates. Should mention the new config option needs to be documented with its default value and behavior."
+    },
+    {
+      "id": 2,
+      "prompt": "I added a `--dry-run` flag to the `wgc subgraph publish` command. When set, it validates the schema and shows what would change but doesn't actually publish. I need to make sure the docs reflect this.",
+      "expected_output": "Should identify cli/subgraph/publish.mdx as needing an update. Should note the new --dry-run flag needs to be added to the command's flag documentation with its description."
+    },
+    {
+      "id": 3,
+      "prompt": "I refactored the router's internal request handling to use a middleware chain instead of direct function calls. No new config options, no behavioral changes, just cleaner code. Do the docs need updating?",
+      "expected_output": "Should recognize this is an internal refactor with no user-facing changes and report that no documentation updates are needed, or at most a very minor check."
+    }
+  ]
+}

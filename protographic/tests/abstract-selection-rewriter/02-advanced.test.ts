@@ -207,7 +207,7 @@ describe('Union type', () => {
         }
       }"
     `);
-  })
+  });
 });
 
 describe('AbstractSelectionRewriter - Advanced Cases', () => {

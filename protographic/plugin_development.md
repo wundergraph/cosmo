@@ -38,7 +38,7 @@ project_dir
       - main.go # Main entry point of the plugin
         - main_test.go # Test of the plugin
     - generated
-      - service.proto # Generated from schema 
+      - service.proto # Generated from schema
       - mapping.json # Generated from schema
       - service.proto.lock.json # Generated lock file
       - service.pb.go # Generated gRPC code
@@ -84,7 +84,6 @@ The plugin binary is hosted on the CDN. The URL is constructed as follows:
 
 The plugin name, version are embedded in the router execution config. The router will download the plugin binary from the CDN and store it in the plugin directory.
 The architecture is detected at runtime and the correct binary is downloaded.
-
 
 ## Example Go Plugin
 

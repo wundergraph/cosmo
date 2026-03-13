@@ -4,6 +4,16 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.110.1](https://github.com/wundergraph/cosmo/compare/wgc@0.110.0...wgc@0.110.1) (2026-03-13)
+
+**Note:** Version bump only for package wgc
+
+# [0.110.0](https://github.com/wundergraph/cosmo/compare/wgc@0.109.1...wgc@0.110.0) (2026-03-12)
+
+### Features
+
+* add limit option for error/warning display in publish command ([#2634](https://github.com/wundergraph/cosmo/issues/2634)) ([1d0085d](https://github.com/wundergraph/cosmo/commit/1d0085d4de4db6ccab82bd42df5cd2a1500f3413)) (@JivusAyrus)
+
 ## [0.109.1](https://github.com/wundergraph/cosmo/compare/wgc@0.109.0...wgc@0.109.1) (2026-03-11)
 
 **Note:** Version bump only for package wgc

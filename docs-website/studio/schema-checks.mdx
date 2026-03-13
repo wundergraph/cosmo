@@ -1,0 +1,106 @@
+---
+title: "Schema Checks"
+description: "Validate schema changes before deploying them to production. Ship breaking changes safely through operation checks."
+icon: list-check
+---
+
+A schema check allows you to validate if a proposed schema change will produce any error before shipping it to production. We differentiate between four different kinds of errors:
+
+<CardGroup>
+  <Card title="Composition Errors" icon="square-1">
+    Describes if the proposed schema can be composed with all other subgraphs in the federated graph. It will never be possible to publish a schema that has composition errors because it would result in a non-executable plan for the router.
+  </Card>
+  <Card title="Breaking Change Detection" icon="square-2">
+    Indicates whether the proposed schema is free of changes that break existing client operations. Breaking changes cannot be published unless you force them manually through an override or automatically by using "[Operations Check](/studio/schema-checks#operation-checks)", see below.
+  </Card>
+  <Card title="Operations Check" icon="square-3">
+    Describes if the proposed schema affects any client operations based on real usage data. This is done by sending schema usage traffic to [Cosmo Cloud](/deployments-and-hosting/cosmo-cloud) from your routers. If you propose a breaking change and no active clients use the affected schema changes the check will pass.
+  </Card>
+  <Card title="Lint Check" icon="square-4">
+    Describes if the proposed schema is free of lint errors that are against your lint configuration.
+  </Card>
+</CardGroup>
+You can run schema checks with [`wgc subgraph check`](/cli/subgraph/check) in the CI and optionally with native [Github integration](/tutorial/pr-based-workflow-for-federation). After you have identified the possible effects of your changes you can publish them to your router with [`wgc subgraph publish`](/cli/subgraph/publish) .
+
+## Check overview
+
+This view lists all the checks performed, showing the timestamp of each check, the status (passed or failed), and whether the proposed schema was both composable and non-breaking. You can use the date picker to browse through the history.
+
+* **Timestamp**: This column indicates when each check was performed. The most recent checks are displayed at the top.
+
+* **Status**: This column shows the result of the check. A status of "Passed" means that the proposed schema was both composable and non-breaking. A status of "Failed" means that the proposed schema was either not composable, introduced breaking changes, or both.
+
+## Check Page
+
+
+<Frame caption="Schema Checks View">
+  <img
+    src="/images/studio/task-list-with-pass-and-fail-statuses.png"
+    alt="Task list with pass and fail statuses"
+    title="Task list with pass and fail statuses"
+  />
+</Frame>
+
+### Overview
+
+Have a glance at your check. Understand why the check succeeded or failed, and what graphs, operations, and clients were affected.
+
+<Info>
+  Operation Checks can only function when your router sends schema usage metrics to Cosmo Cloud. This is the default behavior, provided you have not overwritten the default setting. By default operation checks look at the client traffic of the last 7 days to validate if a breaking change can be safely published, however, this can be configured using the namespace [Policies](https://cosmo-docs.wundergraph.com/studio/policies#schema-checks). If you have a more advanced use case, please upgrade to a higher plan or contact us.
+</Info>
+
+<Frame>
+  <img
+    src="/images/studio/successful-schema-update-with-one-addition.png"
+    alt="Cosmo Studio schema check view showing a successful update with one field addition and no deletions."
+    title="Successful schema update with one addition"
+  />
+</Frame>
+
+#### Manual overrides
+
+You can force a breaking change to be released even when all checks except composition errors are red. The override requires currently an integration with Github. Please check out our [tutorial](/tutorial/pr-based-workflow-for-federation) on how to set this up in a few minutes.
+
+### Operation Checks
+
+Understand which operations and clients are affected by the breaking changes. You can check which ones along all your changes affected that particular operation. Besides that, you can inspect the operation document or share the specific operation with your colleagues.
+
+<Note>
+  Currently, we do not track the usage of directives. This means that changing or deleting directives will always be detected as a non-breaking change, even if clients are using them.
+</Note>
+
+#### Operation Check Overrides
+
+You can apply overrides so future checks ignore specific breaking changes for operations. Learn more by clicking the link below.
+
+<CardGroup>
+  <Card title="Overrides" icon="overline" href="/studio/overrides" horizontal/>
+</CardGroup>
+
+<Info>
+  Operations Check is not performed if there are no breaking changes in your proposed schema.
+</Info>
+
+<Frame>
+  <img
+    src="/images/studio/failed-operation-update-with-lint-issues.png"
+    alt="Cosmo Studio schema check showing a failed operation update with multiple changes and lint issues."
+    title="Failed operation update with lint issues"
+  />
+</Frame>
+
+### Operation Details
+
+If you click on a specific operation, you can view all the changes that have impacted it. Each change is linked to the schema explorer and the field usage page. By default, the field usage opened from here displays the traffic during the timeframe of the check.
+
+### Lint Checks
+
+Lists all the lint errors/warnings found in the proposed schema.
+
+<Frame>
+  <img
+    src="/images/studio/schema-update-with-no-lint-issues.png"
+    alt="Cosmo Studio schema check result showing no lint issues and a successful update."
+    title="Schema update with no lint issues"
+  />
+</Frame>

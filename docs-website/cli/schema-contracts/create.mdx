@@ -1,0 +1,61 @@
+---
+title: "Create"
+description: "Creates a contract from a federated graph or monograph."
+icon: "plus"
+---
+
+## Usage
+
+#### Exclude (the items that have the tag(s) specified will be removed from the federated graph)
+
+```bash
+npx wgc contract create <name> --source <federated-graph-name> --exclude internal -r <routing-url>
+```
+
+#### Include (the items that have the tag(s) specified will be included in the federated graph)
+
+```bash
+npx wgc contract create <name> --source <federated-graph-name> --include public -r <routing-url>
+```
+
+## Description
+
+The `npx wgc contract create` command allows you to create a contract from a federated graph or monograph by providing tags to exclude from the schema. This will create a new contract graph linked to the source graph.
+
+## Parameters
+
+- `<name>`: The name of the contract graph you want to create.
+
+## Required Options
+
+`-r , --routing-url`: The routing URL of your router. This URL defines the endpoint where the router will be accessible. The contract graph will be accessible through this router.
+
+`--source`: The name of the source graph from which contract is created.
+
+## Options
+
+<Note>
+  The --exclude and --include options are currently _mutually exclusive_. An error will be returned if more than one are defined.
+</Note>
+
+- `-n, --namespace` : The namespace of the contract graph and source graph (Default: "default").
+- `--exclude` : The list of tags that need to be excluded from the source graph schema.
+- `--include` : The list of tags that need to be included from the source graph schema.
+- `--admission-webhook-url <url>` the base url of the admission webhook. This is the url that the controlplane will use to implement admission control for the contract graph. Example: `https://admission.example.com` (without the `/validate-config` path name)
+- `--admission-webhook-secret`: Allows you to sign requests (HMAC) made to your admission webhook url. The header containing this signature is `X-Cosmo-Signature-256`
+- `--readme` : The markdown file which describes the contract graph.
+- `--suppress-warnings`: This flag suppresses any warnings produced by composition.
+
+## Examples
+
+```bash
+npx wgc contract create production-external --source production --exlude internal experimental -r http://router.example.com/graphql
+```
+
+Create a contract graph named `production-external` from the source graph schema of `production` that excludes all schema elements tagged with `internal` or `experimental`.
+
+```bash
+npx wgc contract create production-external --source production --include public api -r http://router.example.com/graphql
+```
+
+Create a contract graph named `production-external` from the source graph schema of `production` that excludes all schema elements tagged with `public` or `api`.

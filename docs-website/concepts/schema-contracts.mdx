@@ -1,0 +1,276 @@
+---
+title: "Schema Contracts"
+description: "Empower yourself as a developer by leveraging the simplicity and efficiency of WunderGraph Cosmo Schema Contracts. Schema Contracts allow you to build versatile, multi-audience graphs, simplifying development and ensuring the maintainability of your graph."
+icon: "file-signature"
+---
+
+## Introduction
+
+By adopting Schema Contracts, you can effortlessly handle complex data needs and evolving requirements. Schema Contracts prevent the creation of monolithic, unmanageable graphs, which can quickly turn into a maintenance nightmare. Instead, you can enjoy a well-organized, scalable, and adaptable API structure that caters to the specific requirements of different user groups and use cases. This approach also facilitates the implementation of new features or changes without disrupting existing consumers, ensuring a smooth evolution of your API landscape. The decoupling of different concerns within the graph not only helps maintain clear boundaries but also enhances the maintainability and extensibility of your system over time.
+
+Discover the versatility of Schema Contracts as we explore the various use cases for which they are well suited. We'll outline the prerequisites you must complete before implementing Schema Contracts, deepening our understanding of how they work under the hood. We'll provide a process for starting and working with Schema Contract implementations in your graph and share some best practices and additional resources for working with Schema Contracts.
+
+Get ready to be inspired by the flexibility and adaptability these contracts bring to your API development.
+
+### Use Cases
+
+#### Tailored APIs for Specific Consumers
+
+Federation aims to combine all your services into a unified graph, making each more accessible and easier to consume than otherwise would be in isolation. However, as your graph grows in size, potentially across different domains, supporting ever-varying use cases, eventually, you may want to tailor the API experience for specific user groups.
+
+#### Privacy and Data Security
+
+Security is a top concern for graphs that serve different stakeholders across the organization, third-party partners, and even the public. Getting the correct information into the right hands and keeping sensitive information out of the wrong hands is table stakes for multi-stakeholder graphs. Schema Contracts, with their ability to filter in and out portions of the graph that should only be accessible to specific audiences, are a natural fit for this purpose.
+
+#### Documentation and Guidance
+
+Large schemas are difficult to understand and navigate, especially for new developers. Moreover, the larger a schema becomes, the harder it becomes to maintain and evolve. Finally, large schemas can impact performance as the server has to process more data for validation purposes and identify potential pathways through your graph.
+
+#### Legacy Systems Integration
+
+Integrating legacy systems can often present challenges due to outdated technologies and schemas. Schema Contracts can act as a compatibility layer that allows you to modernize your graph step-by-step. By isolating the legacy schemas and defining how they interact with the rest of your graph, you can progressively replace or upgrade legacy components without disrupting the entire system.
+
+#### Multi-Tenant Applications
+
+For applications that serve multiple tenants, Schema Contracts enable you to create isolated views and tailored experiences for each tenant. This ensures tenant data is kept separate and secure, allowing you to customize the graph according to each tenant's needs without risking data leakage.
+
+## Understanding Schema Contracts
+
+### Terminology
+
+| Term                | Definition                                                                                                                                                                                        |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Schema Contract** | A Contract Graph or Contract is the filtered version of a Source Graph.                                                                                                                           |
+| **Source Graph**    | A federated graph or monograph whose schema is to be filtered out.                                                                                                                                |
+| **Router Schema**   | The schema used internally by the router to plan operations contains all fields, even those marked `@inaccessible`, which is necessary for accurate query planning.                               |
+| **Client Schema**   | A Client Schema is derived from a Router Schema. It excludes all elements marked for removal in the Router Schema. A Client Schema is accessible to clients and can be exposed via introspection. |
+
+### Functionality
+
+Schema Contracts work by filtering the Source Graph to create a subset of that graph, known as the Contract Graph. This subset includes only the parts of the Source Graph that are relevant and accessible to a specific client or tenant. By defining filtering rules with `@tag` and leveraging the Router Schema, Schema Contracts ensure that only the required data is exposed while maintaining the integrity and security of the source data. This allows you to create customized views for different clients or tenants without duplicating schemas or risking cross-tenant data leaks.
+
+### Interaction with Other Features
+
+- **Labels:** Schema Contracts inherit the same Labels given to the Source Graph from which they are derrived. Labesl on Schema Contracts cannot be updated independently. Changes to the Labels on a Source Graph will propogate to all derivative Schema Contracts.
+- **Namespaces:** Schema Contracts cannot be moved to another Namespace on their own. To move a Schema Contract into another Namespace, move the Source Graph to the desired Namespace and all derivative Schema Contracts will be moved automatically.
+- **Schema Checks:** Schema Checks are automatically run against all Schema Contracts, just as they are for graphs without Schema Contracts; thus, a Schema Check for a Federated Graph will fail if there are any composition errors in the Schema Contract or Breaking Client Usage is detected.
+- **Recomposition:** Schema Contracts will recompose when any of the following events occur:
+  - The Schema Contract is created;
+  - The Schema Contract Routing URL changes;
+  - A Subgraph in a Federated Graph is Created, Updated, Moved, or Deleted;
+  - The Federated Graph serving as the Source Graph for the Schema Contract has been moved into a new Namespace;
+  - The Federated Graph serving as the Source Graph for the Schema Contract has been Relabeled; or
+  - A new schema is published in a Monograph.
+- **Graph Type:** A Schema Contract will be the same Graph Type as its Source Graph. Where a Schema Contract is created from a Source Graph that is a Federated Graph, the resulting Schema Contract will be a Federated Graph. Where a Schema Contract is created from a Source Graph that is a Monograph, the resulting Schema Contract will be a Monograph.
+- **CLI Compatability:** With the exception of `Move` and `Monograph Publish` commands, the WunderGraph Cosmo CLI commands work the same for Schema Contracts as they would otherwise.
+- **Deletion:** If a Source Graph is deleted, Schema Contracts based thereon will also be deleted.
+- **Monograph Migration:** Migrating a Monograph into a Federated Graph will migrate all connected Schema Contracts.
+
+## How to Create a Schema Contract
+
+Getting started with Schema Contracts is a three-step process. First, add `@tag` to your subgraph schemas to define filtering rules. Second, publish the updated subgraph schemas to WunderGraph Cosmo using the WunderGraph Cosmo CLI. Third, create a Schema Contract using the WunderGraph Cosmo CLI, specifying the `@tag`-based filtering rules you defined in the first step. Thereafter, you will be ready to deploy your Contract Schema to a WunderGraph Cosmo Router and start serving traffic.
+
+Follow along with the steps below as we create a Schema Contract for an existing Federated Graph presently in use at a fictional, professional racing series to learn how you can do the same in your organization.
+
+### Prerequisites
+
+Creating a Schema Contract with WunderGraph Cosmo requires that you have an account--either with your self-hosted version of WunderGraph Cosmo or with our WunderGraph Cosmo Cloud offering. Once armed with your WunderGraph Cosmo account, consider the following additional steps that must be taken to follow along with the steps outlined below.
+
+> **No Account? No Problem.** Head on over to the [WunderGraph Cosmo Studio](https://cosmo.wundergraph.com) and signup for a free account--the process is fast and no credit card is required\!
+
+#### 1. Federated or Monograph Published to WunderGraph Cosmo
+
+To serve as a source graph, you must have an existing Graph (Federated or Monograph) deployed to WunderGraph Cosmo.
+
+#### 2. WunderGraph Cosmo CLI Downloaded and Installed
+
+The WunderGraph Cosmo CLI is an essential companion for developers leveraging the powerful capabilities of the WunderGraph Cosmo Platform, including Schema Contracts. To download the WunderGraph Cosmo CLI, you can use the Node Package Manager (`npm`). This is currently the primary method available for obtaining the CLI. Here are the steps:
+
+1. **Install NodeJS:** If you do not already have NodeJS installed, you will need to install it first, as `npm` comes bundled with NodeJS.
+2. **Use** `npm` **to Install the CLI:**
+
+```bash
+npm install -g wgc@latest
+```
+
+or
+
+```bash
+npx -y wgc@latest
+```
+
+#### 3. Authentication with WunderGraph Cosmo and Suitable Privileges
+
+You must be authenticated with and have sufficient privileges in the WunderGraph Cosmo organization where you wish to create a Schema Contract. Run the following command to link the CLI with your WunderGraph account.
+
+```bash
+wgc auth login
+```
+
+A browser window will automatically open, prompting you to grant access to the CLI. Once granted, a success message will indicate that you may close the browser and return to the CLI. You are now ready to run `wgc` commands against your WunderGraph account.
+
+> **Welcome Back\!** Upon returning to the CLI, you may be prompted to select an organization with which to work if your WunderGraph account is linked to multiple organizations--if you're only in one organization, choose that one. Should the above workflow not function as expected, check the CLI's output for additional context and further instructions.
+
+## Getting Started
+
+### Add `@tag` to Subgraph Schemas to Define Filtering Rules
+
+To create a Schema Contract, you must first define filtering rules using `@tag` in your subgraph schemas. Consider the following schema for a `Driver` subgraph: **Drivers Subgraph**
+
+```graphql
+type Query {
+    getDriverById(id: ID!): Driver
+    getDriverBySSN(ssn: String!): Driver
+}
+
+type Driver @key(fields: "id") @key(fields: "ssn") {
+    id: ID!
+    name: String!
+    dob: String!
+    ssn: String!
+}
+```
+
+Here, we have several fields that we may want to filter out of the Schema Contract for specific audiences. For instance, sensitive information like the ssn field should not be accessible to all API consumers. Using Schema Contracts, we can create a version of our schema that excludes these sensitive fields, providing a tailored and secure API experience for each user group.
+
+To filter out the ssn field from the Schema Contract, we can add a `@tag` directive to the field definition in the schema:
+
+```graphql
+type Query {
+    getDriverById(id: ID!): Driver
+    getDriverBySSN(ssn: String!): Driver
+}
+
+type Driver @key(fields: "id") @key(fields: "ssn") {
+    id: ID!
+    name: String!
+    dob: String!
+    ssn: String! @tag(name: "sensitive")
+}
+```
+
+Schema Contracts and tags can also be used at the query level to control access to specific queries or mutations. This can be useful when restricting access to certain operations based on the user's role or other criteria.
+
+```graphql
+type Query {
+    getDriverById(id: ID!): Driver @tag(name: "public")
+    getDriverBySSN(ssn: String!): Driver @tag(name: "private")
+}
+
+type Driver @key(fields: "id") @key(fields: "ssn") {
+    id: ID!
+    name: String!
+    dob: String! @tag(name: "sensitive")
+    ssn: String! @tag(name: "sensitive")
+}
+```
+
+In this example, the `getDriverById` query is tagged as "public", meaning it could be included in a Schema Contract for public-facing APIs. On the other hand, the `getDriverBySSN` query is tagged as "private", meaning it could be excluded from public-facing APIs and only included in Schema Contracts for internal use.
+
+### Publish Updated Schemas to WunderGraph Cosmo using the WunderGraph Cosmo CLI
+
+Once we've finished annotating our subgraph schemas with `@tag`, we can publish the updated schemas to WunderGraph. First, let's run a Schema Check to ensure that our new schema is valid:
+
+```bash
+wgc subgraph check drivers --schema ./schema.graphql
+```
+
+If all goes well, we'll see a `✔ Schema check passed.` message in the terminal. If not, the CLI will provide a detailed error message to help us identify and resolve any issues. Once we're confident that our new subgraph schema is ready to go, we can publish it to WunderGraph Cosmo.
+
+```bash
+wgc subgraph publish drivers --schema ./schema.graphql
+```
+
+If all goes well, we'll see a `✔ Subgraph published successfully` message in the terminal.
+
+Note that the changes will be reflected in the WunderGraph Cosmo Studio when we publish our updated subgraph schema. However, at this point, we have only added @tag to our schema and published the updated schema. We haven't yet created a Schema Contract that uses these tags to filter the schema.
+
+Therefore, while we can see the `@tag` in the schema in the Studio schema, there will be no functional changes to our API. The tags are merely annotations and do not have any effect until they are used in a Schema Contract. The actual filtering of the schema based on the @tag will only happen when we create a Schema Contract and specify which tags to filter. The functional changes will occur once the Schema Contract is created and deployed, and our API will start serving the filtered schema. Let's do it\!
+
+### Create a Schema Contract using the WonderGraph Cosmo CLI
+
+Now that we've added `@tag` to our subgraph schemas and published the updated schemas to WunderGraph Cosmo, we're ready to create a Schema Contract\! We create a Schema Contract for our organization using the WunderGraph Cosmo CLI `contract create` command. When creating the Schema Contract, we specify which tags to filter. WunderGraph Cosmo then generates a Schema Contract that filters the tagged queries accordingly.
+
+To create Schema Contracts for our `drivers` subgraph, we can use the following command:
+
+```bash
+wgc contract create public \
+  --source contracts-sandbox \
+  --exclude sensitive \
+  --exclude private \
+  --routing-url http://localhost:3003
+```
+
+Here, we specify the `public` tag as the name of the Schema Contract, `contracts-sandbox` as the Source Graph, and `sensitive` and `private` as the tags to exclude from the Schema Contract. This command tells WunderGraph Cosmo to create a Schema Contract named `public` that filters out any fields tagged as `sensitive` or `private` from the Source Graph \``` contracts-sandbox` ``. Furthermore, we specify the routing URL for the Schema Contract, which is the URL where the Schema Contract will be deployed.
+
+If all goes well, we'll see a `✔ Schema Contract created successfully` message in the terminal. Our Schema Contract is now ready to be deployed to a WunderGraph Cosmo Router and start serving traffic.
+
+### Start Serving Schema Contract Traffic via the WunderGraph Cosmo Router
+
+Like any Federated Graph, a Schema Contract is deployed to a WunderGraph Cosmo Router using the WunderGraph Cosmo CLI. This guide does not provide a full treatment of how to deploy a graph to a WunderGraph Cosmo Router. However, for present purposes, the following two-step process should suffice.
+
+First, create a router token for our new Schema Contract:
+
+```bash
+wgc router token create public-router-token -g public
+```
+
+Second, pass the router token to the WunderGraph Cosmo Router to start serving traffic:
+
+```bash
+docker run \
+  --name schema-contracts-router \
+  --rm \
+  -p 3002:3002 \
+  --add-host=host.docker.internal:host-gateway \
+  -e pull=always \
+  -e DEV_MODE=true \
+  -e LISTEN_ADDR=0.0.0.0:3002 \
+  -e GRAPH_API_TOKEN=<GRAPH_API_TOKEN> \
+  ghcr.io/wundergraph/cosmo/router:latest
+```
+
+Our Schema Contract is now deployed to a WunderGraph Cosmo Router and is ready to start serving traffic. We can now make requests to the Schema Contract using the router URL, which, in this case, we specified as http://localhost:3002.
+
+Upon visiting the router URL in a browser, we should see the WunderGraph Cosmo Router UI, where we can explore the API. Note that the Schema Contract only includes the fields not tagged as `sensitive` or `private` in the Source Graph.
+
+## Best Practices for Using Schema Contracts
+
+Maintaining and updating Schema Contracts over time is an important aspect of managing your application's data layer. Here are some best practices to consider:
+
+<CardGroup cols={2}>
+  <Card title="Conduct Regular Audits" icon="square-check" iconType="solid">
+    Regularly review your Schema Contracts to ensure they are still meeting your application's needs. This includes checking that all fields are still necessary and that new fields that should be included in the contract haven't been added. It's easy to make a schema more complex than it needs to be. Try to keep your schema as simple as possible. This will make understanding, maintaining, and evolving easier over time.
+  </Card>
+  <Card title="Versioning the Schema Contract" icon="square-check" iconType="solid">
+    When making significant changes to a Schema Contract, consider versioning the contract. This allows you to introduce changes gradually and gives contract consumers time to adjust to the new schema.
+  </Card>
+  <Card title="Keep Communication Lines Open" icon="square-check" iconType="solid">
+    Keep the lines of communication open with the consumers of your Schema Contracts. If you're planning on making changes, let them know in advance. This can help to avoid any unexpected surprises or breaking changes.
+  </Card>
+  <Card title="Document Your Schema Contracts" icon="square-check" iconType="solid">
+    Keep your Schema Contracts well-documented. This includes what fields are included in the contract, why they are included, and any known limitations or caveats.
+  </Card>
+  <Card title="Employ Automated Testing" icon="square-check" iconType="solid">
+    Implement automated testing for your Schema Contracts. This can help to catch any potential issues early before they become larger problems.
+  </Card>
+  <Card title="Try to Maintain Backward Compatibility" icon="square-check" iconType="solid">
+    When making changes to your Schema Contracts, try to maintain backward compatibility. If a breaking change is necessary, consider creating a new version of the contract.
+  </Card>
+  <Card title="Deprecation Strategy" icon="square-check" iconType="solid">
+    Have a clear strategy for deprecating old or unused Schema Contracts. This includes communicating the deprecation to consumers and providing a clear timeline for when the contract will no longer be supported.
+  </Card>
+  <Card title="Performance Monitoring" icon="square-check" iconType="solid">
+    Regularly monitor the performance of your Schema Contracts. If a contract is causing performance issues, it may need to be optimized or restructured.
+  </Card>
+</CardGroup>
+
+Remember, maintaining and updating Schema Contracts is an ongoing process. Regular reviews and communication with your team and the consumers of your contracts can help to ensure they continue to meet the needs of your application.
+
+## Conclusion
+
+Schema Contracts unlock multi-purpose, multi-audience Graphs. Large graphs can be split into different use cases, simplifying development and keeping graphs maintainable. This approach fosters a scalable and flexible system, allowing distinct teams to work independently while ensuring data integrity and consistency. By adhering to these best practices, you can significantly enhance the reliability and maintainability of your data contracts, leading to smoother application development and more robust data management.
+
+## Questions or Feedback
+
+Feel free to reach out if you have any questions or feedback regarding Schema Contracts. Your insights and inquiries are valuable; open communication helps us improve continuously. Don't hesitate to get in touch if you need clarification on best practices, have suggestions for improvements, or encounter specific issues. We are here to support you and ensure the best possible management of your Schema Contracts.

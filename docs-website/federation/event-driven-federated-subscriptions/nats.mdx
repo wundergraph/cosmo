@@ -1,0 +1,71 @@
+---
+title: "NATS"
+icon: puzzle-piece
+---
+
+## Definitions
+
+<Note>
+  The `providerId` argument, including the default value "default", *must* correspond to an equivalent property in *events.providers.nats* entry of the router config.yml.
+</Note>
+
+### @edfs\_natsPublish
+
+```graphql
+directive @edfs__natsPublish(
+  subject: String!,
+  providerId: String! = "default"
+) on FIELD_DEFINITION
+
+type edfs__PublishResult {
+    success: Boolean!
+}
+```
+
+|Argument name|Type|Value|
+|---|---|---|
+|subject|String!|The event subject.|
+|providerId|String!|The provider ID, which identifies the connection in the router config.yaml. If unsupplied, the provider ID "default" will be used.|
+
+### @edfs\_\_natsRequest
+
+```graphql
+directive @edfs__natsRequest(
+  subject: String!,
+  providerId: String! = "default"
+) on FIELD_DEFINITION
+```
+
+|Argument name|Type|Value|
+|---|---|---|
+|subject|String!|The event subject.|
+|providerId|String!|The provider ID, which identifies the connection in the router config.yaml. <br/>If unsupplied, the provider ID "default" will be used.|
+
+### @edfs\_\_natsSubscribe
+
+```graphql
+directive @edfs__natsSubscribe(
+  subjects: [String!]!,
+  providerId: String! = "default",
+  streamConfiguration: edfs__NatsStreamConfiguration
+) on FIELD_DEFINITION
+
+input edfs__NatsStreamConfiguration {
+    consumerInactiveThreshold: Int! = 30
+    consumerName: String!
+    streamName: String!
+}
+```
+
+|Argument name|Type|Value|
+|---|---|---|
+|subjects|[String!]!|The event subjects (it is possible to subscribe to multiple events). See [subjects](/federation/event-driven-federated-subscriptions/nats#root-field-arguments-and-event-subjects).|
+|providerId|String!|The provider ID, which identifies the connection in the router config.yaml. <br/>If unsupplied, the provider ID "default" will be used.|
+|streamConfiguration|edfs\_\_StreamConfiguration|Configures a stream/consumer for a NATS connection.<br/>See [Stream and consumer configuration](/router/event-driven-federated-subscriptions-edfs/nats/stream-and-consumer-configuration).|
+
+
+
+For a full example, please refer to:
+<CardGroup>
+  <Card title="NATS" icon="puzzle-piece" href="/router/event-driven-federated-subscriptions-edfs/nats" horizontal />
+</CardGroup>

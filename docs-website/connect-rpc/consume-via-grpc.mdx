@@ -1,0 +1,72 @@
+---
+title: "Consume gRPC"
+description: "Interact with your API using high-performance gRPC clients and standard tooling like grpcurl." 
+icon: "tower-broadcast"
+---
+
+This page demonstrates how your platform enables API consumers to interact with the API using standard gRPC tooling.
+
+Platform teams can adapt the examples on this page when creating consumer-facing documentation to ensure a consistent and supported API consumption experience.
+
+For internal microservices, backend systems, or high-performance mobile applications, consumers can interact with the API using the binary gRPC protocol over HTTP/2.
+
+## Prerequisites
+
+To consume the API via standard gRPC clients, consumers need two things provided by the platform team:
+
+1. Connection Details: The host and port where the router's ConnectRPC server is listening (e.g., localhost:5026).
+
+2. Service Definitions: The service.proto file generated during the build step. This file is required to define the available services, methods, and message structures for binary serialization.
+
+## Ad-Hoc testing with `grpcurl`
+
+`grpcurl` is a widely used command-line tool that lets you interact with gRPC servers, similar to how `curl` works for HTTP. 
+It is excellent for testing and debugging without generating code.
+
+### Command structure
+
+To make a request, you need to point `grpcurl` to your local `.proto` definition file, specify the plaintext flag (unless TLS is configured), provide the request data as JSON, and specify the target endpoint and fully qualified method name.
+
+In production environments, TLS is typically enabled and the `-plaintext` flag should be omitted.
+
+```bash
+grpcurl -plaintext \
+  -proto <path_to_service.proto> \
+  -d '<json_request_body>' \
+  <host>:<port> \
+  <package_name>.<ServiceName>/<MethodName>
+```
+
+## Examples
+
+The following examples assume the router is listening locally on port `5026` and the proto definitions are available in a local `./services/service.proto` file.
+
+### GetEmployeeById
+
+Retrieve an employee by their ID.
+
+```bash
+grpcurl -plaintext \
+  -proto ./services/service.proto \
+  -d '{"id": 1}' \
+  localhost:5026 \
+  employees.v1.HrService/GetEmployeeById
+```
+
+### UpdateEmployeeMood
+
+Update data on the server.
+
+```bash
+grpcurl -plaintext \
+  -proto ./services/service.proto \
+  -d '{"id": 1, "mood": "MOOD_HAPPY"}' \
+  localhost:5026 \
+  employees.v1.HrService/UpdateEmployeeMood
+```
+
+## Programmatic gRPC Clients
+
+While `grpcurl` is useful for testing, nearly every major programming language has robust library support for gRPC. Consumers can use standard `protoc` code generation tools against the provided `service.proto` file to build high-performance, typed clients for backend services.
+
+<Note> For the best developer experience in languages like TypeScript, Go, and Kotlin, we recommend using the pre-generated [SDKs](/connect-rpc/consume-via-sdks) instead of raw gRPC clients. </Note>

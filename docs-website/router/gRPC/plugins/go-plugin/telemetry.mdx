@@ -1,0 +1,95 @@
+---
+title: 'Telemetry'
+description: 'Utilize the router plugin telemetry tracing feature for automatic built in tracing.'
+sidebarTitle: Telemetry
+icon: "binary-circle-check"
+---
+
+## Tracing
+
+The router provides built-in tracing support that extends to your plugins. This allows you to trace operations from the router through to your plugin code.
+
+To enable tracing in your plugin, use the `WithTracing()` option when initializing:
+
+```go
+routerplugin.WithTracing()
+```
+
+Here's how to configure it during plugin initialization:
+
+```go
+pl, err := routerplugin.NewRouterPlugin(
+	func(s *grpc.Server) {
+		s.RegisterService(&projects.ProjectsService_ServiceDesc, &service.ProjectsService{
+			NextID: 1,
+		})
+	},
+	routerplugin.WithTracing(),
+)
+```
+
+### How tracing works
+
+When your plugin starts up, the router shares its telemetry configuration with the plugin. This configuration includes crucial trace context such as the `traceparent` value.
+
+When you enable tracing in your plugin using `WithTracing()`, the plugin uses this shared configuration to set up its own tracing. This ensures that any operations performed by your plugin become part of the same distributed trace that originated from the router.
+
+Additionally, when your plugin makes HTTP requests using the provided HTTP client, the trace context is automatically propagated to downstream services. This creates an unbroken chain of tracing that spans from the initial router request, through your plugin, and into any external APIs you call.
+
+### Working with traces
+
+Under the hood we use the opentelemetry-go library, which means the same can be used to work with traces. More information can be found in the [OTEL go docs](https://opentelemetry.io/docs/languages/go/). A few examples showing how to use open telemetry tracing in your plugin are as follows.
+
+#### Create a new trace
+Let's say you want to add more spans for the operation which filters projects by the passed in status.
+
+```go
+func (p *ProjectsService) QueryProjectsByStatus(ctx context.Context, req *service.QueryProjectsByStatusRequest) (*service.QueryProjectsByStatusResponse, error) {
+	// Create a tracer from the inner global tracer
+	tracer := otel.Tracer("projects-service")
+	ctx, span := tracer.Start(ctx, "Query Projects By Status")
+	defer span.End()
+
+	// Add attributes to the span
+	span.SetAttributes(
+		attribute.Key("project.status`").Int(req.Status)
+	)
+
+	// Note that if you want to create a tracer derived from
+	// the above tracer, you will need to pass it down to where its needed
+	projects := getProjectsForStatus(ctx, req.Status)
+
+	return &service.QueryProjectsByStatusResponse{ProjectsByStatus: projects}, nil
+}
+```
+
+#### Add attributes to the current trace
+Let's say inside the above called getProjectsForStatus function we want to add more attributes.
+
+```go
+func getProjectsForStatus(ctx context.Context, status int) []*service.Project {
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(
+		// You can use semconv to set standard attributes
+    	semconv.HTTPClientIPKey.String("127.2.2.5"),
+	)
+
+	projects := make([]*service.Project, 0)
+
+	for _, proj := range data.ServiceProjects {
+		if proj.Status == req.Status {
+			projects = append(projects, proj)
+		}
+	}
+
+	span.SetAttributes(
+		attribute.Key("slice.count`").Int(len(projects)
+	)
+
+	return projects
+}
+```
+
+### HTTP Client Traces
+
+If you are utilizing the provided inbuilt HTTP Client, you can also get out of the box tracing with it. Read [this section](/router/gRPC/plugins/go-plugin/http-client#inbuilt-tracing) for more information.

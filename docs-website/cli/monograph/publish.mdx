@@ -1,0 +1,48 @@
+---
+title: "Publish"
+description: "Publishes a monograph on the control plane."
+icon: upload
+---
+
+## **Usage**
+
+```bash
+npx wgc monograph publish [monographName] --schema [schemaFilePath]
+```
+
+## **Description**
+
+The `npx wgc monograph publish` command enables you to publish a specific monograph to the Cosmo platform. Publishing a monograph makes it available for consumption by other services or applications, allowing them to send GraphQL queries and retrieve data from your monograph.
+
+## **Parameters**
+
+* `[monographName]`: The name of the monograph you want to publish. Make sure to use the correct name of the monograph you previously created.
+
+## **Options**
+
+* `-n, --namespace` : The namespace of the monograph (Default: "default").
+
+* `--schema`: The file path to the GraphQL schema definition for the monograph you want to publish. This file should contain the complete schema definition in the GraphQL Schema Definition Language (SDL) format.
+
+  * Example: `--schema ../production.graphql`
+
+* `--fail-on-admission-webhook-error `: If set, the command will fail if the admission webhook fails
+
+* `--fail-on-composition-error `: If set, the command will fail if the composition of the monograph fails.
+
+* `--suppress-warnings`: This flag suppresses any warnings produced by composition.
+
+## **Example**
+
+### Publish a schema to an existing monograph.
+
+```bash
+npx wgc monograph publish production --schema ../production.graphql
+```
+
+## **Notes**
+
+* The `npx wgc monograph publish` command interacts with the Cosmo platform's control plane to publish the specified monograph.
+
+* Double-check that the path provided for the `--schema` option points to the correct location of the GraphQL schema file you intend to publish.
+

@@ -1,0 +1,236 @@
+---
+title: "Composing Graphs"
+description: "How to compose a federated graph with WunderGraph Schema Composition, a TypeScript composition library."
+icon: "network-wired"
+---
+
+## Subgraph object
+
+The subgraph object is the core of the composition library. It has the following form:
+
+```typescript
+import { DocumentNode } from 'graphql';
+import { federateSubgraphs, Subgraph } from '@wundergraph/composition';
+
+export type Subgraph = {
+  definitions: DocumentNode
+  name: string;
+  url: string;
+};
+```
+
+A `DocumentNode` can be created using the graphql libary `parse` function. A simple example subgraph is provided below :
+
+```typescript
+import { DocumentNode } from 'graphql';
+import { federateSubgraphs, Subgraph } from '@wundergraph/composition';
+
+const subgraphA = {
+  name: 'subgraph-a',
+  url: 'http://localhost:4001',
+  definitions: parse(`
+    type User {
+      name: String!
+    }
+  `),
+};
+```
+
+## Federating subgraphs
+
+Producing a federating graph with WunderMerge.
+
+### federateSubgraphs
+
+The federateSubgraphs function is responsible for normalizing, validating, and finally federating an array of Subgraph objects:
+
+```typescript
+export function federateSubgraphs(subgraphs: Subgraph[]): FederationResult;
+```
+
+### Federation Result
+
+The `federateSubgraphs` function returns a `FederationResult`, which has the following form:
+
+```typescript
+import { DocumentNode, GraphQLSchema } from 'graphql';
+
+export type FederationResult = {
+  errors?: Error[];
+  federatedGraphAST?: DocumentNode;
+  federatedGraphSchema?: GraphQLSchema;
+};
+```
+
+#### Properties
+
+**errors**: An optional array of all errors encountered during normalization and validation of the subgraph, or composition and validation of the federated graph. If there are any errors during normalization, federation will not be attempted. If federation was successful, the array will be undefined. 
+
+**federatedGraphAST**: An optional graphql `DocumentNode` representation of the federated graph. If federation was unsuccessful, this property will be undefined. 
+
+**federatedGraphSchema**: An optional graphql `GraphQLSchema` representation of the federated graph. If federation was unsuccessful, this property will be undefined.
+
+#### Printing the federated schema
+
+You can produce a string of the federated graph through graphql `print` or graphql `printSchema`.
+
+```typescript
+import { print, printSchema } from 'graphql';
+
+const result = federateSubgraphs([subgraphA, subgraphB]);
+if (result.errors) {
+  for (const err of result.errors) {
+    console.log(err.message);
+  }
+} else {
+  print(result.federatedGraphAST!);
+  printSchema(result.federatedGraphSchema!);
+}
+```
+
+## Example
+
+An example of federation with two graphs.
+
+```typescript
+# subgraph 1
+type Query {
+  employees: [Employee!]!
+  employee(id: Int!): Employee
+}
+
+enum Department {
+  ENGINEERING
+  MARKETING
+  OPERATIONS
+}
+
+interface RoleType {
+  department: Department!
+}
+
+enum EngineerType {
+  FRONTEND
+  BACKEND
+  FULLSTACK
+}
+
+type Engineer implements RoleType {
+  department: Department!
+  type: EngineerType!
+}
+
+type Marketer implements RoleType {
+  department: Department!
+}
+
+type Operator implements RoleType {
+  department: Department!
+}
+
+type Employee @key(fields: "id") {
+  id: Int!
+  forename: String!
+  surname: String!
+  role: RoleType!
+}
+```
+
+```typescript
+# subgraph 2
+enum ProductNames {
+  CLOUD
+  COSMO
+  ENGINE
+  SDK
+}
+
+type Employee @key(fields: "id") {
+  id: Int!
+  products: [ProductNames!]
+}
+```
+
+```typescript
+import { parse, print } from 'graphql';
+
+const subgraphOne = {
+  name: 'subgraph-1',
+  url: 'http://localhost:4001',
+  definitions: parse(subgraphOneSDLString),
+}: Subgraph;
+
+const subgraphTwo = {
+  name: 'subgraph-2',
+  url: 'http://localhost:4002',
+  definitions: parse(subgraphTwoSDLString),
+}: Subgraph;
+
+const result = federateSubgraphs([subgraphOne, subgraphTwo]);
+if (result.errors) {
+  for (const err of result.errors) {
+    console.log(err.message);
+  }
+} else {
+  print(result.federatedGraphAST!);
+}
+```
+
+```typescript
+# federated graph
+directive @deprecated(reason: String = "No longer supported") on ARGUMENT_DEFINITION | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION
+directive @external on FIELD_DEFINITION | OBJECT
+directive @key(fields: String!) repeatable on OBJECT
+directive @provides(fields: String!) on FIELD_DEFINITION
+directive @requires(fields: String!) on FIELD_DEFINITION
+directive @tag(name: String!) repeatable on ARGUMENT_DEFINITION | ENUM | ENUM_VALUE | FIELD_DEFINITION | INPUT_FIELD_DEFINITION | INPUT_OBJECT | INTERFACE | OBJECT | SCALAR | UNION
+
+type Query {
+  employees: [Employee!]!
+  employee(id: Int!): Employee
+}
+
+enum Department {
+  ENGINEERING
+  MARKETING
+  OPERATIONS
+}
+
+interface RoleType {
+  department: Department!
+}
+
+enum EngineerType {
+  FRONTEND
+  BACKEND
+  FULLSTACK
+}
+
+type Engineer implements RoleType {
+  department: Department!
+  type: EngineerType!
+}
+
+type Marketer implements RoleType {
+  department: Department!
+}
+
+type Operator implements RoleType {
+  department: Department!
+}
+
+type Employee {
+  id: Int!
+  forename: String!
+  surname: String!
+  role: RoleType!
+  products: [ProductNames!]
+}
+
+enum ProductNames {
+  CLOUD
+  COSMO
+  ENGINE
+  SDK
+}
+```

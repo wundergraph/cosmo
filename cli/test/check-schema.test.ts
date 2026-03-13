@@ -115,9 +115,6 @@ describe('stdout', () => {
   });
 
   afterEach(() => {
-    logSpy.mockRestore();
-    stderrSpy.mockRestore();
-    exitSpy.mockRestore();
     process.exitCode = undefined;
     resetVcsConfig();
   });
@@ -667,9 +664,6 @@ describe('json output', () => {
   });
 
   afterEach(() => {
-    logSpy.mockRestore();
-    stderrSpy.mockRestore();
-    exitSpy.mockRestore();
     process.exitCode = undefined;
     resetVcsConfig();
   });

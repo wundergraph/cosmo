@@ -1,0 +1,62 @@
+---
+title: "Delete"
+description: "Deletes a gRPC subgraph on the control plane. The gRPC subgraph will be deleted from all federated graphs."
+icon: trash
+---
+
+## Usage
+
+```bash
+wgc grpc-service delete <name> [-f, --force]
+```
+
+<Note>
+  **Delete** is an irreversible action. However, the change will only be visible
+  to the routers once the composition has been successful. Until then, the
+  routers will operate with the most recent valid composition. Please use
+  [subgraph check](/cli/subgraph/check) to understand the impact of your change.
+</Note>
+
+## Description
+
+The `wgc grpc-service delete` command allows you to delete a gRPC subgraph on the Cosmo platform's control plane. When you delete a gRPC subgraph, all associated data and configurations will be permanently removed. Use this command with caution, as the action cannot be undone.
+
+## Parameters
+
+- `<name>`: The name of the gRPC subgraph you want to delete. This should be the exact name of the gRPC subgraph you wish to remove.
+
+## Options
+
+- `-n, --namespace [string]`: The namespace of the gRPC subgraph (Default: "default").
+
+- `-f, --force`: An optional flag that allows you to force delete the gRPC subgraph without being prompted for confirmation. Use this option if you want to delete the gRPC subgraph without additional prompts.
+
+- `--suppress-warnings`: This flag suppresses any warnings produced by composition.
+
+## Examples
+
+1. Delete the gRPC subgraph named "users-service":
+
+   ```bash
+   wgc grpc-service delete users-service
+   ```
+
+2. Force delete the gRPC subgraph named "users-service" without confirmation:
+
+   ```bash
+   wgc grpc-service delete users-service -f
+   ```
+
+3. Delete a gRPC subgraph in a specific namespace:
+
+   ```bash
+   wgc grpc-service delete users-service -n production
+   ```
+
+## Notes
+
+- The `wgc grpc-service delete` command interacts with the Cosmo platform's control plane to delete the specified gRPC subgraph.
+
+- When using the `--force` option, the command will not prompt for confirmation, so exercise caution to prevent accidental data loss.
+
+- If composition errors occur during deletion, the gRPC subgraph will still be deleted, but the router will continue to work with the latest valid schema until the composition issues are resolved.

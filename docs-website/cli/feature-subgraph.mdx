@@ -1,0 +1,25 @@
+---
+title: "Feature Subgraph"
+description: 'An overview of feature-subgraph (alias "fs") commands.'
+icon: circle-info
+sidebarTitle: Overview
+---
+
+Federated graphs are composed of "base subgraphs". Feature subgraphs represent a replacement (or "override") for a specific base subgraph. A feature subgraph exists only as long as its base subgraph also exists.
+
+Creating a feature subgraph does nothing in isolation. It must be added to an enabled [feature flag](/concepts/feature-flags) to be considered by composition.
+
+## Minimum Requirements
+
+|Package|Minimum version|
+|---|---|
+|[wgc](/cli/intro)|[0.58.0](https://github.com/wundergraph/cosmo/compare/wgc@0.57.7...wgc@0.58.0)|
+|[router](/router/intro)|[0.95.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.95.0)|
+
+<CardGroup>
+<Card title="Create Feature Subgraph" href="/cli/feature-subgraph/create-feature-subgraph" icon="plus" horizontal/>
+<Card title="Publish Feature Subgraph" href="/cli/feature-subgraph/publish-feature-subgraph" icon="upload" horizontal/>
+<Card title="Update Feature Subgraph" href="/cli/feature-subgraph/update-feature-subgraph" icon="pen-to-square" horizontal/>
+<Card title="Delete Feature Subgraph" href="/cli/feature-subgraph/delete-feature-subgraph" icon="trash" horizontal/>
+</CardGroup>
+

@@ -1,0 +1,36 @@
+---
+title: "Delete"
+description: "Allows you to delete a namespace"
+icon: trash
+---
+
+## Usage
+
+```bash
+npx wgc namespace delete [name]
+```
+
+## Description
+
+The `npx wgc namespace delete` command allows you to delete a namespace within the organization.
+
+<Warning>
+Deleting a namespace will delete all resources (federated graphs and subgraphs) within it. Please use the command carefully. Only admins and creators of the namespace can perform this action.
+</Warning>
+
+## **Parameters**
+
+* `[name]`: The name of the namespace you want to delete.
+
+## Options
+
+* `-f, --force`: An optional flag that allows you to force delete the namespace without being prompted for confirmation.
+
+## **Example**
+
+- Delete a namespace named "production"
+
+```bash
+npx wgc namespace delete production
+```
+

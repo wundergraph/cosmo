@@ -1,0 +1,47 @@
+---
+title: "Architecture"
+description: "High-level architecture of the Cosmo Platform"
+icon: archway
+---
+
+<Frame>
+<img src="/images/architecture-overview.png" />
+</Frame>
+
+The architecture of the Cosmo Platform is founded on several key principles.
+
+<CardGroup>
+<Card title="Open Source" icon="square-1">
+ We have constructed our platform based on open standards such as Open Telemetry (OTEL), S3, and Prometheus. The Router is fully Open-Source under the Apache 2.0 license. You can fully customize it, e.g., with custom modules.
+</Card>
+<Card title="High Availability" icon="square-2">
+ We have designed all of our components with the intention of reducing downtime and preventing service loss. The Router is engineered to function independently, only having one dependency on the CDN to load its configuration, which guarantees an uptime of 99.999%.
+</Card>
+<Card title="Cost-Efficiency at Scale" icon="square-3">
+ We have meticulously selected our components to handle even the most demanding use cases. This enables us to efficiently handle billions of requests per month.
+</Card>
+<Card title="Hybrid Deployments" icon="square-4">
+ You have the option to run the entire platform on your own infrastructure, maintaining 100% data sovereignty. Alternatively, you can use [Cosmo Cloud](/deployments-and-hosting/cosmo-cloud) and only run the Router. We will operate the more complex, "stateful" components for you.
+</Card>
+<Card title="Optimized Solution" icon="square-5">
+ All components have been engineered to work together in the most efficient manner. Despite the potential limitations this might introduce, we view it as a strategic advantage. This holistic control over the entire stack not only enables us to optimize operations and costs but also significantly enhances the development experience.
+</Card>
+</CardGroup>
+
+### Cosmo Reference Architecture
+
+Next, let's take a look at the Reference Architecture, which is also the blueprint of Cosmo Cloud.
+
+<Frame caption="Cosmo Reference Architecture Overview">
+  <img src="/images/image-4.png" />
+</Frame>
+
+The Cosmo Platform architecture comprises several integral components. The **Router** efficiently manages traffic and routes requests between clients and Subgraphs, relying solely on the **CDN** to load its configuration.
+
+**Studio** provides a user-friendly interface for managing and monitoring services, validating Schema Checks, trying out Queries in the Playground, exploring the Schema or analyzing bottlenecks through metrics and distributed tracing.
+
+User authentication and authorization are handled by **Keycloak,** making it easy to integrate with your own Identity Provider through OpenID Connect (OIDC) or SCIM.
+
+The **Controlplane** manages the Graphs and their Schema, while the **OTEL Collector** aggregates telemetry data. The **GraphQL Metrics Collector** is responsible for gathering Schema usage information, which is essential to being able to provide composition checks against live traffic.
+
+**PostgreSQL** and **Redis** serve as core databases for storing critical data, with **Clickhouse** used for high-performance analytical queries. Together, these components ensure a robust, efficient, and scalable platform.

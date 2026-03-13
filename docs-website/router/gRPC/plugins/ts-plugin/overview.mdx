@@ -1,0 +1,35 @@
+---
+title: 'TypeScript Plugins'
+description: "TypeScript Router Plugins"
+icon: "circle-info"
+sidebarTitle: Overview
+---
+
+TypeScript (with Bun) is one of the languages supported out of the box for developing router plugins. However, unlike Golang router plugins, it does not come with its own library. This means there is no automated tracing or out-of-the-box HTTP client at the moment.
+
+<Note>
+TypeScript (with Bun) support is available in [wgc@0.96.0](https://github.com/wundergraph/cosmo/releases/tag/wgc%400.96.0) and above.
+</Note>
+
+The generated TypeScript plugin folder structure includes the following:
+
+```text
+plugin
+├── bin
+│   └── grpc-health-check/proto/health/v1
+│       └── health.proto
+└── src
+    └── plugin-server.ts
+```
+
+`plugin-server.ts`
+
+Provides similar minimal functionality to the [router-plugin](https://pkg.go.dev/github.com/wundergraph/cosmo/router-plugin) package for Go, which internally uses the official HashiCorp `go-plugin` plugin server helper functions.
+
+This provides the following out of the box:
+- Health Check using the [grpc-health-check package](https://github.com/grpc/grpc-node/tree/master/packages/grpc-health-check)
+- Create a Unix socket for communication and initialize the stdout plugin handshake
+
+`grpc-health-check`
+
+When you build a plugin using `wgc router plugin build <pluginName>`, the binary is placed in the `bin` folder. In addition, the `health.proto` definition is copied into the correct directory structure under `grpc-health-check`. Ensure that both the binary and the `grpc-health-check` folder are copied over when deploying or running the plugin.

@@ -1,0 +1,48 @@
+---
+title: "Redis"
+icon: "sitemap"
+---
+
+## Definitions
+
+<Note>
+  The `providerId` argument, including the default value "default", _must_ correspond to an equivalent property in _events.providers.redis_ entry of the router config.yml.
+</Note>
+
+### @edfs_redisPublish
+
+```js
+directive @edfs__redisPublish(
+  channel: String!,
+  providerId: String! = "default"
+) on FIELD_DEFINITION
+
+type edfs__PublishResult {
+    success: Boolean!
+}
+```
+
+| Argument name | Type     | Value                                                                                                                                    |
+| ------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| channel       | String\! | The event channel.                                                                                                                       |
+| providerId    | String\! | The provider ID, which identifies the connection in the router config.yaml. <br />If unsupplied, the provider ID "default" will be used. |
+
+### @edfs__redisSubscribe
+
+```js
+directive @edfs__redisSubscribe(
+  channels: [String!]!,
+  providerId: String! = "default"
+) on FIELD_DEFINITION
+```
+
+| Argument name | Type         | Value                                                                                                                                                                                                                                       |
+| ------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| channels      | [String\!]\! | The event channels. It is possible to subscribe to multiple topics.<br />Also, subscription is done using `PSUBSCRIBE `so some pattern matching can be used, as per redis documentation: https://redis.io/docs/latest/commands/psubscribe/. |
+| providerId    | String\!     | The provider ID, which identifies the connection in the router config.yaml. <br />If unsupplied, the provider ID "default" will be used.                                                                                                    |
+
+<CardGroup cols={2}>
+  <Card title="Redis" icon="sitemap" horizontal href="/router/event-driven-federated-subscriptions-edfs/redis">
+    
+  </Card>
+</CardGroup>

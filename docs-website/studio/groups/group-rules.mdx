@@ -1,0 +1,129 @@
+---
+title: "Group Rules"
+description: "Configure the resources accessible to your groups."
+icon: "database"
+---
+
+A **group rule** defines the roles and associated resources that determine what group members and API keys can access, as well as the level of permissions granted.
+
+<Frame caption="Group with no rules">
+  <img
+    src="/images/studio/setting-viewer-access-rules.png"
+    alt="Cosmo Studio group configuration page showing viewer rules granting access to multiple resources."
+    title="Setting viewer access rules"
+  />
+</Frame>
+
+When a group rule doesn't have any explicit resources, the group will always have access to all resources within the organization.
+
+In the same way, if a rule is limited to a single resource and that resource is deleted from the organization, the rule will fall back to granting access to all resources in the organization.
+
+<Note>
+    Unlike assigning specific resources, if a group doesn't have any rule assigned, this will result in the group effectively not having access to any resource.
+</Note>
+
+## Roles
+
+You can assign multiple roles to a group using the `Add rule` button. If no group rules are configured, group members will not have access to any resources.
+
+<Frame caption="Role selector">
+  <img
+    src="/images/studio/selecting-user-role-for-wundergraph.png"
+    alt="Cosmo Studio role selector for a group showing organization roles like Admin, Developer, and API Key Manager."
+    title="Selecting user role for wundergraph"
+  />
+</Frame>
+
+Each role type can only be added once per group. For example, you can assign the `Organization Admin` and `Organization Viewer` roles in the same group, but you cannot assign the same role type more than once. You could also add a `Graph Admin` role to that group, as long as each role type appears only once.
+
+The order in which roles are assigned does not affect how access checks are performed. For example, given the following group:
+
+<Frame>
+  <img
+    src="/images/studio/wundergraph-rule-without-description.png"
+    alt="Cosmo Studio group rule editor showing roles for wundergraph without a description or namespace assigned."
+    title="Wundergraph rule without description"
+  />
+</Frame>
+
+The members for this group will have **Admin** access to the `default` namespace and **Viewer** to the `test` and any other namespace that may exist in the organization.
+
+If the namespace `default` is deleted, the **Admin** role is no longer scoped and will apply to all resources.
+
+With this in mind, members of the following example will have **Organization Admin** access to all resources.
+
+<Frame>
+  <img
+    src="/images/studio/role-permissions-settings-page.png"
+    alt="Cosmo Studio settings page showing role permissions for Admin, Developer, and API Key Manager roles."
+    title="Role permissions settings page"
+  />
+</Frame>
+
+### Organization Roles
+
+These roles apply at the organization level and cannot be limited to specific resources:
+
+1. **Admin** — Full permissions to create and manage all services.
+2. **Developer** — Read and write access to all organizational objects.
+3. **API Key Manager** — Permissions to create, modify, and delete API keys.
+4. **Viewer** — Read-only access to all organizational objects.
+
+An organization **Developer** can manage namespaces and publish graphs. An **Admin** can do the same, plus manage organization-wide settings.
+
+### Namespace Roles
+
+1. **Admin** — Read and write access to assigned namespaces.
+2. **Viewer** — Read-only access to assigned namespaces.
+
+If no resources are assigned, the group is granted access to all namespaces in the organization. Groups with the **Admin** role will also be able to create new namespaces.
+
+### Graph Roles
+
+1. **Admin** — Read and write access to assigned graphs.
+2. **Viewer** — Read-only access to assigned graphs.
+
+Graph resources can be assigned in one of two ways:
+
+- **Namespace**: Grants access to all graphs within the selected namespace, including permission to create new graphs.
+- **Specific graphs**: Limits access to only the selected graphs.
+
+If no graphs are explicitly assigned, the group will have access to all graphs in the organization. Groups with the **Admin** role will also be able to create new graphs.
+
+<Frame caption="Graph resource selector">
+  <img
+    src="/images/studio/rule-granting-full-access-to-resources.png"
+    alt="Cosmo Studio graph resource selector showing default and test namespaces with full access permissions."
+    title="Rule granting full access to resources"
+  />
+</Frame>
+
+### Subgraph Roles
+
+1. **Admin** — Read and write access to assigned subgraphs.
+2. **Publisher** — Read and write access to assigned subgraphs, but cannot create new ones.
+3. **Checker** — Grants read-only access to subgraphs as well as the ability to create subgraph checks.
+3. **Viewer** — Grants read-only access to subgraphs.
+
+Subgraph resources can be assigned similarly:
+
+- **Namespace**: Grants access to all subgraphs within the selected namespace, including permission to create new subgraphs.
+- **Specific subgraphs**: Restricts access to only the selected subgraphs.
+
+If no subgraph resources are assigned, the group will have access to all subgraphs in the organization.
+
+## Resources
+
+<Frame caption="Graph resource selector">
+  <img
+    src="/images/studio/rule-configuration-for-test-and-admin.png"
+    alt="Cosmo Studio rule configuration screen for test and admin namespaces showing one selected rule."
+    title="Rule configuration for test and admin"
+  />
+</Frame>
+
+Resources represent entities in your organization, including but not limited to:
+
+- Namespaces
+- Federated Graphs
+- Subgraphs

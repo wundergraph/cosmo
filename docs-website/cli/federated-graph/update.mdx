@@ -1,0 +1,55 @@
+---
+title: "Update"
+description: "Updates a federated graph on the control plane."
+icon: pen-to-square
+---
+
+## Usage
+
+```bash
+npx wgc federated-graph update <name> [-r, --routing-url <url>] [--label-matcher <labels...>] [--readme <path-to-readme>]
+```
+<Info>
+**Update** is an irreversible action. However, the change will only be visible to the routers once the composition has been successful. Until then, the routers will operate with the most recent valid composition. Please use [federated-graph check](/cli/federated-graph/check) to understand the impact of your change.
+</Info>
+
+## Description
+
+The `npx wgc federated-graph update` command allows you to update an existing federated graph on the Cosmo platform's control plane. With this command, you can modify the routing URL of your router and update the labels used to select the subgraphs to be federated.
+
+## Parameters
+
+* `<name>`: The name of the federated graph you want to update. Replace `<name>` with the name of the federated graph you wish to modify.
+
+## Options
+
+* `-n, --namespace` : The namespace of the federated graph (Default: "default").
+
+* `-r , --routing-url` : The updated routing URL of your router. This URL defines the endpoint where the router will be accessible. The federated graph will be accessible through this updated router URL.
+
+* `--label-matcher <labels...>`: The updated labels used to select the subgraphs to be federated. Labels are passed in the format `<key>=<value> <key>=<value>`, where each `<key>=<value>` pair represents a label key and its corresponding value. The federated graph will include the subgraphs that match the updated labels.
+
+* `--unset-label-matcher`: This will remove all label matchers. It will not add new label matchers if both this and --label-matchers option is passed.
+
+* `--admission-webhook-url <url>` the base url of the admission webhook. This is the url that the controlplane will use to implement admission control for the federated graph. Example: `https://admission.example.com` (without the `/validate-config` path name)
+
+* `--admission-webhook-secret`: Allows you to sign requests (HMAC) made to your admission webhook url. The header containing this signature is `X-Cosmo-Signature-256`
+
+* `--readme <path-to-readme>` : The path to the markdown file which describes the federated graph. The readme can be used to communicate the information of the federated graph to other team members.
+
+* `--suppress-warnings`: This flag suppresses any warnings produced by composition.
+
+## Examples
+
+```bash
+npx wgc federated-graph update production -r http://new-router.example.com/graphql --selector team=B department=Engineering
+```
+
+Update the federated graph named "production" with an updated routing URL of "[http://new-router.example.com/graphql](http://new-router.example.com/graphql)" and update the labels to select subgraphs with "team=B" and "department=Engineering".
+
+## Notes
+
+* The `npx wgc federated-graph update` command interacts with the Cosmo platform's control plane to update the specified federated graph. Ensure that you have the necessary permissions to perform this operation.
+
+* If you want to update both the routing URL and labels, you can combine the options in a single command as demonstrated in the examples.
+

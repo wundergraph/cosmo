@@ -1,0 +1,59 @@
+---
+title: "Link"
+description: "Links a subgraph to another subgraph on the control plane for schema validation."
+icon: link
+---
+
+## Usage
+
+```bash
+npx wgc subgraph link <source-subgraph-name> --target-subgraph <namespace>/<subgraph-name>
+```
+
+## Description
+
+The `npx wgc subgraph link` command allows you to link a source subgraph to a target subgraph on the control plane. When performing schema checks on the source subgraph, traffic and pruning checks will also be performed on the target subgraph. This is useful for verifying the impact of schema changes before they are propagated to the next environment.
+
+This feature enables cross-environment validation, allowing you to test how changes in one subgraph (typically in a development or staging environment) will affect another subgraph (typically in production or another environment).
+
+## Parameters
+
+- `<source-subgraph-name>`: The name of the subgraph that you want to link from. This is the subgraph that will have its schema changes validated against the target subgraph.
+
+## Options
+
+- `-n, --namespace <string>`: The namespace of the source subgraph (Default: "default").
+
+- `-t, --target-subgraph <string>` **(Required)**: The name of the subgraph to link to. Must be specified in the format `<namespace>/<subgraph-name>`.
+
+## Examples
+
+1. Link a subgraph named "products" in the default namespace to a target subgraph "users" in the "production" namespace:
+
+   ```bash
+   npx wgc subgraph link products --target-subgraph production/users
+   ```
+
+2. Link a subgraph named "inventory" in the "staging" namespace to a target subgraph "catalog" in the "production" namespace:
+
+   ```bash
+   npx wgc subgraph link inventory -n staging --target-subgraph production/catalog
+   ```
+
+3. Link subgraphs within the same namespace:
+
+   ```bash
+   npx wgc subgraph link orders --target-subgraph default/shipping
+   ```
+
+## Notes
+
+- The source and target subgraphs cannot be the same subgraph. The command will prevent self-linking.
+
+- The target subgraph must be specified in the exact format `<namespace>/<subgraph-name>`. If the format is incorrect, the command will fail with an error.
+
+- Once linked, schema checks performed on the source subgraph will automatically include validation against the target subgraph.
+
+- Use [wgc subgraph unlink](/cli/subgraph/unlink) to remove the link between subgraphs.
+
+- Ensure you have the necessary permissions to link subgraphs across namespaces.

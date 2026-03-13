@@ -1,0 +1,16 @@
+---
+title: "Sessions"
+description: "This page provides information on how the organization member sessions are handled in Cosmo Studio."
+icon: "shield-plus"
+sidebarTitle: Sessions
+---
+
+When a user logs in to Cosmo Studio, a new session is created. The session is renewed every eight hours while the user is active and is terminated after **72 hours** of inactivity. This limit has been established following standards set by authorities like [Auth0](https://auth0.com/), [Cloudflare](https://www.cloudflare.com/), to mention a few.
+
+Sessions have a maximum lifetime of **14 days** from the time of authentication. After this period, the session will automatically expire, and you will be required to reauthenticate to continue using the service.
+
+It is recommended to use Google or GitHub during sign in, as these services provide a extended security for user authentication. Organizations can also configure their preferred [Identity Provider](/studio/sso) when they want full control over their members.
+
+<Note>
+    High-risk operations, such as deleting an organization, are protected behind an email confirmation.
+</Note>

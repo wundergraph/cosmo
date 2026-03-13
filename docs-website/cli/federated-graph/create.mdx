@@ -1,0 +1,58 @@
+---
+title: "Create"
+description: "Creates a federated graph on the control plane."
+icon: plus
+---
+
+## Usage
+
+```bash
+npx wgc federated-graph create <name> -r <routing-url> --label-matcher <labels...>
+```
+
+## Description
+
+The `npx wgc federated-graph create` command allows you to create a new federated graph on the Cosmo platform's control plane. Federated graphs provide a mechanism to combine multiple subgraphs into a unified schema, enabling efficient, scalable, and distributed GraphQL APIs. With this command, you can create a federated graph and specify the routing URL for your router and the labels used to select the subgraphs to be federated.
+
+## Parameters
+
+* `<name>`: The name of the federated graph you want to create. Replace `<name>` with the desired name for your federated graph.
+
+## Required Options
+
+`-r , --routing-url`: The routing URL of your router. This URL defines the endpoint where the router will be accessible. The federated graph will be accessible through this router.
+
+`--label-matcher <labels...>`: The labels used to select the subgraphs to be federated. Labels are passed in the format `<key>=<value> <key>=<value>`, where each `<key>=<value>` pair represents a label key and its corresponding value. The federated graph will include the subgraphs that match the specified labels.
+
+`--readme`: The path to the markdown file which describes the federated graph. The readme can be used to communicate the information of the federated graph to other team members.
+
+## Options
+
+* `-n, --namespace` : The namespace of the federated graph (Default: "default").
+
+* `-r, --routing-url` :The routing url of your router. This is the url that the router will be accessible at.
+
+* `--admission-webhook-url <url>` the base url of the admission webhook. This is the url that the controlplane will use to implement admission control for the federated graph. Example: `https://admission.example.com` (without the `/validate-config` path name)
+
+* `--admission-webhook-secret`: Allows you to sign requests (HMAC) made to your admission webhook url. The header containing this signature is `X-Cosmo-Signature-256`
+
+* `--label-matcher [labels...]` : The label matcher is used to select the subgraphs to federate. The labels are passed in the format = =. They are separated by spaces and grouped using comma. Example: --label-matcher team=A,team=B env=prod
+
+* `--readme` : The markdown file which describes the federated graph.
+
+* `--suppress-warnings`: This flag suppresses any warnings produced by composition.
+
+## Examples
+
+```bash
+npx wgc federated-graph create production -r http://router.example.com/graphql --label-matcher team=A department=backend
+```
+
+Create a federated graph named "production" with a routing URL of "[http://router.example.com/graphql](http://router.example.com/graphql)" and federate subgraphs with labels `team=A` and `department=backend`.
+
+## Notes
+
+* The `npx wgc federated-graph create` command interacts with the Cosmo platform's control plane to create the specified federated graph.
+
+* The routing URL of the router should be accessible by the federated graph to handle incoming queries and route them to the appropriate subgraphs.
+

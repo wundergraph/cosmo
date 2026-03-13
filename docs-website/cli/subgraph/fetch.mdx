@@ -1,0 +1,46 @@
+---
+title: "Fetch"
+description: "Fetches the latest published SDL of a subgraph. If the federated graph is specified, the latest successfully composed version of the subgraph will be fetched."
+icon: download
+---
+
+## Usage
+
+```bash
+npx wgc subgraph fetch <name>
+```
+
+## Description
+
+The `npx wgc subgraph fetch` command allows you to fetch the latest Schema Definition Language (SDL) of a subgraph graph from the Cosmo platform's control plane. The fetched SDL represents the last schema of the subgraph graph. You can pass the name of the federated graph to fetch the latest successfully composed subgraph schema from the controlplane.
+
+## Parameters
+
+* `<name>`: The name of the subgraph graph you want to fetch. Replace `<name>` with the name of the subgraph graph you wish to retrieve the SDL for.
+
+## Options
+
+* `-n, --namespace` : The namespace of the federated graph (Default: "default").
+
+* `-g --graph-name`: The name of the federated graph to fetch the latest valid subgraph SDL from.
+
+* `-o, --out` : Destination file for the SDL. Prints to standard output if not provided.
+
+## Examples
+
+```bash
+npx wgc subgraph fetch products
+```
+
+Fetch the latest SDL of the subgraph graph named "products."
+
+```bash
+npx wgc subgraph fetch products -g mygraph -n default
+```
+
+Fetch the latest successfully composed SDL of the subgraph graph named "products" in the "default" namspace.
+
+## Notes
+
+* The `npx wgc subgraph fetch` command interacts with the Cosmo platform's control plane to fetch the SDL. Ensure that you have the necessary permissions to perform this operation.
+

@@ -1,0 +1,76 @@
+---
+title: "Create"
+description: "Creates a proposal for a federated graph."
+icon: plus
+---
+
+## Usage
+
+```bash
+npx wgc proposal create <name> --federation-graph <federated-graph-name> (--subgraph <subgraph> --new-subgraph <subgraph> --deleted-subgraph <subgraph-name>)... [options]
+```
+
+<Info>
+  A proposal allows you to propose changes to a federated graph and review them
+  before applying.
+</Info>
+
+## Description
+
+The `npx wgc proposal create` command allows you to create a new proposal for federated graph changes within the Cosmo platform. Proposals provide a way to suggest and review modifications to subgraphs within a federated graph before applying them. You can include existing subgraphs with schema changes, add new subgraphs, or remove existing subgraphs in a proposal.
+
+## **Parameters**
+
+- `[name]`: The name of the proposal you want to create. It should be a descriptive identifier for the proposal.
+
+## **Options**
+
+- `-f, --federation-graph <federatedGraphName>` (required): The name of the federated graph this proposal is for.
+
+- `-n, --namespace [namespace]` : The namespace of the federated graph (Default: "default").
+
+- `--subgraph <subgraph>`: Specify a subgraph to include in the proposal with its updated schema. Can be specified multiple times for different subgraphs.
+
+  - Format: `name:subgraph-name,schemaPath:path-to-schema`
+  - Example: `--subgraph name:products,schemaPath:./schemas/products.graphql`
+
+- `--new-subgraph <subgraph>`: Specify a new subgraph to add in the proposal. Can be specified multiple times.
+
+  - Format: `name:subgraph-name,schemaPath:path-to-schema,labels:"key=value key=value"`
+  - Example: `--new-subgraph name:reviews,schemaPath:./schemas/reviews.graphql,labels:"team=B department=engineering"`
+
+- `--deleted-subgraph <name>`: Specify a subgraph to be deleted in the proposal. Can be specified multiple times.
+  - Example: `--deleted-subgraph legacy-products`
+
+<Note>
+  At least one of `--subgraph`, `--new-subgraph`, or `--deleted-subgraph` must be provided.
+</Note>
+
+## **Examples**
+
+### Update an existing subgraph
+
+```bash
+npx wgc proposal create update-products --federation-graph my-graph --subgraph name:products,schemaPath:./schemas/products.graphql
+```
+
+### Add a new subgraph
+
+```bash
+npx wgc proposal create add-reviews --federation-graph my-graph --new-subgraph name:reviews,schemaPath:./schemas/reviews.graphql,labels:"team=product"
+```
+
+### Remove a subgraph
+
+```bash
+npx wgc proposal create remove-legacy --federation-graph my-graph --deleted-subgraph legacy-products
+```
+
+### Complex proposal with multiple changes
+
+```bash
+npx wgc proposal create quarterly-update --federation-graph my-graph \
+  --subgraph name:products,schemaPath:./schemas/products.graphql \
+  --new-subgraph name:reviews,schemaPath:./schemas/reviews.graphql,labels:"team=product" \
+  --deleted-subgraph legacy-products
+```

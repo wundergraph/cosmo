@@ -1,0 +1,285 @@
+---
+title: 'Plugins'
+description: 'Local router plugins for high-performance GraphQL Federation with simplified deployment'
+sidebarTitle: Overview
+icon: "circle-info"
+---
+
+## Introduction
+
+Router plugins are extensions that run as separate processes locally alongside the Cosmo Router and communicate over Google's Remote Procedure Call ([gRPC](https://grpc.io/)) protocol. Unlike gRPC services that run remotely over the network, plugins provide the simplest deployment model with the highest performance for GraphQL Federation.
+The Cosmo cli ([wgc](/cli)) provides you with a set of tools to create and build router plugins.
+Together with the built-in testing framework, router plugins are purpose-built to leverage LLMs to generate adapter code between your GraphQL Schema and the underlying data source.
+
+In addition, the Cosmo Router manages the lifecycle of plugins,
+including hot-reloading plugins without any service interruption.
+There's no need to deploy "Subgraph" services just to bring an existing API into your Supergraph.
+
+For an overview of gRPC concepts shared between plugins and services, see our [gRPC Concepts documentation](/router/gRPC/concepts).
+
+## Workflow
+
+<Steps>
+    <Step title="Define a Subgraph Schema">
+        Define a regular Subgraph Schema like you're used to
+    </Step>
+    <Step title="Generate a proto definition">
+        Use wgc to generate a proto definition for your plugin
+    </Step>
+    <Step title="Implement the plugin">
+        Implement the plugin in Go using the generated interfaces
+    </Step>
+    <Step title="Connect to your Router">
+        Hook up the plugin to your Router configuration
+    </Step>
+</Steps>
+
+<Warning>Router plugins are currently in beta. The API may change in future releases.</Warning>
+
+## What Makes Plugins Unique
+
+Router plugins are local extensions that run as separate processes managed by the Cosmo Router. These plugins:
+
+## Demo and Example
+
+If you prefer to explore new solutions by looking at code and running it locally,
+take a look at our [Cosmo Plugin Demo](https://github.com/wundergraph/cosmo-plugin-demo) repository.
+
+## What are Plugins?
+
+Router plugins are extensions that run as separate processes and communicate with the Cosmo Router over Google's Remote Procedure Call ([gRPC](https://grpc.io/)) protocol.
+
+Running as separate processes provides critical fault isolation - if a plugin crashes or encounters a fatal error, it won't bring down your router process.
+
+These plugins implement GraphQL resolvers that can access any data source or service, all while communicating with the Router through a high-performance gRPC interface.
+
+The plugin architecture is built on HashiCorp's battle-tested [go-plugin framework](https://github.com/hashicorp/go-plugin),
+which powers production systems like Vault and Terraform with millions of deployments worldwide.
+This provides enterprise-grade reliability, secure process isolation, and proven stability for your GraphQL infrastructure.
+
+## Motivation
+
+A lot of companies see the value of GraphQL Federation but are hesitant to adopt it because they have existing systems that are incompatible,
+like legacy systems, REST APIs, SOAP, etc...
+
+Router plugins solve this problem by making it very easy to generate adapters between your Supergraph and existing systems.
+The plugin system is designed with tools like Cursor, Windsurf, and Copilot in mind.
+Define a Subgraph Schema, provide an OpenAPI document, a SOAP WSDL, or even just some curl commands,
+and your LLM will be able to generate adapter code and tests in just a few minutes.
+
+Thanks to the strongly-typed proto definition and the built-in testing framework,
+LLM coding assistants can quickly iterate on the generated code and ensure it's correct.
+
+Our goal is to allow you to one-shot generate an adapter for an existing system with a single prompt.
+
+<CardGroup cols={1}>
+    <Card title="Simplify GraphQL Implementation" icon="wand-magic-sparkles">
+        While everyone understands the value of "one schema, one query," building and maintaining production-grade subgraphs across diverse environments remains challenging. Spec support, runtime performance, and type safety depend on your subgraph framework quality.
+    </Card>
+
+    <Card title="Design with GraphQL, Implement with gRPC" icon="code">
+        Our approach combines GraphQL's schema-first flexibility with gRPC's performance and type safety.
+        Using the same plugin system that powers HashiCorp Vault and Terraform,
+        you can develop subgraphs in any language and run them directly in the Cosmo Router.
+    </Card>
+
+    <Card title="Proto-Based Code Generation" icon="bolt">
+        The strict typing and automatic code generation from Protocol Buffers (proto) definitions provides an immense productivity boost,
+        especially in the era of generative AI.
+        The generated proto-based gRPC code creates a strongly-typed foundation that AI tools can more effectively understand,
+        extend, and modify, reducing development time and errors while ensuring consistent API implementation.
+    </Card>
+
+    <Card title="Strongly-Typed Subgraphs" icon="shield-check">
+        It's impossible to know if a Subgraph Framework properly implemented the GraphQL Federation contract.
+        With router plugins, there's no way to get around the proto definition.
+        If the implementation compiles against the proto definition, you know it's correct.
+        This eliminates a whole class of issues around Subgraph Implementation Quality.
+    </Card>
+
+    <Card title="Apollo Federation Subgraph Interoperability" icon="merge">
+        Router plugins are 100% compatible with existing Apollo Federation Subgraph Implementations.
+        This means you can use router plugins alongside existing Apollo Federation Subgraphs.
+    </Card>
+
+    <Card title="No N+1 Problems" icon="layer-group">
+        Declarative approaches like Apollo Connectors suffer from N+1 problems and make it impossible to batch origin requests.
+        Router plugins leverage Cosmo Router's DataLoader capabilities which batches requests by default.
+    </Card>
+
+    <Card title="No Subgraph Framework Lag" icon="chevrons-right">
+        When new features are added to the Apollo Federation Subgraph Specification,
+        it can take months for all Subgraph Implementations to catch up.
+        Router plugins handle all Federation related logic within the Router,
+        only exposing rpc methods for queries, mutations, and entity lookups.
+        As a result, you can always immediately take advantage of the latest features in any language that supports gRPC.
+    </Card>
+
+    <Card title="Breaking free from Apollo" icon="lock">
+        Apollo being the maintainer of the majority of Subgraph Framework implementations limits the speed of innovation.
+        With router plugins, we're able to break free from Apollo's constraints and innovate at a much faster pace.
+    </Card>
+</CardGroup>
+
+### Benefits Over Traditional Subgraphs
+
+When compared to traditional standalone subgraphs, router plugins offer substantial technical advantages:
+
+<CardGroup cols={2}>
+    <Card title="Simplified Architecture" icon="cloud-arrow-up">
+        Maintain fewer components with unified deployment and monitoring. You can run multiple plugins on the same Router.
+    </Card>
+    <Card title="Performance" icon="rocket">
+        Achieve significantly lower latency with direct gRPC-based communication. The network and GraphQL framework overhead is eliminated.
+    </Card>
+    <Card title="Enhanced Developer Experience" icon="code">
+        Work with consistent tooling and deployment patterns across all Subgraphs.
+        If your team knows how to work with gRPC, they know how to build Subgraphs.
+    </Card>
+    <Card title="Seamless Integration" icon="bridge">
+        Connect to legacy systems, databases, and APIs without intermediate GraphQL services.
+        The plugin can be written in any language that supports gRPC.
+    </Card>
+</CardGroup>
+
+This architecture gives you a unified development experience with consistent tooling across all your subgraphs while enabling seamless integration with your existing infrastructure.
+
+## Router Plugin Architecture
+
+The router plugin architecture works by:
+
+1. **Plugin Registration**: Plugins are registered with the Cosmo Router at startup
+2. **Schema Integration**: The plugin's schema is integrated into the federated graph
+3. **Request Handling**: When the Router receives a GraphQL request, it routes relevant parts to the appropriate plugins
+4. **Inter-Process Communication**: Plugins run in separate processes and communicate with the router via gRPC
+5. **Response Assembly**: The Router assembles the complete response from all plugins and regular subgraphs
+
+## Limitations
+
+While powerful, router plugins have some considerations:
+
+- **Language Support**: Currently, only Go and TS (With Bun) are supported for plugin development
+- **Deployment Coupling**: Plugins must be deployed with the Router rather than independently
+
+We're working on adding support for more languages and making the deployment workflow much simpler.
+
+## Bootstrapping a Router Plugin
+
+Cosmo provides a set of CLI tools to simplify the process of creating, building, and testing router plugins.
+These tools handle much of the boilerplate code generation and build process for you.
+
+### Prerequisites
+
+Before using the plugin CLI tools, make sure you have:
+- [WunderGraph Cosmo CLI](/cli) installed
+- The Go compiler, protobuf compiler, and protoc plugins are installed automatically by the CLI.
+However, you can install them manually if you prefer.
+
+### Creating and Building Plugins
+
+The Cosmo CLI provides the following commands for working with plugins:
+
+- **[`wgc router plugin init`](/cli/router/plugin/init)**: Scaffolds a new router plugin project
+- **[`wgc router plugin build`](/cli/router/plugin/build)**: Generates code and builds the plugin
+- **[`wgc router plugin test`](/cli/router/plugin/test)**: Runs tests for your plugin
+
+For detailed documentation on each command, visit the [CLI Plugin Commands](/cli/router/plugin) section.
+
+### Typical Workflow
+
+<Note>
+  We will ask you to install the dependencies for you to compile and test the plugin. However, for the best experience, we recommend you install the dependencies manually and use a IDE with Go support.
+  Please refer to the [CLI Plugin Commands](/cli/router/plugin) documentation for more details.
+</Note>
+
+Here is a simplified workflow for creating a router plugin with a fully working router setup:
+
+```bash
+# 1️⃣ Initialize a full router project with a plugin
+wgc router plugin init hello-world -p myproject --language go
+
+# 2️⃣ Go to the project directory "myproject"
+cd myproject
+
+# 3️⃣ Build, compose and start the router. Navigate to http://localhost:3010
+make
+
+# 4️⃣ Customize the schema and implementation to your needs
+# Edit `./plugins/hello-world/src/schema.graphql`
+
+# 5️⃣ Generate the code for your plugin to implement the resolvers
+cd plugins/hello-world && make generate
+
+# 6️⃣ Now you can implement your gRPC resolvers in `./plugins/hello-world/src/main.go` (for Go) or `./plugins/hello-world/src/plugin.ts` (for TypeScript)
+
+# ⭐ Regenerate the code, build the plugin and serve the latest config.
+# Navigate to http://localhost:3010 again to query your supergraph
+make
+```
+
+Every plugin comes with a `Makefile` that provides a set of commands to build, test, and run the plugin.
+
+### Plugin Directory Structure
+
+When you initialize a plugin using `wgc router plugin init`, it creates a complete router project with a hello world plugin.
+
+For more details on the directory structure and build process, see the [`wgc router plugin init`](/cli/router/plugin/init) documentation.
+
+## Debugging Plugins
+
+Please refer to the [Debugging Plugins](/router/gRPC/plugins/debugging) documentation for more details.
+
+## Deployment Considerations
+
+When deploying router plugins with your Cosmo Router, keep these important considerations in mind:
+
+### Cosmo Cloud Plugin Registry
+
+Native integration with Cosmo Cloud allows you to push plugins directly to the platform without the need to re-deploy the Router. If you're already using Cosmo Cloud, you can use the `wgc router plugin publish` command to publish your plugin directly to the plugin registry for use by your routers.
+
+<Note>
+  **Publishing plugins requires Docker Buildx:** Publishing plugins to the Cosmo Cloud Plugin Registry requires Docker Buildx with a container builder configured. See the [plugin publish documentation](/cli/router/plugin/publish#docker-requirements) for setup instructions.
+</Note>
+
+### Platform Compatibility
+
+Plugins must be compiled for the same target platform as your router. This means:
+
+- If your router runs on Linux AMD64, your plugins must be built for Linux AMD64
+- If deploying to multiple architectures, plugins must be cross-compiled for each target platform
+
+If you're using the Cosmo Cloud Plugin Registry, you can specify platforms using the `--platform` flag when publishing your plugins from the CLI.
+
+### Docker Integration
+
+For containerized router deployments using local plugins:
+
+1. Plugins must be embedded into the same Docker image as the Router
+2. The Router's configuration file must correctly reference the plugins path within the container
+
+Example Dockerfile:
+
+This is an example Dockerfile that embeds the plugins into the router image. You can use volume mounts to avoid building specific docker images for each plugin.
+
+```dockerfile
+FROM ghcr.io/wundergraph/cosmo/router:latest
+
+# Copy the router configuration
+COPY config.yaml /app/config.yaml
+COPY config.json /app/config.json
+
+# Copy the plugins to the container
+COPY ./plugins /app/plugins
+
+# Set the working directory
+WORKDIR /app
+
+# The entrypoint is already set in the base image
+```
+
+## Conclusion
+
+Router plugins for the Cosmo Router provide a powerful way to implement high-performance subgraphs that communicate with the Router via a secure cross-process architecture.
+By leveraging the battle-tested HashiCorp go-plugin framework while maintaining clean separation of concerns, they offer the best of both worlds for many use cases.
+
+For complex systems, consider a hybrid approach: use router plugins for performance-critical paths and traditional subgraphs for areas that require independent scaling or deployment.

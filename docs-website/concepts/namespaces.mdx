@@ -1,0 +1,115 @@
+---
+title: "Namespaces"
+icon: object-ungroup
+description: "Namespaces allow you to group and/or isolate different instances of the same federated graph."
+---
+
+This is useful for managing multi-stage deployment pipelines with separate deployment environments, such as `development`, `staging`, and `production`. Every federated graph has a `default` namespace to which all graph instances are published unless otherwise specified. To specify a namespace other than the `default`, supply the `--namespace` or `-n` parameter when executing WunderGraph Cosmo CLI (`wgc`) commands.
+
+**Create Graph in** `default` **Namespace:**
+
+```bash
+wgc federated-graph create my-wundergraph
+```
+
+**Create Graph in** `production` **Namespace:**
+
+```bash
+wgc federated-graph create my-wundergraph --namespace production
+```
+
+Resources created in one namespace can be moved to another.
+
+**Move Graph to** `production` **Namespace:**
+
+```bash
+wgc federated-graph move my-wundergraph --namespace default --to production
+```
+
+Note that a namespace must already exist before resources can be placed therein. Attempting to place resources into a non-existent namespace will give rise to an error indicating that the provided namespace could not be found.
+
+<Check>
+**Namespaces reduce the complexity of using Labels to isolate resources in different environments.**
+
+Labels and Namespaces serve complementary but distinct roles in organizing and managing resources within WunderGraph Cosmo.
+
+* Labels allow for flexible, declarative composition of federated graphs by letting you specify which subgraphs to include when composing;
+
+* Namespaces are used to group and/or isolate federated graphs and subgraphs, often in different environments, such as `development`, `staging`, and `production.`
+
+Leverage both Namespaces and Labels to allow for flexible and dynamic composition of your federated graphs while protecting against accidental composition of graphs from different environments.
+
+</Check>
+## Creating Namespaces
+
+Create new `namespaces` for your organization using the WunderGraph Cosmo CLI `namespace create` command. To create `namespaces` in your organization for `production`, `staging`, and `development` environments, execute the commands below.
+
+**Create Production Namespace**
+
+```bash
+wgc namespace create production
+```
+
+**Create Staging Namespace**
+
+```bash
+wgc namespace create staging
+```
+
+**Create Development Namespace**
+
+```bash
+wgc namespace create development
+```
+
+<Note>
+  Namespace names must begin and end with an alphanumeric character; with the exception of dashes (-) and underscores (\_), no other special characters are allowed.
+</Note>
+
+## Listing Namespaces
+
+List all `namespaces` for your organization using the WunderGraph Cosmo CLI `namespace list` command. By default, the list of namespaces in your organization will be displayed in a table. To format the output as JSON, supply the `--raw` or `-r` flag when executing the WunderGraph Cosmo CLI (`wgc`) `namespace` `list` command. To persist the output (as JSON) to the file system, supply the `--out` or `-o` parameter when executing the WunderGraph Cosmo CLI (`wgc`) `namespace` `list` command.
+
+**List Organization Namespaces**
+
+```bash
+wgc namespace list
+```
+
+**List Organization Namespaces (JSON -> Console)**
+
+```bash
+wgc namespace list --raw
+```
+
+**List Organization Namespaces (JSON -> File)**
+
+```bash
+wgc namespace list --out "./namespaces.json"
+```
+
+## Renaming Namespaces
+
+Already existing namespaces can be renamed. To rename an existing namespace for your organization to a new name, use the WunderGraph Cosmo CLI (`wgc`) `namespace` `rename` command.
+
+**Rename Existing Namespace**
+
+```bash
+wgc namespace rename my-existing-namespace --to my-new-namespace
+```
+
+## Deleting Namespaces
+
+Delete a `namespace` for your organization using the WunderGraph Cosmo CLI `namespace delete` command. Note that deleting a namespace will delete all resources within it; use caution--only administrators and the creator of a namespace can perform this action. Upon executing the command, you will be prompted for confirmation that you wish to proceed. To force the execution without confirmation, supply the `--force` or `-f` flag when executing WunderGraph Cosmo CLI (`wgc`) `namespace` `delete` command.
+
+**Delete Namespace (Requires Confirmation)**
+
+```bash
+wgc namespace delete my-existing-namespace
+```
+
+**Delete Namespace (No Confirmation)**
+
+```bash
+wgc namespace delete my-existing-namespace --force
+```

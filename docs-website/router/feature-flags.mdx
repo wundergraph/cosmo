@@ -1,0 +1,53 @@
+---
+title: "Feature Flags"
+description: "Route traffic through alternate subgraphs by toggling feature flags per request."
+icon: flag
+sidebarTitle: Feature Flags
+---
+
+## Overview
+
+Router-level feature flags let you swap a subgraph at request time without a redeploy. Each flag defines a replacement subgraph. When a request includes the matching header or cookie, the router resolves the target subgraph to the flagged replacement.
+
+<Info>
+ For a primer on Cosmo feature flags and rollout strategies, see the [concepts guide](/concepts/feature-flags).
+</Info>
+
+## Manage feature flags with Cosmo (recommended)
+
+The recommended way to manage and deploy feature flags is with the **wgc** CLI and **Cosmo Cloud** (or self-hosted Control Plane). You create feature subgraphs, compose them into a feature flag via [`wgc feature-flag create`](/cli/feature-flags/create-feature-flag), and Cosmo produces the feature-flag configuration as part of the router config. The router then receives this configuration when it fetches its config from the Control Plane—no local YAML needed.
+
+To get started:
+
+1. Create a feature subgraph with [`wgc feature-subgraph create`](/cli/feature-subgraph/create-feature-subgraph).
+2. Create and enable a feature flag with [`wgc feature-flag create`](/cli/feature-flags/create-feature-flag), attaching the feature subgraph(s) and labels for your federated graph(s).
+
+For a full walkthrough, see the [gradual rollout with feature flags tutorial](/tutorial/gradual-and-experimental-feature-rollout-with-feature-flags).
+
+## Alternative: Local composition
+
+If you run the router using a **local config file** (e.g. `router-compose.yaml`)
+instead of fetching config from Cosmo, you can still use feature flags. Define `feature_flags` and `feature_graphs`
+in the same input file you pass to [`wgc router compose`](/cli/router/compose). The compose command will include the flag configuration in the generated router config. For the input file structure and a full example, see [Compose — Feature flags (optional)](/cli/router/compose#feature-flags-optional).
+
+Key points:
+
+- `feature_flags[*].name` is the value you will send from the client (case sensitive).
+- `feature_graphs[*].subgraph_name` must match the corresponding entry under `subgraphs` (`checkout` in the example).
+- The router swaps the referenced `subgraph_name` with the replacement defined in `feature_graphs` when the flag is active.
+
+<Note>
+ Name feature flag schemas using the `feature-flag_*.graphql` convention and check in an empty placeholder subgraph file to keep composition predictable.
+</Note>
+
+## Trigger the Flag
+
+Activate a flag by sending the header (or matching cookie) with the desired flag name. All requests that include the header are routed through the replacement subgraph.
+
+```http
+GET /graphql HTTP/1.1
+Host: router.example.com
+X-Feature-Flag: test_checkout
+```
+
+When the router receives `X-Feature-Flag: test_checkout`, it composes the operation against the replacement schema and forwards traffic to the routing URLs declared in the flag configuration.

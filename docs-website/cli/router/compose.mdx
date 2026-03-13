@@ -1,0 +1,90 @@
+---
+title: "Compose"
+description: "Compose generates the router execution config locally from your subgraphs. The config can be used to start your router with a pre-built router config."
+icon: layer-group
+---
+
+<Info>
+  IMPORTANT: Please note that since this command runs locally, the subgraphs may or may not exist on the control plane. It is recommended to **not** use this for production, if you plan to use the Cosmo platform as schema registry or analytics platform. For production, you can fetch the latest router execution config for your federated graph using the [fetch](/cli/router/fetch) command instead.
+</Info>
+
+## Usage
+
+```bash
+npx wgc router compose -i <path-to-input-file>
+```
+
+## Description
+
+The `npx wgc router compose` command allows you to compose subgraphs and build a router execution config locally without a connection to the control plane.
+
+## Options
+
+* `-i, --input`: The path to the input config file that contains information about your subgraphs.
+
+* `-o, --out` : Destination file for the router config. Prints to standard output if not provided.
+
+* `--suppress-warnings`: This flag suppresses any warnings produced by composition.
+
+## Input file structure
+
+```bash
+version: 1
+subgraphs:
+  # You can either provide schema file or introspection. File takes precedence
+  - name: employees
+    routing_url: http://localhost:4001/graphql
+    schema:
+      file: ./employees.graphql
+    subscription:
+      url: http://localhost:4001/sse #Optional, defaults to routing_url
+      protocol: sse # Optional, defaults to ws (websockets)
+      websocket_subprotocol: graphql-ws # Optional, defaults to auto.
+      # Available options are auto, graphql-ws, graphql-transport-ws
+  - name: family
+    routing_url: http://localhost:4002/graphql
+    introspection:
+      url: http://localhost:4002/graphql
+      headers:
+        Authorization: 'Bearer YOUR_TOKEN_HERE'
+```
+
+## Feature flags (optional)
+
+You can define feature flags in the input file so the composed router config includes alternate subgraphs when a flag is active. Each flag lists one or more `feature_graphs` that describe the replacement subgraph to serve when the flag is enabled (e.g. via the `X-Feature-Flag` header). For an overview of how the router uses feature flags, see [Feature Flags](/router/feature-flags).
+
+```yaml
+feature_flags:
+  - name: test_checkout
+    feature_graphs:
+      - name: checkout_canary
+        subgraph_name: checkout
+        routing_url: https://api.example.com/checkout-canary/graphql
+        schema:
+          file: feature-flag_checkout.graphql
+subgraphs:
+  - name: checkout
+    routing_url: https://api.example.com/checkout/graphql
+    schema:
+      file: checkout.graphql
+```
+
+
+## Examples
+
+```bash
+npx wgc router compose -i graph.yaml
+```
+
+Compose subgraphs mentioned in the input file graph.yaml
+
+```bash
+npx wgc router compose -i graph.yaml -o router.json
+```
+
+Compose subgraphs mentioned in graph.yaml and write it to `router.json`
+
+## Notes
+
+* The `npx wgc router compose` command does not interact with the control plane and completely runs locally.
+

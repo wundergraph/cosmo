@@ -66,6 +66,8 @@ message PublishFederatedSubgraphRequest {
   optional bool disable_resolvability_validation = 12;
   optional SubgraphType type = 13;
   optional ProtoInput proto = 14;
+  // Optional limit for the number of errors/warnings returned
+  optional int32 limit = 15;
 }
 
 message PublishFederatedSubgraphResponse {
@@ -75,6 +77,13 @@ message PublishFederatedSubgraphResponse {
   optional bool hasChanged = 4;
   repeated CompositionWarning compositionWarnings = 5;
   optional string proposalMatchMessage = 6;
+  optional SubgraphPublishStats counts = 7;
+}
+
+message SubgraphPublishStats {
+  int32 compositionErrors = 1;
+  int32 compositionWarnings = 2;
+  int32 deploymentErrors = 3;
 }
 
 message GitInfo {
@@ -2881,6 +2890,7 @@ message CreateProposalResponse {
   // If true, it means the graph pruning check failed for the linked check
   optional bool isLinkedPruningCheckFailed = 19;
   optional bool hasLinkedSchemaChecks = 20;
+  repeated FederatedGraphSchemaChange composedSchemaBreakingChanges = 21;
 }
 
 message GetProposalRequest {

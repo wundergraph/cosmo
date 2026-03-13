@@ -1,0 +1,187 @@
+---
+title: "Self Hosting"
+description: "Learn more about how to self-host Cosmo on your own Infra using Docker, Kubernetes, VMs, or Bare Metal."
+icon: note
+---
+
+## Self Hosting Cosmo Router
+
+The Cosmo Router is the main entry point for all requests to your APIs. It's responsible for routing requests to the appropriate service and handling authentication and authorization.
+
+The Router can be self-hosted in a variety of environments, like [Docker](/deployments-and-hosting/docker), and [Kubernetes](/deployments-and-hosting/kubernetes), but also AWS Lambda.
+
+The Router is available in two different versions, the Containerized Version (default) and the AWS Lambda Version.
+
+The Containerized Version is a Docker/OCI compatible container image that is ideal for Kubernetes and other container orchestration platforms, like AWS Fargate, AWS ECS, Azure Container Instances, or Google Cloud Run.
+
+The AWS Lambda Version is a modified version of the Router that is optimized for running on AWS Lambda. For AWS Lambda, the Router is optimized for cold starts and manages Metrics and Tracing differently to account for shutdowns and reboots of the Lambda environment. The Cosmo Router for AWS Lambda is ideal for companies that are looking for a self-hosted solution with minimal operational overhead.
+
+To make deployments on Kubernetes as easy as possible, we provide out of the box [Helm Charts](/deployments-and-hosting/kubernetes/helm-chart).
+
+## Self Hosting the entire Cosmo Stack
+
+Self-hosting WunderGraph Cosmo is a great way to get started with the solution locally. It gives you the ability to take an in-depth look at the platform and understand how it works.
+
+Beyond that, self-hosting allows you to deploy Cosmo in their own infrastructure, giving you full control over the environment and the ability to customize it to your needs. You can run Cosmo 100% on-premises, in a private or public cloud, fully air-gapped, or in a hybrid environment.
+
+We've architected Cosmo to be as flexible as possible, so you can run it in a variety of environments. The platform is designed to be cloud-native, so it can run in a variety of cloud environments, including AWS, Azure, and GCP. In addition, we've chosen components that are open source and available on a variety of platforms and from different vendors, giving you the flexibility to host Cosmo in the environment that best suits your needs.
+
+### Self Hosting Options
+
+There are a few different ways to self-host Cosmo, depending on your needs and the environment you want to run it in.
+
+### Docker
+
+Docker with Docker Compose is the easiest way to get started with Cosmo on your local machine. It's a great way for developers to take Cosmo for a spin and see how it works without committing to any agreements or having to create an account.
+
+To get started with Cosmo using Docker, you need to clone the [Cosmo repository](https://github.com/wundergraph/cosmo), navigate to [examples/full-cosmo-docker](https://github.com/wundergraph/cosmo/tree/main/examples/full-cosmo-docker) in the cli and follow the instructions in the [README](https://github.com/wundergraph/cosmo/blob/main/examples/full-cosmo-docker/README.md).
+
+### Kubernetes
+
+For production environments, we recommend running Cosmo on Kubernetes. Kubernetes is a powerful and flexible platform that can run Cosmo in a variety of environments, including on-premises, in a private or public cloud, or in a hybrid environment.
+
+Take a look at the Deployments and Hosting section for more information on how to deploy Cosmo on Kubernetes.
+
+### Cosmo Dedicated Cloud (Enterprise)
+
+If you want to get the benefits of self-hosting without the hassle of managing the infrastructure, we offer a dedicated cloud option. With Cosmo Dedicated Cloud, we take care of the infrastructure for you, so you can focus on building and deploying your APIs. Our solution is SoC2 compliant and we offer a 99.99% uptime SLA, so you can be confident that your APIs will be available when you need them.
+
+[Contact us](https://wundergraph.com/contact/sales) for more information on Cosmo Dedicated Cloud.
+
+### Architecture
+
+Let's take a look at the architecture of Cosmo and how it can be self-hosted. Cosmo is composed of several different components, each of which can be self-hosted.
+
+<Frame>
+<img src="/images/cosmo-architecture-final.png" />
+</Frame>
+
+### Cosmo CDN Server
+
+The Cosmo CDN Server is responsible for serving the configuration to the Cosmo Router. It's a simple HTTP server built on top of the [Hono](https://github.com/honojs/hono) framework, which allows deploying it on Cloudflare Workers, Fastly Compute, AWS Lambda\@Edge, AWS Lambda, or simply Node.js.
+
+The Cosmo CDN Server decouples serving the configuration to the Router from the Control Plane. It's a key component to achieve high availability of your Router setup. In case of a failure of the Control Plane, your Routers will continue to serve requests as long as the configuration is available.
+
+You need to make sure that the Cosmo CDN Server is served from multiple locations in the world to achieve high availability. Our cloud offering leverages Cloudflare Workers and Cloudflare R2 Storage to achieve more than 99.99% uptime.
+
+### Cosmo Config Storage (S3)
+
+The Cosmo CDN Server serves the configuration from an S3 bucket. We're enforcing authentication & authorization in front of the S3 bucket to ensure that each Router can only access its own configuration. As the CDN Server is stateless, we need to store the configuration in a persistent storage, which is why we're using S3.
+
+We've decided to use a combination of Hono and S3 to achieve the highest possible availability without forcing you to use a specific cloud provider. You can use any S3-compatible storage to store the configuration. We're using Cloudflare R2 Storage for our cloud offering, but you can use AWS S3, Google Cloud Storage, Azure Blob Storage, or even MinIO which can be self-hosted.
+
+If you take a closer look at our Docker Compose setup, you'll see that we're using MinIO to store the configuration in a local development environment. This is just one of many examples that show why we've chosen this architecture. For us, it's important to be able to test the full setup locally, but also give our users the flexibility to run Cosmo in a variety of environments.
+
+### Cosmo Control Plane
+
+The Cosmo Control Plane is the central component that manages the configuration and the state of your APIs. It's the system of record for everything related to your APIs, from namespaces to Subgraphs, Federated Graphs, users, and permissions.
+
+We've decided to implement the Control Plane as a single Node.js application that can run in any environment that supports Node.js. There are no specific requirements.
+
+The command line interface (CLI) and the Studio are the main interfaces to the Control Plane, although you can also interact with it using the HTTP API directly.
+
+To ensure that your workflows are not interrupted, you need to make sure that the Control Plane is highly available.
+
+The Control Plane is stateless and depends on PostgreSQL to store state, as well as Redis to store temporary data and as a cache.
+
+### Cosmo Studio
+
+The Cosmo Studio is the Dashboard of the Platform. It's a web application that allows you to manage your APIs, Subgraphs, and Federated Graphs. You can view Metrics and analytics, inspect the logs, and manage your users and permissions.
+
+The Studio is a Next.js application that can be self-hosted in any environment that supports Node.js. For authentication purposes, you should ensure that both the Studio and the Control Plane run on the same domain, but use different subdomains.
+
+The Studio doesn't manage authentication by itself. The authentication is managed by the Cosmo Authentication Server, which is based on Keycloak.
+
+### Cosmo CLI
+
+The Cosmo CLI is a command line interface that allows you to interact with the Control Plane. It's the primary way to facilitate write operations, like creating a new API, Subgraph, or Federated Graph on the Control Plane.
+
+The CLI is a Node.js application that can run on your local machine or in your CI/CD pipeline.
+
+The CLI authenticates with the Control Plane using a JSON Web Token (JWT) that is issued by the Cosmo Authentication Server.
+
+### Cosmo Authentication Server: Keycloak
+
+The Cosmo Authentication Server is based on Keycloak, an open-source identity and access management solution. It's responsible for managing users and permissions and authenticating users for the Studio and the CLI. In addition, we're using Keycloak to federate authentication with other identity providers, like Google, GitHub, or SAML, so you can implement single sign-on (SSO) for your organization.
+
+Keycloak depends on a PostgreSQL database.
+
+We're using a 3rd party hosted Keycloak instance for our cloud offering to outsource the operational overhead, upgrades, and security patches.
+
+You can self-host Keycloak, just be aware of the operational overhead and the security implications.
+
+### Cosmo OTEL Collector
+
+The Cosmo OTEL Collector is responsible for collecting and exporting metrics and traces to an observability platform, like Grafana, Prometheus, or Jaeger.
+
+To provide Metrics and Tracing in the Cosmo Studio, we're using the OpenTelemetry (OTEL) Collector to collect and aggregate the data from the Routers and additional services. The data is then processed and exported to Clickhouse, our primary data storage for Metrics and Tracing. When self-hosting, you can either disable exporting the data to Clickhouse, use a different storage sink, or use a combined approach where you export the data to Clickhouse and another storage solution like Datadog, or Grafana.
+
+The OTEL Collector is a Go application that can run in any environment that supports containerized applications. You should deploy the OTEL Collector in a highly available setup to ensure that your Metrics and Tracing are not interrupted. If you're expecting spikes in traffic, your OTEL Collector setup should be able to scale horizontally.
+
+### Cosmo GraphQL Metrics Collector
+
+In addition to Metrics and Traces, we're also collecting GraphQL Metrics using the GraphQL Metrics Collector. The GraphQL Metrics Collector is responsible for collecting and exporting metadata about your GraphQL requests and schema usage, powering breaking changes detection and schema evolution.
+
+The GraphQL Metrics Collector is a Go application that operates in a similar way to the OTEL Collector. As such, the same considerations apply.
+
+The GraphQL Metrics Collector is also using Clickhouse as the data storage.
+
+### Cosmo Data Storage: PostgreSQL, ClickHouse, Redis
+
+The Cosmo platform depends on several data storage solutions to store state, metrics, and temporary data.
+
+We're using PostgreSQL to store the state of the Control Plane and Keycloak. Ideally, you should deploy individual PostgreSQL instances for the Control Plane and Keycloak to ensure that the data is isolated and to prevent any interference.
+
+We're using Clickhouse to store Metrics and Tracing data. Clickhouse is a column-oriented database that is optimized for time-series data. It's a great fit for storing Metrics and Tracing data, as it can handle large amounts of data and is optimized for querying time-series data.
+
+We're using Redis to store temporary data and as a cache. Redis is a key-value store that is optimized for high throughput and low latency.
+
+## Security
+
+When self-hosting Cosmo, you need to ensure that the platform is secure and that your data is protected. All internal components should communicate using mutual TLS (mTLS) to ensure that the communication is secure and that the components are authenticated. All storage solutions should be encrypted at rest to ensure that your data is protected.
+
+For external services like Clickhouse, you should use a VPN or a private network to ensure that the data is not exposed to the public internet.
+
+## Considerations
+
+When self-hosting Cosmo, there are a few considerations that you need to take into account.
+
+1. You need to ensure that the platform is deployed correctly and that all components are configured properly
+
+2. You need to ensure that the platform is secure and that your data is protected
+
+3. You're responsible for managing the infrastructure and ensuring that the platform is highly available
+
+4. You need to ensure that the platform is monitored and that you have a plan in place to handle incidents
+
+5. You need to ensure that the platform is scalable and that it can handle spikes in traffic
+
+6. You need to ensure that the platform is compliant with any regulations that apply to your organization
+
+7. You need to ensure that the platform is backed up and that you have a plan in place to recover from a disaster
+
+8. On top of that, you need to ensure that the platform is up to date and that you're applying security patches promptly
+
+9. On every update, you need to ensure that all components are compatible with each other and perform an integration test of your deployment
+
+10. Upgrades of the platform might require database migrations, which need to be handled carefully
+
+11. In addition, you need to ensure that the platform is cost-effective and that you're not overspending on infrastructure
+
+With Cosmo Cloud, we take care of all these considerations for you, so you can focus on building and deploying your APIs. But beyond that, we also offer a dedicated cloud option that allows you to stay on a specific version of Cosmo for a longer period, so you can maintain control over the upgrade process.
+
+If you decide to self-host Cosmo, keep in mind that you're not alone. Our team of experts is available to support platform teams in installing, configuring, and maintaining Cosmo, so you can be confident that you're not alone in the rain when you need help.
+
+## Long Term Support
+
+In addition to just standard support and our hosted cloud offerings, we also offer Long Term Support (LTS) for Cosmo. With LTS, you can stay on a specific version of Cosmo for as long as you need, allowing you to upgrade on your schedule and maintain control over the upgrade process.
+
+## Conclusion
+
+Self-hosting Cosmo is a great way to try out the platform and understand how it works, but it also gives you the flexibility to run Cosmo in any environment that best suits your needs.
+
+You can run Cosmo 100% on-premises, fully air-gapped, or in a hybrid environment, there's nothing that holds you back and we're not putting any restrictions on you.
+
+That being said, we understand that self-hosting is not for everyone, or at least you might want to have someone to rely on when you need help. That's why we offer hosted cloud offerings, Long Term Support (LTS), and support for those who decide to self-host Cosmo.
+
+Please [contact us](https://wundergraph.com/contact/sales) if you have any questions or need help with self-hosting Cosmo.

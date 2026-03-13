@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import * as protobuf from 'protobufjs';
-import { rootToProtoText, serviceToProtoText, messageToProtoText, enumToProtoText, formatField } from '../../src/index.js';
+import {
+  rootToProtoText,
+  serviceToProtoText,
+  messageToProtoText,
+  enumToProtoText,
+  formatField,
+} from '../../src/index.js';
 import { expectValidProto } from '../util.js';
 
 /**

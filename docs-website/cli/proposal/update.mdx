@@ -1,0 +1,86 @@
+---
+title: "Update"
+description: "Updates an existing proposal for a federated graph."
+icon: pen-to-square
+---
+
+## Usage
+
+```bash
+npx wgc proposal update <name> --federation-graph <federated-graph-name> (--subgraph <subgraph> --new-subgraph <subgraph> --deleted-subgraph <subgraph-name>)... [options]
+```
+
+<Info>
+  This command allows you to modify an existing proposal before it is approved.
+  Note that any subgraphs you pass will override the corresponding subgraphs in
+  the current proposal - the command does not merge changes incrementally.
+</Info>
+
+## Description
+
+The `npx wgc proposal update` command enables you to update an existing proposal for federated graph changes within the Cosmo platform. You can modify the proposal by adding, updating, or removing subgraphs from the proposal. This is useful when you need to make adjustments to a proposal that has not yet been approved.
+
+When you specify subgraphs in the update command, they will completely replace the corresponding subgraphs in the existing proposal. The update is not incremental - each subgraph you provide through the command options will override any previous version of that subgraph in the proposal. If you need to maintain some existing changes while adding new ones, make sure to include all the subgraphs you want in the final proposal.
+
+## **Parameters**
+
+- `[name]`: The name of the existing proposal you want to update.
+
+## **Options**
+
+- `-f, --federation-graph <federatedGraphName>` (required): The name of the federated graph this proposal is for.
+
+- `-n, --namespace [namespace]` : The namespace of the federated graph (Default: "default").
+
+- `--subgraph <subgraph>`: Specify a subgraph to update in the proposal with its updated schema. Can be specified multiple times for different subgraphs.
+
+  - Format: `name:subgraph-name,schemaPath:path-to-schema`
+  - Example: `--subgraph name:products,schemaPath:./schemas/products-updated.graphql`
+
+- `--new-subgraph <subgraph>`: Specify a new subgraph to add to the proposal. Can be specified multiple times.
+
+  - Format: `name:subgraph-name,schemaPath:path-to-schema,labels:"key=value key=value"`
+  - Example: `--new-subgraph name:inventory,schemaPath:./schemas/inventory.graphql,labels:"team=B department=operations"`
+
+- `--deleted-subgraph <name>`: Specify a subgraph to be deleted in the proposal. Can be specified multiple times.
+  - Example: `--deleted-subgraph outdated-service`
+
+<Note>
+  At least one of `--subgraph`, `--new-subgraph`, or `--deleted-subgraph` must be provided.
+</Note>
+
+## **Examples**
+
+### Update a subgraph in an existing proposal
+
+```bash
+npx wgc proposal update product-changes --federation-graph my-graph --subgraph name:products,schemaPath:./schemas/products-revised.graphql
+```
+
+### Add another new subgraph to an existing proposal
+
+```bash
+npx wgc proposal update service-expansion --federation-graph my-graph --new-subgraph name:inventory,schemaPath:./schemas/inventory.graphql,labels:"team=operations"
+```
+
+### Mark an additional subgraph for deletion in an existing proposal
+
+```bash
+npx wgc proposal update legacy-cleanup --federation-graph my-graph --deleted-subgraph another-legacy-service
+```
+
+### Multiple updates to an existing proposal
+
+```bash
+npx wgc proposal update revised-plan --federation-graph my-graph \
+  --subgraph name:products,schemaPath:./schemas/products-final.graphql \
+  --new-subgraph name:analytics,schemaPath:./schemas/analytics.graphql,labels:"team=data" \
+  --deleted-subgraph unused-service
+```
+
+<Warning>
+  Remember that each subgraph specified in the update command will override the
+  corresponding subgraph in the existing proposal. If you want to keep existing
+  changes for other subgraphs, you must include them in your update command as
+  well.
+</Warning>

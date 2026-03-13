@@ -1,0 +1,51 @@
+---
+title: "Delete"
+description: "Deletes a subgraph on the control plane. The subgraph will be deleted from all federated graphs."
+icon: trash
+---
+
+## Usage
+
+```bash
+npx wgc subgraph delete <name> [-f, --force]
+```
+
+<Note>
+**Delete** is an irreversible action. However, the change will only be visible to the routers once the composition has been successful. Until then, the routers will operate with the most recent valid composition. Please use [subgraph check](/cli/subgraph/check) to understand the impact of your change.
+</Note>
+## Description
+
+The `npx wgc subgraph delete` command allows you to delete a subgraph on the Cosmo platform's control plane. When you delete a subgraph, all associated data and configurations will be permanently removed. Use this command with caution, as the action cannot be undone.
+
+## Parameters
+
+* `<name>`: The name of the subgraph you want to delete. This should be the exact name of the subgraph you wish to remove.
+
+## Options
+
+* `-n, --namespace` : The namespace of the federated graph (Default: "default").
+
+* `-f, --force`: An optional flag that allows you to force delete the subgraph without being prompted for confirmation. Use this option if you want to delete the subgraph without additional prompts.
+
+* `--suppress-warnings`: This flag suppresses any warnings produced by composition.
+
+## Examples
+
+1. Delete the subgraph named "products":
+
+   ```bash
+   npx wgc subgraph delete products
+   ```
+
+2. Force delete the subgraph named "users" without confirmation:
+
+   ```bash
+   npx wgc subgraph delete users -f
+   ```
+
+## Notes
+
+* The `npx wgc subgraph delete` command interacts with the Cosmo platform's control plane to delete the specified subgraph.
+
+* When using the `--force` option, the command will not prompt for confirmation, so exercise caution to prevent accidental data loss.
+

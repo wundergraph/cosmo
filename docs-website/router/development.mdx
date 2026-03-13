@@ -1,0 +1,39 @@
+---
+title: "Development"
+description: "The Cosmo router contains functionality intended to be used to assist the development of the router and/or subgraphs that are connected through the router. Most of these features should not be enabled for production, since they could impact performance in negative ways."
+icon: circle-info
+sidebarTitle: Overview
+---
+
+### Connect to your subgraphs running on localhost from Docker
+
+A common setup for development is running subgraphs on `localhost` and the executing router inside Docker. To avoid requiring additional configuration steps in this environment and to make this setup more ergonomic, when running inside Docker the router will retry requests that fail to connect to a loopback address, sending them to `docker.host.internal` instead.
+
+This feature is enabled by default, but it can be disabled by setting the environment variable `LOCALHOST_FALLBACK_INSIDE_DOCKER` to `false`.
+
+### Hot reload the router configuration file
+
+When working on the router configuration without changing router versions, custom modules, etc, it can be helpful to enable hot reloading of the configuration file.
+
+You can enable file watching based hot config reloading using the following configuration:
+
+```yaml config.yaml
+watch_config:
+  enabled: true
+  interval: "10s"
+
+  startup_delay:
+    enabled: false
+    maximum: "10s"
+```
+
+Alternatively, the router will always reload when it receives a SIGHUP signal. You can do this on MacOS/Linux using `kill -HUP <pid>`.
+
+<Note>
+  Hot reloading has some limitations:
+
+    - Changes to the `watch_config` section are not hot-reloaded.
+    - Changes to flags and environment variables are not possible.
+    - `watch_config` based reloads are based on the filesystem's modification time, edits that somehow circumvent this mechanism will not trigger a reload.
+
+</Note>

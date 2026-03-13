@@ -54,7 +54,7 @@ const protoOutput = compileGraphQLToProto(
     packageName: 'user.v1', // Package name
     goPackage: 'cosmo/pkg/my_package', // Go package name
     lockFilePath: './proto.lock.json', // Optional: Path to proto.lock.json for deterministic field ordering
-  }
+  },
 );
 ```
 
@@ -68,21 +68,21 @@ import { compileGraphQLToProto } from '@wundergraph/protographic';
 // First generation with a new lock file
 const result1 = compileGraphQLToProto(initialSchema, {
   serviceName: 'MyService',
-  lockFilePath: './proto.lock.json' // Creates lock file if it doesn't exist
+  lockFilePath: './proto.lock.json', // Creates lock file if it doesn't exist
 });
 
 // Later generation with schema changes but preserving field order
 const result2 = compileGraphQLToProto(updatedSchema, {
   serviceName: 'MyService',
-  lockFilePath: './proto.lock.json' // Uses existing lock file
+  lockFilePath: './proto.lock.json', // Uses existing lock file
 });
 ```
 
 When providing a `lockFilePath`, the function returns an object with both the proto definition and the lock data:
 
 ```typescript
-const { proto, lockData } = compileGraphQLToProto(schema, { 
-  lockFilePath: './proto.lock.json' 
+const { proto, lockData } = compileGraphQLToProto(schema, {
+  lockFilePath: './proto.lock.json',
 });
 ```
 
@@ -93,7 +93,7 @@ import { compileGraphQLToProto, ProtoLock } from '@wundergraph/protographic';
 
 // First generation - creates initial lock data
 const result1 = compileGraphQLToProto(initialSchema, {
-  serviceName: 'MyService'
+  serviceName: 'MyService',
 });
 const proto1 = result1.proto;
 const lockData = result1.lockData;
@@ -104,11 +104,12 @@ const lockData = result1.lockData;
 // Later generation with the saved lock data
 const result2 = compileGraphQLToProto(updatedSchema, {
   serviceName: 'MyService',
-  lockData: lockData // Use previously generated lock data
+  lockData: lockData, // Use previously generated lock data
 });
 ```
 
 The lock data records the order of:
+
 - Service methods
 - Message fields
 - Enum values
@@ -141,7 +142,7 @@ query GetUser($userId: ID!) {
 const result = compileOperationsToProto(operation, schema, {
   serviceName: 'UserService',
   packageName: 'user.v1',
-  prefixOperationType: true
+  prefixOperationType: true,
 });
 ```
 

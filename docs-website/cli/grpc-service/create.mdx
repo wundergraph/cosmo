@@ -1,0 +1,74 @@
+---
+title: "Create"
+description: "Creates a federated gRPC subgraph on the control plane."
+icon: plus
+---
+
+## Usage
+
+<Note>A gRPC subgraph name must be unique within a namespace.</Note>
+
+```bash
+wgc grpc-service create <name> -r <routing-url> [options]
+```
+
+<Info>
+  After creating a gRPC subgraph, you can publish it with [wgc grpc-service
+  publish](/cli/grpc-service/publish).
+</Info>
+
+## Description
+
+The `wgc grpc-service create` command allows you to create a new gRPC subgraph within the Cosmo platform. The `<name>` argument specifies the name of the new gRPC subgraph. This establishes the subgraph metadata and routing configuration without publishing any schema.
+
+## Parameters
+
+- `<name>`: The name of the gRPC subgraph you want to create. It is used to uniquely identify your gRPC subgraph.
+
+## Options
+
+- `-r, --routing-url <url>`: The routing URL of your subgraph. This is the gRPC endpoint where requests will be directed, and must follow the format from the gRPC protocol (https://grpc.github.io/grpc/core/md_doc_naming.html).
+
+- `-n, --namespace [string]`: The namespace of the gRPC subgraph (Default: "default").
+
+- `--label [labels...]`: Assign multiple labels to the new gRPC subgraph. Labels are used to categorize and organize subgraphs based on specific criteria (e.g., team, department, project). The labels are passed in the format `<key>=<value>`.
+
+  - Example: `--label team=backend`
+
+- `--readme <path-to-readme>`: The path to the markdown file which describes the gRPC subgraph.
+
+## Examples
+
+- Create a new gRPC subgraph named "users-service" with a routing URL:
+
+```bash
+wgc grpc-service create users-service -r dns:///localhost:4001/
+```
+
+- Create a new gRPC subgraph with labels:
+
+```bash
+wgc grpc-service create users-service -r dns:///localhost:4001/ --label team=backend
+```
+
+- Create a new gRPC subgraph with a readme file:
+
+```bash
+wgc grpc-service create users-service -r dns:///localhost:4001/ --readme ./service-readme.md
+```
+
+- Create a gRPC subgraph in a specific namespace:
+
+```bash
+wgc grpc-service create users-service -r dns:///localhost:4001/ --namespace production
+```
+
+## Notes
+
+- The `wgc grpc-service create` command interacts with the Cosmo platform's control plane to create the specified gRPC subgraph.
+
+- The routing URL must be accessible from your router instances when you later publish the subgraph schema.
+
+- The readme file will be displayed in the Studio for documentation purposes.
+
+- After creating the subgraph, you'll need to use `wgc grpc-service publish` to publish your schema.

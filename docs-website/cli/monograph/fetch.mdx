@@ -1,0 +1,53 @@
+---
+title: "Fetch Schema"
+description: "Fetches the latest valid SDL of a monograph. The output can be piped to a file. This is primarily used for debugging purposes"
+icon: "file-code"
+---
+
+## Usage
+
+```bash
+npx wgc monograph fetch-schema <name>
+```
+
+## Description
+
+The `npx wgc monograph fetch-schema` command allows you to fetch the latest valid Schema Definition Language (SDL) of a monograph from the Cosmo platform's control plane. You can use this command to retrieve the SDL and, if needed, pipe the output to a file.
+
+<Info>
+  By default, the output schema is set to the **Router Schema**. To use the **Client Schema** instead, specify the `-c` or `--client-schema` flag to the command.
+</Info>
+
+## Parameters
+
+- `<name>`: The name of the monograph you want to fetch. Replace `<name>` with the name of the monograph you wish to retrieve the SDL for.
+
+## Options
+
+- `-n, --namespace` : The namespace of the monograph (Default: "default").
+- `-o, --out` : Destination file for the SDL. Prints to standard output if not provided.
+- `-c, --client-schema`: Output the Client Schema instead of the default Router Schema.
+
+## Examples
+
+```bash
+npx wgc monograph fetch-schema production
+```
+
+Fetch the latest valid SDL of the monograph named "production."
+
+```bash
+npx wgc monograph fetch-schema production -o production-schema.graphql
+```
+
+Fetch the latest valid SDL of the monograph named "production" and save it to a file named "production-schema.graphql."
+
+```bash
+npx wgc monograph fetch-schema production --client-schema
+```
+
+Fetch the latest valid client SDL of the monograph named "production".
+
+## Notes
+
+- The `npx wgc monograph fetch-schema` command interacts with the Cosmo platform's control plane to fetch the latest valid SDL of the specified monograph. Ensure that you have the necessary permissions to perform this operation.

@@ -136,7 +136,10 @@ func (p *ProviderAdapter) Subscribe(ctx context.Context, conf datasource.Subscri
 	)
 
 	// Create a new client for the topic
-	client, err := kgo.NewClient(append(p.opts,
+	// Copy opts to avoid data race when multiple goroutines call Subscribe concurrently
+	opts := make([]kgo.Opt, len(p.opts), len(p.opts)+3)
+	copy(opts, p.opts)
+	client, err := kgo.NewClient(append(opts,
 		kgo.ConsumeTopics(subConf.Topics...),
 		// We want to consume the events produced after the first subscription was created
 		// Messages are shared among all subscriptions, therefore old events are not redelivered

@@ -1,0 +1,177 @@
+---
+title: "TLS"
+description: "The Router supports TLS and mTLS for secure communication with your clients and infrastructure components like load-balancer."
+icon: "shield-halved"
+---
+
+<Info>
+  Available since version [0.71.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.71.0)
+</Info>
+The Cosmo Router supports TLS to secure and authenticate communications for both client and subgraph connections. For subgraph connections, encryption and authentication are automatically enabled when the subgraph URL uses the `https://` protocol. For client connections, you can configure TLS as follow:
+
+
+```yaml config.yaml
+tls:
+  server:
+    enabled: true
+    key_file: ../your/key.pem
+    cert_file: ../your/cert.pem
+```
+
+You must provide both files to ensure TLS.
+
+### Use cases
+
+* A typical use case for TLS is to secure communications between your load balancer and router.
+
+* Enable HTTP/2. TLS is mandatory for HTTP/2 operation. Once enabled, requests are upgraded to HTTP/2 whenever possible.
+
+### Cipher
+
+By default, we inherit the defaults of Go TLS configuration. This means the following TLS protocols are supported:
+
+* TLS 1.3
+
+* TLS 1.2
+
+* TLS 1.1
+
+* TLS 1.0
+
+<Note>
+  We strongly advice against using TLS below 1.2 for security reasons.
+</Note>
+
+In terms of cipher support, we also refer to the Go defaults:
+
+```bash
+// AEADs w/ ECDHE
+TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384, TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305, TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,
+
+// CBC w/ ECDHE
+TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA, TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+
+// AEADs w/o ECDHE
+TLS_RSA_WITH_AES_128_GCM_SHA256,
+TLS_RSA_WITH_AES_256_GCM_SHA384,
+
+// CBC w/o ECDHE
+TLS_RSA_WITH_AES_128_CBC_SHA,
+TLS_RSA_WITH_AES_256_CBC_SHA,
+
+// 3DES
+TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+TLS_RSA_WITH_3DES_EDE_CBC_SHA
+```
+
+<Info>
+  If our configuration does not meet your requirements, don't hesitate to contact us or open an issue on GitHub.
+</Info>
+
+## Client Authentication or Mutual TLS (mTLS)
+
+In a standard SSL transaction, the client verifies the server's validity when establishing a secure connection. This involves checking the server's certificate prior to starting the SSL transaction. However, there may be situations where you wish for the server to authenticate the client connecting to it.
+
+When client authentication is activated via `client_auth.cert_file` the client can send a certificate to the server that is validated by the server before a connection is established. By default it is not a requirement and the server support clients with valid and without certificates. You can set `required` to `true` to enforce that a client must be verified and authentic. If the validation does not succeed the client connection is refused.
+
+```yaml config.yaml
+tls:
+  server:
+    enabled: true # Required for client_auth
+    key_file: ../your/key.pem
+    cert_file: ../your/cert.pem
+    client_auth:
+      required: true
+      cert_file: ../your/cert.pem
+```
+
+While client authentication and mTLS are closely related concepts, they are not exactly the same. mTLS is an extension of TLS (Transport Layer Security) that requires both the server and the client to authenticate each other. This ensures that both parties in a communication are who they claim to be, adding an extra layer of security. mTLS involves the exchange of certificates from both parties during the TLS handshake process.
+
+You can enable mTLS by using `client_auth` with `required=true` on the server and the correct TLS settings on the client side.
+
+### Example in Go Clients
+
+```go
+cert, _ := tls.LoadX509KeyPair("your/cert.pem", "your/key.pem")
+
+caCert, _ := os.ReadFile("your/cert.pem")
+
+caCertPool := x509.NewCertPool()
+caCertPool.AppendCertsFromPEM(caCert)
+
+client := &http.Client{
+		Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{
+			RootCAs:      caCertPool,
+			Certificates: []tls.Certificate{cert},
+		},
+	},
+}
+
+// Make request
+_, err = client.Do(req)
+```
+
+That's it! The router should now be able to receive TLS connections **only** from clients who authenticate themselves using a certificate issued by your trusted CA.
+
+## TLS with Subgraphs
+
+### Router mTLS
+
+In addition to accepting mTLS connections from clients (inbound), the router can also present client certificates when connecting to subgraphs (outbound). This is useful when your subgraphs require mTLS authentication to accept requests from the router.
+
+You can configure a global client certificate that applies to all subgraph connections, and optionally override it on a per-subgraph basis.
+
+#### Global Configuration
+
+Apply a client certificate to all outbound subgraph connections:
+
+```yaml config.yaml
+tls:
+  client:
+    all:
+      cert_file: /path/to/client.crt
+      key_file: /path/to/client.key
+```
+
+#### Per-Subgraph Configuration
+
+Override the global config for specific subgraphs. Each entry fully overrides the global `all` config for that subgraph:
+
+```yaml config.yaml
+tls:
+  client:
+    all:
+      cert_file: /path/to/default-client.crt
+      key_file: /path/to/default-client.key
+    subgraphs:
+      products:
+        cert_file: /path/to/products-client.crt
+        key_file: /path/to/products-client.key
+      inventory:
+        cert_file: /path/to/inventory-client.crt
+        key_file: /path/to/inventory-client.key
+```
+
+<Note>
+  Per-subgraph entries live under `tls.client.subgraphs` and use the same field structure as `tls.client.all` (e.g., `cert_file`, `key_file`). A per-subgraph entry fully overrides the global `all` config for that subgraph.
+</Note>
+
+### Custom CA Certificates
+
+By default, the router uses your operating system's root CA store to verify subgraph server certificates. If your subgraphs use TLS certificates signed by an internal or private CA that is not in the system's root CA store, you can provide a custom CA certificate file using `ca_file`. The router will use this CA to verify the subgraph's server certificate during the TLS handshake.
+
+```yaml config.yaml
+tls:
+  client:
+    all:
+      ca_file: /path/to/internal-ca.crt
+      insecure_skip_ca_verification: false
+```
+
+<Warning>
+  `insecure_skip_ca_verification` disables subgraph certificate validation. Only use this for development or testing environments.
+</Warning>

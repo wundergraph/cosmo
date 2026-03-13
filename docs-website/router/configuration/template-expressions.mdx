@@ -1,0 +1,248 @@
+---
+title: "Template Expressions"
+description: "Using Template Expressions for Request and Configuration Control"
+icon: "brackets-curly"
+---
+
+## Template Expressions Overview
+
+Template Expressions are a robust mechanism for accessing information related to requests, responses,
+and other key aspects of the router's operation.
+They enable conditional feature activation and allow for extracting and configuring values dynamically.
+
+An example use case involves conditionally blocking mutations:
+
+```yaml
+security:
+  block_mutations:
+    enabled: true
+    condition: "request.header.Get('x-block-mutation') == 'yes'"
+```
+
+In this example, the condition is evaluated each time a request is made.
+Template Expressions provide access to request details, including headers, URLs, and query parameters.
+However, not all fields are consistently available throughout the request lifecycle.
+For instance, authentication data becomes accessible only after successful authentication.
+
+During the build process, the router validates expressions.
+If an expression is invalid or does not return the expected type (such as a boolean or string),
+an error message is generated to ensure clarity and correctness.
+
+### Template Language
+
+The expressions are based on the [expr-lang](https://github.com/expr-lang/expr) template language. This language is characterized by its:
+
+- **Safety** – Expressions are evaluated securely.
+- **Speed** – The language is optimized for performance.
+- **Side-effect-free operation** – Expressions are read-only and do not alter state.
+
+To modify configurations or manipulate requests and responses, implementing a [custom module](/router/custom-modules) is recommended.
+
+#### Naming Conventions
+
+- **Fields**: Use camelCase (e.g., `request.auth.claims`).
+- **Methods**: Use PascalCase (e.g., `request.header.Get("Content-Type")`).
+- **Utility Functions**: camelCase (e.g. trim) for the full list see [here](https://expr-lang.org/docs/language-definition).
+
+## Expression Context
+
+### **Request Object**
+
+The `request` object is a read-only entity that provides details about the incoming client request. It is accessible at all times during the lifecycle of the request.
+
+**Available Fields**:
+
+- `request.method`
+- `request.url.host`
+- `request.url.path`
+- `request.url.port`
+- `request.trace.sampled`
+- `request.error`
+
+### Operation Object
+
+- `request.operation`
+- `request.operation.name`
+- `request.operation.type` (possible values: `mutation` or `query` )
+- `request.operation.hash`
+- `request.operation.sha256Hash`
+- `request.operation.parsingTime` (time.Duration)
+- `request.operation.persistedId`
+- `request.operation.normalizationTime` (time.Duration)
+- `request.operation.validationTime` (time.Duration)
+- `request.operation.planningTime` (time.Duration)
+
+#### Example expressions
+
+```bash
+hasPrefix(request.operation.name, 'Delete') == true
+request.operation.sha256Hash != ''
+request.operation.persistedId != ''
+```
+
+### Client Object
+
+- `request.client`
+- `request.client.name`
+- `request.client.version`
+
+#### Example expressions
+
+```bash
+request.client.name == 'CoolGraphQLClient'
+```
+
+#### **Header Access**:
+
+- `request.header.Get('Content-Type')` – Header retrieval is case-insensitive.
+
+#### Example expressions
+
+```bash
+request.url.query.foo == 'bar' && request.method == 'POST'
+request.header.Get('x-block-mutation') == 'yes'
+```
+
+### Request Body Object
+
+The body object holds information related to the request body. However, if used in telemetry attribute expressions, it will be empty because the router hasn't read the body at that stage of processing yet.
+
+To optimize performance, the raw request body (`body.raw`) is only included in the expression context if at least one expression explicitly references it.
+
+**Available Fields**:
+
+- `request.body.raw`
+
+#### Example expressions
+
+This example returns the raw body only when an error occurs, which is useful for debugging when used in access log expressions.
+
+```
+request.error != nil ? request.body.raw : ''
+```
+
+### **Authentication Object**
+
+The `auth` object contains authentication-related information for the request. It becomes available after authentication is complete.
+
+**Available Fields**:
+
+- `request.auth`
+- `request.auth.isAuthenticated`
+- `request.auth.type`
+- `request.auth.claims`
+- `request.auth.scopes`
+
+#### Example expressions
+
+```bash
+'read:miscellaneous' in request.auth.scopes
+```
+```
+request.auth.isAuthenticated
+```
+
+### **Subgraph Object**
+
+The Subgraph object provides information about the current subgraph being accessed in the request. Please note that any expression that uses the subgraph object will only have correct values set in the lifecycle of a subgraph request.
+
+It contains the following properties:
+
+#### Properties
+
+- `subgraph.id` (string): The unique identifier of the subgraph
+- `subgraph.name` (string): The name of the subgraph
+- `subgraph.request` (SubgraphRequest): Contains information about the subgraph request
+
+#### SubgraphRequest Properties
+
+- `subgraph.request.error` (error): Any error that occurred during the subgraph request
+- `subgraph.request.clientTrace` (ClientTrace): Contains tracing information about the client connection
+
+#### SubgraphResponse Properties
+
+- `subgraph.response.body` (SubgraphResponseBody)
+
+
+### SubgraphResponseBody Object
+
+The subgraph body object holds information related to the response body of the subgraph. 
+
+To optimize performance, the raw response body (`body.raw`) is only included in the expression context if at least one expression explicitly references it.
+
+**Available Fields**:
+
+- `subgraph.response.body.raw` (string): The raw stringified representation of the subgraph response body
+
+<Note>
+This attribute will evaluate to `""` when used outside of `access_logs.subgraphs.fields` expressions. You can find more info about subgraph access log fields [here](/router/access-logs#subgraph-access-log-expressions).
+</Note>
+
+
+#### Example expressions
+
+This example returns the raw subgraph response body only when an error occurs for the subgraph request.
+
+```
+subgraph.request.error != nil ? subgraph.response.body.raw : ''
+```
+
+#### ClientTrace Properties
+
+- `subgraph.request.clientTrace.fetchDuration` (time.Duration): The duration it took for the router to call the subgraph via HTTP and get a response or error. In case of retries, this value contains the combined duration for all retries. Note: gRPC calls are not supported at the moment.
+- `subgraph.request.clientTrace.connAcquireDuration` (time.Duration): The duration it took to acquire the connection to the subgraph. This includes the dial time if a connection was not reused. If a connection was not successfully acquired, it will be 0. In case of retries, only the last duration is recorded.
+
+This object is available in template expressions and can be accessed using the `subgraph` identifier. For example, you can access the subgraph name using `subgraph.name` or check for errors using `subgraph.request.error`.
+
+#### Example expressions
+
+```bash
+subgraph.name == 'products'
+subgraph.request.error != nil
+subgraph.request.clientTrace.connAcquireDuration > 1.0
+```
+### **Response Object**
+
+The `response` object is a read-only entity that provides details about the outgoing response. It is accessible after the response has been processed by the router.
+
+**Available Fields**:
+
+- `response.body` (ResponseBody)
+
+### ResponseBody Object
+
+The body object holds information related to the response body. 
+
+To optimize performance, the raw response body (`body.raw`) is only included in the expression context if at least one expression explicitly references it.
+
+**Available Fields**:
+
+- `response.body.raw` (string): The raw stringified representation of the router response body
+
+<Note>
+This attribute will evaluate to `""` when used outside of `access_logs.router.fields` expressions. You can find more info about router access log fields [here](/router/access-logs#expression-fields).
+</Note>
+
+#### Example expressions
+
+This example returns the raw response body only when an error occurs, which is useful for debugging when used in access log expressions.
+
+```
+request.error != nil ? response.body.raw : ''
+```
+
+### Subgraph Retry Expressions
+
+You can use expressions to specify the conditions for retries upon subgraph request failures. However, this uses a different expression context, which can be found [here](/router/traffic-shaping/retry#conditional-retry-with-expressions).
+
+
+### Additional Notes
+
+- A Request for Comments (RFC) is [open](https://github.com/wundergraph/cosmo/pull/1481) for feedback on the complete API specification. Future implementations will be driven by customer requirements.
+- The Expr language project offers a [playground](https://expr-lang.org/playground) for testing and developing custom expressions, simplifying the process of constructing and validating expressions.
+
+## Where Can Template Expressions Be Used?
+
+Template Expressions are not a generalized concept within router configuration. This functionality is selectively introduced in areas where it enhances the router's capabilities. You find the supported configuration values on the router [configuration](/router/configuration) documentation page.
+
+If you find a need to enable dynamic configuration, please let us know. Your feedback helps guide future enhancements and feature development.

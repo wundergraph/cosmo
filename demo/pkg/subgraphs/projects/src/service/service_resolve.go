@@ -581,6 +581,77 @@ func (p *ProjectsService) ResolveTaskTotalEffort(ctx context.Context, req *servi
 	return response, nil
 }
 
+// ResolveProjectTaskCount implements projects.ProjectsServiceServer.
+func (p *ProjectsService) ResolveProjectTaskCount(_ context.Context, req *service.ResolveProjectTaskCountRequest) (*service.ResolveProjectTaskCountResponse, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	response := &service.ResolveProjectTaskCountResponse{
+		Result: make([]*service.ResolveProjectTaskCountResult, 0, len(req.Context)),
+	}
+
+	for _, ctx := range req.Context {
+		tasks := data.GetTasksByProjectID(ctx.GetId())
+		response.Result = append(response.Result, &service.ResolveProjectTaskCountResult{
+			TaskCount: int32(len(tasks)),
+		})
+	}
+
+	return response, nil
+}
+
+// ResolveProjectActiveMilestoneCount implements projects.ProjectsServiceServer.
+func (p *ProjectsService) ResolveProjectActiveMilestoneCount(_ context.Context, req *service.ResolveProjectActiveMilestoneCountRequest) (*service.ResolveProjectActiveMilestoneCountResponse, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	response := &service.ResolveProjectActiveMilestoneCountResponse{
+		Result: make([]*service.ResolveProjectActiveMilestoneCountResult, 0, len(req.Context)),
+	}
+
+	for _, ctx := range req.Context {
+		milestones := data.GetMilestonesByProjectID(ctx.GetId())
+		count := int32(0)
+		for _, m := range milestones {
+			if m.GetStatus() != service.MilestoneStatus_MILESTONE_STATUS_COMPLETED {
+				count++
+			}
+		}
+		response.Result = append(response.Result, &service.ResolveProjectActiveMilestoneCountResult{
+			ActiveMilestoneCount: count,
+		})
+	}
+
+	return response, nil
+}
+
+// ResolveEmployeeTotalProjectCount implements projects.ProjectsServiceServer.
+func (p *ProjectsService) ResolveEmployeeTotalProjectCount(_ context.Context, req *service.ResolveEmployeeTotalProjectCountRequest) (*service.ResolveEmployeeTotalProjectCountResponse, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	response := &service.ResolveEmployeeTotalProjectCountResponse{
+		Result: make([]*service.ResolveEmployeeTotalProjectCountResult, 0, len(req.Context)),
+	}
+
+	for _, ctx := range req.Context {
+		count := int32(0)
+		for _, project := range data.ServiceProjects {
+			for _, member := range data.GetTeamMembersByProjectId(project.GetId()) {
+				if member.GetId() == ctx.GetId() {
+					count++
+					break
+				}
+			}
+		}
+		response.Result = append(response.Result, &service.ResolveEmployeeTotalProjectCountResult{
+			TotalProjectCount: count,
+		})
+	}
+
+	return response, nil
+}
+
 // ResolveProjectSubProjects resolves the subProjects field for Project entities.
 // It returns a list of child/sub-projects for each parent project context.
 // The includeArchived argument controls whether completed (archived) projects are included.

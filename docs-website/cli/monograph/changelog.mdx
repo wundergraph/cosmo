@@ -1,0 +1,76 @@
+---
+title: "Changelog"
+description: "Retrieves the changelog for a monograph"
+icon: bullhorn
+---
+
+## Usage
+
+```bash
+npx wgc monograph changelog <name>
+```
+
+## Description
+
+The `npx wgc monograph changelog` command allows you to retrieve the changelog for a given monograph. By default it fetches the latest 10 schema versions from the past 3 days and writes to changelog.json file.
+
+## Parameters
+
+* `<name>`: The name of the monograph you want to create. Replace `<name>` with the name of your monograph.
+
+## Options
+
+`-n, --namespace` : The namespace of the monograph (Default: "default").
+
+`-l, --limit`: The number of entries to fetch. Defaults to 10.
+
+`-f, --offset`: Used for pagination. Sets the offset from which you want to query.
+
+`-s, --start`: The start date in `MM-DD-YY` format. Defaults to 3 days ago from current date.
+
+`-e, --end`: The end date in `MM-DD-YY` format. Defaults to today.
+
+`-o, --out`: The destination file for the json output. Defaults to `changelog.json`
+
+## Examples
+
+```bash
+npx wgc monograph changelog production -s 08-15-23 -e 08-31-23 -o changes.json
+```
+
+Fetch first 10 changes from 8th August to 31st August for the graph `production` and write it to `changes.json` file.
+
+```bash
+npx wgc monograph changelog production -s 08-15-23 -e 08-31-23 -l 10 -f 10 -o changes.json
+```
+
+Fetch the next 10 changes (after the ones in the previous example) from 8th August to 31st August for the graph `production` and write it to `changes.json` file.
+
+## Sample output
+
+```JSON
+[
+  {
+    "createdAt": "Fri Sep 15 2023 21:25:26 GMT+0530 (India Standard Time)",
+    "schemaVersionId": "4f46116d-b307-4bf4-8d24-1974e794819d",
+    "changelogs": [
+      {
+        "id": "2b1db820-6f93-42ac-80a2-b0f5a8d765f3",
+        "path": "ProductNames",
+        "changeType": "TYPE_ADDED",
+        "changeMessage": "Type 'ProductNames' was added",
+        "createdAt": "Fri Sep 15 2023 21:25:26 GMT+0530 (India Standard Time)"
+      },
+      {
+        "id": "0aaf1f49-2fb9-4528-85e4-f4b4b3c671ae",
+        "path": "Employee.products",
+        "changeType": "FIELD_ADDED",
+        "changeMessage": "Field 'products' was added to object type 'Employee'",
+        "createdAt": "Fri Sep 15 2023 21:25:26 GMT+0530 (India Standard Time)"
+      }
+    ]
+  },
+  ..more versions
+]
+```
+

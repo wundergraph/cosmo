@@ -1,0 +1,56 @@
+---
+title: "Update"
+description: "This command updates the tag filters for the contract. To update other aspects of the contract graph please use the federated-graph or monograph update commands."
+icon: "pen-to-square"
+---
+
+## Usage
+
+#### Exclude (the items that have the tag(s) specified will be removed from the source federated graph)
+
+```bash
+npx wgc contract update <name> --source <contract-name> --exclude internal
+```
+
+#### Include (the items that have the tag(s) specified will be included in the source federated graph)
+
+```bash
+npx wgc contract update <name> --source <contract-name> --include public
+```
+
+## Description
+
+The `npx wgc contract update` command allows you to update the tag filters for the contract. This will result in overwriting existing ones and causes a recomposition of the contract graph.
+
+## Parameters
+
+- `<name>`: The name of the contract graph you want to update.
+
+## Options
+
+<Note>
+  The --exclude and --include options are currently _mutually exclusive_. An error will be returned if more than one are defined. The undefined option will be automatically unset.
+</Note>
+
+- `-n, --namespace` : The namespace of the federated graph (Default: "default").
+- `--exclude` : The list of tags that should be excluded from the source graph schema.
+- `--include` : The list of tags that should be included from the source graph schema.
+- `-r , --routing-url`: The routing URL of your router. This URL defines the endpoint where the router will be accessible. The contract graph will be accessible through this router.
+- `--admission-webhook-url <url>` the base url of the admission webhook. This is the url that the controlplane will use to implement admission control for the contract graph. Example: `https://admission.example.com` (without the `/validate-config` path name)
+- `--admission-webhook-secret`: Allows you to sign requests (HMAC) made to your admission webhook url. The header containing this signature is `X-Cosmo-Signature-256`
+- `--readme` : The markdown file which describes the contract graph.
+- `--suppress-warnings`: This flag suppresses any warnings produced by composition.
+
+## Examples
+
+```bash
+npx wgc contract update production-external --exclude experimental deprecated
+```
+
+Updates a contract graph named `production-external` with the new exclude tags: `experimental` and `deprecated`.
+
+```bash
+npx wgc contract update production-external --include public api
+```
+
+Updates a contract graph named `production-external` with the new include tags: `public` and `api`.

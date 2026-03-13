@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.135.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.134.0...@wundergraph/cosmo-connect@0.135.0) (2026-03-12)
+
+### Features
+
+* add composedSchemaBreakingChanges to CreateProposalResponse ([#2640](https://github.com/wundergraph/cosmo/issues/2640)) ([2e0c11e](https://github.com/wundergraph/cosmo/commit/2e0c11ef59a294a726ec6b5dc45ee3b869d6cc46)) (@JivusAyrus)
+* add limit option for error/warning display in publish command ([#2634](https://github.com/wundergraph/cosmo/issues/2634)) ([1d0085d](https://github.com/wundergraph/cosmo/commit/1d0085d4de4db6ccab82bd42df5cd2a1500f3413)) (@JivusAyrus)
+
 # [0.134.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.133.0...@wundergraph/cosmo-connect@0.134.0) (2026-03-11)
 
 ### Features

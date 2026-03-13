@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	integration "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	contexterror "github.com/wundergraph/cosmo/router-tests/modules/context-error"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -20,7 +20,7 @@ func TestContextErrorModule(t *testing.T) {
 	t.Run("error is captured in context when authentication fails", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := integration.ConfigureAuth(t)
+		authenticators, _ := testutils.ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
 			Authenticators:           authenticators,
 			AuthenticationRequired:   true,
