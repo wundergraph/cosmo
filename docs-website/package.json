@@ -19,8 +19,6 @@
   },
   "scripts": {
     "dev": "mintlify dev",
-    "lint": "",
-    "lint:fix": "",
-    "format": ""
+    "lint": "mintlify validate"
   }
 }
