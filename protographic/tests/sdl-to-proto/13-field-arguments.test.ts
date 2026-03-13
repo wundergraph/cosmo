@@ -963,6 +963,303 @@ describe('SDL to Proto Field Arguments', () => {
       'Invalid field context for resolver. Multiple fields with type ID found - provide a context with the fields you want to use in the @connect__fieldResolver directive',
     );
   });
+  it('should support @connect__fieldResolver on fields without arguments', () => {
+    const sdl = `
+    type User {
+        id: ID!
+        name: String!
+        avatar: String! @connect__fieldResolver(context: "id")
+    }
+
+    type Query {
+        user(id: ID!): User
+    }
+  `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc ResolveUserAvatar(ResolveUserAvatarRequest) returns (ResolveUserAvatarResponse) {}
+      }
+
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+      message ResolveUserAvatarContext {
+        string id = 1;
+      }
+
+      message ResolveUserAvatarRequest {
+        // context provides the resolver context for the field avatar of type User.
+        repeated ResolveUserAvatarContext context = 1;
+      }
+
+      message ResolveUserAvatarResult {
+        string avatar = 1;
+      }
+
+      message ResolveUserAvatarResponse {
+        repeated ResolveUserAvatarResult result = 1;
+      }
+
+      message User {
+        string id = 1;
+        string name = 2;
+      }"
+    `);
+  });
+  it('should support @connect__fieldResolver on fields without arguments using multiple context fields', () => {
+    const sdl = `
+    type User {
+        id: ID!
+        name: String!
+        avatar: String! @connect__fieldResolver(context: "id name")
+    }
+
+    type Query {
+        user(id: ID!): User
+    }
+  `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc ResolveUserAvatar(ResolveUserAvatarRequest) returns (ResolveUserAvatarResponse) {}
+      }
+
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+      message ResolveUserAvatarContext {
+        string id = 1;
+        string name = 2;
+      }
+
+      message ResolveUserAvatarRequest {
+        // context provides the resolver context for the field avatar of type User.
+        repeated ResolveUserAvatarContext context = 1;
+      }
+
+      message ResolveUserAvatarResult {
+        string avatar = 1;
+      }
+
+      message ResolveUserAvatarResponse {
+        repeated ResolveUserAvatarResult result = 1;
+      }
+
+      message User {
+        string id = 1;
+        string name = 2;
+      }"
+    `);
+  });
+  it('should emit repeated for list-valued resolver arguments', () => {
+    const sdl = `
+    type User {
+        id: ID!
+        name: String!
+        posts(tags: [String!]!, limit: Int!): [Post!]! @connect__fieldResolver(context: "id")
+    }
+
+    type Post {
+        id: ID!
+        title: String!
+    }
+
+    type Query {
+        user(id: ID!): User
+    }
+  `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+
+    // Verify the args message has repeated for the list argument
+    expect(protoText).toContain('repeated string tags = 1;');
+    // Non-list argument should not be repeated
+    expect(protoText).toContain('int32 limit = 2;');
+    expect(protoText).not.toContain('repeated int32 limit');
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc ResolveUserPosts(ResolveUserPostsRequest) returns (ResolveUserPostsResponse) {}
+      }
+
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+      message ResolveUserPostsArgs {
+        repeated string tags = 1;
+        int32 limit = 2;
+      }
+
+      message ResolveUserPostsContext {
+        string id = 1;
+      }
+
+      message ResolveUserPostsRequest {
+        // context provides the resolver context for the field posts of type User.
+        repeated ResolveUserPostsContext context = 1;
+        // field_args provides the arguments for the resolver field posts of type User.
+        ResolveUserPostsArgs field_args = 2;
+      }
+
+      message ResolveUserPostsResult {
+        repeated Post posts = 1;
+      }
+
+      message ResolveUserPostsResponse {
+        repeated ResolveUserPostsResult result = 1;
+      }
+
+      message User {
+        string id = 1;
+        string name = 2;
+      }
+
+      message Post {
+        string id = 1;
+        string title = 2;
+      }"
+    `);
+  });
+  it('should emit wrapper types for nullable list and nested list resolver arguments', () => {
+    const sdl = `
+    type User {
+        id: ID!
+        name: String!
+        posts(tags: [String!], categories: [[Int!]!]!): [Post!]! @connect__fieldResolver(context: "id")
+    }
+
+    type Post {
+        id: ID!
+        title: String!
+    }
+
+    type Query {
+        user(id: ID!): User
+    }
+  `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    expectValidProto(protoText);
+
+    // Nullable list uses a wrapper type
+    expect(protoText).toContain('ListOfString tags = 1;');
+    // Nested list uses a wrapper type
+    expect(protoText).toContain('ListOfListOfInt categories = 2;');
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc ResolveUserPosts(ResolveUserPostsRequest) returns (ResolveUserPostsResponse) {}
+      }
+
+      // Wrapper message for a list of Int.
+      message ListOfInt {
+        message List {
+          repeated int32 items = 1;
+        }
+        List list = 1;
+      }
+      // Wrapper message for a list of Int.
+      message ListOfListOfInt {
+        message List {
+          repeated ListOfInt items = 1;
+        }
+        List list = 1;
+      }
+      // Wrapper message for a list of String.
+      message ListOfString {
+        message List {
+          repeated string items = 1;
+        }
+        List list = 1;
+      }
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+      message ResolveUserPostsArgs {
+        ListOfString tags = 1;
+        ListOfListOfInt categories = 2;
+      }
+
+      message ResolveUserPostsContext {
+        string id = 1;
+      }
+
+      message ResolveUserPostsRequest {
+        // context provides the resolver context for the field posts of type User.
+        repeated ResolveUserPostsContext context = 1;
+        // field_args provides the arguments for the resolver field posts of type User.
+        ResolveUserPostsArgs field_args = 2;
+      }
+
+      message ResolveUserPostsResult {
+        repeated Post posts = 1;
+      }
+
+      message ResolveUserPostsResponse {
+        repeated ResolveUserPostsResult result = 1;
+      }
+
+      message User {
+        string id = 1;
+        string name = 2;
+      }
+
+      message Post {
+        string id = 1;
+        string title = 2;
+      }"
+    `);
+  });
   it('should correctly convert camelCase field names to snake_case in context messages', () => {
     const sdl = `
     type User {
