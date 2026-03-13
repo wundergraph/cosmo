@@ -1,0 +1,248 @@
+# Generated from standards/ files by codereview pipeline
+# Edit standards/*.md, then run: bun run build:coderabbit
+
+language: en-US
+
+reviews:
+  collapse_walkthrough: true
+  poem: false
+  high_level_summary: true
+  auto_review:
+    enabled: true
+  path_filters:
+    - "!codereview/**"
+    - "!standards/**"
+
+  instructions: |
+    ## Error Handling
+
+    - Always use `%w` to wrap errors when formatting with `fmt.Errorf` instead of `%s` to preserve error chains (#2472)
+    - Log errors with `zap.Error()` API rather than `zap.Any()` to ensure proper error formatting and structured logging (#2273)
+    - Check error slices for nil and length before accessing to prevent panics: `if response.Errors == nil || len(response.Errors) < 1` (#2273)
+    - Avoid internal terminology like "EDFS" in user-facing error messages; use domain-neutral language (#2273)
+    - Ensure error messages are covered by tests rather than being swallowed silently (#2078)
+    - Start spans only when operations will proceed to avoid resource waste: check authentication before span creation (#2192)
+    - Use `logger.Error` level for genuine errors rather than debug/info to ensure visibility in production (#2192)
+
+    ## Go Code Quality
+
+    - Define named zero-value constants for string enums: `const TypeInvalid Type = ""` to handle default cases gracefully (#2192, #2236)
+    - Use early returns with guard clauses instead of deeply nested if-else blocks for better readability (#2235, #2323)
+    - Apply consistent patterns for stateful APIs like `keyGen.Reset()` - establish whether reset happens before or after usage (#2318)
+    - Leverage modern Go 1.25+ features: `range N`, `slices.ContainsFunc`, and `wg.Go()` instead of legacy patterns (#2280, #2288, #2379)
+    - Use `sync.Map` for read-heavy operations with occasional writes rather than mutex-protected maps (#2379)
+    - Simplify single-field access: replace struct when only accessing one field like `config.Enabled` (#2288)
+    - Use `t.TempDir()` in tests instead of manual directory creation and cleanup to avoid boilerplate (#2379)
+
+    ## Testing
+
+    - Separate flaky tests into dedicated functions with retry logic, marking stable tests as non-retryable (#2234)
+    - Write descriptive test names that explain expectations: `"should succeed with valid token"` instead of generic names (#2067)
+    - Use explicit field names in test structs rather than positional boolean values: avoid `false, false, false` patterns (#2318)
+    - Use typed errors and `errors.As/errors.Is` for testable error conditions instead of generic error strings (#2273)
+    - Test error paths and edge cases, not just happy paths - ensure error messages surface in test coverage (#2078)
+    - Use testify comparison functions with correct parameter order: `require.Equal(t, expected, actual)` (#2090)
+
+    ## Configuration
+
+    - Support environment variables for all configuration options using `envprefix` tag following the project conventions (#2296, #2379)
+    - Document configuration option interactions and validate conflicting settings at startup rather than runtime (#2192)
+    - Use concrete, descriptive names for configuration fields rather than generic terms like "Enable" or "Debug" (#2235)
+    - Validate configuration in JSON schema with appropriate constraints and default values (#2379)
+    - Test environment variable configuration for both global and subgraph-specific settings (#2514)
+
+    ## GraphQL Federation
+
+    - Exclude `@requires` fields from entity proto messages since they're resolved by different RPCs (#2439)
+    - Return composition errors for unresolvable fields involving shared root query fields and unreachable nested entities (#2298)
+    - Include federation debugging metadata like `fetch_reasons` only for upstream subgraphs, not client responses (#2160)
+    - Validate federation directives and entity keys during schema composition rather than at runtime (#2439)
+
+    ## Authentication
+
+    - Exclude symmetric algorithms (HS256, HS384, HS512) from JWKS validation to enforce asymmetric key usage (#2067)
+    - Fail loudly when authentication configuration is ambiguous rather than silently choosing defaults (#2216)
+    - Use descriptive function names for security operations: prefer domain-specific names over generic utilities (#2431)
+    - Validate audience claims only when explicitly configured - empty audience list should skip validation (#2074)
+
+    ## PubSub
+
+    - Include `"__typename": "edfs__PublishResult"` prefix in all publish response JSON for proper type identification (#2273)
+    - Implement nil safety checks before setting event data: `if e == nil` guards to prevent panics (#2304)
+    - Use configurable timeouts for hook execution rather than hardcoded values, with clear timeout documentation (#2329)
+    - Perform deep copies of event data when crossing module boundaries to prevent data races (#2087)
+    - Log hook timeout violations with enough context for debugging: include hook type and subscription details (#2329)
+
+    ## Database
+
+    - Wrap related database operations in transactions to ensure consistency, especially for delete operations (#2553)
+    - Abstract business logic into repository methods rather than handling it directly in request handlers (#2553)
+    - Use parameterized queries consistently to prevent SQL injection, even for escaped parameters (#2331)
+
+    ## Performance
+
+    - Process data before caching rather than on every cache retrieval to reduce repeated work (#2318)
+    - Use early returns and guard clauses to avoid expensive operations: `if condition { return }` pattern (#2323)
+    - Choose appropriate data structures for access patterns: `sync.Map` for read-heavy scenarios (#2379)
+    - Optimize hot paths in request processing by avoiding unnecessary allocations and repeated parsing (#2074)
+
+    ## Proto/gRPC
+
+    - Enforce single GraphQL operation per document when generating proto definitions (#2302)
+    - Use consistent proto message naming conventions: `ResolveUserPostArgs`, `ResolveUserPostContext` patterns (#2290)
+    - Implement fail-fast validation in proto processing rather than silent fallbacks (#2379)
+    - Generate proto field numbers deterministically and maintain lock files for stability across builds (#2086)
+
+    ## Configuration Schema
+
+    - Set appropriate default values in JSON schema rather than code to ensure consistency across environments (#2068)
+    - Document units and limits clearly in schema descriptions: specify bytes vs bits, include examples (#2060)
+    - Use enum constraints where possible to prevent invalid configuration values (#2379)
+
+    ## Known False Positive Patterns
+
+    The following patterns were previously flagged but explicitly rejected by human reviewers.
+    Do NOT flag these unless the context is clearly different from the original case.
+
+    - "Fix misnamed profiling option (profilesSampleRate), clamp sample rates, and make init resilient." — rejected: "This is wrong, this setting is for the @sentry/profiling-node integration" (#2199)
+    - "Operation body attributes are wiped before export" — rejected: "This is intentional, the flag is false by default, and the attributes are only for use with other OTEL endpoints." (#2235)
+    - "Verify the graphql-go-tools release candidate version is intentional." — rejected: "What is wrong with you today? Has AWS outage affected your weak mind?" (#2246)
+    - "Consider the implications of returning a non-cloned slice from MutableEvent.GetData()." — rejected: "It's intentional like this and part of the hook interface design. A `MutableEvent` is designed to be mutable, while a `Event` is immutable. Since `Eve" (#2273)
+    - "Cycle detection only checks direct cycles, missing transitive dependencies." — rejected: "Take a look at `01-basic-validation.test.ts`. There is a test that actually already checks this behavior. The visitor will visit every field with argu" (#2290)
+    - "Verify that NetworkError is thrown for authentication failures." — rejected: "Incorrect: https://github.com/keycloak/keycloak/blob/26.2.5/js/libs/keycloak-admin-client/src/utils/fetchWithError.ts#L25" (#2354)
+    - "Fix the incorrect sync.WaitGroup usage." — rejected: "The code compiles and tests pass successfully The wg variable is of type errgroup.Group from golang.org/x/sync/errgroup, not sync.WaitGroup errgroup" (#2379)
+    - "`GraphQL Federation `@requires` directive field set syntax inline fragments abstract types specification`" — rejected: "I know, this is temporary. The implementation for the abstract types is quite complex and I decided to implement this in multiple iterations." (#2439)
+    - "`Apollo Federation `@requires` directive schema composition behavior`" — rejected: "`@requires` fields are resolved by a different RPC. Therefore it doesn't make sense to include the field in the entity message. RPCs that resolve the" (#2439)
+    - "`js-yaml: '=4.1.1'` is out of scope for CVE-2026-25896 and uses an unbounded range." — rejected: "Incorrect finding, this just adds trailing comma (`,`) since other elements are added after it." (#2552)
+    - "Consider using `bytes` for large proto blobs" — rejected: "We do work with text we want to have it encoded" (#2079)
+    - "Default logger is not assigned back to ServeConfig and lacks DisableTime." — rejected: "No that was on purpose because the underlying framework creates its own logger. I only need to because I want to add the logger to the context with an" (#2132)
+    - "Multipart preamble parsing is brittle; accept optional blank line and charset." — rejected: "No, this is OUR multipart implementation, and it's rigid" (#2141)
+    - "Verify MCP-Go APIs: WithStateLess and StreamableHTTPServer availability" — rejected: "But we use `github.com/mark3labs/mcp-go v0.38.0`, you looked at the wrong place." (#2157)
+    - "Add coverage for “no cap” semantics (MaxDuration==0) in shouldUseRetryAfter." — rejected: "This is not applicable since we did not clamp." (#2167)
+
+  path_instructions:
+    - path: "cli/**"
+      instructions: |
+        Looking at the CLI subsystem comments, here are the focused review rules:
+
+        - Use `if` statements instead of `switch` statements for single-case language conditionals in plugin commands (#2293)
+        - Consolidate multiple parameters into typed options objects rather than passing infinite parameters to functions (#2302)
+        - Store plugin templates and grpc-service templates in separate directories for better organization (#2033)
+        - Prefix file paths with `@` (e.g., `@path/to/file.json`) when accepting file input via CLI flags (#2302)
+        - Use arrays with `.includes()` for file extension validation instead of chained `||` conditions (#2302)
+        - Combine `await` and `.catch()` for cleaner error handling instead of nested try/catch blocks (#2033)
+        - Use `node:fs` or `node:fs/promises` consistently throughout CLI commands (#2033)
+        - Chain Command builder methods for better TypeScript typing in action parameters (#2033)
+        - Avoid inline `require()` statements - move imports to the top of files (#2302)
+        - Use `const` declarations for magic numbers like recursion depth limits with explanatory comments (#2302)
+        - Validate GraphQL operation documents to ensure single operation per document (#2302)
+        - Document hacky workarounds (like patches) with explanatory comments, not just PR descriptions (#2293)
+        - Use `.PHONY` (with dot prefix) in Makefiles, not `PHONY` (#2293)
+        - Handle language-specific logic through dedicated functions rather than scattered conditionals (#2293)
+        - Pre-calculate uppercase values in variables instead of calling `upperCase()` multiple times (#2302)
+
+        ## Expert Escalation
+        When you detect a complex or architecturally significant change in this subsystem,
+        add a comment tagging the relevant domain expert(s) for human review.
+        Triggers for escalation:
+        - Changes to core abstractions, interfaces, or module boundaries
+        - Performance-sensitive code paths (hot loops, allocations, concurrency)
+        - Breaking changes to public APIs or configuration schema
+        - Security-relevant changes (auth, validation, input handling)
+        Domain experts for cli:
+        - @StarpTech
+        Format: "**Expert review recommended**: @username - [brief reason]"
+
+    - path: "connect/**"
+      instructions: |
+        - Filter out `@requires` fields from entity messages in protobuf generation since they're resolved by different RPCs (#2439)
+        - Skip special GraphQL federation fields like `_entities` and `_service` when generating protobuf messages (#2439)
+        - For abstract types (interfaces/unions), normalize selection sets by pushing interface-level fields into inline fragments before gRPC mapping (#2439)
+        - Use gqlgen YAML config with `skip_runtime: true` instead of code annotations for directive handling (#2290)
+        - Deduplicate scalar type mappings like `SCALAR_TYPE_MAP` across protographic files - establish single source of truth (#2439)
+        - Use `Object.entries()` iteration over manual key extraction when working with GraphQL type maps (#2290)
+        - Remove unused imports immediately rather than leaving them in the codebase (#2290)
+        - Use nullable argument checks like `(ctx.node.arguments?.length ?? 0) === 0` for safer SDL validation (#2290)
+        - Document why abstract selection normalization is necessary for gRPC compatibility in visitor classes (#2439)
+        - Handle empty string assignments explicitly in SDL-to-mapping contexts with proper guards (#2439)
+        - Include test cases for multiple federation keys and complex union/interface nesting scenarios (#2439)
+        - Use descriptive type names like `CreateRequiredFieldsVisitorOptions` instead of generic names (#2439)
+        - Align ESLint rules with other TypeScript projects in Cosmo rather than copying from unrelated components (#2439)
+        - Consider union member self-references when implementing deduplication logic for protobuf messages (#2439)
+        - Validate against multiple `@requires` directives per field during SDL processing (#2439)
+
+    - path: "controlplane/**"
+      instructions: |
+        - Use `z.coerce` in Zod schemas for environment variable type conversion instead of manual parsing (#2199)
+        - Prefer POSIX standard utilities like `rm` over non-standard ones like `del` in package.json scripts for portability (#2199)
+        - Use both `x` and `**/x` glob variants in package.json for shell compatibility across bash/zsh (#2219)
+        - Use try/catch blocks with await rather than mixing await and catch for proper TypeScript error handling (#2354)
+        - Use GraphQL.js library utilities (`parseType`, `getNullableType`, `getNamedType`) for AST handling instead of text parsing (#2380)
+        - Extract shared constants to common locations when used across multiple files instead of duplicating (#2417)
+        - Validate port ranges (< 65536) in URL validation utilities (#2473)
+        - Use batched database operations when deleting multiple records instead of individual calls (#2467)
+        - Pass complete objects as parameters rather than destructuring into individual properties when the whole object is needed (#2271)
+        - Add unit tests for new utility functions, especially validation and parsing logic (#2131)
+        - Log authentication errors for debugging, especially for external services like Keycloak (#2443)
+        - Validate same-origin requirements for authentication redirects to prevent security issues (#2476)
+        - Use helper functions consistently once created instead of falling back to manual implementations (#2065)
+        - Consider using arrays instead of tuples in SQL queries when the database client supports it (#2387)
+        - Check that generated files are properly ignored by formatters to avoid breaking snapshot tests (#2599)
+
+        ## Expert Escalation
+        When you detect a complex or architecturally significant change in this subsystem,
+        add a comment tagging the relevant domain expert(s) for human review.
+        Triggers for escalation:
+        - Changes to core abstractions, interfaces, or module boundaries
+        - Performance-sensitive code paths (hot loops, allocations, concurrency)
+        - Breaking changes to public APIs or configuration schema
+        - Security-relevant changes (auth, validation, input handling)
+        Domain experts for controlplane:
+        - @JivusAyrus
+        Format: "**Expert review recommended**: @username - [brief reason]"
+
+    - path: "router/**"
+      instructions: |
+
+
+        ## Expert Escalation
+        When you detect a complex or architecturally significant change in this subsystem,
+        add a comment tagging the relevant domain expert(s) for human review.
+        Triggers for escalation:
+        - Changes to core abstractions, interfaces, or module boundaries
+        - Performance-sensitive code paths (hot loops, allocations, concurrency)
+        - Breaking changes to public APIs or configuration schema
+        - Security-relevant changes (auth, validation, input handling)
+        Domain experts for router:
+        - @endigma
+        - @dkorittki
+        - @StarpTech
+        Format: "**Expert review recommended**: @username - [brief reason]"
+
+    - path: "studio/**"
+      instructions: |
+        - For operations components, use `operationsData?.operations` as the sole dependency in useEffect hooks when reacting to operation data changes (#2331)
+        - In client usage tables, precision loss for request counts is acceptable as values won't reach problematically high numbers (#2331)
+        - When displaying operation IDs in UI, show only the first 4-6 characters for consistency with operations overview patterns (#2474)
+        - In delete dialogs for persisted operations, emphasize analytics value with messaging like "If you are not sending us analytics, we cannot guarantee that existing clients won't break" (#2553)
+        - Use `localStorage` safely knowing it's domain-specific - GraphiQL headers won't affect router playground unless running under the same domain (#2446)
+        - For breaking change UI copy, use specific messaging: "Toggle to prevent future checks from treating this change to {path} as breaking for this operation" (#2461)
+        - In operations override UI, use clear enable/disable language: "Enable overrides so future checks will not fail on breaking listed changes" (#2461)
+        - When checking current organization context, always handle undefined cases safely even though it should never be null after session loads (#2161)
+        - For linter config accordions, disable expansion when the parent linter is disabled to prevent editing of nested dropdowns (#2574)
+        - Preserve existing tag input behaviors unless specifically requested to change - avoid modifying established interaction patterns (#2468)
+        - In trace detail components, prefer manual indentation adjustments over automatic prettier reformatting for React JSX nesting (#2235)
+        - For large SVG backgrounds in popups and feature announcements, ensure file size is justified by the visual requirement (#2182)
+
+        ## Expert Escalation
+        When you detect a complex or architecturally significant change in this subsystem,
+        add a comment tagging the relevant domain expert(s) for human review.
+        Triggers for escalation:
+        - Changes to core abstractions, interfaces, or module boundaries
+        - Performance-sensitive code paths (hot loops, allocations, concurrency)
+        - Breaking changes to public APIs or configuration schema
+        - Security-relevant changes (auth, validation, input handling)
+        Domain experts for studio:
+        - @JivusAyrus
+        - @StarpTech
+        Format: "**Expert review recommended**: @username - [brief reason]"

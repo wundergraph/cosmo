@@ -1,0 +1,22 @@
+{
+  "name": "codereview-pipeline",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "extract": "bun run scripts/extract.ts",
+    "extract:full": "bun run scripts/extract.ts --full",
+    "filter": "bun run scripts/filter.ts",
+    "build:profiles": "bun run scripts/build-profiles.ts",
+    "build:guidelines": "bun run scripts/build-guidelines.ts",
+    "build:antipatterns": "bun run scripts/build-antipatterns.ts",
+    "build:coderabbit": "bun run scripts/build-coderabbit.ts",
+    "build:claude-md": "bun run scripts/build-claude-md.ts",
+    "evaluate": "bun run scripts/evaluate.ts",
+    "pipeline": "bun run extract && bun run filter && bun run build:profiles && bun run build:antipatterns && bun run build:coderabbit && bun run build:claude-md",
+    "pipeline:full": "bun run extract:full && bun run filter && bun run build:profiles && bun run build:antipatterns && bun run build:coderabbit && bun run build:claude-md"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.5.2"
+  }
+}
