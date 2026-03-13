@@ -354,7 +354,7 @@ keycloak:
   replicas: 1
   image:
     repository: ghcr.io/wundergraph/cosmo/keycloak
-    tag: '0.12.0'
+    tag: '0.13.0'
     pullPolicy: IfNotPresent
   args:
     - 'start'
