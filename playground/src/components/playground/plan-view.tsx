@@ -1,5 +1,5 @@
 import { Bars3BottomLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
-import Editor, { loader, useMonaco } from '@monaco-editor/react';
+import Editor, { useMonaco } from '@monaco-editor/react';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { LuLayoutDashboard, LuNetwork } from 'react-icons/lu';
 import { Edge, Node, ReactFlowProvider } from 'reactflow';

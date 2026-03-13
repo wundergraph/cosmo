@@ -2,15 +2,7 @@ import { TraceContext, TraceView } from '@/components/playground/trace-view';
 import { explorerPlugin } from '@graphiql/plugin-explorer';
 import { createGraphiQLFetcher } from '@graphiql/toolkit';
 import { GraphiQL } from 'graphiql';
-import {
-  GraphQLSchema,
-  Kind,
-  OperationTypeNode,
-  buildClientSchema,
-  getIntrospectionQuery,
-  parse,
-  validate,
-} from 'graphql';
+import { GraphQLSchema, buildClientSchema, getIntrospectionQuery, parse, validate } from 'graphql';
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { FaNetworkWired } from 'react-icons/fa';
@@ -89,7 +81,7 @@ const substituteHeadersFromEnv = (headers: Record<string, string>, graphId: stri
   return headers;
 };
 
-const executeScript = async (code: string | undefined, graphId: string) => {
+const executeScript = async (code: string | undefined, _graphId: string) => {
   if (!code) {
     return;
   }
@@ -526,7 +518,7 @@ export const Playground = (input: {
         }),
       );
 
-      scriptsButton.onclick = (e) => {
+      scriptsButton.onclick = (_e) => {
         (tabs[0] as HTMLButtonElement).className = 'graphiql-un-styled';
         (tabs[1] as HTMLButtonElement).className = 'graphiql-un-styled';
         (sections[0] as HTMLDivElement).className = 'graphiql-editor hidden';
