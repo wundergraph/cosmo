@@ -1,0 +1,93 @@
+---
+title: "Configure Router"
+description: "Enable the ConnectRPC server in the Cosmo Router to serve your typed API endpoints." 
+icon: "gears"
+---
+
+Once you have defined your contracts and generated your Protocol Buffer definitions, the next step is to configure the Cosmo Router to serve them.
+
+In this architecture, the router runs a ConnectRPC server alongside its standard GraphQL endpoint, acting as a protocol sidecar within the same binary.
+
+It loads your proto definitions, maps RPC calls to GraphQL operations, and handles protocol translation automatically.
+
+## Prerequisites
+
+Ensure you have the following files generated from the [Define Contracts](/connect-rpc/produce-define-contracts) step:
+
+- The directory containing your source `.graphql` operation files (e.g., ./services/).
+- The generated `service.proto` located inside that same directory.
+
+## 1. Update Router Configuration
+
+You need to modify your router's `config.yaml` to enable the ConnectRPC server and tell it where to find your service definitions.
+
+The router uses a storage provider to specify the **root services directory**. The router recursively walks this directory to discover all .proto files and their associated .graphql operations.
+
+Add the following configuration blocks:
+
+```yaml
+# Storage providers must be defined first
+storage_providers:
+  file_system:
+    - id: "fs-services"
+      path: "/services"
+
+# ConnectRPC configuration
+connect_rpc:
+  enabled: true
+  storage:
+    provider_id: "fs-services"  # Must match a storage_providers.file_system[].id
+```
+
+For detailed information about router configuration options, including environment variables, storage providers, and advanced settings, see the [Router Configuration documentation](/router/configuration).
+
+## 2. Run the router (docker example)
+
+When running the router container, you must ensure:
+
+- The new ConnectRPC port (e.g., 5026) is exposed.
+
+- The directory containing your service definitions is mounted into the container.
+
+Here is an example docker run command:
+
+```bash
+docker run \
+  --name cosmo-router \
+  -p 3002:3002 \
+  -p 5026:5026 \
+  -v "$(pwd)/config.yaml:/config/config.yaml:ro" \
+  -v "$(pwd)/services:/services:ro" \
+  ghcr.io/wundergraph/cosmo/router:latest
+```
+
+- `-p 3002:3002` — Maps the standard GraphQL port.
+- `-p 5026:5026` — Maps the ConnectRPC port configured in `config.yaml`.
+- `-v "$(pwd)/config.yaml:..."` — Mounts your config file into the container.
+- `-v "$(pwd)/services:..."` — Mounts your services directory containing proto and graphql files.
+
+<Note>
+You will also need to pass any required environment variables (e.g., `GRAPH_API_TOKEN`) using `-e` flags.
+</Note>
+
+## 3. Verification
+
+When the router starts, it will scan the mounted directories. Look at the logs to verify it has successfully discovered your services and operations.
+
+You should see output similar to this:
+
+```Plaintext
+INFO discovered service {"service": "HrService", "dir": "/services", "proto_files": 1, "operation_files": 3}
+INFO loaded operations for service {"service": "employees.v1.HrService", "operation_count": 3}
+INFO ConnectRPC server ready {"addr": "0.0.0.0:5026"}
+```
+
+Key indicators:
+
+- `discovered service`: Confirms the service.proto file was found.
+
+- `loaded operations`: Confirms the corresponding .graphql files were found and mapped.
+
+- `ConnectRPC server ready`: Confirms the server is listening on the configured port.
+
+Your API is now ready to accept traffic via gRPC, Connect, and HTTP/JSON.
