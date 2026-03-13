@@ -424,7 +424,7 @@ export class Composer {
     routerExecutionConfig,
     featureFlagId,
   }: {
-    composedGraph: Omit<ComposedFederatedGraph, 'subgraphs'> & { subgraphs: CompositionSubgraphRecord[] };
+    composedGraph: ComposedFederatedGraph;
     composedById: string;
     isFeatureFlagComposition: boolean;
     federatedSchemaVersionId: UUID;

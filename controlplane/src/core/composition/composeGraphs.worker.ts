@@ -4,6 +4,11 @@
  * Keep this file independent from local controlplane runtime helpers where
  * possible. The worker returns plain `Serialized*` payloads so the thread
  * boundary stays stable even when richer in-process models change.
+ *
+ * IMPORTANT: Avoid adding value imports from local `.ts` files (e.g.
+ * `./composition.js`). Tinypool worker threads cannot resolve `.js` imports
+ * to `.ts` source files, so only `import type` (which is erased at runtime)
+ * is safe for local modules. Value imports from npm packages are fine.
  */
 import { randomUUID } from 'node:crypto';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
@@ -18,7 +23,6 @@ import { parse } from 'graphql';
 import type { FederationResult, FederationResultWithContracts } from '@wundergraph/composition';
 import type { RouterSubgraph } from '@wundergraph/cosmo-shared';
 import type { SubgraphDTO } from '../../types/index.js';
-import { validateRouterCompatibilityVersion } from './composition.js';
 import type {
   ComposeGraphsTaskInput,
   ComposeGraphsTaskResult,
@@ -182,7 +186,8 @@ export default function composeGraphsInWorker(task: ComposeGraphsTaskInput): Com
     results: task.subgraphsToCompose.map((subgraphsToCompose) => {
       const compositionSubgraphs = toCompositionSubgraphs(subgraphsToCompose.subgraphs);
 
-      const version = validateRouterCompatibilityVersion(task.federatedGraph.routerCompatibilityVersion);
+      // Version is validated on the main thread before dispatching to the worker.
+      const version = task.routerCompatibilityVersion;
 
       const result: FederationResult | FederationResultWithContracts = task.federatedGraph.contract
         ? federateSubgraphsContract({

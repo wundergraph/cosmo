@@ -7,7 +7,11 @@
  * classes, and custom Error/Warning instances are reconstructed outside the
  * worker when needed.
  */
-import type { CompositionOptions, FieldConfiguration } from '@wundergraph/composition';
+import type {
+  CompositionOptions,
+  FieldConfiguration,
+  SupportedRouterCompatibilityVersion,
+} from '@wundergraph/composition';
 import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { FederatedGraphDTO, SubgraphDTO } from '../../types/index.js';
 
@@ -50,6 +54,8 @@ export interface SerializedContractCompositionArtifact {
 
 export interface ComposeGraphsTaskInput {
   federatedGraph: FederatedGraphDTO;
+  /** Pre-validated on the main thread before dispatching to the worker. */
+  routerCompatibilityVersion: SupportedRouterCompatibilityVersion;
   subgraphsToCompose: {
     subgraphs: SubgraphDTO[];
     isFeatureFlagComposition: boolean;
