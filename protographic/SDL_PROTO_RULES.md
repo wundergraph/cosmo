@@ -293,9 +293,11 @@ message RequireProductNameByIdFields {
 
 Field resolvers allow you to define custom resolution logic for specific fields within a GraphQL type. Using the `@connect__fieldResolver` directive, you can specify which fields should be resolved through dedicated RPC methods, enabling lazy loading, computed fields, or integration with external data sources.
 
-### Basic Field Resolver
+Fields with the `@connect__fieldResolver` directive are excluded from the parent type's Proto message. This is the same behavior as fields with arguments, which are always treated as resolver fields. This ensures that expensive or lazily-loaded fields are not part of the regular response returned by operations — they are only resolved through their dedicated RPC methods.
 
-Fields marked with `@connect__fieldResolver` generate dedicated RPC methods with request and response messages:
+### Basic Field Resolver with Arguments
+
+Fields with arguments are automatically treated as resolver fields. Additionally, fields marked with `@connect__fieldResolver` generate dedicated RPC methods with request and response messages:
 
 ```graphql
 type User {
@@ -344,14 +346,61 @@ message ResolveUserPostsResponse {
 }
 ```
 
+### Field Resolver without Arguments
+
+The `@connect__fieldResolver` directive can also be used on fields **without arguments** to exclude expensive fields from the parent type's message and resolve them separately. In this case, no `Args` message is generated and the request message only contains the `context` field:
+
+```graphql
+type User {
+  id: ID!
+  name: String!
+  avatar: String! @connect__fieldResolver(context: "id")
+}
+
+type Query {
+  user(id: ID!): User
+}
+```
+
+Maps to:
+
+```protobuf
+rpc ResolveUserAvatar(ResolveUserAvatarRequest) returns (ResolveUserAvatarResponse) {}
+
+message ResolveUserAvatarContext {
+  string id = 1;
+}
+
+// Request message only includes context (no field_args)
+message ResolveUserAvatarRequest {
+  repeated ResolveUserAvatarContext context = 1;
+}
+
+message ResolveUserAvatarResult {
+  string avatar = 1;
+}
+
+message ResolveUserAvatarResponse {
+  repeated ResolveUserAvatarResult result = 1;
+}
+
+// Note: avatar is excluded from the User message
+message User {
+  string id = 1;
+  string name = 2;
+}
+```
+
 ### Field Resolver Components
 
-Each field resolver generates four message types:
+For field resolvers **with arguments**, four message types are generated:
 
 1. **Context Message** (`Resolve{Type}{Field}Context`): Contains fields from the parent type needed to resolve the field
 2. **Args Message** (`Resolve{Type}{Field}Args`): Contains the arguments passed to the field
 3. **Result Message** (`Resolve{Type}{Field}Result`): Contains the resolved field value
 4. **Request/Response Messages**: Standard request/response pattern for the RPC method
+
+For field resolvers **without arguments**, the `Args` message is omitted and the request message only contains the `context` field.
 
 ### Context Specification
 
