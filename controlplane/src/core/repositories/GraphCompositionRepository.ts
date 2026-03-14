@@ -11,7 +11,7 @@ import {
   users,
 } from '../../db/schema.js';
 import { DateRange, GraphCompositionDTO } from '../../types/index.js';
-import { ComposedSubgraph } from '../composition/composer.js';
+import { CompositionSubgraphRecord } from '../composition/composer.js';
 import { FederatedGraphRepository } from './FederatedGraphRepository.js';
 
 export class GraphCompositionRepository {
@@ -38,7 +38,7 @@ export class GraphCompositionRepository {
     compositionErrorString: string;
     compositionWarningString: string;
     routerConfigSignature?: string;
-    composedSubgraphs: ComposedSubgraph[];
+    composedSubgraphs: CompositionSubgraphRecord[];
     composedById: string;
     admissionErrorString?: string;
     deploymentErrorString?: string;

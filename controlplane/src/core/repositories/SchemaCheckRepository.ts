@@ -36,7 +36,8 @@ import {
   SchemaLintIssues,
 } from '../../types/index.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
-import { CheckSubgraph, ComposedFederatedGraph, Composer } from '../composition/composer.js';
+import { CheckSubgraph, Composer } from '../composition/composer.js';
+import { DeserializedComposedGraph } from '../composition/composeGraphs.pool.js';
 import { buildSchema } from '../composition/composition.js';
 import { getDiffBetweenGraphs, SchemaDiff } from '../composition/schemaCheck.js';
 import {
@@ -531,7 +532,7 @@ export class SchemaCheckRepository {
     return 0;
   }
 
-  public createSchemaCheckCompositions(data: { schemaCheckID: string; compositions: ComposedFederatedGraph[] }) {
+  public createSchemaCheckCompositions(data: { schemaCheckID: string; compositions: DeserializedComposedGraph[] }) {
     if (data.compositions.length === 0) {
       return;
     }
