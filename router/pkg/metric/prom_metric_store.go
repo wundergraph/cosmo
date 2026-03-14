@@ -3,6 +3,7 @@ package metric
 import (
 	"context"
 	"errors"
+
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -147,6 +148,18 @@ func (h *PromMetricStore) MeasureOperationPlanningTime(ctx context.Context, plan
 func (h *PromMetricStore) MeasureSchemaFieldUsage(ctx context.Context, schemaUsage int64, opts ...otelmetric.AddOption) {
 	if c, ok := h.measurements.counters[SchemaFieldUsageCounter]; ok {
 		c.Add(ctx, schemaUsage, opts...)
+	}
+}
+
+func (h *PromMetricStore) MeasureOperationCostEstimated(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.int64Histograms[OperationCostEstimatedHistogram]; ok {
+		c.Record(ctx, cost, opts...)
+	}
+}
+
+func (h *PromMetricStore) MeasureOperationCostActual(ctx context.Context, cost int64, opts ...otelmetric.RecordOption) {
+	if c, ok := h.measurements.int64Histograms[OperationCostActualHistogram]; ok {
+		c.Record(ctx, cost, opts...)
 	}
 }
 

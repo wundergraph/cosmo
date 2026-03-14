@@ -1,4 +1,10 @@
-import { type FieldName, type TypeName } from '../types/types';
+import {
+  type ArgumentName,
+  type DirectiveArgumentCoords,
+  type FieldCoords,
+  type FieldName,
+  type TypeName,
+} from '../types/types';
 
 export type NatsEventType = 'subscribe' | 'publish' | 'request';
 
@@ -92,4 +98,27 @@ export type ConfigurationData = {
   keys?: RequiredFieldConfiguration[];
   requireFetchReasonsFieldNames?: Array<FieldName>;
   requires?: RequiredFieldConfiguration[];
+};
+
+export type Costs = {
+  directiveArgumentWeights: Map<DirectiveArgumentCoords, number>;
+  fieldWeights: Map<FieldCoords, FieldWeightConfiguration>;
+  listSizes: Map<FieldCoords, FieldListSizeConfiguration>;
+  typeWeights: Map<TypeName, number>;
+};
+
+export type FieldWeightConfiguration = {
+  argumentWeights: Map<ArgumentName, number>;
+  fieldName: FieldName;
+  typeName: TypeName;
+  weight?: number;
+};
+
+export type FieldListSizeConfiguration = {
+  fieldName: FieldName;
+  requireOneSlicingArgument: boolean;
+  sizedFields: Array<FieldName>;
+  slicingArguments: Array<ArgumentName>;
+  typeName: TypeName;
+  assumedSize?: number;
 };

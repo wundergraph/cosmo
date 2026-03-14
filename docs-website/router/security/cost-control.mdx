@@ -181,6 +181,41 @@ query {
 
 When multiple slicing arguments are provided, the router uses the maximum value among them.
 
+**Targeting specific child fields with `sizedFields`** — when a field returns an object
+that contains list fields. This is useful for Cursor connection types where
+the parent field returns an object containing paginated lists.
+
+`sizedFields` option states that the size of the list returned by
+`Connection.edges` is determined by the value of one of the slicing arguments of the parent field:
+
+```graphql
+type Query {
+  usersConnection(first: Int, last: Int, before: ID): Connection! @listSize(
+      slicingArguments: ["first", "last"]
+      sizedFields: ["edges"]
+    )
+}
+
+type Connection {
+  edges: [Edge]      # Sized field — inherits multiplier from parent
+  totalCount: Int    # Not a list, not in sizedFields
+}
+
+type Edge {
+  cursor: ID
+  node: Film         # Definition of this type left out in this example
+}
+```
+
+With this configuration, a query like `usersConnection(first: 5)` applies the multiplier `5` only to
+the `edges` field. Without `sizedFields`, when `@listSize` is applied to a field returning a list,
+all immediate list children inherit the size estimate.
+
+<Info>
+    `sizedFields` can only reference fields that return lists within the parent type.
+    The parent field must return a composite type (object, interface, or union).
+</Info>
+
 ## Accessing Cost in Custom Modules
 
 In custom modules, the calculated cost is accessible through the operation context:
@@ -384,7 +419,6 @@ Use `@listSize` to provide realistic estimates for deeply nested structures.
 
 ## Features Not Yet Implemented
 
-- `sizedFields` in `@listSize` for applying list size estimates to specific child fields rather than all children
 - `requireOneSlicingArgument` in `@listSize` for validation that exactly one slicing argument is provided
 - **Weights on input object fields** — when an argument accepts an input object, the `@cost` weights on its nested fields are not yet accumulated recursively
 - **Weights on directive arguments** — `@cost` placed on arguments of custom directives is not accounted for

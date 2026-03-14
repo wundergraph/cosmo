@@ -16,7 +16,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
-	"github.com/wundergraph/cosmo/router/internal/track"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -40,6 +39,7 @@ import (
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
+	"github.com/wundergraph/cosmo/router/internal/track"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -54,6 +54,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
@@ -523,6 +524,18 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if r.engineExecutionConfiguration.Debug.EnableNormalizationCacheResponseHeader {
 		r.logger.Warn("The engine execution configuration field 'enable_normalization_cache_response_header' is deprecated, and will be removed. Use 'enable_cache_response_headers' instead.")
 		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
+	}
+
+	if ca := r.securityConfiguration.CostControl; ca != nil && ca.Enabled {
+		if ca.Mode != config.CostControlModeMeasure && ca.Mode != config.CostControlModeEnforce {
+			return nil, fmt.Errorf("cost control mode %q is invalid. Valid values are %q and %q", ca.Mode, config.CostControlModeMeasure, config.CostControlModeEnforce)
+		}
+		if ca.Mode == config.CostControlModeEnforce && ca.MaxEstimatedLimit <= 0 {
+			return nil, errors.New("cost control mode is 'enforce' but 'max_estimated_limit' is not set. Please provide a positive value for 'security.cost_control.max_estimated_limit'")
+		}
+		if ca.EstimatedListSize <= 0 {
+			return nil, errors.New("cost control is enabled but 'estimated_list_size' is not set. Please provide a positive value for 'security.cost_control.estimated_list_size'")
+		}
 	}
 
 	if r.securityConfiguration.DepthLimit != nil {
@@ -2455,6 +2468,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			},
 			Exporters:           openTelemetryExporters,
 			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
+			CostStats:           cfg.Metrics.OTLP.CostStats,
 			Streams:             cfg.Metrics.OTLP.Streams,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
@@ -2474,6 +2488,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},
 			CircuitBreaker:      cfg.Metrics.Prometheus.CircuitBreaker,
+			CostStats:           cfg.Metrics.Prometheus.CostStats,
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 			Streams:             cfg.Metrics.Prometheus.Streams,

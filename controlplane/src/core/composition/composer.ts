@@ -143,6 +143,7 @@ export function subgraphDTOsToComposedSubgraphs(
     const subgraphConfig = result.success ? result.subgraphConfigBySubgraphName.get(subgraph.name) : undefined;
     const schema = subgraphConfig?.schema;
     const configurationDataByTypeName = subgraphConfig?.configurationDataByTypeName;
+    const costs = subgraphConfig?.costs;
 
     if (subgraph.type === 'grpc_plugin') {
       if (!subgraph.proto || !subgraph.proto.pluginData) {
@@ -161,6 +162,7 @@ export function subgraphDTOsToComposedSubgraphs(
         isFeatureSubgraph: subgraph.isFeatureSubgraph,
         configurationDataByTypeName,
         schema,
+        costs,
         protoSchema: subgraph.proto.schema,
         mapping: parseGRPCMapping(subgraph.proto.mappings),
         imageReference: new ImageReference({
@@ -185,6 +187,7 @@ export function subgraphDTOsToComposedSubgraphs(
         isFeatureSubgraph: subgraph.isFeatureSubgraph,
         configurationDataByTypeName,
         schema,
+        costs,
         protoSchema: subgraph.proto.schema,
         mapping: parseGRPCMapping(subgraph.proto.mappings),
       };
@@ -205,6 +208,7 @@ export function subgraphDTOsToComposedSubgraphs(
         subgraph.subscriptionProtocol === 'ws' ? subgraph.websocketSubprotocol || 'auto' : undefined,
       configurationDataByTypeName,
       schema,
+      costs,
     };
   });
 }

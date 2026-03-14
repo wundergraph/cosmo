@@ -7,7 +7,7 @@ import {
   type SchemaDefinitionNode,
   type SchemaExtensionNode,
 } from 'graphql';
-import { type ConfigurationData } from '../router-configuration/types';
+import { type ConfigurationData, type Costs } from '../router-configuration/types';
 import {
   type AuthorizationData,
   type ConditionalFieldData,
@@ -31,6 +31,7 @@ export type NormalizationSuccess = {
   concreteTypeNamesByAbstractTypeName: Map<string, Set<string>>;
   conditionalFieldDataByCoordinates: Map<string, ConditionalFieldData>;
   configurationDataByTypeName: Map<TypeName, ConfigurationData>;
+  costs: Costs;
   directiveDefinitionByName: Map<DirectiveName, DirectiveDefinitionNode>;
   entityInterfaces: Map<string, EntityInterfaceSubgraphData>;
   entityDataByTypeName: Map<string, EntityData>;

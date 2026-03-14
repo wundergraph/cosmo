@@ -90,6 +90,30 @@ message DataSourceConfiguration {
   DataSourceCustomEvents custom_events = 13;
   repeated EntityInterfaceConfiguration entity_interfaces = 14;
   repeated EntityInterfaceConfiguration interface_objects = 15;
+  CostConfiguration cost_configuration = 16;
+}
+
+message CostConfiguration {
+  repeated FieldWeightConfiguration field_weights = 1;
+  repeated FieldListSizeConfiguration list_sizes = 2;
+  map<string, int32> type_weights = 3;
+  map<string, int32> directive_argument_weights = 4;
+}
+
+message FieldWeightConfiguration {
+  string type_name = 1;
+  string field_name = 2;
+  optional int32 weight = 3;
+  map<string, int32> argument_weights = 4;
+}
+
+message FieldListSizeConfiguration {
+  string type_name = 1;
+  string field_name = 2;
+  optional int32 assumed_size = 3;
+  repeated string slicing_arguments = 4;
+  repeated string sized_fields = 5;
+  optional bool require_one_slicing_argument = 6;
 }
 
 message ArgumentConfiguration {
