@@ -227,6 +227,38 @@ export class OperationsRepository {
     return result!.id;
   }
 
+  public async getAllPersistedOperationsForGraph(): Promise<
+    Array<{
+      hash: string;
+      operationContent: string;
+      operationId: string;
+      operationNames: string[];
+      clientName: string;
+    }>
+  > {
+    const results = await this.db
+      .select({
+        hash: federatedGraphPersistedOperations.hash,
+        operationContent: federatedGraphPersistedOperations.operationContent,
+        operationId: federatedGraphPersistedOperations.operationId,
+        operationNames: federatedGraphPersistedOperations.operationNames,
+        clientName: federatedGraphClients.name,
+      })
+      .from(federatedGraphPersistedOperations)
+      .innerJoin(federatedGraphClients, eq(federatedGraphClients.id, federatedGraphPersistedOperations.clientId))
+      .where(eq(federatedGraphPersistedOperations.federatedGraphId, this.federatedGraphId));
+
+    return results
+      .filter((r) => r.operationContent != null)
+      .map((r) => ({
+        hash: r.hash,
+        operationContent: r.operationContent!,
+        operationId: r.operationId,
+        operationNames: r.operationNames ?? [],
+        clientName: r.clientName,
+      }));
+  }
+
   public async getRegisteredClients(): Promise<ClientDTO[]> {
     const fedGraphClients = await this.db.query.federatedGraphClients.findMany({
       where: eq(federatedGraphClients.federatedGraphId, this.federatedGraphId),

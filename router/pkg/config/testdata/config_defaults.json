@@ -531,6 +531,11 @@
     "Storage": {
       "ProviderID": "",
       "ObjectPrefix": ""
+    },
+    "Manifest": {
+      "Enabled": false,
+      "PollInterval": 10000000000,
+      "PollJitter": 5000000000
     }
   },
   "AutomaticPersistedQueries": {

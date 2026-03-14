@@ -7,6 +7,7 @@ import (
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.uber.org/zap"
 )
 
@@ -37,12 +38,14 @@ type Options struct {
 
 	ProviderClient StorageClient
 	ApqClient      apq.Client
+	PQLStore       *pqlmanifest.Store
 }
 
 type Client struct {
 	cache          *operationstorage.OperationsCache
 	providerClient StorageClient
 	apqClient      apq.Client
+	pqlStore       *pqlmanifest.Store
 }
 
 func NewClient(opts *Options) (*Client, error) {
@@ -57,11 +60,12 @@ func NewClient(opts *Options) (*Client, error) {
 		providerClient: opts.ProviderClient,
 		cache:          cache,
 		apqClient:      opts.ApqClient,
+		pqlStore:       opts.PQLStore,
 	}, nil
 }
 
 func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, bool, error) {
-	if c.apqClient != nil && c.apqClient.Enabled() {
+	if c.APQEnabled() {
 		resp, apqErr := c.apqClient.PersistedOperation(ctx, clientName, sha256Hash)
 		if len(resp) > 0 || apqErr != nil {
 			return resp, true, apqErr
@@ -72,9 +76,23 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 		return data, false, nil
 	}
 
+	// PQL manifest check (local, no network)
+	if c.pqlStore != nil && c.pqlStore.IsLoaded() {
+		if body, found := c.pqlStore.LookupByHash(sha256Hash); found {
+			return body, false, nil
+		}
+		// Manifest is authoritative — operation not found
+		if c.APQEnabled() {
+			return nil, true, nil
+		}
+		return nil, false, &PersistentOperationNotFoundError{
+			ClientName: clientName, Sha256Hash: sha256Hash,
+		}
+	}
+
 	if c.providerClient == nil {
 		// This can happen if we are using APQ client, without any persisted operation client. Otherwise, we should have a provider client and shouldn't reach here.
-		return nil, c.apqClient != nil, nil
+		return nil, c.APQEnabled(), nil
 	}
 
 	var (
@@ -105,6 +123,15 @@ func (c *Client) SaveOperation(ctx context.Context, clientName, sha256Hash, oper
 
 func (c *Client) APQEnabled() bool {
 	return c.apqClient != nil && c.apqClient.Enabled()
+}
+
+// ManifestRevision returns the current PQL manifest revision, or "" if no manifest is loaded.
+// Used to include in cache keys so entries naturally invalidate when the manifest changes.
+func (c *Client) ManifestRevision() string {
+	if c.pqlStore == nil {
+		return ""
+	}
+	return c.pqlStore.Revision()
 }
 
 func (c *Client) Close() {

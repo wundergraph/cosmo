@@ -37,6 +37,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/cdn"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/fs"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/operationstorage/s3"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
@@ -1094,7 +1095,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.staticExecutionConfig = executionConfig
 	}
 
-	if err := r.buildClients(); err != nil {
+	if err := r.buildClients(ctx); err != nil {
 		return err
 	}
 
@@ -1117,7 +1118,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 }
 
 // buildClients initializes the storage clients for persisted operations and router config.
-func (r *Router) buildClients() error {
+func (r *Router) buildClients(ctx context.Context) error {
 	s3Providers := map[string]config.S3StorageProvider{}
 	cdnProviders := map[string]config.CDNStorageProvider{}
 	redisProviders := map[string]config.RedisStorageProvider{}
@@ -1249,7 +1250,38 @@ func (r *Router) buildClients() error {
 		}
 	}
 
-	if pClient != nil || apqClient != nil {
+	var pqlStore *pqlmanifest.Store
+
+	if r.persistedOperationsConfig.Manifest.Enabled {
+		if r.graphApiToken == "" {
+			return errors.New("graph token is required for PQL manifest")
+		}
+
+		fetcher, err := pqlmanifest.NewFetcher(r.cdnConfig.URL, r.graphApiToken, r.logger)
+		if err != nil {
+			return fmt.Errorf("failed to create PQL manifest fetcher: %w", err)
+		}
+
+		pqlStore = pqlmanifest.NewStore(r.logger)
+
+		poller := pqlmanifest.NewPoller(
+			fetcher, pqlStore,
+			r.persistedOperationsConfig.Manifest.PollInterval,
+			r.persistedOperationsConfig.Manifest.PollJitter,
+			r.logger,
+		)
+
+		if err := poller.FetchInitial(ctx); err != nil {
+			r.logger.Warn("Failed to fetch initial PQL manifest, will retry on next poll", zap.Error(err))
+		}
+
+		go poller.Poll(ctx)
+
+		// When manifest is enabled, do not use CDN fetches for individual operations
+		pClient = nil
+	}
+
+	if pClient != nil || apqClient != nil || pqlStore != nil {
 		// For backwards compatibility with cdn config field
 		cacheSize := r.persistedOperationsConfig.Cache.Size.Uint64()
 		if cacheSize <= 0 {
@@ -1261,6 +1293,7 @@ func (r *Router) buildClients() error {
 			Logger:         r.logger,
 			ProviderClient: pClient,
 			ApqClient:      apqClient,
+			PQLStore:       pqlStore,
 		})
 		if err != nil {
 			return err

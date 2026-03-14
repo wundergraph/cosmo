@@ -927,12 +927,19 @@ type AutomaticPersistedQueriesCacheConfig struct {
 	TTL  int         `yaml:"ttl" env:"APQ_CACHE_TTL" envDefault:"-1"`
 }
 
+type PQLManifestConfig struct {
+	Enabled      bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	PollInterval time.Duration `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
+	PollJitter   time.Duration `yaml:"poll_jitter" envDefault:"5s" env:"POLL_JITTER"`
+}
+
 type PersistedOperationsConfig struct {
 	Disabled   bool                             `yaml:"disabled" env:"DISABLED" envDefault:"false"`
 	LogUnknown bool                             `yaml:"log_unknown" env:"LOG_UNKNOWN" envDefault:"false"`
 	Safelist   SafelistConfiguration            `yaml:"safelist" envPrefix:"SAFELIST_"`
 	Cache      PersistedOperationsCacheConfig   `yaml:"cache"`
 	Storage    PersistedOperationsStorageConfig `yaml:"storage"`
+	Manifest   PQLManifestConfig                `yaml:"manifest" envPrefix:"MANIFEST_"`
 }
 
 type SafelistConfiguration struct {

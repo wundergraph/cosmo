@@ -18,6 +18,7 @@ import { OperationsRepository } from '../../repositories/OperationsRepository.js
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
+import { generateAndUploadManifest } from './generateManifest.js';
 import { createBlobStoragePath } from './utils.js';
 
 const MAX_PERSISTED_OPERATIONS = 100;
@@ -202,6 +203,9 @@ export function publishPersistedOperations(
           version: 1,
           body: operation.contents,
         };
+        // Deprecated: Uploading individual operations to blob storage is deprecated.
+        // The router now downloads all operations at once via the PQL manifest, avoiding
+        // per-request CDN latency. This upload is kept for backward compatibility with older routers.
         try {
           await opts.blobStorage.putObject({
             key: path,
@@ -262,6 +266,22 @@ export function publishPersistedOperations(
     }
 
     await operationsRepo.updatePersistedOperations(clientId, userId, updatedOperations);
+
+    try {
+      await generateAndUploadManifest({
+        db: opts.db,
+        federatedGraphId: federatedGraph.id,
+        organizationId,
+        blobStorage: opts.blobStorage,
+        logger,
+      });
+    } catch (e) {
+      const error = e instanceof Error ? e : new Error('Unknown error');
+      logger.error(error, 'Failed to regenerate PQL manifest after publishing persisted operations', {
+        federatedGraphId: federatedGraph.id,
+        organizationId,
+      });
+    }
 
     return {
       response: {

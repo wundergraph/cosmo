@@ -26,12 +26,12 @@ export interface BlobStorage {
   headObject({
     context,
     key,
-    schemaVersionId,
+    version,
   }: {
     context: Context;
     abortSignal?: AbortSignal;
     key: string;
-    schemaVersionId: string;
+    version: string;
   }): Promise<boolean>;
 }
 
@@ -106,6 +106,9 @@ const jwtMiddleware = (secret: string | ((c: Context) => string)) => {
   };
 };
 
+// Deprecated: Individual persisted operation lookups via CDN are deprecated.
+// The router now downloads all operations at once via the PQL manifest, avoiding
+// per-request latency. This handler is kept for backward compatibility with older routers.
 const persistedOperation = (storage: BlobStorage) => {
   return async (c: Context) => {
     const organizationId = c.get('authenticatedOrganizationId');
@@ -165,7 +168,7 @@ const latestValidRouterConfig = (storage: BlobStorage) => {
     // starts for the first time, and we need to return a config anyway.
     if (body?.version) {
       try {
-        isModified = await storage.headObject({ context: c, key, schemaVersionId: body.version });
+        isModified = await storage.headObject({ context: c, key, version: body.version });
       } catch (e: any) {
         if (e instanceof BlobNotFoundError) {
           return c.notFound();
@@ -262,6 +265,58 @@ const cacheOperations = (storage: BlobStorage) => {
   };
 };
 
+const persistedOperationsManifest = (storage: BlobStorage) => {
+  return async (c: Context) => {
+    const organizationId = c.get('authenticatedOrganizationId');
+    const federatedGraphId = c.get('authenticatedFederatedGraphId');
+
+    if (organizationId !== c.req.param('organization_id') || federatedGraphId !== c.req.param('federated_graph_id')) {
+      return c.text('Bad Request', 400);
+    }
+
+    const key = `${organizationId}/${federatedGraphId}/operations/manifest.json`;
+
+    const body = await c.req.json();
+
+    let isModified = true;
+
+    // Only check if revision is specified otherwise we assume the router
+    // starts for the first time, and we need to return the manifest anyway.
+    if (body?.revision) {
+      try {
+        isModified = await storage.headObject({ context: c, key, version: body.revision });
+      } catch (e: any) {
+        if (e instanceof BlobNotFoundError) {
+          return c.notFound();
+        }
+        throw e;
+      }
+    }
+
+    if (!isModified) {
+      return c.body(null, 304);
+    }
+
+    let blobObject: BlobObject;
+
+    try {
+      blobObject = await storage.getObject({ context: c, key, cacheControl: 'no-cache' });
+    } catch (e: any) {
+      if (e instanceof BlobNotFoundError) {
+        return c.notFound();
+      }
+      throw e;
+    }
+
+    c.header('Content-Type', 'application/json; charset=UTF-8');
+    c.header('Cache-Control', 'no-cache, no-store, must-revalidate');
+
+    return stream(c, async (stream) => {
+      await stream.pipe(blobObject.stream);
+    });
+  };
+};
+
 const subgraphChecks = (storage: BlobStorage) => {
   return async (c: Context) => {
     const organizationId = c.get('authenticatedOrganizationId');
@@ -301,6 +356,11 @@ export const cdn = <E extends Env, S extends Schema = {}, BasePath extends strin
   hono: Hono<E, S, BasePath>,
   opts: CdnOptions,
 ) => {
+  const manifestPath = '/:organization_id/:federated_graph_id/operations/manifest.json';
+  hono
+    .use(manifestPath, jwtMiddleware(opts.authJwtSecret))
+    .post(manifestPath, persistedOperationsManifest(opts.blobStorage));
+
   const operations = '/:organization_id/:federated_graph_id/operations/:client_id/:operation{.+\\.json$}';
   const latestValidRouterConfigs = '/:organization_id/:federated_graph_id/routerconfigs/latest.json';
   hono.use(operations, jwtMiddleware(opts.authJwtSecret)).get(operations, persistedOperation(opts.blobStorage));
