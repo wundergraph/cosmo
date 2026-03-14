@@ -1055,7 +1055,43 @@ type MCPConfiguration struct {
 	RouterURL                 string           `yaml:"router_url,omitempty" env:"MCP_ROUTER_URL"`
 	// OmitToolNamePrefix removes the "execute_operation_" prefix from MCP tool names.
 	// When enabled, GetUser becomes get_user. When disabled (default), GetUser becomes execute_operation_get_user.
-	OmitToolNamePrefix bool `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	OmitToolNamePrefix bool                       `yaml:"omit_tool_name_prefix" envDefault:"false" env:"MCP_OMIT_TOOL_NAME_PREFIX"`
+	CodeMode        CodeModeConfiguration   `yaml:"code_mode,omitempty"`
+}
+
+type CodeModeConfiguration struct {
+	Enabled                 bool                         `yaml:"enabled" envDefault:"false" env:"MCP_CODE_MODE_ENABLED"`
+	Server                  CodeModeServer               `yaml:"server,omitempty"`
+	RequireMutationApproval bool                         `yaml:"require_mutation_approval" envDefault:"true" env:"MCP_CODE_MODE_REQUIRE_MUTATION_APPROVAL"`
+	Sandbox                 SandboxConfiguration         `yaml:"sandbox"`
+	QueryGeneration         QueryGenerationConfiguration `yaml:"query_generation"`
+}
+
+type CodeModeServer struct {
+	ListenAddr string `yaml:"listen_addr" envDefault:"localhost:5027" env:"MCP_CODE_MODE_LISTEN_ADDR"`
+}
+
+type SandboxConfiguration struct {
+	Timeout            time.Duration `yaml:"timeout" envDefault:"5s" env:"MCP_CODE_MODE_SANDBOX_TIMEOUT"`
+	MaxMemoryMB        int           `yaml:"max_memory_mb" envDefault:"16" env:"MCP_CODE_MODE_SANDBOX_MAX_MEMORY_MB"`
+	MaxFuel            uint64        `yaml:"max_fuel" envDefault:"10000000" env:"MCP_CODE_MODE_SANDBOX_MAX_FUEL"`
+	MaxInputSizeBytes  int           `yaml:"max_input_size_bytes" envDefault:"65536" env:"MCP_CODE_MODE_SANDBOX_MAX_INPUT_SIZE_BYTES"`
+	MaxOutputSizeBytes int           `yaml:"max_output_size_bytes" envDefault:"1048576" env:"MCP_CODE_MODE_SANDBOX_MAX_OUTPUT_SIZE_BYTES"`
+}
+
+type QueryGenerationConfiguration struct {
+	Enabled  bool                `yaml:"enabled" envDefault:"false" env:"MCP_CODE_MODE_QUERY_GENERATION_ENABLED"`
+	Endpoint string              `yaml:"endpoint" env:"MCP_CODE_MODE_QUERY_GENERATION_ENDPOINT"`
+	Auth     QueryGenerationAuth `yaml:"auth"`
+	Timeout  time.Duration       `yaml:"timeout" envDefault:"10s" env:"MCP_CODE_MODE_QUERY_GENERATION_TIMEOUT"`
+}
+
+type QueryGenerationAuth struct {
+	Type          string `yaml:"type" envDefault:"static" env:"MCP_CODE_MODE_QUERY_GENERATION_AUTH_TYPE"`
+	TokenEndpoint string `yaml:"token_endpoint" env:"MCP_CODE_MODE_QUERY_GENERATION_AUTH_TOKEN_ENDPOINT"`
+	ClientID      string `yaml:"client_id" env:"MCP_CODE_MODE_QUERY_GENERATION_AUTH_CLIENT_ID"`
+	ClientSecret  string `yaml:"client_secret" env:"MCP_CODE_MODE_QUERY_GENERATION_AUTH_CLIENT_SECRET"`
+	StaticToken   string `yaml:"static_token" env:"YOKO_TOKEN"`
 }
 
 type MCPSessionConfig struct {

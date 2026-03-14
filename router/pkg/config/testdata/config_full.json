@@ -201,7 +201,33 @@
     "EnableArbitraryOperations": false,
     "ExposeSchema": false,
     "RouterURL": "https://cosmo-router.wundergraph.com",
-    "OmitToolNamePrefix": false
+    "OmitToolNamePrefix": false,
+    "CodeMode": {
+      "Enabled": false,
+      "Server": {
+        "ListenAddr": "localhost:5027"
+      },
+      "RequireMutationApproval": true,
+      "Sandbox": {
+        "Timeout": 5000000000,
+        "MaxMemoryMB": 16,
+        "MaxFuel": 10000000,
+        "MaxInputSizeBytes": 65536,
+        "MaxOutputSizeBytes": 1048576
+      },
+      "QueryGeneration": {
+        "Enabled": false,
+        "Endpoint": "",
+        "Auth": {
+          "Type": "static",
+          "TokenEndpoint": "",
+          "ClientID": "",
+          "ClientSecret": "",
+          "StaticToken": ""
+        },
+        "Timeout": 10000000000
+      }
+    }
   },
   "ConnectRPC": {
     "Enabled": false,

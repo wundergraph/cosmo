@@ -3,6 +3,7 @@ node_modules
 .idea
 .vscode
 .zed
+.serena/
 **/*.env
 **/*.env.*
 !**/*.env.example

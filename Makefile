@@ -208,3 +208,6 @@ new-gm-data-migration:
 		exit 1; \
 	fi
 	mkdir -p data_migrations/graphqlmetrics/$(shell date +%s)_$(name)
+
+code-mode-demo:
+	./router/scripts/code-mode-demo.sh

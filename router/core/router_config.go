@@ -109,6 +109,7 @@ type Config struct {
 	retryOptions                    retrytransport.RetryOptions
 	redisClient                     rd.RDCloser
 	mcpServer                       *mcpserver.GraphQLSchemaServer
+	codeModeServer                  *mcpserver.CodeModeServer
 	connectRPCServer                *connectrpc.Server
 	processStartTime                time.Time
 	developmentMode                 bool
@@ -332,6 +333,7 @@ func (c *Config) Usage() map[string]any {
 	usage["mcp_enable_arbitrary_operations"] = c.mcp.EnableArbitraryOperations
 	usage["mcp_exclude_mutations"] = c.mcp.ExcludeMutations
 	usage["mcp_expose_schema"] = c.mcp.ExposeSchema
+	usage["mcp_code_mode"] = c.mcp.CodeMode.Enabled
 
 	usage["connect_rpc"] = c.connectRPC.Enabled
 
