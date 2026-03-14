@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.1](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.15.0...helm-cosmo-router@0.15.1) (2026-03-14)
+
+
+### Bug Fixes
+
+* **helm:** exclude commonLabels from immutable selector matchLabels ([#2571](https://github.com/wundergraph/cosmo/issues/2571)) ([5758b4f](https://github.com/wundergraph/cosmo/commit/5758b4fc73f26ee18dbfda64b979d8025029711a))
+
 ## [0.15.0](https://github.com/wundergraph/cosmo/compare/helm-cosmo-router@0.14.0...helm-cosmo-router@0.15.0) (2025-09-10)
 
 
