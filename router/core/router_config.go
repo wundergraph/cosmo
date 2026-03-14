@@ -267,6 +267,7 @@ func (c *Config) Usage() map[string]any {
 
 	usage["engine_execution_configuration_enable_single_flight"] = c.engineExecutionConfiguration.EnableSingleFlight
 	usage["engine_execution_configuration_enable_request_tracing"] = c.engineExecutionConfiguration.EnableRequestTracing
+	usage["engine_execution_configuration_require_request_tracing_auth"] = c.engineExecutionConfiguration.RequireRequestTracingAuth
 	usage["engine_execution_configuration_enable_net_poll"] = c.engineExecutionConfiguration.EnableNetPoll
 	usage["engine_execution_configuration_execution_plan_cache_size"] = c.engineExecutionConfiguration.ExecutionPlanCacheSize
 	usage["engine_execution_configuration_minify_subgraph_operations"] = c.engineExecutionConfiguration.MinifySubgraphOperations
