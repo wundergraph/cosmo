@@ -1,0 +1,23 @@
+{
+  "skill_name": "cosmo-dev-commands",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I just edited controlplane/src/controllers/organization.ts. Can you lint the controlplane workspace?",
+      "expected_output": "Suggests: pnpm --filter controlplane lint",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I changed some code in router/pkg/engine/datasource/. How do I run the tests for the router?",
+      "expected_output": "Suggests: make test (run from router/ directory)",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I'm about to commit changes to composition/src/. I want to format the code and then build it.",
+      "expected_output": "Suggests: pnpm --filter @wundergraph/composition format, then pnpm --filter @wundergraph/composition build",
+      "files": []
+    }
+  ]
+}
