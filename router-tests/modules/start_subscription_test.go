@@ -81,6 +81,12 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
+			// The SubscriptionOnStart hook may be called asynchronously after
+			// WaitForSubscriptionCount returns, so poll until it fires.
+			require.Eventually(t, func() bool {
+				return customModule.HookCallCount.Load() >= 1
+			}, time.Second*10, time.Millisecond*50)
+
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
@@ -530,10 +536,15 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			xEnv.WaitForSubscriptionCount(1, time.Second*10)
 
+			// The SubscriptionOnStart hook may be called asynchronously after
+			// WaitForSubscriptionCount returns, so poll until it fires.
+			require.Eventually(t, func() bool {
+				return customModule.HookCallCount.Load() >= 1
+			}, time.Second*10, time.Millisecond*50)
+
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())

@@ -1,0 +1,183 @@
+---
+title: "Migration: Request Deduplication"
+description: "Migration guide for custom modules using EnginePreOriginHandler (OnOriginRequest) to adapt to the new request deduplication behavior."
+icon: "arrows-turn-right"
+---
+
+<Warning>
+  This migration guide is for users **upgrading to Router version [0.278.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.278.0) or later** from an older version. If you use custom modules with `EnginePreOriginHandler`, you need to follow this guide.
+</Warning>
+
+This guide helps Cosmo Router users who have custom modules with `EnginePreOriginHandler` (`OnOriginRequest`) to adapt to a breaking behavioral change in how [request deduplication](/router/request-deduplication) works.
+
+## What Changed
+
+In older versions of the Cosmo Router, request deduplication (singleflight) happened at the **HTTP transport layer**. The `CustomTransport.RoundTrip` method would hash the request body and all headers to compute a deduplication key. Since `EnginePreOriginHandler.OnOriginRequest` hooks ran *before* the transport layer, any headers set in `OnOriginRequest` were naturally included in the deduplication key. Two requests with different custom headers would correctly be treated as distinct requests.
+
+Starting with Router [0.278.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.278.0), request deduplication has moved to the **engine/loader layer**. The router now **pre-computes** subgraph header hashes based on configured header forwarding rules *before* calling into the engine — which is *after* all middleware runs but *before* any `OnOriginRequest` hook fires. See [Request Deduplication](/router/request-deduplication) for details on how the new deduplication works.
+
+This means:
+
+- Headers set in `OnOriginRequest` are **not included** in the deduplication key.
+- Two concurrent requests that differ only by a header set in `OnOriginRequest` may be incorrectly deduplicated — one request's response will be served to both clients.
+- As a safety measure, the router **automatically disables both levels of request deduplication** whenever any `EnginePreOriginHandler` is registered. This prevents incorrect behavior but sacrifices a significant performance optimization.
+
+## What You Need to Do
+
+### Scenario 1: You set headers in `OnOriginRequest` that affect request identity
+
+**Example**: setting a tenant ID, user-specific token, or any header whose value varies between requests and should prevent deduplication.
+
+**Old code (broken with new dedup):**
+```go
+func (m *MyModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+    tenantID := extractTenantID(ctx)
+    req.Header.Set("X-Tenant-ID", tenantID)
+    return req, nil
+}
+```
+
+**Migration — Step 1: Move the header to `RouterOnRequest` or `Middleware`**
+
+```go
+func (m *MyModule) RouterOnRequest(ctx core.RequestContext, next http.Handler) {
+    tenantID := extractTenantID(ctx)
+    ctx.Request().Header.Set("X-Tenant-ID", tenantID)
+    next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+Or if you need access to the parsed operation:
+
+```go
+func (m *MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
+    tenantID := extractTenantID(ctx)
+    ctx.Request().Header.Set("X-Tenant-ID", tenantID)
+    next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+**Migration — Step 2: Add a header forwarding rule**
+
+In your `config.yaml`, add a rule that tells the router to forward this header to subgraphs:
+
+```yaml
+headers:
+  all:
+    request:
+      - op: "propagate"
+        named: "X-Tenant-ID"
+```
+
+Or if it should only go to specific subgraphs:
+
+```yaml
+headers:
+  subgraphs:
+    my-subgraph:
+      request:
+        - op: "propagate"
+          named: "X-Tenant-ID"
+```
+
+This ensures:
+1. The header value is read from the inbound request during hash computation
+2. Different values produce different hashes, preventing incorrect deduplication
+3. The header is forwarded to the subgraph automatically — no `OnOriginRequest` needed
+4. Request deduplication remains enabled (no performance loss)
+
+**Migration — Step 3: Remove the `EnginePreOriginHandler` implementation**
+
+If this was the only reason for your `OnOriginRequest` hook, remove it entirely. Remove the interface guard too:
+
+```go
+// Remove this:
+// var _ core.EnginePreOriginHandler = (*MyModule)(nil)
+```
+
+Without any `EnginePreOriginHandler` registered, the router will no longer auto-disable deduplication.
+
+### Scenario 2: You set headers in `OnOriginRequest` for signing or decoration (not affecting identity)
+
+**Example**: adding a request signature, timestamp, or trace correlation header that should not affect deduplication.
+
+```go
+func (m *MyModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+    signature := computeSignature(req)
+    req.Header.Set("X-Request-Signature", signature)
+    return req, nil
+}
+```
+
+**This is still valid.** `OnOriginRequest` is the right place for this because:
+- The signature should be unique per actual outgoing request, not per logical dedup group
+- You do not want the signature to affect deduplication
+
+**However**, having this hook registered will auto-disable deduplication. To re-enable it, add the force flags to your config:
+
+```yaml
+engine:
+  enable_single_flight: true
+  force_enable_single_flight: true
+  enable_inbound_request_deduplication: true
+  force_enable_inbound_request_deduplication: true
+```
+
+Or via environment variables:
+
+```
+ENGINE_ENABLE_SINGLE_FLIGHT=true
+ENGINE_FORCE_ENABLE_SINGLE_FLIGHT=true
+ENGINE_ENABLE_INBOUND_REQUEST_DEDUPLICATION=true
+ENGINE_FORCE_ENABLE_INBOUND_REQUEST_DEDUPLICATION=true
+```
+
+Only use these flags when you are certain your `OnOriginRequest` hook does not set headers that should differentiate requests for deduplication purposes.
+
+### Scenario 3: You use `OnOriginRequest` to short-circuit with a mock response
+
+```go
+func (m *MyModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+    if shouldMock(req) {
+        return req, &http.Response{StatusCode: 200, Body: io.NopCloser(strings.NewReader(`{"data":{}}`))}
+    }
+    return req, nil
+}
+```
+
+**This still works as expected.** Short-circuiting happens at the transport layer after deduplication. However, the same auto-disable of dedup applies — use force flags if appropriate.
+
+### Scenario 4: You use `OnOriginRequest` to inspect or log (read-only)
+
+```go
+func (m *MyModule) OnOriginRequest(req *http.Request, ctx core.RequestContext) (*http.Request, *http.Response) {
+    subgraph := ctx.ActiveSubgraph(req)
+    ctx.Logger().Info("calling subgraph", zap.String("name", subgraph.Name))
+    return req, nil
+}
+```
+
+**This still works but unnecessarily disables dedup.** Consider moving read-only logging to `EnginePostOriginHandler.OnOriginResponse` or using the force-enable flags.
+
+## Quick Reference: Which Hook for What
+
+| Use Case | Recommended Hook | Why |
+|---|---|---|
+| Set headers that vary per user/tenant | `RouterOnRequest` or `Middleware` + header forwarding rule | Headers are included in dedup key |
+| Read auth claims to set headers | `Middleware` (auth is done) + header forwarding rule | Has access to `ctx.Authentication()` |
+| Add request signatures | `OnOriginRequest` + force-enable dedup | Signatures should be per actual request |
+| Short-circuit with mock response | `OnOriginRequest` | Only place where you can return a custom response |
+| Log/observe subgraph requests | `OnOriginRequest` or `OnOriginResponse` + force-enable dedup | Read-only, no dedup impact |
+| Inspect subgraph responses | `OnOriginResponse` | Runs after the subgraph response is received |
+| Block requests based on operation | `Middleware` | Has full operation context |
+| Manipulate headers before auth | `RouterOnRequest` | Runs before auth middleware |
+
+## Common Pitfalls
+
+1. **Setting headers in `OnOriginRequest` without a forwarding rule**: The header reaches the subgraph but is invisible to deduplication. Two requests that should be distinct (different header values) may be collapsed into one.
+
+2. **Forgetting to add the forwarding rule after moving header logic to middleware**: If you set `X-Tenant-ID` in `RouterOnRequest` but don't configure a `propagate` rule for it in `headers.all.request`, the header will be on the inbound request but won't be forwarded to subgraphs and won't affect dedup.
+
+3. **Using `force_enable_single_flight` when your hook DOES set identity-affecting headers**: This will cause incorrect deduplication — clients with different tenants/users may receive each other's data. Only use force flags when the hook is purely decorative (signatures, logging).
+
+4. **Not removing the `EnginePreOriginHandler` interface after migration**: Even if the method body is empty, having the interface implemented will register the module as a pre-origin handler and disable dedup.

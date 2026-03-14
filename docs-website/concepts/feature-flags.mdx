@@ -1,0 +1,65 @@
+---
+title: "Feature Flags"
+description: "An overview of feature subgraphs, feature flags, and implementing your first feature flag."
+icon: flag
+---
+
+<Frame caption="Feature Flag and Feature Subgraphs">
+  <img src="/images/concepts/feature-flags.png" />
+</Frame>
+
+## What is a Feature Flag?
+
+A feature flag is a toggle-able collection of "subgraph replacements", known as feature subgraphs, for one or more federated graphs. Feature flags enable you to release changes and experimental features incrementally to a subset of your consumer traffic, rather than all clients immediately.
+
+<Info>
+  Learn how to use feature flags [through this example](/tutorial/gradual-and-experimental-feature-rollout-with-feature-flags).
+</Info>
+
+## Motivations
+
+What problems can feature flags and their constituent feature subgraphs solve?
+
+### Incremental Feature Rollout
+
+<Frame caption="Traffic splitting">
+  <img src="/images/concepts/feature-flag-traffic-splitting.png" />
+</Frame>
+
+Feature flags allow you to roll out new features gradually. You can enable a feature for a small percentage of users and monitor its performance. If everything goes well, you can increase the percentage of users who see the feature. If the feature requires further iteration, you can disable the feature without deploying a new version of the API.
+
+Let's imagine you have a monolithic GraphQL API and want to migrate to a Federated GraphQL API. You've got existing clients that depend on the old schema and have certain expectations about the characteristics of the API, like the performance of certain GraphQL Operations.
+
+With feature flags, we can publish a new subgraph schema that utilises the `@override` directive on some number of fields in the old schema without automatically enabling it for all clients. Instead, we can send a small percentage of traffic to the new subgraph in a "shadow mode" and monitor its performance. This means that the new subgraph is used to compute the result of the GraphQL Operation, but the result is not returned to the client. Instead, we compare the result from the newly introduced subgraph with the result of the existing Monolith in terms of correctness and performance.
+
+If everything goes well, you can enable the feature flag for 1% of your users, keep monitoring, and gradually increase the percentage of traffic that is sent to the new subgraph. If something goes wrong, we can disable the feature flag for all users without deploying a new version of the API.
+
+After rolling out the feature to 100% of your users, it can be continually monitored in production until there is confidence to publish the new subgraph schema without the feature flag. You can then remove the feature flag as well as any remaining obsolete logic and declarations from the monolith.
+
+<Info>
+  The router is not responsible for traffic splitting. Modern cloud providers / load-balancers support traffic splitting e.g. based on IP or custom rules and allows to set custom headers. On our case, we would set the `X-Feature-Flag` header to the name of the feature flag to enable it.
+</Info>
+
+### Schema Evolution
+
+Feature flags allow you to publish Subgraph Schema Changes without breaking existing clients. You can add new fields or types to your feature subgraph schemas and expose them through a feature flag.
+
+The same is true for renaming existing fields. For example, your codebase could maintain two versions of the schema: one with the old field name and one with the new field name. These two separate schema versions can be exposed through different paths, e.g., `/v1/graphql` and `/v2/graphql`. This way, existing clients can continue to use the old schema until they are ready to switch to the new schema, and the contract is never broken. Moreover, new clients could automatically use the latest version of the schema, including all feature flags.
+
+### Dynamic Configuration
+
+Feature flags allow you to change the behavior of your API at runtime. You can enable or disable feature flags for each request based on the user's permissions or other criteria.
+
+Depending on the request context, e.g., through a header, JWT claim, or a cookie, feature flags can be enabled or disabled. This allows you to create personalized experiences for different users without having to deploy multiple routers, APIs, or new versions of those APIs.
+
+### Staging Environments
+
+Feature flags allow you to test new features in a staging environment before rolling them out to production. You can enable a feature flag in the staging environment to test it with real data and real users. If everything goes well, you can enable the feature flag in the production environment. If something doesn't go according to plan, the feature flag can be disabled in the staging environment without affecting the production environment.
+
+For larger environments, it's often not possible to spin up the whole infrastructure on a developer's machine. If you want to test a new feature end-to-end, you need to have a complete staging environment that is as close to production as possible. This means that you'll very likely have to support one or more frontend applications, in addition to the many subgraph services that compose the federated API.
+
+Furthermore, to be able to test a new feature, the entire stack needs to be running. This makes it unlikely that you can run one whole stack for each feature in isolation. Consequently, what is needed is a shared staging environment where developers can test their features without affecting other developers. Feature flags allow individual developers to test their changes in as much isolation as possible—all simply through the setting of a specific cookie or header in your client.
+
+## Using Feature Flags
+
+Learn how to use feature flags [through this example](/tutorial/gradual-and-experimental-feature-rollout-with-feature-flags).

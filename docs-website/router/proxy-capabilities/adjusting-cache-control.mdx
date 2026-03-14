@@ -1,0 +1,155 @@
+---
+title: "Adjusting Cache Control"
+description: "Caching requests and responses is a critical ability. The router enables very detailed control of the cache control policy for the whole graph, as well as subgraphs"
+icon: "clock"
+---
+
+## Understanding Cache Control
+
+In HTTP, the `Cache-Control` header is used to define the caching behavior of responses. It tells browsers and intermediary servers how to handle content caching. Some of the common `Cache-Control` directives include:
+
+* `max-age`: Specifies how long (in seconds) a response can be considered fresh.
+
+* `no-cache`: Forces caches to submit the request to the origin server for validation before serving the cached copy.
+
+* `no-store`: Prevents the storage of any part of the response by caches.
+
+Additionally, `Expires` is an older header used to specify an exact expiration time for cached content. If both `Cache-Control` and `Expires` are present, `Cache-Control` takes precedence.Cache Control Policy
+
+To enable a restrictive cache control policy, insert the following snippet into your [config.yaml](/router/configuration#config-file) file and adjust it according to your needs.
+
+```yaml
+# config.yaml
+
+# See https://cosmo-docs.wundergraph.com/router/configuration#config-file
+# for the full list of configuration options.
+
+cache_control_policy:
+  enabled: true
+  value: "max-age=180, public"
+  subgraphs:
+    - name: "products"
+      value: "max-age=60, public"
+    - name: "pricing"
+      value: "no-cache"
+```
+
+## Restrictive Cache Control Policy
+
+The cache control policy algorithm ensures that the strictest caching policy from all subgraphs is applied when propagating the `Cache-Control` header (and related ones, such as `Expires`). This is critical for cases where different subgraphs have varying caching requirements, and you want to ensure that sensitive or time-sensitive data is properly handled.
+
+<Info>
+  This policy doesn't need to be set for the entire federation, you can decide to only apply the restrictive cache control policy to a subgraph. In order to do that, just set `enabled`: false in your `cache_control_policy` configuration
+</Info>
+
+The algorithm evaluates the following in order:
+
+1. `no-cache` and `no-store` directives take priority, and these will override any other directives.
+
+2. `max-age` values: The smallest `max-age` value from any subgraph (or the default, if specified in the configuration) is selected.
+
+3. `Expires` header: The earliest expiration date will be used if `Expires` headers are provided.
+
+<Info>
+  **`no-cache`/`no-store` always wins**
+
+  When any subgraph returns `no-cache` or `no-store` directives, they will take precedence over all other cache settings, regardless of `max-age` values. This guarantees that sensitive data will not be stored in caches, providing an extra layer of security.
+</Info>
+
+<Note>
+  **Mutation Requests Automatically Set `no-cache`**
+
+  If a global cache control policy is enabled, we will automatically set `Cache-Control: no-cache` to GraphQL mutation request for security reasons, ensuring that mutation results are never cached.
+</Note>
+
+<Note>
+  **Requests with errors are always `no-cache`**
+
+  If the final response to the client has any errors, we automatically set `Cache-Control: no-store, no-cache, must-revalidate` to prevent clients or caches re-serving the errored response.
+</Note>
+
+### Example Scenarios:
+
+#### Scenario 1: Global Default + Subgraph Specific `max-age`
+
+* Global Default: `Cache-Control: max-age=600` (10 minutes)
+
+* Subgraph A: `Cache-Control: max-age=300` (5 minutes)
+
+* Subgraph B: No cache control specified
+
+  * Result: `Cache-Control: max-age=300`, since Subgraph A's `max-age=300` is more restrictive than the global default.
+
+#### Scenario 2: Subgraph-Specific `no-cache` with Global Default
+
+* Global Default: `Cache-Control: max-age=600`
+
+* Subgraph A: `Cache-Control: no-cache`
+
+* Subgraph B: `Cache-Control: max-age=300`
+
+  * Result: `Cache-Control: no-cache` overrides everything due to its strictness.
+
+#### Scenario 3: `Expires` in Subgraphs
+
+* Subgraph A: `Cache-Control: max-age=300`, `Expires=Wed, 15 Sep 2024 18:00:00 GMT`
+
+* Subgraph B: `Cache-Control: max-age=600`, `Expires=Wed, 15 Sep 2024 17:00:00 GMT`
+
+  * Result: The response uses `Expires=Wed, 15 Sep 2024 17:00:00 GMT`, the earlier expiration time.
+
+#### Scenario 4: Combining Global Defaults with `no-cache`
+
+* Global Default: `Cache-Control: max-age=600`
+
+* Subgraph A: `Cache-Control: no-store`
+
+* Subgraph B: No cache control set
+
+  * Result: `Cache-Control: no-store` takes precedence, as it's stricter than the global default.
+
+#### Scenario 5: No global default
+
+* Global: `enabled: true`, `value` unset
+
+* Subgraph A: no cache control set
+
+* Subgraph B: `Cache-Control: max-age=300`
+
+  * Result: Any requests which access `subgraph B` will have `Cache-Control: max-age=300` set, but requests which don't access subgraph B won't have any cache-control set
+
+#### Scenario 6: With subgraph error
+
+* Global: Any
+
+* Subgraph A: Any
+
+* Subgraph B: Returns error response
+
+  * Result: Any requests which access `subgraph B` will have an error, and thus `Cache-Control: no-store, no-cache, must-revalidate` set, but requests which don't access subgraph B won't have any cache-control set.
+
+By combining these mechanisms, the algorithm ensures that data handling adheres to the strictest cache control settings from all subgraph responses, promoting both security and performance integrity. Users can define global defaults to enforce a baseline cache policy, and can rely on `no-cache` or `no-store` directives for security sensitive subgraphs.
+
+### Overriding Cache Control Policy
+
+<Info>
+  By using the `set` operation in their header propagation rules, users can overwrite the cache control policy if necessary.
+</Info>
+
+For example, a configuration can be set like:
+
+```yaml
+cache_control_policy:
+  enabled: true
+  value: "max-age=180, public"
+
+headers:
+ subgraphs:
+    specific-subgraph: # Will only affect this subgraph
+      response:
+        - op: "set"
+          name: "Cache-Control"
+          value: "max-age=5400"
+```
+
+For this configuration, any request which hits the `specific-subgraph` will have the desired subgraph cache control value set (`max-age=5400`).
