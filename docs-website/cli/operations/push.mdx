@@ -1,0 +1,31 @@
+---
+title: "Push"
+description: "Push persisted operations to your routers"
+icon: "arrow-up-right"
+---
+
+### Usage
+
+```bash
+wgc operations push -c <client_name> <graph_name> -f <operations_file>
+```
+
+### Description
+
+Pushes the provided operations to the control plane, enabling them to be used from the router when using the given `graph_name`. Additionally, it registers the given `client_name` as a well-known client.
+
+The operations file might be one of the following formats:
+
+- Plain `.graphql` or `.gql` file
+- An [Apollo operation manifest](https://www.apollographql.com/docs/kotlin/advanced/persisted-queries/#1-generate-operation-manifest)
+- A [Relay Query Map](https://relay.dev/docs/guides/persisted-queries/)
+
+The operations are validated against the graph schema before registering them. If any of the operations is invalid, no operations will be registered.
+
+### Options
+
+- `-n, --namespace` : The namespace of the federated graph (Default: "default").
+- `-c, --client-name <client-name>` The client name / identifier to register these operations under.
+- `-f, --file <filename>` Filename to read operations from. This argument can be used multiple times to read operations from multiple files. See [Description](/cli/operations/push#description) for a list of the supported file formats.
+- `-q, --quiet` Don't produce any output, just exit with success or error. Intended for use in CI checks.
+- `--format <output-format>` Specify an output format for the returned data. Support types include `text` (the default) and `json.`

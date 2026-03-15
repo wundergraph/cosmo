@@ -35,6 +35,7 @@ type (
 	}
 )
 
+
 func createExporter(log *zap.Logger, exp *ExporterConfig) (sdktrace.SpanExporter, error) {
 	u, err := url.Parse(exp.Endpoint)
 	if err != nil {
@@ -220,8 +221,9 @@ func NewTracerProvider(ctx context.Context, config *ProviderConfig) (*sdktrace.T
 
 	tp := sdktrace.NewTracerProvider(opts...)
 
-	// Don't set it globally when we use the router in tests.
-	// In practice, setting it globally only makes sense for module development.
+	// Don't set globals when we use the router in tests.
+	// In practice, setting them globally only makes sense for module development.
+	// In tests, the error handler is wired locally via errorLoggingExporter above.
 	if config.MemoryExporter == nil {
 		otel.SetTracerProvider(tp)
 		otel.SetErrorHandler(otel.ErrorHandlerFunc(errHandler(config)))

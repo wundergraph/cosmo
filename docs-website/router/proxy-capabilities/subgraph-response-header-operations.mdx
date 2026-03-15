@@ -1,0 +1,101 @@
+---
+title: "Subgraph Response Header Operations"
+description: "Similar to request headers, we also allow for operations to be run on the headers of the router responses"
+icon: "arrow-right-from-bracket"
+---
+
+## Response Header Propagation
+
+In addition to the request focused rules, you can also define specific rules for your response header propagation. This enables organizations to select between a variety of propagation algorithms, and tighten their control of the caching capabilities of their graphs.
+
+### Header Algorithms
+
+We have defined for options of header algorithms that you can use for `propagate` requests.
+
+<Warning>
+  We strongly recommend only using one algorithm per header across your graphs. Having different algorithms defined for the same header for different subgraphs may result in inconsistent behavior. If there is a serious need for that, open an issue in the project.
+</Warning>
+
+1. `first_write`: Propagates the first occurrence of a header from any subgraph to the client. Once a header is set, subsequent values from other subgraphs are ignored.
+
+2. `last_write`: Propagates the last occurrence of a header from any subgraph to the client, overwriting earlier values.
+
+3. `append`: Combines all header values from different subgraphs into a single, comma-separated list. This is helpful for aggregating values such as roles or flags that need to be merged.
+
+### Enabling Header Propagation
+
+By default, no response headers are forwarded for security reasons. To enable response header propagation, insert the following snippet into your [config.yaml](/router/configuration#config-file) file and adjust it according to your needs.
+
+```yaml
+# config.yaml
+
+# See https://cosmo-docs.wundergraph.com/router/configuration#config-file
+# for the full list of configuration options.
+
+headers:
+  all: # Header rules for all subgraph responses.
+    response:
+      - op: "propagate"            # Forward a client header
+        named: X-Test-Header       # Exact match (Use the canonicalized version)
+        algorithm: "first_write"   # This algorithm retains the first value encountered
+
+      - op: "propagate"
+        matching: (?i)^X-Custom-.* # Regex match (Case insensitive)
+        algorithm: "last_write"
+
+      - op: "propagate"
+        matching: ^(Header-1|Key)$
+        negate_match: true         # Ensure that all headers except the Header-1 and Key are propagated
+        algorithm: "last_write"
+
+      - op: "propagate"
+        named: "X-User-Id"
+        default: "123"             # Set the value when the header was not set
+        algorithm: "last_write"
+
+      - op: "set"
+        name: "X-Custom-Header"
+        value: "my-required-key"
+
+  subgraphs:
+    specific-subgraph: # Will only affect this subgraph
+      response:
+      - op: "propagate"
+        named: "X-User-Id"
+        default: "456"             # Set the value when the header was not set
+        algorithm: "last_write"
+```
+
+### What does the snippet do?
+
+With `all` we address all subgraph requests. Next, we can define several rules on the client's request. The operation `propagate` forwards all matching client request headers to the subgraphs. The operation `set` sets a new header which is forward to the subgraphs.
+
+The `subgraphs` section allows to propagate headers for specific subgraphs. The name must match with the subgraph name in the Studio.
+
+### Supported header rules
+
+Currently, we support the following header rules:
+
+* **propagate** - Forwards all matching response headers from the subgraphs. You can choose between the following options:
+
+  * `algorithm` - This defines the algorithm, selecting between `first_write`, `last_write`, and `append`
+
+  * `named` - It exactly matches on the header name.
+
+  * `matching` - Regex matches on the header name. You can use[regex101.com](https://regex101.com/) to test your regexes. Go to the website and select `Golang` on the left panel. **Note:** The Router *never* propagates [hop-by-hop headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers#hop-by-hop_headers) (such as `Connection`) when propagating by regex.
+
+  * `negate_match` - If set to true, the result of the `matching` regex will be inverted. This is useful for simulating negative lookahead behavior, which is not natively supported.
+
+  * `rename` - Replaces the identified header based on its name or matching criteria and transfers the value to the newly specified header.
+
+  * `default` - Fallback to this value when the `named`, `matching` or `rename` header could not be found.
+
+* `set` - Sets a header on the request forward to the subgraph. You must set the following values:
+
+  * `name` - The name of the header to set
+
+  * `value` - The value to set for the header
+
+<Note>
+  Go canonicalizes headers by default e.g. `x-my-header` to `X-My-Header.` Write your rule accordingly or use `(?i)``^X-Test-.*` flags to make your regex case insensitive.
+</Note>

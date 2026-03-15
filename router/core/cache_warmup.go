@@ -132,7 +132,7 @@ func (w *cacheWarmup) run(ctx context.Context) (int, error) {
 	done := ctx.Done()
 	index := make(chan int, len(items))
 	defer close(index)
-	itemCompleted := make(chan struct{})
+	itemCompleted := make(chan struct{}, w.workers)
 
 	for i, item := range items {
 		if item.Client == nil {

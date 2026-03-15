@@ -4,6 +4,18 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.203.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.203.0...controlplane@0.203.1) (2026-03-13)
+
+**Note:** Version bump only for package controlplane
+
+# [0.203.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.202.0...controlplane@0.203.0) (2026-03-12)
+
+### Features
+
+* add composedSchemaBreakingChanges to CreateProposalResponse ([#2640](https://github.com/wundergraph/cosmo/issues/2640)) ([2e0c11e](https://github.com/wundergraph/cosmo/commit/2e0c11ef59a294a726ec6b5dc45ee3b869d6cc46)) (@JivusAyrus)
+* add limit option for error/warning display in publish command ([#2634](https://github.com/wundergraph/cosmo/issues/2634)) ([1d0085d](https://github.com/wundergraph/cosmo/commit/1d0085d4de4db6ccab82bd42df5cd2a1500f3413)) (@JivusAyrus)
+* reduce logging verbosity ([#2642](https://github.com/wundergraph/cosmo/issues/2642)) ([e735694](https://github.com/wundergraph/cosmo/commit/e7356944fcc90dd58109f687335c0c1dce133250)) (@wilsonrivera)
+
 # [0.202.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.201.0...controlplane@0.202.0) (2026-03-12)
 
 ### Features
