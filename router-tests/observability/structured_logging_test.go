@@ -3065,7 +3065,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						Header:        map[string][]string{"graphql-client-name": {"my-client"}},
 					})
 					require.NoError(t, err)
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 					requestLog := xEnv.Observer().FilterMessage("/graphql")
 					requestContext := requestLog.All()[0].ContextMap()
 					val, ok := requestContext["persisted_operation_cache_hit"].(bool)
@@ -3079,7 +3079,7 @@ func TestFlakyAccessLogs(t *testing.T) {
 						Header:        map[string][]string{"graphql-client-name": {"my-client"}},
 					})
 					require.NoError(t, err)
-					require.JSONEq(t, employeesIDData, res.Body)
+					require.JSONEq(t, testutils.EmployeesIDData, res.Body)
 					requestLog = xEnv.Observer().FilterMessage("/graphql")
 					requestContext = requestLog.All()[1].ContextMap()
 					val, ok = requestContext["persisted_operation_cache_hit"].(bool)
