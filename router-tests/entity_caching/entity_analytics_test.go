@@ -30,12 +30,12 @@ func TestEntityAnalytics(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 		})
 
 		// After testenv shutdown, exporter flushes remaining items
@@ -72,14 +72,14 @@ func TestEntityAnalytics(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 			require.Equal(t, int64(1), counters.details.Load())
 
 			// Second request: cache hit → no subgraph fetch
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 			require.Equal(t, int64(1), counters.details.Load(), "details subgraph should not be called again")
 		})
 
@@ -126,7 +126,7 @@ func TestEntityAnalytics(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 		})
 
 		collector.waitForRequest(t, 60*time.Second)
@@ -157,7 +157,7 @@ func TestEntityAnalytics(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ items { id name } }`,
@@ -177,6 +177,6 @@ func TestEntityAnalytics(t *testing.T) {
 				hashes[agg.Analytics.Operation.Hash] = true
 			}
 		}
-		assert.GreaterOrEqual(t, len(hashes), 2, "different operations should produce different aggregation entries")
+		assert.Equal(t, 2, len(hashes), "different operations should produce different aggregation entries")
 	})
 }
