@@ -1,0 +1,16 @@
+{
+  "ignorePatterns": ["*.d.ts"],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "import"],
+  "rules": {
+    "@typescript-eslint/consistent-type-imports": [
+      "error",
+      {
+        "prefer": "type-imports",
+        "fixStyle": "inline-type-imports"
+      }
+    ],
+    "import/no-duplicates": ["error", { "prefer-inline": true }],
+    "object-curly-spacing": ["error", "always"]
+  }
+}

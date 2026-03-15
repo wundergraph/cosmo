@@ -242,6 +242,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 
 	planConfig.BuildFetchReasons = routerEngineCfg.Execution.EnableRequireFetchReasons || routerEngineCfg.Execution.ValidateRequiredExternalFields
 	planConfig.ValidateRequiredExternalFields = routerEngineCfg.Execution.ValidateRequiredExternalFields
+	planConfig.RelaxSubgraphOperationFieldSelectionMergingNullability = routerEngineCfg.Execution.RelaxSubgraphOperationFieldSelectionMergingNullability
 
 	return planConfig, providers, nil
 }

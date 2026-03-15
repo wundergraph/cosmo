@@ -1,0 +1,55 @@
+---
+title: "Set"
+description: "Set the router compatibility version for a specific monograph."
+icon: upload
+---
+
+<Note>
+  Currently, there is only one router compatibility version. Consequently, this command does not yet serve a meaningful function (but will in the near future).
+</Note>
+
+## Requirements
+
+|Package|Minimum version|
+|---|---|
+|[wgc](/cli/intro)|[0.74.0](https://github.com/wundergraph/cosmo/releases/tag/wgc%400.74.0)|
+
+## Usage
+
+```bash
+npx wgc monograph version set <name> --version <router compatibility version>
+```
+
+## Arguments
+
+|Description|Type|
+|---|---|
+|The name of the monograph.|string|
+
+## Options
+
+|Option|Type|Value|Required|Default value|
+|---|---|---|---|---|
+|`--version/-v`|string|The router compatibility version to be set.|true||
+|`--namespace/-n`|string|The namespace where the monograph exists.|false|"default"|
+
+## Description
+
+The `wgc monograph version set` command allows a [valid router compatibility version](/cli/router/compatibility-version/list) to be set for a monograph.
+
+## Output
+
+If successful, a table will display the graph name, its namespace, the previous router compatibility version, and the current router compatibility version.
+
+## Example
+
+```bash
+> npx wgc federated-graph version set mygraph -v 1
+✔ Successfully set the router compatibility version for federated graph "prod" to 1.
+┌────────────┬───────────┬──────────────────┬─────────────┐
+│ GRAPH NAME │ NAMESPACE │ PREVIOUS VERSION │ NEW VERSION │
+├────────────┼───────────┼──────────────────┼─────────────┤
+│ prod       │ default   │ 2                │ 1           │
+└────────────┴───────────┴──────────────────┴─────────────┘
+```
+

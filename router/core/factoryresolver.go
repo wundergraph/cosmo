@@ -104,6 +104,18 @@ func NewDefaultFactoryResolver(
 		subgraphHTTPClients[subgraph] = subgraphClient
 	}
 
+	// Create HTTP clients for subgraphs that have per-subgraph TLS
+	// but no per-subgraph transport options. These use the default request timeout.
+	for subgraph, subgraphTransport := range subgraphTransports {
+		if _, exists := subgraphHTTPClients[subgraph]; !exists {
+			subgraphClient := &http.Client{
+				Transport: transportFactory.RoundTripper(subgraphTransport),
+				Timeout:   transportOptions.SubgraphTransportOptions.RequestTimeout,
+			}
+			subgraphHTTPClients[subgraph] = subgraphClient
+		}
+	}
+
 	var factoryLogger abstractlogger.Logger
 	if log != nil {
 		factoryLogger = abstractlogger.NewZapLogger(log, abstractlogger.DebugLevel)
@@ -710,14 +722,30 @@ func toGRPCConfiguration(config *nodev1.GRPCConfiguration, pluginsEnabled bool) 
 	}
 
 	for _, entity := range in.EntityMappings {
-		result.EntityRPCs[entity.TypeName] = append(result.EntityRPCs[entity.TypeName], grpcdatasource.EntityRPCConfig{
+		entityRPCConfig := grpcdatasource.EntityRPCConfig{
 			Key: entity.Key,
 			RPCConfig: grpcdatasource.RPCConfig{
 				RPC:      entity.Rpc,
 				Request:  entity.Request,
 				Response: entity.Response,
 			},
-		})
+		}
+
+		if len(entity.RequiredFieldMappings) > 0 {
+			entityRPCConfig.RequiredFields = make(grpcdatasource.RequiredFieldsRPCMapping, len(entity.RequiredFieldMappings))
+			for _, requiredField := range entity.RequiredFieldMappings {
+				entityRPCConfig.RequiredFields[requiredField.FieldMapping.Original] = grpcdatasource.RequiredFieldsRPCTypeField{
+					TargetName: requiredField.FieldMapping.Mapped,
+					RPCConfig: grpcdatasource.RPCConfig{
+						RPC:      requiredField.Rpc,
+						Request:  requiredField.Request,
+						Response: requiredField.Response,
+					},
+				}
+			}
+		}
+
+		result.EntityRPCs[entity.TypeName] = append(result.EntityRPCs[entity.TypeName], entityRPCConfig)
 	}
 
 	for _, resolve := range in.ResolveMappings {

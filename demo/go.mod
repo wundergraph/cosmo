@@ -11,8 +11,8 @@ require (
 	github.com/rs/cors v1.11.0
 	github.com/vektah/gqlparser/v2 v2.5.30
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20250820135159-bf8852195d3f
-	github.com/wundergraph/cosmo/router v0.0.0-20260213090732-c8009933b2d1
-	github.com/wundergraph/cosmo/router-tests v0.0.0-20260213090732-c8009933b2d1
+	github.com/wundergraph/cosmo/router v0.0.0-20260213130455-6e3277e7b850
+	github.com/wundergraph/cosmo/router-tests v0.0.0-20260213130455-6e3277e7b850
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.58.0
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.33.0
@@ -48,7 +48,7 @@ require (
 	github.com/dgraph-io/ristretto/v2 v2.4.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dlclark/regexp2 v1.11.0 // indirect
-	github.com/docker/cli v28.2.2+incompatible // indirect
+	github.com/docker/cli v29.2.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/docker/go-units v0.5.0 // indirect

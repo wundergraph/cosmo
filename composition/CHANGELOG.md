@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.53.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.52.0...@wundergraph/composition@0.53.0) (2026-03-10)
+
+### Features
+
+* add composition options ([#2595](https://github.com/wundergraph/cosmo/issues/2595)) ([1cba9ab](https://github.com/wundergraph/cosmo/commit/1cba9ab997a64e8bea18a7f6f01507f2ec2dd82b)) (@Aenimus)
+
+# [0.52.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.51.2...@wundergraph/composition@0.52.0) (2026-03-05)
+
+### Features
+
+* add format script + optional git hooks ([#2579](https://github.com/wundergraph/cosmo/issues/2579)) ([edabd2b](https://github.com/wundergraph/cosmo/commit/edabd2bd8f775c5717ca785f16616cff6f7ae039)) (@comatory)
+
+## [0.51.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.51.1...@wundergraph/composition@0.51.2) (2026-02-28)
+
+### Bug Fixes
+
+* handle fully external, unresolvable entity keys ([#2568](https://github.com/wundergraph/cosmo/issues/2568)) ([3168ab0](https://github.com/wundergraph/cosmo/commit/3168ab04eba3ca2c8ba353a8e7e6419fd62ae1c7)) (@Aenimus)
+
 ## [0.51.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.51.0...@wundergraph/composition@0.51.1) (2026-02-12)
 
 ### Bug Fixes

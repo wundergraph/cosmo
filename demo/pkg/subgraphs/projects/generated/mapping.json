@@ -150,7 +150,8 @@
       "key": "id",
       "rpc": "LookupProjectById",
       "request": "LookupProjectByIdRequest",
-      "response": "LookupProjectByIdResponse"
+      "response": "LookupProjectByIdResponse",
+      "requiredFieldMappings": []
     },
     {
       "typeName": "Milestone",
@@ -158,7 +159,8 @@
       "key": "id",
       "rpc": "LookupMilestoneById",
       "request": "LookupMilestoneByIdRequest",
-      "response": "LookupMilestoneByIdResponse"
+      "response": "LookupMilestoneByIdResponse",
+      "requiredFieldMappings": []
     },
     {
       "typeName": "Task",
@@ -166,7 +168,8 @@
       "key": "id",
       "rpc": "LookupTaskById",
       "request": "LookupTaskByIdRequest",
-      "response": "LookupTaskByIdResponse"
+      "response": "LookupTaskByIdResponse",
+      "requiredFieldMappings": []
     },
     {
       "typeName": "Employee",
@@ -174,7 +177,19 @@
       "key": "id",
       "rpc": "LookupEmployeeById",
       "request": "LookupEmployeeByIdRequest",
-      "response": "LookupEmployeeByIdResponse"
+      "response": "LookupEmployeeByIdResponse",
+      "requiredFieldMappings": [
+        {
+          "fieldMapping": {
+            "original": "taggedProjectSummary",
+            "mapped": "tagged_project_summary",
+            "argumentMappings": []
+          },
+          "rpc": "RequireEmployeeTaggedProjectSummaryById",
+          "request": "RequireEmployeeTaggedProjectSummaryByIdRequest",
+          "response": "RequireEmployeeTaggedProjectSummaryByIdResponse"
+        }
+      ]
     },
     {
       "typeName": "Product",
@@ -182,7 +197,8 @@
       "key": "upc",
       "rpc": "LookupProductByUpc",
       "request": "LookupProductByUpcRequest",
-      "response": "LookupProductByUpcResponse"
+      "response": "LookupProductByUpcResponse",
+      "requiredFieldMappings": []
     }
   ],
   "typeFieldMappings": [
@@ -635,6 +651,16 @@
               "mapped": "category"
             }
           ]
+        },
+        {
+          "original": "taskCount",
+          "mapped": "task_count",
+          "argumentMappings": []
+        },
+        {
+          "original": "activeMilestoneCount",
+          "mapped": "active_milestone_count",
+          "argumentMappings": []
         }
       ]
     },
@@ -877,6 +903,11 @@
           "argumentMappings": []
         },
         {
+          "original": "expertise",
+          "mapped": "expertise",
+          "argumentMappings": []
+        },
+        {
           "original": "projects",
           "mapped": "projects",
           "argumentMappings": []
@@ -907,6 +938,11 @@
           "argumentMappings": []
         },
         {
+          "original": "taggedProjectSummary",
+          "mapped": "tagged_project_summary",
+          "argumentMappings": []
+        },
+        {
           "original": "currentWorkload",
           "mapped": "current_workload",
           "argumentMappings": [
@@ -933,6 +969,11 @@
               "mapped": "priority"
             }
           ]
+        },
+        {
+          "original": "totalProjectCount",
+          "mapped": "total_project_count",
+          "argumentMappings": []
         }
       ]
     },
@@ -1198,6 +1239,34 @@
     {
       "type": "LOOKUP_TYPE_RESOLVE",
       "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "taskCount",
+          "mapped": "task_count",
+          "argumentMappings": []
+        }
+      },
+      "rpc": "ResolveProjectTaskCount",
+      "request": "ResolveProjectTaskCountRequest",
+      "response": "ResolveProjectTaskCountResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Project",
+        "fieldMapping": {
+          "original": "activeMilestoneCount",
+          "mapped": "active_milestone_count",
+          "argumentMappings": []
+        }
+      },
+      "rpc": "ResolveProjectActiveMilestoneCount",
+      "request": "ResolveProjectActiveMilestoneCountRequest",
+      "response": "ResolveProjectActiveMilestoneCountResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
         "type": "Milestone",
         "fieldMapping": {
           "original": "isAtRisk",
@@ -1316,6 +1385,20 @@
       "rpc": "ResolveEmployeeAverageTaskCompletionDays",
       "request": "ResolveEmployeeAverageTaskCompletionDaysRequest",
       "response": "ResolveEmployeeAverageTaskCompletionDaysResponse"
+    },
+    {
+      "type": "LOOKUP_TYPE_RESOLVE",
+      "lookupMapping": {
+        "type": "Employee",
+        "fieldMapping": {
+          "original": "totalProjectCount",
+          "mapped": "total_project_count",
+          "argumentMappings": []
+        }
+      },
+      "rpc": "ResolveEmployeeTotalProjectCount",
+      "request": "ResolveEmployeeTotalProjectCountRequest",
+      "response": "ResolveEmployeeTotalProjectCountResponse"
     }
   ]
 }

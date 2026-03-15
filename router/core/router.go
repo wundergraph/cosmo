@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"sync"
 	"time"
 
@@ -42,6 +41,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
@@ -52,6 +52,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/otel/otelconfig"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
@@ -315,12 +316,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 	if err != nil {
 		return nil, err
 	}
-	// we only add post origin handler for header rules
-	// pre handlers (header propagation rules) are handled via the engine
-	if r.headerPropagation != nil && r.headerPropagation.HasResponseRules() {
-		r.postOriginHandlers = append(r.postOriginHandlers, r.headerPropagation.OnOriginResponse)
-	}
-
 	defaultCorsHeaders := []string{
 		// Common headers
 		"authorization",
@@ -364,6 +359,12 @@ func NewRouter(opts ...Option) (*Router, error) {
 	} else {
 		r.baseURL = fmt.Sprintf("http://%s", r.listenAddr)
 	}
+
+	graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to construct graphql endpoint url: %w", err)
+	}
+	r.graphqlEndpointURL = graphqlEndpointURL
 
 	if r.tlsConfig != nil && r.tlsConfig.Enabled {
 		if r.tlsConfig.CertFile == "" {
@@ -670,6 +671,11 @@ func (r *Router) initModules(ctx context.Context) error {
 					reqContext := getRequestContext(request.Context())
 					// Ensure we work with latest request in the chain to work with the right context
 					reqContext.request = request
+					// Propagate the writer so that when a module calls
+					// ctx.ResponseWriter() it receives the writer from the
+					// current middleware layer (e.g. a buffered writer from an
+					// outer module), not the one set by the pre-handler.
+					reqContext.responseWriter = writer
 					fn.Middleware(reqContext, handler)
 				})
 			})
@@ -677,10 +683,14 @@ func (r *Router) initModules(ctx context.Context) error {
 
 		if fn, ok := moduleInstance.(RouterOnRequestHandler); ok {
 			r.routerOnRequestHandlers = append(r.routerOnRequestHandlers, func(handler http.Handler) http.Handler {
-				return http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
+				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 					reqContext := getRequestContext(request.Context())
 					// Ensure we work with latest request in the chain to work with the right context
 					reqContext.request = request
+					// Propagate the writer so that when a module calls
+					// ctx.ResponseWriter() it receives the writer from the
+					// current middleware layer, not the one set by the pre-handler.
+					reqContext.responseWriter = writer
 					fn.RouterOnRequest(reqContext, handler)
 				})
 			})
@@ -728,6 +738,64 @@ func (r *Router) BaseURL() string {
 	return r.baseURL
 }
 
+// NewServer prepares a new server instance but does not start it. The method should only be used when you want to bootstrap
+// the server manually otherwise you can use Router.Start(). You're responsible for setting health checks status to ready with Server.HealthChecks().
+// The server can be shutdown with Router.Shutdown(). Use core.WithExecutionConfig to pass the initial config otherwise the Router will
+// try to fetch the config from the control plane. You can swap the router config by using Router.newGraphServer().
+func (r *Router) NewServer(ctx context.Context) (Server, error) {
+	if r.shutdown.Load() {
+		return nil, errors.New("router is shutdown. Create a new instance with router.NewRouter()")
+	}
+
+	if err := r.bootstrap(ctx); err != nil {
+		return nil, fmt.Errorf("failed to bootstrap application: %w", err)
+	}
+
+	r.httpServer = newServer(&httpServerOptions{
+		addr:               r.listenAddr,
+		logger:             r.logger,
+		tlsConfig:          r.tlsConfig,
+		tlsServerConfig:    r.tlsServerConfig,
+		healthcheck:        r.healthcheck,
+		baseURL:            r.baseURL,
+		maxHeaderBytes:     int(r.routerTrafficConfig.MaxHeaderBytes.Uint64()),
+		livenessCheckPath:  r.livenessCheckPath,
+		readinessCheckPath: r.readinessCheckPath,
+		healthCheckPath:    r.healthCheckPath,
+	})
+
+	r.configureUsageTracking(ctx)
+
+	if r.reloadPersistentState == nil {
+		r.reloadPersistentState = NewReloadPersistentState(r.logger)
+	}
+
+	r.reloadPersistentState.UpdateReloadPersistentState(&r.Config)
+
+	// Start the server with the static config without polling
+	if r.staticExecutionConfig != nil {
+		r.logger.Info("Static execution config provided. Polling is disabled. Updating execution config is only possible by providing a config.")
+		return r.httpServer, r.newServer(ctx, r.staticExecutionConfig)
+	}
+
+	// when no static config is provided and no poller is configured, we can't start the server
+	if r.configPoller == nil {
+		return nil, errors.New("config fetcher not provided. Please provide a static execution config instead")
+	}
+
+	cfg, err := r.configPoller.GetRouterConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get initial execution config: %w", err)
+	}
+
+	if err := r.newServer(ctx, cfg.Config); err != nil {
+		r.logger.Error("Failed to start server with initial config", zap.Error(err))
+		return nil, err
+	}
+
+	return r.httpServer, nil
+}
+
 // bootstrap initializes the Router. It is called by Start() and NewServer().
 // It should only be called once for a Router instance.
 func (r *Router) bootstrap(ctx context.Context) error {
@@ -767,10 +835,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			Logger:            r.logger,
 			Config:            r.traceConfig,
 			ServiceInstanceID: r.instanceID,
-			IPAnonymization: &rtrace.IPAnonymizationConfig{
+			IPAnonymization: &attributeprocessor.IPAnonymizationConfig{
 				Enabled: r.ipAnonymization.Enabled,
-				Method:  rtrace.IPAnonymizationMethod(r.ipAnonymization.Method),
+				Method:  attributeprocessor.IPAnonymizationMethod(r.ipAnonymization.Method),
 			},
+			SanitizeUTF8:   r.traceConfig.SanitizeUTF8,
 			MemoryExporter: r.traceConfig.TestMemoryExporter,
 		})
 		if err != nil {
@@ -859,8 +928,6 @@ func (r *Router) bootstrap(ctx context.Context) error {
 				zap.String("provider_id", r.mcp.Storage.ProviderID))
 
 			// Find the provider in storage_providers
-			found := false
-
 			// Check for file_system providers
 			for _, provider := range r.storageProviders.FileSystem {
 				if provider.ID == r.mcp.Storage.ProviderID {
@@ -870,12 +937,11 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 					// Use the resolved file system path
 					operationsDir = provider.Path
-					found = true
 					break
 				}
 			}
 
-			if !found {
+			if operationsDir == "" {
 				return fmt.Errorf("storage provider with id '%s' for mcp server not found", r.mcp.Storage.ProviderID)
 			}
 		}
@@ -901,18 +967,13 @@ func (r *Router) bootstrap(ctx context.Context) error {
 			mcpOpts = append(mcpOpts, mcpserver.WithCORS(*r.corsOptions))
 		}
 
-		// Determine the router GraphQL endpoint
-		var routerGraphQLEndpoint string
-
-		// Use the custom URL if provided
+		mcpGraphQLEndpoint := r.graphqlEndpointURL
 		if r.mcp.RouterURL != "" {
-			routerGraphQLEndpoint = r.mcp.RouterURL
-		} else {
-			routerGraphQLEndpoint = path.Join(r.listenAddr, r.graphqlPath)
+			mcpGraphQLEndpoint = r.mcp.RouterURL
 		}
 
 		mcpss, err := mcpserver.NewGraphQLSchemaServer(
-			routerGraphQLEndpoint,
+			mcpGraphQLEndpoint,
 			mcpOpts...,
 		)
 		if err != nil {
@@ -921,14 +982,90 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 		err = mcpss.Start()
 		if err != nil {
+			// Cleanup the server if Start() fails to prevent resource leaks
+			if stopErr := mcpss.Stop(ctx); stopErr != nil {
+				r.logger.Warn("Failed to stop MCP server during error cleanup", zap.Error(stopErr))
+			}
 			return fmt.Errorf("failed to start MCP server: %w", err)
 		}
 
 		r.mcpServer = mcpss
 	}
 
-	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
-		r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
+	if r.connectRPC.Enabled {
+		r.logger.Debug("ConnectRPC configuration",
+			zap.Bool("enabled", r.connectRPC.Enabled),
+			zap.String("storage_provider_id", r.connectRPC.Storage.ProviderID),
+			zap.String("listen_addr", r.connectRPC.Server.ListenAddr),
+			zap.String("graphql_endpoint", r.connectRPC.GraphQLEndpoint))
+
+		// Resolve the services provider to get the services directory
+		var servicesDir string
+		for _, provider := range r.storageProviders.FileSystem {
+			if provider.ID == r.connectRPC.Storage.ProviderID {
+				servicesDir = provider.Path
+				r.logger.Debug("Resolved services provider",
+					zap.String("provider_id", provider.ID),
+					zap.String("path", provider.Path))
+				break
+			}
+		}
+		if servicesDir == "" {
+			return fmt.Errorf("services storage provider with id '%s' for connect_rpc not found", r.connectRPC.Storage.ProviderID)
+		}
+
+		// Discover services using convention-based approach
+		discoveredServices, err := connectrpc.DiscoverServices(connectrpc.ServiceDiscoveryConfig{
+			ServicesDir: servicesDir,
+			Logger:      r.logger,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to discover ConnectRPC services: %w", err)
+		}
+
+		connectGraphQLEndpoint := r.graphqlEndpointURL
+		if r.connectRPC.GraphQLEndpoint != "" {
+			connectGraphQLEndpoint = r.connectRPC.GraphQLEndpoint
+		}
+
+		// Initialize the ConnectRPC server with the services directory
+		serverConfig := connectrpc.ServerConfig{
+			ServicesDir:     servicesDir,
+			ListenAddr:      r.connectRPC.Server.ListenAddr,
+			GraphQLEndpoint: connectGraphQLEndpoint,
+			Logger:          r.logger,
+			CorsConfig:      r.corsOptions,
+		}
+
+		crpcServer, err := connectrpc.NewServer(serverConfig)
+		if err != nil {
+			r.logger.Error("Failed to create ConnectRPC server", zap.Error(err))
+			return fmt.Errorf("failed to create connect_rpc server: %w", err)
+		}
+
+		err = crpcServer.Start()
+		if err != nil {
+			r.logger.Error("Failed to start ConnectRPC server", zap.Error(err))
+			// Cleanup the server if Start() fails to prevent resource leaks
+			if stopErr := crpcServer.Stop(ctx); stopErr != nil {
+				r.logger.Warn("Failed to stop ConnectRPC server during error cleanup", zap.Error(stopErr))
+			}
+			return fmt.Errorf("failed to start ConnectRPC server: %w", err)
+		}
+
+		// Single consolidated INFO log for ConnectRPC startup
+		r.logger.Info("ConnectRPC server ready",
+			zap.String("listen_addr", r.connectRPC.Server.ListenAddr),
+			zap.Int("services", len(discoveredServices)),
+			zap.Int("operations", crpcServer.GetOperationCount()))
+
+		r.connectRPCServer = crpcServer
+	}
+
+	if _, isNoop := r.EngineStats.(*statistics.NoopEngineStats); isNoop {
+		if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
+			r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
+		}
 	}
 
 	if r.engineExecutionConfiguration.Debug.ReportMemoryUsage {
@@ -1286,13 +1423,9 @@ func (r *Router) Start(ctx context.Context) error {
 	}
 
 	if r.playgroundConfig.Enabled {
-		graphqlEndpointURL, err := url.JoinPath(r.baseURL, r.graphqlPath)
-		if err != nil {
-			return fmt.Errorf("failed to join graphql endpoint url: %w", err)
-		}
 		r.logger.Info("GraphQL endpoint",
 			zap.String("method", http.MethodPost),
-			zap.String("url", graphqlEndpointURL),
+			zap.String("url", r.graphqlEndpointURL),
 		)
 	}
 
@@ -1433,89 +1566,70 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	var wg sync.WaitGroup
 
 	if r.prometheusServer != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if subErr := r.prometheusServer.Close(); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown prometheus server: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.mcpServer != nil {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			if subErr := r.mcpServer.Stop(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown mcp server: %w", subErr))
 			}
-		}()
+		})
+	}
+
+	if r.connectRPCServer != nil {
+		wg.Go(func() {
+			if subErr := r.connectRPCServer.Stop(ctx); subErr != nil {
+				err.Append(fmt.Errorf("failed to shutdown connect_rpc server: %w", subErr))
+			}
+		})
 	}
 
 	if r.tracerProvider != nil {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			if subErr := r.tracerProvider.Shutdown(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown tracer: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.gqlMetricsExporter != nil {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.promMeterProvider != nil {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			if subErr := r.promMeterProvider.Shutdown(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown prometheus meter provider: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.otlpMeterProvider != nil {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			if subErr := r.otlpMeterProvider.Shutdown(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown OTLP meter provider: %w", subErr))
 			}
-		}()
+		})
 	}
 
 	if r.redisClient != nil {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			if closeErr := r.redisClient.Close(); closeErr != nil {
 				err.Append(fmt.Errorf("failed to close redis client: %w", closeErr))
 			}
-		}()
+		})
 	}
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		for _, module := range r.modules {
 			if cleaner, ok := module.(Cleaner); ok {
 				if subErr := cleaner.Cleanup(); subErr != nil {
@@ -1523,7 +1637,7 @@ func (r *Router) Shutdown(ctx context.Context) error {
 				}
 			}
 		}
-	}()
+	})
 
 	// Shutdown the CDN operation client and free up resources
 	if r.persistedOperationClient != nil {
@@ -1535,6 +1649,12 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	wg.Wait()
 
 	return err.ErrOrNil()
+}
+
+func WithEngineStats(stats statistics.EngineStatistics) Option {
+	return func(r *Router) {
+		r.EngineStats = stats
+	}
 }
 
 func WithListenerAddr(addr string) Option {
@@ -2037,6 +2157,12 @@ func WithTLSConfig(cfg *TlsConfig) Option {
 	}
 }
 
+func WithSubgraphTLSConfiguration(cfg config.ClientTLSConfiguration) Option {
+	return func(r *Router) {
+		r.subgraphTLSConfiguration = cfg
+	}
+}
+
 func WithTelemetryAttributes(attributes []config.CustomAttribute) Option {
 	return func(r *Router) {
 		r.telemetryAttributes = attributes
@@ -2130,6 +2256,12 @@ func WithPlugins(cfg config.PluginsConfiguration) Option {
 	}
 }
 
+func WithConnectRPC(cfg config.ConnectRPCConfiguration) Option {
+	return func(r *Router) {
+		r.connectRPC = cfg
+	}
+}
+
 func WithDemoMode(demoMode bool) Option {
 	return func(r *Router) {
 		r.demoMode = demoMode
@@ -2145,7 +2277,7 @@ func WithStreamsHandlerConfiguration(cfg config.StreamsHandlerConfiguration) Opt
 
 type ProxyFunc func(req *http.Request) (*url.URL, error)
 
-func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string) *http.Transport {
+func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDialer *TraceDialer, subgraph string, clientTLS *tls.Config) *http.Transport {
 	dialer := &net.Dialer{
 		Timeout:   opts.DialTimeout,
 		KeepAlive: opts.KeepAliveProbeInterval,
@@ -2174,6 +2306,11 @@ func newHTTPTransport(opts *TransportRequestOptions, proxy ProxyFunc, traceDiale
 		// Will return nil when HTTP(S)_PROXY does not exist or is empty.
 		// This will prevent the transport from handling the proxy when it is not needed.
 		Proxy: proxy,
+		// TLSClientConfig configures client TLS for outbound subgraph connections (mTLS).
+	}
+
+	if clientTLS != nil {
+		transport.TLSClientConfig = clientTLS
 	}
 
 	if traceDialer != nil {
@@ -2232,6 +2369,10 @@ func TraceConfigFromTelemetry(cfg *config.Telemetry) *rtrace.Config {
 		Propagators:                propagators,
 		ResponseTraceHeader:        cfg.Tracing.ResponseTraceHeader,
 		OperationContentAttributes: cfg.Tracing.OperationContentAttributes,
+		SanitizeUTF8: &attributeprocessor.SanitizeUTF8Config{
+			Enabled:          cfg.Tracing.SanitizeUTF8.Enabled,
+			LogSanitizations: cfg.Tracing.SanitizeUTF8.LogSanitizations,
+		},
 	}
 }
 
@@ -2317,6 +2458,11 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			Streams:             cfg.Metrics.OTLP.Streams,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
+			LogExporter: rmetric.LogExporterConfig{
+				Enabled:        cfg.Metrics.OTLP.LogExporter.Enabled,
+				ExcludeMetrics: cfg.Metrics.OTLP.LogExporter.ExcludeMetrics,
+				IncludeMetrics: cfg.Metrics.OTLP.LogExporter.IncludeMetrics,
+			},
 		},
 		Prometheus: rmetric.PrometheusConfig{
 			Enabled:         cfg.Metrics.Prometheus.Enabled,

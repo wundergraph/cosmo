@@ -1,21 +1,17 @@
-import { docsBaseURL } from "@/lib/constants";
-import { cn } from "@/lib/utils";
-import {
-  CaretSortIcon,
-  Cross2Icon,
-  HamburgerMenuIcon,
-} from "@radix-ui/react-icons";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { ReactNode, useContext, useState } from "react";
-import { UserContext } from "../app-provider";
-import { Logo } from "../logo";
-import { Separator } from "../ui/separator";
-import { UserMenu, UserMenuMobile } from "../user-menu";
-import { LayoutProps } from "./layout";
-import { useUser } from "@/hooks/use-user";
-import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
-import { FiHelpCircle } from "react-icons/fi";
+import { docsBaseURL } from '@/lib/constants';
+import { cn } from '@/lib/utils';
+import { CaretSortIcon, Cross2Icon, HamburgerMenuIcon } from '@radix-ui/react-icons';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { ReactNode, useContext, useState } from 'react';
+import { UserContext } from '../app-provider';
+import { Logo } from '../logo';
+import { Separator } from '../ui/separator';
+import { UserMenu, UserMenuMobile } from '../user-menu';
+import { LayoutProps } from './layout';
+import { useUser } from '@/hooks/use-user';
+import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { FiHelpCircle } from 'react-icons/fi';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,8 +21,8 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import NewFeaturesPopup from "../dashboard/NewFeaturesPopup";
+} from '../ui/dropdown-menu';
+import NewFeaturesPopup from '../dashboard/NewFeaturesPopup';
 
 export type NavLink = {
   title: ReactNode;
@@ -38,7 +34,7 @@ export type NavLink = {
 };
 
 const isActive = (path: string, currentPath: string, exact = true) => {
-  return path === "/" || exact ? path === currentPath : currentPath.match(path);
+  return path === '/' || exact ? path === currentPath : currentPath.match(path);
 };
 
 const MobileNav = () => {
@@ -46,26 +42,17 @@ const MobileNav = () => {
   return (
     <div
       className={cn(
-        "fixed inset-0 top-28 z-50 grid h-[calc(100vh-112px)] grid-flow-row auto-rows-max overflow-auto border-t bg-popover shadow-md animate-in slide-in-from-bottom-64 lg:hidden",
+        'fixed inset-0 top-28 z-50 grid h-[calc(100vh-112px)] grid-flow-row auto-rows-max overflow-auto border-t bg-popover shadow-md animate-in slide-in-from-bottom-64 lg:hidden',
       )}
     >
       <div className="relative z-20 grid gap-6 rounded-md p-4 text-popover-foreground">
         <nav className="grid grid-flow-row auto-rows-max items-center justify-center space-y-2 text-center text-sm">
-          <Link
-            href="/account/invitations"
-            className="flex items-center justify-center gap-x-2"
-          >
+          <Link href="/account/invitations" className="flex items-center justify-center gap-x-2">
             Invitations
-            {user?.invitations?.length && (
+            {typeof user?.invitations?.length === 'number' && user?.invitations?.length > 0 && (
               <div className="relative">
-                <div
-                  aria-hidden="true"
-                  className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400"
-                />
-                <div
-                  aria-hidden="true"
-                  className="h-2 w-2 rounded-full bg-blue-400"
-                />
+                <div aria-hidden="true" className="absolute h-2 w-2 animate-ping rounded-full bg-blue-400" />
+                <div aria-hidden="true" className="h-2 w-2 rounded-full bg-blue-400" />
               </div>
             )}
           </Link>
@@ -108,16 +95,15 @@ const Organizations = () => {
         <DropdownMenuRadioGroup
           value={user.currentOrganization.slug}
           onValueChange={(orgSlug) => {
-            const currentOrg = user.organizations.find(
-              (org) => org.slug === orgSlug,
-            );
+            const currentOrg = user.organizations.find((org) => org.slug === orgSlug);
             if (currentOrg) {
               router.replace({
-                pathname: isOrganizationRoot &&
-                  pathSegments[0]?.toLowerCase() !== "account" &&
-                  pathSegments[1]?.toLowerCase() !== "invitations"
-                  ? `/[organizationSlug]/${pathSegments[1]}`
-                  : `/[organizationSlug]`,
+                pathname:
+                  isOrganizationRoot &&
+                  pathSegments[0]?.toLowerCase() !== 'account' &&
+                  pathSegments[1]?.toLowerCase() !== 'invitations'
+                    ? `/[organizationSlug]/${pathSegments[1]}`
+                    : `/[organizationSlug]`,
                 query: {
                   organizationSlug: currentOrg.slug,
                 },
@@ -127,7 +113,7 @@ const Organizations = () => {
         >
           {user?.organizations?.map(({ name, slug }) => {
             return (
-              <DropdownMenuRadioItem className="pl-2 gap-x-2" key={slug} value={slug}>
+              <DropdownMenuRadioItem className="gap-x-2 pl-2" key={slug} value={slug}>
                 <span className="w-full">{name}</span>
               </DropdownMenuRadioItem>
             );
@@ -155,27 +141,17 @@ export const SideNav = (props: SideNavLayoutProps) => {
   return (
     <div className="lg:grid lg:grid-cols-[auto_1fr] lg:divide-x">
       <aside
-        className={cn(
-          "relative z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4",
-          {
-            "lg:h-[calc(100vh-32px)]": props.isBannerDisplayed,
-            "lg:h-screen": !props.isBannerDisplayed,
-          },
-        )}
+        className={cn('relative z-40 flex min-w-[210px] flex-shrink-0 flex-col bg-background pt-4 lg:px-3 lg:pb-4', {
+          'lg:h-[calc(100vh-32px)]': props.isBannerDisplayed,
+          'lg:h-screen': !props.isBannerDisplayed,
+        })}
       >
         <div className="flex min-h-0 flex-1 flex-col gap-y-4 px-4 lg:gap-y-6 lg:px-0">
           <div className="flex items-center justify-between gap-x-4">
             <div className="flex w-full items-center space-x-2">
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Link
-                    href={
-                      user?.currentOrganization
-                        ? `/${user.currentOrganization.slug}`
-                        : `/`
-                    }
-                    className="ml-2"
-                  >
+                  <Link href={user?.currentOrganization ? `/${user.currentOrganization.slug}` : `/`} className="ml-2">
                     <Logo />
                   </Link>
                 </TooltipTrigger>
@@ -189,11 +165,7 @@ export const SideNav = (props: SideNavLayoutProps) => {
               className="flex items-center space-x-2 lg:hidden"
               onClick={() => setShowMobileMenu(!showMobileMenu)}
             >
-              {showMobileMenu ? (
-                <Cross2Icon className="h-5 w-5" />
-              ) : (
-                <HamburgerMenuIcon className="h-5 w-5" />
-              )}
+              {showMobileMenu ? <Cross2Icon className="h-5 w-5" /> : <HamburgerMenuIcon className="h-5 w-5" />}
             </button>
             {showMobileMenu && <MobileNav />}
           </div>
@@ -202,12 +174,7 @@ export const SideNav = (props: SideNavLayoutProps) => {
               if (!item) return null;
 
               const isCurrent =
-                item.href &&
-                isActive(
-                  encodeURI(item.href.split("?")[0]),
-                  router.asPath.split("?")[0],
-                  item.matchExact,
-                );
+                item.href && isActive(encodeURI(item.href.split('?')[0]), router.asPath.split('?')[0], item.matchExact);
 
               return (
                 <div key={index}>
@@ -216,27 +183,18 @@ export const SideNav = (props: SideNavLayoutProps) => {
                       key={index}
                       href={item.href}
                       className={cn(
-                        "group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground",
-                        isCurrent ? "bg-accent/80" : "transparent",
+                        'group flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground',
+                        isCurrent ? 'bg-accent/80' : 'transparent',
                       )}
                     >
                       {item.icon}
 
-                      <span className={cn("whitespace-nowrap", item.className)}>
-                        {item.title}
-                      </span>
+                      <span className={cn('whitespace-nowrap', item.className)}>{item.title}</span>
                     </Link>
                   ) : (
-                    <h4 className="hidden px-3 py-2 text-sm text-muted-foreground lg:block">
-                      {item.title}
-                    </h4>
+                    <h4 className="hidden px-3 py-2 text-sm text-muted-foreground lg:block">{item.title}</h4>
                   )}
-                  {item.separator && (
-                    <Separator
-                      orientation="horizontal"
-                      className="my-3 hidden lg:block"
-                    />
-                  )}
+                  {item.separator && <Separator orientation="horizontal" className="my-3 hidden lg:block" />}
                 </div>
               );
             })}

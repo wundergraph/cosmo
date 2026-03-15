@@ -111,22 +111,23 @@ type OperationProcessorOptions struct {
 	PersistedOperationClient            *persistedoperation.Client
 	AutomaticPersistedOperationCacheTtl int
 
-	EnablePersistedOperationsCache                   bool
-	PersistedOpsNormalizationCache                   *ristretto.Cache[uint64, NormalizationCacheEntry]
-	NormalizationCache                               *ristretto.Cache[uint64, NormalizationCacheEntry]
-	QueryDepthCache                                  *ristretto.Cache[uint64, ComplexityCacheEntry]
-	VariablesNormalizationCache                      *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
-	RemapVariablesCache                              *ristretto.Cache[uint64, RemapVariablesCacheEntry]
-	ValidationCache                                  *ristretto.Cache[uint64, bool]
-	OperationHashCache                               *ristretto.Cache[uint64, string]
-	ParseKitPoolSize                                 int
-	IntrospectionEnabled                             bool
-	ApolloCompatibilityFlags                         config.ApolloCompatibilityFlags
-	ApolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
-	DisableExposingVariablesContentOnValidationError bool
-	ComplexityLimits                                 *config.ComplexityLimits
-	ParserTokenizerLimits                            astparser.TokenizerLimits
-	OperationNameLengthLimit                         int
+	EnablePersistedOperationsCache                         bool
+	PersistedOpsNormalizationCache                         *ristretto.Cache[uint64, NormalizationCacheEntry]
+	NormalizationCache                                     *ristretto.Cache[uint64, NormalizationCacheEntry]
+	QueryDepthCache                                        *ristretto.Cache[uint64, ComplexityCacheEntry]
+	VariablesNormalizationCache                            *ristretto.Cache[uint64, VariablesNormalizationCacheEntry]
+	RemapVariablesCache                                    *ristretto.Cache[uint64, RemapVariablesCacheEntry]
+	ValidationCache                                        *ristretto.Cache[uint64, bool]
+	OperationHashCache                                     *ristretto.Cache[uint64, string]
+	ParseKitPoolSize                                       int
+	IntrospectionEnabled                                   bool
+	ApolloCompatibilityFlags                               config.ApolloCompatibilityFlags
+	ApolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
+	DisableExposingVariablesContentOnValidationError       bool
+	RelaxSubgraphOperationFieldSelectionMergingNullability bool
+	ComplexityLimits                                       *config.ComplexityLimits
+	ParserTokenizerLimits                                  astparser.TokenizerLimits
+	OperationNameLengthLimit                               int
 }
 
 // OperationProcessor provides shared resources to the parseKit and OperationKit.
@@ -785,6 +786,10 @@ type VariablesNormalizationCacheEntry struct {
 	// reparse indicates whether the operation document needs to be reparsed from
 	// its string representation when retrieved from the cache.
 	reparse bool
+
+	// variablesHash is the hash of the normalized variables, used as part of the
+	// inbound singleflight deduplication key.
+	variablesHash uint64
 }
 
 type RemapVariablesCacheEntry struct {
@@ -920,6 +925,9 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 			o.parsedOperation.NormalizedRepresentation = entry.normalizedRepresentation
 			o.parsedOperation.ID = entry.id
 			o.parsedOperation.Request.Variables = entry.variables
+			// Restore VariablesHash from cache — without this, all cache-hit requests get
+			// VariablesHash=0, causing inbound singleflight key collisions across different variables.
+			o.parsedOperation.VariablesHash = entry.variablesHash
 
 			if entry.reparse {
 				if err = o.setAndParseOperationDoc(); err != nil {
@@ -989,6 +997,7 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 				normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 				variables:                o.parsedOperation.Request.Variables,
 				reparse:                  false,
+				variablesHash:            o.parsedOperation.VariablesHash,
 			}
 			o.cache.variablesNormalizationCache.Set(cacheKey, entry, 1)
 		}
@@ -1013,6 +1022,7 @@ func (o *OperationKit) NormalizeVariables() (cached bool, mapping []uploads.Uplo
 			normalizedRepresentation: o.parsedOperation.NormalizedRepresentation,
 			variables:                o.parsedOperation.Request.Variables,
 			reparse:                  true,
+			variablesHash:            o.parsedOperation.VariablesHash,
 		}
 		o.cache.variablesNormalizationCache.Set(cacheKey, entry, 1)
 	}
@@ -1412,9 +1422,10 @@ func (o *OperationKit) skipIncludeVariableNames() []string {
 }
 
 type parseKitOptions struct {
-	apolloCompatibilityFlags                         config.ApolloCompatibilityFlags
-	apolloRouterCompatibilityFlags                   config.ApolloRouterCompatibilityFlags
-	disableExposingVariablesContentOnValidationError bool
+	apolloCompatibilityFlags                               config.ApolloCompatibilityFlags
+	apolloRouterCompatibilityFlags                         config.ApolloRouterCompatibilityFlags
+	disableExposingVariablesContentOnValidationError       bool
+	relaxSubgraphOperationFieldSelectionMergingNullability bool
 }
 
 func createParseKit(i int, options *parseKitOptions) *parseKit {
@@ -1443,12 +1454,21 @@ func createParseKit(i int, options *parseKitOptions) *parseKit {
 			},
 			DisableExposingVariablesContent: options.disableExposingVariablesContentOnValidationError,
 		}),
-		operationValidator: astvalidation.DefaultOperationValidator(astvalidation.WithApolloCompatibilityFlags(
-			apollocompatibility.Flags{
-				UseGraphQLValidationFailedStatus: options.apolloCompatibilityFlags.UseGraphQLValidationFailedStatus.Enabled,
-			},
-		)),
+		operationValidator: createOperationValidator(options),
 	}
+}
+
+func createOperationValidator(options *parseKitOptions) *astvalidation.OperationValidator {
+	var opts []astvalidation.Option
+	opts = append(opts, astvalidation.WithApolloCompatibilityFlags(
+		apollocompatibility.Flags{
+			UseGraphQLValidationFailedStatus: options.apolloCompatibilityFlags.UseGraphQLValidationFailedStatus.Enabled,
+		},
+	))
+	if options.relaxSubgraphOperationFieldSelectionMergingNullability {
+		opts = append(opts, astvalidation.WithRelaxFieldSelectionMergingNullability())
+	}
+	return astvalidation.DefaultOperationValidator(opts...)
 }
 
 func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
@@ -1466,9 +1486,10 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		operationNameLengthLimit: opts.OperationNameLengthLimit,
 		complexityLimits:         opts.ComplexityLimits,
 		parseKitOptions: &parseKitOptions{
-			apolloCompatibilityFlags:                         opts.ApolloCompatibilityFlags,
-			apolloRouterCompatibilityFlags:                   opts.ApolloRouterCompatibilityFlags,
-			disableExposingVariablesContentOnValidationError: opts.DisableExposingVariablesContentOnValidationError,
+			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
+			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,
+			disableExposingVariablesContentOnValidationError:       opts.DisableExposingVariablesContentOnValidationError,
+			relaxSubgraphOperationFieldSelectionMergingNullability: opts.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		},
 	}
 	for i := 0; i < opts.ParseKitPoolSize; i++ {

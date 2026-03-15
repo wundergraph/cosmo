@@ -1,0 +1,60 @@
+---
+title: "Update"
+description: "Updates monograph metadata like URL, subscription configuration and more on the control plane."
+icon: pen-to-square
+---
+
+## Usage
+
+```bash
+npx wgc monograph update <name> [-r, --routing-url <url>] [--readme <path-to-readme>]
+```
+
+## Description
+
+The `npx wgc monograph update` command allows you to update an existing monograph on the Cosmo platform's control plane. With this command, you can modify the routing URL, graphql server endpoint, subscription configuration and readme.
+
+## Parameters
+
+* `<name>`: The name of the monograph you want to update. This should be the exact name of the monograph you wish to modify.
+
+## Options
+
+* `-n, --namespace` : The namespace of the monograph (Default: "default").
+
+* `-r, --routing-url <url>`: This is the url that the router will be accessible at.
+
+* `-u, --graph-url <url>`: The url of your GraphQL server that is accessible from the router.
+
+* `--subscription-url:` Optionally, use a different URL for subscription requests. If no subscription URL is provided, the router URL is used for subscriptions. To remove a previously set subscription URL, use the flag without provided a URL argument.
+
+* `--subscription-protocol:` Optionally, set a protocol to use for subscriptions. The available options are:
+
+  * `ws` (default): Negotiate an appropriate protocol over websockets. Both `graphql-ws` and `subscription-transport-ws` are supported.
+
+  * `sse`: Use Server-Sent Events with a GET request.
+
+  * `sse_post`: Use Server-Sent events with a POST request.
+
+* `--readme <path-to-readme>:` The path to the markdown file which describes the monograph.
+
+* `--websocket-subprotocol:` The subprotocol to use when subscribing to the monograph. The supported protocols are auto(default), graphql-ws, and graphql-transport-ws. It should be used only if the subscription protocol is ws.
+
+* `--admission-webhook-url <url>` the base url of the admission webhook. This is the url that the controlplane will use to implement admission control for the federated graph.
+
+* `--admission-webhook-secret`: Allows you to sign requests (HMAC) made to your admission webhook url. The header containing this signature is `X-Cosmo-Signature-256`
+
+## Example
+
+Update the routing URL of the monograph "production":
+
+```bash
+npx wgc monograph update production -r http://new-domain.com/graphql
+```
+
+## Notes
+
+* The `npx wgc monograph update` command interacts with the Cosmo platform's control plane to update the specified monograph.
+
+* You can combine the options in a single command to update multiple things.
+

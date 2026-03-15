@@ -1,0 +1,179 @@
+---
+title: "Authentication & Authorization"
+icon: camera-cctv
+description: "Set up authentication and authorization for incoming requests"
+---
+
+<Info>
+  Authorization directives can be used in your schema to define granular authorization rules on the field definition level. Documentation can be found at [@authenticated](/federation/directives/authenticated) and [@requiresScopes](/federation/directives/requiresscopes).
+</Info>
+
+Cosmo router supports authenticating incoming requests using [JWKS](https://auth0.com/docs/secure/tokens/json-web-tokens/json-web-key-sets) authentication. The JSON Web Key Set (JWKS) is a set of keys that contains the public keys used to verify any JSON Web Token (JWT) issued by the authorization server and signed using a [signing algorithm](https://auth0.com/docs/tokens/concepts/signing-algorithms).
+
+To enable an authentication provider, add it to your configuration
+
+## Current Configuration
+
+In the current router version, the configuration and behavior of authentication have been redesigned. Instead of specifying a configuration per JWKS endpoint, you can now list multiple endpoints where all header rules apply to. Each JWKS endpoint can optionally specify a whitelist of supported JWT algorithms.
+
+### Configuration
+
+<CodeGroup>
+  ```yaml config.yaml
+  authentication:
+    jwt:
+      jwks:
+        - url: https://example.com/.well-known/jwks.json
+          refresh_interval: 1m
+          algorithms: ["RS256"]
+          refresh_unknown_kid:
+            enabled: true
+            max_wait: 2m
+            interval: 30s
+            burst: 5
+        - url: https://example2.com/.well-known/jwks.json
+          refresh_interval: 2m
+          # optional list of allowed algorithms per JWKS
+          algorithms: ["RS256", "EdDSA", "HS512"]
+          audiences:
+            - http://aud1
+            - http://aud2
+        - symmetric_algorithm: HS256
+          secret: <your_secret>
+          header_key_id: some-key-id
+      header_name: Authorization # Optional, Authorization is the default value
+      header_value_prefix: Bearer # Optional, Bearer is the default value
+      header_sources:
+        - type: header
+          name: X-Auth-Token
+          value_prefixes: [Token, MyToken]
+        - type: header
+          name: X-Authorization
+  ```
+</CodeGroup>
+
+The router configuration facilitates the setup of multiple JWKS (JSON Web Key Set) endpoints, each customizable with distinct retrieval settings. It allows specification of supported JWT (JSON Web Token) algorithms per endpoint. It also allows the use of secrets for symmetric algorithms, as it would be a security risk to expose them over a JWKS endpoint. Centralizing header rules application across all keys from every JWKS endpoint simplifies management. This setup grants centralized control while offering flexibility in the retrieval and processing of keys.
+
+For more information on the attributes, visit the auth configuration parameter section page [here](/router/configuration#authentication).
+
+### Disabling Authentication for Introspection Operations
+
+Cosmo Router supports bypassing authentication for introspection queries.
+
+This is useful, for example, when you want to configure client tooling from within a secured environment without requiring authentication tokens.
+Instead of having to disable authentication altogether, this feature allows you to keep the configuration as close to production as possible while still using introspection queries easily.
+Additionally, you can define a dedicated secret to authenticate introspection queries.
+
+<Warning>
+This feature is meant to be used in secure, internal environments. It is not recommended for use in a production environment.
+By default, introspection queries are not excluded from authentication.
+</Warning>
+
+To enable this feature, add the following section to your router configuration:
+
+<CodeGroup>
+  ```yaml config.yaml
+  authentication:
+    ignore_introspection: true # default is false
+    # other auth settings here
+  ```
+</CodeGroup>
+
+Now, when you send an introspection query, you won't need to provide an authentication token.
+
+```bash
+curl -X POST http://localhost:3002/graphql \
+  --header "Content-Type: application/json" \
+  --data '{"query": "{ __schema { types { name } } }"}'
+```
+
+Optionally, you can set a dedicated secret for introspection queries.
+
+<CodeGroup>
+  ```yaml config.yaml
+  introspection:
+    secret: 'dedicated_secret_for_introspection'
+  ```
+</CodeGroup>
+
+When a secret is set, you must include it in the `Authorization` header (without a Bearer prefix).
+
+```bash
+curl -X POST http://localhost:3002/graphql \
+  --header "Content-Type: application/json" \
+  --header "Authorization: dedicated_secret_for_introspection" \
+  --data '{"query": "{ __schema { types { name } } }"}'
+```
+
+
+## Old Router configuration (\< 0.168.1)
+
+<CodeGroup>
+  ```yaml config.yaml
+  authentication:
+    providers:
+      - name: My Auth Provider # Optional, used for error messages and diagnostics
+        jwks: # JWKS provider configuration
+          url: https://example.com/.well-known/jwks.json # URL to load the JWKS from (Authorization server)
+          header_names: [Authorization] # Optional, Authorization is the default value
+          header_value_prefixes: [Bearer] # Optional, Bearer is the default value
+          refresh_interval: 1m # Optional, How often the JWK is refreshed
+
+  ```
+</CodeGroup>
+
+Using multiple authentication providers is also supported. If authentication with any of the providers succeeds, the claims from the token are decoded and made available through the request pipeline. Notice that providers are tried in the same order as they are defined in the configuration and once a provider authenticates a request, no other providers are tried.
+
+### Enforce authentication
+
+By default, requests without authentication information are allowed. Only requests with invalid authentication information (e.g. an incorrectly signed token) produce a `403 Forbidden` response. To disable anonymous requests, use the Authorization configuration:
+
+<CodeGroup>
+  ```yaml config.yaml
+  authorization:
+    require_authentication: true
+  ```
+</CodeGroup>
+
+This causes requests without authorization information to produce a `401 Unauthorized`
+
+Authentication information is also available to custom modules. See [Access Authenticated Information](/router/custom-modules#access-authentication-information).
+
+### Forwarding authentication headers
+
+By default, the router won't forward authentication headers to subgraphs, but if desired this can be configured using [Proxy capabilities](/router/proxy-capabilities).
+
+
+### Refreshing Unknown KIDs on Demand
+
+When `refresh_unknown_kid.enabled` is set to `true`, the router will automatically attempt to refresh the JWKS (fetch updated keys) whenever it encounters a valid token with an unknown KID (Key ID). This is useful when key rotation has occurred but the router hasn't picked up the new keys in its regular refresh cycle.
+
+To prevent overwhelming the JWKS endpoint, this feature includes rate limiting controlled by the following parameters:
+- `burst`: Maximum number of refreshes allowed without waiting. Internally, the router keeps a counter of available burst tokens. Each time the `interval` elapses, one token is replenished, up to the `burst` limit.
+- `interval`: The time that must elapse between replenishing burst tokens, until the `burst` limit is reached.
+- `max_wait`: Maximum time a refresh is allowed to wait. If the computed wait would exceed this value, the request is rejected immediately with a 401 Unauthorized status instead of waiting.
+
+#### Rate Limiting Example
+
+Let's examine how rate limiting works with these settings:
+```yaml
+refresh_unknown_kid:
+  enabled: true
+  burst: 1
+  interval: 30s
+  max_wait: 110s
+```
+
+
+If we send 6 simultaneous requests with unknown KIDs:
+1. First request: JWKS refreshed immediately; 1 burst token is consumed.
+2. Second request: Waits for 30s (interval × 1); a token is replenished after 30s.
+3. Third request: Waits for 60s (interval × 2); a token is replenished after another 30s.
+4. Fourth request: Waits for 90s (interval × 3); a token is replenished after another 30s.
+5. Fifth request: Fails immediately (would require 120s wait > max_wait) with 401 Unauthorized.
+6. Sixth request: Fails immediately (would require 150s wait > max_wait) with 401 Unauthorized.
+
+The 2nd, 3rd and 4th requests are rate-limited because the burst capacity is set to 1. After the first request passes, the number of available burst tokens is 0 and subsequent requests must wait until the `interval` elapses. If `burst` were set to 2, the second request would also pass immediately.
+
+The `max_wait` setting prevents excessive wait times. In this example, since the 5th and 6th requests would require waiting longer than the configured `max_wait` of 110s, they immediately return with a 401 Unauthorized status instead of attempting to refresh.
+

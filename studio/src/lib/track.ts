@@ -1,8 +1,8 @@
 // Tracking. This will be available if the following scripts are embedded though CUSTOM_HEAD_SCRIPTS
 // Reo, PostHog
 
-import posthog from "posthog-js";
-import PostHogClient from "./posthog";
+import posthog from 'posthog-js';
+import PostHogClient from './posthog';
 
 declare global {
   interface Window {
@@ -12,7 +12,7 @@ declare global {
 }
 
 const resetTracking = () => {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     return;
   }
 
@@ -34,18 +34,18 @@ const identify = ({
   organizationSlug: string;
   plan?: string;
 }) => {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     return;
   }
 
-  if (process.env.NODE_ENV !== "production") {
+  if (process.env.NODE_ENV !== 'production') {
     return;
   }
 
   // Identify with Reo
   window.Reo?.identify({
     username: email,
-    type: "email",
+    type: 'email',
   });
 
   // Identify with PostHog

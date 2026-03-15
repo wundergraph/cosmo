@@ -1,24 +1,31 @@
 import { unresolvablePathError } from '../../errors/errors';
 import { getOrThrowError } from '../../utils/utils';
-import { GraphFieldData } from '../../utils/types';
-import { FieldName, RootFieldData, SelectionPath, SubgraphName, TypeName } from '../types/types';
+import { type GraphFieldData } from '../../utils/types';
+import {
+  type FieldName,
+  type RootFieldData,
+  type SelectionPath,
+  type SubgraphName,
+  type TypeName,
+} from '../types/types';
 
 import {
-  GenerateResolvabilityErrorReasonsParams,
-  GenerateSharedResolvabilityErrorReasonsParams,
-  GetMultipliedRelativeOriginPathsParams,
-  ResolvabilityErrorsParams,
-  RootResolvabilityErrorsParams,
-  SharedResolvabilityErrorsParams,
+  type GenerateResolvabilityErrorReasonsParams,
+  type GenerateSharedResolvabilityErrorReasonsParams,
+  type GetMultipliedRelativeOriginPathsParams,
+  type ResolvabilityErrorsParams,
+  type RootResolvabilityErrorsParams,
+  type SharedResolvabilityErrorsParams,
 } from './types/params';
-import { SelectionSetSegments } from './types/types';
+import { type SelectionSetSegments } from './types/types';
 import { LITERAL_SPACE, QUOTATION_JOIN } from '../constants/string-constants';
 
 export type UnresolvableFieldData = {
-  fieldName: string;
+  externalSubgraphNames: Set<SubgraphName>;
+  fieldName: FieldName;
   selectionSet: string;
-  subgraphNames: Set<string>;
-  typeName: string;
+  subgraphNames: Set<SubgraphName>;
+  typeName: TypeName;
 };
 
 export function newRootFieldData(
@@ -55,13 +62,25 @@ export function generateResolvabilityErrorReasons({
   rootFieldData,
   unresolvableFieldData,
 }: GenerateResolvabilityErrorReasonsParams): Array<string> {
-  const { fieldName, typeName, subgraphNames } = unresolvableFieldData;
-  const reasons: Array<string> = [
-    rootFieldData.message,
-    `The field "${typeName}.${fieldName}" is defined in the following subgraph` +
-      (subgraphNames.size > 1 ? `s` : ``) +
-      `: "${[...subgraphNames].join(QUOTATION_JOIN)}".`,
-  ];
+  const { externalSubgraphNames, fieldName, typeName, subgraphNames } = unresolvableFieldData;
+  const reasons: Array<string> = [rootFieldData.message];
+  if (externalSubgraphNames.size > 0) {
+    const nonExternalSubgraphNames = subgraphNames.difference(externalSubgraphNames);
+    reasons.push(
+      `The field "${typeName}.${fieldName}" is defined (and resolvable) in the following subgraph` +
+        (nonExternalSubgraphNames.size > 1 ? `s` : ``) +
+        `: "${[...nonExternalSubgraphNames].join(QUOTATION_JOIN)}".`,
+      `The field "${typeName}.${fieldName}" is defined "@external" (and unresolvable) in the following subgraph` +
+        (externalSubgraphNames.size > 1 ? `s` : ``) +
+        `: "${[...externalSubgraphNames].join(QUOTATION_JOIN)}".`,
+    );
+  } else {
+    reasons.push(
+      `The field "${typeName}.${fieldName}" is defined in the following subgraph` +
+        (subgraphNames.size > 1 ? `s` : ``) +
+        `: "${[...subgraphNames].join(QUOTATION_JOIN)}".`,
+    );
+  }
   if (entityAncestorData) {
     let hasIntersectingTargetSubgraph = false;
     for (const [targetSubgraphName, fieldSets] of entityAncestorData.fieldSetsByTargetSubgraphName) {
@@ -70,6 +89,9 @@ export function generateResolvabilityErrorReasons({
       }
       hasIntersectingTargetSubgraph = true;
       for (const fieldSet of fieldSets) {
+        if (entityAncestorData.subgraphName === targetSubgraphName) {
+          continue;
+        }
         reasons.push(
           `The entity ancestor "${entityAncestorData.typeName}" in subgraph "${entityAncestorData.subgraphName}" does not satisfy the key field set "${fieldSet}" to access subgraph "${targetSubgraphName}".`,
         );
@@ -106,13 +128,25 @@ export function generateSharedResolvabilityErrorReasons({
   rootFieldData,
   unresolvableFieldData,
 }: GenerateSharedResolvabilityErrorReasonsParams): Array<string> {
-  const { fieldName, typeName, subgraphNames } = unresolvableFieldData;
-  const reasons: Array<string> = [
-    rootFieldData.message,
-    `The field "${typeName}.${fieldName}" is defined in the following subgraph` +
-      (subgraphNames.size > 1 ? `s` : ``) +
-      `: "${[...subgraphNames].join(QUOTATION_JOIN)}".`,
-  ];
+  const { externalSubgraphNames, fieldName, typeName, subgraphNames } = unresolvableFieldData;
+  const reasons: Array<string> = [rootFieldData.message];
+  if (externalSubgraphNames.size > 0) {
+    const nonExternalSubgraphNames = subgraphNames.difference(externalSubgraphNames);
+    reasons.push(
+      `The field "${typeName}.${fieldName}" is defined (and resolvable) in the following subgraph` +
+        (nonExternalSubgraphNames.size > 1 ? `s` : ``) +
+        `: "${[...nonExternalSubgraphNames].join(QUOTATION_JOIN)}".`,
+      `The field "${typeName}.${fieldName}" is defined "@external" (and unresolvable) in the following subgraph` +
+        (externalSubgraphNames.size > 1 ? `s` : ``) +
+        `: "${[...externalSubgraphNames].join(QUOTATION_JOIN)}".`,
+    );
+  } else {
+    reasons.push(
+      `The field "${typeName}.${fieldName}" is defined in the following subgraph` +
+        (subgraphNames.size > 1 ? `s` : ``) +
+        `: "${[...subgraphNames].join(QUOTATION_JOIN)}".`,
+    );
+  }
   let hasIntersectingTargetSubgraph = false;
   for (const [targetSubgraphName, fieldSets] of entityAncestors.fieldSetsByTargetSubgraphName) {
     if (!subgraphNames.has(targetSubgraphName)) {
@@ -206,6 +240,7 @@ export function generateRootResolvabilityErrors({
     const selectionSetSegments = generateSelectionSetSegments(path);
     for (const [fieldName, fieldData] of fieldDataByName) {
       unresolvableFieldDatas.push({
+        externalSubgraphNames: fieldData.externalSubgraphNames,
         fieldName,
         selectionSet: renderSelectionSet(selectionSetSegments, fieldData),
         subgraphNames: fieldData.subgraphNames,
@@ -247,6 +282,7 @@ export function generateEntityResolvabilityErrors({
     const selectionSetSegments = generateSelectionSetSegments(fullPath);
     for (const [fieldName, fieldData] of fieldDataByName) {
       unresolvableFieldDatas.push({
+        externalSubgraphNames: fieldData.externalSubgraphNames,
         fieldName,
         selectionSet: renderSelectionSet(selectionSetSegments, fieldData),
         subgraphNames: fieldData.subgraphNames,
@@ -289,6 +325,7 @@ export function generateSharedEntityResolvabilityErrors({
     const selectionSetSegments = generateSelectionSetSegments(fullPath);
     for (const [fieldName, fieldData] of fieldDataByName) {
       unresolvableFieldDatas.push({
+        externalSubgraphNames: fieldData.externalSubgraphNames,
         fieldName,
         selectionSet: renderSelectionSet(selectionSetSegments, fieldData),
         subgraphNames: fieldData.subgraphNames,

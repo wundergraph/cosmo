@@ -4,6 +4,43 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.135.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.134.0...@wundergraph/cosmo-connect@0.135.0) (2026-03-12)
+
+### Features
+
+* add composedSchemaBreakingChanges to CreateProposalResponse ([#2640](https://github.com/wundergraph/cosmo/issues/2640)) ([2e0c11e](https://github.com/wundergraph/cosmo/commit/2e0c11ef59a294a726ec6b5dc45ee3b869d6cc46)) (@JivusAyrus)
+* add limit option for error/warning display in publish command ([#2634](https://github.com/wundergraph/cosmo/issues/2634)) ([1d0085d](https://github.com/wundergraph/cosmo/commit/1d0085d4de4db6ccab82bd42df5cd2a1500f3413)) (@JivusAyrus)
+
+# [0.134.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.133.0...@wundergraph/cosmo-connect@0.134.0) (2026-03-11)
+
+### Features
+
+* add composedSchemaBreakingChanges to UpdateProposalResponse ([#2627](https://github.com/wundergraph/cosmo/issues/2627)) ([2375cd8](https://github.com/wundergraph/cosmo/commit/2375cd845a9da0bd1933d6f3596b9a495a9228bd)) (@JivusAyrus)
+
+# [0.133.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.132.0...@wundergraph/cosmo-connect@0.133.0) (2026-03-04)
+
+### Features
+
+* add support for federated graph schema changes ([#2566](https://github.com/wundergraph/cosmo/issues/2566)) ([2f0a666](https://github.com/wundergraph/cosmo/commit/2f0a666d8c82d649707e57f6ccd085197e485da5)) (@JivusAyrus)
+
+# [0.132.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.131.0...@wundergraph/cosmo-connect@0.132.0) (2026-03-02)
+
+### Features
+
+* **studio:** delete persisted operations ([#2553](https://github.com/wundergraph/cosmo/issues/2553)) ([1adf02c](https://github.com/wundergraph/cosmo/commit/1adf02c0a84bb3ae63b1d900d1075ae2c8f8c069)) (@comatory)
+
+# [0.131.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.130.0...@wundergraph/cosmo-connect@0.131.0) (2026-02-26)
+
+### Features
+
+* add support for requires in protographic ([#2439](https://github.com/wundergraph/cosmo/issues/2439)) ([48a1613](https://github.com/wundergraph/cosmo/commit/48a1613285c978589b95a2c18d7618c9569b8f4f)) (@Noroth)
+
+# [0.130.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.129.0...@wundergraph/cosmo-connect@0.130.0) (2026-02-16)
+
+### Features
+
+* add support to mark API keys as external ([#2507](https://github.com/wundergraph/cosmo/issues/2507)) ([483d5c8](https://github.com/wundergraph/cosmo/commit/483d5c8e7ffbc2f71fcafdb745d20fc68670bb0c)) (@wilsonrivera)
+
 # [0.129.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.128.0...@wundergraph/cosmo-connect@0.129.0) (2026-02-12)
 
 ### Features

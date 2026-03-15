@@ -63,56 +63,94 @@ export default class SchemaLinter {
         case 'FIELD_NAMES_SHOULD_BE_CAMEL_CASE': {
           rulesConfig[ruleName] = [
             rule.severity,
-            { FieldDefinition: { style: 'camelCase' }, allowLeadingUnderscore: true },
+            {
+              FieldDefinition: { style: 'camelCase' },
+              allowLeadingUnderscore: true,
+            },
           ];
           break;
         }
         case 'TYPE_NAMES_SHOULD_BE_PASCAL_CASE': {
           rulesConfig[ruleName] = [
             rule.severity,
-            { ObjectTypeDefinition: { style: 'PascalCase' }, allowLeadingUnderscore: true },
+            {
+              ObjectTypeDefinition: {
+                style: 'PascalCase',
+                ignorePattern: SchemaLinter.createIgnorePatternFromReservedDefinitionList(
+                  SchemaLinter.reservedEdfsTypeDefinitions,
+                ),
+              },
+              allowLeadingUnderscore: true,
+            },
           ];
           break;
         }
         case 'SHOULD_NOT_HAVE_TYPE_PREFIX': {
           rulesConfig[ruleName] = [
             rule.severity,
-            { ObjectTypeDefinition: { forbiddenPrefixes: ['Type', 'type'] }, allowLeadingUnderscore: true },
+            {
+              ObjectTypeDefinition: { forbiddenPrefixes: ['Type', 'type'] },
+              allowLeadingUnderscore: true,
+            },
           ];
           break;
         }
         case 'SHOULD_NOT_HAVE_TYPE_SUFFIX': {
           rulesConfig[ruleName] = [
             rule.severity,
-            { ObjectTypeDefinition: { forbiddenSuffixes: ['Type', 'type'] }, allowLeadingUnderscore: true },
+            {
+              ObjectTypeDefinition: { forbiddenSuffixes: ['Type', 'type'] },
+              allowLeadingUnderscore: true,
+            },
           ];
           break;
         }
         case 'SHOULD_NOT_HAVE_INPUT_PREFIX': {
           rulesConfig[ruleName] = [
             rule.severity,
-            { InputObjectTypeDefinition: { forbiddenPrefixes: ['Input', 'input'] }, allowLeadingUnderscore: true },
+            {
+              InputObjectTypeDefinition: {
+                forbiddenPrefixes: ['Input', 'input'],
+              },
+              allowLeadingUnderscore: true,
+            },
           ];
           break;
         }
         case 'SHOULD_HAVE_INPUT_SUFFIX': {
           rulesConfig[ruleName] = [
             rule.severity,
-            { InputObjectTypeDefinition: { requiredSuffixes: ['Input'] }, allowLeadingUnderscore: true },
+            {
+              InputObjectTypeDefinition: {
+                requiredSuffixes: ['Input'],
+                ignorePattern: SchemaLinter.createIgnorePatternFromReservedDefinitionList(
+                  SchemaLinter.reservedEdfsInputDefinitions,
+                ),
+              },
+              allowLeadingUnderscore: true,
+            },
           ];
           break;
         }
         case 'SHOULD_NOT_HAVE_ENUM_PREFIX': {
           rulesConfig[ruleName] = [
             rule.severity,
-            { EnumTypeDefinition: { forbiddenPrefixes: ['Enum', 'enum', 'ENUM'] }, allowLeadingUnderscore: true },
+            {
+              EnumTypeDefinition: {
+                forbiddenPrefixes: ['Enum', 'enum', 'ENUM'],
+              },
+              allowLeadingUnderscore: true,
+            },
           ];
           break;
         }
         case 'SHOULD_NOT_HAVE_ENUM_SUFFIX': {
           rulesConfig[ruleName] = [
             rule.severity,
-            { EnumTypeDefinition: { forbiddenSuffixes: ['Enum', 'enum'] }, allowLeadingUnderscore: true },
+            {
+              EnumTypeDefinition: { forbiddenSuffixes: ['Enum', 'enum'] },
+              allowLeadingUnderscore: true,
+            },
           ];
           break;
         }
@@ -120,7 +158,9 @@ export default class SchemaLinter {
           rulesConfig[ruleName] = [
             rule.severity,
             {
-              InterfaceTypeDefinition: { forbiddenPrefixes: ['Interface', 'interface'] },
+              InterfaceTypeDefinition: {
+                forbiddenPrefixes: ['Interface', 'interface'],
+              },
               allowLeadingUnderscore: true,
             },
           ];
@@ -130,7 +170,9 @@ export default class SchemaLinter {
           rulesConfig[ruleName] = [
             rule.severity,
             {
-              InterfaceTypeDefinition: { forbiddenSuffixes: ['Interface', 'interface'] },
+              InterfaceTypeDefinition: {
+                forbiddenSuffixes: ['Interface', 'interface'],
+              },
               allowLeadingUnderscore: true,
             },
           ];
@@ -139,7 +181,10 @@ export default class SchemaLinter {
         case 'ENUM_VALUES_SHOULD_BE_UPPER_CASE': {
           rulesConfig[ruleName] = [
             rule.severity,
-            { EnumValueDefinition: { style: 'UPPER_CASE' }, allowLeadingUnderscore: true },
+            {
+              EnumValueDefinition: { style: 'UPPER_CASE' },
+              allowLeadingUnderscore: true,
+            },
           ];
           break;
         }
@@ -158,7 +203,9 @@ export default class SchemaLinter {
         case 'ORDER_FIELDS': {
           rulesConfig[ruleName] = [
             rule.severity,
-            { fields: ['ObjectTypeDefinition', 'InterfaceTypeDefinition', 'InputObjectTypeDefinition'] },
+            {
+              fields: ['ObjectTypeDefinition', 'InterfaceTypeDefinition', 'InputObjectTypeDefinition'],
+            },
           ];
           break;
         }
@@ -185,7 +232,9 @@ export default class SchemaLinter {
   schemaLintCheck = ({ schema, rulesInput }: { schema: string; rulesInput: SchemaLintDTO[] }): SchemaLintIssues => {
     const rulesConfig: RulesConfig = this.createRulesConfig(rulesInput);
 
-    this.linter.defineParser('@graphql-eslint/eslint-plugin', { parseForESLint });
+    this.linter.defineParser('@graphql-eslint/eslint-plugin', {
+      parseForESLint,
+    });
 
     for (const ruleName of Object.keys(LintRules)) {
       const ruleModule = this.getRuleModule(ruleName as LintRule);
@@ -241,4 +290,17 @@ export default class SchemaLinter {
       errors: lintErrors,
     };
   };
+
+  static createIgnorePatternFromReservedDefinitionList(list: Set<string>): string {
+    return `^(${[...list].join('|')})$`;
+  }
+
+  /** Reserved names for types to support EDFS router feature */
+  static reservedEdfsTypeDefinitions = new Set(['edfs__PublishResult']);
+  /** Reserved names for inputs to support EDFS router feature */
+  static reservedEdfsInputDefinitions = new Set([
+    'edfs__NatsStreamConfiguration',
+    'openfed__SubscriptionFieldCondition',
+    'openfed__SubscriptionFilterCondition',
+  ]);
 }

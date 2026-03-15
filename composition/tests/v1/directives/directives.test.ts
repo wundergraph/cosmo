@@ -1,18 +1,15 @@
 import {
   DEPRECATED,
   DEPRECATED_DEFINITION,
-  DirectiveName,
+  type DirectiveName,
   FIRST_ORDINAL,
   INACCESSIBLE,
   INACCESSIBLE_DEFINITION,
   invalidArgumentValueErrorMessage,
   invalidDirectiveError,
-  NormalizationFailure,
-  NormalizationSuccess,
-  normalizeSubgraph,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
+  type Subgraph,
   TAG,
   TAG_DEFINITION,
 } from '../../../src';
@@ -21,39 +18,28 @@ import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION, TAG_DIRECTIVE } from '
 import {
   federateSubgraphsSuccess,
   normalizeString,
+  normalizeSubgraphFailure,
   normalizeSubgraphSuccess,
   schemaToSortedNormalizedString,
 } from '../../utils/utils';
-import { DirectiveDefinitionNode } from 'graphql/language';
+import { type DirectiveDefinitionNode } from 'graphql';
 
 describe('Directive tests', () => {
   describe('Normalization tests', () => {
     test('that an error is returned if an @inaccessible Enum Value is used as a directive argument', () => {
-      const result = normalizeSubgraph(
-        na.definitions,
-        na.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(na, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError('z', 'Query.dummy', FIRST_ORDINAL, [
           invalidArgumentValueErrorMessage('B', '@z', 'enum', 'Enum!'),
         ]),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a string can be coerced into a List of String type', () => {
-      const result = normalizeSubgraph(
-        nb.definitions,
-        nb.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema, warnings } = normalizeSubgraphSuccess(nb, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
             `
@@ -65,35 +51,23 @@ describe('Directive tests', () => {
         `,
         ),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that an error is returned if null is provided to a non-nullable List type', () => {
-      const result = normalizeSubgraph(
-        nc.definitions,
-        nc.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(nc, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError('z', 'Query.dummy', FIRST_ORDINAL, [
           invalidArgumentValueErrorMessage('null', '@z', 'list', '[[String]!]!'),
         ]),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a nullable List type can accept null', () => {
-      const result = normalizeSubgraph(
-        nd.definitions,
-        nd.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema, warnings } = normalizeSubgraphSuccess(nd, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
             `
@@ -105,7 +79,7 @@ describe('Directive tests', () => {
         `,
         ),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that an object can be coerced into a List of Input Object type', () => {
@@ -130,31 +104,19 @@ describe('Directive tests', () => {
     });
 
     test('that an error is returned if an @inaccessible Enum attempts to coerce into a List type', () => {
-      const result = normalizeSubgraph(
-        nf.definitions,
-        nf.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationFailure;
-      expect(result.success).toBe(false);
-      expect(result.errors).toHaveLength(1);
-      expect(result.errors[0]).toStrictEqual(
+      const { errors, warnings } = normalizeSubgraphFailure(nf, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
         invalidDirectiveError('z', 'Query.dummy', FIRST_ORDINAL, [
           invalidArgumentValueErrorMessage('B', '@z', 'list', '[[Enum!]!]!'),
         ]),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that an Enum Value can be coerced into a List of Enum type', () => {
-      const result = normalizeSubgraph(
-        ng.definitions,
-        ng.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema, warnings } = normalizeSubgraphSuccess(ng, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
             INACCESSIBLE_DIRECTIVE +
@@ -172,23 +134,16 @@ describe('Directive tests', () => {
         `,
         ),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that an integer can be coerced into a List of Int type', () => {
-      const result = normalizeSubgraph(
-        nh.definitions,
-        nh.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema, warnings } = normalizeSubgraphSuccess(nh, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Int!]!]!) on FIELD_DEFINITION
-            
             
             type Query {
               dummy: String! @z(list: 1)
@@ -196,23 +151,16 @@ describe('Directive tests', () => {
         `,
         ),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
-    test('that a float can be coerced into a List of Int type', () => {
-      const result = normalizeSubgraph(
-        ni.definitions,
-        ni.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+    test('that a float can be coerced into a List of Float type', () => {
+      const { schema, warnings } = normalizeSubgraphSuccess(ni, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Float!]!]!) on FIELD_DEFINITION
-            
             
             type Query {
               dummy: String! @z(list: 1.1)
@@ -220,23 +168,16 @@ describe('Directive tests', () => {
         `,
         ),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
-    test('that a custom scalar can be coerced into a List of Int type', () => {
-      const result = normalizeSubgraph(
-        nj.definitions,
-        nj.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+    test('that a custom scalar can be coerced into a List of that type', () => {
+      const { schema, warnings } = normalizeSubgraphSuccess(nj, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
             `
             directive @z(list: [[Scalar!]!]!) on FIELD_DEFINITION
-            
             
             type Query {
               dummy: String! @z(list: {name: "test"})
@@ -246,23 +187,16 @@ describe('Directive tests', () => {
         `,
         ),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that a integer can be coerced into a Float', () => {
-      const result = normalizeSubgraph(
-        nk.definitions,
-        nk.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
-      expect(schemaToSortedNormalizedString(result.schema)).toBe(
+      const { schema, warnings } = normalizeSubgraphSuccess(nk, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
         normalizeString(
           SCHEMA_QUERY_DEFINITION +
             `
             directive @z(float: Float!) on FIELD_DEFINITION
-            
             
             type Query {
               dummy: String! @z(float: 1)
@@ -270,17 +204,24 @@ describe('Directive tests', () => {
         `,
         ),
       );
-      expect(result.warnings).toHaveLength(0);
+      expect(warnings).toHaveLength(0);
     });
 
     test('that @specifiedBy is supported', () => {
-      const result = normalizeSubgraph(
-        subgraphA.definitions,
-        subgraphA.name,
-        undefined,
-        ROUTER_COMPATIBILITY_VERSION_ONE,
-      ) as NormalizationSuccess;
-      expect(result.success).toBe(true);
+      const { schema, warnings } = normalizeSubgraphSuccess(subgraphA, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(schemaToSortedNormalizedString(schema)).toBe(
+        normalizeString(
+          SCHEMA_QUERY_DEFINITION +
+            `
+          scalar JSON @specifiedBy(url: "https://wundergraph.com")
+          
+          type Query {
+            json: JSON!
+          }
+      `,
+        ),
+      );
+      expect(warnings).toHaveLength(0);
     });
 
     test('that directives declared after schema definitions and extensions are still valid #1', () => {

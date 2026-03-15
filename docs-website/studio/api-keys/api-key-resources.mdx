@@ -1,0 +1,18 @@
+---
+title: "API Key Resources"
+description: "Configure the resources accessible to your API keys."
+icon: "database"
+---
+
+<Info>
+    We have updated how the RBAC (Resource-based access control) works and deprecated assigning resources directly to API Keys.
+</Info>
+
+To create an API Key with limited resources you'll have to [create a new group](/studio/groups#how-to-create-a-group) for the API Key or use an existing group with that have been configured with the expected limitations.
+
+<Note>
+    Existing API Keys have been assigned the same group as the member that created them, with the limitation of API Keys which resources.
+
+    For API Keys with resources, we have kept the legacy validation in place but we highly recommend to migrate them to the new groups system.
+</Note>
+

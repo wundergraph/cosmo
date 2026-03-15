@@ -19,6 +19,7 @@ WunderGraph Cosmo Controlplane
 | commonLabels | object | `{}` | Add labels to all deployed resources |
 | configuration.allowedOrigins[0] | string | `"*"` |  |
 | configuration.authRedirectUri | string | `"http://controlplane.wundergraph.local/v1/auth/callback"` |  |
+| configuration.authSsoCookieDomain | string | `".wundergraph.local"` | The domain for the cookie used to store SSO authentication information |
 | configuration.cdnBaseUrl | string | `"http://cosmo-cdn:8787"` | URL of the CDN to use for serving router configs and persistent operations |
 | configuration.clickhouseDsn | string | `"http://default:changeme@cosmo-clickhouse:8123?database=cosmo"` |  |
 | configuration.clickhouseMigrationDsn | string | `"clickhouse://default:changeme@cosmo-clickhouse:9000?database=cosmo"` |  |

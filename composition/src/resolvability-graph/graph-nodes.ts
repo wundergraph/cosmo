@@ -1,11 +1,12 @@
 import { add, getEntriesNotInHashSet, getValueOrDefault } from '../utils/utils';
-import { GraphFieldData } from '../utils/types';
-import { FieldName, NodeName, SubgraphName, TypeName } from './types/types';
+import { type GraphFieldData } from '../utils/types';
+import { type FieldName, type NodeName, type SubgraphName, type TypeName } from './types/types';
 
 export class Edge {
   edgeName: string;
   id: number;
   isAbstractEdge: boolean;
+  isExternal = false;
   isInaccessible = false;
   node: GraphNode;
   visitedIndices = new Set<number>();
@@ -16,6 +17,10 @@ export class Edge {
     this.isAbstractEdge = isAbstractEdge;
     this.node = node;
   }
+
+  isEdgeInaccessible(): boolean {
+    return this.isInaccessible || this.node.isInaccessible;
+  }
 }
 
 export type GraphNodeOptions = {
@@ -24,6 +29,7 @@ export type GraphNodeOptions = {
 };
 
 export class GraphNode {
+  externalFieldSets = new Set<string>();
   fieldDataByName = new Map<FieldName, GraphFieldData>();
   headToTailEdges = new Map<string, Edge>();
   entityEdges = new Array<Edge>();
@@ -79,7 +85,6 @@ export class GraphNode {
 export class RootNode {
   fieldDataByName = new Map<FieldName, GraphFieldData>();
   headToSharedTailEdges = new Map<string, Array<Edge>>();
-  // It is used
   isAbstract = false;
   isRootNode = true;
   typeName: TypeName;

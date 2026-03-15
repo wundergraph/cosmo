@@ -1,45 +1,25 @@
-import { RefreshInterval } from "@/components/analytics/refresh-interval";
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import {
-  useAnalyticsQueryState,
-  useDateRangeQueryState,
-} from "@/components/analytics/useAnalyticsQueryState";
-import {
-  DatePickerWithRange,
-  DateRangePickerChangeHandler,
-} from "@/components/date-picker-with-range";
-import { EmptyState } from "@/components/empty-state";
-import { getDashboardLayout } from "@/components/layout/dashboard-layout";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Loader } from "@/components/ui/loader";
-import { Pagination } from "@/components/ui/pagination";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Spacer } from "@/components/ui/spacer";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { formatDateTime } from "@/lib/format-date";
-import { createDateRange, msToTime } from "@/lib/insights-helpers";
-import { NextPageWithLayout } from "@/lib/page";
-import { cn } from "@/lib/utils";
-import { useQuery } from "@connectrpc/connect-query";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { CheckIcon, UpdateIcon } from "@radix-ui/react-icons";
-import { keepPreviousData } from "@tanstack/react-query";
+import { RefreshInterval } from '@/components/analytics/refresh-interval';
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useAnalyticsQueryState, useDateRangeQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
+import { EmptyState } from '@/components/empty-state';
+import { getDashboardLayout } from '@/components/layout/dashboard-layout';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Loader } from '@/components/ui/loader';
+import { Pagination } from '@/components/ui/pagination';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Spacer } from '@/components/ui/spacer';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { useFeatureLimit } from '@/hooks/use-feature-limit';
+import { formatDateTime } from '@/lib/format-date';
+import { createDateRange, msToTime } from '@/lib/insights-helpers';
+import { NextPageWithLayout } from '@/lib/page';
+import { cn } from '@/lib/utils';
+import { useQuery } from '@connectrpc/connect-query';
+import { ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, UpdateIcon } from '@radix-ui/react-icons';
+import { keepPreviousData } from '@tanstack/react-query';
 import {
   createColumnHelper,
   flexRender,
@@ -48,28 +28,24 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
-} from "@tanstack/react-table";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import {
-  getOrganizationWebhookHistory,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { GetOrganizationWebhookHistoryResponse } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { formatISO } from "date-fns";
-import { useRouter } from "next/router";
-import { WebhookDeliveryDetails } from "@/components/webhook-delivery-details";
+} from '@tanstack/react-table';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { getOrganizationWebhookHistory } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { GetOrganizationWebhookHistoryResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { formatISO } from 'date-fns';
+import { useRouter } from 'next/router';
+import { WebhookDeliveryDetails } from '@/components/webhook-delivery-details';
 
 const WebhookHistoryPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const pageNumber = router.query.page
-    ? parseInt(router.query.page as string)
-    : 1;
-  const limit = Number.parseInt((router.query.pageSize as string) || "10");
+  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
+  const limit = Number.parseInt((router.query.pageSize as string) || '10');
   const {
     dateRange: { start, end },
     range,
   } = useDateRangeQueryState();
   const { refreshInterval } = useAnalyticsQueryState();
-  const type = (router.query.type as string) || "";
+  const type = (router.query.type as string) || '';
 
   const deliveryId = router.query.details as string;
   const { data, isLoading, error, isFetching, refetch } = useQuery(
@@ -93,15 +69,12 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
 
   const applyParams = useApplyParams();
 
-  const onDateRangeChange: DateRangePickerChangeHandler = ({
-                                                             dateRange,
-                                                             range,
-                                                           }) => {
+  const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange, range }) => {
     if (range) {
       applyParams({
         range: range.toString(),
         dateRange: null,
-        page: "1",
+        page: '1',
       });
     } else if (dateRange) {
       const stringifiedDateRange = JSON.stringify({
@@ -112,23 +85,20 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
       applyParams({
         range: null,
         dateRange: stringifiedDateRange,
-        page: "1",
+        page: '1',
       });
     }
   };
 
-  const historyRetention = useFeatureLimit("analytics-retention", 7);
+  const historyRetention = useFeatureLimit('analytics-retention', 7);
 
   const noOfPages = Math.ceil((data?.totalCount || 0) / limit);
 
-  const columnHelper =
-    createColumnHelper<
-      GetOrganizationWebhookHistoryResponse["deliveries"][number]
-    >();
+  const columnHelper = createColumnHelper<GetOrganizationWebhookHistoryResponse['deliveries'][number]>();
 
   const columns = [
     columnHelper.display({
-      id: "status",
+      id: 'status',
       size: 40,
       header: () => <div className="w-4"></div>,
       cell: (ctx) => {
@@ -146,46 +116,38 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
         );
       },
     }),
-    columnHelper.accessor("createdAt", {
+    columnHelper.accessor('createdAt', {
       header: () => <div>Time</div>,
       cell: (ctx) => formatDateTime(new Date(ctx.getValue())),
     }),
-    columnHelper.accessor("type", {
+    columnHelper.accessor('type', {
       header: () => <div>Type</div>,
       cell: (ctx) => <div>{ctx.getValue()}</div>,
     }),
-    columnHelper.accessor("eventName", {
+    columnHelper.accessor('eventName', {
       header: () => <div>Event</div>,
       cell: (ctx) => <Badge variant="secondary">{ctx.getValue()}</Badge>,
     }),
-    columnHelper.accessor("responseStatusCode", {
+    columnHelper.accessor('responseStatusCode', {
       header: () => <div>Status</div>,
       cell: (ctx) => {
         const statusCode = ctx.row.original.responseStatusCode;
         const isSuccess = !!statusCode && statusCode >= 200 && statusCode < 300;
 
         return (
-          <div
-            className={cn(
-              "flex items-center gap-x-2",
-              !isSuccess && "text-destructive",
-            )}
-          >
-            <span>
-              {ctx.row.original.responseStatusCode ||
-                ctx.row.original.responseErrorCode}
-            </span>
+          <div className={cn('flex items-center gap-x-2', !isSuccess && 'text-destructive')}>
+            <span>{ctx.row.original.responseStatusCode || ctx.row.original.responseErrorCode}</span>
           </div>
         );
       },
     }),
-    columnHelper.accessor("duration", {
+    columnHelper.accessor('duration', {
       header: () => <div>Duration</div>,
       cell: (ctx) => {
         return <span>{msToTime(ctx.getValue())}</span>;
       },
     }),
-    columnHelper.accessor("retryCount", {
+    columnHelper.accessor('retryCount', {
       header: () => <div>Retries</div>,
     }),
   ];
@@ -235,18 +197,10 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
           </SelectContent>
         </Select>
         <Spacer />
-        <Button
-          isLoading={isLoading || isFetching}
-          size="icon"
-          variant="outline"
-          onClick={() => refetch()}
-        >
+        <Button isLoading={isLoading || isFetching} size="icon" variant="outline" onClick={() => refetch()}>
           <UpdateIcon />
         </Button>
-        <RefreshInterval
-          value={refreshInterval}
-          onChange={onRefreshIntervalChange}
-        />
+        <RefreshInterval value={refreshInterval} onChange={onRefreshIntervalChange} />
       </div>
       <TableWrapper className="max-h-full">
         <Table>
@@ -261,12 +215,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
                       }}
                       key={header.id}
                     >
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
+                      {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   );
                 })}
@@ -283,33 +232,26 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
                   });
                 }}
                 className="group cursor-pointer hover:bg-secondary/30"
-                data-state={row.getIsSelected() && "selected"}
+                data-state={row.getIsSelected() && 'selected'}
               >
                 {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
+                  <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                 ))}
               </TableRow>
             ))}
           </TableBody>
         </Table>
         {isLoading && <Loader className="my-12" />}
-        {!isLoading &&
-          (error || data?.response?.code !== EnumStatusCode.OK) && (
-            <EmptyState
-              icon={<ExclamationTriangleIcon />}
-              title="Could not retrieve history"
-              description={
-                data?.response?.details || error?.message || "Please try again"
-              }
-              actions={<Button onClick={() => refetch()}>Retry</Button>}
-            />
-          )}
+        {!isLoading && (error || data?.response?.code !== EnumStatusCode.OK) && (
+          <EmptyState
+            icon={<ExclamationTriangleIcon />}
+            title="Could not retrieve history"
+            description={data?.response?.details || error?.message || 'Please try again'}
+            actions={<Button onClick={() => refetch()}>Retry</Button>}
+          />
+        )}
         {data?.deliveries.length === 0 && (
-          <p className="w-full p-8 text-center text-sm italic text-muted-foreground">
-            No history found
-          </p>
+          <p className="w-full p-8 text-center text-sm italic text-muted-foreground">No history found</p>
         )}
       </TableWrapper>
       <Pagination limit={limit} noOfPages={noOfPages} pageNumber={pageNumber} />
@@ -318,7 +260,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
         onOpenChange={(isOpen) => {
           if (!isOpen) {
             const newQuery = { ...router.query };
-            delete newQuery["details"];
+            delete newQuery['details'];
             router.replace({
               query: newQuery,
             });
@@ -331,11 +273,7 @@ const WebhookHistoryPage: NextPageWithLayout = () => {
 };
 
 WebhookHistoryPage.getLayout = (page) => {
-  return getDashboardLayout(
-    page,
-    "Webhook History",
-    "Track all webhooks that are fired in your organization",
-  );
+  return getDashboardLayout(page, 'Webhook History', 'Track all webhooks that are fired in your organization');
 };
 
 export default WebhookHistoryPage;
