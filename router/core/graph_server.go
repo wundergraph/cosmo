@@ -568,12 +568,12 @@ type graphMux struct {
 	validationCache             *ristretto.Cache[uint64, bool]
 	operationHashCache          *ristretto.Cache[uint64, string]
 
-	accessLogsFileLogger      *logging.BufferedLogger
-	metricStore               rmetric.Store
-	prometheusCacheMetrics    *rmetric.CacheMetrics
-	otelCacheMetrics          *rmetric.CacheMetrics
-	streamMetricStore         rmetric.StreamMetricStore
-	prometheusMetricsExporter *graphqlmetrics.PrometheusMetricsExporter
+	accessLogsFileLogger   *logging.BufferedLogger
+	metricStore            rmetric.Store
+	prometheusCacheMetrics *rmetric.CacheMetrics
+	otelCacheMetrics       *rmetric.CacheMetrics
+	streamMetricStore      rmetric.StreamMetricStore
+	prometheusMetricsExporter  *graphqlmetrics.PrometheusMetricsExporter
 }
 
 // buildOperationCaches creates the caches for the graph mux.

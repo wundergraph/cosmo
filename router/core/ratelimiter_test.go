@@ -157,6 +157,54 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 	})
 }
 
+func TestRateLimiterOverrideValidation(t *testing.T) {
+	t.Parallel()
+
+	t.Run("rejects zero rate", func(t *testing.T) {
+		t.Parallel()
+		_, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			Overrides: map[string]RateLimitOverride{
+				"key": {Rate: 0, Burst: 1, Period: time.Second},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "rate, burst, and period must be > 0")
+	})
+
+	t.Run("rejects zero burst", func(t *testing.T) {
+		t.Parallel()
+		_, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			Overrides: map[string]RateLimitOverride{
+				"key": {Rate: 1, Burst: 0, Period: time.Second},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "rate, burst, and period must be > 0")
+	})
+
+	t.Run("rejects zero period", func(t *testing.T) {
+		t.Parallel()
+		_, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			Overrides: map[string]RateLimitOverride{
+				"key": {Rate: 1, Burst: 1, Period: 0},
+			},
+		})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "rate, burst, and period must be > 0")
+	})
+
+	t.Run("accepts valid override", func(t *testing.T) {
+		t.Parallel()
+		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			Overrides: map[string]RateLimitOverride{
+				"key": {Rate: 5, Burst: 10, Period: time.Second},
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, rl)
+	})
+}
+
 func TestRateLimiterOverrides(t *testing.T) {
 	t.Parallel()
 

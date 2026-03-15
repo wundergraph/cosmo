@@ -2270,6 +2270,7 @@
               "description": "Override the default rate limit for specific keys. The key is the full Redis key (prefix:suffix), and the value is the rate limit configuration for that key.",
               "additionalProperties": {
                 "type": "object",
+                "additionalProperties": false,
                 "required": ["rate", "burst", "period"],
                 "properties": {
                   "rate": {

@@ -45,6 +45,9 @@ func NewCosmoRateLimiter(opts *CosmoRateLimiterOptions) (rl *CosmoRateLimiter, e
 			if key == "" {
 				continue
 			}
+			if override.Rate <= 0 || override.Burst <= 0 || override.Period <= 0 {
+				return nil, fmt.Errorf("invalid rate limit override for key %q: rate, burst, and period must be > 0", key)
+			}
 			overrides[key] = redis_rate.Limit{
 				Rate:   override.Rate,
 				Burst:  override.Burst,
