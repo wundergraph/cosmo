@@ -227,9 +227,8 @@ func TestMemoryEntityCache_EvictsWhenFull(t *testing.T) {
 			hitCount++
 		}
 	}
-	// With 1KB max and 512B entries, at most 2 should fit
-	assert.LessOrEqual(t, hitCount, 2, "cache should evict entries to stay within MaxCost")
-	assert.Greater(t, hitCount, 0, "cache should have at least one entry")
+	// With 1KB max and 512B entries, exactly 2 should fit.
+	assert.Equal(t, 2, hitCount, "cache should evict entries to stay within MaxCost")
 }
 
 func TestMemoryEntityCache_Close(t *testing.T) {

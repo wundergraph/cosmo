@@ -32,7 +32,7 @@ func TestEntityCaching(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
 			detailsAfterFirst := counters.details.Load()
 			require.Equal(t, int64(1), detailsAfterFirst)
@@ -40,7 +40,7 @@ func TestEntityCaching(t *testing.T) {
 			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res2.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res2.Body)
 
 			// Details subgraph should NOT be called again (cache hit)
 			require.Equal(t, int64(1), counters.details.Load())
@@ -61,12 +61,12 @@ func TestEntityCaching(t *testing.T) {
 			res1 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res1.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res1.Body)
 
 			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "2") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"2","name":"Gadget","description":"A high-tech gadget with many features"}}}`, res2.Body)
+			require.Equal(t, `{"data":{"item":{"id":"2","name":"Gadget","description":"A high-tech gadget with many features"}}}`, res2.Body)
 
 			// Both entities should produce cache entries
 			require.Equal(t, 2, cache.Len())
@@ -75,7 +75,7 @@ func TestEntityCaching(t *testing.T) {
 			res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res3.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res3.Body)
 		})
 	})
 
@@ -206,7 +206,7 @@ func TestEntityCaching(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description available } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use","available":true}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use","available":true}}}`, res.Body)
 
 			detailsAfterFirst := counters.details.Load()
 			inventoryAfterFirst := counters.inventory.Load()
@@ -214,7 +214,7 @@ func TestEntityCaching(t *testing.T) {
 			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description available } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use","available":true}}}`, res2.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use","available":true}}}`, res2.Body)
 
 			require.Equal(t, detailsAfterFirst, counters.details.Load())
 			require.Equal(t, inventoryAfterFirst, counters.inventory.Load())
@@ -444,7 +444,7 @@ func TestEntityCaching(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
 			detailsAfterFirst := counters.details.Load()
 			require.Equal(t, int64(1), detailsAfterFirst)
@@ -456,7 +456,7 @@ func TestEntityCaching(t *testing.T) {
 			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res2.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res2.Body)
 			require.Equal(t, int64(1), counters.details.Load())
 		})
 	})
@@ -663,13 +663,13 @@ func TestEntityCaching(t *testing.T) {
 
 			// Phase 1: Cache is healthy. First request populates cache.
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
-			require.JSONEq(t, expected, res.Body)
+			require.Equal(t, expected, res.Body)
 			detailsAfterFirst := counters.details.Load()
-			require.Greater(t, detailsAfterFirst, int64(0))
+			require.Equal(t, int64(1), detailsAfterFirst)
 
 			// Second request should be a cache hit — subgraph counter stays the same.
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
-			require.JSONEq(t, expected, res.Body)
+			require.Equal(t, expected, res.Body)
 			require.Equal(t, detailsAfterFirst, counters.details.Load(), "expected cache hit: details counter should not change")
 
 			// Phase 2: Cache starts failing. Breaker is still closed, so it tries the cache
@@ -677,7 +677,7 @@ func TestEntityCaching(t *testing.T) {
 			cache.SetFailing(true)
 			for range 2 {
 				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
-				require.JSONEq(t, expected, res.Body)
+				require.Equal(t, expected, res.Body)
 			}
 			require.True(t, cb.IsOpen(), "breaker should be open after 2 consecutive failures")
 
@@ -685,8 +685,8 @@ func TestEntityCaching(t *testing.T) {
 			// Subgraph counter should increase with every request.
 			counterBefore := counters.details.Load()
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
-			require.JSONEq(t, expected, res.Body)
-			require.Greater(t, counters.details.Load(), counterBefore, "expected subgraph fetch when breaker is open")
+			require.Equal(t, expected, res.Body)
+			require.Equal(t, counterBefore+1, counters.details.Load(), "expected subgraph fetch when breaker is open")
 
 			// Phase 4: Cache recovers. Wait for cooldown so breaker transitions to half-open.
 			cache.SetFailing(false)
@@ -694,13 +694,13 @@ func TestEntityCaching(t *testing.T) {
 
 			// The next request is the half-open probe. It should succeed and close the breaker.
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
-			require.JSONEq(t, expected, res.Body)
+			require.Equal(t, expected, res.Body)
 			require.False(t, cb.IsOpen(), "breaker should be closed after successful probe")
 
 			// Phase 5: Cache works again. Verify we get a cache hit.
 			detailsBefore := counters.details.Load()
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
-			require.JSONEq(t, expected, res.Body)
+			require.Equal(t, expected, res.Body)
 			require.Equal(t, detailsBefore, counters.details.Load(), "expected cache hit after recovery")
 		})
 	})
@@ -730,7 +730,7 @@ func TestEntityCaching(t *testing.T) {
 			// Trip the breaker: 2 failures while closed.
 			for range 2 {
 				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
-				require.JSONEq(t, expected, res.Body)
+				require.Equal(t, expected, res.Body)
 			}
 			require.True(t, cb.IsOpen(), "breaker should be open after threshold failures")
 
@@ -740,13 +740,13 @@ func TestEntityCaching(t *testing.T) {
 
 			// Probe request: succeeds, closes the breaker, populates cache.
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
-			require.JSONEq(t, expected, res.Body)
+			require.Equal(t, expected, res.Body)
 			require.False(t, cb.IsOpen(), "breaker should be closed after successful probe")
 
 			// Next request should be a cache hit — subgraph not called.
 			detailsBefore := counters.details.Load()
 			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
-			require.JSONEq(t, expected, res.Body)
+			require.Equal(t, expected, res.Body)
 			require.Equal(t, detailsBefore, counters.details.Load(), "expected cache hit after recovery")
 		})
 	})
@@ -774,7 +774,7 @@ func TestEntityCaching(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
 			detailsAfterWarm := counters.details.Load()
 
@@ -881,7 +881,7 @@ func TestEntityCaching(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
 			detailsAfterWarm := counters.details.Load()
 
@@ -1013,7 +1013,7 @@ func TestEntityCaching(t *testing.T) {
 			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
 			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 		})
 	})
 
