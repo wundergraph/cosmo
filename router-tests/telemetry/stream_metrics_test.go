@@ -10,7 +10,7 @@ import (
 	"github.com/hasura/go-graphql-client"
 	"github.com/nats-io/nats.go"
 	"github.com/stretchr/testify/require"
-	integration "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	"github.com/wundergraph/cosmo/router-tests/events"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/pkg/config"
@@ -52,9 +52,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 				rm := metricdata.ResourceMetrics{}
 				require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
+				scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "router.streams.sent.messages")
+				metricEntry := testutils.GetMetricByName(scope, "router.streams.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -119,6 +119,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				clientRunCh := make(chan error)
 				go func() { clientRunCh <- client.Run() }()
 				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
+				xEnv.WaitForTriggerCount(1, WaitTimeout)
 
 				events.ProduceKafkaMessage(t, xEnv, time.Second, topic, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
@@ -129,9 +130,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
 					require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
+					scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "router.streams.received.messages")
+					metricEntry := testutils.GetMetricByName(scope, "router.streams.received.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -189,9 +190,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 				rm := metricdata.ResourceMetrics{}
 				require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
+				scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "router.streams.sent.messages")
+				metricEntry := testutils.GetMetricByName(scope, "router.streams.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -241,9 +242,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 				rm := metricdata.ResourceMetrics{}
 				require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
+				scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "router.streams.sent.messages")
+				metricEntry := testutils.GetMetricByName(scope, "router.streams.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -310,13 +311,10 @@ func TestFlakyEventMetrics(t *testing.T) {
 				}()
 
 				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
+				xEnv.WaitForTriggerCount(1, WaitTimeout)
 
 				// Send a mutation to trigger the first subscription
-				err = xEnv.NatsConnectionDefault.Publish(xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename":"Employee"}`))
-				require.NoError(t, err)
-
-				err = xEnv.NatsConnectionDefault.Flush()
-				require.NoError(t, err)
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, xEnv.GetPubSubName("employeeUpdated.3"), []byte(`{"id":3,"__typename":"Employee"}`), 1, WaitTimeout)
 
 				testenv.AwaitChannelWithT(t, WaitTimeout, subscriptionArgsCh, func(t *testing.T, args subscriptionArgs) {
 					require.NoError(t, args.errValue)
@@ -325,9 +323,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
 					require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
+					scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "router.streams.received.messages")
+					metricEntry := testutils.GetMetricByName(scope, "router.streams.received.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -387,9 +385,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 				rm := metricdata.ResourceMetrics{}
 				require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-				scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
+				scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
 				require.NotNil(t, scope)
-				metricEntry := integration.GetMetricByName(scope, "router.streams.sent.messages")
+				metricEntry := testutils.GetMetricByName(scope, "router.streams.sent.messages")
 				require.NotNil(t, metricEntry)
 
 				sum, _ := metricEntry.Data.(metricdata.Sum[int64])
@@ -454,6 +452,7 @@ func TestFlakyEventMetrics(t *testing.T) {
 				go func() { runCh <- client.Run() }()
 
 				xEnv.WaitForSubscriptionCount(1, WaitTimeout)
+				xEnv.WaitForTriggerCount(1, WaitTimeout)
 				events.ProduceRedisMessage(t, xEnv, topic, `{"__typename":"Employee","id": 1,"update":{"name":"foo"}}`)
 
 				testenv.AwaitChannelWithT(t, WaitTimeout, subscriptionArgsCh, func(t *testing.T, args subscriptionArgs) {
@@ -463,9 +462,9 @@ func TestFlakyEventMetrics(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
 					require.NoError(t, metricReader.Collect(context.Background(), &rm))
 
-					scope := integration.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
+					scope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.streams")
 					require.NotNil(t, scope)
-					metricEntry := integration.GetMetricByName(scope, "router.streams.received.messages")
+					metricEntry := testutils.GetMetricByName(scope, "router.streams.received.messages")
 					require.NotNil(t, metricEntry)
 
 					sum, _ := metricEntry.Data.(metricdata.Sum[int64])

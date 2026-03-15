@@ -1,0 +1,391 @@
+---
+title: "Cost Control"
+description: "Protect the API from expensive operations by estimating query complexity before execution using @cost and @listSize directives"
+icon: scale-balanced
+---
+
+<Warning>
+    This feature is not released yet. Preview documentation only.
+</Warning>
+
+## Overview
+
+Cost Control prevents a single GraphQL request from using too many system resources and
+slowing everything else down. A query requesting deeply nested lists can generate
+thousands of resolver calls and overwhelm subgraphs, while a simple field lookup costs almost nothing.
+Cost Control allows assigning weights to fields and estimating query complexity *before* execution begins.
+
+When Cost Control is enabled, the router calculates and records costs for each incoming operation.
+In **enforce** mode, operations exceeding the configured limit are rejected immediately,
+and no subgraph requests are made, protecting the infrastructure from resource exhaustion.
+
+The Cosmo Router implements the [IBM GraphQL Cost Directive Specification](https://ibm.github.io/graphql-specs/cost-spec.html),
+adapted for GraphQL Federation.
+
+### Key differences from the IBM specification
+
+Weights use plain integers instead of stringified floats, as defined in the IBM spec.
+
+The IBM specification does not account for federation. Static cost is calculated based on the query plan,
+which uses a federation of subgraphs to create a chain of fetches. This chain is invisible at the supergraph
+level and may include entity calls, `@requires` fetches, and similar operations. These are accounted for because they make
+certain queries more expensive.
+
+When a field returns a list of objects with a type weight, the IBM spec does not multiply the type's own weight
+by the list size — only the children's costs are multiplied. This implementation multiplies both the type weight
+and children's costs by the list size, resulting in higher cost estimates for list fields with weighted types.
+This is done because federation may trigger entity fetches between subgraphs.
+
+The router supports both static (estimated) and runtime (actual) cost measurements.
+Estimated cost is calculated before the execution, based on directive weights and list size estimates.
+Actual cost is calculated after the execution, using real list sizes returned by subgraphs.
+
+## How Cost is Calculated
+
+The router walks through the query and sums the cost of each field.
+
+By default, object types (including interfaces and unions) cost `1`, scalar and enum fields cost `0`.
+For example, this query has a cost of `4`:
+
+```graphql
+query {
+  book(id: 1) {          # Book object: 1
+    title                 # String scalar: 0
+    author {              # Author object: 1
+      name                # String scalar: 0
+    }
+    publisher {           # Publisher object: 1
+      address {           # Address object: 1
+        zipCode           # Int scalar: 0
+      }
+    }
+  }
+}
+```
+The router also accounts for weights assigned to the same field coordinate in different subgraphs,
+allowing specific resolvers to be weighted differently per subgraph.
+
+### List Fields Multiply Cost
+
+When a field returns a list, the cost of that field and all its children is multiplied by the expected list size.
+Since the router cannot determine actual list sizes during planning, it uses estimates.
+
+```graphql
+query {
+  employees {            # List of Employee
+    id
+    department {
+      name
+    }
+  }
+}
+```
+
+With a default list size of 10, this query costs: `10 × (1 Employee + 1 Department) = 20`
+
+## Configuration
+
+Cost Control is enabled in the router configuration:
+
+```yaml
+security:
+  cost_control:
+    enabled: true
+    mode: enforce
+    estimated_list_size: 10
+    max_estimated_limit: 1000
+    expose_headers: true
+```
+
+| Option                | Environment Variable                         | Default   | Description                                                                                                                     |
+|-----------------------|----------------------------------------------|-----------|---------------------------------------------------------------------------------------------------------------------------------|
+| `enabled`             | `SECURITY_COST_CONTROL_ENABLED`             | `false`   | When true, the router calculates costs for every operation.                                                                     |
+| `mode`                | `SECURITY_COST_CONTROL_MODE`                | `measure` | `measure` calculates costs only; `enforce` rejects operations exceeding the estimated limit.                                    |
+| `max_estimated_limit` | `SECURITY_COST_CONTROL_MAX_ESTIMATED_LIMIT` | `0`       | Maximum allowed estimated cost for a query. Rejection of operation happens only for positive values and when mode is 'enforce'. |
+| `estimated_list_size` | `SECURITY_COST_CONTROL_ESTIMATED_LIST_SIZE` | `0`       | Default assumed size for list fields when no `@listSize` directive is specified. Required for Cost Control to work.             |
+| `expose_headers`      | `SECURITY_COST_CONTROL_EXPOSE_HEADERS`      | `false`   | Adds `X-WG-Cost-Estimated` and `X-WG-Cost-Actual` response headers to every operation.                                          |
+
+## Customizing Cost with Directives
+
+Default weights work for many APIs, but the `@cost` and `@listSize` directives allow fine-tuning.
+
+### The @cost Directive
+
+`@cost` assigns custom weights to types, fields or arguments that are more expensive than average.
+
+When specified **on a type** — all fields returning this type inherit the weight:
+
+```graphql
+type Address @cost(weight: 5) {
+  street: String
+  city: String
+  zipCode: String
+}
+```
+
+When specified **on a field** — only that field carries the weight:
+
+```graphql
+type Query {
+  searchFirst(term: String!): Result @cost(weight: 10)
+}
+```
+
+When specified **on an argument** — adds cost for expensive argument processing:
+
+```graphql
+type Query {
+  users(filter: UserFilter @cost(weight: 3)): [User]
+}
+```
+
+When specified **on a field returning a list** — the list size multiplies the weight of this field:
+
+```graphql
+type Query {
+  searchAll(term: String!): [Result] @cost(weight: 10)
+}
+```
+
+### The @listSize Directive
+
+`@listSize` provides better list size estimates than the global default.
+
+**Static size with `assumedSize`** — when a field consistently returns a predictable number of items:
+
+```graphql
+type Query {
+  topProducts: [Product] @listSize(assumedSize: 5)
+  featuredCategories: [Category] @listSize(assumedSize: 3)
+}
+```
+
+**Dynamic size with `slicingArguments`** — when the list size is controlled by a pagination argument:
+
+```graphql
+type Query {
+  products(first: Int!): [Product] @listSize(slicingArguments: ["first"])
+  search(limit: Int!): [Result] @listSize(slicingArguments: ["limit"])
+}
+```
+
+The router reads the argument value from the query to determine the multiplier:
+
+```graphql
+query {
+  products(first: 20) {   # Multiplier is 20
+    name
+  }
+}
+```
+
+When multiple slicing arguments are provided, the router uses the maximum value among them.
+
+## Accessing Cost in Custom Modules
+
+In custom modules, the calculated cost is accessible through the operation context:
+
+```go
+func (m *MyModule) Middleware(ctx core.RequestContext, next http.Handler) {
+    // Get cost after planning
+    cost, err := ctx.Operation().Cost()
+    if err != nil {
+        // Cost Control was not enabled.
+    }
+    
+    // Use estimated cost for custom logic (rate limiting, logging, etc.)
+    if cost.Estimated > m.warningThreshold {
+        m.logger.Warn("High cost operation", "cost", cost.Estimated)
+    }
+    
+    next.ServeHTTP(ctx.ResponseWriter(), ctx.Request())
+}
+```
+
+Use cases:
+
+- Apply rate limiting based on query cost
+- Log expensive operations for analysis
+- Support billing based on query complexity
+- Throttle requests during high-load periods
+
+## Error Responses
+
+When a query exceeds the estimated cost limit (in enforce mode), the router returns a 400 status:
+
+```json
+{
+  "errors": [
+    {
+      "message": "The estimated query cost 1540 exceeds the maximum allowed limit 1500"
+    }
+  ]
+}
+```
+
+## Telemetry
+
+When Cost Control is enabled, the router can emit OpenTelemetry metrics for every operation.
+These metrics are available through both OTEL and Prometheus exporters, carrying the same
+operation-level attributes as other router metrics (`wg.operation.name`, `wg.operation.type`,
+`wg.operation.protocol`, `wg.client.name`, `wg.client.version`, `http.status_code`).
+For more details on exporting and querying, see [Metrics & Monitoring](/router/metrics-and-monitoring).
+
+Cost metrics are disabled by default and must be explicitly enabled through `cost_stats` under the
+OTLP or Prometheus telemetry configuration:
+
+```yaml
+telemetry:
+  metrics:
+    otlp:
+      cost_stats:
+        estimated_enabled: true
+        actual_enabled: true
+    prometheus:
+      cost_stats:
+        estimated_enabled: true
+        actual_enabled: true
+```
+
+The environment variables corresponding to the config options above:
+
+    `METRICS_OTLP_COST_STATS_ESTIMATED_ENABLED`
+    `METRICS_OTLP_COST_STATS_ACTUAL_ENABLED`
+    `PROMETHEUS_COST_STATS_ESTIMATED_ENABLED`
+    `PROMETHEUS_COST_STATS_ACTUAL_ENABLED`
+
+### Metrics
+
+| Metric Name                               | Instrument Type | Description                                                                                                    |
+|-------------------------------------------|-----------------|----------------------------------------------------------------------------------------------------------------|
+| `router.graphql.operation.cost.estimated` | Int64 Histogram | Estimated cost calculated before execution, based on directive weights and list size estimates.                |
+| `router.graphql.operation.cost.actual`    | Int64 Histogram | Actual cost calculated after execution using real list sizes returned by subgraphs.                            |
+
+Those metrics use the exact same attribute set as other router request-level metrics
+(like `router.http.requests`, `router.http.request.duration_milliseconds`).
+
+<Info>
+    Cost metrics require both Cost Control to be enabled (`security.cost_control.enabled: true`) and the
+    corresponding `cost_stats` toggle to be set. The actual metrics additionally require execution
+    to complete so the router can observe real list sizes.
+</Info>
+
+### Using cost metrics
+
+By default, histogram bucket boundaries are the following:
+
+    0, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000
+
+The best practice is to assign the smallest possible weights to fields. It is better to keep costs low.
+If the estimate exceeds `10000`, the value will be placed in the infinite bucket.
+Non-scalar fields have a default weight of 1. It is a good idea to pick custom weights close to 1.
+
+In **measure mode**, use cost metrics to understand the traffic before enabling enforcement:
+
+- Compare estimated vs. actual costs to configure `estimated_list_size` and `@listSize`.
+- Identify operations where the delta is consistently large — these benefit from more precise `@listSize` annotations.
+
+## Response Headers
+
+When `expose_headers` is enabled, the router adds cost information to every response as HTTP headers.
+This is useful for debugging, client-side observability, and integrating cost awareness into API tooling.
+
+| Header                | Description                                                                                         |
+|-----------------------|-----------------------------------------------------------------------------------------------------|
+| `X-WG-Cost-Estimated` | The estimated cost calculated before execution, based on directive weights and list size estimates. |
+| `X-WG-Cost-Actual`    | The actual cost calculated after execution using real list sizes from subgraph responses.           |
+
+Both headers are present on successful responses. On rejected responses (enforce mode), only `X-WG-Cost-Estimated` is set,
+since the query was not executed.
+
+```yaml
+security:
+  cost_control:
+    expose_headers: true
+```
+
+## Best Practices
+
+### Start with Measure Mode
+
+Start with `mode: measure` to calculate costs without rejecting queries.
+This reveals traffic patterns before enabling enforcement.
+
+```yaml
+security:
+  cost_control:
+    enabled: true
+    mode: measure
+    estimated_list_size: 10
+```
+
+### Pick Parameters for @listSize Carefully
+
+The default list size significantly impacts cost calculations.
+If lists typically return 5–20 items, a default of 10 is reasonable.
+For fields that return large lists (100+ items), consider:
+
+1. Using `@listSize(assumedSize: N)` on those specific fields
+2. Requiring pagination with `slicingArguments`
+
+### Annotate Expensive Resolvers
+
+Apply `@cost` to fields that trigger expensive operations:
+
+- External API calls
+- Complex computations
+- Large database queries
+- Fields that fan out to multiple subgraphs
+
+```graphql
+type Query {
+  # Calls external payment API
+  paymentHistory(userId: ID!): [Payment] @cost(weight: 5)
+  
+  # Requires joining multiple tables
+  analyticsReport(dateRange: DateRange!): Report @cost(weight: 10)
+}
+```
+
+### Design for Pagination
+
+Pagination improves cost accuracy. `slicingArguments` provides precise multipliers based on client requests:
+
+```graphql
+type Query {
+  # Good: cost scales with requested page size
+  users(first: Int!, after: String): [User] @listSize(slicingArguments: ["first"])
+  
+  # Less ideal: cost uses default estimated_list_size
+  allUsers: [User]
+}
+```
+
+### Nested Lists
+
+Nested list fields require special attention, as costs multiply:
+
+```graphql
+query {
+  departments {           # 10 departments
+    employees {           # × 10 employees each = 100
+      projects {          # × 10 projects each = 1000
+        tasks {           # × 10 tasks each = 10000
+          name
+        }
+      }
+    }
+  }
+}
+```
+
+With a default list size of 10, this query costs over 10,000.
+Use `@listSize` to provide realistic estimates for deeply nested structures.
+
+## Features Not Yet Implemented
+
+- `sizedFields` in `@listSize` for applying list size estimates to specific child fields rather than all children
+- `requireOneSlicingArgument` in `@listSize` for validation that exactly one slicing argument is provided
+- **Weights on input object fields** — when an argument accepts an input object, the `@cost` weights on its nested fields are not yet accumulated recursively
+- **Weights on directive arguments** — `@cost` placed on arguments of custom directives is not accounted for
+

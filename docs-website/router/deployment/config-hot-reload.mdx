@@ -1,0 +1,45 @@
+---
+title: "Config Hot Reload"
+description: "Config Hot-Reload allows updating a running router without interrupting existing client traffic."
+icon: "arrows-rotate"
+---
+
+## Zero-Downtime Deployments
+
+By default, the router polls the CDN (Content Delivery Network) for configuration updates every 15 seconds. When the configuration changes e.g. after publishing a subgraph schema, the router initiates a graceful shutdown of the current graph instance. During this process, both graph instances run simultaneously to avoid interrupting existing and new client traffic. Once all requests have been served, the previous graph instance is cleaned up.
+
+There are a few configuration flags that impact this procedure:
+
+* **GRACE\_PERIOD**: Defines the maximum time for graceful shutdown of graph resources, such as the planner cache and flushing telemetry data. The default value is 30 seconds.
+
+* **SHUTDOWN\_DELAY**: Defines the maximum time the router waits before canceling all server resources, such as active client connections, to shut down the process. This setting applies when a shutdown signal (e.g., `SIGTERM`, `SIGINT`, `SIGHUP`) is sent to the process. The default value is 60 seconds.
+
+<Info>
+  Timeouts can be [configured](/router/configuration) as environment variables and in the config.yaml file.
+</Info>
+
+## Hot-reloading with execution config file provider
+
+It is also possible to hot-reload the router with a new execution config file provider. This allows you to dynamically update the execution configuration without restarting the router.
+
+### Example configuration
+
+```yaml config.yaml
+execution_config:
+  file:
+    path: "<path to your execution config>"
+    watch: true
+    watch_interval: "5s"
+```
+
+This will behave similarly to the CDN polling with regard to router lifecycle.
+
+### Subscriptions
+
+WebSocket or SSE (Server-Sent Events) connections are long-lived and will be closed immediately after the active graph instance is shut down. Clients must reconnect to restore the connection.
+
+### Latency Implications and Cache Warming
+
+When the configuration is swapped, a new graph is created internally. This implies that the planner cache is invalidated, as a plan is coupled to a specific graph. In high-traffic scenarios, this can therefore increase latency.
+
+To mitigate this issue, the router supports **cache warming**. For more details on cache warming, see the [Cache Warmer documentation](/concepts/cache-warmer).

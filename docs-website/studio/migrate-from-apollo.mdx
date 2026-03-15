@@ -1,0 +1,87 @@
+---
+title: "Migrate from Apollo"
+description: "Migrate from Apollo GraphOS to WunderGraph Cosmo with a single click"
+icon: "swap-arrows"
+---
+
+If you are a user of Apollo GraphOS with configured graphs, then you can migrate to WunderGraph Cosmo with a click of a button.
+
+<Frame caption="Migrate from Apollo button">
+  <img 
+    src="/images/studio/no-graphs-found-migrate-from-apollo.png" 
+    alt="WunderGraph Docs showing no graphs found with option to migrate from Apollo" 
+    title="No graphs found — migrate from Apollo" 
+  />
+</Frame>
+
+Once you have clicked on "Migrate from Apollo", a modal will appear. This modal will request your "Graph API Key" for the federated graph you wish to migrate.
+
+<Info>
+  Your API key is never saved nor stored; it is only temporarily used to fetch the necessary data for migration.
+</Info>
+
+### Steps to fetch the graph API key
+<Steps>
+  <Step title="Navigate to Apollo GraphOS Studio"/>
+  <Step title="Select the graph that has to be migrated">
+    <Frame>
+      <img 
+        src="/images/studio/cloud-supergraph-section-overview.png" 
+        alt="Cosmo Docs cloud supergraph section with main variant and graph search bar" 
+        title="Cloud Supergraph section overview" 
+      />
+    </Frame>
+  </Step>
+
+  <Step title="Navigate to the settings page of the graph">
+    <Frame>
+      <img 
+        src="/images/studio/settings-option-in-operations-section.png" 
+        alt="Cosmo Docs user interface showing settings option in operations section" 
+        title="Settings option in operations section" 
+      />
+    </Frame>
+  </Step>
+
+  <Step title="Navigate to the 'This Graph' tab and click on API Keys">
+    <Frame>
+      <img 
+        src="/images/studio/build-variant-settings-this-graph.png" 
+        alt="Cosmo Docs settings page for build variant with This Graph tab highlighted" 
+        title="Build variant settings — This Graph" 
+      />
+    </Frame>
+<br/>
+    <Frame>
+      <img 
+        src="/images/studio/api-keys-highlighted-in-general-settings.png" 
+        alt="General settings section showing API Keys highlighted as current selection" 
+        title="API Keys highlighted in general settings" 
+      />
+    </Frame>
+  </Step>
+
+
+  <Step title="Create a new key and copy">
+    <Frame>
+      <img 
+        src="/images/studio/create-api-key-for-spotify-demo-graph.png" 
+        alt="Create API key for Spotify Demo Graph to uniquely identify data" 
+        title="Create API key for Spotify Demo Graph" 
+      />
+    </Frame>
+<br/>
+    <Frame caption="Migrate from Apollo modal">
+      <img 
+        src="/images/studio/apollo-migration-page-with-api-key-fields.png" 
+        alt="Cosmo Docs migration modal showing Graph API Key and Variant Name fields" 
+        title="Apollo migration page with API key fields" 
+      />
+    </Frame>
+  </Step>
+</Steps>
+
+Once you have acquired the key, paste the key into the Graph API Key input, type the name of the variant to be migrated into the Graph Variant Name input and click on the "Migrate" button.
+
+That's it! After a few seconds, your graphs will have been successfully migrated to WunderGraph Cosmo.
+
