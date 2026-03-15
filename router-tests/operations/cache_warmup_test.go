@@ -1378,22 +1378,26 @@ func writeTestConfig(t *testing.T, version string, path string) {
 					RootNodes: []*nodev1.TypeField{
 						{
 							TypeName:   "Query",
-							FieldNames: []string{"hello"},
+							FieldNames: []string{"hello", "world"},
 						},
 					},
 					CustomStatic: &nodev1.DataSourceCustom_Static{
 						Data: &nodev1.ConfigurationVariable{
-							StaticVariableContent: `{"hello": "Hello!"}`,
+							StaticVariableContent: `{"hello": "Hello!", "world": "World!"}`,
 						},
 					},
 					Id: "0",
 				},
 			},
-			GraphqlSchema: "schema {\n  query: Query\n}\ntype Query {\n  hello: String\n}",
+			GraphqlSchema: "schema {\n  query: Query\n}\ntype Query {\n  hello: String\n  world: String\n}",
 			FieldConfigurations: []*nodev1.FieldConfiguration{
 				{
 					TypeName:  "Query",
 					FieldName: "hello",
+				},
+				{
+					TypeName:  "Query",
+					FieldName: "world",
 				},
 			},
 		},
