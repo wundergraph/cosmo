@@ -4,21 +4,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alicebob/miniredis/v2"
-	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 
-	"github.com/wundergraph/cosmo/router/pkg/entitycache"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
-
-func newTestRedisCache(t *testing.T) (*entitycache.RedisEntityCache, *miniredis.Miniredis) {
-	t.Helper()
-	mr := miniredis.RunT(t)
-	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
-	t.Cleanup(func() { client.Close() })
-	return entitycache.NewRedisEntityCache(client, "test"), mr
-}
 
 func TestRedis(t *testing.T) {
 	t.Parallel()

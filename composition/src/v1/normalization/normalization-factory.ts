@@ -445,6 +445,9 @@ export class NormalizationFactory {
   directiveDefinitionDataByName = initializeDirectiveDefinitionDatas();
   doesParentRequireFetchReasons = false;
   edfsDirectiveReferences = new Set<string>();
+  // Populated in Phase 1 of validateAndExtractEntityCachingConfigs().
+  // Used as a lookup in Phase 2 to verify that @queryCache/@cacheInvalidate/@cachePopulate
+  // fields return entity types that have opted into caching.
   entityCacheConfigByTypeName = new Map<
     string,
     { maxAgeSeconds: number; includeHeaders: boolean; partialCacheLoad: boolean; shadowMode: boolean }
@@ -3212,13 +3215,34 @@ export class NormalizationFactory {
     }
   }
 
+  /*
+   * Validates and extracts entity caching directive configurations from the subgraph schema.
+   *
+   * Entity caching allows the router to cache resolved entities (types with @key) in an external
+   * store (e.g., Redis) and serve subsequent requests from cache instead of re-fetching from subgraphs.
+   *
+   * Five directives work together to control caching behavior:
+   *
+   *   @entityCache(maxAge: Int!)       — on OBJECT types: marks an entity type as cacheable
+   *   @queryCache(maxAge: Int!)        — on Query fields: enables cache reads for a query that returns a cached entity
+   *   @cacheInvalidate                 — on Mutation/Subscription fields: evicts the returned entity from cache
+   *   @cachePopulate(maxAge: Int)      — on Mutation/Subscription fields: writes the returned entity into cache
+   *   @is(field: String!)             — on arguments: maps a query argument to an entity @key field for cache key construction
+   *
+   * Processing happens in three phases:
+   *   Phase 1: Collect @entityCache from entity types → populates entityCacheConfigByTypeName lookup
+   *   Phase 2: Process root type fields (Query/Mutation/Subscription) for @queryCache, @cacheInvalidate, @cachePopulate, @is
+   *   Phase 3: Attach validated configs to their respective ConfigurationData entries for serialization
+   */
   validateAndExtractEntityCachingConfigs() {
     const entityCacheConfigs: EntityCacheConfig[] = [];
     const rootFieldCacheConfigs: RootFieldCacheConfig[] = [];
     const cachePopulateConfigs: CachePopulateConfig[] = [];
     const cacheInvalidateConfigs: CacheInvalidateConfig[] = [];
 
-    // Phase 1: Extract @entityCache from object types
+    // Phase 1: Extract @entityCache from object types.
+    // This must run before Phase 2 because @queryCache/@cacheInvalidate/@cachePopulate validate
+    // that the return entity type has @entityCache via the entityCacheConfigByTypeName lookup.
     for (const [typeName, parentData] of this.parentDefinitionDataByTypeName) {
       if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
         continue;
@@ -3273,7 +3297,12 @@ export class NormalizationFactory {
       this.entityCacheConfigByTypeName.set(typeName, config);
     }
 
-    // Phase 2: Process fields on Query, Mutation, Subscription types
+    // Phase 2: Process root type fields for @queryCache, @cacheInvalidate, @cachePopulate, and @is.
+    // Each directive has placement constraints:
+    //   @queryCache → Query fields only (return type must be a cached entity)
+    //   @cacheInvalidate → Mutation/Subscription fields only (return type must be a cached entity)
+    //   @cachePopulate → Mutation/Subscription fields only (return type must be a cached entity)
+    //   @cacheInvalidate and @cachePopulate are mutually exclusive on the same field.
     for (const [parentTypeName, parentData] of this.parentDefinitionDataByTypeName) {
       if (parentData.kind !== Kind.OBJECT_TYPE_DEFINITION) {
         continue;
@@ -3363,7 +3392,12 @@ export class NormalizationFactory {
             continue;
           }
 
-          // Build argument-to-key mappings
+          // Build argument-to-key mappings for cache key construction.
+          // The router needs to know how to derive cache keys from query arguments.
+          // For example: query { product(id: ID!) @queryCache } → cache key includes the "id" argument value.
+          // Mappings are built by matching arguments to @key fields either by name (auto-mapping)
+          // or explicitly via @is(field: "keyFieldName") on the argument.
+          // List-returning fields skip mapping entirely — they can only populate the cache, not read from it.
           const isListReturn = this.isListType(fieldData.node.type);
           const keyFieldSets = this.keyFieldSetDatasByTypeName.get(returnTypeName);
           const keyFields = this.extractKeyFieldNames(keyFieldSets);
@@ -3496,8 +3530,13 @@ export class NormalizationFactory {
       }
     }
 
-    // Phase 3: Attach configs to ConfigurationData
-    // Group by the entity type's configuration data entry
+    // Phase 3: Attach validated configs to their respective ConfigurationData entries.
+    // The router deserializes ConfigurationData per subgraph type, so each config must be placed
+    // on the correct type's entry:
+    //   - entityCacheConfigs → on the entity type itself (e.g., "Product")
+    //   - rootFieldCacheConfigs → on the Query type
+    //   - cachePopulateConfigs → on the Mutation or Subscription type
+    //   - cacheInvalidateConfigs → on the Mutation or Subscription type
     if (
       entityCacheConfigs.length > 0 ||
       rootFieldCacheConfigs.length > 0 ||
@@ -3548,6 +3587,9 @@ export class NormalizationFactory {
     }
   }
 
+  // Recursively unwraps NonNullType wrappers to check if the underlying type is a list.
+  // Used to determine whether a @queryCache field returns a single entity (cache-readable)
+  // or a list (cache writes only, no key-based lookups).
   isListType(typeNode: TypeNode): boolean {
     if (typeNode.kind === Kind.LIST_TYPE) {
       return true;
@@ -3558,6 +3600,9 @@ export class NormalizationFactory {
     return false;
   }
 
+  // Collects the top-level field names from all @key(fields: "...") directives on an entity type.
+  // Only simple (non-nested) field names are extracted — compound keys like @key(fields: "store { id }")
+  // are filtered out because nested fields cannot be directly mapped to query arguments.
   extractKeyFieldNames(keyFieldSets: Map<string, KeyFieldSetData> | undefined): Set<string> {
     const keyFields = new Set<string>();
     if (!keyFieldSets) {
@@ -3575,6 +3620,16 @@ export class NormalizationFactory {
     return keyFields;
   }
 
+  // Builds mappings between a @queryCache field's arguments and the returned entity's @key fields.
+  // These mappings tell the router how to construct cache keys from query arguments at runtime.
+  //
+  // Two mapping strategies are supported:
+  //   1. Explicit: argument has @is(field: "keyFieldName") → maps argument to the named @key field
+  //   2. Auto-mapping: argument name matches a @key field name → implicitly mapped
+  //
+  // Returns the mappings and optionally the first unmapped @key field (for a warning).
+  // For list-returning fields, returns empty mappings — the router cannot do key-based cache
+  // lookups for lists, but can still populate the cache with individual entities from the response.
   buildArgumentKeyMappings(
     fieldData: FieldData,
     fieldCoords: string,
@@ -3582,6 +3637,7 @@ export class NormalizationFactory {
     keyFields: Set<string>,
     isListReturn: boolean,
   ): { mappings: EntityKeyMappingConfig[]; unmappedKeyField: string | undefined } {
+    // List-returning fields skip mapping — cache reads require a single entity key
     if (isListReturn || keyFields.size === 0) {
       return { mappings: [], unmappedKeyField: undefined };
     }

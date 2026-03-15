@@ -701,7 +701,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 
 	// Mutation/subscription cache populate
 	for _, cp := range in.CachePopulateConfigurations {
-		if strings.EqualFold(cp.OperationType, "subscription") {
+		if cp.OperationType == "Subscription" {
 			for _, ec := range in.EntityCacheConfigurations {
 				ttl := time.Duration(ec.MaxAgeSeconds) * time.Second
 				if cp.MaxAgeSeconds != nil {

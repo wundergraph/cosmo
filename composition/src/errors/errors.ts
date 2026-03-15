@@ -1699,16 +1699,21 @@ export function oneOfRequiredFieldsError({ requiredFieldNames, typeName }: OneOf
   );
 }
 
-// Entity caching directive error messages
+// Entity caching directive error messages.
+// These are reported during composition when subgraph schemas use entity caching directives
+// incorrectly. Each error corresponds to a validation rule in validateAndExtractEntityCachingConfigs().
 
+// @entityCache requires the type to be a federation entity (must have @key)
 export function entityCacheWithoutKeyErrorMessage(typeName: string): string {
   return `Type "${typeName}" has @entityCache but no @key directive.`;
 }
 
+// @queryCache is restricted to Query fields — Mutation/Subscription fields use @cachePopulate or @cacheInvalidate
 export function queryCacheOnNonQueryFieldErrorMessage(fieldCoords: string): string {
   return `@queryCache is only valid on Query fields, found on "${fieldCoords}".`;
 }
 
+// @queryCache requires the return type to be a federation entity — non-entity types have no @key for cache key construction
 export function queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
   return (
     `Field "${fieldCoords}" has @queryCache but returns non-entity type "${returnType}".` +
@@ -1716,18 +1721,22 @@ export function queryCacheOnNonEntityReturnTypeErrorMessage(fieldCoords: string,
   );
 }
 
+// The entity type must explicitly opt in to caching via @entityCache — @queryCache alone is insufficient
 export function queryCacheReturnTypeWithoutEntityCacheErrorMessage(fieldCoords: string, returnType: string): string {
   return `Field "${fieldCoords}" returns entity type "${returnType}" which does not have @entityCache.`;
 }
 
+// Shared validation for maxAge across @entityCache, @queryCache, and @cachePopulate
 export function maxAgeNotPositiveIntegerErrorMessage(directiveName: string, value: number): string {
   return `@${directiveName} maxAge must be a positive integer, got "${value}".`;
 }
 
+// @is maps arguments to @key fields — it's meaningless without @queryCache since only @queryCache uses argument-to-key mappings
 export function isWithoutQueryCacheErrorMessage(argumentName: string, fieldCoords: string): string {
   return `@is on argument "${argumentName}" of field "${fieldCoords}" has no effect without @queryCache.`;
 }
 
+// @is(field: "...") must reference a field that appears in the entity's @key directive
 export function isReferencesUnknownKeyFieldErrorMessage(
   isField: string,
   argumentName: string,
@@ -1740,6 +1749,7 @@ export function isReferencesUnknownKeyFieldErrorMessage(
   );
 }
 
+// Each @key field may only be mapped to one argument — duplicates would create ambiguous cache keys
 export function duplicateKeyFieldMappingErrorMessage(fieldCoords: string, keyField: string): string {
   return `Multiple arguments on field "${fieldCoords}" map to @key field "${keyField}".`;
 }
@@ -1751,22 +1761,27 @@ export function redundantIsDirectiveErrorMessage(argumentName: string, fieldCoor
   );
 }
 
+// @cacheInvalidate is for side-effect operations — Query fields should use @queryCache instead
 export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
   return `@cacheInvalidate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
 }
 
+// @cacheInvalidate needs to know which entity to evict — non-entity return types have no cache key
 export function cacheInvalidateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
   return `Field "${fieldCoords}" has @cacheInvalidate but returns non-entity type "${returnType}".`;
 }
 
+// @cachePopulate is for side-effect operations — Query fields should use @queryCache instead
 export function cachePopulateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
   return `@cachePopulate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
 }
 
+// @cachePopulate needs to know which entity to write — non-entity return types have no cache key
 export function cachePopulateOnNonEntityReturnTypeErrorMessage(fieldCoords: string, returnType: string): string {
   return `Field "${fieldCoords}" has @cachePopulate but returns non-entity type "${returnType}".`;
 }
 
+// A field cannot both populate and invalidate — these are contradictory cache operations
 export function cacheInvalidateAndPopulateMutualExclusionErrorMessage(fieldCoords: string): string {
   return (
     `Field "${fieldCoords}" has both @cacheInvalidate and @cachePopulate.` +
