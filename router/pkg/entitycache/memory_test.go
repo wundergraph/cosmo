@@ -11,8 +11,18 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
+const testCacheSize = 10 * 1024 * 1024 // 10MB
+
+func newTestCache(t *testing.T) *MemoryEntityCache {
+	t.Helper()
+	c, err := NewMemoryEntityCache(testCacheSize)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Close() })
+	return c
+}
+
 func TestMemoryEntityCache_GetMiss(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	entries, err := c.Get(context.Background(), []string{"key1", "key2"})
 	require.NoError(t, err)
 	require.Len(t, entries, 2)
@@ -21,7 +31,7 @@ func TestMemoryEntityCache_GetMiss(t *testing.T) {
 }
 
 func TestMemoryEntityCache_SetThenGet(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	ctx := context.Background()
 	err := c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
@@ -37,7 +47,7 @@ func TestMemoryEntityCache_SetThenGet(t *testing.T) {
 }
 
 func TestMemoryEntityCache_PartialHit(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
@@ -51,7 +61,7 @@ func TestMemoryEntityCache_PartialHit(t *testing.T) {
 }
 
 func TestMemoryEntityCache_Delete(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
@@ -65,13 +75,13 @@ func TestMemoryEntityCache_Delete(t *testing.T) {
 }
 
 func TestMemoryEntityCache_DeleteNonexistent(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	err := c.Delete(context.Background(), []string{"nonexistent"})
 	require.NoError(t, err)
 }
 
 func TestMemoryEntityCache_TTLExpiry(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
@@ -82,16 +92,15 @@ func TestMemoryEntityCache_TTLExpiry(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotNil(t, entries[0])
 
-	// Wait for expiry
-	time.Sleep(100 * time.Millisecond)
-
-	entries, err = c.Get(ctx, []string{"k1"})
-	require.NoError(t, err)
-	assert.Nil(t, entries[0])
+	// Wait for expiry — ristretto's TTL cleanup ticker runs periodically
+	require.Eventually(t, func() bool {
+		entries, err = c.Get(ctx, []string{"k1"})
+		return err == nil && entries[0] == nil
+	}, 2*time.Second, 50*time.Millisecond)
 }
 
 func TestMemoryEntityCache_Overwrite(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
@@ -106,7 +115,7 @@ func TestMemoryEntityCache_Overwrite(t *testing.T) {
 }
 
 func TestMemoryEntityCache_EmptyBatch(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	ctx := context.Background()
 
 	entries, err := c.Get(ctx, nil)
@@ -118,18 +127,21 @@ func TestMemoryEntityCache_EmptyBatch(t *testing.T) {
 }
 
 func TestMemoryEntityCache_NilEntriesInSet(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	err := c.Set(context.Background(), []*resolve.CacheEntry{
 		nil,
 		{Key: "k1", Value: []byte("v1")},
 		nil,
 	}, 5*time.Second)
 	require.NoError(t, err)
-	assert.Equal(t, 1, c.Len())
+
+	entries, err := c.Get(context.Background(), []string{"k1"})
+	require.NoError(t, err)
+	assert.NotNil(t, entries[0])
 }
 
 func TestMemoryEntityCache_ConcurrentAccess(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	ctx := context.Background()
 	var wg sync.WaitGroup
 
@@ -148,19 +160,8 @@ func TestMemoryEntityCache_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 }
 
-func TestMemoryEntityCache_Len(t *testing.T) {
-	c := NewMemoryEntityCache()
-	assert.Equal(t, 0, c.Len())
-
-	require.NoError(t, c.Set(context.Background(), []*resolve.CacheEntry{
-		{Key: "k1", Value: []byte("v1")},
-		{Key: "k2", Value: []byte("v2")},
-	}, 5*time.Second))
-	assert.Equal(t, 2, c.Len())
-}
-
 func TestMemoryEntityCache_NoExpiryWithZeroTTL(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
@@ -174,7 +175,7 @@ func TestMemoryEntityCache_NoExpiryWithZeroTTL(t *testing.T) {
 }
 
 func TestMemoryEntityCache_RemainingTTL(t *testing.T) {
-	c := NewMemoryEntityCache()
+	c := newTestCache(t)
 	ctx := context.Background()
 	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
 		{Key: "k1", Value: []byte("v1")},
@@ -185,4 +186,65 @@ func TestMemoryEntityCache_RemainingTTL(t *testing.T) {
 	require.NotNil(t, entries[0])
 	assert.True(t, entries[0].RemainingTTL > 0)
 	assert.True(t, entries[0].RemainingTTL <= 5*time.Second)
+}
+
+func TestMemoryEntityCache_InvalidMaxSize(t *testing.T) {
+	_, err := NewMemoryEntityCache(0)
+	require.Error(t, err)
+
+	_, err = NewMemoryEntityCache(-1)
+	require.Error(t, err)
+}
+
+func TestMemoryEntityCache_EvictsWhenFull(t *testing.T) {
+	// Create a tiny cache (1KB)
+	c, err := NewMemoryEntityCache(1024)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Close() })
+
+	ctx := context.Background()
+	// Fill with entries larger than cache capacity
+	val := make([]byte, 512)
+	for i := range len(val) {
+		val[i] = byte(i % 256)
+	}
+	for i := range 10 {
+		key := "key" + string(rune('A'+i))
+		require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
+			{Key: key, Value: val},
+		}, 5*time.Second))
+	}
+
+	// Not all entries can fit — some must have been evicted.
+	// We can't predict exactly which ones, but the total stored
+	// data should be bounded by MaxCost.
+	hitCount := 0
+	for i := range 10 {
+		key := "key" + string(rune('A'+i))
+		entries, err := c.Get(ctx, []string{key})
+		require.NoError(t, err)
+		if entries[0] != nil {
+			hitCount++
+		}
+	}
+	// With 1KB max and 512B entries, at most 2 should fit
+	assert.LessOrEqual(t, hitCount, 2, "cache should evict entries to stay within MaxCost")
+	assert.Greater(t, hitCount, 0, "cache should have at least one entry")
+}
+
+func TestMemoryEntityCache_Close(t *testing.T) {
+	c, err := NewMemoryEntityCache(testCacheSize)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	require.NoError(t, c.Set(ctx, []*resolve.CacheEntry{
+		{Key: "k1", Value: []byte("v1")},
+	}, 5*time.Second))
+
+	c.Close()
+
+	// After close, Get returns zero values without panicking
+	entries, err := c.Get(ctx, []string{"k1"})
+	require.NoError(t, err)
+	assert.Nil(t, entries[0])
 }

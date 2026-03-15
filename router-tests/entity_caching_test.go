@@ -13,6 +13,14 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
+func newEntityMemoryCache(t *testing.T) *entitycache.MemoryEntityCache {
+	t.Helper()
+	c, err := entitycache.NewMemoryEntityCache(10 * 1024 * 1024) // 10MB for tests
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Close() })
+	return c
+}
+
 // entityCachingConfig returns RouterOptions that enable entity caching with
 // the given MemoryEntityCache as the default L2 cache.
 func entityCachingConfig(cache *entitycache.MemoryEntityCache) []core.Option {
@@ -59,7 +67,7 @@ func TestEntityCaching(t *testing.T) {
 	t.Run("basic L2 miss then hit", func(t *testing.T) {
 		t.Parallel()
 
-		cache := entitycache.NewMemoryEntityCache()
+		cache := newEntityMemoryCache(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: entityCachingConfig(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
@@ -83,7 +91,7 @@ func TestEntityCaching(t *testing.T) {
 	t.Run("different entities produce separate cache entries", func(t *testing.T) {
 		t.Parallel()
 
-		cache := entitycache.NewMemoryEntityCache()
+		cache := newEntityMemoryCache(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: entityCachingConfig(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
@@ -117,7 +125,7 @@ func TestEntityCaching(t *testing.T) {
 	t.Run("multi-subgraph entity caching", func(t *testing.T) {
 		t.Parallel()
 
-		cache := entitycache.NewMemoryEntityCache()
+		cache := newEntityMemoryCache(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: entityCachingConfig(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
@@ -153,8 +161,8 @@ func TestEntityCaching(t *testing.T) {
 	t.Run("per-subgraph cache name routes to separate instances", func(t *testing.T) {
 		t.Parallel()
 
-		defaultCache := entitycache.NewMemoryEntityCache()
-		customCache := entitycache.NewMemoryEntityCache()
+		defaultCache := newEntityMemoryCache(t)
+		customCache := newEntityMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: []core.Option{
@@ -193,7 +201,7 @@ func TestEntityCaching(t *testing.T) {
 	t.Run("shadow mode always fetches from subgraph", func(t *testing.T) {
 		t.Parallel()
 
-		cache := entitycache.NewMemoryEntityCache()
+		cache := newEntityMemoryCache(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: entityCachingConfig(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
@@ -225,7 +233,7 @@ func TestEntityCaching(t *testing.T) {
 	t.Run("list query with caching", func(t *testing.T) {
 		t.Parallel()
 
-		cache := entitycache.NewMemoryEntityCache()
+		cache := newEntityMemoryCache(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: entityCachingConfig(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
@@ -265,7 +273,7 @@ func TestEntityCaching(t *testing.T) {
 	t.Run("cache entries written to L2", func(t *testing.T) {
 		t.Parallel()
 
-		cache := entitycache.NewMemoryEntityCache()
+		cache := newEntityMemoryCache(t)
 		testenv.Run(t, &testenv.Config{
 			RouterOptions: entityCachingConfig(cache),
 			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {

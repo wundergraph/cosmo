@@ -1513,25 +1513,26 @@ func (s *graphServer) buildGraphMux(
 		handlerOpts.ApolloSubscriptionMultipartPrintBoundary = s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled
 	}
 
-	handlerOpts.EntityCachingL1Enabled = s.entityCachingConfig.Enabled && s.entityCachingConfig.L1.Enabled
-	handlerOpts.EntityCachingL2Enabled = s.entityCachingConfig.Enabled && s.entityCachingConfig.L2.Enabled
-	handlerOpts.EntityCachingAnalyticsEnabled = s.entityCachingConfig.Enabled && s.entityCachingConfig.Analytics.Enabled
-	handlerOpts.EntityCachingGlobalKeyPrefix = s.entityCachingConfig.GlobalCacheKeyPrefix
-	handlerOpts.EntityCacheKeyInterceptors = s.entityCacheKeyInterceptors
+	if s.entityCachingConfig.Enabled {
+		handlerOpts.EntityCaching = EntityCachingHandlerOptions{
+			L1Enabled:        s.entityCachingConfig.L1.Enabled,
+			L2Enabled:        s.entityCachingConfig.L2.Enabled,
+			AnalyticsEnabled: s.entityCachingConfig.Analytics.Enabled,
+			GlobalKeyPrefix:  s.entityCachingConfig.GlobalCacheKeyPrefix,
+			KeyInterceptors:  s.entityCacheKeyInterceptors,
+		}
 
-	var entityCacheMetricsList []*rmetric.EntityCacheMetrics
-	if s.otlpEntityCacheMetrics != nil {
-		entityCacheMetricsList = append(entityCacheMetricsList, s.otlpEntityCacheMetrics)
-	}
-	if s.promEntityCacheMetrics != nil {
-		entityCacheMetricsList = append(entityCacheMetricsList, s.promEntityCacheMetrics)
-	}
-	handlerOpts.EntityCacheMetrics = entityCacheMetricsList
+		for _, m := range []*rmetric.EntityCacheMetrics{s.otlpEntityCacheMetrics, s.promEntityCacheMetrics} {
+			if m != nil {
+				handlerOpts.EntityCaching.Metrics = append(handlerOpts.EntityCaching.Metrics, m)
+			}
+		}
 
-	if s.entityAnalyticsExporter != nil {
-		handlerOpts.EntityAnalyticsExporter = s.entityAnalyticsExporter
-		handlerOpts.EntityAnalyticsDetailLevel = entityanalytics.ParseDetailLevel(s.entityCachingConfig.Analytics.DetailLevel)
-		handlerOpts.RouterConfigVersion = opts.RouterConfigVersion
+		if s.entityAnalyticsExporter != nil {
+			handlerOpts.EntityCaching.AnalyticsExporter = s.entityAnalyticsExporter
+			handlerOpts.EntityCaching.AnalyticsDetail = entityanalytics.ParseDetailLevel(s.entityCachingConfig.Analytics.DetailLevel)
+			handlerOpts.EntityCaching.RouterConfigVersion = opts.RouterConfigVersion
+		}
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)

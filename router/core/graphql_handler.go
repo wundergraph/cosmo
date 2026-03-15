@@ -85,15 +85,20 @@ type HandlerOptions struct {
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
 
-	EntityCachingL1Enabled          bool
-	EntityCachingL2Enabled          bool
-	EntityCachingAnalyticsEnabled   bool
-	EntityCachingGlobalKeyPrefix    string
-	EntityCacheKeyInterceptors      []EntityCacheKeyInterceptor
-	EntityCacheMetrics              []*rmetric.EntityCacheMetrics
-	EntityAnalyticsExporter         *entityanalytics.EntityAnalyticsExporter
-	EntityAnalyticsDetailLevel      entityanalytics.DetailLevel
-	RouterConfigVersion             string
+	EntityCaching EntityCachingHandlerOptions
+}
+
+// EntityCachingHandlerOptions groups all entity caching configuration passed to the GraphQL handler.
+type EntityCachingHandlerOptions struct {
+	L1Enabled          bool
+	L2Enabled          bool
+	AnalyticsEnabled   bool
+	GlobalKeyPrefix    string
+	KeyInterceptors    []EntityCacheKeyInterceptor
+	Metrics            []*rmetric.EntityCacheMetrics
+	AnalyticsExporter  *entityanalytics.EntityAnalyticsExporter
+	AnalyticsDetail    entityanalytics.DetailLevel
+	RouterConfigVersion string
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -114,15 +119,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
 		headerPropagation:                        opts.HeaderPropagation,
-		entityCachingL1Enabled:                   opts.EntityCachingL1Enabled,
-		entityCachingL2Enabled:                   opts.EntityCachingL2Enabled,
-		entityCachingAnalyticsEnabled:            opts.EntityCachingAnalyticsEnabled,
-		entityCachingGlobalKeyPrefix:             opts.EntityCachingGlobalKeyPrefix,
-		entityCacheKeyInterceptors:               opts.EntityCacheKeyInterceptors,
-		entityCacheMetrics:                       opts.EntityCacheMetrics,
-		entityAnalyticsExporter:                  opts.EntityAnalyticsExporter,
-		entityAnalyticsDetailLevel:               opts.EntityAnalyticsDetailLevel,
-		routerConfigVersion:                      opts.RouterConfigVersion,
+		entityCaching:                            opts.EntityCaching,
 	}
 	return graphQLHandler
 }
@@ -155,15 +152,7 @@ type GraphQLHandler struct {
 
 	apolloSubscriptionMultipartPrintBoundary bool
 
-	entityCachingL1Enabled          bool
-	entityCachingL2Enabled          bool
-	entityCachingAnalyticsEnabled   bool
-	entityCachingGlobalKeyPrefix    string
-	entityCacheKeyInterceptors      []EntityCacheKeyInterceptor
-	entityCacheMetrics              []*rmetric.EntityCacheMetrics
-	entityAnalyticsExporter         *entityanalytics.EntityAnalyticsExporter
-	entityAnalyticsDetailLevel      entityanalytics.DetailLevel
-	routerConfigVersion             string
+	entityCaching EntityCachingHandlerOptions
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -558,15 +547,15 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 }
 
 func (h *GraphQLHandler) recordEntityCacheAndAnalytics(resolveCtx *resolve.Context, reqCtx *requestContext) {
-	hasMetrics := len(h.entityCacheMetrics) > 0
-	hasAnalytics := h.entityAnalyticsExporter != nil
+	hasMetrics := len(h.entityCaching.Metrics) > 0
+	hasAnalytics := h.entityCaching.AnalyticsExporter != nil
 	if !hasMetrics && !hasAnalytics {
 		return
 	}
 	snapshot := resolveCtx.GetCacheStats()
 	if hasMetrics {
 		ctx := resolveCtx.Context()
-		for _, m := range h.entityCacheMetrics {
+		for _, m := range h.entityCaching.Metrics {
 			m.RecordSnapshot(ctx, snapshot)
 		}
 	}
@@ -577,10 +566,10 @@ func (h *GraphQLHandler) recordEntityCacheAndAnalytics(resolveCtx *resolve.Conte
 			Type:          toEntityAnalyticsOpType(reqCtx.operation.opType),
 			ClientName:    reqCtx.operation.clientInfo.Name,
 			ClientVersion: reqCtx.operation.clientInfo.Version,
-			SchemaVersion: h.routerConfigVersion,
+			SchemaVersion: h.entityCaching.RouterConfigVersion,
 		}
-		info := entityanalytics.BuildEntityAnalyticsInfo(snapshot, meta, h.entityAnalyticsDetailLevel)
-		h.entityAnalyticsExporter.RecordAnalytics(info, false)
+		info := entityanalytics.BuildEntityAnalyticsInfo(snapshot, meta, h.entityCaching.AnalyticsDetail)
+		h.entityCaching.AnalyticsExporter.RecordAnalytics(info, false)
 	}
 }
 
@@ -597,21 +586,21 @@ func toEntityAnalyticsOpType(opType OperationType) entityanalyticsv1.OperationTy
 
 func (h *GraphQLHandler) cachingOptions(reqCtx *requestContext) resolve.CachingOptions {
 	return resolve.CachingOptions{
-		EnableL1Cache:         h.entityCachingL1Enabled,
-		EnableL2Cache:         h.entityCachingL2Enabled,
-		EnableCacheAnalytics:  h.entityCachingAnalyticsEnabled,
-		GlobalCacheKeyPrefix:  h.entityCachingGlobalKeyPrefix,
+		EnableL1Cache:         h.entityCaching.L1Enabled,
+		EnableL2Cache:         h.entityCaching.L2Enabled,
+		EnableCacheAnalytics:  h.entityCaching.AnalyticsEnabled,
+		GlobalCacheKeyPrefix:  h.entityCaching.GlobalKeyPrefix,
 		L2CacheKeyInterceptor: h.buildL2CacheKeyInterceptor(reqCtx),
 	}
 }
 
 func (h *GraphQLHandler) buildL2CacheKeyInterceptor(reqCtx *requestContext) resolve.L2CacheKeyInterceptor {
-	if len(h.entityCacheKeyInterceptors) == 0 {
+	if len(h.entityCaching.KeyInterceptors) == 0 {
 		return nil
 	}
 	return func(ctx context.Context, key string, info resolve.L2CacheKeyInterceptorInfo) string {
 		keys := [][]byte{[]byte(key)}
-		for _, interceptor := range h.entityCacheKeyInterceptors {
+		for _, interceptor := range h.entityCaching.KeyInterceptors {
 			keys = interceptor.OnEntityCacheKeys(keys, reqCtx)
 		}
 		return string(keys[0])

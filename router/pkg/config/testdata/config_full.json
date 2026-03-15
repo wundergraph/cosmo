@@ -936,7 +936,8 @@
     "Enabled": false,
     "GlobalCacheKeyPrefix": "",
     "L1": {
-      "Enabled": true
+      "Enabled": true,
+      "MaxSizeBytes": 104857600
     },
     "L2": {
       "Enabled": true,

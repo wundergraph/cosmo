@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -1339,16 +1340,32 @@ func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, er
 	}
 
 	caches := make(map[string]resolve.LoaderCache)
-	keyPrefix := r.entityCachingConfig.L2.Storage.KeyPrefix
+	l2Cfg := r.entityCachingConfig.L2
+
+	// buildCache creates a Redis-backed cache with optional circuit breaker wrapping.
+	buildCache := func(providerID string) (resolve.LoaderCache, error) {
+		client, err := r.findRedisClient(providerID)
+		if err != nil {
+			return nil, err
+		}
+		var cache resolve.LoaderCache = entitycache.NewRedisEntityCache(client, l2Cfg.Storage.KeyPrefix)
+		if l2Cfg.CircuitBreaker.Enabled {
+			cache = entitycache.NewCircuitBreakerCache(cache, entitycache.CircuitBreakerConfig{
+				Enabled:          true,
+				FailureThreshold: l2Cfg.CircuitBreaker.FailureThreshold,
+				CooldownPeriod:   l2Cfg.CircuitBreaker.CooldownPeriod,
+			})
+		}
+		return cache, nil
+	}
 
 	// Build default cache from l2.storage.provider_id
-	defaultProviderID := r.entityCachingConfig.L2.Storage.ProviderID
-	if defaultProviderID != "" {
-		client, err := r.findRedisClient(defaultProviderID)
+	if l2Cfg.Storage.ProviderID != "" {
+		cache, err := buildCache(l2Cfg.Storage.ProviderID)
 		if err != nil {
 			return nil, fmt.Errorf("entity caching default provider: %w", err)
 		}
-		caches["default"] = entitycache.NewRedisEntityCache(client, keyPrefix)
+		caches["default"] = cache
 	}
 
 	// Build per-subgraph caches from subgraphs[].entities[].cache_name
@@ -1361,24 +1378,12 @@ func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, er
 			if _, exists := caches[cacheName]; exists {
 				continue
 			}
-			client, err := r.findRedisClient(cacheName)
+			cache, err := buildCache(cacheName)
 			if err != nil {
 				return nil, fmt.Errorf("entity caching provider %q for %s.%s: %w",
 					cacheName, sg.Name, entity.Type, err)
 			}
-			caches[cacheName] = entitycache.NewRedisEntityCache(client, keyPrefix)
-		}
-	}
-
-	// Wrap caches with circuit breaker if enabled
-	cbCfg := r.entityCachingConfig.L2.CircuitBreaker
-	if cbCfg.Enabled {
-		for name, cache := range caches {
-			caches[name] = entitycache.NewCircuitBreakerCache(cache, entitycache.CircuitBreakerConfig{
-				Enabled:          true,
-				FailureThreshold: cbCfg.FailureThreshold,
-				CooldownPeriod:   cbCfg.CooldownPeriod,
-			})
+			caches[cacheName] = cache
 		}
 	}
 
@@ -1768,6 +1773,15 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	// Shutdown the CDN operation client and free up resources
 	if r.persistedOperationClient != nil {
 		r.persistedOperationClient.Close()
+	}
+
+	// Close entity cache instances that implement io.Closer (e.g. ristretto-backed MemoryEntityCache).
+	for _, cache := range r.entityCacheInstances {
+		if closer, ok := cache.(io.Closer); ok {
+			if closeErr := closer.Close(); closeErr != nil {
+				err.Append(fmt.Errorf("failed to close entity cache: %w", closeErr))
+			}
+		}
 	}
 
 	r.usage.Close()

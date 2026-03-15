@@ -1,28 +1,36 @@
 package entity_caching
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
+	"github.com/stretchr/testify/require"
 
 	"github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/details"
 	"github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/inventory"
 	"github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/items"
 	itemsModel "github.com/wundergraph/cosmo/router-tests/entity_caching/subgraphs/items/subgraph/model"
 	"github.com/wundergraph/cosmo/router/core"
+	entityanalyticsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/entityanalytics/v1"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/entitycache"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"google.golang.org/protobuf/proto"
 )
 
 type requestCounters struct {
@@ -220,7 +228,7 @@ func removeSubscriptionPopulateConfigs(rc *nodev1.RouterConfig) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
 		filtered := ds.CachePopulateConfigurations[:0]
 		for _, cp := range ds.CachePopulateConfigurations {
-			if !strings.EqualFold(cp.OperationType, "subscription") {
+			if cp.OperationType != "Subscription" {
 				filtered = append(filtered, cp)
 			}
 		}
@@ -233,6 +241,24 @@ func setQueryCacheShadowMode(rc *nodev1.RouterConfig, enabled bool) {
 	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
 		for _, rfc := range ds.RootFieldCacheConfigurations {
 			rfc.ShadowMode = enabled
+		}
+	}
+}
+
+// setQueryCacheIncludeHeaders sets IncludeHeaders on all root field cache configs.
+func setQueryCacheIncludeHeaders(rc *nodev1.RouterConfig, enabled bool) {
+	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
+		for _, rfc := range ds.RootFieldCacheConfigurations {
+			rfc.IncludeHeaders = enabled
+		}
+	}
+}
+
+// setCachePopulateTTL overrides MaxAgeSeconds on all cache populate configs.
+func setCachePopulateTTL(rc *nodev1.RouterConfig, ttl int64) {
+	for _, ds := range rc.EngineConfig.DatasourceConfigurations {
+		for _, cp := range ds.CachePopulateConfigurations {
+			cp.MaxAgeSeconds = &ttl
 		}
 	}
 }
@@ -262,6 +288,55 @@ func (c *cacheFailed) Error() string {
 	return "entity cache operation failed"
 }
 
+// ControllableCache wraps a MemoryEntityCache but can be toggled to fail on demand.
+// Use SetFailing(true) to simulate a Redis outage mid-test.
+type ControllableCache struct {
+	inner   *entitycache.MemoryEntityCache
+	failing atomic.Bool
+}
+
+func newControllableCache(t *testing.T) *ControllableCache {
+	t.Helper()
+	cache, err := entitycache.NewMemoryEntityCache(10 * 1024 * 1024)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = cache.Close() })
+	return &ControllableCache{inner: cache}
+}
+
+func (c *ControllableCache) SetFailing(v bool) { c.failing.Store(v) }
+
+func (c *ControllableCache) Get(ctx context.Context, keys []string) ([]*resolve.CacheEntry, error) {
+	if c.failing.Load() {
+		return nil, errCacheFailed
+	}
+	return c.inner.Get(ctx, keys)
+}
+
+func (c *ControllableCache) Set(ctx context.Context, entries []*resolve.CacheEntry, ttl time.Duration) error {
+	if c.failing.Load() {
+		return errCacheFailed
+	}
+	return c.inner.Set(ctx, entries, ttl)
+}
+
+func (c *ControllableCache) Delete(ctx context.Context, keys []string) error {
+	if c.failing.Load() {
+		return errCacheFailed
+	}
+	return c.inner.Delete(ctx, keys)
+}
+
+// entityCachingOptionsWithCircuitBreakerRef is like entityCachingOptionsWithCircuitBreaker
+// but also returns the CircuitBreakerCache so tests can inspect its state.
+func entityCachingOptionsWithCircuitBreakerRef(cache resolve.LoaderCache, threshold int, cooldown time.Duration) ([]core.Option, *entitycache.CircuitBreakerCache) {
+	cb := entitycache.NewCircuitBreakerCache(cache, entitycache.CircuitBreakerConfig{
+		Enabled:          true,
+		FailureThreshold: threshold,
+		CooldownPeriod:   cooldown,
+	})
+	return entityCachingOptions(cb), cb
+}
+
 // entityCachingOptionsWithSubgraphConfig returns router options with per-subgraph cache routing.
 func entityCachingOptionsWithSubgraphConfig(caches map[string]resolve.LoaderCache, subgraphs []config.EntityCachingSubgraphConfig) []core.Option {
 	return []core.Option{
@@ -280,8 +355,120 @@ func entityCachingOptionsWithSubgraphConfig(caches map[string]resolve.LoaderCach
 }
 
 // newMemoryCache is a convenience wrapper.
-func newMemoryCache() *entitycache.MemoryEntityCache {
-	return entitycache.NewMemoryEntityCache()
+func newMemoryCache(t *testing.T) *entitycache.MemoryEntityCache {
+	t.Helper()
+	c, err := entitycache.NewMemoryEntityCache(10 * 1024 * 1024) // 10MB for tests
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = c.Close() })
+	return c
+}
+
+// entityCachingOptionsWithAnalytics returns router options with entity caching and analytics export enabled.
+func entityCachingOptionsWithAnalytics(cache resolve.LoaderCache, collectorURL string) []core.Option {
+	return []core.Option{
+		core.WithEntityCaching(config.EntityCachingConfiguration{
+			Enabled: true,
+			L1: config.EntityCachingL1Configuration{
+				Enabled: true,
+			},
+			L2: config.EntityCachingL2Configuration{
+				Enabled: true,
+			},
+			Analytics: config.EntityCachingAnalyticsConfig{
+				Enabled:     true,
+				DetailLevel: "full",
+				Export: config.EntityCachingAnalyticsExportConfig{
+					Enabled:   true,
+					Endpoint:  collectorURL,
+					BatchSize: 10,
+					QueueSize: 100,
+					Interval:  1 * time.Second,
+					Retry: config.EntityCachingAnalyticsRetryConfig{
+						Enabled:     true,
+						MaxRetries:  1,
+						MaxDuration: 5 * time.Second,
+						Interval:    1 * time.Second,
+					},
+				},
+			},
+		}),
+		core.WithEntityCacheInstances(map[string]resolve.LoaderCache{
+			"default": cache,
+		}),
+	}
+}
+
+// fakeCollector is a test HTTP server that receives entity analytics via Connect RPC.
+type fakeCollector struct {
+	server   *httptest.Server
+	mu       sync.Mutex
+	received []*entityanalyticsv1.PublishEntityAnalyticsRequest
+	ready    chan struct{} // closed on first request
+	once     sync.Once
+}
+
+func newFakeCollector(t *testing.T) *fakeCollector {
+	t.Helper()
+	fc := &fakeCollector{
+		ready: make(chan struct{}),
+	}
+	fc.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reader, err := gzip.NewReader(r.Body)
+		require.NoError(t, err)
+		defer reader.Close()
+
+		data, err := io.ReadAll(reader)
+		require.NoError(t, err)
+
+		var req entityanalyticsv1.PublishEntityAnalyticsRequest
+		err = proto.Unmarshal(data, &req)
+		require.NoError(t, err)
+
+		fc.mu.Lock()
+		fc.received = append(fc.received, &req)
+		fc.mu.Unlock()
+
+		fc.once.Do(func() { close(fc.ready) })
+
+		// Return empty response
+		res := &entityanalyticsv1.PublishEntityAnalyticsResponse{}
+		out, err := proto.Marshal(res)
+		require.NoError(t, err)
+
+		w.Header().Set("Content-Type", "application/proto")
+		_, err = w.Write(out)
+		require.NoError(t, err)
+	}))
+	t.Cleanup(fc.server.Close)
+	return fc
+}
+
+func (fc *fakeCollector) waitForRequest(t *testing.T, timeout time.Duration) {
+	t.Helper()
+	select {
+	case <-fc.ready:
+	case <-time.After(timeout):
+		t.Fatal("timeout waiting for entity analytics collector to receive data")
+	}
+}
+
+func (fc *fakeCollector) allAggregations() []*entityanalyticsv1.EntityAnalyticsAggregation {
+	fc.mu.Lock()
+	defer fc.mu.Unlock()
+	var all []*entityanalyticsv1.EntityAnalyticsAggregation
+	for _, req := range fc.received {
+		all = append(all, req.Aggregations...)
+	}
+	return all
+}
+
+// newTestRedisCache creates a miniredis-backed cache for testing.
+func newTestRedisCache(t *testing.T) (*entitycache.RedisEntityCache, *miniredis.Miniredis) {
+	t.Helper()
+	mr := miniredis.RunT(t)
+	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { client.Close() })
+	return entitycache.NewRedisEntityCache(client, "test"), mr
 }
 
 // extensionInvalidationMiddleware returns an HTTP middleware that injects

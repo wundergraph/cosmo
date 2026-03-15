@@ -955,7 +955,8 @@ type EntityCachingConfiguration struct {
 }
 
 type EntityCachingL1Configuration struct {
-	Enabled bool `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_L1_ENABLED"`
+	Enabled      bool  `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_L1_ENABLED"`
+	MaxSizeBytes int64 `yaml:"max_size_bytes" envDefault:"104857600" env:"ENTITY_CACHING_L1_MAX_SIZE_BYTES"` // default 100MB
 }
 
 type EntityCachingL2Configuration struct {

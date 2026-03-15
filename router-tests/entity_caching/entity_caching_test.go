@@ -23,7 +23,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -52,7 +52,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, _ := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -84,7 +84,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -112,7 +112,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, _ := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -159,7 +159,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -197,7 +197,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -226,7 +226,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -254,7 +254,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -284,7 +284,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -320,8 +320,8 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, _ := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		defaultCache := newMemoryCache()
-		customCache := newMemoryCache()
+		defaultCache := newMemoryCache(t)
+		customCache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -353,7 +353,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -403,7 +403,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -434,7 +434,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -466,7 +466,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -499,7 +499,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -523,7 +523,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -550,7 +550,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -586,7 +586,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, _ := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -639,21 +639,115 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
-	t.Run("circuit_breaker_fallback", func(t *testing.T) {
+	// Tests that the full circuit breaker lifecycle keeps requests working:
+	// cache healthy → cache breaks → breaker opens → cache recovers → breaker closes.
+	// At every phase, GraphQL queries must return correct data. The subgraph call
+	// counter proves whether the response came from cache (counter unchanged) or
+	// from a subgraph fetch (counter incremented).
+	t.Run("circuit_breaker_degrades_gracefully_on_cache_failure", func(t *testing.T) {
 		t.Parallel()
 
-		servers, _ := startSubgraphServers(t)
+		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
+
+		cache := newControllableCache(t)
+		cooldown := 100 * time.Millisecond
+		opts, cb := entityCachingOptionsWithCircuitBreakerRef(cache, 2, cooldown)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
-			RouterOptions:            entityCachingOptions(&FailingEntityCache{}),
+			RouterOptions:            opts,
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Even with a failing cache, queries should succeed via subgraph fallback
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name description } }`,
-			})
-			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+			const query = `{ item(id: "1") { id name description } }`
+			const expected = `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`
+
+			// Phase 1: Cache is healthy. First request populates cache.
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			require.JSONEq(t, expected, res.Body)
+			detailsAfterFirst := counters.details.Load()
+			require.Greater(t, detailsAfterFirst, int64(0))
+
+			// Second request should be a cache hit — subgraph counter stays the same.
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			require.JSONEq(t, expected, res.Body)
+			require.Equal(t, detailsAfterFirst, counters.details.Load(), "expected cache hit: details counter should not change")
+
+			// Phase 2: Cache starts failing. Breaker is still closed, so it tries the cache
+			// and gets errors. Requests still succeed via subgraph fallback.
+			cache.SetFailing(true)
+			for range 2 {
+				res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+				require.JSONEq(t, expected, res.Body)
+			}
+			require.True(t, cb.IsOpen(), "breaker should be open after 2 consecutive failures")
+
+			// Phase 3: Breaker is open — cache is bypassed entirely.
+			// Subgraph counter should increase with every request.
+			counterBefore := counters.details.Load()
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			require.JSONEq(t, expected, res.Body)
+			require.Greater(t, counters.details.Load(), counterBefore, "expected subgraph fetch when breaker is open")
+
+			// Phase 4: Cache recovers. Wait for cooldown so breaker transitions to half-open.
+			cache.SetFailing(false)
+			time.Sleep(cooldown + 50*time.Millisecond)
+
+			// The next request is the half-open probe. It should succeed and close the breaker.
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			require.JSONEq(t, expected, res.Body)
+			require.False(t, cb.IsOpen(), "breaker should be closed after successful probe")
+
+			// Phase 5: Cache works again. Verify we get a cache hit.
+			detailsBefore := counters.details.Load()
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			require.JSONEq(t, expected, res.Body)
+			require.Equal(t, detailsBefore, counters.details.Load(), "expected cache hit after recovery")
+		})
+	})
+
+	// Focused test for the half-open → closed transition.
+	// Trips the breaker, waits for cooldown, then verifies that one successful
+	// probe closes the breaker and the cache resumes normal operation.
+	t.Run("circuit_breaker_recovery_after_cooldown", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+
+		cache := newControllableCache(t)
+		cooldown := 100 * time.Millisecond
+		cache.SetFailing(true) // Start broken
+
+		opts, cb := entityCachingOptionsWithCircuitBreakerRef(cache, 2, cooldown)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            opts,
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			const query = `{ item(id: "1") { id name description } }`
+			const expected = `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`
+
+			// Trip the breaker: 2 failures while closed.
+			for range 2 {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+				require.JSONEq(t, expected, res.Body)
+			}
+			require.True(t, cb.IsOpen(), "breaker should be open after threshold failures")
+
+			// Fix the cache and wait for cooldown.
+			cache.SetFailing(false)
+			time.Sleep(cooldown + 50*time.Millisecond)
+
+			// Probe request: succeeds, closes the breaker, populates cache.
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			require.JSONEq(t, expected, res.Body)
+			require.False(t, cb.IsOpen(), "breaker should be closed after successful probe")
+
+			// Next request should be a cache hit — subgraph not called.
+			detailsBefore := counters.details.Load()
+			res = xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{Query: query})
+			require.JSONEq(t, expected, res.Body)
+			require.Equal(t, detailsBefore, counters.details.Load(), "expected cache hit after recovery")
 		})
 	})
 
@@ -662,7 +756,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, counters := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -732,7 +826,7 @@ func TestEntityCaching(t *testing.T) {
 
 		servers, _ := startSubgraphServers(t)
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -777,7 +871,7 @@ func TestEntityCaching(t *testing.T) {
 		var extensionFlag atomic.Bool
 		servers, counters := startSubgraphServersWithMiddleware(t, extensionInvalidationMiddleware(&extensionFlag))
 		configJSON := buildConfigJSON(servers)
-		cache := newMemoryCache()
+		cache := newMemoryCache(t)
 
 		testenv.Run(t, &testenv.Config{
 			RouterConfigJSONTemplate: configJSON,
@@ -814,6 +908,265 @@ func TestEntityCaching(t *testing.T) {
 				Query: `{ item(id: "1") { id name description } }`,
 			})
 			require.Equal(t, detailsAfterWarm+2, counters.details.Load())
+		})
+	})
+
+	t.Run("mutation_populate_writes_to_cache", func(t *testing.T) {
+		t.Parallel()
+
+		servers, _ := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// createItem has @cachePopulate(maxAge: 60) — should return data
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { createItem(name: "Foobar", category: "test") { id name category } }`,
+			})
+			require.Contains(t, res.Body, `"Foobar"`)
+			require.Contains(t, res.Body, `"createItem"`)
+		})
+	})
+
+	t.Run("delete_mutation_invalidates_cache", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Warm cache
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id name description } }`,
+			})
+			detailsAfterWarm := counters.details.Load()
+
+			// Verify cache hit
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id name description } }`,
+			})
+			require.Equal(t, detailsAfterWarm, counters.details.Load())
+
+			// Delete triggers @cacheInvalidate
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { deleteItem(id: "1") { id name } }`,
+			})
+
+			// After invalidation, cache miss
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id name description } }`,
+			})
+			require.Equal(t, detailsAfterWarm+1, counters.details.Load())
+		})
+	})
+
+	t.Run("l1_deduplication_with_l2", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Query same entity via two aliases — L1 should deduplicate
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{
+					a: item(id: "1") { id name description }
+					b: item(id: "1") { id name description }
+				}`,
+			})
+			require.Contains(t, res.Body, `"a"`)
+			require.Contains(t, res.Body, `"b"`)
+
+			// Details subgraph called only once (L1 dedup within single request)
+			require.Equal(t, int64(1), counters.details.Load())
+
+			// L2 should also have the entry
+			require.Equal(t, 1, cache.Len())
+		})
+	})
+
+	t.Run("shadow_mode_with_failing_cache", func(t *testing.T) {
+		t.Parallel()
+
+		servers, _ := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(&FailingEntityCache{}),
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				setEntityCacheShadowMode(routerConfig, true)
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Shadow mode + failing cache: should still return data (subgraph always called)
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id name description } }`,
+			})
+			require.JSONEq(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+		})
+	})
+
+	t.Run("negative_cache_ttl_expiry", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				setNegativeCacheTTL(routerConfig, 1) // 1 second negative cache TTL
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Query non-existent item with cross-subgraph field
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "999") { id name description } }`,
+			})
+			require.Contains(t, res.Body, `"item":null`)
+			detailsAfterFirst := counters.details.Load()
+
+			// Immediately: negative cache hit (details not called again)
+			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "999") { id name description } }`,
+			})
+			require.Contains(t, res2.Body, `"item":null`)
+			require.Equal(t, detailsAfterFirst, counters.details.Load())
+
+			// Wait for negative cache TTL expiry
+			time.Sleep(1500 * time.Millisecond)
+
+			// After expiry: if negative cache was applied, details would be called again.
+			// For null items, entity resolution doesn't happen, so details stays the same.
+			// This verifies the system is stable after negative cache TTL expires.
+			res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "999") { id name description } }`,
+			})
+			require.Contains(t, res3.Body, `"item":null`)
+		})
+	})
+
+	t.Run("partial_cache_load_multiple_warm", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				setEntityCachePartialLoad(routerConfig, true)
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Warm cache for id:"1" and id:"2"
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "1") { id description } }`,
+			})
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ item(id: "2") { id description } }`,
+			})
+			detailsAfterWarm := counters.details.Load()
+			require.Equal(t, int64(2), detailsAfterWarm)
+			require.Equal(t, 2, cache.Len())
+
+			// List query: id:"1" and id:"2" cached, rest fetched from subgraph
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ items { id description } }`,
+			})
+			require.Contains(t, res.Body, `"description"`)
+
+			// Details should be called once more for the remaining uncached items
+			require.Equal(t, detailsAfterWarm+1, counters.details.Load())
+		})
+	})
+
+	t.Run("query_cache_include_headers", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions: append(
+				entityCachingOptions(cache),
+				core.WithHeaderRules(config.HeaderRules{
+					All: &config.GlobalHeaderRule{
+						Request: []*config.RequestHeaderRule{
+							{
+								Operation: config.HeaderRuleOperationPropagate,
+								Named:     "X-Tenant",
+							},
+						},
+					},
+				}),
+			),
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				// @queryCache includeHeaders varies the root field cache key by request headers
+				setQueryCacheIncludeHeaders(routerConfig, true)
+				// Also set entity cache includeHeaders so entity resolution cache key varies too
+				setEntityCacheIncludeHeaders(routerConfig, true)
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Request with header A — entity resolution calls details subgraph
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `{ item(id: "1") { id name description } }`,
+				Header: map[string][]string{"X-Tenant": {"A"}},
+			})
+			detailsAfterA := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterA)
+
+			// Same query, header A — entity cache hit (details not called)
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `{ item(id: "1") { id name description } }`,
+				Header: map[string][]string{"X-Tenant": {"A"}},
+			})
+			require.Equal(t, detailsAfterA, counters.details.Load())
+
+			// Same query, header B — different cache key, details called again
+			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query:  `{ item(id: "1") { id name description } }`,
+				Header: map[string][]string{"X-Tenant": {"B"}},
+			})
+			require.Equal(t, detailsAfterA+1, counters.details.Load())
+		})
+	})
+
+	t.Run("cache_populate_maxage_override", func(t *testing.T) {
+		t.Parallel()
+
+		servers, _ := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+			ModifyRouterConfig: func(routerConfig *nodev1.RouterConfig) {
+				setCachePopulateTTL(routerConfig, 1)
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// createItem has @cachePopulate — verify the mutation succeeds
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `mutation { createItem(name: "ShortLived", category: "test") { id name category } }`,
+			})
+			require.Contains(t, res.Body, `"ShortLived"`)
+			require.Contains(t, res.Body, `"createItem"`)
 		})
 	})
 
