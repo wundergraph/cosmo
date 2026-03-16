@@ -143,12 +143,7 @@ export class SDLValidationVisitor {
       validationFunction: (ctx) => this.validateInvalidResolverContext(ctx),
     };
 
-    this.lintingRules = [
-      objectTypeRule,
-      listTypeRule,
-      providesRule,
-      resolverContextRule,
-    ];
+    this.lintingRules = [objectTypeRule, listTypeRule, providesRule, resolverContextRule];
   }
 
   /**

@@ -529,5 +529,4 @@ describe('SDL Validation', () => {
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(0);
   });
-
 });
