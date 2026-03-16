@@ -3328,14 +3328,14 @@
         "slow_plan_cache_size": {
           "type": "integer",
           "minimum": 1,
-          "default": 100,
+          "default": 300,
           "description": "The maximum number of entries in the slow plan cache."
         },
         "slow_plan_cache_threshold": {
           "type": "string",
           "format": "go-duration",
           "description": "The minimum planning duration for a query plan to be stored in the slow plan cache, protecting it from TinyLFU cache eviction.",
-          "default": "5s",
+          "default": "100ms",
           "duration": {
             "minimum": "1ns"
           }
