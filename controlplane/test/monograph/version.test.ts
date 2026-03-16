@@ -16,7 +16,7 @@ describe('monograph version tests', () => {
   let chClient: ClickHouseClient;
   let dbname = '';
 
-  vi.mock('../src/core/clickhouse/index.js', () => {
+  vi.mock('../../src/core/clickhouse/index.js', () => {
     const ClickHouseClient = vi.fn();
     ClickHouseClient.prototype.queryPromise = vi.fn();
 

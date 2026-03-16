@@ -1,21 +1,14 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { joinLabel } from '@wundergraph/cosmo-shared';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
-import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../../src/core/test-util.js';
-import {
-  assertNumberOfCompositions,
-  createFederatedGraph,
-  createNamespace,
-  createThenPublishSubgraph,
-  SetupTest,
-} from '../test-util.js';
+import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
+import { assertNumberOfCompositions, createNamespace, SetupTest } from '../test-util.js';
 
 describe('monograph recompose tests', () => {
   let chClient: ClickHouseClient;
   let dbname = '';
 
-  vi.mock('../src/core/clickhouse/index.js', () => {
+  vi.mock('../../src/core/clickhouse/index.js', () => {
     const ClickHouseClient = vi.fn();
     ClickHouseClient.prototype.queryPromise = vi.fn();
 
