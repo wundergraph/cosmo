@@ -3124,6 +3124,28 @@
           "type": "object",
           "description": "Cost control based on @cost and @listSize directives.",
           "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": { "enabled": { "const": true } },
+                "required": ["enabled"]
+              },
+              "then": {
+                "required": ["estimated_list_size"]
+              }
+            },
+            {
+              "if": {
+                "properties": { "mode": { "const": "enforce" } },
+                "required": ["mode"]
+              },
+              "then": {
+                "properties": {
+                  "max_estimated_limit": { "minimum": 1 }
+                }
+              }
+            }
+          ],
           "properties": {
             "enabled": {
               "type": "boolean",
@@ -3138,7 +3160,7 @@
             },
             "max_estimated_limit": {
               "type": "integer",
-              "description": "Maximum allowed estimated cost for a query. Only enforced when its value is positive and mode is 'enforce'.",
+              "description": "Maximum allowed estimated cost for a query. Required to be positive when mode is 'enforce'.",
               "default": 0,
               "minimum": 0
             },
