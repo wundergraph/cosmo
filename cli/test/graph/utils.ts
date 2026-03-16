@@ -1,13 +1,13 @@
 import type { PartialMessage } from '@bufbuild/protobuf';
 import { RecomposeGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
+import { createPromiseClient, createRouterTransport, Transport } from '@connectrpc/connect';
 import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
 import { Command } from 'commander';
 import RecomposeCommand from '../../src/commands/graph/common/recompose.js';
 import { Client } from '../../src/core/client/client.js';
 
-export function createMockTransport(response: PartialMessage<RecomposeGraphResponse>) {
-  return createRouterTransport(({ service }) => {
+export function createMockTransport(response: PartialMessage<RecomposeGraphResponse>): Transport {
+  return createRouterTransport(({ service }): void => {
     service(PlatformService, {
       recomposeGraph: () => response,
     });

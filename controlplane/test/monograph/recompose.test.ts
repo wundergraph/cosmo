@@ -31,8 +31,10 @@ describe('monograph recompose tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that recomposing a published monograph succeeds and triggers a new composition', async () => {
+  test('that recomposing a published monograph succeeds and triggers a new composition', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
     const monographName = genID('monograph');
@@ -67,7 +69,5 @@ describe('monograph recompose tests', () => {
     expect(response.deploymentErrors).toHaveLength(0);
 
     await assertNumberOfCompositions(client, monographName, 2, namespace);
-
-    await server.close();
   });
 });

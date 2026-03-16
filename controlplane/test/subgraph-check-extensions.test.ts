@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import axios from 'axios';
 import { TestUser, afterAllSetup, beforeAllSetup, genUniqueLabel, genID } from '../src/core/test-util.js';
@@ -132,6 +132,8 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
 
   test('Should enable subgraph check extensions', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
@@ -139,12 +141,12 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('Should not be able to enable subgraph check extensions', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'launch@1' } });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
@@ -153,8 +155,6 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
     expect(response.response?.details).toBe('Upgrade to enterprise plan to enable subgraph check extensions');
-
-    await server.close();
   });
 
   test('users without write access should not be able to enable subgraph check extensions', async (testContext) => {
@@ -163,6 +163,7 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
       setupBilling: { plan: 'enterprise' },
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     authenticator.changeUser(TestUser.viewerTimCompanyA);
 
@@ -174,12 +175,12 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
 
     expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(response.response?.details).toBe('The user does not have the permissions to perform this operation');
-
-    await server.close();
   });
 
   test('should configure subgraph check extensions', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
@@ -216,8 +217,6 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     expect(getSubgraphCheckExtensionsConfig.endpoint).toStrictEqual('http://localhost:4000/');
     expect(getSubgraphCheckExtensionsConfig.isSecretKeyAssigned).toStrictEqual(true);
     expect(getSubgraphCheckExtensionsConfig.includeComposedSdl).toStrictEqual(false);
-
-    await server.close();
   });
 
   test('users without write access should not be able to configure subgraph check extensions', async (testContext) => {
@@ -226,6 +225,8 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
       setupBilling: { plan: 'enterprise' },
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
@@ -257,12 +258,12 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     expect(configureGraphPruningConfigResponse.response?.details).toBe(
       'The user does not have the permissions to perform this operation',
     );
-
-    await server.close();
   });
 
   test.each(['http', 'https'])('that `%s://localhost` is allowed as the endpoint', async (protocol) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
+    onTestFinished(() => server.close());
+
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
@@ -299,12 +300,12 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     expect(getSubgraphCheckExtensionsConfig.endpoint).toStrictEqual(`${protocol}://localhost:5000/`);
     expect(getSubgraphCheckExtensionsConfig.isSecretKeyAssigned).toStrictEqual(true);
     expect(getSubgraphCheckExtensionsConfig.includeComposedSdl).toStrictEqual(false);
-
-    await server.close();
   });
 
-  test('that an endpoint with invalid schema is not saved', async () => {
+  test('that an endpoint with invalid schema is not saved', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
@@ -313,12 +314,12 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
     expect(response.response?.details).toBe('The endpoint must be a valid absolute URL starting with https://');
-
-    await server.close();
   });
 
-  test('that https is required when not using localhost', async () => {
+  test('that https is required when not using localhost', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
@@ -327,12 +328,12 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
     expect(response.response?.details).toBe('The endpoint must be a valid absolute URL starting with https://');
-
-    await server.close();
   });
 
-  test('that an endpoint with https is updated successfully', async (protocol) => {
+  test('that an endpoint with https is updated successfully', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'enterprise' } });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.configureSubgraphCheckExtensions({
       enableSubgraphCheckExtensions: true,
       namespace: 'default',
@@ -369,15 +370,14 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     expect(getSubgraphCheckExtensionsConfig.endpoint).toStrictEqual('https://example.com/handler');
     expect(getSubgraphCheckExtensionsConfig.isSecretKeyAssigned).toStrictEqual(true);
     expect(getSubgraphCheckExtensionsConfig.includeComposedSdl).toStrictEqual(false);
-
-    await server.close();
   });
 
-  test('that the subgraph check extension webhook is sent and handled correctly', async () => {
+  test('that the subgraph check extension webhook is sent and handled correctly', async (testContext) => {
     const postSpy = vi.fn().mockResolvedValue({ status: 400, data: {} });
 
     const { client, server, subgraph1Name, fedGraphName, adminAliceCompanyA, blobStorage } =
       await setupTestGraphs(postSpy);
+    testContext.onTestFinished(() => server.close());
 
     // Run the schema check
     const checkResp = await client.checkSubgraphSchema({
@@ -435,7 +435,5 @@ describe('Subgraph Check Extensions Tests', (ctx) => {
     expect(checkSummary.check?.checkExtensionErrorMessage).toBe(
       "Check extension returned status code '400'. Allowed values are 200 and 204.",
     );
-
-    await server.close();
   });
 });
