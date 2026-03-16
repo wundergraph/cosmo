@@ -162,11 +162,10 @@ func (c *InMemoryPlanCacheFallback) cleanupUnusedFeatureFlags(routerCfg *nodev1.
 func convertToNodeOperation(data *slowplancache.Cache[*planWithMetaData]) []*nodev1.Operation {
 	items := make([]*nodev1.Operation, 0)
 
-	data.IterValues(func(v *planWithMetaData) (stop bool) {
+	for v := range data.Values() {
 		items = append(items, &nodev1.Operation{
 			Request: &nodev1.OperationRequest{Query: v.content},
 		})
-		return false
-	})
+	}
 	return items
 }

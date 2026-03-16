@@ -2,6 +2,7 @@ package slowplancache
 
 import (
 	"fmt"
+	"iter"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -193,23 +194,29 @@ func (c *Cache[V]) refreshMin() {
 	}
 }
 
-// IterValues iterates over all cached values. The callback is invoked outside
-// the read lock to avoid holding it during user code execution.
-func (c *Cache[V]) IterValues(cb func(v V) bool) {
-	if c == nil || c.closed.Load() {
-		return
-	}
-
-	c.mu.RLock()
-	values := make([]V, 0, len(c.entries))
-	for _, e := range c.entries {
-		values = append(values, e.value)
-	}
-	c.mu.RUnlock()
-
-	for _, v := range values {
-		if cb(v) {
+// Values returns an iterator over all cached values. The snapshot is taken
+// under the read lock, but iteration happens outside the lock to avoid
+// holding it during user code execution.
+func (c *Cache[V]) Values() iter.Seq[V] {
+	return func(yield func(V) bool) {
+		if c == nil || c.closed.Load() {
 			return
+		}
+
+		// We extract this to a separate slice so we don't need to hold the lock
+		// since this would be expensive based on what the iterator is doing
+		c.mu.RLock()
+		values := make([]V, 0, len(c.entries))
+		for _, e := range c.entries {
+			values = append(values, e.value)
+		}
+		c.mu.RUnlock()
+
+		for _, v := range values {
+			b := yield(v)
+			if !b {
+				return
+			}
 		}
 	}
 }

@@ -123,7 +123,7 @@ func TestCache_UpdateExisting(t *testing.T) {
 	require.True(t, ok)
 }
 
-func TestCache_IterValues(t *testing.T) {
+func TestCache_Values(t *testing.T) {
 	t.Parallel()
 	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
@@ -135,15 +135,14 @@ func TestCache_IterValues(t *testing.T) {
 	c.Wait()
 
 	var contents []string
-	c.IterValues(func(v *testPlan) bool {
+	for v := range c.Values() {
 		contents = append(contents, v.content)
-		return false
-	})
+	}
 	require.Len(t, contents, 3)
 	require.ElementsMatch(t, []string{"q1", "q2", "q3"}, contents)
 }
 
-func TestCache_IterValues_EarlyStop(t *testing.T) {
+func TestCache_Values_EarlyStop(t *testing.T) {
 	t.Parallel()
 	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
@@ -155,10 +154,10 @@ func TestCache_IterValues_EarlyStop(t *testing.T) {
 	c.Wait()
 
 	count := 0
-	c.IterValues(func(_ *testPlan) bool {
+	for range c.Values() {
 		count++
-		return true // stop after first
-	})
+		break // stop after first
+	}
 	require.Equal(t, 1, count)
 }
 
@@ -190,21 +189,20 @@ func TestCache_SetAfterClose(t *testing.T) {
 	require.False(t, ok)
 }
 
-func TestCache_IterValuesEmpty(t *testing.T) {
+func TestCache_ValuesEmpty(t *testing.T) {
 	t.Parallel()
 	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
 	defer c.Close()
 
 	count := 0
-	c.IterValues(func(_ *testPlan) bool {
+	for range c.Values() {
 		count++
-		return false
-	})
+	}
 	require.Equal(t, 0, count)
 }
 
-func TestCache_IterValuesAfterClose(t *testing.T) {
+func TestCache_ValuesAfterClose(t *testing.T) {
 	t.Parallel()
 	c, err := New[*testPlan](10, 0)
 	require.NoError(t, err)
@@ -212,10 +210,9 @@ func TestCache_IterValuesAfterClose(t *testing.T) {
 	c.Close()
 
 	count := 0
-	c.IterValues(func(_ *testPlan) bool {
+	for range c.Values() {
 		count++
-		return false
-	})
+	}
 	require.Equal(t, 0, count)
 }
 
@@ -302,9 +299,8 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		go func() {
 			defer func() { done <- struct{}{} }()
-			c.IterValues(func(_ *testPlan) bool {
-				return false
-			})
+			for range c.Values() {
+			}
 		}()
 	}
 
