@@ -21,7 +21,7 @@ import {
   SchemaGraphPruningIssues,
   SchemaLintIssues,
 } from '../../types/index.js';
-import { ComposedFederatedGraph } from '../composition/composer.js';
+import { DeserializedComposedGraph } from '../composition/composeGraphs.pool.js';
 import { GetDiffBetweenGraphsSuccess } from '../composition/schemaCheck.js';
 import { SubgraphCheckExtensionsRepository } from '../repositories/SubgraphCheckExtensionsRepository.js';
 import { BlobStorage } from '../blobstorage/index.js';
@@ -599,7 +599,7 @@ export class OrganizationWebhookService {
       isDeleted: boolean;
     }[];
     affectedGraphs: FederatedGraphDTO[];
-    composedGraphs: ComposedFederatedGraph[];
+    composedGraphs: DeserializedComposedGraph[];
     inspectedOperations: InspectorOperationResult[];
   }): Promise<
     | {
