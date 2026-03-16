@@ -229,25 +229,29 @@ export default async function build(opts: BuildConfig) {
     logger.warn('ClickHouse connection not configured');
   }
 
-  const authUtils = new AuthUtils(fastify.db, {
-    jwtSecret: opts.auth.secret,
-    session: {
-      cookieName: userSessionCookieName,
+  const authUtils = new AuthUtils(
+    fastify.db,
+    {
+      jwtSecret: opts.auth.secret,
+      session: {
+        cookieName: userSessionCookieName,
+      },
+      oauth: {
+        clientID: opts.keycloak.clientId,
+        redirectUri: opts.auth.redirectUri,
+        openIdApiBaseUrl: opts.keycloak.apiUrl + '/realms/' + opts.keycloak.realm,
+        openIdFrontendUrl: opts.keycloak.frontendUrl + '/realms/' + opts.keycloak.realm,
+        logoutRedirectUri: opts.auth.webBaseUrl + '/login',
+      },
+      pkce: {
+        cookieName: pkceCodeVerifierCookieName,
+      },
+      webBaseUrl: opts.auth.webBaseUrl,
+      ssoCookieDomain: opts.auth.ssoCookieDomain,
+      webErrorPath: opts.auth.webErrorPath,
     },
-    oauth: {
-      clientID: opts.keycloak.clientId,
-      redirectUri: opts.auth.redirectUri,
-      openIdApiBaseUrl: opts.keycloak.apiUrl + '/realms/' + opts.keycloak.realm,
-      openIdFrontendUrl: opts.keycloak.frontendUrl + '/realms/' + opts.keycloak.realm,
-      logoutRedirectUri: opts.auth.webBaseUrl + '/login',
-    },
-    pkce: {
-      cookieName: pkceCodeVerifierCookieName,
-    },
-    webBaseUrl: opts.auth.webBaseUrl,
-    ssoCookieDomain: opts.auth.ssoCookieDomain,
-    webErrorPath: opts.auth.webErrorPath,
-  });
+    logger,
+  );
 
   const organizationRepository = new OrganizationRepository(logger, fastify.db, opts.stripe?.defaultPlanId);
   const orgInvitationRepository = new OrganizationInvitationRepository(logger, fastify.db, opts.stripe?.defaultPlanId);

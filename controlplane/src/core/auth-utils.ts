@@ -66,6 +66,7 @@ export default class AuthUtils {
   constructor(
     private db: PostgresJsDatabase<typeof schema>,
     private opts: AuthUtilsOptions,
+    private logger: FastifyBaseLogger,
   ) {
     this.webUrl = new URL(opts.webBaseUrl);
     this.webDomain = this.webUrl.hostname.replace(/^[^.]+\./g, '');
@@ -150,7 +151,8 @@ export default class AuthUtils {
         payload.iss === this.opts.oauth.openIdApiBaseUrl &&
         (!payload.exp || payload.exp > Date.now() / 1000 + tokenExpirationWindowSkew)
       );
-    } catch {
+    } catch (error) {
+      this.logger.debug(error, 'Invalid or misconstructed access token');
       return false;
     }
   }
