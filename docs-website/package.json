@@ -1,0 +1,24 @@
+{
+  "name": "docs-website",
+  "version": "0.1.0",
+  "private": true,
+  "license": "Apache-2.0",
+  "description": "Documentation for WunderGraph Cosmo (https://cosmo-docs.wundergraph.com) — a Full Lifecycle GraphQL API Management Solution for managing Federated Graphs at scale.",
+  "keywords": [
+    "wundergraph",
+    "documentation",
+    "cosmo"
+  ],
+  "author": {
+    "name": "WunderGraph Maintainers",
+    "email": "info@wundergraph.com"
+  },
+  "repository": {
+    "url": "https://github.com/wundergraph/cosmo",
+    "directory": "docs-website"
+  },
+  "scripts": {
+    "dev": "mintlify dev",
+    "lint": "mintlify validate"
+  }
+}
