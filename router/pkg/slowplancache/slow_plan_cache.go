@@ -213,8 +213,7 @@ func (c *Cache[V]) Values() iter.Seq[V] {
 		c.mu.RUnlock()
 
 		for _, v := range values {
-			b := yield(v)
-			if !b {
+			if !yield(v) {
 				return
 			}
 		}
