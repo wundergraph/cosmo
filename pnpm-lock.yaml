@@ -349,9 +349,6 @@ importers:
       '@types/semver':
         specifier: 7.7.0
         version: 7.7.0
-      '@types/tar':
-        specifier: 6.1.13
-        version: 6.1.13
       '@vitest/coverage-v8':
         specifier: 3.2.4
         version: 3.2.4(vitest@3.2.4(@types/debug@4.1.12)(@types/node@20.12.12)(jsdom@27.2.0)(terser@5.44.1))
@@ -7748,9 +7745,6 @@ packages:
 
   '@types/stream-json@1.7.7':
     resolution: {integrity: sha512-hHG7cLQ09H/m9i0jzL6UJAeLLxIWej90ECn0svO4T8J0nGcl89xZDQ2ujT4WKlvg0GWkcxJbjIDzW/v7BYUM6Q==}
-
-  '@types/tar@6.1.13':
-    resolution: {integrity: sha512-IznnlmU5f4WcGTh2ltRu/Ijpmk8wiWXfF0VA4s+HPjHZgvFggk1YaIkbo5krX/zUCzWF8N/l4+W/LNxnvAJ8nw==}
 
   '@types/tedious@4.0.14':
     resolution: {integrity: sha512-KHPsfX/FoVbUGbyYvk1q9MMQHLPeRZhRJZdO45Q4YjvFkv4hMNghCWTvy7rdKessBsmtz4euWCWAB6/tVpI1Iw==}
@@ -22443,11 +22437,6 @@ snapshots:
     dependencies:
       '@types/node': 20.12.12
       '@types/stream-chain': 2.0.1
-
-  '@types/tar@6.1.13':
-    dependencies:
-      '@types/node': 20.12.12
-      minipass: 4.2.8
 
   '@types/tedious@4.0.14':
     dependencies:
