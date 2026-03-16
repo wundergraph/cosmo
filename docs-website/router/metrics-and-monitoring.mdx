@@ -177,6 +177,8 @@ You can use the `router.http.requests.error` metric to track errors across route
 
 * `http.status_code`: The status code of the response.
 
+* `wg.error.type`: Classifies the error into a specific category. This attribute is attached to both router-level and subgraph-level request metrics when an error occurs. Only set when an error is present. See [Error Types](/router/configuration/error-types) for the full list of possible values.
+
 You have two ways to query for errors. Both metrics can be quite useful depending on the query scenario. In general, we recommend to use the `router.http.requests.error` metric.
 
 #### Subgraph specific
@@ -283,7 +285,7 @@ The name of the destination of the messaging backend (topic, queue, etc)
 The provider id as specified in the router configuration
 
 * `wg.error.type`:
-A generic error type to indicate an error occurred. This is available only for `router.streams.sent.messages` at this moment, as we do not catch message receive errors.
+The error type classification. For Cosmo Streams metrics, this indicates a send error. See [Error Types](/router/configuration/error-types) for the full list of possible values.
 
 
 ### Connection Metrics

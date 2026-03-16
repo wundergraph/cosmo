@@ -36,7 +36,49 @@ const (
 	errorTypeEDFSInvalidMessage
 	errorTypeMergeResult
 	errorTypeStreamsHandlerError
+	errorTypeOperationBlocked
+	errorTypePersistedOperationNotFound
+	errorTypeValidationError
+	errorTypeInputError
+	errorTypeSubgraphError
 )
+
+func (e errorType) String() string {
+	switch e {
+	case errorTypeRateLimit:
+		return "rate_limit"
+	case errorTypeUnauthorized:
+		return "unauthorized"
+	case errorTypeContextCanceled:
+		return "context_canceled"
+	case errorTypeContextTimeout:
+		return "context_timeout"
+	case errorTypeUpgradeFailed:
+		return "upgrade_failed"
+	case errorTypeEDFS:
+		return "edfs"
+	case errorTypeInvalidWsSubprotocol:
+		return "invalid_ws_subprotocol"
+	case errorTypeEDFSInvalidMessage:
+		return "edfs_invalid_message"
+	case errorTypeMergeResult:
+		return "merge_result"
+	case errorTypeStreamsHandlerError:
+		return "streams_handler_error"
+	case errorTypeOperationBlocked:
+		return "operation_blocked"
+	case errorTypePersistedOperationNotFound:
+		return "persisted_operation_not_found"
+	case errorTypeValidationError:
+		return "validation_error"
+	case errorTypeInputError:
+		return "input_error"
+	case errorTypeSubgraphError:
+		return "subgraph_error"
+	default:
+		return "unknown"
+	}
+}
 
 type (
 	GraphQLErrorResponse struct {
@@ -63,6 +105,10 @@ func getErrorType(err error) errorType {
 	}
 	if errors.Is(err, context.Canceled) {
 		return errorTypeContextCanceled
+	}
+	var poNotFoundErr *persistedoperation.PersistentOperationNotFoundError
+	if errors.As(err, &poNotFoundErr) {
+		return errorTypePersistedOperationNotFound
 	}
 	var upgradeErr *graphql_datasource.UpgradeRequestError
 	if errors.As(err, &upgradeErr) {
@@ -93,6 +139,20 @@ func getErrorType(err error) errorType {
 	var mergeResultErr resolve.ErrMergeResult
 	if errors.As(err, &mergeResultErr) {
 		return errorTypeMergeResult
+	}
+	var reportErr ReportError
+	if errors.As(err, &reportErr) {
+		return errorTypeValidationError
+	}
+	var subgraphErr *resolve.SubgraphError
+	if errors.As(err, &subgraphErr) {
+		return errorTypeSubgraphError
+	}
+	var httpErr *httpGraphqlError
+	if errors.As(err, &httpErr) {
+		if httpErr.errorCategory != errorTypeUnknown {
+			return httpErr.errorCategory
+		}
 	}
 	return errorTypeUnknown
 }
