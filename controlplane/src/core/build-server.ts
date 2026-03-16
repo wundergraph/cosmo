@@ -183,7 +183,7 @@ export default async function build(opts: BuildConfig) {
   fastify.addHook('onRequest', async (request, reply) => {
     const contentType = request.headers['content-type'];
 
-    const contentTypeNormalized = contentType ? contentType : [];
+    const contentTypeNormalized = contentType || [];
     const contentTypeValues = Array.isArray(contentTypeNormalized) ? contentTypeNormalized : [contentTypeNormalized];
 
     if (contentTypeValues.some((v) => v.includes('\t'))) {
