@@ -29,6 +29,9 @@ jobs:
       - name: Build for router
         run: pnpm run --filter ./playground build:router
 
+      - name: Lint & format
+        run: pnpm run --filter ./playground lint:fix
+
       - uses: ./.github/actions/git-dirty-check
         with:
           package-name: playground
