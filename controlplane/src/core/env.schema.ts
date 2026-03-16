@@ -54,6 +54,10 @@ export const envVariables = z
      */
     OPENAI_API_KEY: z.string().optional(),
     /**
+     * Composition workers
+     */
+    COMPOSITION_MAX_THREADS: z.coerce.number().int().min(0).default(0),
+    /**
      * Auth
      */
     AUTH_JWT_SECRET: z.string().min(32).max(32),
