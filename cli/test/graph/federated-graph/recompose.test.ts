@@ -1,12 +1,5 @@
-import { afterEach, beforeEach, describe, expect, test, vi, type MockInstance } from 'vitest';
-import { Command } from 'commander';
-import { type PartialMessage } from '@bufbuild/protobuf';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
-import { RecomposeGraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { afterEach, beforeEach, describe, expect, type MockInstance, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { Client } from '../../../src/core/client/client.js';
-import RecomposeCommand from '../../../src/commands/graph/common/recompose.js';
 import { runRecompose } from '../utils.js';
 
 describe('federated-graph recompose', () => {
