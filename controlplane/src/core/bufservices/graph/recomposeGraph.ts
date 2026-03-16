@@ -105,10 +105,10 @@ export function recomposeGraph(
     await auditLogRepo.addAuditLog({
       organizationId: authContext.organizationId,
       organizationSlug: authContext.organizationSlug,
-      auditAction: req.isMonograph ? 'federated_graph.recomposed' : 'monograph.recomposed',
+      auditAction: req.isMonograph ? 'monograph.recomposed' : 'federated_graph.recomposed',
       action: 'recomposed',
       actorId: authContext.userId,
-      auditableType: req.isMonograph ? 'federated_graph' : 'monograph',
+      auditableType: req.isMonograph ? 'monograph' : 'federated_graph',
       auditableDisplayName: graph.name,
       actorDisplayName: authContext.userDisplayName,
       apiKeyName: authContext.apiKeyName,
@@ -124,7 +124,7 @@ export function recomposeGraph(
     const boundedCompositionWarnings = compositionWarnings.slice(0, boundedLimit);
     const boundedDeploymentErrors = deploymentErrors.slice(0, boundedLimit);
 
-    const counts = {
+    const errorCounts = {
       compositionErrors: compositionErrors.length,
       compositionWarnings: compositionWarnings.length,
       deploymentErrors: deploymentErrors.length,
@@ -132,33 +132,36 @@ export function recomposeGraph(
 
     if (boundedCompositionErrors.length > 0) {
       return {
-        response: {
-          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
-        },
         compositionErrors: boundedCompositionErrors,
         compositionWarnings: boundedCompositionWarnings,
         deploymentErrors: boundedDeploymentErrors,
+        errorCounts,
+        response: {
+          code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
+        },
       };
     }
 
     if (boundedDeploymentErrors.length > 0) {
       return {
-        response: {
-          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
-        },
         compositionErrors: [],
         compositionWarnings: boundedCompositionWarnings,
         deploymentErrors: boundedDeploymentErrors,
+        errorCounts,
+        response: {
+          code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
+        },
       };
     }
 
     return {
+      compositionErrors: [],
+      compositionWarnings: boundedCompositionWarnings,
+      deploymentErrors: [],
+      errorCounts,
       response: {
         code: EnumStatusCode.OK,
       },
-      compositionErrors: [],
-      deploymentErrors: [],
-      compositionWarnings: boundedCompositionWarnings,
     };
   });
 }

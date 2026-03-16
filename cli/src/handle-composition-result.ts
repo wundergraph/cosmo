@@ -161,9 +161,9 @@ export function handleCompositionResult({
         // Only deployment errors were displayed at this point; warnings come after the switch statement
         printTruncationWarning({
           displayedErrorCounts: new SubgraphPublishStats({
-            compositionErrors: compositionErrors.length,
+            compositionErrors: 0,
             compositionWarnings: 0,
-            deploymentErrors: 0,
+            deploymentErrors: deploymentErrors.length,
           }),
           totalErrorCounts,
         });

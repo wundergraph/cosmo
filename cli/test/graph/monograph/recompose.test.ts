@@ -59,12 +59,17 @@ describe('monograph recompose', () => {
 
   test('that recompose fails but does not return exit code 1 if the graph is not found', async () => {
     await expect(
-      runRecompose({
-        response: { code: EnumStatusCode.ERR_NOT_FOUND, details: 'Monograph not found' },
-        compositionErrors: [],
-        compositionWarnings: [],
-        deploymentErrors: [],
-      }),
+      runRecompose(
+        {
+          response: { code: EnumStatusCode.ERR_NOT_FOUND, details: 'Monograph not found' },
+          compositionErrors: [],
+          compositionWarnings: [],
+          deploymentErrors: [],
+        },
+        {
+          isMonograph: true,
+        },
+      ),
     ).rejects.toThrow();
 
     expect(process.exitCode).toBeUndefined();
@@ -119,7 +124,7 @@ describe('monograph recompose', () => {
     expect(process.exitCode).toBeUndefined();
   });
 
-  test('that recompose fails if deployment errors occur and returns exit code 1 if --fail-on-composition-error is set', async () => {
+  test('that recompose fails if deployment errors occur and returns exit code 1 if --fail-on-admission-webhook-error is set', async () => {
     await runRecompose(
       {
         response: { code: EnumStatusCode.ERR_DEPLOYMENT_FAILED },

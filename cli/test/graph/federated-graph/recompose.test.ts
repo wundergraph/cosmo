@@ -98,7 +98,7 @@ describe('federated-graph recompose', () => {
     expect(process.exitCode).toBeUndefined();
   });
 
-  test('that recompose fails if deployment errors occur and returns exit code 1 if --fail-on-composition-error is set', async () => {
+  test('that recompose fails if deployment errors occur and returns exit code 1 if --fail-on-admission-webhook-error is set', async () => {
     await runRecompose(
       {
         response: { code: EnumStatusCode.ERR_DEPLOYMENT_FAILED },
