@@ -139,6 +139,22 @@ export default class AuthUtils {
     res.header('Set-Cookie', userSsoCookie);
   }
 
+  isValidAccessToken(token: string): boolean {
+    if (!token) {
+      return false;
+    }
+
+    try {
+      const payload = decodeJWT(token);
+      return (
+        payload.iss === this.opts.oauth.openIdApiBaseUrl &&
+        (!payload.exp || payload.exp > Date.now() / 1000 + tokenExpirationWindowSkew)
+      );
+    } catch {
+      return false;
+    }
+  }
+
   async getUserInfo(accessToken: string) {
     const res = await axios({
       url: this.opts.oauth.openIdApiBaseUrl + '/protocol/openid-connect/userinfo',

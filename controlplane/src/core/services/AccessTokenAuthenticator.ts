@@ -24,6 +24,10 @@ export default class AccessTokenAuthenticator {
    * Authenticates the user with the given access token. Returns the user's organization ID and user's ID.
    */
   public async authenticate(accessToken: string, organizationSlug: string | null): Promise<AccessTokenAuthContext> {
+    if (!this.authUtils.isValidAccessToken(accessToken)) {
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Invalid or expired access token');
+    }
+
     const userInfoData = await this.authUtils.getUserInfo(accessToken);
 
     const orgSlug = organizationSlug || userInfoData.groups?.[0]?.split('/')?.[1];
