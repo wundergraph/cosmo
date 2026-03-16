@@ -91,6 +91,10 @@ dev-setup: prerequisites
 	make generate-go
 	make infra-up
 	pnpm -r run --filter '!studio' build
+	make build-plugins
+
+build-plugins:
+	$(MAKE) -C demo plugin-build-ci
 
 dev-setup-no-infra: prerequisites
 	pnpm install
