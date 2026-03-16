@@ -309,7 +309,7 @@ Those metrics use the exact same attribute set as other router request-level met
 
 By default, histogram bucket boundaries are the following:
 
-    0, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000
+    0, 10, 50, 200, 1000, 5000, 10000
 
 The best practice is to assign the smallest possible weights to fields. It is better to keep costs low.
 If the estimate exceeds `10000`, the value will be placed in the infinite bucket.

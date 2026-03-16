@@ -80,10 +80,7 @@ var (
 	}
 
 	costBucketBounds = []float64{
-		0, 5, 10,
-		25, 50, 100,
-		250, 500, 1000,
-		2500, 5000, 10000,
+		0, 10, 50, 200, 1000, 5000, 10000,
 	}
 
 	OperationCostEstimatedHistogramDescription = "Estimated operation cost before execution"
