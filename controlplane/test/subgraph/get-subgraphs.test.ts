@@ -269,8 +269,9 @@ describe('List Subgraphs', (ctx) => {
     },
   );
 
-  test('Should not return duplicated subgraphs when tied to contract', async () => {
+  test('Should not return duplicated subgraphs when tied to contract', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -326,7 +327,5 @@ describe('List Subgraphs', (ctx) => {
     expect(getFederatedGraphByName.response?.code).toBe(EnumStatusCode.OK);
     expect(getFederatedGraphByName.subgraphs).toHaveLength(1);
     expect(getFederatedGraphByName.subgraphs.find((g) => g.name === subgraphName)).toBeDefined();
-
-    await server.close();
   });
 });
