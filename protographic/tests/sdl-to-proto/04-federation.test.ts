@@ -1293,6 +1293,125 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }"
     `);
   });
+  test('should generate rpc method for required field with field arguments', () => {
+    const sdl = `
+      type User @key(fields: "id") {
+        id: ID!
+        name: String! @external
+
+        post(slug: String!): Post! @requires(fields: "name")
+      }
+
+      type Post {
+        id: ID!
+        author: User!
+        title: String!
+      }
+
+      type Query {
+        user(id: ID!): User
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    expect(protoText).toMatchInlineSnapshot(`
+      "syntax = "proto3";
+      package service.v1;
+
+      // Service definition for DefaultService
+      service DefaultService {
+        // Lookup User entity by id
+        rpc LookupUserById(LookupUserByIdRequest) returns (LookupUserByIdResponse) {}
+        rpc QueryUser(QueryUserRequest) returns (QueryUserResponse) {}
+        rpc RequireUserPostById(RequireUserPostByIdRequest) returns (RequireUserPostByIdResponse) {}
+      }
+
+      // Key message for User entity lookup
+      message LookupUserByIdRequestKey {
+        // Key field for User entity lookup.
+        string id = 1;
+      }
+
+      // Request message for User entity lookup.
+      message LookupUserByIdRequest {
+        /*
+         * List of keys to look up User entities.
+         * Order matters - each key maps to one entity in LookupUserByIdResponse.
+         */
+        repeated LookupUserByIdRequestKey keys = 1;
+      }
+
+      // Response message for User entity lookup.
+      message LookupUserByIdResponse {
+        /*
+         * List of User entities in the same order as the keys in LookupUserByIdRequest.
+         * Always return the same number of entities as keys. Use null for entities that cannot be found.
+         * 
+         * Example:
+         *   LookupUserByIdRequest:
+         *     keys:
+         *       - id: 1
+         *       - id: 2
+         *   LookupUserByIdResponse:
+         *     result:
+         *       - id: 1 # User with id 1 found
+         *       - null  # User with id 2 not found
+         */
+        repeated User result = 1;
+      }
+
+      // Request message for user operation.
+      message QueryUserRequest {
+        string id = 1;
+      }
+      // Response message for user operation.
+      message QueryUserResponse {
+        User user = 1;
+      }
+
+      message RequireUserPostByIdRequest {
+        // RequireUserPostByIdContext provides the context for the required fields method RequireUserPostById.
+        repeated RequireUserPostByIdContext context = 1;
+        RequireUserPostByIdArgs field_args = 2;
+      }
+
+      message RequireUserPostByIdContext {
+        LookupUserByIdRequestKey key = 1;
+        RequireUserPostByIdFields fields = 2;
+      }
+
+      message RequireUserPostByIdResponse {
+        // RequireUserPostByIdResult provides the result for the required fields method RequireUserPostById.
+        repeated RequireUserPostByIdResult result = 1;
+      }
+
+      message RequireUserPostByIdResult {
+        Post post = 1;
+      }
+
+      message RequireUserPostByIdFields {
+        string name = 1;
+      }
+
+      message RequireUserPostByIdArgs {
+        string slug = 1;
+      }
+
+      message User {
+        string id = 1;
+      }
+
+      message Post {
+        string id = 1;
+        User author = 2;
+        string title = 3;
+      }"
+    `);
+  });
   test('should generate rpc method for required field with randomly ordered fields', () => {
     const sdl = `
       type Product @key(fields: "id") {
