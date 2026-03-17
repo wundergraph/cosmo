@@ -1763,6 +1763,16 @@ export function listSizeSizedFieldsInvalidReturnTypeErrorMessage(
   );
 }
 
+export function listSizeSizedFieldsOnListsErrorMessage(
+  directiveCoords: DirectiveArgumentCoords,
+  returnTypeName: TypeName,
+): string {
+  return (
+    ` The "sizedFields" argument on "${directiveCoords}" is invalid because` +
+    ` the return type "${returnTypeName}" must not be a list.`
+  );
+}
+
 export function listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(
   directiveCoords: DirectiveArgumentCoords,
 ): string {

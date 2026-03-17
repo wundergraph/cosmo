@@ -139,6 +139,7 @@ import {
   listSizeSizedFieldNotFoundErrorMessage,
   listSizeSizedFieldNotListErrorMessage,
   listSizeSizedFieldsInvalidReturnTypeErrorMessage,
+  listSizeSizedFieldsOnListsErrorMessage,
   listSizeSlicingArgumentNotIntErrorMessage,
   multipleNamedTypeDefinitionError,
   noBaseScalarDefinitionError,
@@ -2603,6 +2604,9 @@ export class NormalizationFactory {
       errorMessages.push(
         listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(directiveCoords, printTypeNode(data.type)),
       );
+    }
+    if (hasSizedFields && isTypeNodeListType(data.type)) {
+      errorMessages.push(listSizeSizedFieldsOnListsErrorMessage(directiveCoords, printTypeNode(data.type)));
     }
 
     if (listSizeConfig.assumedSize !== undefined && listSizeConfig.slicingArguments.length > 0) {

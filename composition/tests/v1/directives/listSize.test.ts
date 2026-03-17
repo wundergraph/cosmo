@@ -11,6 +11,7 @@ import {
   listSizeSizedFieldNotFoundErrorMessage,
   listSizeSizedFieldNotListErrorMessage,
   listSizeSizedFieldsInvalidReturnTypeErrorMessage,
+  listSizeSizedFieldsOnListsErrorMessage,
   listSizeSlicingArgumentNotIntErrorMessage,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
@@ -507,6 +508,16 @@ describe('@listSize directive tests', () => {
       );
     });
 
+    test('that @listSize with sizedFields on lists produces an error', () => {
+      const { errors } = normalizeSubgraphFailure(subgraphWithListSizedFieldsOnLists, ROUTER_COMPATIBILITY_VERSION_ONE);
+      expect(errors).toHaveLength(1);
+      expect(errors[0]).toStrictEqual(
+        invalidDirectiveError(LIST_SIZE, 'Query.connections', FIRST_ORDINAL, [
+          listSizeSizedFieldsOnListsErrorMessage('Query.connections', '[Connection]'),
+        ]),
+      );
+    });
+
     test('that @listSize with non-boolean requireOneSlicingArgument produces an error', () => {
       const { errors } = normalizeSubgraphFailure(
         subgraphWithInvalidRequireOneSlicingArgument,
@@ -852,6 +863,19 @@ const subgraphWithNonListSizedFields: Subgraph = {
   definitions: parse(`
     type Query {
       usersConnection(first: Int): Connection! @listSize(slicingArguments: ["first"], sizedFields: "edges")
+    }
+    type Connection { edges: [Edge!]! }
+    type Edge { node: User! }
+    type User { id: ID! }
+  `),
+};
+
+const subgraphWithListSizedFieldsOnLists: Subgraph = {
+  name: 'subgraph-listsize-sizedfields-on-lists',
+  url: '',
+  definitions: parse(`
+    type Query {
+      connections(first: Int): [Connection] @listSize(slicingArguments: ["first"], sizedFields: "edges")
     }
     type Connection { edges: [Edge!]! }
     type Edge { node: User! }
