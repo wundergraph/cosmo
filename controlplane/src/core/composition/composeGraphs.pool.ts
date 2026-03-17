@@ -62,7 +62,9 @@ function getComposeGraphsPool() {
     filename,
     minThreads: 1,
     maxThreads: getMaxThreads(),
+    runtime: 'child_process',
     concurrentTasksPerWorker: 2,
+    serialization: 'advanced',
   });
 
   return composeGraphsPool;

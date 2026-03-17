@@ -34,8 +34,10 @@ describe('GetOperationDeprecatedFields', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should return ERR_ANALYTICS_DISABLED when ClickHouse client is not available', async () => {
+  test('Should return ERR_ANALYTICS_DISABLED when ClickHouse client is not available', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient: undefined });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -59,12 +61,12 @@ describe('GetOperationDeprecatedFields', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_ANALYTICS_DISABLED);
     expect(response.deprecatedFields).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return ERR_NOT_FOUND when federated graph does not exist', async () => {
+  test('Should return ERR_NOT_FOUND when federated graph does not exist', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('nonExistentGraph');
 
     const response = await client.getOperationDeprecatedFields({
@@ -77,12 +79,12 @@ describe('GetOperationDeprecatedFields', () => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(response.response?.details).toContain(`Federated graph '${fedGraphName}' not found`);
     expect(response.deprecatedFields).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return ERR when date range is invalid', async () => {
+  test('Should return ERR when date range is invalid', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -112,12 +114,12 @@ describe('GetOperationDeprecatedFields', () => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
     expect(response.response?.details).toBe('Invalid date range');
     expect(response.deprecatedFields).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return empty deprecated fields when schema has no deprecated fields', async () => {
+  test('Should return empty deprecated fields when schema has no deprecated fields', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -144,12 +146,12 @@ describe('GetOperationDeprecatedFields', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.deprecatedFields).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return deprecated fields used in operation', async () => {
+  test('Should return deprecated fields used in operation', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -196,12 +198,12 @@ describe('GetOperationDeprecatedFields', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.deprecatedFields.length).toBeGreaterThanOrEqual(0);
     // The response should contain deprecated fields if they exist in the schema
-
-    await server.close();
   });
 
-  test('Should handle operation without deprecated fields', async () => {
+  test('Should handle operation without deprecated fields', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -232,12 +234,12 @@ describe('GetOperationDeprecatedFields', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.deprecatedFields).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should handle operation name with special characters', async () => {
+  test('Should handle operation name with special characters', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -265,12 +267,12 @@ describe('GetOperationDeprecatedFields', () => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('Should handle operation hash with special characters', async () => {
+  test('Should handle operation hash with special characters', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -298,12 +300,12 @@ describe('GetOperationDeprecatedFields', () => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('Should handle date range correctly', async () => {
+  test('Should handle date range correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -335,12 +337,12 @@ describe('GetOperationDeprecatedFields', () => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('Should handle range parameter correctly', async () => {
+  test('Should handle range parameter correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -369,12 +371,12 @@ describe('GetOperationDeprecatedFields', () => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('Should return deprecated fields with correct field name and type name', async () => {
+  test('Should return deprecated fields with correct field name and type name', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -418,12 +420,12 @@ describe('GetOperationDeprecatedFields', () => {
       expect(response.deprecatedFields[0]?.fieldName).toBeDefined();
       expect(response.deprecatedFields[0]?.typeName).toBeDefined();
     }
-
-    await server.close();
   });
 
-  test('Should handle operation without operation name', async () => {
+  test('Should handle operation without operation name', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -451,12 +453,12 @@ describe('GetOperationDeprecatedFields', () => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('Should handle deprecated fields with empty type names array', async () => {
+  test('Should handle deprecated fields with empty type names array', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -491,6 +493,5 @@ describe('GetOperationDeprecatedFields', () => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-    await server.close();
   });
 });

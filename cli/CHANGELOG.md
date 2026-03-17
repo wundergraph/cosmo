@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.112.0](https://github.com/wundergraph/cosmo/compare/wgc@0.111.0...wgc@0.112.0) (2026-03-17)
+
+### Features
+
+* expose costs ([#2470](https://github.com/wundergraph/cosmo/issues/2470)) ([d43aa40](https://github.com/wundergraph/cosmo/commit/d43aa40f2429fbb212e5618cd5586774e1b6ae7e)) (@ysmolski)
+
+# [0.111.0](https://github.com/wundergraph/cosmo/compare/wgc@0.110.2...wgc@0.111.0) (2026-03-17)
+
+### Features
+
+* add graph recompose ([#2652](https://github.com/wundergraph/cosmo/issues/2652)) ([8bdb7d0](https://github.com/wundergraph/cosmo/commit/8bdb7d08485cb8bde84efb033663e49ed23e060f)) (@Aenimus)
+
+## [0.110.2](https://github.com/wundergraph/cosmo/compare/wgc@0.110.1...wgc@0.110.2) (2026-03-17)
+
+**Note:** Version bump only for package wgc
+
 ## [0.110.1](https://github.com/wundergraph/cosmo/compare/wgc@0.110.0...wgc@0.110.1) (2026-03-13)
 
 **Note:** Version bump only for package wgc

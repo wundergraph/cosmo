@@ -178,6 +178,7 @@ import { getSubgraphCheckExtensionsConfig } from './check-extensions/getSubgraph
 import { configureSubgraphCheckExtensions } from './check-extensions/configureSubgraphCheckExtensions.js';
 import { initializeCosmoUser } from './user/initializeCosmoUser.js';
 import { listOrganizations } from './organization/listOrganizations.js';
+import { recomposeGraph } from './graph/recomposeGraph.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof PlatformService>> {
   return {
@@ -900,6 +901,10 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof Platfo
 
     verifyAPIKeyGraphAccess: (req, ctx) => {
       return verifyAPIKeyGraphAccess(opts, req, ctx);
+    },
+
+    recomposeGraph: (req, ctx) => {
+      return recomposeGraph(opts, req, ctx);
     },
   };
 }
