@@ -293,7 +293,7 @@ export class RequiredFieldsVisitor {
           description: `${contextMessageName} provides the context for the required fields method ${requiredFieldsMethodName}.`,
         },
       ],
-    }
+    };
 
     const requireArgsMessageName = `${requiredFieldsMethodName}Args`;
 
@@ -302,8 +302,8 @@ export class RequiredFieldsVisitor {
         fieldName: 'field_args',
         typeName: requireArgsMessageName,
         fieldNumber: 2,
-        description: `${requireArgsMessageName} provides the field arguments for the required field with method ${requiredFieldsMethodName}.`
-      })
+        description: `${requireArgsMessageName} provides the field arguments for the required field with method ${requiredFieldsMethodName}.`,
+      });
     }
 
     this.messageDefinitions.push(requestMessage);
@@ -333,18 +333,18 @@ export class RequiredFieldsVisitor {
     if (this.requiredField.args.length > 0) {
       const requireArgsMessage: ProtoMessage = {
         messageName: requireArgsMessageName,
-        fields: []
-      }
+        fields: [],
+      };
 
       this.requiredField.args.forEach((d, i) => {
         requireArgsMessage.fields.push({
           fieldName: graphqlArgumentToProtoField(d.name),
           typeName: getProtoTypeFromGraphQL(false, d.type, true).typeName,
-          fieldNumber: i+1
-        })
-      })
+          fieldNumber: i + 1,
+        });
+      });
 
-      this.messageDefinitions.push(requireArgsMessage)
+      this.messageDefinitions.push(requireArgsMessage);
     }
 
     // Define the prototype for the required fields message.

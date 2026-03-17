@@ -1137,7 +1137,7 @@ Example:
 
         // Skip fields with @requires directive, they are managed by the required fields visitor
         if (field.args.length > 0 && this.findDirective(field, REQUIRES_DIRECTIVE_NAME)) {
-          continue
+          continue;
         }
 
         const methodName = createResolverMethodName(type.name, field.name);
@@ -1252,7 +1252,7 @@ Example:
   }
 
   private findDirective(field: GraphQLField<any, any>, directive: string): DirectiveNode | undefined {
-    return field.astNode?.directives?.find((d) => d.name.value === directive)
+    return field.astNode?.directives?.find((d) => d.name.value === directive);
   }
 
   /**
