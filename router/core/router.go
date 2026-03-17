@@ -25,7 +25,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.uber.org/zap"
 
-	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/entityanalytics/v1/entityanalyticsv1connect"
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1/graphqlmetricsv1connect"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
@@ -33,7 +32,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/docker"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/graphiql"
-	"github.com/wundergraph/cosmo/router/internal/entityanalytics"
 	"github.com/wundergraph/cosmo/router/internal/graphqlmetrics"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation/apq"
@@ -904,44 +902,7 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}
 
-	// Create entity analytics exporter
-	if r.entityCachingConfig.Enabled && r.entityCachingConfig.Analytics.Enabled && r.entityCachingConfig.Analytics.Export.Enabled {
-		endpoint := r.entityCachingConfig.Analytics.Export.Endpoint
-		if endpoint == "" && r.graphqlMetricsConfig != nil {
-			endpoint = r.graphqlMetricsConfig.CollectorEndpoint
-		}
-		if endpoint != "" {
-			client := entityanalyticsv1connect.NewEntityAnalyticsServiceClient(
-				http.DefaultClient,
-				endpoint,
-				connect.WithSendGzip(),
-			)
-			exportCfg := r.entityCachingConfig.Analytics.Export
-			settings := &exporter.ExporterSettings{
-				BatchSize:     exportCfg.BatchSize,
-				QueueSize:     exportCfg.QueueSize,
-				Interval:      exportCfg.Interval,
-				ExportTimeout: exportCfg.Interval,
-				RetryOptions: exporter.RetryOptions{
-					Enabled:     exportCfg.Retry.Enabled,
-					MaxRetry:    exportCfg.Retry.MaxRetries,
-					MaxDuration: exportCfg.Retry.MaxDuration,
-					Interval:    exportCfg.Retry.Interval,
-				},
-			}
-			eae, err := entityanalytics.NewEntityAnalyticsExporter(
-				r.logger,
-				client,
-				r.graphApiToken,
-				settings,
-			)
-			if err != nil {
-				return fmt.Errorf("failed to create entity analytics exporter: %w", err)
-			}
-			r.entityAnalyticsExporter = eae
-			r.logger.Info("Entity analytics export enabled")
-		}
-	}
+	// TODO: Add entity analytics exporter setup here once the analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
 
 	// Create Prometheus metrics exporter for schema field usage
 	// Note: This is separate from the Prometheus meter provider which handles OTEL metrics
@@ -1342,13 +1303,22 @@ func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, er
 	caches := make(map[string]resolve.LoaderCache)
 	l2Cfg := r.entityCachingConfig.L2
 
-	// buildCache creates a Redis-backed cache with optional circuit breaker wrapping.
+	// buildCache creates a cache backed by either Redis or memory, with optional circuit breaker wrapping.
 	buildCache := func(providerID string) (resolve.LoaderCache, error) {
-		client, err := r.findRedisClient(providerID)
-		if err != nil {
-			return nil, err
+		var cache resolve.LoaderCache
+		if memProvider, ok := r.findMemoryProvider(providerID); ok {
+			mc, err := entitycache.NewMemoryEntityCache(int64(memProvider.MaxSize))
+			if err != nil {
+				return nil, fmt.Errorf("creating memory cache: %w", err)
+			}
+			cache = mc
+		} else {
+			client, err := r.findRedisClient(providerID)
+			if err != nil {
+				return nil, err
+			}
+			cache = entitycache.NewRedisEntityCache(client, l2Cfg.Storage.KeyPrefix)
 		}
-		var cache resolve.LoaderCache = entitycache.NewRedisEntityCache(client, l2Cfg.Storage.KeyPrefix)
 		if l2Cfg.CircuitBreaker.Enabled {
 			cache = entitycache.NewCircuitBreakerCache(cache, entitycache.CircuitBreakerConfig{
 				Enabled:          true,
@@ -1368,22 +1338,28 @@ func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, er
 		caches["default"] = cache
 	}
 
-	// Build per-subgraph caches from subgraphs[].entities[].cache_name
-	for _, sg := range r.entityCachingConfig.Subgraphs {
+	// Build per-subgraph/entity caches from subgraph_cache_overrides
+	for _, sg := range r.entityCachingConfig.SubgraphCacheOverrides {
+		// Collect unique provider IDs from subgraph-level and entity-level overrides
+		providerIDs := make(map[string]string) // providerID → context (for error messages)
+		if sg.StorageProviderID != "" && sg.StorageProviderID != "default" {
+			providerIDs[sg.StorageProviderID] = sg.Name
+		}
 		for _, entity := range sg.Entities {
-			cacheName := entity.CacheName
-			if cacheName == "" || cacheName == "default" {
+			if entity.StorageProviderID != "" && entity.StorageProviderID != "default" {
+				providerIDs[entity.StorageProviderID] = sg.Name + "." + entity.Type
+			}
+		}
+		for providerID, context := range providerIDs {
+			if _, exists := caches[providerID]; exists {
 				continue
 			}
-			if _, exists := caches[cacheName]; exists {
-				continue
-			}
-			cache, err := buildCache(cacheName)
+			cache, err := buildCache(providerID)
 			if err != nil {
-				return nil, fmt.Errorf("entity caching provider %q for %s.%s: %w",
-					cacheName, sg.Name, entity.Type, err)
+				return nil, fmt.Errorf("entity caching provider %q for %s: %w",
+					providerID, context, err)
 			}
-			caches[cacheName] = cache
+			caches[providerID] = cache
 		}
 	}
 
@@ -1400,7 +1376,16 @@ func (r *Router) findRedisClient(providerID string) (rd.RDCloser, error) {
 			})
 		}
 	}
-	return nil, fmt.Errorf("redis provider %q not found in storage_providers", providerID)
+	return nil, fmt.Errorf("storage provider %q not found in storage_providers (checked redis, memory)", providerID)
+}
+
+func (r *Router) findMemoryProvider(providerID string) (*config.MemoryStorageProvider, bool) {
+	for i := range r.storageProviders.Memory {
+		if r.storageProviders.Memory[i].ID == providerID {
+			return &r.storageProviders.Memory[i], true
+		}
+	}
+	return nil, false
 }
 
 // Start starts the router. It does block until the router has been initialized. After that the server is listening
@@ -1724,14 +1709,6 @@ func (r *Router) Shutdown(ctx context.Context) error {
 		wg.Go(func() {
 			if subErr := r.gqlMetricsExporter.Shutdown(ctx); subErr != nil {
 				err.Append(fmt.Errorf("failed to shutdown graphql metrics exporter: %w", subErr))
-			}
-		})
-	}
-
-	if r.entityAnalyticsExporter != nil {
-		wg.Go(func() {
-			if subErr := r.entityAnalyticsExporter.Shutdown(ctx); subErr != nil {
-				err.Append(fmt.Errorf("failed to shutdown entity analytics exporter: %w", subErr))
 			}
 		})
 	}

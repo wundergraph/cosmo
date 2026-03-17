@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
@@ -31,13 +30,20 @@ import (
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 )
 
+// Proto operation_type string values from the composition layer.
+// CachePopulateConfiguration and CacheInvalidateConfiguration use these title-case strings
+// (distinct from the router's internal lowercase OperationType constants in context.go).
+const (
+	protoOperationTypeSubscription = "Subscription"
+)
+
 type Loader struct {
 	ctx               context.Context
 	resolver          FactoryResolver
 	subscriptionHooks subscriptionHooks
 	// includeInfo controls whether additional information like type usage and field usage is included in the plan de
-	includeInfo        bool
-	logger             *zap.Logger
+	includeInfo         bool
+	logger              *zap.Logger
 	entityCachingConfig *config.EntityCachingConfiguration
 }
 
@@ -659,7 +665,7 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 
 	// Entity caching configurations
 	for _, ec := range in.EntityCacheConfigurations {
-		cacheName := l.resolveEntityCacheName(subgraphName, ec.TypeName)
+		cacheName := l.resolveEntityCacheProviderID(subgraphName, ec.TypeName)
 		out.FederationMetaData.EntityCaching = append(out.FederationMetaData.EntityCaching, plan.EntityCacheConfiguration{
 			TypeName:                    ec.TypeName,
 			CacheName:                   cacheName,
@@ -667,13 +673,12 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 			IncludeSubgraphHeaderPrefix: ec.IncludeHeaders,
 			EnablePartialCacheLoad:      ec.PartialCacheLoad,
 			ShadowMode:                  ec.ShadowMode,
-			HashAnalyticsKeys:           l.entityCachingConfig != nil && l.entityCachingConfig.Analytics.HashEntityKeys,
 		})
 	}
 
 	// Root field cache configurations
 	for _, rfc := range in.RootFieldCacheConfigurations {
-		cacheName := l.resolveEntityCacheName(subgraphName, rfc.EntityTypeName)
+		cacheName := l.resolveEntityCacheProviderID(subgraphName, rfc.EntityTypeName)
 		var mappings []plan.EntityKeyMapping
 		for _, m := range rfc.EntityKeyMappings {
 			var fieldMappings []plan.FieldMapping
@@ -701,13 +706,13 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 
 	// Mutation/subscription cache populate
 	for _, cp := range in.CachePopulateConfigurations {
-		if cp.OperationType == "Subscription" {
+		if cp.OperationType == protoOperationTypeSubscription {
 			for _, ec := range in.EntityCacheConfigurations {
 				ttl := time.Duration(ec.MaxAgeSeconds) * time.Second
 				if cp.MaxAgeSeconds != nil {
 					ttl = time.Duration(*cp.MaxAgeSeconds) * time.Second
 				}
-				cacheName := l.resolveEntityCacheName(subgraphName, ec.TypeName)
+				cacheName := l.resolveEntityCacheProviderID(subgraphName, ec.TypeName)
 				out.FederationMetaData.SubscriptionEntityPopulation = append(
 					out.FederationMetaData.SubscriptionEntityPopulation,
 					plan.SubscriptionEntityPopulationConfiguration{
@@ -728,8 +733,8 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 
 	// Mutation/subscription cache invalidation
 	for _, ci := range in.CacheInvalidateConfigurations {
-		if strings.EqualFold(ci.OperationType, "subscription") {
-			cacheName := l.resolveEntityCacheName(subgraphName, ci.EntityTypeName)
+		if ci.OperationType == protoOperationTypeSubscription {
+			cacheName := l.resolveEntityCacheProviderID(subgraphName, ci.EntityTypeName)
 			var includeHeaders bool
 			for _, ec := range in.EntityCacheConfigurations {
 				if ec.TypeName == ci.EntityTypeName {
@@ -757,8 +762,8 @@ func (l *Loader) dataSourceMetaData(in *nodev1.DataSourceConfiguration, subgraph
 	return out
 }
 
-func (l *Loader) resolveEntityCacheName(subgraphName, typeName string) string {
-	return resolveEntityCacheName(l.entityCachingConfig, subgraphName, typeName)
+func (l *Loader) resolveEntityCacheProviderID(subgraphName, typeName string) string {
+	return resolveEntityCacheProviderID(l.entityCachingConfig, subgraphName, typeName)
 }
 
 func (l *Loader) fieldHasAuthorizationRule(fieldConfiguration *nodev1.FieldConfiguration) bool {

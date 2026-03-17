@@ -925,6 +925,7 @@
         "ClusterEnabled": false
       }
     ],
+    "Memory": null,
     "FileSystem": [
       {
         "ID": "mcp",
@@ -951,25 +952,7 @@
         "CooldownPeriod": 10000000000
       }
     },
-    "Analytics": {
-      "Enabled": false,
-      "HashEntityKeys": false,
-      "DetailLevel": "standard",
-      "Export": {
-        "Enabled": true,
-        "Endpoint": "",
-        "BatchSize": 1024,
-        "QueueSize": 10240,
-        "Interval": 10000000000,
-        "Retry": {
-          "Enabled": true,
-          "MaxRetries": 5,
-          "MaxDuration": 10000000000,
-          "Interval": 5000000000
-        }
-      }
-    },
-    "Subgraphs": null
+    "SubgraphCacheOverrides": null
   },
   "ExecutionConfig": {
     "File": {

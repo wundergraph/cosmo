@@ -5,11 +5,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/entitycache"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -170,11 +170,11 @@ func TestEntityCaching(t *testing.T) {
 					Enabled: true,
 					L1:      config.EntityCachingL1Configuration{Enabled: true},
 					L2:      config.EntityCachingL2Configuration{Enabled: true},
-					Subgraphs: []config.EntityCachingSubgraphConfig{
+					SubgraphCacheOverrides: []config.EntityCachingSubgraphCacheOverride{
 						{
 							Name: "products",
 							Entities: []config.EntityCachingEntityConfig{
-								{Type: "Employee", CacheName: "custom"},
+								{Type: "Employee", StorageProviderID: "custom"},
 							},
 						},
 					},

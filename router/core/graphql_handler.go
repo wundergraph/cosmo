@@ -10,8 +10,6 @@ import (
 	"net/http"
 	"strings"
 
-	entityanalyticsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/entityanalytics/v1"
-	"github.com/wundergraph/cosmo/router/internal/entityanalytics"
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/graphql_datasource"
@@ -90,15 +88,11 @@ type HandlerOptions struct {
 
 // EntityCachingHandlerOptions groups all entity caching configuration passed to the GraphQL handler.
 type EntityCachingHandlerOptions struct {
-	L1Enabled          bool
-	L2Enabled          bool
-	AnalyticsEnabled   bool
-	GlobalKeyPrefix    string
-	KeyInterceptors    []EntityCacheKeyInterceptor
-	Metrics            []*rmetric.EntityCacheMetrics
-	AnalyticsExporter  *entityanalytics.EntityAnalyticsExporter
-	AnalyticsDetail    entityanalytics.DetailLevel
-	RouterConfigVersion string
+	L1Enabled       bool
+	L2Enabled       bool
+	GlobalKeyPrefix string
+	KeyInterceptors []EntityCacheKeyInterceptor
+	Metrics         []*rmetric.EntityCacheMetrics
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -253,7 +247,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
-		h.recordEntityCacheAndAnalytics(resolveCtx, reqCtx)
+		h.recordEntityCacheMetrics(resolveCtx)
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter
@@ -546,41 +540,16 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 	}
 }
 
-func (h *GraphQLHandler) recordEntityCacheAndAnalytics(resolveCtx *resolve.Context, reqCtx *requestContext) {
-	hasMetrics := len(h.entityCaching.Metrics) > 0
-	hasAnalytics := h.entityCaching.AnalyticsExporter != nil
-	if !hasMetrics && !hasAnalytics {
+// recordEntityCacheMetrics records OTEL metrics from the cache analytics snapshot.
+// TODO: Add entity analytics export here once the analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
+func (h *GraphQLHandler) recordEntityCacheMetrics(resolveCtx *resolve.Context) {
+	if len(h.entityCaching.Metrics) == 0 {
 		return
 	}
 	snapshot := resolveCtx.GetCacheStats()
-	if hasMetrics {
-		ctx := resolveCtx.Context()
-		for _, m := range h.entityCaching.Metrics {
-			m.RecordSnapshot(ctx, snapshot)
-		}
-	}
-	if hasAnalytics {
-		meta := entityanalytics.OperationMeta{
-			Hash:          reqCtx.operation.HashString(),
-			Name:          reqCtx.operation.name,
-			Type:          toEntityAnalyticsOpType(reqCtx.operation.opType),
-			ClientName:    reqCtx.operation.clientInfo.Name,
-			ClientVersion: reqCtx.operation.clientInfo.Version,
-			SchemaVersion: h.entityCaching.RouterConfigVersion,
-		}
-		info := entityanalytics.BuildEntityAnalyticsInfo(snapshot, meta, h.entityCaching.AnalyticsDetail)
-		h.entityCaching.AnalyticsExporter.RecordAnalytics(info, false)
-	}
-}
-
-func toEntityAnalyticsOpType(opType OperationType) entityanalyticsv1.OperationType {
-	switch opType {
-	case OperationTypeMutation:
-		return entityanalyticsv1.OperationType_MUTATION
-	case OperationTypeSubscription:
-		return entityanalyticsv1.OperationType_SUBSCRIPTION
-	default:
-		return entityanalyticsv1.OperationType_QUERY
+	ctx := resolveCtx.Context()
+	for _, m := range h.entityCaching.Metrics {
+		m.RecordSnapshot(ctx, snapshot)
 	}
 }
 
@@ -588,7 +557,7 @@ func (h *GraphQLHandler) cachingOptions(reqCtx *requestContext) resolve.CachingO
 	return resolve.CachingOptions{
 		EnableL1Cache:         h.entityCaching.L1Enabled,
 		EnableL2Cache:         h.entityCaching.L2Enabled,
-		EnableCacheAnalytics:  h.entityCaching.AnalyticsEnabled,
+		EnableCacheAnalytics:  len(h.entityCaching.Metrics) > 0,
 		GlobalCacheKeyPrefix:  h.entityCaching.GlobalKeyPrefix,
 		L2CacheKeyInterceptor: h.buildL2CacheKeyInterceptor(reqCtx),
 	}

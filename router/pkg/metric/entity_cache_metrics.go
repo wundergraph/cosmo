@@ -7,7 +7,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/metric"
+	"go.uber.org/zap"
 
+	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
@@ -21,18 +23,8 @@ const (
 	entityCacheLatencyKey         = entityCacheMetricBase + "latency"
 	entityCacheInvalidationsKey   = entityCacheMetricBase + "invalidations"
 	entityCachePopulationsKey     = entityCacheMetricBase + "populations"
-	entityCacheShadowStalenessKey    = entityCacheMetricBase + "shadow.staleness"
-	entityCacheOperationErrorsKey   = entityCacheMetricBase + "operation_errors"
-)
-
-var (
-	attrKeyType       = attribute.Key("type")
-	attrKeyCacheLevel = attribute.Key("cache_level")
-	attrKeyCacheType  = attribute.Key("cache_type")
-	attrKeyOperation  = attribute.Key("operation")
-	attrKeySource     = attribute.Key("source")
-	attrKeyCacheName  = attribute.Key("cache_name")
-	attrKeyEntityType = attribute.Key("entity_type")
+	entityCacheShadowStalenessKey = entityCacheMetricBase + "shadow.staleness"
+	entityCacheOperationErrorsKey = entityCacheMetricBase + "operation_errors"
 )
 
 type entityCacheInstruments struct {
@@ -45,12 +37,16 @@ type entityCacheInstruments struct {
 	operationErrors otelmetric.Int64Counter
 }
 
+// EntityCacheMetrics is a struct that holds the metrics for the entity cache.
 type EntityCacheMetrics struct {
 	instruments    *entityCacheInstruments
 	baseAttributes []attribute.KeyValue
+	logger         *zap.Logger
 }
 
+// NewEntityCacheMetrics creates a new EntityCacheMetrics instance.
 func NewEntityCacheMetrics(
+	logger *zap.Logger,
 	baseAttributes []attribute.KeyValue,
 	provider *metric.MeterProvider,
 ) (*EntityCacheMetrics, error) {
@@ -64,6 +60,7 @@ func NewEntityCacheMetrics(
 	return &EntityCacheMetrics{
 		instruments:    instruments,
 		baseAttributes: slices.Clone(baseAttributes),
+		logger:         logger,
 	}, nil
 }
 
@@ -140,6 +137,12 @@ func (m *EntityCacheMetrics) attrs(extra ...attribute.KeyValue) otelmetric.Measu
 	return otelmetric.WithAttributes(slices.Concat(m.baseAttributes, extra)...)
 }
 
+// Shutdown performs cleanup of entity cache metrics resources.
+// EntityCacheMetrics uses synchronous instruments, so there are no callbacks to unregister.
+func (m *EntityCacheMetrics) Shutdown() error {
+	return nil
+}
+
 func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolve.CacheAnalyticsSnapshot) {
 	for _, event := range snapshot.L1Reads {
 		cacheType := cacheTypeFromEntityType(event.EntityType)
@@ -163,23 +166,23 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 
 	for range snapshot.L1Writes {
 		m.instruments.keysStats.Add(ctx, 1,
-			m.attrs(attrKeyOperation.String("added"), attrKeyCacheLevel.String("l1")),
+			m.attrs(otel.CacheMetricsOperationAttribute.String("added"), otel.EntityCacheCacheLevelAttribute.String("l1")),
 		)
 	}
 
 	for range snapshot.L2Writes {
 		m.instruments.keysStats.Add(ctx, 1,
-			m.attrs(attrKeyOperation.String("added"), attrKeyCacheLevel.String("l2")),
+			m.attrs(otel.CacheMetricsOperationAttribute.String("added"), otel.EntityCacheCacheLevelAttribute.String("l2")),
 		)
 		m.instruments.populations.Add(ctx, 1,
-			m.attrs(attrKeySource.String("query")),
+			m.attrs(otel.EntityCacheSourceAttribute.String("query")),
 		)
 	}
 
 	for _, event := range snapshot.FetchTimings {
 		if event.Source == resolve.FieldSourceL2 {
 			m.instruments.latency.Record(ctx, float64(event.DurationMs),
-				m.attrs(attrKeyCacheLevel.String("l2"), attrKeyOperation.String("get")),
+				m.attrs(otel.EntityCacheCacheLevelAttribute.String("l2"), otel.CacheMetricsOperationAttribute.String("get")),
 			)
 		}
 	}
@@ -187,7 +190,7 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 	for _, event := range snapshot.ShadowComparisons {
 		if !event.IsFresh {
 			m.instruments.shadowStaleness.Add(ctx, 1,
-				m.attrs(attrKeyCacheType.String(cacheTypeFromEntityType(event.EntityType))),
+				m.attrs(otel.CacheMetricsCacheTypeAttribute.String(cacheTypeFromEntityType(event.EntityType))),
 			)
 		}
 	}
@@ -195,7 +198,7 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 	for _, event := range snapshot.MutationEvents {
 		if event.HadCachedValue {
 			m.instruments.invalidations.Add(ctx, 1,
-				m.attrs(attrKeySource.String("mutation")),
+				m.attrs(otel.EntityCacheSourceAttribute.String("mutation")),
 			)
 		}
 	}
@@ -203,9 +206,9 @@ func (m *EntityCacheMetrics) RecordSnapshot(ctx context.Context, snapshot resolv
 	for _, opErr := range snapshot.CacheOpErrors {
 		m.instruments.operationErrors.Add(ctx, 1,
 			m.attrs(
-				attrKeyOperation.String(opErr.Operation),
-				attrKeyCacheName.String(opErr.CacheName),
-				attrKeyEntityType.String(opErr.EntityType),
+				otel.CacheMetricsOperationAttribute.String(opErr.Operation),
+				otel.EntityCacheCacheNameAttribute.String(opErr.CacheName),
+				otel.EntityCacheEntityTypeAttribute.String(opErr.EntityType),
 			),
 		)
 	}
@@ -220,6 +223,6 @@ func cacheTypeFromEntityType(entityType string) string {
 
 func (m *EntityCacheMetrics) recordRequestStat(ctx context.Context, typ, cacheLevel, cacheType string) {
 	m.instruments.requestsStats.Add(ctx, 1,
-		m.attrs(attrKeyType.String(typ), attrKeyCacheLevel.String(cacheLevel), attrKeyCacheType.String(cacheType)),
+		m.attrs(otel.CacheMetricsTypeAttribute.String(typ), otel.EntityCacheCacheLevelAttribute.String(cacheLevel), otel.CacheMetricsCacheTypeAttribute.String(cacheType)),
 	)
 }
