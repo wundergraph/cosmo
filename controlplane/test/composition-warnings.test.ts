@@ -39,8 +39,9 @@ describe('Composition warning tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test(`that a warning is returned if the target subgraph of an override does not exist`, async () => {
+  test(`that a warning is returned if the target subgraph of an override does not exist`, async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -71,12 +72,11 @@ describe('Composition warning tests', () => {
     expect(publishFederatedSubgraphResp.compositionWarnings[0].message).toBe(
       invalidOverrideTargetSubgraphNameWarning('employees', 'Query', ['hello'], 'pandas').message,
     );
-
-    await server.close();
   });
 
-  test('that an warning is returned if a V1 interface extension field is declared @external', async () => {
+  test('that a warning is returned if a V1 interface extension field is declared @external', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -116,12 +116,11 @@ describe('Composition warning tests', () => {
     expect(publishFederatedSubgraphResp.compositionWarnings[0].message).toBe(
       externalInterfaceFieldsWarning('pandas', 'Interface', ['age', 'id']).message,
     );
-
-    await server.close();
   });
 
-  test('that an warning is returned if a non-external v1 fields are a part of a @requires field set', async () => {
+  test('that a warning is returned if a non-external v1 fields are a part of a @requires field set', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -212,7 +211,5 @@ describe('Composition warning tests', () => {
         REQUIRES,
       ).message,
     );
-
-    await server.close();
   });
 });
