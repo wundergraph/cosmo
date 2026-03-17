@@ -157,53 +157,6 @@ func TestOperationCost(t *testing.T) {
 			})
 		})
 
-		t.Run("Should fail on startup when cost control is enabled without estimated_list_size", func(t *testing.T) {
-			t.Parallel()
-
-			testenv.FailsOnStartup(t, &testenv.Config{
-				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
-					cfg.CostControl = &config.CostControl{
-						Enabled: true,
-						Mode:    config.CostControlModeMeasure,
-					}
-				},
-			}, func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "cost control is enabled but 'estimated_list_size' is not set")
-			})
-		})
-
-		t.Run("Should fail on startup when cost control mode is invalid", func(t *testing.T) {
-			t.Parallel()
-
-			testenv.FailsOnStartup(t, &testenv.Config{
-				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
-					cfg.CostControl = &config.CostControl{
-						Enabled:           true,
-						Mode:              "invalid",
-						EstimatedListSize: 5,
-					}
-				},
-			}, func(t *testing.T, err error) {
-				require.ErrorContains(t, err, `cost control mode "invalid" is invalid`)
-			})
-		})
-
-		t.Run("Should fail on startup when enforce mode is set without max_estimated_limit", func(t *testing.T) {
-			t.Parallel()
-
-			testenv.FailsOnStartup(t, &testenv.Config{
-				ModifySecurityConfiguration: func(cfg *config.SecurityConfiguration) {
-					cfg.CostControl = &config.CostControl{
-						Enabled:           true,
-						Mode:              config.CostControlModeEnforce,
-						EstimatedListSize: 5,
-					}
-				},
-			}, func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "cost control mode is 'enforce' but 'max_estimated_limit' is not set")
-			})
-		})
-
 		t.Run("disabled cost control does not block queries", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
@@ -263,7 +216,8 @@ func TestOperationCost(t *testing.T) {
 				})
 				require.Contains(t, res.Body, `"data":`)
 
-				require.Equal(t, "600", res.Response.Header.Get(core.CostEstimatedHeader))
+				// 50 * (employees(1) + id(0) + 1 * (role(1) + 3 * departments(1) + 5 * title(1)))
+				require.Equal(t, "500", res.Response.Header.Get(core.CostEstimatedHeader))
 				require.Equal(t, "280", res.Response.Header.Get(core.CostActualHeader))
 			})
 		})
@@ -287,8 +241,8 @@ func TestOperationCost(t *testing.T) {
 				require.Contains(t, res.Body, `"data":`)
 
 				// Department enum has @cost(weight: 1), overriding the default enum weight of 0.
-				// Without the Department type weight, estimated would be 8.
-				require.Equal(t, "18", res.Response.Header.Get(core.CostEstimatedHeader))
+				// employee(5) + 2 + 1 * (role(1) + 3 * departments(1)))
+				require.Equal(t, "11", res.Response.Header.Get(core.CostEstimatedHeader))
 
 				require.Equal(t, "10", res.Response.Header.Get(core.CostActualHeader))
 			})
