@@ -21,8 +21,11 @@ directive @cacheInvalidate on FIELD_DEFINITION
 
 directive @cachePopulate(maxAge: Int) on FIELD_DEFINITION
 
+directive @is(field: String!) on ARGUMENT_DEFINITION
+
 type Query {
   item(id: ID!): Item @queryCache(maxAge: 300)
+  itemByPid(pid: ID! @is(field: "id")): Item @queryCache(maxAge: 300)
   items: [Item!]! @queryCache(maxAge: 300)
 }
 

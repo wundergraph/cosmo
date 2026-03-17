@@ -9,6 +9,7 @@
             "typeName": "Query",
             "fieldNames": [
               "item",
+              "itemByPid",
               "items"
             ]
           },
@@ -57,10 +58,10 @@
           },
           "federation": {
             "enabled": true,
-            "serviceSdl": "extend schema\n  @link(\n    url: \"https://specs.apollo.dev/federation/v2.5\"\n    import: [\"@key\"]\n  )\n\ndirective @entityCache(\n  maxAge: Int!\n  includeHeaders: Boolean = false\n  partialCacheLoad: Boolean = false\n  shadowMode: Boolean = false\n) on OBJECT\n\ndirective @queryCache(\n  maxAge: Int!\n  includeHeaders: Boolean = false\n  shadowMode: Boolean = false\n) on FIELD_DEFINITION\n\ndirective @cacheInvalidate on FIELD_DEFINITION\n\ndirective @cachePopulate(maxAge: Int) on FIELD_DEFINITION\n\ndirective @is(field: String!) on ARGUMENT_DEFINITION\n\ntype Query {\n  item(id: ID!): Item @queryCache(maxAge: 300)\n  items: [Item!]! @queryCache(maxAge: 300)\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item @cacheInvalidate\n  deleteItem(id: ID!): Item @cacheInvalidate\n  createItem(name: String!, category: String!): Item! @cachePopulate(maxAge: 60)\n}\n\ntype Subscription {\n  itemUpdated: Item @cacheInvalidate\n  itemCreated: Item @cachePopulate\n}\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  id: ID!\n  name: String!\n  category: String!\n}\n"
+            "serviceSdl": "extend schema\n  @link(\n    url: \"https://specs.apollo.dev/federation/v2.5\"\n    import: [\"@key\"]\n  )\n\ndirective @entityCache(\n  maxAge: Int!\n  includeHeaders: Boolean = false\n  partialCacheLoad: Boolean = false\n  shadowMode: Boolean = false\n) on OBJECT\n\ndirective @queryCache(\n  maxAge: Int!\n  includeHeaders: Boolean = false\n  shadowMode: Boolean = false\n) on FIELD_DEFINITION\n\ndirective @cacheInvalidate on FIELD_DEFINITION\n\ndirective @cachePopulate(maxAge: Int) on FIELD_DEFINITION\n\ndirective @is(field: String!) on ARGUMENT_DEFINITION\n\ntype Query {\n  item(id: ID!): Item @queryCache(maxAge: 300)\n  itemByPid(pid: ID! @is(field: \"id\")): Item @queryCache(maxAge: 300)\n  items: [Item!]! @queryCache(maxAge: 300)\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item @cacheInvalidate\n  deleteItem(id: ID!): Item @cacheInvalidate\n  createItem(name: String!, category: String!): Item! @cachePopulate(maxAge: 60)\n}\n\ntype Subscription {\n  itemUpdated: Item @cacheInvalidate\n  itemCreated: Item @cachePopulate\n}\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  id: ID!\n  name: String!\n  category: String!\n}\n"
           },
           "upstreamSchema": {
-            "key": "a038fcbdbe4e621feced9e5e9fc9e96d7a620fb9"
+            "key": "e10cbe748d7769562d213e67e31453c628ac25d0"
           }
         },
         "requestTimeoutSeconds": "10",
@@ -90,6 +91,24 @@
                     "entityKeyField": "id",
                     "argumentPath": [
                       "id"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "fieldName": "itemByPid",
+            "maxAgeSeconds": "300",
+            "entityTypeName": "Item",
+            "entityKeyMappings": [
+              {
+                "entityTypeName": "Item",
+                "fieldMappings": [
+                  {
+                    "entityKeyField": "id",
+                    "argumentPath": [
+                      "pid"
                     ]
                   }
                 ]
@@ -253,6 +272,16 @@
         ]
       },
       {
+        "typeName": "Query",
+        "fieldName": "itemByPid",
+        "argumentsConfiguration": [
+          {
+            "name": "pid",
+            "sourceType": "FIELD_ARGUMENT"
+          }
+        ]
+      },
+      {
         "typeName": "Mutation",
         "fieldName": "updateItem",
         "argumentsConfiguration": [
@@ -291,13 +320,13 @@
         ]
       }
     ],
-    "graphqlSchema": "type Query {\n  item(id: ID!): Item\n  items: [Item!]!\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item\n  deleteItem(id: ID!): Item\n  createItem(name: String!, category: String!): Item!\n}\n\ntype Subscription {\n  itemUpdated: Item\n  itemCreated: Item\n}\n\ntype Item {\n  id: ID!\n  name: String!\n  category: String!\n  description: String!\n  rating: Float!\n  tags: [String!]!\n  available: Boolean!\n  count: Int!\n}",
+    "graphqlSchema": "type Query {\n  item(id: ID!): Item\n  itemByPid(pid: ID!): Item\n  items: [Item!]!\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item\n  deleteItem(id: ID!): Item\n  createItem(name: String!, category: String!): Item!\n}\n\ntype Subscription {\n  itemUpdated: Item\n  itemCreated: Item\n}\n\ntype Item {\n  id: ID!\n  name: String!\n  category: String!\n  description: String!\n  rating: Float!\n  tags: [String!]!\n  available: Boolean!\n  count: Int!\n}",
     "stringStorage": {
-      "a038fcbdbe4e621feced9e5e9fc9e96d7a620fb9": "schema {\n  query: Query\n  mutation: Mutation\n  subscription: Subscription\n}\n\ndirective @cacheInvalidate on FIELD_DEFINITION\n\ndirective @cachePopulate(maxAge: Int) on FIELD_DEFINITION\n\ndirective @entityCache(includeHeaders: Boolean = false, maxAge: Int!, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ndirective @queryCache(includeHeaders: Boolean = false, maxAge: Int!, shadowMode: Boolean = false) on FIELD_DEFINITION\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  category: String!\n  id: ID!\n  name: String!\n}\n\ntype Mutation {\n  createItem(category: String!, name: String!): Item! @cachePopulate(maxAge: 60)\n  deleteItem(id: ID!): Item @cacheInvalidate\n  updateItem(id: ID!, name: String!): Item @cacheInvalidate\n}\n\ntype Query {\n  item(id: ID!): Item @queryCache(maxAge: 300)\n  items: [Item!]! @queryCache(maxAge: 300)\n}\n\ntype Subscription {\n  itemCreated: Item @cachePopulate\n  itemUpdated: Item @cacheInvalidate\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
+      "e10cbe748d7769562d213e67e31453c628ac25d0": "schema {\n  query: Query\n  mutation: Mutation\n  subscription: Subscription\n}\n\ndirective @cacheInvalidate on FIELD_DEFINITION\n\ndirective @cachePopulate(maxAge: Int) on FIELD_DEFINITION\n\ndirective @entityCache(includeHeaders: Boolean = false, maxAge: Int!, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT\n\ndirective @is(field: String!) on ARGUMENT_DEFINITION\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ndirective @queryCache(includeHeaders: Boolean = false, maxAge: Int!, shadowMode: Boolean = false) on FIELD_DEFINITION\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  category: String!\n  id: ID!\n  name: String!\n}\n\ntype Mutation {\n  createItem(category: String!, name: String!): Item! @cachePopulate(maxAge: 60)\n  deleteItem(id: ID!): Item @cacheInvalidate\n  updateItem(id: ID!, name: String!): Item @cacheInvalidate\n}\n\ntype Query {\n  item(id: ID!): Item @queryCache(maxAge: 300)\n  itemByPid(pid: ID! @is(field: \"id\")): Item @queryCache(maxAge: 300)\n  items: [Item!]! @queryCache(maxAge: 300)\n}\n\ntype Subscription {\n  itemCreated: Item @cachePopulate\n  itemUpdated: Item @cacheInvalidate\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
       "9921646fcc093d4481ef27c3336d513404e35323": "directive @entityCache(includeHeaders: Boolean = false, maxAge: Int!, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  description: String!\n  id: ID!\n  rating: Float!\n  tags: [String!]!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet",
       "1b1e0779b2386e60fa2359ba40523fac98cd810c": "directive @entityCache(includeHeaders: Boolean = false, maxAge: Int!, partialCacheLoad: Boolean = false, shadowMode: Boolean = false) on OBJECT\n\ndirective @key(fields: openfed__FieldSet!, resolvable: Boolean = true) repeatable on INTERFACE | OBJECT\n\ndirective @link(as: String, for: link__Purpose, import: [link__Import], url: String!) repeatable on SCHEMA\n\ntype Item @key(fields: \"id\") @entityCache(maxAge: 300) {\n  available: Boolean!\n  count: Int!\n  id: ID!\n}\n\nscalar link__Import\n\nenum link__Purpose {\n  EXECUTION\n  SECURITY\n}\n\nscalar openfed__FieldSet"
     },
-    "graphqlClientSchema": "type Query {\n  item(id: ID!): Item\n  items: [Item!]!\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item\n  deleteItem(id: ID!): Item\n  createItem(name: String!, category: String!): Item!\n}\n\ntype Subscription {\n  itemUpdated: Item\n  itemCreated: Item\n}\n\ntype Item {\n  id: ID!\n  name: String!\n  category: String!\n  description: String!\n  rating: Float!\n  tags: [String!]!\n  available: Boolean!\n  count: Int!\n}"
+    "graphqlClientSchema": "type Query {\n  item(id: ID!): Item\n  itemByPid(pid: ID!): Item\n  items: [Item!]!\n}\n\ntype Mutation {\n  updateItem(id: ID!, name: String!): Item\n  deleteItem(id: ID!): Item\n  createItem(name: String!, category: String!): Item!\n}\n\ntype Subscription {\n  itemUpdated: Item\n  itemCreated: Item\n}\n\ntype Item {\n  id: ID!\n  name: String!\n  category: String!\n  description: String!\n  rating: Float!\n  tags: [String!]!\n  available: Boolean!\n  count: Int!\n}"
   },
   "subgraphs": [
     {

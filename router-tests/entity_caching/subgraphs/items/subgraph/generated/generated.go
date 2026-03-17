@@ -68,6 +68,7 @@ type ComplexityRoot struct {
 
 	Query struct {
 		Item               func(childComplexity int, id string) int
+		ItemByPid          func(childComplexity int, pid string) int
 		Items              func(childComplexity int) int
 		__resolve__service func(childComplexity int) int
 		__resolve_entities func(childComplexity int, representations []map[string]any) int
@@ -93,6 +94,7 @@ type MutationResolver interface {
 }
 type QueryResolver interface {
 	Item(ctx context.Context, id string) (*model.Item, error)
+	ItemByPid(ctx context.Context, pid string) (*model.Item, error)
 	Items(ctx context.Context) ([]*model.Item, error)
 }
 type SubscriptionResolver interface {
@@ -199,6 +201,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Item(childComplexity, args["id"].(string)), true
+
+	case "Query.itemByPid":
+		if e.complexity.Query.ItemByPid == nil {
+			break
+		}
+
+		args, err := ec.field_Query_itemByPid_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ItemByPid(childComplexity, args["pid"].(string)), true
 
 	case "Query.items":
 		if e.complexity.Query.Items == nil {
@@ -394,7 +408,8 @@ directive @cachePopulate(maxAge: Int) on FIELD_DEFINITION
 directive @is(field: String!) on ARGUMENT_DEFINITION
 
 type Query {
-  item(id: ID! @is(field: "id")): Item @queryCache(maxAge: 300)
+  item(id: ID!): Item @queryCache(maxAge: 300)
+  itemByPid(pid: ID! @is(field: "id")): Item @queryCache(maxAge: 300)
   items: [Item!]! @queryCache(maxAge: 300)
 }
 
@@ -702,6 +717,34 @@ func (ec *executionContext) field_Query__entities_argsRepresentations(
 	}
 
 	var zeroVal []map[string]any
+	return zeroVal, nil
+}
+
+func (ec *executionContext) field_Query_itemByPid_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := ec.field_Query_itemByPid_argsPid(ctx, rawArgs)
+	if err != nil {
+		return nil, err
+	}
+	args["pid"] = arg0
+	return args, nil
+}
+func (ec *executionContext) field_Query_itemByPid_argsPid(
+	ctx context.Context,
+	rawArgs map[string]any,
+) (string, error) {
+	if _, ok := rawArgs["pid"]; !ok {
+		var zeroVal string
+		return zeroVal, nil
+	}
+
+	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("pid"))
+	if tmp, ok := rawArgs["pid"]; ok {
+		return ec.unmarshalNID2string(ctx, tmp)
+	}
+
+	var zeroVal string
 	return zeroVal, nil
 }
 
@@ -1285,6 +1328,66 @@ func (ec *executionContext) fieldContext_Query_item(ctx context.Context, field g
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_item_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_itemByPid(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_itemByPid(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ItemByPid(rctx, fc.Args["pid"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Item)
+	fc.Result = res
+	return ec.marshalOItem2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋrouterᚑtestsᚋentity_cachingᚋsubgraphsᚋitemsᚋsubgraphᚋmodelᚐItem(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_itemByPid(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Item_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Item_name(ctx, field)
+			case "category":
+				return ec.fieldContext_Item_category(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Item", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_itemByPid_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -3918,6 +4021,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_item(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "itemByPid":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_itemByPid(ctx, field)
 				return res
 			}
 

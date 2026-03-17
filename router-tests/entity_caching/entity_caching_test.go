@@ -977,6 +977,42 @@ func TestEntityCaching(t *testing.T) {
 		})
 	})
 
+	t.Run("is_directive_cache_key_mapping", func(t *testing.T) {
+		t.Parallel()
+
+		servers, counters := startSubgraphServers(t)
+		configJSON := buildConfigJSON(servers)
+		cache := newMemoryCache(t)
+
+		testenv.Run(t, &testenv.Config{
+			RouterConfigJSONTemplate: configJSON,
+			RouterOptions:            entityCachingOptions(cache),
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// Query using @is-mapped argument (pid maps to @key field "id")
+			// Include cross-subgraph field (description from details) to trigger entity caching
+			req := testenv.GraphQLRequest{
+				Query: `{ itemByPid(pid: "1") { id name description } }`,
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, `{"data":{"itemByPid":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
+
+			detailsAfterFirst := counters.details.Load()
+			require.Equal(t, int64(1), detailsAfterFirst)
+
+			// Same query again — entity cache hit (details subgraph not called again)
+			res2 := xEnv.MakeGraphQLRequestOK(req)
+			require.Equal(t, `{"data":{"itemByPid":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res2.Body)
+			require.Equal(t, int64(1), counters.details.Load())
+
+			// Different pid — entity cache miss for this entity
+			res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Query: `{ itemByPid(pid: "2") { id name description } }`,
+			})
+			require.Equal(t, `{"data":{"itemByPid":{"id":"2","name":"Gadget","description":"A high-tech gadget with many features"}}}`, res3.Body)
+			require.Equal(t, int64(2), counters.details.Load())
+		})
+	})
+
 	t.Run("shadow_mode_with_failing_cache", func(t *testing.T) {
 		t.Parallel()
 

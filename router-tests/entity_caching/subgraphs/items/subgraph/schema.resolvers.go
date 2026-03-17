@@ -55,6 +55,16 @@ func (r *queryResolver) Item(ctx context.Context, id string) (*model.Item, error
 	return nil, nil
 }
 
+// ItemByPid is the resolver for the itemByPid field.
+func (r *queryResolver) ItemByPid(ctx context.Context, pid string) (*model.Item, error) {
+	for _, item := range Items {
+		if item.ID == pid {
+			return item, nil
+		}
+	}
+	return nil, nil
+}
+
 // Items is the resolver for the items field.
 func (r *queryResolver) Items(ctx context.Context) ([]*model.Item, error) {
 	return Items, nil

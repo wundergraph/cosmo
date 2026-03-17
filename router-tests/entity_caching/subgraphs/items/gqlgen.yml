@@ -30,6 +30,8 @@ directives:
     skip_runtime: true
   cachePopulate:
     skip_runtime: true
+  is:
+    skip_runtime: true
 
 models:
   ID:

@@ -2,6 +2,7 @@ package entitycache
 
 import (
 	"context"
+	"io"
 	"sync/atomic"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 )
 
 var _ resolve.LoaderCache = (*CircuitBreakerCache)(nil)
+var _ io.Closer = (*CircuitBreakerCache)(nil)
 
 const (
 	stateClosed   int32 = 0
@@ -133,4 +135,11 @@ func (cb *CircuitBreakerCache) onFailure() {
 		cb.lastStateChange.Store(time.Now().UnixNano())
 		cb.consecutiveFails.Store(0)
 	}
+}
+
+func (cb *CircuitBreakerCache) Close() error {
+	if closer, ok := cb.cache.(io.Closer); ok {
+		return closer.Close()
+	}
+	return nil
 }
