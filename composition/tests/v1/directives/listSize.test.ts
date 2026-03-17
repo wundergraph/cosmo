@@ -519,7 +519,10 @@ describe('@listSize directive tests', () => {
     });
 
     test('that @listSize with sizedFields on deep lists produces an error', () => {
-      const { errors } = normalizeSubgraphFailure(subgraphWithListSizedFieldsOnDeepLists, ROUTER_COMPATIBILITY_VERSION_ONE);
+      const { errors } = normalizeSubgraphFailure(
+        subgraphWithListSizedFieldsOnDeepLists,
+        ROUTER_COMPATIBILITY_VERSION_ONE,
+      );
       expect(errors).toHaveLength(1);
       expect(errors[0]).toStrictEqual(
         invalidDirectiveError(LIST_SIZE, 'Query.connections', FIRST_ORDINAL, [
