@@ -88,6 +88,12 @@ type Operation struct {
 	Hash              string        `expr:"hash"`
 	ValidationTime    time.Duration `expr:"validationTime"`
 	PlanningTime      time.Duration `expr:"planningTime"`
+
+	NormalizationCacheHit          bool `expr:"normalizationCacheHit"`
+	VariablesNormalizationCacheHit bool `expr:"variablesNormalizationCacheHit"`
+	VariablesRemappingCacheHit     bool `expr:"variablesRemappingCacheHit"`
+	PersistedOperationCacheHit     bool `expr:"persistedOperationCacheHit"`
+	PlanCacheHit                   bool `expr:"planCacheHit"`
 }
 
 type Client struct {

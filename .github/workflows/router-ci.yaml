@@ -9,6 +9,7 @@ on:
       - 'router-plugin/**/*'
       - 'router-tests/**/*'
       - 'connect/**/*'
+      - 'Makefile'
       - '.github/workflows/router-ci.yaml'
 
 concurrency:

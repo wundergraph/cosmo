@@ -85,18 +85,23 @@ create-demo:
 delete-demo:
 	./scripts/delete-local-demo.sh
 
+build-plugins:
+	$(MAKE) -C demo plugin-build-ci
+
 dev-setup: prerequisites
 	pnpm install
 	pnpm generate
 	make generate-go
 	make infra-up
 	pnpm -r run --filter '!studio' build
+	make build-plugins
 
 dev-setup-no-infra: prerequisites
 	pnpm install
 	pnpm generate
 	make generate-go
 	pnpm -r run --filter '!studio' build
+	make build-plugins
 
 build-pnpm:
 	pnpm install

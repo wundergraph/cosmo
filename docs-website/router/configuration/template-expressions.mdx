@@ -71,6 +71,11 @@ The `request` object is a read-only entity that provides details about the incom
 - `request.operation.normalizationTime` (time.Duration)
 - `request.operation.validationTime` (time.Duration)
 - `request.operation.planningTime` (time.Duration)
+- `request.operation.normalizationCacheHit` (bool)
+- `request.operation.variablesNormalizationCacheHit` (bool)
+- `request.operation.variablesRemappingCacheHit` (bool)
+- `request.operation.persistedOperationCacheHit` (bool)
+- `request.operation.planCacheHit` (bool)
 
 #### Example expressions
 
@@ -78,6 +83,7 @@ The `request` object is a read-only entity that provides details about the incom
 hasPrefix(request.operation.name, 'Delete') == true
 request.operation.sha256Hash != ''
 request.operation.persistedId != ''
+request.operation.planCacheHit == true
 ```
 
 ### Client Object
