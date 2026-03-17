@@ -53,9 +53,13 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
+import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composition/composeGraphs.pool.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
+  composition?: {
+    maxThreads: number;
+  };
   database: {
     url: string;
     tls?: {
@@ -157,6 +161,10 @@ const developmentLoggerOpts: LoggerOptions = {
 };
 
 export default async function build(opts: BuildConfig) {
+  configureComposeGraphsPool({
+    maxThreads: opts.composition?.maxThreads ?? 0,
+  });
+
   opts.logger = {
     timestamp: stdTimeFunctions.isoTime,
     formatters: {
@@ -535,6 +543,12 @@ export default async function build(opts: BuildConfig) {
     await Promise.all(bullWorkers.map((worker) => worker.close()));
 
     fastify.log.debug('Bull workers shut down');
+
+    fastify.log.debug('Shutting down composition worker pool');
+
+    await destroyComposeGraphsPool();
+
+    fastify.log.debug('Composition worker pool shut down');
   });
 
   return fastify;
