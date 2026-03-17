@@ -38,6 +38,7 @@ describe('Router Config', (ctx) => {
 
   test('Should return routerConfig after federating a valid graph', async (testContext) => {
     const { client, server, blobStorage, users } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const inventorySubgraph = genID('inventory');
     const pandasSubgraph = genID('pandas');
@@ -216,12 +217,11 @@ describe('Router Config', (ctx) => {
     const config = routerConfigFromJsonString(configJsonString);
 
     expect(config).toBeDefined();
-
-    await server.close();
   });
 
   test('Should not return routerConfig if an invalid schema version is available', async (testContext) => {
     const { client, server, users, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const pandasSubgraph = genID('pandas');
     const usersSubgraph = genID('users');
@@ -337,7 +337,5 @@ describe('Router Config', (ctx) => {
     const config = routerConfigFromJsonString(configJsonString);
 
     expect(config).toBeDefined();
-
-    await server.close();
   });
 });

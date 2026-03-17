@@ -648,8 +648,6 @@ describe('Publish subgraph tests', () => {
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
       expect(publishResponse.response?.details).toBe('The version and platforms are required for plugin subgraphs.');
-
-      await server.close();
     });
 
     test('Should fail to publish plugin with invalid version format', async () => {

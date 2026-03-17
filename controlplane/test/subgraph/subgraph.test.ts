@@ -58,8 +58,6 @@ describe('Subgraph', (ctx) => {
     });
 
     expect(resp.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('Should create a subgraph when subgraph did not exist before on publish', async (testContext) => {

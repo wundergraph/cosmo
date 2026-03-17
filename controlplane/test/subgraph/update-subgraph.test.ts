@@ -46,8 +46,6 @@ describe('Update subgraph tests', () => {
       });
 
       expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     },
   );
 
@@ -71,8 +69,6 @@ describe('Update subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('subgraph-admin should be able to update subgraph on allowed namespace', async (testContext) => {
@@ -135,6 +131,7 @@ describe('Update subgraph tests', () => {
     'subgraph-viewer',
   ])('%s should not be able to update subgraph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 

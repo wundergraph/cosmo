@@ -719,8 +719,6 @@ describe('Create feature subgraph tests', () => {
       expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
       expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
       expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
-
-      await server.close();
     },
   );
 

@@ -96,14 +96,15 @@ describe('Graph Pruning Tests', (ctx) => {
       enableGraphPruning: true,
       namespace: 'default',
     });
+    testContext.onTestFinished(() => server.close());
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('Should not be able to enable graph pruning', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'developer@1' } });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.enableGraphPruning({
       enableGraphPruning: true,
       namespace: 'default',
@@ -111,8 +112,6 @@ describe('Graph Pruning Tests', (ctx) => {
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
     expect(response.response?.details).toBe('Upgrade to a paid plan to enable graph pruning');
-
-    await server.close();
   });
 
   test('users without write access should not be able to enable graph pruning', async (testContext) => {
@@ -121,6 +120,7 @@ describe('Graph Pruning Tests', (ctx) => {
       setupBilling: { plan: 'launch@1' },
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     authenticator.changeUser(TestUser.viewerTimCompanyA);
 
@@ -131,12 +131,12 @@ describe('Graph Pruning Tests', (ctx) => {
 
     expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
     expect(response.response?.details).toBe('The user does not have the permissions to perform this operation');
-
-    await server.close();
   });
 
   test('Should configure graph pruning config', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'launch@1' } });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.enableGraphPruning({
       enableGraphPruning: true,
       namespace: 'default',
@@ -183,8 +183,6 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(getNamespaceGraphPruningConfigResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getNamespaceGraphPruningConfigResponse.graphPrunerEnabled).toBe(true);
     expect(getNamespaceGraphPruningConfigResponse.configs).toEqual(graphPruningConfigs);
-
-    await server.close();
   });
 
   test('users without write access should not be able to configure graph pruning config', async (testContext) => {
@@ -193,6 +191,8 @@ describe('Graph Pruning Tests', (ctx) => {
       setupBilling: { plan: 'launch@1' },
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.enableGraphPruning({
       enableGraphPruning: true,
       namespace: 'default',
@@ -229,12 +229,11 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(configureGraphPruningConfigResponse.response?.details).toBe(
       'The user does not have the permissions to perform this operation',
     );
-
-    await server.close();
   });
 
   test('Should configure graph pruning config, run check subgraph command and verify the results', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'launch@1' }, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
@@ -391,12 +390,11 @@ describe('Graph Pruning Tests', (ctx) => {
         severity: LintSeverity.warn,
       }),
     ]);
-
-    await server.close();
   });
 
   test('Should store grace fields when published after graph pruning is enabled', async (testContext) => {
     const { client, server, users } = await SetupTest({ dbname, setupBilling: { plan: 'launch@1' }, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph1');
@@ -542,7 +540,5 @@ describe('Graph Pruning Tests', (ctx) => {
     expect(graceFields).toHaveLength(1);
     expect(graceFields[0].path).toBe('Hello.b');
     expect(graceFields[0].isDeprecated).toBe(true);
-
-    await server.close();
   });
 });

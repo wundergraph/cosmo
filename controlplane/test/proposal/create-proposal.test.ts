@@ -69,6 +69,7 @@ describe('Create proposal tests', () => {
         setupBilling: { plan: 'enterprise' },
         enabledFeatures: ['proposals'],
       });
+      onTestFinished(() => server.close());
 
       // Setup a federated graph with a single subgraph
       const subgraphName = genID('subgraph1');
@@ -144,18 +145,17 @@ describe('Create proposal tests', () => {
       expect(proposalResponse.proposal?.subgraphs[0].name).toBe(subgraphName);
       expect(proposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
       expect(proposalResponse.proposal?.subgraphs[0].isDeleted).toBe(false);
-
-      await server.close();
     },
   );
 
-  test('graph-admin should successfully create a new proposal for a federated graph on allowed namespace', async (role) => {
+  test('graph-admin should successfully create a new proposal for a federated graph on allowed namespace', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -268,8 +268,6 @@ describe('Create proposal tests', () => {
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test.each([
@@ -288,6 +286,7 @@ describe('Create proposal tests', () => {
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -347,8 +346,6 @@ describe('Create proposal tests', () => {
     });
 
     expect(createProposalResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test('should create a proposal with multiple subgraph changes', async (testContext) => {
@@ -875,8 +872,6 @@ describe('Create proposal tests', () => {
     const enableResponse = await enableProposalsForNamespace(client);
     expect(enableResponse.response?.code).toBe(EnumStatusCode.ERR_UPGRADE_PLAN);
     expect(enableResponse.response?.details).toContain('Upgrade to a launch plan to enable proposals');
-
-    await server.close();
   });
 
   test('should fail to create a proposal when proposals are not enabled for namespace', async (testContext) => {
@@ -886,6 +881,7 @@ describe('Create proposal tests', () => {
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Don't enable proposals for the namespace
 

@@ -15,8 +15,9 @@ describe('isMemberOf', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should return true when user is an active member of the organization', async () => {
+  test('Should return true when user is an active member of the organization', async (testContext) => {
     const { server, users } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
     const org = await orgRepo.bySlug(users.adminAliceCompanyA.organizationSlug);
@@ -29,12 +30,11 @@ describe('isMemberOf', () => {
     });
 
     expect(isMember).toBe(true);
-
-    await server.close();
   });
 
-  test('Should return false when user is not a member of the organization', async () => {
+  test('Should return false when user is not a member of the organization', async (testContext) => {
     const { server, users } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
     const org = await orgRepo.bySlug(users.adminAliceCompanyA.organizationSlug);
@@ -49,12 +49,11 @@ describe('isMemberOf', () => {
     });
 
     expect(isMember).toBe(false);
-
-    await server.close();
   });
 
-  test('Should return false when user is a member but inactive', async () => {
+  test('Should return false when user is a member but inactive', async (testContext) => {
     const { server, users } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
     const org = await orgRepo.bySlug(users.adminAliceCompanyA.organizationSlug);
@@ -89,12 +88,11 @@ describe('isMemberOf', () => {
       userId: users.devJoeCompanyA!.userId,
     });
     expect(isMember).toBe(false);
-
-    await server.close();
   });
 
-  test('Should return true when inactive member is reactivated', async () => {
+  test('Should return true when inactive member is reactivated', async (testContext) => {
     const { server, users } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
     const org = await orgRepo.bySlug(users.adminAliceCompanyA.organizationSlug);
@@ -136,12 +134,11 @@ describe('isMemberOf', () => {
       userId: users.devJoeCompanyA!.userId,
     });
     expect(isMember).toBe(true);
-
-    await server.close();
   });
 
-  test('Should return false for non-existent user', async () => {
+  test('Should return false for non-existent user', async (testContext) => {
     const { server, users } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
     const org = await orgRepo.bySlug(users.adminAliceCompanyA.organizationSlug);
@@ -155,12 +152,11 @@ describe('isMemberOf', () => {
     });
 
     expect(isMember).toBe(false);
-
-    await server.close();
   });
 
-  test('Should return false for non-existent organization', async () => {
+  test('Should return false for non-existent organization', async (testContext) => {
     const { server, users } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
 
@@ -171,7 +167,5 @@ describe('isMemberOf', () => {
     });
 
     expect(isMember).toBe(false);
-
-    await server.close();
   });
 });

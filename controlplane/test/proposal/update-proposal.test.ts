@@ -1180,8 +1180,6 @@ describe('Update proposal tests', () => {
     expect(getProposalResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).toBe(updatedSubgraphSDL);
     expect(getProposalResponse.proposal?.subgraphs[0].schemaSDL).not.toBe(furtherUpdatedSubgraphSDL);
-
-    await server.close();
   });
 
   test('should fetch proposal checks after updating a proposal', async (testContext) => {
@@ -1191,6 +1189,7 @@ describe('Update proposal tests', () => {
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');

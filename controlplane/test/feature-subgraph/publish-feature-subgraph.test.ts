@@ -183,12 +183,11 @@ describe('Publish feature subgraph tests', () => {
     expect(publishFeatureSubgraphResponse.response?.details).toBe(
       `Base subgraph "${nonExistentBaseSubgraph}" does not exist in the namespace "default".`,
     );
-
-    await server.close();
   });
 
   test('that publishFederatedSubgraph fails when base subgraph exists in different namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');

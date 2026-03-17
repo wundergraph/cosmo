@@ -224,7 +224,5 @@ describe('Apollo Federated Graph', (ctx) => {
     expect(graph.subgraphs[3]?.labels).toEqual([label]);
     expect(graph.subgraphs[3]?.lastUpdatedAt).toBeTruthy();
     expect(graph.subgraphs[3]?.routingURL).toEqual('http://localhost:8084');
-
-    await server.close();
   });
 });
