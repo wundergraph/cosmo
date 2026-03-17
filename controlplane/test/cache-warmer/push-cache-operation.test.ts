@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, Mock, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, Mock, onTestFinished, test, vi } from 'vitest';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import {
   afterAllSetup,
@@ -77,6 +77,7 @@ describe('PushCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -117,8 +118,6 @@ describe('PushCacheOperation', (ctx) => {
     });
     expect(getCacheOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(getCacheOperationsResp.totalCount).toBe(1);
-
-    await server.close();
   });
 
   test('Should be able to push a persisted operation.', async (testContext) => {
@@ -129,6 +128,7 @@ describe('PushCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -165,8 +165,6 @@ describe('PushCacheOperation', (ctx) => {
     expect(getCacheOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(getCacheOperationsResp.totalCount).toBe(1);
     expect(getCacheOperationsResp.operations[0].operationContent).toBe(operationContent);
-
-    await server.close();
   });
 
   test('Should be able to push a duplicate persisted operation.', async (testContext) => {
@@ -177,6 +175,7 @@ describe('PushCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -227,8 +226,6 @@ describe('PushCacheOperation', (ctx) => {
     });
     expect(getCacheOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(getCacheOperationsResp.totalCount).toBe(1);
-
-    await server.close();
   });
 
   test('Should be able to push a cache operation and make sure it doesnt exceed the max operations count.', async (testContext) => {
@@ -239,6 +236,7 @@ describe('PushCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -381,8 +379,6 @@ describe('PushCacheOperation', (ctx) => {
     expect(getCacheOperationsResp.totalCount).toBe(5);
     expect(getCacheOperationsResp.operations[0].isManuallyAdded).toBe(true);
     expect(getCacheOperationsResp.operations[1].isManuallyAdded).toBe(true);
-
-    await server.close();
   });
 
   test('Should be able to push a cache operation when the manually added operations are already equal to the number of maxOperationsCount.', async (testContext) => {
@@ -393,6 +389,7 @@ describe('PushCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -444,8 +441,6 @@ describe('PushCacheOperation', (ctx) => {
     expect(getCacheOperationsResp.operations[2].operationContent).not.toBe(operations[2].content);
     expect(getCacheOperationsResp.operations[3].operationContent).not.toBe(operations[3].content);
     expect(getCacheOperationsResp.operations[4].operationContent).not.toBe(operations[4].content);
-
-    await server.close();
   });
 
   test('Should be able to push multiple queries in a doc if the operation name passed matches with one of them', async (testContext) => {
@@ -456,6 +451,7 @@ describe('PushCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -483,8 +479,6 @@ describe('PushCacheOperation', (ctx) => {
       operationContent: 'query Hello1 { hello { message } } query Hello2 { hello { message } }',
     });
     expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('Should not be able to push a cache operation whose operation name is not present in the operation', async (testContext) => {
@@ -495,6 +489,7 @@ describe('PushCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -551,6 +546,7 @@ describe('PushCacheOperation', (ctx) => {
           plan: 'enterprise',
         },
       });
+      onTestFinished(() => server.close());
 
       const federatedGraphName = genID('fedGraph');
       await createFederatedAndSubgraph(client, federatedGraphName);
@@ -577,12 +573,10 @@ describe('PushCacheOperation', (ctx) => {
         operationContent,
       });
       expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     },
   );
 
-  test('graph-admin should be able to publish when given access to namespace', async (role) => {
+  test('graph-admin should be able to publish when given access to namespace', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({
       dbname,
       chClient,
@@ -591,6 +585,7 @@ describe('PushCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -643,8 +638,6 @@ describe('PushCacheOperation', (ctx) => {
       operationContent,
     });
     expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test.each([
@@ -665,6 +658,7 @@ describe('PushCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -691,7 +685,5 @@ describe('PushCacheOperation', (ctx) => {
       operationContent,
     });
     expect(pushCacheOperationResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 });

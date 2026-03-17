@@ -18,6 +18,7 @@ import {
   SubscriptionProtocol,
   WebsocketSubprotocol,
 } from '@wundergraph/cosmo-shared';
+import { SubgraphPublishStats } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { config, configFile } from './core/config.js';
 import { KeycloakToken } from './commands/auth/utils.js';
 
@@ -295,3 +296,36 @@ export const validateSubscriptionProtocols = ({
     }
   }
 };
+
+type PrintTruncationWarningParams = {
+  displayedErrorCounts: SubgraphPublishStats;
+  totalErrorCounts?: SubgraphPublishStats;
+};
+
+export function printTruncationWarning({ displayedErrorCounts, totalErrorCounts }: PrintTruncationWarningParams) {
+  if (!totalErrorCounts) {
+    return;
+  }
+
+  const truncatedItems: string[] = [];
+
+  if (totalErrorCounts.compositionErrors > displayedErrorCounts.compositionErrors) {
+    truncatedItems.push(
+      `composition errors (${displayedErrorCounts.compositionErrors} of ${totalErrorCounts.compositionErrors} shown)`,
+    );
+  }
+  if (totalErrorCounts.compositionWarnings > displayedErrorCounts.compositionWarnings) {
+    truncatedItems.push(
+      `composition warnings (${displayedErrorCounts.compositionWarnings} of ${totalErrorCounts.compositionWarnings} shown)`,
+    );
+  }
+  if (totalErrorCounts.deploymentErrors > displayedErrorCounts.deploymentErrors) {
+    truncatedItems.push(
+      `deployment errors (${displayedErrorCounts.deploymentErrors} of ${totalErrorCounts.deploymentErrors} shown)`,
+    );
+  }
+
+  if (truncatedItems.length > 0) {
+    console.log(pc.yellow(`\nNote: Some results were truncated: ${truncatedItems.join(', ')}.`));
+  }
+}
