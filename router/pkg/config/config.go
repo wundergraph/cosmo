@@ -852,7 +852,13 @@ type StorageProviders struct {
 	S3         []S3StorageProvider         `yaml:"s3,omitempty"`
 	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty"`
 	Redis      []RedisStorageProvider      `yaml:"redis,omitempty"`
+	Memory     []MemoryStorageProvider     `yaml:"memory,omitempty"`
 	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty"`
+}
+
+type MemoryStorageProvider struct {
+	ID      string      `yaml:"id,omitempty" env:"STORAGE_PROVIDER_MEMORY_ID"`
+	MaxSize BytesString `yaml:"max_size" envDefault:"100MB" env:"STORAGE_PROVIDER_MEMORY_MAX_SIZE"`
 }
 
 type PersistedOperationsStorageConfig struct {
@@ -950,8 +956,7 @@ type EntityCachingConfiguration struct {
 	GlobalCacheKeyPrefix string                      `yaml:"global_cache_key_prefix,omitempty" env:"ENTITY_CACHING_GLOBAL_CACHE_KEY_PREFIX"`
 	L1                 EntityCachingL1Configuration  `yaml:"l1"`
 	L2                 EntityCachingL2Configuration  `yaml:"l2"`
-	Analytics          EntityCachingAnalyticsConfig  `yaml:"analytics"`
-	Subgraphs          []EntityCachingSubgraphConfig `yaml:"subgraphs,omitempty"`
+	SubgraphCacheOverrides []EntityCachingSubgraphCacheOverride `yaml:"subgraph_cache_overrides,omitempty"`
 }
 
 type EntityCachingL1Configuration struct {
@@ -976,37 +981,15 @@ type EntityCachingCircuitBreakerConfig struct {
 	CooldownPeriod   time.Duration `yaml:"cooldown_period" envDefault:"10s" env:"ENTITY_CACHING_L2_CIRCUIT_BREAKER_COOLDOWN_PERIOD"`
 }
 
-type EntityCachingAnalyticsConfig struct {
-	Enabled        bool                              `yaml:"enabled" envDefault:"false" env:"ENTITY_CACHING_ANALYTICS_ENABLED"`
-	HashEntityKeys bool                              `yaml:"hash_entity_keys" envDefault:"false" env:"ENTITY_CACHING_ANALYTICS_HASH_ENTITY_KEYS"`
-	DetailLevel    string                            `yaml:"detail_level" envDefault:"standard" env:"ENTITY_CACHING_ANALYTICS_DETAIL_LEVEL"`
-	Export         EntityCachingAnalyticsExportConfig `yaml:"export"`
-}
-
-type EntityCachingAnalyticsExportConfig struct {
-	Enabled   bool          `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_ANALYTICS_EXPORT_ENABLED"`
-	Endpoint  string        `yaml:"endpoint" env:"ENTITY_CACHING_ANALYTICS_EXPORT_ENDPOINT"`
-	BatchSize int           `yaml:"batch_size" envDefault:"1024" env:"ENTITY_CACHING_ANALYTICS_EXPORT_BATCH_SIZE"`
-	QueueSize int           `yaml:"queue_size" envDefault:"10240" env:"ENTITY_CACHING_ANALYTICS_EXPORT_QUEUE_SIZE"`
-	Interval  time.Duration `yaml:"interval" envDefault:"10s" env:"ENTITY_CACHING_ANALYTICS_EXPORT_INTERVAL"`
-	Retry     EntityCachingAnalyticsRetryConfig `yaml:"retry"`
-}
-
-type EntityCachingAnalyticsRetryConfig struct {
-	Enabled     bool          `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_ANALYTICS_EXPORT_RETRY_ENABLED"`
-	MaxRetries  int           `yaml:"max_retries" envDefault:"5" env:"ENTITY_CACHING_ANALYTICS_EXPORT_RETRY_MAX_RETRIES"`
-	MaxDuration time.Duration `yaml:"max_duration" envDefault:"10s" env:"ENTITY_CACHING_ANALYTICS_EXPORT_RETRY_MAX_DURATION"`
-	Interval    time.Duration `yaml:"interval" envDefault:"5s" env:"ENTITY_CACHING_ANALYTICS_EXPORT_RETRY_INTERVAL"`
-}
-
-type EntityCachingSubgraphConfig struct {
-	Name     string                      `yaml:"name"`
-	Entities []EntityCachingEntityConfig `yaml:"entities,omitempty"`
+type EntityCachingSubgraphCacheOverride struct {
+	Name              string                      `yaml:"name"`
+	StorageProviderID string                      `yaml:"storage_provider_id,omitempty"`
+	Entities          []EntityCachingEntityConfig `yaml:"entities,omitempty"`
 }
 
 type EntityCachingEntityConfig struct {
-	Type      string `yaml:"type"`
-	CacheName string `yaml:"cache_name,omitempty" envDefault:"default"`
+	Type              string `yaml:"type"`
+	StorageProviderID string `yaml:"storage_provider_id,omitempty" envDefault:""`
 }
 
 type AccessLogsConfig struct {

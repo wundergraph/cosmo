@@ -268,7 +268,7 @@ func buildEntityCacheInvalidationConfigs(
 				result[subgraphName] = make(map[string]*resolve.EntityCacheInvalidationConfig)
 			}
 			result[subgraphName][ec.TypeName] = &resolve.EntityCacheInvalidationConfig{
-				CacheName:                   resolveEntityCacheName(cfg, subgraphName, ec.TypeName),
+				CacheName:                   resolveEntityCacheProviderID(cfg, subgraphName, ec.TypeName),
 				IncludeSubgraphHeaderPrefix: ec.IncludeHeaders,
 			}
 		}
@@ -288,15 +288,21 @@ func subgraphNameByID(subgraphs []*nodev1.Subgraph, id string) string {
 	return ""
 }
 
-func resolveEntityCacheName(cfg *config.EntityCachingConfiguration, subgraphName, typeName string) string {
-	for _, sg := range cfg.Subgraphs {
+func resolveEntityCacheProviderID(cfg *config.EntityCachingConfiguration, subgraphName, typeName string) string {
+	for _, sg := range cfg.SubgraphCacheOverrides {
 		if sg.Name == subgraphName {
+			// Tier 1: entity-level override
 			for _, e := range sg.Entities {
-				if e.Type == typeName && e.CacheName != "" {
-					return e.CacheName
+				if e.Type == typeName && e.StorageProviderID != "" {
+					return e.StorageProviderID
 				}
+			}
+			// Tier 2: subgraph-level override
+			if sg.StorageProviderID != "" {
+				return sg.StorageProviderID
 			}
 		}
 	}
+	// Tier 3: global default
 	return "default"
 }

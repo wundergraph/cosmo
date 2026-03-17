@@ -29,17 +29,16 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
-			})
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
 			detailsAfterFirst := counters.details.Load()
 			require.Equal(t, int64(1), detailsAfterFirst)
 
-			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name description } }`,
-			})
+			res2 := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res2.Body)
 
 			// Details subgraph should NOT be called again (cache hit)
@@ -58,9 +57,10 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res1 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			reqItem1 := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
-			})
+			}
+			res1 := xEnv.MakeGraphQLRequestOK(reqItem1)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res1.Body)
 
 			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
@@ -72,9 +72,7 @@ func TestEntityCaching(t *testing.T) {
 			require.Equal(t, 2, cache.Len())
 
 			// Re-fetch id:"1" — verify response correctness
-			res3 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name description } }`,
-			})
+			res3 := xEnv.MakeGraphQLRequestOK(reqItem1)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res3.Body)
 		})
 	})
@@ -90,18 +88,17 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ items { id description rating } }`,
-			})
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
 			require.Contains(t, res.Body, `"description"`)
 			require.Contains(t, res.Body, `"rating"`)
 
 			detailsAfterFirst := counters.details.Load()
 			require.Equal(t, int64(1), detailsAfterFirst)
 
-			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ items { id description rating } }`,
-			})
+			res2 := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, res.Body, res2.Body)
 			require.Equal(t, int64(1), counters.details.Load())
 		})
@@ -140,15 +137,14 @@ func TestEntityCaching(t *testing.T) {
 				clearEntityCacheConfigs(routerConfig)
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
-			})
+			}
+			xEnv.MakeGraphQLRequestOK(req)
 			detailsFirst := counters.details.Load()
 			require.Equal(t, int64(1), detailsFirst)
 
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name description } }`,
-			})
+			xEnv.MakeGraphQLRequestOK(req)
 			// Details subgraph called again (no caching)
 			require.Equal(t, int64(2), counters.details.Load())
 		})
@@ -203,17 +199,16 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description available } }`,
-			})
+			}
+			res := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use","available":true}}}`, res.Body)
 
 			detailsAfterFirst := counters.details.Load()
 			inventoryAfterFirst := counters.inventory.Load()
 
-			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name description available } }`,
-			})
+			res2 := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use","available":true}}}`, res2.Body)
 
 			require.Equal(t, detailsAfterFirst, counters.details.Load())
@@ -235,14 +230,13 @@ func TestEntityCaching(t *testing.T) {
 				setEntityCacheShadowMode(routerConfig, true)
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
-			})
+			}
+			xEnv.MakeGraphQLRequestOK(req)
 			detailsFirst := counters.details.Load()
 
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name description } }`,
-			})
+			xEnv.MakeGraphQLRequestOK(req)
 			// Shadow mode: subgraph ALWAYS called, but cache is populated
 			require.Equal(t, detailsFirst+1, counters.details.Load())
 			require.Equal(t, 1, cache.Len())
@@ -293,24 +287,21 @@ func TestEntityCaching(t *testing.T) {
 				setEntityCacheTTL(routerConfig, 1)
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id description } }`,
-			})
+			}
+			xEnv.MakeGraphQLRequestOK(req)
 			detailsAfterFirst := counters.details.Load()
 
 			// Immediately, should be cached
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id description } }`,
-			})
+			xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, detailsAfterFirst, counters.details.Load())
 
 			// Wait for TTL expiry
 			time.Sleep(1500 * time.Millisecond)
 
 			// After expiry, cache miss
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id description } }`,
-			})
+			xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, detailsAfterFirst+1, counters.details.Load())
 		})
 	})
@@ -330,11 +321,11 @@ func TestEntityCaching(t *testing.T) {
 					"default": defaultCache,
 					"custom":  customCache,
 				},
-				[]config.EntityCachingSubgraphConfig{
+				[]config.EntityCachingSubgraphCacheOverride{
 					{
 						Name: "details",
 						Entities: []config.EntityCachingEntityConfig{
-							{Type: "Item", CacheName: "custom"},
+							{Type: "Item", StorageProviderID: "custom"},
 						},
 					},
 				},
@@ -412,18 +403,17 @@ func TestEntityCaching(t *testing.T) {
 				setNegativeCacheTTL(routerConfig, 60)
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Query non-existent item
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "999") { id name description } }`,
-			})
+			}
+			// Query non-existent item
+			res := xEnv.MakeGraphQLRequestOK(req)
 			require.Contains(t, res.Body, `"item":null`)
 
 			detailsAfterFirst := counters.details.Load()
 
 			// Second query for same non-existent item — should be cached (negative cache)
-			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "999") { id name description } }`,
-			})
+			res2 := xEnv.MakeGraphQLRequestOK(req)
 			require.Contains(t, res2.Body, `"item":null`)
 			require.Equal(t, detailsAfterFirst, counters.details.Load())
 		})
@@ -440,10 +430,11 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Cross-subgraph query to trigger entity caching
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
-			})
+			}
+			// Cross-subgraph query to trigger entity caching
+			res := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
 			detailsAfterFirst := counters.details.Load()
@@ -453,9 +444,7 @@ func TestEntityCaching(t *testing.T) {
 			require.Equal(t, 1, cache.Len())
 
 			// Same query — entity cache hit
-			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name description } }`,
-			})
+			res2 := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res2.Body)
 			require.Equal(t, int64(1), counters.details.Load())
 		})
@@ -472,10 +461,11 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Cross-subgraph list query to trigger entity caching
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ items { id name description } }`,
-			})
+			}
+			// Cross-subgraph list query to trigger entity caching
+			res := xEnv.MakeGraphQLRequestOK(req)
 			require.Contains(t, res.Body, `"Widget"`)
 			require.Contains(t, res.Body, `"description"`)
 
@@ -486,9 +476,7 @@ func TestEntityCaching(t *testing.T) {
 			require.Equal(t, 5, cache.Len())
 
 			// Same query — entity cache hit
-			res2 := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ items { id name description } }`,
-			})
+			res2 := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, res.Body, res2.Body)
 			require.Equal(t, int64(1), counters.details.Load())
 		})
@@ -532,15 +520,14 @@ func TestEntityCaching(t *testing.T) {
 				setQueryCacheShadowMode(routerConfig, true)
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name } }`,
-			})
+			}
+			xEnv.MakeGraphQLRequestOK(req)
 			itemsFirst := counters.items.Load()
 
 			// Shadow mode: items subgraph always called
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name } }`,
-			})
+			xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, itemsFirst+1, counters.items.Load())
 		})
 	})
@@ -556,16 +543,15 @@ func TestEntityCaching(t *testing.T) {
 			RouterConfigJSONTemplate: configJSON,
 			RouterOptions:            entityCachingOptions(cache),
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Warm cache
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
-			})
+			}
+			// Warm cache
+			xEnv.MakeGraphQLRequestOK(req)
 			detailsAfterWarm := counters.details.Load()
 
 			// Verify cache hit
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name description } }`,
-			})
+			xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, detailsAfterWarm, counters.details.Load())
 
 			// Mutation triggers @cacheInvalidate
@@ -574,9 +560,7 @@ func TestEntityCaching(t *testing.T) {
 			})
 
 			// After invalidation, cache miss → details subgraph called again
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name description } }`,
-			})
+			xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, detailsAfterWarm+1, counters.details.Load())
 		})
 	})
@@ -770,26 +754,25 @@ func TestEntityCaching(t *testing.T) {
 				removeSubscriptionPopulateConfigs(rc)
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-			// Warm cache
-			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+			req := testenv.GraphQLRequest{
 				Query: `{ item(id: "1") { id name description } }`,
-			})
+			}
+			// Warm cache
+			res := xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, `{"data":{"item":{"id":"1","name":"Widget","description":"A versatile widget for everyday use"}}}`, res.Body)
 
 			detailsAfterWarm := counters.details.Load()
 
 			// Verify cache hit
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name description } }`,
-			})
+			xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, detailsAfterWarm, counters.details.Load())
 
 			// Start subscription via WebSocket (itemUpdated has @cacheInvalidate)
 			conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
 
 			err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
-				ID:      "1",
-				Type:    "subscribe",
+				ID:   "1",
+				Type: "subscribe",
 				// Select ONLY key fields so the engine uses SubscriptionCacheModeInvalidate.
 				// Selecting non-key fields would cause SubscriptionCacheModePopulate instead.
 				Payload: []byte(`{"query":"subscription { itemUpdated { id } }"}`),
@@ -814,9 +797,7 @@ func TestEntityCaching(t *testing.T) {
 			xEnv.WaitForSubscriptionCount(0, 5*time.Second)
 
 			// After invalidation, cache miss → details subgraph called again
-			xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
-				Query: `{ item(id: "1") { id name description } }`,
-			})
+			xEnv.MakeGraphQLRequestOK(req)
 			require.Equal(t, detailsAfterWarm+1, counters.details.Load())
 		})
 	})

@@ -35,7 +35,6 @@ import (
 
 	"github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/common"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"github.com/wundergraph/cosmo/router/internal/entityanalytics"
 	"github.com/wundergraph/cosmo/router/internal/circuit"
 	"github.com/wundergraph/cosmo/router/internal/exporter"
 	"github.com/wundergraph/cosmo/router/internal/expr"
@@ -208,6 +207,14 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		return nil, fmt.Errorf("failed to build entity cache instances: %w", err)
 	}
 	s.entityCacheInstances = entityCacheInstances
+
+	if entityCacheInstances != nil && r.entityCachingConfig.Enabled {
+		s.validateEntityCacheOverrides(
+			&r.entityCachingConfig,
+			routerConfig.GetSubgraphs(),
+			routerConfig.GetEngineConfig(),
+		)
+	}
 
 	baseOtelAttributes := []attribute.KeyValue{
 		otel.WgRouterVersion.String(Version),
@@ -559,18 +566,61 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 	return nil
 }
 
+func (s *graphServer) validateEntityCacheOverrides(
+	cfg *config.EntityCachingConfiguration,
+	configSubgraphs []*nodev1.Subgraph,
+	engineConfig *nodev1.EngineConfiguration,
+) {
+	// Build lookup: subgraph name set
+	subgraphNames := make(map[string]bool, len(configSubgraphs))
+	for _, sg := range configSubgraphs {
+		subgraphNames[sg.Name] = true
+	}
+
+	// Build lookup: subgraph name → set of entity type names
+	// Datasources are keyed by ID, not name — map via subgraphNameByID
+	entityTypesBySubgraph := make(map[string]map[string]bool)
+	for _, ds := range engineConfig.DatasourceConfigurations {
+		sgName := subgraphNameByID(configSubgraphs, ds.Id)
+		if sgName == "" {
+			continue
+		}
+		if entityTypesBySubgraph[sgName] == nil {
+			entityTypesBySubgraph[sgName] = make(map[string]bool)
+		}
+		for _, ec := range ds.EntityCacheConfigurations {
+			entityTypesBySubgraph[sgName][ec.TypeName] = true
+		}
+	}
+
+	for _, override := range cfg.SubgraphCacheOverrides {
+		if !subgraphNames[override.Name] {
+			s.logger.Warn("entity caching: subgraph_cache_overrides references unknown subgraph",
+				zap.String("subgraph", override.Name))
+			continue
+		}
+		for _, entity := range override.Entities {
+			if entities := entityTypesBySubgraph[override.Name]; entities == nil || !entities[entity.Type] {
+				s.logger.Warn("entity caching: subgraph_cache_overrides references unknown entity type",
+					zap.String("subgraph", override.Name),
+					zap.String("entity_type", entity.Type))
+			}
+		}
+	}
+}
+
 func (s *graphServer) setupEntityCacheMetrics(baseAttributes []attribute.KeyValue) error {
-	if !s.entityCachingConfig.Enabled || !s.entityCachingConfig.Analytics.Enabled {
+	if !s.entityCachingConfig.Enabled {
 		return nil
 	}
 
 	var err error
-	s.otlpEntityCacheMetrics, err = rmetric.NewEntityCacheMetrics(baseAttributes, s.otlpMeterProvider)
+	s.otlpEntityCacheMetrics, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.otlpMeterProvider)
 	if err != nil {
 		return fmt.Errorf("failed to create entity cache metrics for OTLP: %w", err)
 	}
 
-	s.promEntityCacheMetrics, err = rmetric.NewEntityCacheMetrics(baseAttributes, s.promMeterProvider)
+	s.promEntityCacheMetrics, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.promMeterProvider)
 	if err != nil {
 		return fmt.Errorf("failed to create entity cache metrics for Prometheus: %w", err)
 	}
@@ -1515,11 +1565,10 @@ func (s *graphServer) buildGraphMux(
 
 	if s.entityCachingConfig.Enabled {
 		handlerOpts.EntityCaching = EntityCachingHandlerOptions{
-			L1Enabled:        s.entityCachingConfig.L1.Enabled,
-			L2Enabled:        s.entityCachingConfig.L2.Enabled,
-			AnalyticsEnabled: s.entityCachingConfig.Analytics.Enabled,
-			GlobalKeyPrefix:  s.entityCachingConfig.GlobalCacheKeyPrefix,
-			KeyInterceptors:  s.entityCacheKeyInterceptors,
+			L1Enabled:       s.entityCachingConfig.L1.Enabled,
+			L2Enabled:       s.entityCachingConfig.L2.Enabled,
+			GlobalKeyPrefix: s.entityCachingConfig.GlobalCacheKeyPrefix,
+			KeyInterceptors: s.entityCacheKeyInterceptors,
 		}
 
 		for _, m := range []*rmetric.EntityCacheMetrics{s.otlpEntityCacheMetrics, s.promEntityCacheMetrics} {
@@ -1527,12 +1576,7 @@ func (s *graphServer) buildGraphMux(
 				handlerOpts.EntityCaching.Metrics = append(handlerOpts.EntityCaching.Metrics, m)
 			}
 		}
-
-		if s.entityAnalyticsExporter != nil {
-			handlerOpts.EntityCaching.AnalyticsExporter = s.entityAnalyticsExporter
-			handlerOpts.EntityCaching.AnalyticsDetail = entityanalytics.ParseDetailLevel(s.entityCachingConfig.Analytics.DetailLevel)
-			handlerOpts.EntityCaching.RouterConfigVersion = opts.RouterConfigVersion
-		}
+		// TODO: Add entity analytics exporter to handler options here once analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
@@ -1911,6 +1955,18 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 
 	if s.prometheusEngineMetrics != nil {
 		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.otlpEntityCacheMetrics != nil {
+		if err := s.otlpEntityCacheMetrics.Shutdown(); err != nil {
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.promEntityCacheMetrics != nil {
+		if err := s.promEntityCacheMetrics.Shutdown(); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
 	}
