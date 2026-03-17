@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.136.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.135.0...@wundergraph/cosmo-connect@0.136.0) (2026-03-17)
+
+### Features
+
+* add graph recompose ([#2652](https://github.com/wundergraph/cosmo/issues/2652)) ([8bdb7d0](https://github.com/wundergraph/cosmo/commit/8bdb7d08485cb8bde84efb033663e49ed23e060f)) (@Aenimus)
+
 # [0.135.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.134.0...@wundergraph/cosmo-connect@0.135.0) (2026-03-12)
 
 ### Features
