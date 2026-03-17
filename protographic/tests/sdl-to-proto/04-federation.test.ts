@@ -1372,16 +1372,20 @@ describe('SDL to Proto - Federation and Special Types', () => {
       message QueryUserResponse {
         User user = 1;
       }
-
       message RequireUserPostByIdRequest {
         // RequireUserPostByIdContext provides the context for the required fields method RequireUserPostById.
         repeated RequireUserPostByIdContext context = 1;
+        // RequireUserPostByIdArgs provides the field arguments for the required field with method RequireUserPostById.
         RequireUserPostByIdArgs field_args = 2;
       }
 
       message RequireUserPostByIdContext {
         LookupUserByIdRequestKey key = 1;
         RequireUserPostByIdFields fields = 2;
+      }
+
+      message RequireUserPostByIdArgs {
+        string slug = 1;
       }
 
       message RequireUserPostByIdResponse {
@@ -1395,10 +1399,6 @@ describe('SDL to Proto - Federation and Special Types', () => {
 
       message RequireUserPostByIdFields {
         string name = 1;
-      }
-
-      message RequireUserPostByIdArgs {
-        string slug = 1;
       }
 
       message User {

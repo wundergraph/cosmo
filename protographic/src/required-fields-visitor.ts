@@ -28,6 +28,7 @@ import {
   createResponseMessageName,
   graphqlFieldToProtoField,
   formatKeyElements,
+  graphqlArgumentToProtoField,
 } from './naming-conventions.js';
 import { getProtoTypeFromGraphQL } from './proto-utils.js';
 import { AbstractSelectionRewriter } from './abstract-selection-rewriter.js';
@@ -281,7 +282,7 @@ export class RequiredFieldsVisitor {
 
     // Request messages
     const contextMessageName = `${requiredFieldsMethodName}Context`;
-    this.messageDefinitions.push({
+    const requestMessage: ProtoMessage = {
       messageName: requestMessageName,
       fields: [
         {
@@ -292,7 +293,20 @@ export class RequiredFieldsVisitor {
           description: `${contextMessageName} provides the context for the required fields method ${requiredFieldsMethodName}.`,
         },
       ],
-    });
+    }
+
+    const requireArgsMessageName = `${requiredFieldsMethodName}Args`;
+
+    if (this.requiredField.args.length > 0) {
+      requestMessage.fields.push({
+        fieldName: 'field_args',
+        typeName: requireArgsMessageName,
+        fieldNumber: 2,
+        description: `${requireArgsMessageName} provides the field arguments for the required field with method ${requiredFieldsMethodName}.`
+      })
+    }
+
+    this.messageDefinitions.push(requestMessage);
 
     const fieldsMessageName = `${requiredFieldsMethodName}Fields`;
     const entityKeyRequestMessageName = createEntityLookupRequestKeyMessageName(
@@ -315,6 +329,23 @@ export class RequiredFieldsVisitor {
         },
       ],
     });
+
+    if (this.requiredField.args.length > 0) {
+      const requireArgsMessage: ProtoMessage = {
+        messageName: requireArgsMessageName,
+        fields: []
+      }
+
+      this.requiredField.args.forEach((d, i) => {
+        requireArgsMessage.fields.push({
+          fieldName: graphqlArgumentToProtoField(d.name),
+          typeName: getProtoTypeFromGraphQL(false, d.type, true).typeName,
+          fieldNumber: i+1
+        })
+      })
+
+      this.messageDefinitions.push(requireArgsMessage)
+    }
 
     // Define the prototype for the required fields message.
     // This will be added to the message definitions when the document is left.
