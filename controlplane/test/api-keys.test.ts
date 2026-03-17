@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { CreateAPIKeyResponse, ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { uid } from 'uid';
@@ -25,6 +25,7 @@ describe('API Keys', (ctx) => {
 
   test('Should be able to create and delete a api key', async (testContext) => {
     const { client, users, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
@@ -97,14 +98,13 @@ describe('API Keys', (ctx) => {
 
     deleteResponse = await client.deleteAPIKey({ name: 'test1' });
     expect(deleteResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 
   test.each(['organization-admin', 'organization-apikey-manager'])(
     '%s should be able to create, update and delete API keys',
     async (role) => {
       const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+      onTestFinished(() => server.close());
 
       const orgGroupsResponse = await client.getOrganizationGroups({});
       expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -155,13 +155,12 @@ describe('API Keys', (ctx) => {
 
       expect(getApiKeysResponse.response?.code).toBe(EnumStatusCode.OK);
       expect(apiKey).toBeUndefined();
-
-      await server.close();
     },
   );
 
-  test('that an "organization-apikey-manager" cannot create API keys with admin role', async () => {
+  test('that an "organization-apikey-manager" cannot create API keys with admin role', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroupsResponse = await client.getOrganizationGroups({});
     expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -185,12 +184,11 @@ describe('API Keys', (ctx) => {
     expect(createApiKeyResponse.response?.details).toBe(
       `You don't have access to create an API key with the group "admin"`,
     );
-
-    await server.close();
   });
 
-  test('that an "organization-apikey-manager" cannot update API keys with admin role', async () => {
+  test('that an "organization-apikey-manager" cannot update API keys with admin role', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroupsResponse = await client.getOrganizationGroups({});
     expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -221,12 +219,11 @@ describe('API Keys', (ctx) => {
 
     expect(updateApiKeyResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(updateApiKeyResponse.response?.details).toBe(`You don't have access to update the API key group to "admin"`);
-
-    await server.close();
   });
 
-  test('that an "organization-apikey-manager" cannot delete an API key with admin role', async () => {
+  test('that an "organization-apikey-manager" cannot delete an API key with admin role', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroupsResponse = await client.getOrganizationGroups({});
     expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -256,8 +253,6 @@ describe('API Keys', (ctx) => {
 
     expect(deleteApiKeyResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(deleteApiKeyResponse.response?.details).toBe(`You don't have access to remove the API key "${apiKeyName}"`);
-
-    await server.close();
   });
 
   test.each([
@@ -272,6 +267,7 @@ describe('API Keys', (ctx) => {
     'subgraph-viewer',
   ])('%s should not be able to create API keys', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    onTestFinished(() => server.close());
 
     const orgGroupsResponse = await client.getOrganizationGroups({});
     expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -292,8 +288,6 @@ describe('API Keys', (ctx) => {
     });
 
     expect(createApiKeyResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test.each([
@@ -308,6 +302,7 @@ describe('API Keys', (ctx) => {
     'subgraph-viewer',
   ])('%s should not be able to update API keys', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    onTestFinished(() => server.close());
 
     const orgGroupsResponse = await client.getOrganizationGroups({});
     expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -337,8 +332,6 @@ describe('API Keys', (ctx) => {
     });
 
     expect(updateApiKeyResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test.each([
@@ -353,12 +346,12 @@ describe('API Keys', (ctx) => {
     'subgraph-viewer',
   ])('%s should not be able to delete API keys', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    onTestFinished(() => server.close());
 
     const orgGroupsResponse = await client.getOrganizationGroups({});
     expect(orgGroupsResponse.response?.code).toBe(EnumStatusCode.OK);
 
     const adminGroup = orgGroupsResponse.groups.find((g) => g.name === 'admin')!;
-    const developerGroup = orgGroupsResponse.groups.find((g) => g.name === 'developer')!;
 
     // Create the API key with the `admin` group
     const apiKeyName = uid();
@@ -381,7 +374,5 @@ describe('API Keys', (ctx) => {
     });
 
     expect(updateApiKeyResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 });

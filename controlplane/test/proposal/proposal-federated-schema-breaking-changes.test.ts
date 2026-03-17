@@ -49,13 +49,14 @@ describe('Proposal federated graph schema breaking changes', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should detect federated graph breaking change when proposal adds subgraph with nullable field that conflicts with existing required field', async () => {
+  test('Should detect federated graph breaking change when proposal adds subgraph with nullable field that conflicts with existing required field', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -154,17 +155,16 @@ describe('Proposal federated graph schema breaking changes', () => {
       (c) => c.federatedGraphName === fedGraphName,
     );
     expect(fedGraphChange).toBeDefined();
-
-    await server.close();
   });
 
-  test('Should detect federated graph breaking change when proposal updates published subgraph B to add nullable field that conflicts with required field from subgraph A', async () => {
+  test('Should detect federated graph breaking change when proposal updates published subgraph B to add nullable field that conflicts with required field from subgraph A', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -290,17 +290,16 @@ describe('Proposal federated graph schema breaking changes', () => {
     expect(fedGraphChange).toBeDefined();
     expect(fedGraphChange?.path).toBe('User.name');
     expect(fedGraphChange?.isBreaking).toBe(true);
-
-    await server.close();
   });
 
-  test('Should detect federated graph breaking change when proposal updates multiple subgraphs causing field nullability conflict', async () => {
+  test('Should detect federated graph breaking change when proposal updates multiple subgraphs causing field nullability conflict', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -416,17 +415,16 @@ describe('Proposal federated graph schema breaking changes', () => {
     // Since the change is already reported at subgraph level, it should not be duplicated
     // at federated level
     expect(checkSummary.composedSchemaBreakingChanges.length).toBe(0);
-
-    await server.close();
   });
 
-  test('Should not detect federated graph breaking changes when proposal adds non-conflicting fields', async () => {
+  test('Should not detect federated graph breaking changes when proposal adds non-conflicting fields', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -514,17 +512,16 @@ describe('Proposal federated graph schema breaking changes', () => {
     // The check should be successful
     const affectedGraph = checkSummary.affectedGraphs[0];
     expect(affectedGraph.isCheckSuccessful).toBe(true);
-
-    await server.close();
   });
 
-  test('Should detect breaking change at subgraph level and not duplicate at federated level when proposal removes a field', async () => {
+  test('Should detect breaking change at subgraph level and not duplicate at federated level when proposal removes a field', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -616,17 +613,16 @@ describe('Proposal federated graph schema breaking changes', () => {
 
     // Since the change is already reported at subgraph level, it should not be duplicated
     expect(checkSummary.composedSchemaBreakingChanges.length).toBe(0);
-
-    await server.close();
   });
 
-  test('Should detect federated graph breaking changes when proposal updates multiple subgraphs simultaneously', async () => {
+  test('Should detect federated graph breaking changes when proposal updates multiple subgraphs simultaneously', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -749,17 +745,16 @@ describe('Proposal federated graph schema breaking changes', () => {
     // Verify breaking changes are reported at subgraph level
     const subgraphBreakingChanges = checkSummary.changes.filter((c: any) => c.isBreaking);
     expect(subgraphBreakingChanges.length).toBe(2);
-
-    await server.close();
   });
 
-  test('Should check federated graph schema changes against traffic when adding new subgraph via proposal', async () => {
+  test('Should check federated graph schema changes against traffic when adding new subgraph via proposal', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -876,17 +871,16 @@ describe('Proposal federated graph schema breaking changes', () => {
 
     // The check should not be successful due to federated breaking changes with client traffic
     expect(affectedGraph.isCheckSuccessful).toBe(false);
-
-    await server.close();
   });
 
-  test('Should not perform federated diff when subgraph changes do not involve field changes', async () => {
+  test('Should not perform federated diff when subgraph changes do not involve field changes', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -981,17 +975,16 @@ describe('Proposal federated graph schema breaking changes', () => {
     // The check should be successful
     const affectedGraph = checkSummary.affectedGraphs[0];
     expect(affectedGraph.isCheckSuccessful).toBe(true);
-
-    await server.close();
   });
 
-  test('Should detect breaking change when proposal changes Query field return type from Object to Union (nullable to nullable)', async () => {
+  test('Should detect breaking change when proposal changes Query field return type from Object to Union (nullable to nullable)', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -1112,17 +1105,16 @@ describe('Proposal federated graph schema breaking changes', () => {
     expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
     expect(checkSummary.composedSchemaBreakingChanges[0].path).toBe('Query.a');
     expect(checkSummary.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-    await server.close();
   });
 
-  test('Should detect breaking change when proposal changes Query field return type from Object! to Union!', async () => {
+  test('Should detect breaking change when proposal changes Query field return type from Object! to Union!', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -1243,17 +1235,16 @@ describe('Proposal federated graph schema breaking changes', () => {
     expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
     expect(checkSummary.composedSchemaBreakingChanges[0].path).toBe('Query.a');
     expect(checkSummary.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-    await server.close();
   });
 
-  test('Should detect breaking change when proposal changes Query field return type from Object (nullable) to Union!', async () => {
+  test('Should detect breaking change when proposal changes Query field return type from Object (nullable) to Union!', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -1374,17 +1365,16 @@ describe('Proposal federated graph schema breaking changes', () => {
     expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
     expect(checkSummary.composedSchemaBreakingChanges[0].path).toBe('Query.a');
     expect(checkSummary.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-    await server.close();
   });
 
-  test('Should detect breaking change when proposal changes Query field return type from Object! to Interface (nullable)', async () => {
+  test('Should detect breaking change when proposal changes Query field return type from Object! to Interface (nullable)', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -1507,17 +1497,16 @@ describe('Proposal federated graph schema breaking changes', () => {
     expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
     expect(checkSummary.composedSchemaBreakingChanges[0].path).toBe('Query.a');
     expect(checkSummary.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-    await server.close();
   });
 
-  test('Should detect breaking change when proposal changes Query field return type from Object! to Interface!', async () => {
+  test('Should detect breaking change when proposal changes Query field return type from Object! to Interface!', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -1640,17 +1629,16 @@ describe('Proposal federated graph schema breaking changes', () => {
     expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
     expect(checkSummary.composedSchemaBreakingChanges[0].path).toBe('Query.a');
     expect(checkSummary.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-    await server.close();
   });
 
-  test('Should detect breaking change when proposal changes Query field return type from Object (nullable) to Interface!', async () => {
+  test('Should detect breaking change when proposal changes Query field return type from Object (nullable) to Interface!', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -1773,17 +1761,16 @@ describe('Proposal federated graph schema breaking changes', () => {
     expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
     expect(checkSummary.composedSchemaBreakingChanges[0].path).toBe('Query.a');
     expect(checkSummary.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-    await server.close();
   });
 
-  test('Should detect federated graph breaking change when proposal adds a type with nullable field conflicting with required field', async () => {
+  test('Should detect federated graph breaking change when proposal adds a type with nullable field conflicting with required field', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphAName = genID('subgraphA');
@@ -1902,7 +1889,5 @@ describe('Proposal federated graph schema breaking changes', () => {
     expect(checkSummary.composedSchemaBreakingChanges[0].federatedGraphName).toBe(fedGraphName);
     expect(checkSummary.composedSchemaBreakingChanges[0].path).toBe('User.name');
     expect(checkSummary.composedSchemaBreakingChanges[0].isBreaking).toBe(true);
-
-    await server.close();
   });
 });
