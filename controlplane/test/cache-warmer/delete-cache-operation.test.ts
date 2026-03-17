@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, Mock, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, Mock, onTestFinished, test, vi } from 'vitest';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import {
   afterAllSetup,
@@ -77,6 +77,7 @@ describe('DeleteCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -128,8 +129,6 @@ describe('DeleteCacheOperation', (ctx) => {
 
     expect(getCacheOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(getCacheOperationsResp.totalCount).toBe(1);
-
-    await server.close();
   });
 
   test('Should return an error if the operation doesnt exist.', async (testContext) => {
@@ -140,6 +139,7 @@ describe('DeleteCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -189,8 +189,6 @@ describe('DeleteCacheOperation', (ctx) => {
 
     expect(getCacheOperationsResp.response?.code).toBe(EnumStatusCode.OK);
     expect(getCacheOperationsResp.totalCount).toBe(1);
-
-    await server.close();
   });
 
   test.each(['organization-admin', 'organization-developer'])(
@@ -203,6 +201,7 @@ describe('DeleteCacheOperation', (ctx) => {
           plan: 'enterprise',
         },
       });
+      onTestFinished(() => server.close());
 
       authenticator.changeUserWithSuppliedContext({
         ...users.adminAliceCompanyA,
@@ -243,8 +242,6 @@ describe('DeleteCacheOperation', (ctx) => {
         namespace: 'default',
       });
       expect(deleteCacheOperationResp.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     },
   );
 
@@ -266,6 +263,7 @@ describe('DeleteCacheOperation', (ctx) => {
         plan: 'enterprise',
       },
     });
+    onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     await createFederatedAndSubgraph(client, federatedGraphName);
@@ -306,7 +304,5 @@ describe('DeleteCacheOperation', (ctx) => {
       namespace: 'default',
     });
     expect(deleteCacheOperationResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 });

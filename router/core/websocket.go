@@ -20,14 +20,10 @@ import (
 	"github.com/gobwas/ws/wsutil"
 	"github.com/gorilla/websocket"
 	"github.com/tidwall/gjson"
-	"github.com/wundergraph/astjson"
 	"go.uber.org/atomic"
 	"go.uber.org/zap"
 
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
-
+	"github.com/wundergraph/astjson"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/internal/wsproto"
@@ -36,6 +32,10 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/logging"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
 var (
@@ -957,6 +957,10 @@ func (h *WebSocketConnectionHandler) parseAndPlan(registration *SubscriptionRegi
 	}
 
 	opContext.planningTime = time.Since(startPlanning)
+
+	if err := operationKit.ValidateStaticCost(opContext); err != nil {
+		return operationKit.parsedOperation, nil, err
+	}
 
 	opContext.initialPayload = h.initialPayload
 
