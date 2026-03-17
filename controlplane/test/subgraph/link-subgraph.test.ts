@@ -32,8 +32,9 @@ describe('Link/Unlink Subgraph tests', () => {
   });
 
   describe('LinkSubgraph', () => {
-    test('Should successfully link two subgraphs in different namespaces', async () => {
+    test('Should successfully link two subgraphs in different namespaces', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       // Create two namespaces
       await createNamespace(client, 'prod');
@@ -70,12 +71,11 @@ describe('Link/Unlink Subgraph tests', () => {
       });
 
       expect(linkResponse.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     });
 
-    test('Should fail when source namespace does not exist', async () => {
+    test('Should fail when source namespace does not exist', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       const targetSubgraphName = genID('target-subgraph');
@@ -90,12 +90,11 @@ describe('Link/Unlink Subgraph tests', () => {
 
       expect(linkResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
       expect(linkResponse.response?.details).toBe('The source namespace "nonexistent" was not found.');
-
-      await server.close();
     });
 
-    test('Should fail when target namespace does not exist', async () => {
+    test('Should fail when target namespace does not exist', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       const sourceSubgraphName = genID('source-subgraph');
       await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
@@ -109,12 +108,11 @@ describe('Link/Unlink Subgraph tests', () => {
 
       expect(linkResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
       expect(linkResponse.response?.details).toBe('The target namespace "nonexistent" was not found.');
-
-      await server.close();
     });
 
-    test('Should fail when source subgraph does not exist', async () => {
+    test('Should fail when source subgraph does not exist', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       const targetSubgraphName = genID('target-subgraph');
@@ -129,12 +127,11 @@ describe('Link/Unlink Subgraph tests', () => {
 
       expect(linkResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
       expect(linkResponse.response?.details).toBe('The subgraph "nonexistent-subgraph" was not found.');
-
-      await server.close();
     });
 
-    test('Should fail when target subgraph does not exist', async () => {
+    test('Should fail when target subgraph does not exist', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       const sourceSubgraphName = genID('source-subgraph');
@@ -149,12 +146,11 @@ describe('Link/Unlink Subgraph tests', () => {
 
       expect(linkResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
       expect(linkResponse.response?.details).toBe('The target subgraph "nonexistent-subgraph" was not found.');
-
-      await server.close();
     });
 
-    test('Should fail when source and target subgraphs are the same', async () => {
+    test('Should fail when source and target subgraphs are the same', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       const sourceSubgraphName = genID('source-subgraph');
 
@@ -170,12 +166,11 @@ describe('Link/Unlink Subgraph tests', () => {
 
       expect(linkResponse.response?.code).toBe(EnumStatusCode.ERR);
       expect(linkResponse.response?.details).toBe('The source and target subgraphs cannot be the same subgraphs.');
-
-      await server.close();
     });
 
-    test('Should fail when source subgraph is a feature subgraph', async () => {
+    test('Should fail when source subgraph is a feature subgraph', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       const baseSubgraphName = genID('base-subgraph');
@@ -205,12 +200,11 @@ describe('Link/Unlink Subgraph tests', () => {
       expect(linkResponse.response?.details).toBe(
         `The source subgraph "${featureSubgraphName}" is a feature subgraph. Feature subgraphs can not be linked.`,
       );
-
-      await server.close();
     });
 
-    test('Should fail when target subgraph is a feature subgraph', async () => {
+    test('Should fail when target subgraph is a feature subgraph', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       const baseSubgraphName = genID('base-subgraph');
@@ -249,12 +243,11 @@ describe('Link/Unlink Subgraph tests', () => {
       expect(linkResponse.response?.details).toBe(
         `The target subgraph "${featureSubgraphName}" is a feature subgraph. Feature subgraphs can not be linked.`,
       );
-
-      await server.close();
     });
 
-    test('Should fail when source subgraph is already linked to another subgraph', async () => {
+    test('Should fail when source subgraph is already linked to another subgraph', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       await createNamespace(client, 'staging');
@@ -289,16 +282,15 @@ describe('Link/Unlink Subgraph tests', () => {
       expect(secondLinkResponse.response?.details).toBe(
         `The source subgraph "${sourceSubgraphName}" is already linked to the target subgraph "${firstTargetName}" in the namespace "prod". Unlink the existing link first.`,
       );
-
-      await server.close();
     });
 
-    test('Should fail when user lacks write access to source subgraph', async () => {
+    test('Should fail when user lacks write access to source subgraph', async (testContext) => {
       const { client, server, users, authenticator } = await SetupTest({
         dbname,
         enableMultiUsers: true,
         enabledFeatures: ['rbac'],
       });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       const sourceSubgraphName = genID('source-subgraph');
@@ -322,16 +314,15 @@ describe('Link/Unlink Subgraph tests', () => {
       });
 
       expect(linkResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     });
 
-    test('Should fail when user lacks read access to target subgraph', async () => {
+    test('Should fail when user lacks read access to target subgraph', async (testContext) => {
       const { client, server, users, authenticator } = await SetupTest({
         dbname,
         enableMultiUsers: true,
         enabledFeatures: ['rbac'],
       });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       const sourceSubgraphName = genID('source-subgraph');
@@ -365,12 +356,11 @@ describe('Link/Unlink Subgraph tests', () => {
       });
 
       expect(linkResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     });
 
-    test('Should use default namespace when source namespace is not provided', async () => {
+    test('Should use default namespace when source namespace is not provided', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       const sourceSubgraphName = genID('source-subgraph');
@@ -387,14 +377,13 @@ describe('Link/Unlink Subgraph tests', () => {
       });
 
       expect(linkResponse.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     });
   });
 
   describe('UnlinkSubgraph', () => {
-    test('Should successfully unlink a previously linked subgraph', async () => {
+    test('Should successfully unlink a previously linked subgraph', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       const sourceSubgraphName = genID('source-subgraph');
@@ -419,12 +408,11 @@ describe('Link/Unlink Subgraph tests', () => {
       });
 
       expect(unlinkResponse.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     });
 
-    test('Should fail when source subgraph does not exist', async () => {
+    test('Should fail when source subgraph does not exist', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       const unlinkResponse = await client.unlinkSubgraph({
         sourceSubgraphName: 'nonexistent-subgraph',
@@ -433,12 +421,11 @@ describe('Link/Unlink Subgraph tests', () => {
 
       expect(unlinkResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
       expect(unlinkResponse.response?.details).toBe('The subgraph "nonexistent-subgraph" was not found.');
-
-      await server.close();
     });
 
-    test('Should fail when source subgraph is not linked to any subgraph', async () => {
+    test('Should fail when source subgraph is not linked to any subgraph', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       const sourceSubgraphName = genID('source-subgraph');
       await createSubgraph(client, sourceSubgraphName, DEFAULT_SUBGRAPH_URL_ONE, DEFAULT_NAMESPACE);
@@ -452,16 +439,15 @@ describe('Link/Unlink Subgraph tests', () => {
       expect(unlinkResponse.response?.details).toBe(
         `The source subgraph "${sourceSubgraphName}" is not linked to any subgraph.`,
       );
-
-      await server.close();
     });
 
-    test('Should fail when user lacks write access to source subgraph', async () => {
+    test('Should fail when user lacks write access to source subgraph', async (testContext) => {
       const { client, server, users, authenticator } = await SetupTest({
         dbname,
         enableMultiUsers: true,
         enabledFeatures: ['rbac'],
       });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       const sourceSubgraphName = genID('source-subgraph');
@@ -491,12 +477,11 @@ describe('Link/Unlink Subgraph tests', () => {
       });
 
       expect(unlinkResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     });
 
-    test('Should use default namespace when source namespace is not provided', async () => {
+    test('Should use default namespace when source namespace is not provided', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       const sourceSubgraphName = genID('source-subgraph');
@@ -521,12 +506,11 @@ describe('Link/Unlink Subgraph tests', () => {
       });
 
       expect(unlinkResponse.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     });
 
-    test('Should allow relinking after unlinking', async () => {
+    test('Should allow relinking after unlinking', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       await createNamespace(client, 'staging');
@@ -563,14 +547,13 @@ describe('Link/Unlink Subgraph tests', () => {
         targetSubgraphNamespace: 'staging',
       });
       expect(secondLinkResponse.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     });
   });
 
   describe('Integration Tests', () => {
-    test('Should handle multiple link/unlink operations correctly', async () => {
+    test('Should handle multiple link/unlink operations correctly', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       await createNamespace(client, 'staging');
@@ -628,8 +611,6 @@ describe('Link/Unlink Subgraph tests', () => {
         sourceSubgraphNamespace: DEFAULT_NAMESPACE,
       });
       expect(unlink2Response.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     });
   });
 });

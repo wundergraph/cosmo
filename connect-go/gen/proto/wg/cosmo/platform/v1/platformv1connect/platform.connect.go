@@ -565,6 +565,9 @@ const (
 	// PlatformServiceVerifyAPIKeyGraphAccessProcedure is the fully-qualified name of the
 	// PlatformService's VerifyAPIKeyGraphAccess RPC.
 	PlatformServiceVerifyAPIKeyGraphAccessProcedure = "/wg.cosmo.platform.v1.PlatformService/VerifyAPIKeyGraphAccess"
+	// PlatformServiceRecomposeGraphProcedure is the fully-qualified name of the PlatformService's
+	// RecomposeGraph RPC.
+	PlatformServiceRecomposeGraphProcedure = "/wg.cosmo.platform.v1.PlatformService/RecomposeGraph"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -747,6 +750,7 @@ var (
 	platformServiceLinkSubgraphMethodDescriptor                          = platformServiceServiceDescriptor.Methods().ByName("LinkSubgraph")
 	platformServiceUnlinkSubgraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("UnlinkSubgraph")
 	platformServiceVerifyAPIKeyGraphAccessMethodDescriptor               = platformServiceServiceDescriptor.Methods().ByName("VerifyAPIKeyGraphAccess")
+	platformServiceRecomposeGraphMethodDescriptor                        = platformServiceServiceDescriptor.Methods().ByName("RecomposeGraph")
 )
 
 // PlatformServiceClient is a client for the wg.cosmo.platform.v1.PlatformService service.
@@ -1085,6 +1089,8 @@ type PlatformServiceClient interface {
 	UnlinkSubgraph(context.Context, *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error)
 	// VerifyAPIKeyGraphAccess checks if the token or the jwt has organization admin or developer  and checks if the token has permissions to write to the graph
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
+	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
+	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
 }
 
 // NewPlatformServiceClient constructs a client for the wg.cosmo.platform.v1.PlatformService
@@ -2166,6 +2172,12 @@ func NewPlatformServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(platformServiceVerifyAPIKeyGraphAccessMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		recomposeGraph: connect.NewClient[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse](
+			httpClient,
+			baseURL+PlatformServiceRecomposeGraphProcedure,
+			connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -2348,6 +2360,7 @@ type platformServiceClient struct {
 	linkSubgraph                          *connect.Client[v1.LinkSubgraphRequest, v1.LinkSubgraphResponse]
 	unlinkSubgraph                        *connect.Client[v1.UnlinkSubgraphRequest, v1.UnlinkSubgraphResponse]
 	verifyAPIKeyGraphAccess               *connect.Client[v1.VerifyAPIKeyGraphAccessRequest, v1.VerifyAPIKeyGraphAccessResponse]
+	recomposeGraph                        *connect.Client[v1.RecomposeGraphRequest, v1.RecomposeGraphResponse]
 }
 
 // CreatePlaygroundScript calls wg.cosmo.platform.v1.PlatformService.CreatePlaygroundScript.
@@ -3272,6 +3285,11 @@ func (c *platformServiceClient) VerifyAPIKeyGraphAccess(ctx context.Context, req
 	return c.verifyAPIKeyGraphAccess.CallUnary(ctx, req)
 }
 
+// RecomposeGraph calls wg.cosmo.platform.v1.PlatformService.RecomposeGraph.
+func (c *platformServiceClient) RecomposeGraph(ctx context.Context, req *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error) {
+	return c.recomposeGraph.CallUnary(ctx, req)
+}
+
 // PlatformServiceHandler is an implementation of the wg.cosmo.platform.v1.PlatformService service.
 type PlatformServiceHandler interface {
 	// PlaygroundScripts
@@ -3608,6 +3626,8 @@ type PlatformServiceHandler interface {
 	UnlinkSubgraph(context.Context, *connect.Request[v1.UnlinkSubgraphRequest]) (*connect.Response[v1.UnlinkSubgraphResponse], error)
 	// VerifyAPIKeyGraphAccess checks if the token or the jwt has organization admin or developer  and checks if the token has permissions to write to the graph
 	VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error)
+	// RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
+	RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error)
 }
 
 // NewPlatformServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -4685,6 +4705,12 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 		connect.WithSchema(platformServiceVerifyAPIKeyGraphAccessMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	platformServiceRecomposeGraphHandler := connect.NewUnaryHandler(
+		PlatformServiceRecomposeGraphProcedure,
+		svc.RecomposeGraph,
+		connect.WithSchema(platformServiceRecomposeGraphMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/wg.cosmo.platform.v1.PlatformService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case PlatformServiceCreatePlaygroundScriptProcedure:
@@ -5041,6 +5067,8 @@ func NewPlatformServiceHandler(svc PlatformServiceHandler, opts ...connect.Handl
 			platformServiceUnlinkSubgraphHandler.ServeHTTP(w, r)
 		case PlatformServiceVerifyAPIKeyGraphAccessProcedure:
 			platformServiceVerifyAPIKeyGraphAccessHandler.ServeHTTP(w, r)
+		case PlatformServiceRecomposeGraphProcedure:
+			platformServiceRecomposeGraphHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -5756,4 +5784,8 @@ func (UnimplementedPlatformServiceHandler) UnlinkSubgraph(context.Context, *conn
 
 func (UnimplementedPlatformServiceHandler) VerifyAPIKeyGraphAccess(context.Context, *connect.Request[v1.VerifyAPIKeyGraphAccessRequest]) (*connect.Response[v1.VerifyAPIKeyGraphAccessResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.VerifyAPIKeyGraphAccess is not implemented"))
+}
+
+func (UnimplementedPlatformServiceHandler) RecomposeGraph(context.Context, *connect.Request[v1.RecomposeGraphRequest]) (*connect.Response[v1.RecomposeGraphResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("wg.cosmo.platform.v1.PlatformService.RecomposeGraph is not implemented"))
 }

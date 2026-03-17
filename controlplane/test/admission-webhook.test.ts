@@ -36,8 +36,9 @@ describe('Admission Webhook', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test('Ensure headers reach the webhook endpoint', async (textContext) => {
+  test('Ensure headers reach the webhook endpoint', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const admissionWebhookURL = `https://${genID()}`;
 
@@ -56,6 +57,11 @@ describe('Admission Webhook', (ctx) => {
         });
       }),
     );
+    testContext.onTestFinished(() => {
+      mockServer.resetHandlers();
+      mockServer.close();
+    });
+
     mockServer.listen({ onUnhandledRequest: 'bypass' });
 
     const subgraphName = genID('subgraph');
@@ -84,10 +90,5 @@ describe('Admission Webhook', (ctx) => {
     expect(res.response?.code).toBe(EnumStatusCode.OK);
 
     expect(mockServer.listHandlers()[0].isUsed).toBe(true);
-
-    mockServer.resetHandlers();
-    mockServer.close();
-
-    await server.close();
   });
 });

@@ -21,6 +21,7 @@ describe('Get feature subgraph', (ctx) => {
 
   test('should return feature subgraph by name', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -49,12 +50,11 @@ describe('Get feature subgraph', (ctx) => {
     expect(featureSubgraphResp.graph).toBeDefined();
     expect(featureSubgraphResp.graph?.name).toBe(featureSubgraphName);
     expect(featureSubgraphResp.graph?.baseSubgraphName).toBe(subgraphName);
-
-    await server.close();
   });
 
   test('should return feature subgraph by id', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -94,7 +94,5 @@ describe('Get feature subgraph', (ctx) => {
     expect(getByID.graph?.id).toBeDefined();
     expect(getByID.graph?.name).toBe(featureSubgraphName);
     expect(getByID.graph?.baseSubgraphName).toBe(subgraphName);
-
-    await server.close();
   });
 });
