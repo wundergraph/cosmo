@@ -5,6 +5,8 @@ import health from '../src/core/plugins/health.js';
 describe('Health endpoint', () => {
   test('Should return 200', async (testContext) => {
     const server = Fastify();
+    testContext.onTestFinished(() => server.close());
+
     await server.register(health);
 
     testContext.onTestFailed(() => server.close());
@@ -15,6 +17,5 @@ describe('Health endpoint', () => {
     });
 
     expect(resp.statusCode).toBe(200);
-    await server.close();
   });
 });
