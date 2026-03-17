@@ -186,6 +186,20 @@ export default async function build(opts: BuildConfig) {
   });
 
   /**
+   * CVE-2026-25223 prevention
+   */
+  fastify.addHook('onRequest', async (request, reply) => {
+    const contentType = request.headers['content-type'];
+
+    const contentTypeNormalized = contentType || [];
+    const contentTypeValues = Array.isArray(contentTypeNormalized) ? contentTypeNormalized : [contentTypeNormalized];
+
+    if (contentTypeValues.some((v) => v.includes('\t'))) {
+      await reply.code(400).send({ error: 'Invalid Content-Type header' });
+    }
+  });
+
+  /**
    * Plugin registration
    */
 
