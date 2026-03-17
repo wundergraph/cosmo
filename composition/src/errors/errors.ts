@@ -1754,12 +1754,6 @@ export function duplicateKeyFieldMappingErrorMessage(fieldCoords: string, keyFie
   return `Multiple arguments on field "${fieldCoords}" map to @key field "${keyField}".`;
 }
 
-export function redundantIsDirectiveErrorMessage(argumentName: string, fieldCoords: string): string {
-  return (
-    `Argument "${argumentName}" on field "${fieldCoords}" already matches @key field "${argumentName}" by name` +
-    ` — @is is redundant.`
-  );
-}
 
 // @cacheInvalidate is for side-effect operations — Query fields should use @queryCache instead
 export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {

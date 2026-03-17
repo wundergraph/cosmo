@@ -594,6 +594,52 @@ describe('Entity caching directive tests', () => {
         },
       ] satisfies RootFieldCacheConfig[]);
     });
+
+    test('config: compound flat @key with @is on both args', () => {
+      const config = getConfigForType(
+        subgraph(`
+          type Query {
+            product(pid: ID! @is(field: "id"), loc: String! @is(field: "region")): Product @queryCache(maxAge: 30)
+          }
+          type Product @key(fields: "id region") @entityCache(maxAge: 60) {
+            id: ID!
+            region: String!
+            name: String!
+          }
+        `),
+        'Query',
+      );
+      expect(config).toBeDefined();
+      const mappings = config!.rootFieldCacheConfigurations![0].entityKeyMappings[0].fieldMappings;
+      expect(mappings).toHaveLength(2);
+      expect(mappings).toContainEqual({ entityKeyField: 'id', argumentPath: ['pid'] });
+      expect(mappings).toContainEqual({ entityKeyField: 'region', argumentPath: ['loc'] });
+    });
+
+    test('warning: nested @key field excluded from argument mapping — compound keys filtered', () => {
+      const { warnings } = normalizeSubgraphSuccess(
+        subgraph(`
+          type Query {
+            product(storeId: ID!): Product @queryCache(maxAge: 30)
+          }
+          type Product @key(fields: "store { id }") @entityCache(maxAge: 60) {
+            store: Store!
+            name: String!
+          }
+          type Store {
+            id: ID!
+          }
+        `),
+        version,
+      );
+      // "store { id }" splits into tokens ["store", "{", "id", "}"].
+      // extractKeyFieldNames() keeps "store", "id", "}" (only "{" is filtered).
+      // None of these match argument "storeId" → incomplete mapping warning for "store".
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toStrictEqual(
+        incompleteQueryCacheKeyMappingWarning('subgraph-a', 'Query.product', 'Product', 'store'),
+      );
+    });
   });
 
   // ─── @cacheInvalidate ─────────────────────────────────────────────────────────

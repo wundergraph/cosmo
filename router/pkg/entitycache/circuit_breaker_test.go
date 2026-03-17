@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
@@ -208,5 +210,29 @@ func TestCircuitBreakerCache_NeverErrorsToCallers(t *testing.T) {
 	require.NoError(t, err)
 
 	err = cb.Delete(ctx, []string{"a"})
+	require.NoError(t, err)
+}
+
+func TestCircuitBreakerCache_Close_DelegatesToInner(t *testing.T) {
+	mr := miniredis.RunT(t)
+	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	inner := NewRedisEntityCache(client, "test")
+	cb := newTestBreaker(&fakeCache{}, 3, time.Minute)
+	// Replace the inner cache with one that implements io.Closer
+	cb.cache = inner
+
+	err := cb.Close()
+	require.NoError(t, err)
+
+	// After closing, the inner Redis cache should be closed
+	_, err = inner.Get(context.Background(), []string{"key"})
+	require.Error(t, err)
+}
+
+func TestCircuitBreakerCache_Close_NoopWhenInnerNotCloser(t *testing.T) {
+	inner := &fakeCache{}
+	cb := newTestBreaker(inner, 3, time.Minute)
+
+	err := cb.Close()
 	require.NoError(t, err)
 }

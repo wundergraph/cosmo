@@ -2,6 +2,7 @@ package entitycache
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -9,6 +10,7 @@ import (
 )
 
 var _ resolve.LoaderCache = (*RedisEntityCache)(nil)
+var _ io.Closer = (*RedisEntityCache)(nil)
 
 type RedisEntityCache struct {
 	client    redis.UniversalClient
@@ -72,4 +74,8 @@ func (c *RedisEntityCache) Delete(ctx context.Context, keys []string) error {
 		prefixedKeys[i] = c.keyPrefix + ":" + k
 	}
 	return c.client.Del(ctx, prefixedKeys...).Err()
+}
+
+func (c *RedisEntityCache) Close() error {
+	return c.client.Close()
 }

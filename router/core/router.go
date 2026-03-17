@@ -1303,35 +1303,9 @@ func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, er
 	caches := make(map[string]resolve.LoaderCache)
 	l2Cfg := r.entityCachingConfig.L2
 
-	// buildCache creates a cache backed by either Redis or memory, with optional circuit breaker wrapping.
-	buildCache := func(providerID string) (resolve.LoaderCache, error) {
-		var cache resolve.LoaderCache
-		if memProvider, ok := r.findMemoryProvider(providerID); ok {
-			mc, err := entitycache.NewMemoryEntityCache(int64(memProvider.MaxSize))
-			if err != nil {
-				return nil, fmt.Errorf("creating memory cache: %w", err)
-			}
-			cache = mc
-		} else {
-			client, err := r.findRedisClient(providerID)
-			if err != nil {
-				return nil, err
-			}
-			cache = entitycache.NewRedisEntityCache(client, l2Cfg.Storage.KeyPrefix)
-		}
-		if l2Cfg.CircuitBreaker.Enabled {
-			cache = entitycache.NewCircuitBreakerCache(cache, entitycache.CircuitBreakerConfig{
-				Enabled:          true,
-				FailureThreshold: l2Cfg.CircuitBreaker.FailureThreshold,
-				CooldownPeriod:   l2Cfg.CircuitBreaker.CooldownPeriod,
-			})
-		}
-		return cache, nil
-	}
-
 	// Build default cache from l2.storage.provider_id
 	if l2Cfg.Storage.ProviderID != "" {
-		cache, err := buildCache(l2Cfg.Storage.ProviderID)
+		cache, err := r.buildSingleEntityCache(l2Cfg.Storage.ProviderID, l2Cfg)
 		if err != nil {
 			return nil, fmt.Errorf("entity caching default provider: %w", err)
 		}
@@ -1354,7 +1328,7 @@ func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, er
 			if _, exists := caches[providerID]; exists {
 				continue
 			}
-			cache, err := buildCache(providerID)
+			cache, err := r.buildSingleEntityCache(providerID, l2Cfg)
 			if err != nil {
 				return nil, fmt.Errorf("entity caching provider %q for %s: %w",
 					providerID, context, err)
@@ -1364,6 +1338,32 @@ func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, er
 	}
 
 	return caches, nil
+}
+
+// buildSingleEntityCache creates a cache backed by either Redis or memory, with optional circuit breaker wrapping.
+func (r *Router) buildSingleEntityCache(providerID string, l2Cfg config.EntityCachingL2Configuration) (resolve.LoaderCache, error) {
+	var cache resolve.LoaderCache
+	if memProvider, ok := r.findMemoryProvider(providerID); ok {
+		mc, err := entitycache.NewMemoryEntityCache(int64(memProvider.MaxSize))
+		if err != nil {
+			return nil, fmt.Errorf("creating memory cache: %w", err)
+		}
+		cache = mc
+	} else {
+		client, err := r.findRedisClient(providerID)
+		if err != nil {
+			return nil, err
+		}
+		cache = entitycache.NewRedisEntityCache(client, l2Cfg.Storage.KeyPrefix)
+	}
+	if l2Cfg.CircuitBreaker.Enabled {
+		cache = entitycache.NewCircuitBreakerCache(cache, entitycache.CircuitBreakerConfig{
+			Enabled:          true,
+			FailureThreshold: l2Cfg.CircuitBreaker.FailureThreshold,
+			CooldownPeriod:   l2Cfg.CircuitBreaker.CooldownPeriod,
+		})
+	}
+	return cache, nil
 }
 
 func (r *Router) findRedisClient(providerID string) (rd.RDCloser, error) {

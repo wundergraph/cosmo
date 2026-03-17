@@ -146,3 +146,16 @@ func TestRedisEntityCache_Delete_EmptyKeys(t *testing.T) {
 	err := cache.Delete(ctx, []string{})
 	require.NoError(t, err)
 }
+
+func TestRedisEntityCache_Close(t *testing.T) {
+	mr := miniredis.RunT(t)
+	client := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	cache := NewRedisEntityCache(client, "test")
+
+	err := cache.Close()
+	require.NoError(t, err)
+
+	// After closing, operations should fail
+	_, err = cache.Get(context.Background(), []string{"key"})
+	require.Error(t, err)
+}
