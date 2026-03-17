@@ -92,8 +92,8 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		PropagateFetchReasons:                  opts.RouterEngineConfig.Execution.EnableRequireFetchReasons,
 		ValidateRequiredExternalFields:         opts.RouterEngineConfig.Execution.ValidateRequiredExternalFields,
 		SetDeduplicationShardCountToGOMAXPROCS: true,
-		Caches:             opts.EntityCacheInstances,
-		EntityCacheConfigs: buildEntityCacheInvalidationConfigs(opts.EntityCachingConfig, opts.Subgraphs, opts.EngineConfig),
+		Caches:                                 opts.EntityCacheInstances,
+		EntityCacheConfigs:                     buildEntityCacheInvalidationConfigs(opts.EntityCachingConfig, opts.Subgraphs, opts.EngineConfig),
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
