@@ -19,7 +19,14 @@ import {
   visit,
 } from 'graphql';
 import { FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { CompositeMessageDefinition, CompositeMessageKind, ProtoMessage, ProtoMessageField, RPCMethod, VisitContext } from './types.js';
+import {
+  CompositeMessageDefinition,
+  CompositeMessageKind,
+  ProtoMessage,
+  ProtoMessageField,
+  RPCMethod,
+  VisitContext,
+} from './types.js';
 import { KEY_DIRECTIVE_NAME } from './string-constants.js';
 import {
   createEntityLookupRequestKeyMessageName,
@@ -333,11 +340,15 @@ export class RequiredFieldsVisitor {
     if (this.requiredField.args.length > 0) {
       const requireArgsMessage: ProtoMessage = {
         messageName: requireArgsMessageName,
-        fields: this.requiredField.args.map((d, i): ProtoMessageField => ({
-          fieldName: graphqlArgumentToProtoField(d.name),
-          typeName: getProtoTypeFromGraphQL(false, d.type, true).typeName,
-          fieldNumber: i + 1,
-        }))
+        fields: this.requiredField.args.map((d, i): ProtoMessageField => {
+          const protoType = getProtoTypeFromGraphQL(false, d.type, true);
+          return {
+            fieldName: graphqlArgumentToProtoField(d.name),
+            typeName: protoType.typeName,
+            fieldNumber: i + 1,
+            isRepeated: protoType.isRepeated,
+          };
+        }),
       };
 
       this.messageDefinitions.push(requireArgsMessage);
