@@ -341,7 +341,7 @@ export class RequiredFieldsVisitor {
       const requireArgsMessage: ProtoMessage = {
         messageName: requireArgsMessageName,
         fields: this.requiredField.args.map((d, i): ProtoMessageField => {
-          const protoType = getProtoTypeFromGraphQL(false, d.type, true);
+          const protoType = getProtoTypeFromGraphQL(false, d.type);
           return {
             fieldName: graphqlArgumentToProtoField(d.name),
             typeName: protoType.typeName,
