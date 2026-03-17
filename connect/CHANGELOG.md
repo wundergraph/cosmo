@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.137.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.136.0...@wundergraph/cosmo-connect@0.137.0) (2026-03-17)
+
+### Features
+
+* expose costs ([#2470](https://github.com/wundergraph/cosmo/issues/2470)) ([d43aa40](https://github.com/wundergraph/cosmo/commit/d43aa40f2429fbb212e5618cd5586774e1b6ae7e)) (@ysmolski)
+
 # [0.136.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.135.0...@wundergraph/cosmo-connect@0.136.0) (2026-03-17)
 
 ### Features
