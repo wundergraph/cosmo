@@ -74,7 +74,7 @@ describe('Composition warning tests', () => {
     );
   });
 
-  test('that an warning is returned if a V1 interface extension field is declared @external', async (testContext) => {
+  test('that a warning is returned if a V1 interface extension field is declared @external', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
@@ -118,7 +118,7 @@ describe('Composition warning tests', () => {
     );
   });
 
-  test('that an warning is returned if a non-external v1 fields are a part of a @requires field set', async (testContext) => {
+  test('that a warning is returned if a non-external v1 fields are a part of a @requires field set', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
     testContext.onTestFinished(() => server.close());
 
