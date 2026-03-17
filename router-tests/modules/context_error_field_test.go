@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	integration "github.com/wundergraph/cosmo/router-tests"
+	"github.com/wundergraph/cosmo/router-tests/testutils"
 	contexterror "github.com/wundergraph/cosmo/router-tests/modules/context-error"
 	"github.com/wundergraph/cosmo/router-tests/testenv"
 	"github.com/wundergraph/cosmo/router/core"
@@ -20,7 +20,7 @@ func TestContextErrorModule(t *testing.T) {
 	t.Run("error is captured in context when authentication fails", func(t *testing.T) {
 		t.Parallel()
 
-		authenticators, _ := integration.ConfigureAuth(t)
+		authenticators, _ := testutils.ConfigureAuth(t)
 		accessController, err := core.NewAccessController(core.AccessControllerOptions{
 			Authenticators:           authenticators,
 			AuthenticationRequired:   true,
@@ -94,6 +94,31 @@ func TestContextErrorModule(t *testing.T) {
 
 			// Verify the X-Has-Error header is set when subgraph fails
 			require.Equal(t, "true", res.Response.Header.Get("X-Has-Error"))
+		})
+	})
+
+	t.Run("in case of errors in the response, cache control is set to no-cache", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			ModifySubgraphErrorPropagation: func(cfg *config.SubgraphErrorPropagationConfiguration) {
+				cfg.Enabled = true
+				cfg.Mode = config.SubgraphErrorPropagationModePassthrough
+			},
+			Subgraphs: testenv.SubgraphsConfig{
+				GlobalMiddleware: func(handler http.Handler) http.Handler {
+					return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusInternalServerError)
+					})
+				},
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			res, err := xEnv.MakeRequest(http.MethodPost, "/graphql", nil, strings.NewReader(`{"query":"{ employees { id } }"}`))
+			require.NoError(t, err)
+			require.Equal(t, "no-store, no-cache, must-revalidate", res.Header.Get("Cache-Control"))
+			defer res.Body.Close()
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+			require.Equal(t, `{"errors":[{"message":"Failed to fetch from Subgraph 'employees', Reason: empty response.","extensions":{"statusCode":500}}],"data":{"employees":null}}`, string(body))
 		})
 	})
 

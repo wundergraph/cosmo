@@ -1,5 +1,5 @@
-import { EmptyState } from "@/components/empty-state";
-import { Button } from "@/components/ui/button";
+import { EmptyState } from '@/components/empty-state';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -9,18 +9,14 @@ import {
   TableHeader,
   TableRow,
   TableWrapper,
-} from "@/components/ui/table";
-import { useUser } from "@/hooks/use-user";
-import {
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-  NoSymbolIcon,
-} from "@heroicons/react/24/outline";
-import { CrossCircledIcon } from "@radix-ui/react-icons";
-import { GetCheckSummaryResponse_ProposalSchemaMatch } from "@wundergraph/cosmo-connect/dist/platform/v1/platform_pb";
-import { useRouter } from "next/router";
-import React, { useContext } from "react";
-import { GraphContext } from "../layout/graph-layout";
+} from '@/components/ui/table';
+import { useUser } from '@/hooks/use-user';
+import { CheckCircleIcon, ExclamationCircleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
+import { CrossCircledIcon } from '@radix-ui/react-icons';
+import { GetCheckSummaryResponse_ProposalSchemaMatch } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { useRouter } from 'next/router';
+import React, { useContext } from 'react';
+import { GraphContext } from '../layout/graph-layout';
 
 export const ProposalMatchesTable = ({
   proposalMatches,
@@ -68,7 +64,7 @@ export const ProposalMatchesTable = ({
     );
   }
 
-  if (proposalMatch === "error" && proposalMatches.length === 0) {
+  if (proposalMatch === 'error' && proposalMatches.length === 0) {
     return (
       <EmptyState
         icon={<CrossCircledIcon className="h-16 w-16 text-destructive" />}
@@ -78,7 +74,7 @@ export const ProposalMatchesTable = ({
     );
   }
 
-  if (proposalMatch === "warn" && proposalMatches.length === 0) {
+  if (proposalMatch === 'warn' && proposalMatches.length === 0) {
     return (
       <EmptyState
         icon={<ExclamationCircleIcon className="h-16 w-16 text-warning" />}
@@ -109,7 +105,7 @@ export const ProposalMatchesTable = ({
                     </span>
                   ) : (
                     <span className="inline-flex items-center rounded-md bg-destructive/20 px-2 py-1 text-xs text-destructive">
-                      {proposalMatch === "error" ? (
+                      {proposalMatch === 'error' ? (
                         <CrossCircledIcon className="mr-1 h-3 w-3 text-destructive" />
                       ) : (
                         <ExclamationCircleIcon className="mr-1 h-3 w-3 text-destructive" />

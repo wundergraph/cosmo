@@ -6,7 +6,6 @@ package nats
 
 import (
 	"context"
-	"io"
 
 	mock "github.com/stretchr/testify/mock"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
@@ -103,20 +102,31 @@ func (_c *MockAdapter_Publish_Call) RunAndReturn(run func(ctx context.Context, c
 }
 
 // Request provides a mock function for the type MockAdapter
-func (_mock *MockAdapter) Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer) error {
-	ret := _mock.Called(ctx, cfg, event, w)
+func (_mock *MockAdapter) Request(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent) ([]byte, error) {
+	ret := _mock.Called(ctx, cfg, event)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Request")
 	}
 
-	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, datasource.PublishEventConfiguration, datasource.StreamEvent, io.Writer) error); ok {
-		r0 = returnFunc(ctx, cfg, event, w)
-	} else {
-		r0 = ret.Error(0)
+	var r0 []byte
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, datasource.PublishEventConfiguration, datasource.StreamEvent) ([]byte, error)); ok {
+		return returnFunc(ctx, cfg, event)
 	}
-	return r0
+	if returnFunc, ok := ret.Get(0).(func(context.Context, datasource.PublishEventConfiguration, datasource.StreamEvent) []byte); ok {
+		r0 = returnFunc(ctx, cfg, event)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]byte)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, datasource.PublishEventConfiguration, datasource.StreamEvent) error); ok {
+		r1 = returnFunc(ctx, cfg, event)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // MockAdapter_Request_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Request'
@@ -128,12 +138,11 @@ type MockAdapter_Request_Call struct {
 //   - ctx context.Context
 //   - cfg datasource.PublishEventConfiguration
 //   - event datasource.StreamEvent
-//   - w io.Writer
-func (_e *MockAdapter_Expecter) Request(ctx interface{}, cfg interface{}, event interface{}, w interface{}) *MockAdapter_Request_Call {
-	return &MockAdapter_Request_Call{Call: _e.mock.On("Request", ctx, cfg, event, w)}
+func (_e *MockAdapter_Expecter) Request(ctx interface{}, cfg interface{}, event interface{}) *MockAdapter_Request_Call {
+	return &MockAdapter_Request_Call{Call: _e.mock.On("Request", ctx, cfg, event)}
 }
 
-func (_c *MockAdapter_Request_Call) Run(run func(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer)) *MockAdapter_Request_Call {
+func (_c *MockAdapter_Request_Call) Run(run func(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent)) *MockAdapter_Request_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -147,26 +156,21 @@ func (_c *MockAdapter_Request_Call) Run(run func(ctx context.Context, cfg dataso
 		if args[2] != nil {
 			arg2 = args[2].(datasource.StreamEvent)
 		}
-		var arg3 io.Writer
-		if args[3] != nil {
-			arg3 = args[3].(io.Writer)
-		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
 }
 
-func (_c *MockAdapter_Request_Call) Return(err error) *MockAdapter_Request_Call {
-	_c.Call.Return(err)
+func (_c *MockAdapter_Request_Call) Return(bytes []byte, err error) *MockAdapter_Request_Call {
+	_c.Call.Return(bytes, err)
 	return _c
 }
 
-func (_c *MockAdapter_Request_Call) RunAndReturn(run func(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent, w io.Writer) error) *MockAdapter_Request_Call {
+func (_c *MockAdapter_Request_Call) RunAndReturn(run func(ctx context.Context, cfg datasource.PublishEventConfiguration, event datasource.StreamEvent) ([]byte, error)) *MockAdapter_Request_Call {
 	_c.Call.Return(run)
 	return _c
 }

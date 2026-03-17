@@ -1,6 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { lru } from 'tiny-lru';
-import { AuthContext } from '../../types/index.js';
+import { FastifyBaseLogger } from 'fastify';
+import { AuthContext, UserInfoEndpointResponse } from '../../types/index.js';
 import { AuthenticationError } from '../errors/errors.js';
 import { OrganizationRepository } from '../repositories/OrganizationRepository.js';
 import AccessTokenAuthenticator from './AccessTokenAuthenticator.js';
@@ -15,6 +16,7 @@ const maxAuthCacheTtl = 30 * 1000; // 30 seconds
 export interface Authenticator {
   authenticate(headers: Headers): Promise<AuthContext>;
   authenticateRouter(headers: Headers): Promise<GraphKeyAuthContext>;
+  getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined>;
 }
 
 export class Authentication implements Authenticator {
@@ -26,6 +28,7 @@ export class Authentication implements Authenticator {
     private accessTokenAuth: AccessTokenAuthenticator,
     private graphKeyAuth: GraphApiTokenAuthenticator,
     private orgRepo: OrganizationRepository,
+    private logger: FastifyBaseLogger,
   ) {}
 
   /**
@@ -44,7 +47,7 @@ export class Authentication implements Authenticator {
       const authorization = headers.get('authorization');
       if (authorization) {
         const token = authorization.replace(/^bearer\s+/i, '');
-        if (token.startsWith('cosmo')) {
+        if (token.toLowerCase().startsWith('cosmo')) {
           return await this.keyAuth.authenticate(token);
         }
         const organizationSlug = headers.get('cosmo-org-slug');
@@ -78,7 +81,10 @@ export class Authentication implements Authenticator {
       });
 
       if (!isMember) {
-        throw new Error('User is not a member of the organization');
+        throw new AuthenticationError(
+          EnumStatusCode.ERROR_NOT_AUTHENTICATED,
+          'User is not a member of the organization',
+        );
       }
 
       const organizationDeactivated = !!organization.deactivation;
@@ -103,8 +109,17 @@ export class Authentication implements Authenticator {
       this.#cache.set(cacheKey, userContext);
 
       return userContext;
-    } catch {
-      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
+    } catch (error: unknown) {
+      if (error instanceof AuthenticationError || (error instanceof Error && error.name === 'AuthenticationError')) {
+        // Just forward authentication errors to surface better error messages
+        throw error;
+      }
+
+      this.logger.error(error, 'Failed to authenticate request');
+      const authError = new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
+      authError.cause = error;
+
+      throw authError;
     }
   }
 
@@ -119,5 +134,17 @@ export class Authentication implements Authenticator {
       }
     }
     throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Graph token is missing');
+  }
+
+  async getUserInfo(token: string): Promise<UserInfoEndpointResponse | undefined> {
+    if (!token || token.trim().length === 0) {
+      return undefined;
+    }
+
+    try {
+      return token.toLowerCase().startsWith('cosmo') ? undefined : await this.accessTokenAuth.getUserInfo(token);
+    } catch {
+      throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Not authenticated');
+    }
   }
 }

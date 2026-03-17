@@ -46,7 +46,7 @@ Please try the below steps to solve the issue
     }),
   );
 
-  process.exitCode = 1;
-
   await shutdownTelemetry();
+
+  process.exit(1);
 }

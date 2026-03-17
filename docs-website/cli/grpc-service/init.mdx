@@ -1,0 +1,56 @@
+---
+title: "Init"
+icon: 'file-circle-plus'
+sidebarTitle: Init
+description: "Scaffold a new gRPC service project from a template"
+---
+
+The `init` command scaffolds a new gRPC service project from a template,
+downloading and extracting the template from the [wundergraph/cosmo-templates](https://github.com/wundergraph/cosmo-templates) repository.
+
+## Usage
+
+```bash
+wgc grpc-service init [options]
+```
+
+## Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-t, --template <template>` | Template to use | `typescript-connect-rpc-fastify` |
+| `-d, --directory <directory>` | Output directory for the new project | `.` |
+
+## Description
+
+- Downloads and extracts the specified template from the `wundergraph/cosmo-templates` GitHub repository under `grpc-service/<template>`.
+- Validates the template name and checks if it exists.
+- Ensures the output directory is empty or creates it if it does not exist.
+- Copies the template files into the output directory.
+- Prints instructions to check the `README.md` in the generated project.
+
+If the specified template does not exist, the command will list available templates and provide usage guidance.
+
+## List available templates
+
+To list available templates, you can use the [list-templates](/cli/grpc-service/list-templates) command.
+
+## Examples
+
+### Scaffold a new gRPC service with the default template
+
+```bash
+wgc grpc-service init
+```
+
+### Scaffold a new gRPC service with a specific template
+
+```bash
+wgc grpc-service init --template typescript-connect-rpc-fastify --directory ./my-grpc-service
+```
+
+## Output
+
+The command creates a new directory (if it does not exist) and copies the template files into it. Check the generated `README.md` for instructions on how to use your new gRPC service project.
+
+See also: [gRPC Services](/router/gRPC/grpc-services) · [GraphQL Support for gRPC Integration](/router/gRPC/graphql-support)

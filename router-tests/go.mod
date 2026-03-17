@@ -3,10 +3,12 @@ module github.com/wundergraph/cosmo/router-tests
 go 1.25
 
 require (
+	connectrpc.com/connect v1.19.1
 	github.com/MicahParks/jwkset v0.11.0
 	github.com/buger/jsonparser v1.1.1
 	github.com/cloudflare/backoff v0.0.0-20240920015135-e46b80a3a7d0
 	github.com/golang-jwt/jwt/v5 v5.2.2
+	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
@@ -16,17 +18,17 @@ require (
 	github.com/nats-io/nats.go v1.35.0
 	github.com/prometheus/client_golang v1.19.1
 	github.com/prometheus/client_model v0.6.1
-	github.com/redis/go-redis/v9 v9.4.0
+	github.com/redis/go-redis/v9 v9.7.3
 	github.com/sebdah/goldie/v2 v2.7.1
 	github.com/stretchr/testify v1.11.1
 	github.com/twmb/franz-go v1.16.1
 	github.com/twmb/franz-go/pkg/kadm v1.11.0
-	github.com/wundergraph/astjson v0.0.0-20250106123708-be463c97e083
-	github.com/wundergraph/cosmo/demo v0.0.0-20251030234733-8ed574a0296f
+	github.com/wundergraph/astjson v1.1.0
+	github.com/wundergraph/cosmo/demo v0.0.0-20260213130455-6e3277e7b850
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
-	github.com/wundergraph/cosmo/router v0.0.0-20251125205644-175f80c4e6d9
+	github.com/wundergraph/cosmo/router v0.0.0-20260213130455-6e3277e7b850
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
-	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.245
+	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.263
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/sdk v1.36.0
 	go.opentelemetry.io/otel/sdk/metric v1.36.0
@@ -42,7 +44,7 @@ require (
 )
 
 require (
-	connectrpc.com/connect v1.16.2 // indirect
+	connectrpc.com/vanguard v0.3.0 // indirect
 	github.com/99designs/gqlgen v0.17.76 // indirect
 	github.com/KimMachineGun/automemlimit v0.6.1 // indirect
 	github.com/MicahParks/keyfunc/v3 v3.6.2 // indirect
@@ -63,9 +65,9 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/dgraph-io/ristretto/v2 v2.1.0 // indirect
+	github.com/dgraph-io/ristretto/v2 v2.4.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/docker/cli v28.2.2+incompatible // indirect
+	github.com/docker/cli v29.2.0+incompatible // indirect
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -87,7 +89,6 @@ require (
 	github.com/goccy/go-yaml v1.17.1 // indirect
 	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
-	github.com/google/go-containerregistry v0.20.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
@@ -151,6 +152,7 @@ require (
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/vektah/gqlparser/v2 v2.5.30 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
+	github.com/wundergraph/go-arena v1.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20250705151800-55b8f293f342 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect

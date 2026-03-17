@@ -1,76 +1,46 @@
-import { useApplyParams } from "@/components/analytics/use-apply-params";
-import { useDateRangeQueryState } from "@/components/analytics/useAnalyticsQueryState";
-import {
-  getCheckBadge,
-  getCheckIcon,
-  isCheckSuccessful,
-} from "@/components/check-badge-icon";
-import {
-  DatePickerWithRange,
-  DateRangePickerChangeHandler,
-} from "@/components/date-picker-with-range";
-import { EmptyState } from "@/components/empty-state";
-import {
-  GraphContext,
-  GraphPageLayout,
-  getGraphLayout,
-} from "@/components/layout/graph-layout";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CLI } from "@/components/ui/cli";
-import { Loader } from "@/components/ui/loader";
-import { Pagination } from "@/components/ui/pagination";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  TableWrapper,
-} from "@/components/ui/table";
-import { Toolbar } from "@/components/ui/toolbar";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import {
-  ChecksFilterMenu,
-  parseSelectedSubgraphs,
-} from "@/components/checks/checks-filter-menu";
-import { useFeatureLimit } from "@/hooks/use-feature-limit";
-import { useSessionStorage } from "@/hooks/use-session-storage";
-import { docsBaseURL } from "@/lib/constants";
-import { formatDateTime } from "@/lib/format-date";
-import { createDateRange } from "@/lib/insights-helpers";
-import { NextPageWithLayout } from "@/lib/page";
-import {
-  CommandLineIcon,
-  ExclamationTriangleIcon,
-  NoSymbolIcon,
-} from "@heroicons/react/24/outline";
-import { GitHubLogoIcon } from "@radix-ui/react-icons";
-import { useQuery } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
-import { getChecksByFederatedGraphName } from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import { formatDistanceToNow, formatISO } from "date-fns";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { useContext } from "react";
-import { cn } from "@/lib/utils";
-import { useFeature } from "@/hooks/use-feature";
-import { useWorkspace } from "@/hooks/use-workspace";
+import { useApplyParams } from '@/components/analytics/use-apply-params';
+import { useDateRangeQueryState } from '@/components/analytics/useAnalyticsQueryState';
+import { getCheckBadge, getCheckIcon, isCheckSuccessful } from '@/components/check-badge-icon';
+import { DatePickerWithRange, DateRangePickerChangeHandler } from '@/components/date-picker-with-range';
+import { EmptyState } from '@/components/empty-state';
+import { GraphContext, GraphPageLayout, getGraphLayout } from '@/components/layout/graph-layout';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CLI } from '@/components/ui/cli';
+import { Loader } from '@/components/ui/loader';
+import { Pagination } from '@/components/ui/pagination';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableWrapper } from '@/components/ui/table';
+import { Toolbar } from '@/components/ui/toolbar';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ChecksFilterMenu, parseSelectedSubgraphs } from '@/components/checks/checks-filter-menu';
+import { useFeatureLimit } from '@/hooks/use-feature-limit';
+import { useSessionStorage } from '@/hooks/use-session-storage';
+import { docsBaseURL } from '@/lib/constants';
+import { formatDateTime } from '@/lib/format-date';
+import { createDateRange } from '@/lib/insights-helpers';
+import { NextPageWithLayout } from '@/lib/page';
+import { CommandLineIcon, ExclamationTriangleIcon, NoSymbolIcon } from '@heroicons/react/24/outline';
+import { GitHubLogoIcon } from '@radix-ui/react-icons';
+import { useQuery } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { getChecksByFederatedGraphName } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import { formatDistanceToNow, formatISO } from 'date-fns';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { useContext } from 'react';
+import { cn } from '@/lib/utils';
+import { useFeature } from '@/hooks/use-feature';
+import { useWorkspace } from '@/hooks/use-workspace';
 
 const ChecksPage: NextPageWithLayout = () => {
   const router = useRouter();
-  const pageNumber = router.query.page
-    ? parseInt(router.query.page as string)
-    : 1;
+  const pageNumber = router.query.page ? parseInt(router.query.page as string) : 1;
 
-  const limit = Number.parseInt((router.query.pageSize as string) || "10");
+  const limit = Number.parseInt((router.query.pageSize as string) || '10');
   const selectedSubgraphs = parseSelectedSubgraphs(router.query.subgraphs);
-  const { namespace: { name: namespace } } = useWorkspace();
+  const {
+    namespace: { name: namespace },
+  } = useWorkspace();
 
   const {
     dateRange: { start, end },
@@ -80,10 +50,10 @@ const ChecksPage: NextPageWithLayout = () => {
   const endDate = range ? createDateRange(range).end : end;
 
   const graphContext = useContext(GraphContext);
-  const proposalsFeature = useFeature("proposals");
-  const subgraphCheckExtensionsFeature = useFeature("subgraph-check-extensions");
+  const proposalsFeature = useFeature('proposals');
+  const subgraphCheckExtensionsFeature = useFeature('subgraph-check-extensions');
 
-  const [, setRouteCache] = useSessionStorage("checks.route", router.asPath);
+  const [, setRouteCache] = useSessionStorage('checks.route', router.asPath);
 
   const { data, isLoading, error, refetch } = useQuery(
     getChecksByFederatedGraphName,
@@ -95,9 +65,7 @@ const ChecksPage: NextPageWithLayout = () => {
       startDate: formatISO(startDate),
       endDate: formatISO(endDate),
       filters: {
-        subgraphs: !selectedSubgraphs.length
-          ? graphContext?.subgraphs?.map((sg) => sg.id) ?? []
-          : selectedSubgraphs,
+        subgraphs: !selectedSubgraphs.length ? (graphContext?.subgraphs?.map((sg) => sg.id) ?? []) : selectedSubgraphs,
       },
     },
     {
@@ -112,9 +80,7 @@ const ChecksPage: NextPageWithLayout = () => {
       <EmptyState
         icon={<ExclamationTriangleIcon />}
         title="Could not retrieve federated graphs"
-        description={
-          data?.response?.details || error?.message || "Please try again"
-        }
+        description={data?.response?.details || error?.message || 'Please try again'}
         actions={<Button onClick={() => refetch()}>Retry</Button>}
       />
     );
@@ -128,13 +94,8 @@ const ChecksPage: NextPageWithLayout = () => {
         title="Run checks using the CLI"
         description={
           <>
-            No checks found. Use the CLI tool to run one{" "}
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href={docsBaseURL + "/cli/subgraph/check"}
-              className="text-primary"
-            >
+            No checks found. Use the CLI tool to run one{' '}
+            <a target="_blank" rel="noreferrer" href={docsBaseURL + '/cli/subgraph/check'} className="text-primary">
               Learn more.
             </a>
           </>
@@ -160,9 +121,7 @@ const ChecksPage: NextPageWithLayout = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Check</TableHead>
-              {graphContext.graph.supportsFederation && (
-                <TableHead>Subgraph</TableHead>
-              )}
+              {graphContext.graph.supportsFederation && <TableHead>Subgraph</TableHead>}
               <TableHead>Tasks</TableHead>
               <TableHead></TableHead>
             </TableRow>
@@ -193,14 +152,10 @@ const ChecksPage: NextPageWithLayout = () => {
                   checkExtensionErrorMessage,
                 }) => {
                   const isLinkedTrafficCheckFailed = linkedChecks.some(
-                    (linkedCheck) =>
-                      linkedCheck.hasClientTraffic &&
-                      !linkedCheck.isForcedSuccess,
+                    (linkedCheck) => linkedCheck.hasClientTraffic && !linkedCheck.isForcedSuccess,
                   );
                   const isLinkedPruningCheckFailed = linkedChecks.some(
-                    (linkedCheck) =>
-                      linkedCheck.hasGraphPruningErrors &&
-                      !linkedCheck.isForcedSuccess,
+                    (linkedCheck) => linkedCheck.hasGraphPruningErrors && !linkedCheck.isForcedSuccess,
                   );
                   const isSuccessful = isCheckSuccessful(
                     isComposable,
@@ -209,13 +164,13 @@ const ChecksPage: NextPageWithLayout = () => {
                     hasLintErrors,
                     hasGraphPruningErrors,
                     clientTrafficCheckSkipped,
-                    proposalMatch === "error",
+                    proposalMatch === 'error',
                     isLinkedTrafficCheckFailed,
                     isLinkedPruningCheckFailed,
                     checkExtensionErrorMessage,
                   );
 
-                  const path = `${router.asPath.split("?")[0]}/${id}`;
+                  const path = `${router.asPath.split('?')[0]}/${id}`;
 
                   return (
                     <TableRow
@@ -225,15 +180,10 @@ const ChecksPage: NextPageWithLayout = () => {
                     >
                       <TableCell>
                         <div className="flex flex-row items-center gap-1">
-                          <div className="w-20">
-                            {getCheckBadge(isSuccessful, isForcedSuccess)}
-                          </div>
+                          <div className="w-20">{getCheckBadge(isSuccessful, isForcedSuccess)}</div>
 
                           <div className="flex flex-col items-start">
-                            <Link
-                              href={path}
-                              className="font-medium text-foreground"
-                            >
+                            <Link href={path} className="font-medium text-foreground">
                               {id}
                             </Link>
                             <Tooltip>
@@ -244,9 +194,7 @@ const ChecksPage: NextPageWithLayout = () => {
                                   })}
                                 </span>
                               </TooltipTrigger>
-                              <TooltipContent side="bottom">
-                                {formatDateTime(new Date(timestamp))}
-                              </TooltipContent>
+                              <TooltipContent side="bottom">{formatDateTime(new Date(timestamp))}</TooltipContent>
                             </Tooltip>
                           </div>
                         </div>
@@ -255,49 +203,31 @@ const ChecksPage: NextPageWithLayout = () => {
                         <TableCell>
                           {subgraphName ||
                             (checkedSubgraphs.length > 1
-                              ? "Multiple Subgraphs"
+                              ? 'Multiple Subgraphs'
                               : checkedSubgraphs.length > 0
-                              ? checkedSubgraphs[0].subgraphName
-                              : "Subgraph")}
+                                ? checkedSubgraphs[0].subgraphName
+                                : 'Subgraph')}
                         </TableCell>
                       )}
                       <TableCell>
                         <div className="flex flex-wrap items-start gap-2">
                           <Badge
                             variant="outline"
-                            className={cn(
-                              "gap-2 py-1.5",
-                              compositionSkipped && "text-muted-foreground",
-                            )}
+                            className={cn('gap-2 py-1.5', compositionSkipped && 'text-muted-foreground')}
                           >
-                            {compositionSkipped ? (
-                              <NoSymbolIcon className="h-4 w-4" />
-                            ) : (
-                              getCheckIcon(isComposable)
-                            )}
+                            {compositionSkipped ? <NoSymbolIcon className="h-4 w-4" /> : getCheckIcon(isComposable)}
                             <span>Composes</span>
                           </Badge>
                           <Badge
                             variant="outline"
-                            className={cn(
-                              "gap-2 py-1.5",
-                              breakingChangesSkipped && "text-muted-foreground",
-                            )}
+                            className={cn('gap-2 py-1.5', breakingChangesSkipped && 'text-muted-foreground')}
                           >
-                            {breakingChangesSkipped ? (
-                              <NoSymbolIcon className="h-4 w-4" />
-                            ) : (
-                              getCheckIcon(!isBreaking)
-                            )}
+                            {breakingChangesSkipped ? <NoSymbolIcon className="h-4 w-4" /> : getCheckIcon(!isBreaking)}
                             <span>Breaking changes</span>
                           </Badge>
                           <Badge
                             variant="outline"
-                            className={cn(
-                              "gap-2 py-1.5",
-                              clientTrafficCheckSkipped &&
-                                "text-muted-foreground",
-                            )}
+                            className={cn('gap-2 py-1.5', clientTrafficCheckSkipped && 'text-muted-foreground')}
                           >
                             {clientTrafficCheckSkipped ? (
                               <NoSymbolIcon className="h-4 w-4" />
@@ -308,68 +238,46 @@ const ChecksPage: NextPageWithLayout = () => {
                           </Badge>
                           <Badge
                             variant="outline"
-                            className={cn(
-                              "gap-2 py-1.5",
-                              lintSkipped && "text-muted-foreground",
-                            )}
+                            className={cn('gap-2 py-1.5', lintSkipped && 'text-muted-foreground')}
                           >
-                            {lintSkipped ? (
-                              <NoSymbolIcon className="h-4 w-4" />
-                            ) : (
-                              getCheckIcon(!hasLintErrors)
-                            )}
+                            {lintSkipped ? <NoSymbolIcon className="h-4 w-4" /> : getCheckIcon(!hasLintErrors)}
                             <span>Lint Errors</span>
                           </Badge>
                           <Badge
                             variant="outline"
-                            className={cn(
-                              "gap-2 py-1.5",
-                              graphPruningSkipped && "text-muted-foreground",
-                            )}
+                            className={cn('gap-2 py-1.5', graphPruningSkipped && 'text-muted-foreground')}
                           >
                             {graphPruningSkipped ? (
                               <NoSymbolIcon className="h-4 w-4" />
                             ) : (
                               getCheckIcon(!hasGraphPruningErrors)
                             )}
-                            <span className="flex-1 truncate">
-                              Pruning Errors
-                            </span>
+                            <span className="flex-1 truncate">Pruning Errors</span>
                           </Badge>
                           {proposalsFeature?.enabled && (
                             <Badge
                               variant="outline"
-                              className={cn(
-                                "gap-2 py-1.5",
-                                !proposalMatch && "text-muted-foreground",
-                              )}
+                              className={cn('gap-2 py-1.5', !proposalMatch && 'text-muted-foreground')}
                             >
                               {!proposalMatch ? (
                                 <NoSymbolIcon className="h-4 w-4" />
                               ) : (
-                                getCheckIcon(proposalMatch !== "error")
+                                getCheckIcon(proposalMatch !== 'error')
                               )}
-                              <span className="flex-1 truncate">
-                                Proposal Match
-                              </span>
+                              <span className="flex-1 truncate">Proposal Match</span>
                             </Badge>
                           )}
                           {subgraphCheckExtensionsFeature?.enabled && (
                             <Badge
                               variant="outline"
-                              className={cn(
-                                "gap-2 py-1.5",
-                                !checkExtensionDeliveryId && "text-muted-foreground",
-                              )}
+                              className={cn('gap-2 py-1.5', !checkExtensionDeliveryId && 'text-muted-foreground')}
                             >
                               {!checkExtensionDeliveryId ? (
                                 <NoSymbolIcon className="h-4 w-4" />
                               ) : (
                                 getCheckIcon(!checkExtensionErrorMessage)
                               )}
-                              <span className="flex-1 truncate">
-                                Extension
-                              </span>
+                              <span className="flex-1 truncate">Extension</span>
                             </Badge>
                           )}
                         </div>
@@ -433,10 +341,7 @@ const ChecksToolbar = () => {
   const applyParams = useApplyParams();
   const { dateRange, range } = useDateRangeQueryState();
 
-  const onDateRangeChange: DateRangePickerChangeHandler = ({
-    dateRange,
-    range,
-  }) => {
+  const onDateRangeChange: DateRangePickerChangeHandler = ({ dateRange, range }) => {
     if (range) {
       applyParams({
         range: range.toString(),
@@ -455,10 +360,7 @@ const ChecksToolbar = () => {
     }
   };
 
-  const breakingChangeRetention = useFeatureLimit(
-    "breaking-change-retention",
-    7,
-  );
+  const breakingChangeRetention = useFeatureLimit('breaking-change-retention', 7);
 
   return (
     <Toolbar>
@@ -476,15 +378,11 @@ const ChecksToolbar = () => {
 
 ChecksPage.getLayout = (page) =>
   getGraphLayout(
-    <GraphPageLayout
-      title="Checks"
-      subtitle="A record of composition and schema checks"
-      toolbar={<ChecksToolbar />}
-    >
+    <GraphPageLayout title="Checks" subtitle="A record of composition and schema checks" toolbar={<ChecksToolbar />}>
       {page}
     </GraphPageLayout>,
     {
-      title: "Checks",
+      title: 'Checks',
     },
   );
 

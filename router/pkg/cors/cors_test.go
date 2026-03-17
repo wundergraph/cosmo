@@ -21,15 +21,15 @@ func newTestRouter(config Config) *chi.Mux {
 	}
 	router.Get("/", func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
-		writer.Write([]byte("get"))
+		_, _ = writer.Write([]byte("get"))
 	})
 	router.Post("/", func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
-		writer.Write([]byte("post"))
+		_, _ = writer.Write([]byte("post"))
 	})
 	router.Patch("/", func(writer http.ResponseWriter, request *http.Request) {
 		writer.WriteHeader(http.StatusOK)
-		writer.Write([]byte("patch"))
+		_, _ = writer.Write([]byte("patch"))
 	})
 	return router
 }

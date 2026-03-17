@@ -1,22 +1,22 @@
 extend schema
-  @link(
-    url: "https://specs.apollo.dev/federation/v2.5"
-    import: [
-      "@authenticated"
-      "@composeDirective"
-      "@external"
-      "@extends"
-      "@inaccessible"
-      "@interfaceObject"
-      "@override"
-      "@provides"
-      "@key"
-      "@requires"
-      "@requiresScopes"
-      "@shareable"
-      "@tag"
-    ]
-  )
+@link(
+  url: "https://specs.apollo.dev/federation/v2.5"
+  import: [
+    "@authenticated"
+    "@composeDirective"
+    "@external"
+    "@extends"
+    "@inaccessible"
+    "@interfaceObject"
+    "@override"
+    "@provides"
+    "@key"
+    "@requires"
+    "@requiresScopes"
+    "@shareable"
+    "@tag"
+  ]
+)
 
 directive @goField(
   forceResolver: Boolean
@@ -144,6 +144,7 @@ type Employee implements Identifiable @key(fields: "id") {
   details: Details! @shareable
   id: Int!
   tag: String!
+  expertise: String!
   role: RoleType!
   notes: String @shareable
   updatedAt: String!
@@ -194,7 +195,7 @@ type SDK implements IProduct @key(fields: "upc") {
 }
 
 input FindEmployeeCriteria @oneOf {
-    id: Int
-    department: Department
-    title: String
+  id: Int
+  department: Department
+  title: String
 }

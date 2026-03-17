@@ -37,15 +37,19 @@ service ProjectsService {
   rpc QuerySearchProjects(QuerySearchProjectsRequest) returns (QuerySearchProjectsResponse) {}
   rpc QueryTasks(QueryTasksRequest) returns (QueryTasksResponse) {}
   rpc QueryTasksByPriority(QueryTasksByPriorityRequest) returns (QueryTasksByPriorityResponse) {}
+  rpc RequireEmployeeTaggedProjectSummaryById(RequireEmployeeTaggedProjectSummaryByIdRequest) returns (RequireEmployeeTaggedProjectSummaryByIdResponse) {}
   rpc ResolveEmployeeAverageTaskCompletionDays(ResolveEmployeeAverageTaskCompletionDaysRequest) returns (ResolveEmployeeAverageTaskCompletionDaysResponse) {}
   rpc ResolveEmployeeCurrentWorkload(ResolveEmployeeCurrentWorkloadRequest) returns (ResolveEmployeeCurrentWorkloadResponse) {}
+  rpc ResolveEmployeeTotalProjectCount(ResolveEmployeeTotalProjectCountRequest) returns (ResolveEmployeeTotalProjectCountResponse) {}
   rpc ResolveMilestoneDaysUntilDue(ResolveMilestoneDaysUntilDueRequest) returns (ResolveMilestoneDaysUntilDueResponse) {}
   rpc ResolveMilestoneIsAtRisk(ResolveMilestoneIsAtRiskRequest) returns (ResolveMilestoneIsAtRiskResponse) {}
+  rpc ResolveProjectActiveMilestoneCount(ResolveProjectActiveMilestoneCountRequest) returns (ResolveProjectActiveMilestoneCountResponse) {}
   rpc ResolveProjectCompletionRate(ResolveProjectCompletionRateRequest) returns (ResolveProjectCompletionRateResponse) {}
   rpc ResolveProjectCriticalDeadline(ResolveProjectCriticalDeadlineRequest) returns (ResolveProjectCriticalDeadlineResponse) {}
   rpc ResolveProjectEstimatedDaysRemaining(ResolveProjectEstimatedDaysRemainingRequest) returns (ResolveProjectEstimatedDaysRemainingResponse) {}
   rpc ResolveProjectFilteredTasks(ResolveProjectFilteredTasksRequest) returns (ResolveProjectFilteredTasksResponse) {}
   rpc ResolveProjectSubProjects(ResolveProjectSubProjectsRequest) returns (ResolveProjectSubProjectsResponse) {}
+  rpc ResolveProjectTaskCount(ResolveProjectTaskCountRequest) returns (ResolveProjectTaskCountResponse) {}
   rpc ResolveProjectTopPriorityItem(ResolveProjectTopPriorityItemRequest) returns (ResolveProjectTopPriorityItemResponse) {}
   rpc ResolveTaskIsBlocked(ResolveTaskIsBlockedRequest) returns (ResolveTaskIsBlockedResponse) {}
   rpc ResolveTaskTotalEffort(ResolveTaskTotalEffortRequest) returns (ResolveTaskTotalEffortResponse) {}
@@ -617,6 +621,40 @@ message ResolveProjectTopPriorityItemResponse {
   repeated ResolveProjectTopPriorityItemResult result = 1;
 }
 
+message ResolveProjectTaskCountContext {
+  string id = 1;
+}
+
+message ResolveProjectTaskCountRequest {
+  // context provides the resolver context for the field taskCount of type Project.
+  repeated ResolveProjectTaskCountContext context = 1;
+}
+
+message ResolveProjectTaskCountResult {
+  int32 task_count = 1;
+}
+
+message ResolveProjectTaskCountResponse {
+  repeated ResolveProjectTaskCountResult result = 1;
+}
+
+message ResolveProjectActiveMilestoneCountContext {
+  string id = 1;
+}
+
+message ResolveProjectActiveMilestoneCountRequest {
+  // context provides the resolver context for the field activeMilestoneCount of type Project.
+  repeated ResolveProjectActiveMilestoneCountContext context = 1;
+}
+
+message ResolveProjectActiveMilestoneCountResult {
+  int32 active_milestone_count = 1;
+}
+
+message ResolveProjectActiveMilestoneCountResponse {
+  repeated ResolveProjectActiveMilestoneCountResult result = 1;
+}
+
 message ResolveMilestoneIsAtRiskArgs {
   google.protobuf.DoubleValue threshold = 1;
 }
@@ -763,8 +801,47 @@ message ResolveEmployeeAverageTaskCompletionDaysResponse {
   repeated ResolveEmployeeAverageTaskCompletionDaysResult result = 1;
 }
 
+message ResolveEmployeeTotalProjectCountContext {
+  int32 id = 1;
+}
+
+message ResolveEmployeeTotalProjectCountRequest {
+  // context provides the resolver context for the field totalProjectCount of type Employee.
+  repeated ResolveEmployeeTotalProjectCountContext context = 1;
+}
+
+message ResolveEmployeeTotalProjectCountResult {
+  int32 total_project_count = 1;
+}
+
+message ResolveEmployeeTotalProjectCountResponse {
+  repeated ResolveEmployeeTotalProjectCountResult result = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdRequest {
+  // RequireEmployeeTaggedProjectSummaryByIdContext provides the context for the required fields method RequireEmployeeTaggedProjectSummaryById.
+  repeated RequireEmployeeTaggedProjectSummaryByIdContext context = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeTaggedProjectSummaryByIdFields fields = 2;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdResponse {
+  // RequireEmployeeTaggedProjectSummaryByIdResult provides the result for the required fields method RequireEmployeeTaggedProjectSummaryById.
+  repeated RequireEmployeeTaggedProjectSummaryByIdResult result = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdResult {
+  string tagged_project_summary = 1;
+}
+
+message RequireEmployeeTaggedProjectSummaryByIdFields {
+  string expertise = 1;
+}
+
 message Project {
-  reserved 20 to 25;
   string id = 1;
   string name = 2;
   google.protobuf.StringValue description = 3;
@@ -787,7 +864,6 @@ message Project {
 }
 
 message Milestone {
-  reserved 12 to 13;
   string id = 1;
   string project_id = 2;
   string name = 3;
@@ -824,7 +900,6 @@ message Task {
 }
 
 message Employee {
-  reserved 8 to 9;
   int32 id = 1;
   ListOfProject projects = 2;
   repeated Task assigned_tasks = 3;

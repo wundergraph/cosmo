@@ -114,6 +114,10 @@ type Project implements Node & Timestamped @key(fields: "id") {
   estimatedDaysRemaining(fromDate: String): Int @connect__fieldResolver(context: "id endDate status")
   criticalDeadline(withinDays: Int): Timestamped @connect__fieldResolver(context: "id status milestones")
   topPriorityItem(category: String): ProjectSearchResult @connect__fieldResolver(context: "id status")
+
+  # No-arg field resolvers (expensive computed fields without arguments)
+  taskCount: Int! @connect__fieldResolver(context: "id")
+  activeMilestoneCount: Int! @connect__fieldResolver(context: "id")
 }
 
 # New types - simplified with ID references only
@@ -221,6 +225,7 @@ union ProjectActivity = ProjectUpdate | Milestone | Task
 # Federated types (unchanged)
 type Employee @key(fields: "id") {
   id: Int!
+  expertise: String! @external
   # New field resolved by this subgraph:
   projects: [Project!]
   # New fields for extended functionality
@@ -232,9 +237,15 @@ type Employee @key(fields: "id") {
   certifications: [String!]  # nullable list of non-nullable certifications
   projectHistory: [[Project!]]!  # non-nullable list of nullable lists of non-nullable projects
 
+  # Field requiring expertise from employees subgraph
+  taggedProjectSummary: String! @requires(fields: "expertise")
+
   # Computed fields with @connect__fieldResolver
   currentWorkload(includeCompleted: Boolean, projectId: ID): Int! @connect__fieldResolver(context: "id")
   averageTaskCompletionDays(projectId: ID, priority: TaskPriority): Float @connect__fieldResolver(context: "id")
+
+  # No-arg field resolver (expensive computed field without arguments)
+  totalProjectCount: Int! @connect__fieldResolver(context: "id")
 }
 
 type Product @key(fields: "upc") {

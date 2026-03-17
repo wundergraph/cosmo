@@ -16,7 +16,7 @@ import {
   buildFieldDefinition,
   buildNestedMessage,
   createFieldNumberManager,
-} from '../../src';
+} from '../../src/index.js';
 
 describe('Message Builder', () => {
   describe('buildFieldDefinition', () => {

@@ -8,6 +8,8 @@ import {
   SubgraphType,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { isValidUrl } from '@wundergraph/cosmo-shared';
+import { maxRowLimitForChecks } from '../../constants.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../../../types/index.js';
 import { buildSchema } from '../../composition/composition.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
@@ -20,6 +22,7 @@ import { SchemaGraphPruningRepository } from '../../repositories/SchemaGraphPrun
 import { SubgraphRepository } from '../../repositories/SubgraphRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import {
+  clamp,
   convertToSubgraphType,
   enrichLogger,
   formatSubgraphType,
@@ -29,9 +32,9 @@ import {
   getLogger,
   handleError,
   isValidGraphName,
+  isValidGrpcNamingScheme,
   isValidLabels,
   isValidPluginVersion,
-  newCompositionOptions,
 } from '../../util.js';
 import { OrganizationWebhookService } from '../../webhooks/OrganizationWebhookService.js';
 
@@ -68,6 +71,11 @@ export function publishFederatedSubgraph(
       throw new UnauthorizedError();
     }
 
+    const ignoreExternalKeysFeature = await orgRepo.getFeature({
+      organizationId: authContext.organizationId,
+      featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
+    });
+
     const subgraphSchemaSDL = req.schema;
     const namespace = await namespaceRepo.byName(req.namespace);
     if (!namespace) {
@@ -97,7 +105,12 @@ export function publishFederatedSubgraph(
        * If no federated graphs have yet been created, the subgraph will be validated against the latest router
        * compatibility version.
        */
-      // Here we check if the schema is valid as a subgraph SDL
+      /* Here we check if the schema is valid as a subgraph SDL
+       * `buildSchema` only calls normalization in isolation.
+       * The `disableResolvabilityChecks` flag is only used in the federation step.
+       * The `ignoreExternalKeys` flag is propagated in normalization but only used in the federation step.
+       * Consequently, there is currently no reason to propagate the options within `buildSchema`.
+       */
       const result = buildSchema(subgraphSchemaSDL, true, routerCompatibilityVersion);
       if (!result.success) {
         return {
@@ -125,25 +138,23 @@ export function publishFederatedSubgraph(
     }
 
     let proposalMatchMessage: string | undefined;
-    let matchedEntity:
-      | {
-          proposalId: string;
-          proposalSubgraphId: string;
-        }
-      | undefined;
+    const matchedProposalEntities: {
+      proposalId: string;
+      proposalSubgraphId: string;
+    }[] = [];
 
     // if the subgraph is a feature subgraph, we don't need to check for proposal matches for now.
     if (namespace.enableProposals && !subgraph?.isFeatureSubgraph) {
       const proposalConfig = await proposalRepo.getProposalConfig({ namespaceId: namespace.id });
       if (proposalConfig) {
-        const match = await proposalRepo.matchSchemaWithProposal({
+        const matches = await proposalRepo.matchSchemaWithProposals({
           subgraphName: req.name,
           namespaceId: namespace.id,
           schemaSDL: subgraphSchemaSDL,
           routerCompatibilityVersion,
           isDeleted: false,
         });
-        if (!match) {
+        if (matches.length === 0) {
           const message = `The subgraph ${req.name}'s schema does not match to this subgraph's schema in any approved proposal.`;
           if (proposalConfig.publishSeverityLevel === 'warn') {
             proposalMatchMessage = message;
@@ -160,7 +171,7 @@ export function publishFederatedSubgraph(
             };
           }
         }
-        matchedEntity = match;
+        matchedProposalEntities.push(...matches);
       }
     }
 
@@ -390,6 +401,21 @@ export function publishFederatedSubgraph(
             proposalMatchMessage,
           };
         }
+        // For GRPC_SERVICE subgraphs, validate that routing URL follows gRPC naming scheme
+        if (req.type === SubgraphType.GRPC_SERVICE && !isValidGrpcNamingScheme(routingUrl)) {
+          return {
+            response: {
+              code: EnumStatusCode.ERR,
+              details:
+                `Routing URL must follow gRPC naming scheme. ` +
+                `See https://grpc.io/docs/guides/custom-name-resolution/ for examples.`,
+            },
+            compositionErrors: [],
+            deploymentErrors: [],
+            compositionWarnings: [],
+            proposalMatchMessage,
+          };
+        }
 
         if (req.subscriptionUrl && !isValidUrl(req.subscriptionUrl)) {
           return {
@@ -424,7 +450,7 @@ export function publishFederatedSubgraph(
           organizationId: authContext.organizationId,
           featureId: 'plugins',
         });
-        const limit = feature?.limit === -1 ? 0 : feature?.limit ?? 0;
+        const limit = feature?.limit === -1 ? 0 : (feature?.limit ?? 0);
         if (count >= limit) {
           return {
             response: {
@@ -574,8 +600,38 @@ export function publishFederatedSubgraph(
           webhookJWTSecret: opts.admissionWebhookJWTSecret,
         },
         opts.chClient!,
-        newCompositionOptions(req.disableResolvabilityValidation),
+        {
+          disableResolvabilityValidation: req.disableResolvabilityValidation,
+          ignoreExternalKeys: ignoreExternalKeysFeature?.enabled ?? false,
+        },
       );
+
+    // if this subgraph is part of a proposal, mark the proposal subgraph as published
+    // and if all proposal subgraphs are published, collect proposal details for the webhook
+    const proposalDetailsList: {
+      id: string;
+      name: string;
+      namespace: string;
+      federatedGraphId: string;
+    }[] = [];
+
+    for (const matchedEntity of matchedProposalEntities) {
+      const { allSubgraphsPublished } = await proposalRepo.markProposalSubgraphAsPublished({
+        proposalSubgraphId: matchedEntity.proposalSubgraphId,
+        proposalId: matchedEntity.proposalId,
+      });
+      if (allSubgraphsPublished) {
+        const proposal = await proposalRepo.ById(matchedEntity.proposalId);
+        if (proposal) {
+          proposalDetailsList.push({
+            id: proposal.proposal.id,
+            name: proposal.proposal.name,
+            namespace: req.namespace,
+            federatedGraphId: proposal.proposal.federatedGraphId,
+          });
+        }
+      }
+    }
 
     for (const graph of updatedFederatedGraphs) {
       const hasErrors =
@@ -589,6 +645,7 @@ export function publishFederatedSubgraph(
               id: graph.id,
               name: graph.name,
               namespace: graph.namespace,
+              composedSchemaVersionId: graph.composedSchemaVersionId,
             },
             organization: {
               id: authContext.organizationId,
@@ -602,44 +659,34 @@ export function publishFederatedSubgraph(
       );
     }
 
-    // if this subgraph is part of a proposal, mark the proposal subgraph as published
-    // and if all proposal subgraphs are published, update the proposal state to PUBLISHED
-    if (matchedEntity) {
-      const { allSubgraphsPublished } = await proposalRepo.markProposalSubgraphAsPublished({
-        proposalSubgraphId: matchedEntity.proposalSubgraphId,
-        proposalId: matchedEntity.proposalId,
-      });
-      if (allSubgraphsPublished) {
-        const proposal = await proposalRepo.ById(matchedEntity.proposalId);
-        if (proposal) {
-          const federatedGraph = await fedGraphRepo.byId(proposal.proposal.federatedGraphId);
-          if (federatedGraph) {
-            orgWebhooks.send(
-              {
-                eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
-                payload: {
-                  federated_graph: {
-                    id: federatedGraph.id,
-                    name: federatedGraph.name,
-                    namespace: federatedGraph.namespace,
-                  },
-                  organization: {
-                    id: authContext.organizationId,
-                    slug: authContext.organizationSlug,
-                  },
-                  proposal: {
-                    id: proposal.proposal.id,
-                    name: proposal.proposal.name,
-                    namespace: req.namespace,
-                    state: 'PUBLISHED',
-                  },
-                  actor_id: authContext.userId,
-                },
+    // Send PROPOSAL_STATE_UPDATED webhook for each published proposal
+    for (const proposalDetails of proposalDetailsList) {
+      const federatedGraph = updatedFederatedGraphs.find((g) => g.id === proposalDetails.federatedGraphId);
+      if (federatedGraph) {
+        orgWebhooks.send(
+          {
+            eventName: OrganizationEventName.PROPOSAL_STATE_UPDATED,
+            payload: {
+              federated_graph: {
+                id: federatedGraph.id,
+                name: federatedGraph.name,
+                namespace: federatedGraph.namespace,
               },
-              authContext.userId,
-            );
-          }
-        }
+              organization: {
+                id: authContext.organizationId,
+                slug: authContext.organizationSlug,
+              },
+              proposal: {
+                id: proposalDetails.id,
+                name: proposalDetails.name,
+                namespace: proposalDetails.namespace,
+                state: 'PUBLISHED',
+              },
+              actor_id: authContext.userId,
+            },
+          },
+          authContext.userId,
+        );
       }
     }
 
@@ -694,15 +741,29 @@ export function publishFederatedSubgraph(
       }
     }
 
+    // If req.limit is not provided, use maxRowLimitForChecks as default
+    const boundedLimit = req.limit === undefined ? maxRowLimitForChecks : clamp(req.limit, 1, maxRowLimitForChecks);
+
+    const boundedCompositionErrors = compositionErrors.slice(0, boundedLimit);
+    const boundedCompositionWarnings = compositionWarnings.slice(0, boundedLimit);
+    const boundedDeploymentErrors = deploymentErrors.slice(0, boundedLimit);
+
+    const counts = {
+      compositionErrors: compositionErrors.length,
+      compositionWarnings: compositionWarnings.length,
+      deploymentErrors: deploymentErrors.length,
+    };
+
     if (compositionErrors.length > 0) {
       return {
         response: {
           code: EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED,
         },
-        compositionErrors,
-        compositionWarnings,
+        compositionErrors: boundedCompositionErrors,
+        compositionWarnings: boundedCompositionWarnings,
         deploymentErrors: [],
         proposalMatchMessage,
+        counts,
       };
     }
 
@@ -712,9 +773,10 @@ export function publishFederatedSubgraph(
           code: EnumStatusCode.ERR_DEPLOYMENT_FAILED,
         },
         compositionErrors: [],
-        deploymentErrors,
-        compositionWarnings,
+        deploymentErrors: boundedDeploymentErrors,
+        compositionWarnings: boundedCompositionWarnings,
         proposalMatchMessage,
+        counts,
       };
     }
 
@@ -725,8 +787,9 @@ export function publishFederatedSubgraph(
       compositionErrors: [],
       deploymentErrors: [],
       hasChanged: subgraphChanged,
-      compositionWarnings,
+      compositionWarnings: boundedCompositionWarnings,
       proposalMatchMessage,
+      counts,
     };
   });
 }

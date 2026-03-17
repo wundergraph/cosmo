@@ -35,6 +35,7 @@ export function createAPIKey(
     // Check if the organization has reached the limit of 200 API keys
     const apiKeysCount = await apiKeyRepo.getAPIKeysCount({
       organizationID: authContext.organizationId,
+      includeExternal: false,
     });
 
     if (apiKeysCount >= 200) {
@@ -103,6 +104,7 @@ export function createAPIKey(
       organizationID: authContext.organizationId,
       userID: authContext.userId || req.userID,
       key: generatedAPIKey,
+      isExternal: req.external ?? false,
       expiresAt: req.expires,
       groupId: orgGroup.groupId,
       permissions: req.permissions,

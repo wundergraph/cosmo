@@ -81,7 +81,9 @@ func TestLocalhostFallbackRoundTripper(t *testing.T) {
 		t.Parallel()
 		resp, err := client.Get(fmt.Sprintf("http://localhost:%d/hello", port))
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 		data, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
 		var response map[string]any
@@ -98,7 +100,9 @@ func TestLocalhostFallbackRoundTripper(t *testing.T) {
 		const hello = "hello world"
 		resp, err := client.Post(fmt.Sprintf("http://localhost:%d", port), "text/plain", strings.NewReader(hello))
 		require.NoError(t, err)
-		defer resp.Body.Close()
+		defer func() {
+			_ = resp.Body.Close()
+		}()
 		data, err := io.ReadAll(resp.Body)
 		require.NoError(t, err)
 		var response map[string]any

@@ -1,0 +1,125 @@
+query Full {
+  employees {
+    # resolved through employees subgraph
+    id
+    # overridden by the products subgraph
+    notes
+    details {
+      # resolved through either employees or family subgraph
+      forename
+      surname
+      # resolved through employees subgraph
+      location {
+        language
+      }
+      # resolved through family subgraph
+      hasChildren
+      # maritalStatus can return null
+      maritalStatus
+      nationality
+      # pets can return null
+      pets {
+        class
+        gender
+        name
+        ... on Cat {
+          type
+        }
+        ... on Dog {
+          breed
+        }
+        ... on Alligator {
+          dangerous
+        }
+      }
+    }
+    # resolved through employees subgraph
+    role {
+      departments
+      title
+      ... on Engineer {
+        engineerType
+      }
+      ... on Operator {
+        operatorType
+      }
+    }
+    # resolved through hobbies subgraph
+    hobbies {
+      ... on Exercise {
+        category
+      }
+      ... on Flying {
+        planeModels
+        yearsOfExperience
+      }
+      ... on Gaming {
+        genres
+        name
+        yearsOfExperience
+      }
+      ... on Other {
+        name
+      }
+      ... on Programming {
+        languages
+      }
+      ... on Travelling {
+        countriesLived {
+          language
+          key {
+            name
+          }
+        }
+      }
+    }
+    # resolved through products subgraph
+    products
+  }
+  # can return null
+  employee(id: 1) {
+    # resolved through employees subgraph
+    id
+    details {
+      forename
+      location {
+        language
+      }
+    }
+  }
+  teammates(team: OPERATIONS) {
+    # resolved through employees subgraph
+    id
+    ...EmployeeNameFragment
+    # resolved through products subgraph
+    products
+  }
+  productTypes {
+    ... on Documentation {
+      url(product: SDK)
+      urls(products: [COSMO, MARKETING])
+    }
+    ... on Consultancy {
+      lead {
+        ...EmployeeNameFragment
+      }
+      name
+    }
+  }
+  a: findEmployees(criteria: {
+    hasPets: true, nationality: UKRAINIAN, nested: { maritalStatus: ENGAGED }
+  }) {
+    ...EmployeeNameFragment
+  }
+  b: findEmployees(criteria: {
+    hasPets: true, nationality: GERMAN, nested: { maritalStatus: MARRIED, hasChildren: true }
+  }) {
+    ...EmployeeNameFragment
+  }
+}
+
+fragment EmployeeNameFragment on Employee {
+  details {
+    forename
+  }
+}

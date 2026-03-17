@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { joinLabel } from '@wundergraph/cosmo-shared';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
@@ -14,6 +15,7 @@ import {
 } from '../../src/core/test-util.js';
 import {
   createEventDrivenGraph,
+  createFederatedGraph,
   createSubgraph,
   DEFAULT_NAMESPACE,
   eventDrivenGraphSDL,
@@ -819,7 +821,7 @@ describe('Publish subgraph tests', () => {
       });
 
       const grpcServiceName = genID('grpc-service');
-      const routingUrl = 'http://localhost:4001';
+      const routingUrl = 'localhost:4001';
 
       // First create the GRPC service subgraph
       await createGrpcServiceSubgraph(client, grpcServiceName, routingUrl);
@@ -854,7 +856,7 @@ describe('Publish subgraph tests', () => {
       });
 
       const grpcServiceName = genID('grpc-service');
-      const routingUrl = 'http://localhost:4001';
+      const routingUrl = 'localhost:4001';
 
       // Publish to a non-existent GRPC service subgraph (should create and publish)
       const publishResponse = await client.publishFederatedSubgraph({
@@ -898,7 +900,7 @@ describe('Publish subgraph tests', () => {
         namespace: 'default',
         schema: grpcServiceSDL,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: 'http://localhost:4002',
+        routingUrl: 'localhost:4002',
         proto: validGrpcProtoRequest,
         labels: [genUniqueLabel('grpc-service')],
       });
@@ -926,13 +928,15 @@ describe('Publish subgraph tests', () => {
         namespace: 'default',
         schema: grpcServiceSDL,
         type: SubgraphType.GRPC_SERVICE,
-        routingUrl: 'http://localhost:4001',
+        routingUrl: 'localhost:4001',
         proto: validGrpcProtoRequest,
         labels: [genUniqueLabel('grpc-service')],
       });
 
       expect(publishResponse.response?.code).toBe(EnumStatusCode.ERR);
-      expect(publishResponse.response?.details).toContain(`Subgraph ${pluginName} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`);
+      expect(publishResponse.response?.details).toContain(
+        `Subgraph ${pluginName} is a plugin. Please use the 'wgc router plugin publish' command to publish the plugin.`,
+      );
 
       await server.close();
     });
@@ -943,7 +947,7 @@ describe('Publish subgraph tests', () => {
       });
 
       const grpcServiceName = genID('grpc-service');
-      const routingUrl = 'http://localhost:4001';
+      const routingUrl = 'localhost:4001';
 
       // First create a GRPC service subgraph
       await createGrpcServiceSubgraph(client, grpcServiceName, routingUrl);
@@ -970,7 +974,7 @@ describe('Publish subgraph tests', () => {
       });
 
       const grpcServiceName = genID('grpc-service');
-      const routingUrl = 'http://localhost:4001';
+      const routingUrl = 'localhost:4001';
 
       // Try to publish without proto
       const publishResponse = await client.publishFederatedSubgraph({
@@ -1044,7 +1048,7 @@ describe('Publish subgraph tests', () => {
         });
 
         const grpcServiceName = genID('grpc-service');
-        const routingUrl = 'http://localhost:4001';
+        const routingUrl = 'localhost:4001';
 
         authenticator.changeUserWithSuppliedContext({
           ...users.adminAliceCompanyA,
@@ -1082,7 +1086,7 @@ describe('Publish subgraph tests', () => {
       });
 
       const grpcServiceName = genID('grpc-service');
-      const routingUrl = 'http://localhost:4001';
+      const routingUrl = 'localhost:4001';
 
       authenticator.changeUserWithSuppliedContext({
         ...users.adminAliceCompanyA,
@@ -1112,7 +1116,7 @@ describe('Publish subgraph tests', () => {
         });
 
         const grpcServiceName = genID('grpc-service');
-        const routingUrl = 'http://localhost:4001';
+        const routingUrl = 'localhost:4001';
 
         // First create the GRPC service subgraph
         await createGrpcServiceSubgraph(client, grpcServiceName, routingUrl);
@@ -1135,5 +1139,238 @@ describe('Publish subgraph tests', () => {
         await server.close();
       },
     );
+
+    test('Should not allow publishing a GRPC service subgraph with HTTP/HTTPS routing URL', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceName = genID('grpc-service');
+      const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+      // Test HTTP URL when creating and publishing in one step
+      const publishResponseHttp = await client.publishFederatedSubgraph({
+        name: genID('grpc-service-http'),
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'http://localhost:8080',
+        proto: validGrpcProtoRequest,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(publishResponseHttp.response?.code).toBe(EnumStatusCode.ERR);
+      expect(publishResponseHttp.response?.details).toContain('Routing URL must follow gRPC naming scheme');
+
+      // Test HTTPS URL when creating and publishing in one step
+      const publishResponseHttps = await client.publishFederatedSubgraph({
+        name: genID('grpc-service-https'),
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'https://example.com:8080',
+        proto: validGrpcProtoRequest,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(publishResponseHttps.response?.code).toBe(EnumStatusCode.ERR);
+      expect(publishResponseHttps.response?.details).toContain('Routing URL must follow gRPC naming scheme');
+
+      await server.close();
+    });
+
+    test('Should allow publishing a GRPC service subgraph with valid gRPC naming scheme URLs', async () => {
+      const { client, server } = await SetupTest({
+        dbname,
+      });
+
+      const grpcServiceLabel = genUniqueLabel('grpc-service');
+
+      // Test DNS scheme
+      const publishResponseDns = await client.publishFederatedSubgraph({
+        name: genID('grpc-service-dns'),
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'dns:localhost:8080',
+        proto: validGrpcProtoRequest,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(publishResponseDns.response?.code).toBe(EnumStatusCode.OK);
+
+      // Test plain hostname (defaults to DNS)
+      const publishResponsePlain = await client.publishFederatedSubgraph({
+        name: genID('grpc-service-plain'),
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'localhost:8080',
+        proto: validGrpcProtoRequest,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(publishResponsePlain.response?.code).toBe(EnumStatusCode.OK);
+
+      // Test IPv4 scheme
+      const publishResponseIpv4 = await client.publishFederatedSubgraph({
+        name: genID('grpc-service-ipv4'),
+        namespace: 'default',
+        schema: grpcServiceSDL,
+        type: SubgraphType.GRPC_SERVICE,
+        routingUrl: 'ipv4:127.0.0.1:8080',
+        proto: validGrpcProtoRequest,
+        labels: [grpcServiceLabel],
+      });
+
+      expect(publishResponseIpv4.response?.code).toBe(EnumStatusCode.OK);
+
+      await server.close();
+    });
+  });
+
+  describe('Publish response counts tests', () => {
+    test('Should return counts in the response on successful publish', async () => {
+      const { client, server } = await SetupTest({ dbname });
+
+      const subgraphName = genID('subgraph');
+
+      await createSubgraph(client, subgraphName, 'http://localhost:4001');
+      const publishResp = await client.publishFederatedSubgraph({
+        name: subgraphName,
+        namespace: 'default',
+        schema: subgraphSDL,
+      });
+
+      expect(publishResp.response?.code).toBe(EnumStatusCode.OK);
+      expect(publishResp.counts).toBeDefined();
+      expect(publishResp.counts?.compositionErrors).toBe(0);
+      expect(publishResp.counts?.compositionWarnings).toBe(0);
+      expect(publishResp.counts?.deploymentErrors).toBe(0);
+
+      await server.close();
+    });
+
+    test('Should reflect actual composition errors in counts', async () => {
+      const { client, server } = await SetupTest({ dbname });
+
+      const federatedGraphName = genID('fedGraph');
+      const label = genUniqueLabel();
+
+      await createFederatedGraph(client, federatedGraphName, 'default', [joinLabel(label)], 'http://localhost:8081');
+
+      const subgraphName1 = genID('subgraph1');
+      await client.createFederatedSubgraph({
+        name: subgraphName1,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:4001',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraphName1,
+        namespace: 'default',
+        schema: `
+          type Query {
+            hello: String
+          }
+          type User @key(fields: "id") {
+            id: ID!
+            name: String
+          }
+        `,
+      });
+
+      const subgraphName2 = genID('subgraph2');
+      await client.createFederatedSubgraph({
+        name: subgraphName2,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:4002',
+      });
+
+      // This schema has a conflicting type definition that causes composition errors
+      const publishResp = await client.publishFederatedSubgraph({
+        name: subgraphName2,
+        namespace: 'default',
+        schema: `
+          type User @key(fields: "id") {
+            id: ID!
+            name: Int
+          }
+        `,
+      });
+
+      expect(publishResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+      expect(publishResp.counts).toBeDefined();
+      expect(publishResp.compositionErrors.length).toBe(publishResp.counts?.compositionErrors);
+
+      await server.close();
+    });
+
+    test('Should restrict the number of returned composition errors when limit parameter is set', async () => {
+      const { client, server } = await SetupTest({ dbname });
+
+      const federatedGraphName = genID('fedGraph');
+      const label = genUniqueLabel();
+
+      await createFederatedGraph(client, federatedGraphName, 'default', [joinLabel(label)], 'http://localhost:8081');
+
+      const subgraphName1 = genID('subgraph1');
+      await client.createFederatedSubgraph({
+        name: subgraphName1,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:4001',
+      });
+
+      await client.publishFederatedSubgraph({
+        name: subgraphName1,
+        namespace: 'default',
+        schema: `
+          type Query {
+            hello: String
+          }
+          type User @key(fields: "id") {
+            id: ID!
+            name: String
+            email: String
+            age: Int
+          }
+        `,
+      });
+
+      const subgraphName2 = genID('subgraph2');
+      await client.createFederatedSubgraph({
+        name: subgraphName2,
+        namespace: 'default',
+        labels: [label],
+        routingUrl: 'http://localhost:4002',
+      });
+
+      // This schema has multiple conflicting type definitions to generate multiple errors
+      const publishResp = await client.publishFederatedSubgraph({
+        name: subgraphName2,
+        namespace: 'default',
+        schema: `
+          type User @key(fields: "id") {
+            id: ID!
+            name: Int
+            email: Int
+            age: String
+          }
+        `,
+        limit: 1,
+      });
+
+      expect(publishResp.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+      expect(publishResp.counts).toBeDefined();
+      // When limit is 1, only 1 error should be returned but counts reflects the total
+      expect(publishResp.compositionErrors.length).toBe(1);
+      // The total count must be strictly greater than returned errors, proving truncation occurred
+      expect(publishResp.counts!.compositionErrors!).toBeGreaterThan(publishResp.compositionErrors.length);
+
+      await server.close();
+    });
   });
 });

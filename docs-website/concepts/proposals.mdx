@@ -1,0 +1,148 @@
+---
+title: "Proposals"
+description: "Proposals allow you to introduce changes to your federated graph in a structured way."
+icon: file-circle-plus
+---
+
+## What are Proposals?
+
+Proposals in Cosmo provide a structured way to manage, review, and implement changes to federated graphs. They allow teams to propose and evaluate modifications to subgraphs, enabling a collaborative review process and minimizing the risk of introducing errors or breaking changes.
+
+A proposal represents a collection of changes to a federated graph, which can include:
+
+- Updates to existing subgraphs
+- Addition of new subgraphs
+- Removal of existing subgraphs
+
+## Why Use Proposals?
+
+Proposals help teams:
+
+- **Collaborate on schema evolution**: Enables team members to review and approve changes.
+- **Document schema changes**: Keeps a historical record of modifications to your graph.
+- **Enforce governance**: Implements proper change management for your GraphQL architecture.
+- **Prevent breaking changes**: Identifies and addresses potential issues before they impact users.
+
+## Proposal States
+
+Proposals go through various states during their lifecycle:
+
+1. **Draft**: It's the initial state when the proposal is created and is not yet reviewed.
+2. **Approved**: Indicates that the proposal has been approved by authorized team members.
+3. **Published**: Indicates that all the subgraphs which are part of the proposal have been published.
+4. **Closed**: Indicates that the proposal has been closed.
+
+## Proposal Workflow
+
+The typical workflow for proposals includes:
+
+1. **Creation**: A team member creates a proposal with desired changes using the CLI.
+2. **Validation**: Automatic checks are run to validate the proposal for:
+   - Composition errors
+   - Breaking changes
+   - Operation impact (based on actual usage data)
+   - Lint errors
+   - Graph pruning errors
+3. **Review**: Team members review the proposal in the Studio UI.
+4. **Collaboration**: Team members discuss and refine the proposal if needed.
+5. **Decision**: Approving or closing the proposal based on review.
+6. **Application**: Applying approved proposals to update the federated graph.
+
+## Using Proposals with CLI
+
+### Creating a Proposal
+
+Use the [`wgc proposal create`](/cli/proposal/create) command to create a new proposal:
+
+```bash
+npx wgc proposal create <name> --federation-graph <federated-graph-name> (--subgraph <subgraph> --new-subgraph <subgraph> --deleted-subgraph <subgraph-name>)... [options]
+```
+
+### Updating a Proposal
+
+Use the [`wgc proposal update`](/cli/proposal/update) command to modify an existing proposal:
+
+```bash
+npx wgc proposal update <name> --federation-graph <federated-graph-name> (--subgraph <subgraph> --new-subgraph <subgraph> --deleted-subgraph <subgraph-name>)... [options]
+```
+
+**Note**: When updating a proposal, any subgraphs you specify will completely replace the corresponding subgraphs in the existing proposal. The update is not incremental.
+
+## Configuring Proposals
+
+<Frame>
+  <img src="/images/concepts/proposals/proposalSettings.png" />
+</Frame>
+
+### Enabling Proposals
+
+To activate the proposal workflow for your federated graphs:
+
+1. Navigate to the **Policies** section in your Cosmo dashboard.
+2. Scroll down to the **Enable Proposals** section.
+3. Toggle the switch to enable proposals.
+
+When enabled, changes to the schema will need to go through a proposal process, requiring proper review and approval before being implemented.
+
+### Proposal Configuration
+
+The proposal configuration allows you to set severity levels for subgraph checks and publishes, this is to make sure that the schema used for checks/publishes is a part of an approved proposal.
+
+#### Check Severity Level
+
+This sets the severity level for subgraph checks during proposal evaluation. Available levels include:
+
+- **Error**: Returns an error if the schema used for the check doesn't match any of the approved proposals.
+- **Warn**: Returns a warning if the schema used for the check doesn't match any of the approved proposals.
+
+#### Publish Severity Level
+
+This determines the severity level for subgraph publishes during proposal evaluation. Options include:
+
+- **Error**: Returns an error if the schema used for the publish doesn't match any of the approved proposals.
+- **Warn**: Returns a warning if the schema used for the publish doesn't match any of the approved proposals.
+
+Configuring these severity levels allows you to enforce different levels of strictness in your proposal workflow.
+
+## Proposal UI
+
+### Schema Comparison View
+
+<Frame>
+  <img
+    src="/images/concepts/proposals/proposedSchemas.png"
+    alt="Proposal schema comparison view showing proposed changes"
+  />
+</Frame>
+
+The Schema Comparison view displays a side-by-side diff of the current and proposed schemas. This diff view makes it easy to identify and understand proposed schema modifications, such as the addition of enum values, type changes, or directive modifications... etc.
+
+The review process provides a governance layer that ensures all schema changes are properly vetted before being applied to your production graph.
+
+### Validation Checks
+
+<Frame>
+  <img
+    src="/images/concepts/proposals/checks.png"
+    alt="Proposal checks showing validation status for various criteria"
+  />
+</Frame>
+
+Cosmo automatically executes a comprehensive suite of validation checks whenever a proposal was created or updated. These checks ensure the proposed schema changes are valid, compatible, and adhere to best practices before they can be approved.
+
+### Review Workflow
+
+<Frame>
+  <img
+    src="/images/concepts/proposals/reviewChanges.png"
+    alt="Review changes dialog with approve and close options"
+  />
+</Frame>
+
+To complete a proposal review:
+
+1. Click **Review Changes** in the top-right corner to open the decision dialog.
+2. Select one of the following actions:
+   - **Approve**: Accept the proposal. Once approved the users can publish the subgraphs.
+   - **Close**: Reject the proposal.
+3. Click **Submit review** to confirm your decision.
