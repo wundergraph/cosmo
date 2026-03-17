@@ -44,6 +44,7 @@ describe('Federated Graph', (ctx) => {
 
   test('Webhook meta for monograph and federated graph should be stored and retrieved correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const monographName = genID('monograph');
     const fedGraphName = genID('fedGraph');
@@ -120,12 +121,11 @@ describe('Federated Graph', (ctx) => {
     });
     expect(webhookMetaRes.response?.code).toBe(EnumStatusCode.OK);
     expect(webhookMetaRes.eventsMeta).toMatchObject(eventsMeta);
-
-    await server.close();
   });
 
   test('Slack integration meta for monograph and federated graph should be stored and retrieved correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const monographName = genID('monograph');
     const fedGraphName = genID('fedGraph');
@@ -192,12 +192,12 @@ describe('Federated Graph', (ctx) => {
     expect(integrationsRes.response?.code).toBe(EnumStatusCode.OK);
     expect(integrationsRes.integrations.length).toBe(1);
     expect(integrationsRes.integrations[0].eventsMeta).toMatchObject(eventsMeta);
-
-    await server.close();
   });
 
-  test('that resolvability validation is disabled successfully', async () => {
+  test('that resolvability validation is disabled successfully', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
     const fedGraphName = genID('fedGraph');
@@ -263,11 +263,9 @@ describe('Federated Graph', (ctx) => {
 
     expect(publishResponseThree.response?.code).toBe(EnumStatusCode.OK);
     expect(publishResponseThree.compositionErrors).toHaveLength(0);
-
-    await server.close();
   });
 
-  test('that true external entity key errors can be ignored with the composition feature flag', async () => {
+  test('that true external entity key errors can be ignored with the composition feature flag', async (testContext) => {
     const namespace = genID('namespace').toLowerCase();
     const label = genUniqueLabel();
     const graphName = genID('fedGraph');
@@ -290,6 +288,8 @@ describe('Federated Graph', (ctx) => {
     `;
 
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     await createNamespace(client, namespace);
 
     const publishExternalKeySubgraph = await client.publishFederatedSubgraph({
@@ -319,12 +319,12 @@ describe('Federated Graph', (ctx) => {
     expect(createGraphWithoutFeature.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
     expect(createGraphWithoutFeature.compositionErrors).toHaveLength(3);
 
-    await server.close();
-
     const { client: featureClient, server: featureServer } = await SetupTest({
       dbname,
       enabledFeatures: [COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID],
     });
+    testContext.onTestFinished(() => featureServer.close());
+
     const featureNamespace = genID('namespace').toLowerCase();
     const featureLabel = genUniqueLabel();
 
@@ -356,7 +356,5 @@ describe('Federated Graph', (ctx) => {
     });
     expect(createGraphWithFeature.response?.code).toBe(EnumStatusCode.OK);
     expect(createGraphWithFeature.compositionErrors).toHaveLength(0);
-
-    await featureServer.close();
   });
 });

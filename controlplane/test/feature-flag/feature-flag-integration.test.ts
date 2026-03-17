@@ -57,8 +57,9 @@ describe('Feature flag integration tests', () => {
   test(
     'that a feature flag that is enabled upon creation can be disabled and re-enabled (default namespace with labels)',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels = [{ key: 'team', value: 'A' }];
       const baseGraphName = genID('baseFederatedGraphName');
@@ -100,16 +101,15 @@ describe('Feature flag integration tests', () => {
       await assertNumberOfCompositions(client, baseGraphName, 6);
 
       await assertFeatureFlagExecutionConfig(blobStorage, key, true);
-
-      await server.close();
     },
   );
 
   test(
     'that a feature flag that is enabled upon creation can be disabled and re-enabled (namespace without labels)',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -154,16 +154,15 @@ describe('Feature flag integration tests', () => {
       await assertNumberOfCompositions(client, baseGraphName, 6, namespace);
 
       await assertFeatureFlagExecutionConfig(blobStorage, key, true);
-
-      await server.close();
     },
   );
 
   test(
     'that a feature flag that is disabled upon creation can be enabled and re-disabled (namespace without labels)',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -203,16 +202,15 @@ describe('Feature flag integration tests', () => {
       await toggleFeatureFlag(client, featureFlagName, false, namespace);
       await assertNumberOfCompositions(client, baseGraphName, 4, namespace);
       await assertFeatureFlagExecutionConfig(blobStorage, key, false);
-
-      await server.close();
     },
   );
 
   test(
     'that a feature flag that is enabled upon creation can be composed with contracts (namespace without labels)',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -272,16 +270,15 @@ describe('Feature flag integration tests', () => {
       // The contract recomposition and the feature flag composition
       await assertNumberOfCompositions(client, contractName, 3, namespace);
       await assertFeatureFlagExecutionConfig(blobStorage, contractKey, true);
-
-      await server.close();
     },
   );
 
   test(
     'that a feature flag that is disabled upon creation can be composed with contracts (namespace without labels)',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -348,16 +345,15 @@ describe('Feature flag integration tests', () => {
       // The contract recomposition and the feature flag composition
       await assertNumberOfCompositions(client, contractName, 3, namespace);
       await assertFeatureFlagExecutionConfig(blobStorage, contractKey, true);
-
-      await server.close();
     },
   );
 
   test(
     'that publishing a feature subgraph that is not part of a feature flag does not trigger a composition',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -393,16 +389,15 @@ describe('Feature flag integration tests', () => {
 
       // Expect no further compositions
       await assertNumberOfCompositions(client, baseGraphName, 1, namespace);
-
-      await server.close();
     },
   );
 
   test(
     'that a failing base federated graph rejects a feature flag until it composes successfully',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -465,16 +460,15 @@ describe('Feature flag integration tests', () => {
       // Composition should now trigger for the base graph and then the feature flag
       await assertNumberOfCompositions(client, baseGraphName, 5, namespace);
       await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
-
-      await server.close();
     },
   );
 
   test(
     'that a feature flag that is enabled upon creation can be deleted with contracts (namespace without labels)',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -549,16 +543,15 @@ describe('Feature flag integration tests', () => {
       const deleteFeatureFlagResponse = await client.deleteFeatureFlag({ name: featureFlagName, namespace });
       expect(deleteFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
       expect(deleteFeatureFlagResponse.response?.details).toBe(`The feature flag "${featureFlagName}" was not found.`);
-
-      await server.close();
     },
   );
 
   test(
     'that publishing a change to a subgraph produces new compositions for the base graph and contracts that also have feature flags',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -634,16 +627,15 @@ describe('Feature flag integration tests', () => {
         await assertNumberOfCompositions(client, name, 5, namespace);
         await assertFeatureFlagExecutionConfig(blobStorage, key, true);
       }
-
-      await server.close();
     },
   );
 
   test(
     'test that multiple federated graphs and contracts compose and deploy correctly',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -810,16 +802,15 @@ describe('Feature flag integration tests', () => {
        *  */
       await assertNumberOfCompositions(client, contractNameTwo, 9, namespace);
       await assertFeatureFlagExecutionConfig(blobStorage, contractKeyTwo, false);
-
-      await server.close();
     },
   );
 
   test(
     'that a feature subgraph is never included in the base composition',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -846,16 +837,15 @@ describe('Feature flag integration tests', () => {
       const key = blobStorage.keys()[0];
       expect(key).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
       await assertExecutionConfigSubgraphNames(blobStorage, key, subgraphIds);
-
-      await server.close();
     },
   );
 
   test(
     'that setting a feature flag to its current state does not trigger composition',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels = [{ key: 'team', value: 'A' }];
       const baseGraphName = 'baseGraphName';
@@ -903,13 +893,12 @@ describe('Feature flag integration tests', () => {
       // Expect compositions to remain at 4
       await assertNumberOfCompositions(client, baseGraphName, 4);
       await assertFeatureFlagExecutionConfig(blobStorage, key, false);
-
-      await server.close();
     },
   );
 
-  test('that feature subgraph publish recomposes the feature flag', async () => {
+  test('that feature subgraph publish recomposes the feature flag', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const labels: Array<Label> = [];
     const namespace = genID('namespace').toLowerCase();
@@ -998,15 +987,14 @@ describe('Feature flag integration tests', () => {
     // Another base recomposition and a feature flag composition
     await assertNumberOfCompositions(client, baseGraphName, 7, namespace);
     await assertFeatureFlagExecutionConfig(blobStorage, baseGraphKey, true);
-
-    await server.close();
   });
 
   test(
     'that a federated graph with feature flags and feature subgraphs can be moved',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -1042,16 +1030,15 @@ describe('Feature flag integration tests', () => {
       expect(moveFederatedGraphResponse.compositionErrors[1]).toStrictEqual(
         unsuccessfulBaseCompositionError(baseGraphName, namespace),
       );
-
-      await server.close();
     },
   );
 
   test(
     'that a federated graph with a contract, feature flags, and feature subgraphs can be moved',
     getDebugTestOptions(isDebugMode),
-    async () => {
-      const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    async (testContext) => {
+      const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const labels: Array<Label> = [];
       const namespace = genID('namespace').toLowerCase();
@@ -1097,16 +1084,15 @@ describe('Feature flag integration tests', () => {
       expect(moveFederatedGraphResponse.compositionErrors[1]).toStrictEqual(
         unsuccessfulBaseCompositionError(baseGraphName, namespace),
       );
-
-      await server.close();
     },
   );
 
   test(
     'that a feature flag whose labels are updated recompose the correct federated graphs successfully',
     getDebugTestOptions(isDebugMode),
-    async () => {
+    async (testContext) => {
       const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const firstLabel = { key: 'team', value: 'A' };
       const secondLabel = { key: 'team', value: 'B' };
@@ -1179,8 +1165,6 @@ describe('Feature flag integration tests', () => {
       // The base recomposition of graph two and the feature flag composition
       await assertNumberOfCompositions(client, baseGraphNameTwo, 3, namespace);
       await assertFeatureFlagExecutionConfig(blobStorage, federatedGraphKeyTwo, true);
-
-      await server.close();
     },
   );
 });

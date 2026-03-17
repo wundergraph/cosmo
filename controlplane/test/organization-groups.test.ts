@@ -16,8 +16,9 @@ describe('Organization Group tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should not be able to create group when RBAC not is enabled', async () => {
+  test('Should not be able to create group when RBAC not is enabled', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const createdGroupResponse = await client.createOrganizationGroup({
       name: genID('group'),
@@ -30,12 +31,11 @@ describe('Organization Group tests', () => {
 
     expect(groupsResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(groupsResponse.groups.length).toBe(3);
-
-    await server.close();
   });
 
-  test('Should be able to create group when RBAC is enabled', async () => {
+  test('Should be able to create group when RBAC is enabled', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    testContext.onTestFinished(() => server.close());
 
     const createdGroupResponse = await client.createOrganizationGroup({
       name: genID('group'),
@@ -48,12 +48,11 @@ describe('Organization Group tests', () => {
 
     expect(groupsResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(groupsResponse.groups.length).toBe(4);
-
-    await server.close();
   });
 
-  test('Should not be able to update builtin group', async () => {
+  test('Should not be able to update builtin group', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.builtin)!;
@@ -70,12 +69,11 @@ describe('Organization Group tests', () => {
     });
 
     expect(updateResponse.response?.code).toBe(EnumStatusCode.ERR);
-
-    await server.close();
   });
 
-  test('Should not be able to delete builtin group', async () => {
+  test('Should not be able to delete builtin group', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.builtin)!;
@@ -85,37 +83,34 @@ describe('Organization Group tests', () => {
     });
 
     expect(deleteResponse.response?.code).toBe(EnumStatusCode.ERR);
-
-    await server.close();
   });
 
-  test('Should be able to update existing group', async () => {
+  test('Should be able to update existing group', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    testContext.onTestFinished(() => server.close());
 
     const group = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
     expect(group.rules.length).toBe(1);
     expect(group.rules[0].role).toBe('organization-admin');
-
-    await server.close();
   });
 
-  test('Should be able to delete group', async () => {
+  test('Should be able to delete group', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    testContext.onTestFinished(() => server.close());
 
     const group = await createOrganizationGroup(client, genID('group'));
     const deleteGroupResponse = await client.deleteOrganizationGroup({ groupId: group.groupId });
 
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('Should not be able to delete group with members', async () => {
+  test('Should not be able to delete group with members', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enabledFeatures: ['rbac'],
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     authenticator.changeUserWithSuppliedContext(users.adminBobCompanyA!);
 
@@ -132,16 +127,15 @@ describe('Organization Group tests', () => {
 
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(deleteGroupResponse.response?.details).toBe('No group to move existing members and mappers to was provided');
-
-    await server.close();
   });
 
-  test('that a failure is returned when updating a member to a group owned by a different organization', async () => {
+  test('that a failure is returned when updating a member to a group owned by a different organization', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enabledFeatures: ['rbac'],
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroupRepo = new OrganizationGroupRepository(server.db);
     const companyBId = users.adminJimCompanyB!.organizationId;
@@ -158,16 +152,15 @@ describe('Organization Group tests', () => {
 
     expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(updateGroupResponse.response?.details).toBe('One of the submitted groups is not part of this organization');
-
-    await server.close();
   });
 
-  test('that a failure is returned when updating a member to non-existent group', async () => {
+  test('that a failure is returned when updating a member to non-existent group', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enabledFeatures: ['rbac'],
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     authenticator.changeUserWithSuppliedContext(users.adminBobCompanyA!);
     const updateGroupResponse = await client.updateOrgMemberGroup({
@@ -177,16 +170,15 @@ describe('Organization Group tests', () => {
 
     expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(updateGroupResponse.response?.details).toBe('One of the submitted groups is not part of this organization');
-
-    await server.close();
   });
 
-  test('that a failure is returned when updating a member without providing any group', async () => {
+  test('that a failure is returned when updating a member without providing any group', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enabledFeatures: ['rbac'],
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     authenticator.changeUserWithSuppliedContext(users.adminBobCompanyA!);
     const updateGroupResponse = await client.updateOrgMemberGroup({
@@ -196,16 +188,15 @@ describe('Organization Group tests', () => {
 
     expect(updateGroupResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(updateGroupResponse.response?.details).toBe('The organization member must have at least one group');
-
-    await server.close();
   });
 
-  test('Deleting a group should delete it from Keycloak too', async () => {
+  test('Deleting a group should delete it from Keycloak too', async (testContext) => {
     const { client, server, keycloakClient, realm } = await SetupTest({
       dbname,
       enabledFeatures: ['rbac'],
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     const group = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
 
@@ -217,16 +208,15 @@ describe('Organization Group tests', () => {
 
     kcGroup = await keycloakClient.client.groups.find({ realm, search: group.name });
     expect(kcGroup).toHaveLength(0);
-
-    await server.close();
   });
 
-  test('Should move members to target group when deleting group', async () => {
+  test('Should move members to target group when deleting group', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enabledFeatures: ['rbac'],
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     authenticator.changeUserWithSuppliedContext(users.adminBobCompanyA!);
 
@@ -248,12 +238,11 @@ describe('Organization Group tests', () => {
     });
 
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('Should be possible to delete a group when an OIDC have been linked to the organization', async () => {
+  test('Should be possible to delete a group when an OIDC have been linked to the organization', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac', 'oidc'], enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     // Create a new group
     const createGroupResponse = await client.createOrganizationGroup({
@@ -280,12 +269,11 @@ describe('Organization Group tests', () => {
     });
 
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('Should not be able to delete a group that has been linked to an OIDC mapper', async () => {
+  test('Should not be able to delete a group that has been linked to an OIDC mapper', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac', 'oidc'], enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     // Create a new group
     const createGroupResponse = await client.createOrganizationGroup({
@@ -318,12 +306,11 @@ describe('Organization Group tests', () => {
 
     expect(deleteGroupResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(deleteGroupResponse.response?.details).toBe('No group to move existing members and mappers to was provided');
-
-    await server.close();
   });
 
-  test('Should be able to update mapper when OIDC is connected', async () => {
+  test('Should be able to update mapper when OIDC is connected', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac', 'oidc'], enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
@@ -369,8 +356,6 @@ describe('Organization Group tests', () => {
 
     expect(getProviderResponse.mappers).toHaveLength(1);
     expect(mapper).toBeDefined();
-
-    await server.close();
   });
 });
 
@@ -383,8 +368,9 @@ describe('Group membership tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should be able to update member group', async () => {
+  test('Should be able to update member group', async (testContext) => {
     const { client, server, users } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
     const adminGroup = orgGroups.groups.find((g) => g.name === 'admin')!;
@@ -402,12 +388,11 @@ describe('Group membership tests', () => {
     const orgMemberUpdated = orgMembersResponse.members.find((m) => m.userID === users.devJoeCompanyA?.userId);
     expect(orgMemberUpdated?.groups).toHaveLength(1);
     expect(orgMemberUpdated?.groups[0].name).toBe('admin');
-
-    await server.close();
   });
 
-  test('Non admin should not be able update user groups', async () => {
+  test('Non admin should not be able update user groups', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const orgGroups = await client.getOrganizationGroups({});
     const developerGroup = orgGroups.groups.find((g) => g.name === 'developer')!;
@@ -422,8 +407,6 @@ describe('Group membership tests', () => {
     expect(updateGroupResponse.response?.details).toBe(
       'The user does not have the permissions to perform this operation',
     );
-
-    await server.close();
   });
 });
 
@@ -436,12 +419,13 @@ describe('Multiple group membership tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should be able to add and remove member from multiple groups', async () => {
+  test('Should be able to add and remove member from multiple groups', async (testContext) => {
     const { client, server, users, keycloakClient, realm } = await SetupTest({
       dbname,
       enableMultiUsers: true,
       enabledFeatures: ['rbac'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const group1 = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
     const group2 = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
@@ -505,12 +489,11 @@ describe('Multiple group membership tests', () => {
 
     expect(kcUserGroups).toHaveLength(1);
     expect(kcUserGroups.find((group) => group.path === `${orgRootGroup}/${group3.name}`)).toBeDefined();
-
-    await server.close();
   });
 
-  test('Should not fail when moving a group member to a group they already belong to', async () => {
+  test('Should not fail when moving a group member to a group they already belong to', async (testContext) => {
     const { client, server, users } = await SetupTest({ dbname, enableMultiUsers: true, enabledFeatures: ['rbac'] });
+    testContext.onTestFinished(() => server.close());
 
     const group1 = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
     const group2 = await createOrganizationGroup(client, genID('group'), { role: 'organization-admin' });
@@ -539,7 +522,5 @@ describe('Multiple group membership tests', () => {
     expect(
       getOrganizationGroupMembersResponse.members.find((m) => m.id === users.viewerTimCompanyA?.userId),
     ).toBeDefined();
-
-    await server.close();
   });
 });

@@ -1,9 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { ExpiresAt } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { uid } from 'uid';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { TestUser, afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel, TestUser } from '../src/core/test-util.js';
 import { SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -19,6 +17,7 @@ describe('Get user accessible resources', (ctx) => {
 
   test('Should be able to get user accessible resources of a admin', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, enabledFeatures: ['rbac'] });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph1');
     const fedGraphName = genID('fedGraph');
@@ -69,8 +68,6 @@ describe('Get user accessible resources', (ctx) => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.subgraphs[0].targetId).toBe(getSubgraphResp.graph?.targetId);
     expect(response.federatedGraphs[0].targetId).toBe(getFedGraphResp.graph?.targetId);
-
-    await server.close();
   });
 
   test('Should be able to get user accessible resources of a developer', async (testContext) => {
@@ -79,6 +76,7 @@ describe('Get user accessible resources', (ctx) => {
       enabledFeatures: ['rbac'],
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     authenticator.changeUser(TestUser.devJoeCompanyA);
 
@@ -131,7 +129,5 @@ describe('Get user accessible resources', (ctx) => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.subgraphs[0].targetId).toBe(getSubgraphResp.graph?.targetId);
     expect(response.federatedGraphs[0].targetId).toBe(getFedGraphResp.graph?.targetId);
-
-    await server.close();
   });
 });

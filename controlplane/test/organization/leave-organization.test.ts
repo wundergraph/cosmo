@@ -16,11 +16,12 @@ describe('Leave organization', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should remove member from organization groups when leaving', async () => {
+  test('Should remove member from organization groups when leaving', async (testContext) => {
     const { client, server, keycloakClient, realm, users, authenticator } = await SetupTest({
       dbname,
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
     const orgGroupRepo = new OrganizationGroupRepository(server.db);
@@ -72,12 +73,11 @@ describe('Leave organization', () => {
 
     expect(kcUserGroups).toHaveLength(1);
     expect(viewerGroup).toBeUndefined();
-
-    await server.close();
   });
 
-  test('Owner should not be able to leave organization', async () => {
+  test('Owner should not be able to leave organization', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const leaveOrganizationResponse = await client.leaveOrganization({});
 
@@ -85,7 +85,5 @@ describe('Leave organization', () => {
     expect(leaveOrganizationResponse.response?.details).toBe(
       'Creator of a organization cannot leave the organization.',
     );
-
-    await server.close();
   });
 });

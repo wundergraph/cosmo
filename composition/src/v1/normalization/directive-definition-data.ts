@@ -4,6 +4,7 @@ import { DEFAULT_DEPRECATION_REASON, Kind } from 'graphql';
 import {
   ARGUMENT_DEFINITION_UPPER,
   AS,
+  ASSUMED_SIZE,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
   CACHE_INVALIDATE,
@@ -16,6 +17,7 @@ import {
   CONFIGURE_DESCRIPTION,
   CONNECT_FIELD_RESOLVER,
   CONTEXT,
+  COST,
   DEFAULT_EDFS_PROVIDER_ID,
   DEPRECATED,
   DESCRIPTION_OVERRIDE,
@@ -51,6 +53,7 @@ import {
   LINK,
   LINK_IMPORT,
   LINK_PURPOSE,
+  LIST_SIZE,
   MAX_AGE,
   NAME,
   OBJECT_UPPER,
@@ -63,6 +66,7 @@ import {
   QUERY_CACHE,
   REASON,
   REQUIRE_FETCH_REASONS,
+  REQUIRE_ONE_SLICING_ARGUMENT,
   REQUIRES,
   REQUIRES_SCOPES,
   RESOLVABLE,
@@ -73,6 +77,8 @@ import {
   SEMANTIC_NON_NULL,
   SHADOW_MODE,
   SHAREABLE,
+  SIZED_FIELDS,
+  SLICING_ARGUMENTS,
   SPECIFIED_BY,
   STREAM_CONFIGURATION,
   STRING_SCALAR,
@@ -85,6 +91,7 @@ import {
   TOPICS,
   UNION_UPPER,
   URL_LOWER,
+  WEIGHT,
 } from '../../utils/string-constants';
 import {
   AUTHENTICATED_DEFINITION,
@@ -94,6 +101,7 @@ import {
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION,
   CONFIGURE_DESCRIPTION_DEFINITION,
   CONNECT_FIELD_RESOLVER_DEFINITION,
+  COST_DEFINITION,
   DEPRECATED_DEFINITION,
   ENTITY_CACHE_DEFINITION,
   EDFS_KAFKA_PUBLISH_DEFINITION,
@@ -110,6 +118,7 @@ import {
   IS_DEFINITION,
   KEY_DEFINITION,
   LINK_DEFINITION,
+  LIST_SIZE_DEFINITION,
   ONE_OF_DEFINITION,
   OVERRIDE_DEFINITION,
   PROVIDES_DEFINITION,
@@ -244,6 +253,34 @@ export const CONNECT_FIELD_RESOLVER_DEFINITION_DATA: DirectiveDefinitionData = {
   node: CONNECT_FIELD_RESOLVER_DEFINITION,
   optionalArgumentNames: new Set<string>(),
   requiredArgumentNames: new Set<string>([CONTEXT]),
+};
+
+export const COST_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      WEIGHT,
+      {
+        name: WEIGHT,
+        typeNode: {
+          kind: Kind.NON_NULL_TYPE,
+          type: stringToNamedTypeNode(INT_SCALAR),
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([
+    ARGUMENT_DEFINITION_UPPER,
+    ENUM_UPPER,
+    FIELD_DEFINITION_UPPER,
+    INPUT_FIELD_DEFINITION_UPPER,
+    OBJECT_UPPER,
+    SCALAR_UPPER,
+  ]),
+  name: COST,
+  node: COST_DEFINITION,
+  optionalArgumentNames: new Set<string>(),
+  requiredArgumentNames: new Set<string>([WEIGHT]),
 };
 
 export const DEPRECATED_DEFINITION_DATA: DirectiveDefinitionData = {
@@ -585,6 +622,61 @@ export const LINK_DEFINITION_DATA: DirectiveDefinitionData = {
   node: LINK_DEFINITION,
   optionalArgumentNames: new Set<string>([AS, FOR, IMPORT]),
   requiredArgumentNames: new Set<string>([URL_LOWER]),
+};
+
+export const LIST_SIZE_DEFINITION_DATA: DirectiveDefinitionData = {
+  argumentTypeNodeByName: new Map<string, ArgumentData>([
+    [
+      ASSUMED_SIZE,
+      {
+        name: ASSUMED_SIZE,
+        typeNode: stringToNamedTypeNode(INT_SCALAR),
+      },
+    ],
+    [
+      SLICING_ARGUMENTS,
+      {
+        name: SLICING_ARGUMENTS,
+        typeNode: {
+          kind: Kind.LIST_TYPE,
+          type: {
+            kind: Kind.NON_NULL_TYPE,
+            type: stringToNamedTypeNode(STRING_SCALAR),
+          },
+        },
+      },
+    ],
+    [
+      SIZED_FIELDS,
+      {
+        name: SIZED_FIELDS,
+        typeNode: {
+          kind: Kind.LIST_TYPE,
+          type: {
+            kind: Kind.NON_NULL_TYPE,
+            type: stringToNamedTypeNode(STRING_SCALAR),
+          },
+        },
+      },
+    ],
+    [
+      REQUIRE_ONE_SLICING_ARGUMENT,
+      {
+        name: REQUIRE_ONE_SLICING_ARGUMENT,
+        typeNode: stringToNamedTypeNode(BOOLEAN_SCALAR),
+        defaultValue: {
+          kind: Kind.BOOLEAN,
+          value: true,
+        },
+      },
+    ],
+  ]),
+  isRepeatable: false,
+  locations: new Set<string>([FIELD_DEFINITION_UPPER]),
+  name: LIST_SIZE,
+  node: LIST_SIZE_DEFINITION,
+  optionalArgumentNames: new Set<string>([ASSUMED_SIZE, SLICING_ARGUMENTS, SIZED_FIELDS, REQUIRE_ONE_SLICING_ARGUMENT]),
+  requiredArgumentNames: new Set<string>(),
 };
 
 export const PROVIDES_DEFINITION_DATA: DirectiveDefinitionData = {

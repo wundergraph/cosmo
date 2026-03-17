@@ -23,8 +23,9 @@ describe('getChangelogBySchemaVersion', () => {
     await afterAllSetup(dbname);
   });
 
-  test('should return changelog for a valid schema version', async () => {
+  test('should return changelog for a valid schema version', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -70,12 +71,11 @@ describe('getChangelogBySchemaVersion', () => {
     expect(changelogRes.changelog?.schemaVersionId).toBe(schemaVersionId);
     expect(changelogRes.changelog?.compositionId).toBeDefined();
     expect(changelogRes.changelog?.changelogs).toBeDefined();
-
-    await server.close();
   });
 
-  test('should return changelog with changes when schema is updated', async () => {
+  test('should return changelog with changes when schema is updated', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -121,12 +121,11 @@ describe('getChangelogBySchemaVersion', () => {
     expect(changelogRes.changelog).toBeDefined();
     expect(changelogRes.changelog?.changelogs).toBeDefined();
     expect(changelogRes.changelog?.changelogs.length).toBe(1);
-
-    await server.close();
   });
 
-  test('should return not found error for non-existent schema version', async () => {
+  test('should return not found error for non-existent schema version', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const changelogRes = await client.getChangelogBySchemaVersion({
       schemaVersionId: randomUUID(),
@@ -134,15 +133,14 @@ describe('getChangelogBySchemaVersion', () => {
 
     expect(changelogRes.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(changelogRes.response?.details).toBe('Could not find composition linked to the changelog');
-
-    await server.close();
   });
 
-  test('should not allow access to changelog from different organization', async () => {
+  test('should not allow access to changelog from different organization', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({
       dbname,
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     // Create a composition as Company A
     const subgraphName = genID('subgraph');
@@ -186,12 +184,11 @@ describe('getChangelogBySchemaVersion', () => {
     // Should return not found (since it filters by organization)
     expect(changelogRes.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(changelogRes.response?.details).toBe('Could not find composition linked to the changelog');
-
-    await server.close();
   });
 
-  test('should work with custom namespace', async () => {
+  test('should work with custom namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
@@ -229,7 +226,5 @@ describe('getChangelogBySchemaVersion', () => {
     expect(changelogRes.response?.code).toBe(EnumStatusCode.OK);
     expect(changelogRes.changelog).toBeDefined();
     expect(changelogRes.changelog?.schemaVersionId).toBe(schemaVersionId);
-
-    await server.close();
   });
 });

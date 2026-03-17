@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -34,8 +34,9 @@ describe('Create subgraph tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that an Event-Driven subgraph can be created', async () => {
+  test('that an Event-Driven subgraph can be created', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -46,14 +47,13 @@ describe('Create subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
     '%s should create regular subgraph can be created',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph');
 
@@ -69,13 +69,12 @@ describe('Create subgraph tests', () => {
       });
 
       expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     },
   );
 
-  test('Should create regular subgraph can be created using legacy API key', async (role) => {
+  test('Should create regular subgraph can be created using legacy API key', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -91,12 +90,12 @@ describe('Create subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('subgraph-admin should create regular subgraph can be created on allowed namespace', async (role) => {
+  test('subgraph-admin should create regular subgraph can be created on allowed namespace', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     await createNamespace(client, 'prod');
 
     const subgraphName = genID('subgraph');
@@ -144,12 +143,12 @@ describe('Create subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
-  test('subgraph-admin should not create regular subgraph can be created when allowed resources', async (role) => {
+  test('subgraph-admin should not create regular subgraph can be created when allowed resources', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     await createNamespace(client, 'prod');
 
     const subgraphName = genID('subgraph');
@@ -179,8 +178,6 @@ describe('Create subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test.each([
@@ -195,6 +192,7 @@ describe('Create subgraph tests', () => {
     'subgraph-viewer',
   ])('%s should not be able to create regular subgraph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -210,12 +208,11 @@ describe('Create subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
-  test('that an error is returned if the name is invalid', async () => {
+  test('that an error is returned if the name is invalid', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     let createFederatedSubgraphResp = await client.createFederatedSubgraph({
       name: 'a*a',
@@ -248,12 +245,11 @@ describe('Create subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
-
-    await server.close();
   });
 
-  test('that an error is returned if an Event-Driven subgraph defines a routing URL', async () => {
+  test('that an error is returned if an Event-Driven subgraph defines a routing URL', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -266,12 +262,11 @@ describe('Create subgraph tests', () => {
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFederatedSubgraphResp.response?.details).toBe('An Event-Driven Graph must not define a routing URL');
-
-    await server.close();
   });
 
-  test('that an error is returned if an Event-Driven subgraph defines a subscription URL', async () => {
+  test('that an error is returned if an Event-Driven subgraph defines a subscription URL', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -286,12 +281,11 @@ describe('Create subgraph tests', () => {
     expect(createFederatedSubgraphResp.response?.details).toBe(
       'An Event-Driven Graph must not define a subscription URL',
     );
-
-    await server.close();
   });
 
-  test('that an error is returned if an Event-Driven subgraph defines a subscription protocol', async () => {
+  test('that an error is returned if an Event-Driven subgraph defines a subscription protocol', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -306,12 +300,11 @@ describe('Create subgraph tests', () => {
     expect(createFederatedSubgraphResp.response?.details).toBe(
       'An Event-Driven Graph must not define a subscription protocol',
     );
-
-    await server.close();
   });
 
-  test('that an error is returned if an Event-Driven subgraph defines a websocket subprotocol', async () => {
+  test('that an error is returned if an Event-Driven subgraph defines a websocket subprotocol', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -326,12 +319,11 @@ describe('Create subgraph tests', () => {
     expect(createFederatedSubgraphResp.response?.details).toBe(
       'An Event-Driven Graph must not define a websocket subprotocol',
     );
-
-    await server.close();
   });
 
-  test('that a valid subscription URL is accepted', async () => {
+  test('that a valid subscription URL is accepted', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -343,12 +335,11 @@ describe('Create subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('that an error is returned if an invalid subscription URL is defined', async () => {
+  test('that an error is returned if an invalid subscription URL is defined', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -361,12 +352,11 @@ describe('Create subgraph tests', () => {
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFederatedSubgraphResp.response?.details).toBe('Subscription URL "url" is not a valid URL');
-
-    await server.close();
   });
 
-  test('that an error is returned if a regular subgraph is created without a routing URL', async () => {
+  test('that an error is returned if a regular subgraph is created without a routing URL', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -377,12 +367,11 @@ describe('Create subgraph tests', () => {
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFederatedSubgraphResp.response?.details).toBe('A non-Event-Driven Graph must define a routing URL');
-
-    await server.close();
   });
 
-  test('that an error is returned if a regular subgraph is created with an invalid routing URL', async () => {
+  test('that an error is returned if a regular subgraph is created with an invalid routing URL', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -394,12 +383,11 @@ describe('Create subgraph tests', () => {
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFederatedSubgraphResp.response?.details).toBe('Routing URL "url" is not a valid URL');
-
-    await server.close();
   });
 
-  test('that an error is returned if a subgraph is created with the same name as another feature subgraph', async () => {
+  test('that an error is returned if a subgraph is created with the same name as another feature subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraphOne');
     const featureSubgraphName = genID('featureSubgraphOne');
@@ -421,8 +409,6 @@ describe('Create subgraph tests', () => {
     expect(createSubgraphResponse.response?.details).toBe(
       `A feature subgraph with the name "${featureSubgraphName}" already exists in the namespace "default".`,
     );
-
-    await server.close();
   });
 
   test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
@@ -433,6 +419,7 @@ describe('Create subgraph tests', () => {
         enableMultiUsers: true,
         enabledFeatures: ['rbac'],
       });
+      onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph');
 
@@ -448,8 +435,6 @@ describe('Create subgraph tests', () => {
       });
 
       expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     },
   );
 
@@ -469,6 +454,7 @@ describe('Create subgraph tests', () => {
       enableMultiUsers: true,
       enabledFeatures: ['rbac'],
     });
+    onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -484,16 +470,15 @@ describe('Create subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
-  test('Should be able to create subgraphs only on allowed namespaces', async () => {
+  test('Should be able to create subgraphs only on allowed namespaces', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enableMultiUsers: true,
       enabledFeatures: ['rbac'],
     });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -535,16 +520,15 @@ describe('Create subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   describe('Plugin subgraph creation tests', () => {
-    test('Should be able to create a plugin subgraph', async () => {
+    test('Should be able to create a plugin subgraph', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
         setupBilling: { plan: 'launch@1' },
       });
+      testContext.onTestFinished(() => server.close());
 
       const pluginName = genID('plugin');
       const pluginLabel = genUniqueLabel('plugin');
@@ -568,15 +552,14 @@ describe('Create subgraph tests', () => {
       expect(getSubgraphResp.graph).toBeDefined();
       expect(getSubgraphResp.graph?.name).toBe(pluginName);
       expect(getSubgraphResp.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
-
-      await server.close();
     });
 
-    test('Should not be able to create a plugin subgraph on developer plan', async () => {
+    test('Should not be able to create a plugin subgraph on developer plan', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
         setupBilling: { plan: 'developer@1' },
       });
+      testContext.onTestFinished(() => server.close());
 
       // Create 3 plugins successfully
       for (let i = 1; i <= 3; i++) {
@@ -605,15 +588,14 @@ describe('Create subgraph tests', () => {
 
       expect(createFourthPluginResponse.response?.code).toBe(EnumStatusCode.ERR_LIMIT_REACHED);
       expect(createFourthPluginResponse.response?.details).toBe('The organization reached the limit of plugins');
-
-      await server.close();
     });
 
-    test('Should enforce plugin limit on launch plan (max 10 plugins)', async () => {
+    test('Should enforce plugin limit on launch plan (max 10 plugins)', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
         setupBilling: { plan: 'launch@1' },
       });
+      testContext.onTestFinished(() => server.close());
 
       // Create 10 plugins successfully
       for (let i = 1; i <= 10; i++) {
@@ -643,15 +625,14 @@ describe('Create subgraph tests', () => {
 
       expect(createEleventhPluginResp.response?.code).toBe(EnumStatusCode.ERR_LIMIT_REACHED);
       expect(createEleventhPluginResp.response?.details).toBe('The organization reached the limit of plugins');
-
-      await server.close();
     });
 
-    test('Should not allow creating a plugin with the same name as a regular subgraph', async () => {
+    test('Should not allow creating a plugin with the same name as a regular subgraph', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
         setupBilling: { plan: 'launch@1' },
       });
+      testContext.onTestFinished(() => server.close());
 
       const sharedName = genID('shared-subgraph');
       const regularLabel = genUniqueLabel('backend');
@@ -679,15 +660,14 @@ describe('Create subgraph tests', () => {
       expect(createPluginSubgraphResp.response?.details).toBe(
         `A subgraph with the name "${sharedName}" already exists in the namespace "${DEFAULT_NAMESPACE}".`,
       );
-
-      await server.close();
     });
 
-    test('Should not allow creating a regular subgraph with the same name as a plugin', async () => {
+    test('Should not allow creating a regular subgraph with the same name as a plugin', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
         setupBilling: { plan: 'launch@1' },
       });
+      testContext.onTestFinished(() => server.close());
 
       const sharedName = genID('shared-plugin');
       const pluginLabel = genUniqueLabel('auth');
@@ -715,8 +695,6 @@ describe('Create subgraph tests', () => {
       expect(createRegularSubgraphResp.response?.details).toBe(
         `A subgraph with the name "${sharedName}" already exists in the namespace "${DEFAULT_NAMESPACE}".`,
       );
-
-      await server.close();
     });
 
     test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
@@ -728,6 +706,7 @@ describe('Create subgraph tests', () => {
           enabledFeatures: ['rbac'],
           setupBilling: { plan: 'launch@1' },
         });
+        onTestFinished(() => server.close());
 
         const pluginName = genID('plugin');
         const pluginLabel = genUniqueLabel('service');
@@ -745,8 +724,6 @@ describe('Create subgraph tests', () => {
         });
 
         expect(createPluginSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-        await server.close();
       },
     );
 
@@ -767,6 +744,7 @@ describe('Create subgraph tests', () => {
         enabledFeatures: ['rbac'],
         setupBilling: { plan: 'launch@1' },
       });
+      onTestFinished(() => server.close());
 
       const pluginName = genID('plugin');
       const pluginLabel = genUniqueLabel('restricted');
@@ -784,15 +762,14 @@ describe('Create subgraph tests', () => {
       });
 
       expect(createPluginSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     });
 
-    test('Should be able to create plugin subgraphs with multiple labels', async () => {
+    test('Should be able to create plugin subgraphs with multiple labels', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
         setupBilling: { plan: 'launch@1' },
       });
+      testContext.onTestFinished(() => server.close());
 
       const pluginName = genID('multi-label-plugin');
       const envLabel = genUniqueLabel('env');
@@ -807,15 +784,14 @@ describe('Create subgraph tests', () => {
       });
 
       expect(createPluginSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     });
 
-    test('Should verify plugin limits only apply to plugins, not regular subgraphs', async () => {
+    test('Should verify plugin limits only apply to plugins, not regular subgraphs', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
         setupBilling: { plan: 'launch@1' },
       });
+      testContext.onTestFinished(() => server.close());
 
       // First, create the maximum number of plugins (10 for launch plan)
       for (let i = 1; i <= 10; i++) {
@@ -875,16 +851,15 @@ describe('Create subgraph tests', () => {
 
         expect(createEventDrivenResp.response?.code).toBe(EnumStatusCode.OK);
       }
-
-      await server.close();
     });
   });
 
   describe('GRPC Service subgraph creation tests', () => {
-    test('Should be able to create a GRPC service subgraph', async () => {
+    test('Should be able to create a GRPC service subgraph', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
       });
+      testContext.onTestFinished(() => server.close());
 
       const grpcServiceName = genID('grpc-service');
       const grpcServiceLabel = genUniqueLabel('service');
@@ -910,14 +885,13 @@ describe('Create subgraph tests', () => {
       expect(getSubgraphResp.graph?.name).toBe(grpcServiceName);
       expect(getSubgraphResp.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
       expect(getSubgraphResp.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_ONE);
-
-      await server.close();
     });
 
-    test('Should not allow creating a GRPC service subgraph without a routing URL', async () => {
+    test('Should not allow creating a GRPC service subgraph without a routing URL', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
       });
+      testContext.onTestFinished(() => server.close());
 
       const grpcServiceName = genID('grpc-service');
       const grpcServiceLabel = genUniqueLabel('service');
@@ -933,14 +907,13 @@ describe('Create subgraph tests', () => {
       expect(createGrpcServiceSubgraphResp.response?.details).toBe(
         'A non-Event-Driven Graph must define a routing URL',
       );
-
-      await server.close();
     });
 
-    test('Should not allow creating a GRPC service subgraph with invalid routing URL', async () => {
+    test('Should not allow creating a GRPC service subgraph with invalid routing URL', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
       });
+      testContext.onTestFinished(() => server.close());
 
       const grpcServiceName = genID('grpc-service');
       const grpcServiceLabel = genUniqueLabel('service');
@@ -955,16 +928,14 @@ describe('Create subgraph tests', () => {
 
       expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
       expect(createGrpcServiceSubgraphResp.response?.details).toBe('Routing URL "invalid-url" is not a valid URL');
-
-      await server.close();
     });
 
-    test('Should not allow creating a GRPC service subgraph with HTTP/HTTPS routing URL', async () => {
+    test('Should not allow creating a GRPC service subgraph with HTTP/HTTPS routing URL', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
       });
+      testContext.onTestFinished(() => server.close());
 
-      const grpcServiceName = genID('grpc-service');
       const grpcServiceLabel = genUniqueLabel('service');
 
       // Test HTTP URL
@@ -994,14 +965,13 @@ describe('Create subgraph tests', () => {
       expect(createGrpcServiceSubgraphRespHttps.response?.details).toContain(
         'Routing URL must follow gRPC naming scheme',
       );
-
-      await server.close();
     });
 
-    test('Should allow creating a GRPC service subgraph with valid gRPC naming scheme URLs', async () => {
+    test('Should allow creating a GRPC service subgraph with valid gRPC naming scheme URLs', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
       });
+      testContext.onTestFinished(() => server.close());
 
       const grpcServiceLabel = genUniqueLabel('service');
 
@@ -1037,14 +1007,13 @@ describe('Create subgraph tests', () => {
       });
 
       expect(createGrpcServiceSubgraphRespIpv4.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     });
 
-    test('Should not allow creating a GRPC service with the same name as a regular subgraph', async () => {
+    test('Should not allow creating a GRPC service with the same name as a regular subgraph', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
       });
+      testContext.onTestFinished(() => server.close());
 
       const sharedName = genID('shared-subgraph');
       const regularLabel = genUniqueLabel('backend');
@@ -1073,14 +1042,13 @@ describe('Create subgraph tests', () => {
       expect(createGrpcServiceSubgraphResp.response?.details).toBe(
         `A subgraph with the name "${sharedName}" already exists in the namespace "${DEFAULT_NAMESPACE}".`,
       );
-
-      await server.close();
     });
 
-    test('Should not allow creating a regular subgraph with the same name as a GRPC service', async () => {
+    test('Should not allow creating a regular subgraph with the same name as a GRPC service', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
       });
+      testContext.onTestFinished(() => server.close());
 
       const sharedName = genID('shared-grpc-service');
       const grpcServiceLabel = genUniqueLabel('grpc-service');
@@ -1109,15 +1077,14 @@ describe('Create subgraph tests', () => {
       expect(createRegularSubgraphResp.response?.details).toBe(
         `A subgraph with the name "${sharedName}" already exists in the namespace "${DEFAULT_NAMESPACE}".`,
       );
-
-      await server.close();
     });
 
-    test('Should not allow creating a GRPC service with the same name as a plugin', async () => {
+    test('Should not allow creating a GRPC service with the same name as a plugin', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
         setupBilling: { plan: 'launch@1' },
       });
+      testContext.onTestFinished(() => server.close());
 
       const sharedName = genID('shared-plugin-grpc');
       const pluginLabel = genUniqueLabel('plugin');
@@ -1146,8 +1113,6 @@ describe('Create subgraph tests', () => {
       expect(createGrpcServiceSubgraphResp.response?.details).toBe(
         `A subgraph with the name "${sharedName}" already exists in the namespace "${DEFAULT_NAMESPACE}".`,
       );
-
-      await server.close();
     });
 
     test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
@@ -1158,6 +1123,7 @@ describe('Create subgraph tests', () => {
           enableMultiUsers: true,
           enabledFeatures: ['rbac'],
         });
+        onTestFinished(() => server.close());
 
         const grpcServiceName = genID('grpc-service');
         const grpcServiceLabel = genUniqueLabel('service');
@@ -1176,8 +1142,6 @@ describe('Create subgraph tests', () => {
         });
 
         expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-        await server.close();
       },
     );
 
@@ -1196,6 +1160,7 @@ describe('Create subgraph tests', () => {
         enableMultiUsers: true,
         enabledFeatures: ['rbac'],
       });
+      onTestFinished(() => server.close());
 
       const grpcServiceName = genID('grpc-service');
       const grpcServiceLabel = genUniqueLabel('service');
@@ -1214,14 +1179,13 @@ describe('Create subgraph tests', () => {
       });
 
       expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     });
 
-    test('Should be able to create GRPC service subgraphs with multiple labels', async () => {
+    test('Should be able to create GRPC service subgraphs with multiple labels', async (testContext) => {
       const { client, server } = await SetupTest({
         dbname,
       });
+      testContext.onTestFinished(() => server.close());
 
       const grpcServiceName = genID('multi-label-grpc-service');
       const envLabel = genUniqueLabel('env');
@@ -1237,8 +1201,6 @@ describe('Create subgraph tests', () => {
       });
 
       expect(createGrpcServiceSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     });
   });
 });

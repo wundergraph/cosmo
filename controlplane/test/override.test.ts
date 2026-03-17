@@ -55,6 +55,7 @@ describe('Overrides', (ctx) => {
 
   test('Should be able to detect overrides', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -173,12 +174,11 @@ describe('Overrides', (ctx) => {
     expect(checkResp4.breakingChanges.length).toBe(1);
     expect(checkResp4.operationUsageStats?.totalOperations).toBe(2);
     expect(checkResp4.operationUsageStats?.safeOperations).toBe(1);
-
-    await server.close();
   });
 
   test('Should get correct consolidated view', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -239,7 +239,5 @@ describe('Overrides', (ctx) => {
     expect(overridesRes.overrides[1].hash).toBe('hash2');
     expect(overridesRes.overrides[1].changesOverrideCount).toBe(0);
     expect(overridesRes.overrides[1].hasIgnoreAllOverride).toBe(true);
-
-    await server.close();
   });
 });

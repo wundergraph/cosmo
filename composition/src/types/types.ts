@@ -1,4 +1,9 @@
+export type ArgumentName = string;
+
 export type ContractName = string;
+
+// {DirectiveName}.{ArgumentName}
+export type DirectiveArgumentCoords = string;
 
 export type DirectiveName = string;
 

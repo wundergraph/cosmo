@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -27,20 +27,20 @@ describe('Delete feature flag tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that an error is returned when attempting to delete a feature flag that does not exist', async () => {
+  test('that an error is returned when attempting to delete a feature flag that does not exist', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const featureFlagName = genID('flag');
     // Attempting to delete the feature flag again should result in a not found error
     const deleteFeatureFlagResponseTwo = await client.deleteFeatureFlag({ name: featureFlagName });
     expect(deleteFeatureFlagResponseTwo.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(deleteFeatureFlagResponseTwo.response?.details).toBe(`The feature flag "${featureFlagName}" was not found.`);
-
-    await server.close();
   });
 
-  test('that an error is returned when trying to delete a feature subgraph that is not in the namespace specified', async () => {
+  test('that an error is returned when trying to delete a feature subgraph that is not in the namespace specified', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -75,14 +75,13 @@ describe('Delete feature flag tests', () => {
     expect(deleteFeatureFlagResponseThree.response?.details).toBe(
       `The feature flag "${featureFlagName}" was not found.`,
     );
-
-    await server.close();
   });
 
   test.each(['organization-admin', 'organization-developer'])(
     '%s should be able to delete feature flag',
     async (role) => {
       const { client, server, users, authenticator } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph');
       const featureSubgraphName = genID('featureSubgraph');
@@ -112,8 +111,6 @@ describe('Delete feature flag tests', () => {
       expect(deleteFeatureFlagResponseTwo.response?.details).toBe(
         `The feature flag "${featureFlagName}" was not found.`,
       );
-
-      await server.close();
     },
   );
 
@@ -129,6 +126,7 @@ describe('Delete feature flag tests', () => {
     'subgraph-viewer',
   ])('%s should not be able to create feature flag', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -151,7 +149,5 @@ describe('Delete feature flag tests', () => {
 
     const deleteFeatureFlagResponseOne = await client.deleteFeatureFlag({ name: featureFlagName });
     expect(deleteFeatureFlagResponseOne.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 });

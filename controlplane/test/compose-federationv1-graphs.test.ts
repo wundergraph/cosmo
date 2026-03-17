@@ -38,6 +38,7 @@ describe('ComposeFederationV1Graphs', (ctx) => {
 
   test('Compose these federation v1 subgraph schemas', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
     const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
@@ -146,7 +147,5 @@ describe('ComposeFederationV1Graphs', (ctx) => {
       });
     }
     expect(formattedFederatedSchemaSDL).toBe(composedFederatedGraphSchema);
-
-    await server.close();
   });
 });

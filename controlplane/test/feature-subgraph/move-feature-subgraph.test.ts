@@ -22,8 +22,9 @@ describe('Move feature subgraph tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that a feature subgraph cannot be moved', async () => {
+  test('that a feature subgraph cannot be moved', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -43,7 +44,5 @@ describe('Move feature subgraph tests', () => {
     });
     expect(moveSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(moveSubgraphResponse.response?.details).toBe('Feature subgraphs cannot be moved.');
-
-    await server.close();
   });
 });

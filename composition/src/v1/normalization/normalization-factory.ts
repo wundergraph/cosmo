@@ -25,6 +25,7 @@ import {
   type TypeDefinitionNode,
   type TypeExtensionNode,
   type TypeNode,
+  type ValueNode,
   visit,
 } from 'graphql';
 import {
@@ -75,6 +76,7 @@ import {
 } from '../utils/utils';
 import {
   configureDescriptionNoDescriptionError,
+  costOnInterfaceFieldErrorMessage,
   duplicateArgumentsError,
   duplicateDirectiveArgumentDefinitionsErrorMessage,
   duplicateDirectiveDefinitionArgumentErrorMessage,
@@ -130,6 +132,15 @@ import {
   invalidSubgraphNamesError,
   invalidSubscriptionFilterLocationError,
   invalidUnionMemberTypeError,
+  listSizeAssumedSizeSlicingArgDefaultErrorMessage,
+  listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage,
+  listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage,
+  listSizeInvalidSlicingArgumentErrorMessage,
+  listSizeSizedFieldNotFoundErrorMessage,
+  listSizeSizedFieldNotListErrorMessage,
+  listSizeSizedFieldsInvalidReturnTypeErrorMessage,
+  listSizeSizedFieldsOnListsErrorMessage,
+  listSizeSlicingArgumentNotIntErrorMessage,
   multipleNamedTypeDefinitionError,
   noBaseScalarDefinitionError,
   noDefinedEnumValuesError,
@@ -190,10 +201,13 @@ import {
   type CacheInvalidateConfig,
   type CachePopulateConfig,
   type ConfigurationData,
+  type Costs,
   type EntityCacheConfig,
   type EntityKeyMappingConfig,
   type EventConfiguration,
+  type FieldListSizeConfiguration,
   type FieldMappingConfig,
+  type FieldWeightConfiguration,
   type NatsEventType,
   type RequiredFieldConfiguration,
   type RootFieldCacheConfig,
@@ -247,6 +261,8 @@ import {
   isInputObjectDefinitionData,
   isNodeExternalOrShareable,
   isOutputNodeKind,
+  isParentDataCompositeOutputType,
+  isTypeNodeListType,
   isTypeRequired,
   isTypeValidImplementation,
   newConditionalFieldData,
@@ -276,6 +292,7 @@ import { type Warning } from '../../warnings/types';
 import { type BatchNormalizationResult, type NormalizationResult } from '../../normalization/types';
 import {
   ARGUMENT,
+  ASSUMED_SIZE,
   AUTHENTICATED,
   BOOLEAN_SCALAR,
   CACHE_INVALIDATE,
@@ -285,6 +302,7 @@ import {
   CONFIGURE_DESCRIPTION,
   CONSUMER_INACTIVE_THRESHOLD,
   CONSUMER_NAME,
+  COST,
   DEFAULT_EDFS_PROVIDER_ID,
   DESCRIPTION_OVERRIDE,
   EDFS_KAFKA_PUBLISH,
@@ -319,6 +337,7 @@ import {
   LEVELS,
   LINK_IMPORT,
   LINK_PURPOSE,
+  LIST_SIZE,
   MAX_AGE,
   MUTATION,
   NON_NULLABLE_BOOLEAN,
@@ -340,6 +359,7 @@ import {
   QUERY_CACHE,
   REQUEST,
   REQUIRE_FETCH_REASONS,
+  REQUIRE_ONE_SLICING_ARGUMENT,
   REQUIRES_SCOPES,
   RESOLVABLE,
   ROOT_TYPE_NAMES,
@@ -351,6 +371,8 @@ import {
   SERVICE_FIELD,
   SHADOW_MODE,
   SHAREABLE,
+  SIZED_FIELDS,
+  SLICING_ARGUMENTS,
   STREAM_CONFIGURATION,
   STREAM_NAME,
   STRING_SCALAR,
@@ -365,6 +387,7 @@ import {
   TOPIC,
   TOPICS,
   TYPENAME,
+  WEIGHT,
 } from '../../utils/string-constants';
 import { MAX_INT32 } from '../../utils/integer-constants';
 import {
@@ -384,6 +407,8 @@ import {
   type ExtractArgumentDataResult,
   type FieldSetData,
   type FieldSetParentResult,
+  type HandleCostDirectiveParams,
+  type HandleListSizeDirectiveParams,
   type HandleOverrideDirectiveParams,
   type HandleRequiresScopesDirectiveParams,
   type HandleSemanticNonNullDirectiveParams,
@@ -439,6 +464,12 @@ export class NormalizationFactory {
   concreteTypeNamesByAbstractTypeName = new Map<string, Set<string>>();
   conditionalFieldDataByCoords = new Map<string, ConditionalFieldData>();
   configurationDataByTypeName = new Map<TypeName, ConfigurationData>();
+  costs: Costs = {
+    fieldWeights: new Map(),
+    listSizes: new Map(),
+    typeWeights: new Map(),
+    directiveArgumentWeights: new Map(),
+  };
   customDirectiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
   definedDirectiveNames = new Set<string>();
   directiveDefinitionByName = new Map<DirectiveName, DirectiveDefinitionNode>();
@@ -691,7 +722,9 @@ export class NormalizationFactory {
     const parentTypeName =
       data.kind === Kind.FIELD_DEFINITION ? data.renamedParentTypeName || data.originalParentTypeName : data.name;
     const isAuthenticated = directiveName === AUTHENTICATED;
+    const isCost = directiveName === COST;
     const isField = isFieldData(data);
+    const isListSize = directiveName === LIST_SIZE;
     const isOverride = directiveName === OVERRIDE;
     const isRequiresScopes = directiveName === REQUIRES_SCOPES;
     const isSemanticNonNull = directiveName === SEMANTIC_NON_NULL;
@@ -714,6 +747,11 @@ export class NormalizationFactory {
         } else {
           data.nullLevelsBySubgraphName.set(this.subgraphName, new Set<number>([0]));
         }
+      }
+      if (isListSize && isField && !isTypeNodeListType(data.type)) {
+        errorMessages.push(
+          listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(directiveCoords, printTypeNode(data.type)),
+        );
       }
       return errorMessages;
     }
@@ -774,6 +812,11 @@ export class NormalizationFactory {
         orScopes: (argumentNode.value as ListValueNode).values,
         requiredScopes,
       });
+    }
+    if (isCost) {
+      this.handleCostDirective({ data, directiveCoords, directiveNode, errorMessages });
+    } else if (isListSize && isField) {
+      this.handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages });
     }
     if (duplicateArgumentNames.size > 0) {
       errorMessages.push(duplicateDirectiveArgumentDefinitionsErrorMessage([...duplicateArgumentNames]));
@@ -1144,6 +1187,40 @@ export class NormalizationFactory {
     return output;
   }
 
+  // extracts cost weights from @cost directives applied to arguments of directive definitions.
+  // It works on nodes of this kind: "directive @myDirective(arg1: Int @cost(weight: 5)) on FIELD"
+  extractDirectiveArgumentCosts(node: DirectiveDefinitionNode) {
+    if (!node.arguments) {
+      return;
+    }
+    const directiveName = node.name.value;
+    for (const argNode of node.arguments) {
+      if (!argNode.directives) {
+        continue;
+      }
+      for (const directive of argNode.directives) {
+        if (directive.name.value !== COST) {
+          continue;
+        }
+        const weightArg = directive.arguments?.find((a) => a.name.value === WEIGHT);
+        if (!weightArg) {
+          continue;
+        }
+        if (weightArg.value.kind !== Kind.INT) {
+          const directiveCoords = `@${directiveName}(${argNode.name.value}: ...)`;
+          this.errors.push(
+            invalidDirectiveError(COST, directiveCoords, '1st', [
+              invalidArgumentValueErrorMessage(print(weightArg.value), `@${COST}`, WEIGHT, 'Int!'),
+            ]),
+          );
+          continue;
+        }
+        const weightValue = parseInt((weightArg.value as IntValueNode).value, 10);
+        this.costs.directiveArgumentWeights.set(`${directiveName}.${argNode.name.value}`, weightValue);
+      }
+    }
+  }
+
   // returns true if the directive is custom; otherwise, false
   addDirectiveDefinitionDataByNode(node: DirectiveDefinitionNode): boolean {
     const name = node.name.value;
@@ -1152,6 +1229,7 @@ export class NormalizationFactory {
       return false;
     }
     this.definedDirectiveNames.add(name);
+    this.extractDirectiveArgumentCosts(node);
     // Normalize federation directives by replacing them with predefined definitions
     const definition = V2_DIRECTIVE_DEFINITION_BY_DIRECTIVE_NAME.get(name);
     // Add the V2 directive definitions regardless of use so the subgraph can be recognised as a V2 subgraph.
@@ -2366,6 +2444,223 @@ export class NormalizationFactory {
       );
     }
     data.nullLevelsBySubgraphName.set(this.subgraphName, levels);
+  }
+
+  handleCostDirective({ data, directiveCoords, directiveNode, errorMessages }: HandleCostDirectiveParams) {
+    const weightArg = directiveNode.arguments?.find((arg) => arg.name.value === WEIGHT);
+    if (!weightArg || weightArg.value.kind !== Kind.INT) {
+      return; // type validation handled upstream
+    }
+    const weightValue = parseInt((weightArg.value as IntValueNode).value, 10);
+    switch (data.kind) {
+      case Kind.OBJECT_TYPE_DEFINITION:
+      case Kind.SCALAR_TYPE_DEFINITION:
+      case Kind.ENUM_TYPE_DEFINITION:
+        this.costs.typeWeights.set(data.name, weightValue);
+        break;
+      case Kind.FIELD_DEFINITION: {
+        const typeName = data.renamedParentTypeName || data.originalParentTypeName;
+        const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
+        if (!parentTypeData) {
+          // undefined types are handled elsewhere
+          break;
+        }
+        if (parentTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+          errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
+          break;
+        }
+        const fieldCoords = `${typeName}.${data.name}`;
+        const fieldWeight = getValueOrDefault(
+          this.costs.fieldWeights,
+          fieldCoords,
+          (): FieldWeightConfiguration => ({
+            typeName,
+            fieldName: data.name,
+            argumentWeights: new Map(),
+          }),
+        );
+        fieldWeight.weight = weightValue;
+        break;
+      }
+      case Kind.INPUT_VALUE_DEFINITION:
+      case Kind.ARGUMENT: {
+        const ivData = data as InputValueData;
+        if (ivData.isArgument && ivData.fieldName) {
+          const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
+          const parentTypeData = this.parentDefinitionDataByTypeName.get(typeName);
+          if (!parentTypeData) {
+            // undefined types are handled elsewhere
+            break;
+          }
+          if (parentTypeData.kind === Kind.INTERFACE_TYPE_DEFINITION) {
+            errorMessages.push(costOnInterfaceFieldErrorMessage(directiveCoords));
+            break;
+          }
+          const parentFieldCoords = `${typeName}.${ivData.fieldName}`;
+          const fieldWeight = getValueOrDefault(
+            this.costs.fieldWeights,
+            parentFieldCoords,
+            (): FieldWeightConfiguration => ({
+              typeName,
+              fieldName: ivData.fieldName!,
+              argumentWeights: new Map(),
+            }),
+          );
+          fieldWeight.argumentWeights.set(ivData.name, weightValue);
+        } else {
+          const typeName = ivData.renamedParentTypeName || ivData.originalParentTypeName;
+          const fieldCoords = `${typeName}.${ivData.name}`;
+          const fieldWeight = getValueOrDefault(
+            this.costs.fieldWeights,
+            fieldCoords,
+            (): FieldWeightConfiguration => ({
+              typeName,
+              fieldName: ivData.name,
+              argumentWeights: new Map(),
+            }),
+          );
+          fieldWeight.weight = weightValue;
+        }
+        break;
+      }
+    }
+  }
+
+  handleListSizeDirective({ data, directiveCoords, directiveNode, errorMessages }: HandleListSizeDirectiveParams) {
+    const args = directiveNode.arguments;
+    if (!args) {
+      return;
+    }
+
+    let hasSizedFields = false;
+    const typeName = data.renamedParentTypeName || data.originalParentTypeName;
+    const listSizeConfig: FieldListSizeConfiguration = {
+      typeName,
+      fieldName: data.name,
+      slicingArguments: [],
+      sizedFields: [],
+      requireOneSlicingArgument: true, // per IBM cost spec
+    };
+
+    for (const argumentNode of args) {
+      const argumentName = argumentNode.name.value;
+      // type validation handled upstream
+      switch (argumentName) {
+        case ASSUMED_SIZE:
+          if (argumentNode.value.kind === Kind.INT) {
+            listSizeConfig.assumedSize = parseInt((argumentNode.value as IntValueNode).value, 10);
+          }
+          break;
+        case REQUIRE_ONE_SLICING_ARGUMENT:
+          if (argumentNode.value.kind === Kind.BOOLEAN) {
+            listSizeConfig.requireOneSlicingArgument = argumentNode.value.value;
+          }
+          break;
+        case SLICING_ARGUMENTS: {
+          let argumentValues: ReadonlyArray<ValueNode>;
+          if (argumentNode.value.kind === Kind.LIST) {
+            argumentValues = (argumentNode.value as ListValueNode).values;
+          } else if (argumentNode.value.kind === Kind.STRING) {
+            argumentValues = [argumentNode.value];
+          } else {
+            continue;
+          }
+          for (const valueNode of argumentValues) {
+            if (valueNode.kind !== Kind.STRING) {
+              continue;
+            }
+
+            const slicingArgName = (valueNode as StringValueNode).value;
+            const argData = data.argumentDataByName.get(slicingArgName);
+            if (!argData) {
+              errorMessages.push(listSizeInvalidSlicingArgumentErrorMessage(directiveCoords, slicingArgName));
+              continue;
+            }
+
+            const unwrappedType = argData.type.kind === Kind.NON_NULL_TYPE ? argData.type.type : argData.type;
+            if (unwrappedType.kind === Kind.LIST_TYPE || argData.namedTypeName !== INT_SCALAR) {
+              errorMessages.push(
+                listSizeSlicingArgumentNotIntErrorMessage(directiveCoords, slicingArgName, printTypeNode(argData.type)),
+              );
+              continue;
+            }
+
+            listSizeConfig.slicingArguments.push(slicingArgName);
+          }
+          break;
+        }
+        case SIZED_FIELDS: {
+          let fieldValues: ReadonlyArray<ValueNode>;
+          if (argumentNode.value.kind === Kind.LIST) {
+            fieldValues = (argumentNode.value as ListValueNode).values;
+          } else if (argumentNode.value.kind === Kind.STRING) {
+            fieldValues = [argumentNode.value];
+          } else {
+            continue;
+          }
+          if (fieldValues.length < 1) {
+            continue;
+          }
+          hasSizedFields = true;
+          const returnTypeName = data.namedTypeName;
+          const returnTypeData = this.parentDefinitionDataByTypeName.get(returnTypeName);
+          if (!returnTypeData || !isParentDataCompositeOutputType(returnTypeData)) {
+            errorMessages.push(listSizeSizedFieldsInvalidReturnTypeErrorMessage(directiveCoords, returnTypeName));
+            continue;
+          }
+          for (const valueNode of fieldValues) {
+            if (valueNode.kind !== Kind.STRING) {
+              continue;
+            }
+            const sizedFieldName = (valueNode as StringValueNode).value;
+            const fieldData = returnTypeData.fieldDataByName.get(sizedFieldName);
+            if (!fieldData) {
+              errorMessages.push(
+                listSizeSizedFieldNotFoundErrorMessage(directiveCoords, sizedFieldName, returnTypeName),
+              );
+              continue;
+            }
+            if (!isTypeNodeListType(fieldData.type)) {
+              errorMessages.push(
+                listSizeSizedFieldNotListErrorMessage(
+                  directiveCoords,
+                  sizedFieldName,
+                  returnTypeName,
+                  printTypeNode(fieldData.type),
+                ),
+              );
+              continue;
+            }
+            listSizeConfig.sizedFields.push(sizedFieldName);
+          }
+          break;
+        }
+      }
+    }
+
+    if (!hasSizedFields && !isTypeNodeListType(data.type)) {
+      errorMessages.push(
+        listSizeFieldMustReturnListOrUseSizedFieldsErrorMessage(directiveCoords, printTypeNode(data.type)),
+      );
+    }
+    if (hasSizedFields && isTypeNodeListType(data.type)) {
+      errorMessages.push(listSizeSizedFieldsOnListsErrorMessage(directiveCoords, printTypeNode(data.type)));
+    }
+
+    if (listSizeConfig.assumedSize !== undefined && listSizeConfig.slicingArguments.length > 0) {
+      if (listSizeConfig.requireOneSlicingArgument) {
+        errorMessages.push(listSizeAssumedSizeWithRequiredSlicingArgumentErrorMessage(directiveCoords));
+      } else {
+        for (const slicingArgName of listSizeConfig.slicingArguments) {
+          const argData = data.argumentDataByName.get(slicingArgName);
+          if (argData?.defaultValue) {
+            errorMessages.push(listSizeAssumedSizeSlicingArgDefaultErrorMessage(directiveCoords, slicingArgName));
+          }
+        }
+      }
+    }
+    const fieldCoords = `${typeName}.${data.name}`;
+    this.costs.listSizes.set(fieldCoords, listSizeConfig);
   }
 
   extractRequiredScopes({ directiveCoords, orScopes, requiredScopes }: HandleRequiresScopesDirectiveParams) {
@@ -4392,6 +4687,7 @@ export class NormalizationFactory {
       concreteTypeNamesByAbstractTypeName: this.concreteTypeNamesByAbstractTypeName,
       conditionalFieldDataByCoordinates: this.conditionalFieldDataByCoords,
       configurationDataByTypeName: this.configurationDataByTypeName,
+      costs: this.costs,
       directiveDefinitionByName: this.directiveDefinitionByName,
       entityDataByTypeName: this.entityDataByTypeName,
       entityInterfaces: this.entityInterfaceDataByTypeName,
@@ -4503,6 +4799,7 @@ export function batchNormalize({ options, subgraphs }: BatchNormalizeParams): Ba
       internalSubgraphBySubgraphName.set(subgraphName, {
         conditionalFieldDataByCoordinates: normalizationResult.conditionalFieldDataByCoordinates,
         configurationDataByTypeName: normalizationResult.configurationDataByTypeName,
+        costs: normalizationResult.costs,
         definitions: normalizationResult.subgraphAST,
         directiveDefinitionByName: normalizationResult.directiveDefinitionByName,
         entityInterfaces: normalizationResult.entityInterfaces,

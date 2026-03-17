@@ -35,6 +35,7 @@ describe('Apollo Federated Graph', (ctx) => {
 
   test('Should be able to create a Apollo Federated Graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const inventorySubgraph = genID('inventory');
     const pandasSubgraph = genID('pandas');
@@ -223,7 +224,5 @@ describe('Apollo Federated Graph', (ctx) => {
     expect(graph.subgraphs[3]?.labels).toEqual([label]);
     expect(graph.subgraphs[3]?.lastUpdatedAt).toBeTruthy();
     expect(graph.subgraphs[3]?.routingURL).toEqual('http://localhost:8084');
-
-    await server.close();
   });
 });

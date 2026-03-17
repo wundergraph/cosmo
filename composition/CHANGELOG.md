@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.54.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.53.0...@wundergraph/composition@0.54.0) (2026-03-17)
+
+### Features
+
+* expose costs ([#2470](https://github.com/wundergraph/cosmo/issues/2470)) ([d43aa40](https://github.com/wundergraph/cosmo/commit/d43aa40f2429fbb212e5618cd5586774e1b6ae7e)) (@ysmolski)
+
 # [0.53.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/composition@0.52.0...@wundergraph/composition@0.53.0) (2026-03-10)
 
 ### Features

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import {
   afterAllSetup,
@@ -33,11 +33,12 @@ describe('ValidateAndFetchPluginData', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should successfully validate and fetch plugin data for new plugin', async () => {
+  test('Should successfully validate and fetch plugin data for new plugin', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' }, // Plan that allows plugins
     });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
     const label = genUniqueLabel('test');
@@ -54,15 +55,14 @@ describe('ValidateAndFetchPluginData', () => {
     expect(response.pushToken.length).toBeGreaterThan(0);
     expect(response.reference).toBeDefined();
     expect(response.reference).toMatch(/^[\da-f-]+\/[\da-f-]+$/); // organizationId/subgraphId format
-
-    await server.close();
   });
 
-  test('Should increment version for existing plugin', async () => {
+  test('Should increment version for existing plugin', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
     const label = genUniqueLabel('test');
@@ -103,15 +103,14 @@ describe('ValidateAndFetchPluginData', () => {
     expect(response.newVersion).toBe('v2'); // Should increment from v1 to v2
     expect(response.pushToken).toBeDefined();
     expect(response.reference).toBeDefined();
-
-    await server.close();
   });
 
-  test('Should fail when namespace does not exist', async () => {
+  test('Should fail when namespace does not exist', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
     const nonExistentNamespace = genID('nonexistent');
@@ -127,15 +126,14 @@ describe('ValidateAndFetchPluginData', () => {
     expect(response.newVersion).toBe('');
     expect(response.pushToken).toBe('');
     expect(response.reference).toBe('');
-
-    await server.close();
   });
 
-  test('Should fail when plugin limit is reached', async () => {
+  test('Should fail when plugin limit is reached', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'developer@1' }, // Developer plan has 0 plugin limit
     });
+    testContext.onTestFinished(() => server.close());
 
     // Create 3 plugins successfully
     for (let i = 1; i <= 3; i++) {
@@ -166,15 +164,14 @@ describe('ValidateAndFetchPluginData', () => {
     expect(response.newVersion).toBe('');
     expect(response.pushToken).toBe('');
     expect(response.reference).toBe('');
-
-    await server.close();
   });
 
-  test('Should fail with invalid plugin name', async () => {
+  test('Should fail with invalid plugin name', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const invalidPluginName = ''; // Empty name is invalid
     const label = genUniqueLabel('test');
@@ -192,15 +189,14 @@ describe('ValidateAndFetchPluginData', () => {
     expect(response.newVersion).toBe('');
     expect(response.pushToken).toBe('');
     expect(response.reference).toBe('');
-
-    await server.close();
   });
 
-  test('Should fail with invalid labels', async () => {
+  test('Should fail with invalid labels', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
     const invalidLabel = { key: '', value: 'test' }; // Empty key is invalid
@@ -216,15 +212,14 @@ describe('ValidateAndFetchPluginData', () => {
     expect(response.newVersion).toBe('');
     expect(response.pushToken).toBe('');
     expect(response.reference).toBe('');
-
-    await server.close();
   });
 
-  test('Should work with existing plugin subgraph', async () => {
+  test('Should work with existing plugin subgraph', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
     const label = genUniqueLabel('test');
@@ -249,15 +244,14 @@ describe('ValidateAndFetchPluginData', () => {
     expect(response.newVersion).toBe('v1'); // Default version for plugin without published version
     expect(response.pushToken).toBeDefined();
     expect(response.reference).toBeDefined();
-
-    await server.close();
   });
 
-  test('Should generate valid JWT push token with correct payload', async () => {
+  test('Should generate valid JWT push token with correct payload', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
     const label = genUniqueLabel('test');
@@ -286,8 +280,6 @@ describe('ValidateAndFetchPluginData', () => {
     expect(payload.access[0].name).toBe(response.reference);
     expect(payload.access[0].tag).toBe(response.newVersion);
     expect(payload.access[0].actions).toEqual(['push', 'pull']);
-
-    await server.close();
   });
 
   test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
@@ -299,6 +291,7 @@ describe('ValidateAndFetchPluginData', () => {
         enabledFeatures: ['rbac'],
         setupBilling: { plan: 'launch@1' },
       });
+      onTestFinished(() => server.close());
 
       const pluginName = genID('plugin');
       const label = genUniqueLabel('test');
@@ -318,18 +311,17 @@ describe('ValidateAndFetchPluginData', () => {
       expect(response.newVersion).toBe('v1');
       expect(response.pushToken).toBeDefined();
       expect(response.reference).toBeDefined();
-
-      await server.close();
     },
   );
 
-  test('Should fail when user has insufficient permissions', async () => {
+  test('Should fail when user has insufficient permissions', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({
       dbname,
       enableMultiUsers: true,
       enabledFeatures: ['rbac'],
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
     const label = genUniqueLabel('test');
@@ -347,15 +339,14 @@ describe('ValidateAndFetchPluginData', () => {
     });
 
     expect(response.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
-  test('Should handle complex plugin names with valid separators', async () => {
+  test('Should handle complex plugin names with valid separators', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const complexPluginName = 'org.service-name@v1/plugin_test.example';
     const label = genUniqueLabel('test');
@@ -370,15 +361,14 @@ describe('ValidateAndFetchPluginData', () => {
     expect(response.newVersion).toBe('v1');
     expect(response.pushToken).toBeDefined();
     expect(response.reference).toBeDefined();
-
-    await server.close();
   });
 
-  test('Should handle multiple labels correctly', async () => {
+  test('Should handle multiple labels correctly', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
     const labels = [genUniqueLabel('env'), genUniqueLabel('team'), genUniqueLabel('version')];
@@ -393,15 +383,14 @@ describe('ValidateAndFetchPluginData', () => {
     expect(response.newVersion).toBe('v1');
     expect(response.pushToken).toBeDefined();
     expect(response.reference).toBeDefined();
-
-    await server.close();
   });
 
-  test('Should work with empty labels array', async () => {
+  test('Should work with empty labels array', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
 
@@ -415,15 +404,14 @@ describe('ValidateAndFetchPluginData', () => {
     expect(response.newVersion).toBe('v1');
     expect(response.pushToken).toBeDefined();
     expect(response.reference).toBeDefined();
-
-    await server.close();
   });
 
-  test('Should handle high version numbers correctly', async () => {
+  test('Should handle high version numbers correctly', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
     const label = genUniqueLabel('test');
@@ -463,7 +451,5 @@ describe('ValidateAndFetchPluginData', () => {
     expect(response.newVersion).toBe('v100'); // Should increment to v100
     expect(response.pushToken).toBeDefined();
     expect(response.reference).toBeDefined();
-
-    await server.close();
   });
 });

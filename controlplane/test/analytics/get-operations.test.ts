@@ -38,8 +38,10 @@ describe('GetOperations', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should return ERR_ANALYTICS_DISABLED when ClickHouse client is not available', async () => {
+  test('Should return ERR_ANALYTICS_DISABLED when ClickHouse client is not available', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient: undefined });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -61,12 +63,12 @@ describe('GetOperations', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_ANALYTICS_DISABLED);
     expect(response.operations).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return ERR_NOT_FOUND when federated graph does not exist', async () => {
+  test('Should return ERR_NOT_FOUND when federated graph does not exist', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('nonExistentGraph');
 
     const response = await client.getOperations({
@@ -77,12 +79,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(response.response?.details).toContain(`Federated graph '${fedGraphName}' not found`);
     expect(response.operations).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return ERR when limit is less than 1', async () => {
+  test('Should return ERR when limit is less than 1', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -106,12 +108,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
     expect(response.response?.details).toBe('Limit must be between 1 and 1000');
     expect(response.operations).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return ERR when limit is greater than 1000', async () => {
+  test('Should return ERR when limit is greater than 1000', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -135,12 +137,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
     expect(response.response?.details).toBe('Limit must be between 1 and 1000');
     expect(response.operations).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return ERR when offset is negative', async () => {
+  test('Should return ERR when offset is negative', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -164,12 +166,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
     expect(response.response?.details).toBe('Offset must be >= 0');
     expect(response.operations).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return ERR when date range is invalid', async () => {
+  test('Should return ERR when date range is invalid', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -197,12 +199,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
     expect(response.response?.details).toBe('Invalid date range');
     expect(response.operations).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return empty operations when no operations exist', async () => {
+  test('Should return empty operations when no operations exist', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -227,12 +229,12 @@ describe('GetOperations', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.operations).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return operations sorted by latency (default)', async () => {
+  test('Should return operations sorted by latency (default)', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -280,12 +282,12 @@ describe('GetOperations', () => {
     expect(response.operations[0]?.name).toBe('Operation1');
     expect(response.operations[0]?.metric.case).toBe('latency');
     expect(response.operations[0]?.metric.value).toBe(100.5);
-
-    await server.close();
   });
 
-  test('Should return operations sorted by request count', async () => {
+  test('Should return operations sorted by request count', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -334,12 +336,12 @@ describe('GetOperations', () => {
     expect(response.operations[0]?.name).toBe('Operation1');
     expect(response.operations[0]?.metric.case).toBe('requestCount');
     expect(response.operations[0]?.metric.value).toBe(BigInt(1000));
-
-    await server.close();
   });
 
-  test('Should return operations sorted by error percentage', async () => {
+  test('Should return operations sorted by error percentage', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -388,12 +390,12 @@ describe('GetOperations', () => {
     expect(response.operations[0]?.name).toBe('Operation1');
     expect(response.operations[0]?.metric.case).toBe('errorPercentage');
     expect(response.operations[0]?.metric.value).toBe(10);
-
-    await server.close();
   });
 
-  test('Should filter operations by client name', async () => {
+  test('Should filter operations by client name', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -430,12 +432,12 @@ describe('GetOperations', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.operations).toHaveLength(1);
-
-    await server.close();
   });
 
-  test('Should not include operation content by default', async () => {
+  test('Should not include operation content by default', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -472,12 +474,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.operations).toHaveLength(1);
     expect(response.operations[0]?.content).toBeUndefined();
-
-    await server.close();
   });
 
-  test('Should include operation content when includeContent is true', async () => {
+  test('Should include operation content when includeContent is true', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -523,12 +525,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.operations).toHaveLength(1);
     expect(response.operations[0]?.content).toBe('query { hello }');
-
-    await server.close();
   });
 
-  test('Should not include operation content when includeContent is false', async () => {
+  test('Should not include operation content when includeContent is false', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -569,12 +571,12 @@ describe('GetOperations', () => {
 
     // Should not call getOperationContent
     expect(chClient.queryPromise).toHaveBeenCalledTimes(1);
-
-    await server.close();
   });
 
-  test('Should not include hasDeprecatedFields by default', async () => {
+  test('Should not include hasDeprecatedFields by default', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -616,12 +618,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.operations).toHaveLength(1);
     expect(response.operations[0]?.hasDeprecatedFields).toBeUndefined();
-
-    await server.close();
   });
 
-  test('Should include hasDeprecatedFields when includeHasDeprecatedFields is true', async () => {
+  test('Should include hasDeprecatedFields when includeHasDeprecatedFields is true', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -664,12 +666,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.operations).toHaveLength(1);
     expect(response.operations[0]?.hasDeprecatedFields).toBe(true);
-
-    await server.close();
   });
 
-  test('Should filter operations with deprecated fields only when requested', async () => {
+  test('Should filter operations with deprecated fields only when requested', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -713,12 +715,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.operations.length).toBe(1);
     expect(response.operations[0]?.hasDeprecatedFields).toBe(true);
-
-    await server.close();
   });
 
-  test('Should handle search query', async () => {
+  test('Should handle search query', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -756,12 +758,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.operations).toHaveLength(1);
     expect(response.operations[0]?.name).toBe('SearchOperation');
-
-    await server.close();
   });
 
-  test('Should handle different operation types correctly', async () => {
+  test('Should handle different operation types correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -818,12 +820,12 @@ describe('GetOperations', () => {
     expect(response.operations[0]?.type).toBe(GetOperationsResponse_OperationType.QUERY); // QUERY
     expect(response.operations[1]?.type).toBe(GetOperationsResponse_OperationType.MUTATION); // MUTATION
     expect(response.operations[2]?.type).toBe(GetOperationsResponse_OperationType.SUBSCRIPTION); // SUBSCRIPTION
-
-    await server.close();
   });
 
-  test('Should use default limit of 100 when not specified', async () => {
+  test('Should use default limit of 100 when not specified', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -858,12 +860,12 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     // Default limit is 100, so should return all 50 operations
     expect(response.operations.length).toBe(50);
-
-    await server.close();
   });
 
-  test('Should use default offset of 0 when not specified', async () => {
+  test('Should use default offset of 0 when not specified', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -900,7 +902,5 @@ describe('GetOperations', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.operations.length).toBe(1);
     expect(response.operations[0]?.name).toBe('Operation1');
-
-    await server.close();
   });
 });

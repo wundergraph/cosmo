@@ -2372,6 +2372,240 @@ func TestWebSockets(t *testing.T) {
 		})
 	})
 
+	t.Run("cost control", func(t *testing.T) {
+		t.Parallel()
+
+		t.Run("query cost exceeds limit in enforce mode", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 9,
+						EstimatedListSize: 5,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"{ employees { id } }"}`),
+				})
+				require.NoError(t, err)
+
+				var res testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &res)
+				require.NoError(t, err)
+				require.Equal(t, "error", res.Type)
+				require.Equal(t, "1", res.ID)
+				require.Contains(t, string(res.Payload), "exceeds the maximum allowed limit")
+
+				// Uncomment or remove when a subscription overhaul is merged into main:
+				// var complete testenv.WebSocketMessage
+				// err = testenv.WSReadJSON(t, conn, &complete)
+				// require.NoError(t, err)
+				// require.Equal(t, "complete", complete.Type)
+				// require.Equal(t, "1", complete.ID)
+				// xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			})
+		})
+
+		t.Run("query cost within limit in enforce mode", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 50,
+						EstimatedListSize: 5,
+						ExposeHeaders:     true,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"{ employee(id:1) { id } }"}`),
+				})
+				require.NoError(t, err)
+
+				var res testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &res)
+				require.NoError(t, err)
+				require.Equal(t, "next", res.Type)
+				require.Equal(t, "1", res.ID)
+
+				var complete testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &complete)
+				require.NoError(t, err)
+				require.Equal(t, "complete", complete.Type)
+				require.Equal(t, "1", complete.ID)
+				xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			})
+		})
+
+		t.Run("query cost not enforced in measure mode", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						EstimatedListSize: 5,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"{ employees { id } }"}`),
+				})
+				require.NoError(t, err)
+
+				var res testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &res)
+				require.NoError(t, err)
+				require.Equal(t, "next", res.Type)
+				require.Equal(t, "1", res.ID)
+
+				var complete testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &complete)
+				require.NoError(t, err)
+				require.Equal(t, "complete", complete.Type)
+				require.Equal(t, "1", complete.ID)
+				xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			})
+		})
+
+		t.Run("subscription cost exceeds limit in enforce mode", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+				EnableNats:               true,
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 1,
+						EstimatedListSize: 5,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id details { forename surname } } }"}`),
+				})
+				require.NoError(t, err)
+
+				var res testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &res)
+				require.NoError(t, err)
+				require.Equal(t, "error", res.Type)
+				require.Equal(t, "1", res.ID)
+				require.Contains(t, string(res.Payload), "exceeds the maximum allowed limit")
+
+				// Uncomment or remove when a subscription overhaul is merged into main:
+				// var complete testenv.WebSocketMessage
+				// err = testenv.WSReadJSON(t, conn, &complete)
+				// require.NoError(t, err)
+				// require.Equal(t, "complete", complete.Type)
+				// require.Equal(t, "1", complete.ID)
+				// xEnv.WaitForSubscriptionCount(0, time.Second*5)
+			})
+		})
+
+		t.Run("subscription cost within limit in enforce mode", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+				EnableNats:               true,
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeEnforce,
+						MaxEstimatedLimit: 100,
+						EstimatedListSize: 5,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id } }"}`),
+				})
+				require.NoError(t, err)
+
+				xEnv.WaitForSubscriptionCount(1, time.Second*15)
+				xEnv.WaitForTriggerCount(1, time.Second*15)
+				subject := xEnv.GetPubSubName("employeeUpdated.3")
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
+
+				var res testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &res)
+				require.NoError(t, err)
+				require.Equal(t, "next", res.Type)
+				require.Equal(t, "1", res.ID)
+				require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3}}}`, string(res.Payload))
+
+				require.NoError(t, conn.Close())
+				xEnv.WaitForSubscriptionCount(0, time.Second*15)
+			})
+		})
+
+		t.Run("subscription cost not enforced in measure mode", func(t *testing.T) {
+			t.Parallel()
+
+			testenv.Run(t, &testenv.Config{
+				RouterConfigJSONTemplate: testenv.ConfigWithEdfsNatsJSONTemplate,
+				EnableNats:               true,
+				ModifySecurityConfiguration: func(securityConfiguration *config.SecurityConfiguration) {
+					securityConfiguration.CostControl = &config.CostControl{
+						Enabled:           true,
+						Mode:              config.CostControlModeMeasure,
+						EstimatedListSize: 5,
+					}
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				conn := xEnv.InitGraphQLWebSocketConnection(nil, nil, nil)
+				err := testenv.WSWriteJSON(t, conn, testenv.WebSocketMessage{
+					ID:      "1",
+					Type:    "subscribe",
+					Payload: []byte(`{"query":"subscription { employeeUpdated(employeeID: 3) { id } }"}`),
+				})
+				require.NoError(t, err)
+
+				xEnv.WaitForSubscriptionCount(1, time.Second*15)
+				xEnv.WaitForTriggerCount(1, time.Second*15)
+				subject := xEnv.GetPubSubName("employeeUpdated.3")
+				xEnv.NATSPublishUntilReceived(xEnv.NatsConnectionDefault, subject, []byte(`{"id":3,"__typename": "Employee"}`), 1, time.Second*15)
+
+				var res testenv.WebSocketMessage
+				err = testenv.WSReadJSON(t, conn, &res)
+				require.NoError(t, err)
+				require.Equal(t, "next", res.Type)
+				require.Equal(t, "1", res.ID)
+				require.JSONEq(t, `{"data":{"employeeUpdated":{"id":3}}}`, string(res.Payload))
+
+				require.NoError(t, conn.Close())
+				xEnv.WaitForSubscriptionCount(0, time.Second*15)
+			})
+		})
+	})
+
 }
 
 func TestFlakyWebSockets(t *testing.T) {

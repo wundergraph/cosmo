@@ -74,9 +74,7 @@ describe('Authentication', (ctx) => {
       },
     });
 
-    testContext.onTestFailed(async () => {
-      await server.close();
-    });
+    testContext.onTestFinished(() => server.close());
 
     const addr = await server.listen({
       port: 0,
@@ -97,7 +95,5 @@ describe('Authentication', (ctx) => {
     });
 
     expect(createPandasSubgraph.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHENTICATED);
-
-    await server.close();
   });
 });

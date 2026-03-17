@@ -3173,6 +3173,22 @@ message ListOrganizationsResponse {
    repeated OrganizationMembership organizations = 2;
 }
 
+message RecomposeGraphRequest {
+  string name = 1;
+  string namespace = 2;
+  bool is_monograph = 3;
+  optional int32 limit = 4;
+  optional bool disable_resolvability_validation = 5;
+}
+
+message RecomposeGraphResponse {
+  Response response = 1;
+  repeated CompositionError compositionErrors = 2;
+  repeated DeploymentError deploymentErrors = 3;
+  repeated CompositionWarning compositionWarnings = 4;
+  optional SubgraphPublishStats errorCounts = 5;
+}
+
 service PlatformService {
   // PlaygroundScripts
   rpc CreatePlaygroundScript(CreatePlaygroundScriptRequest) returns (CreatePlaygroundScriptResponse) {}
@@ -3566,4 +3582,6 @@ service PlatformService {
   rpc UnlinkSubgraph(UnlinkSubgraphRequest) returns (UnlinkSubgraphResponse) {}
   // VerifyAPIKeyGraphAccess checks if the token or the jwt has organization admin or developer  and checks if the token has permissions to write to the graph
   rpc VerifyAPIKeyGraphAccess(VerifyAPIKeyGraphAccessRequest) returns (VerifyAPIKeyGraphAccessResponse) {}
+  // RecomposeGraph triggers a recomposition of the federated graph (or monograph) using its current subgraphs
+  rpc RecomposeGraph(RecomposeGraphRequest) returns (RecomposeGraphResponse) {}
 }

@@ -4,6 +4,24 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.207.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.206.0...controlplane@0.207.0) (2026-03-17)
+
+### Features
+
+* expose costs ([#2470](https://github.com/wundergraph/cosmo/issues/2470)) ([d43aa40](https://github.com/wundergraph/cosmo/commit/d43aa40f2429fbb212e5618cd5586774e1b6ae7e)) (@ysmolski)
+
+# [0.206.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.205.0...controlplane@0.206.0) (2026-03-17)
+
+### Features
+
+* add graph recompose ([#2652](https://github.com/wundergraph/cosmo/issues/2652)) ([8bdb7d0](https://github.com/wundergraph/cosmo/commit/8bdb7d08485cb8bde84efb033663e49ed23e060f)) (@Aenimus)
+
+# [0.205.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.204.0...controlplane@0.205.0) (2026-03-17)
+
+### Features
+
+* configure composeGraphsPool to use child_process runtime ([#2657](https://github.com/wundergraph/cosmo/issues/2657)) ([76c16ce](https://github.com/wundergraph/cosmo/commit/76c16ce7fd9134d8fc5b37d97e6bb414cab2edd9)) (@StarpTech)
+
 # [0.204.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.203.1...controlplane@0.204.0) (2026-03-16)
 
 ### Features

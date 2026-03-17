@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -28,10 +28,10 @@ describe('List feature subgraphs', (ctx) => {
 
   test('Should be able to list feature subgraphs of different namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
-    const flagName = genID('flag');
 
     const createNamespaceResp = await client.createNamespace({
       name: 'prod',
@@ -99,16 +99,14 @@ describe('List feature subgraphs', (ctx) => {
 
     expect(listFeatureSubgraphsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(listFeatureSubgraphsResp.response?.details).toBe(`Could not find namespace prod1`);
-
-    await server.close();
   });
 
   test('Should be able to list feature subgraphs of different namespace when using legacy API key', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
-    const flagName = genID('flag');
 
     const createNamespaceResp = await client.createNamespace({
       name: 'prod',
@@ -181,14 +179,13 @@ describe('List feature subgraphs', (ctx) => {
 
     expect(listFeatureSubgraphsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(listFeatureSubgraphsResp.response?.details).toBe(`Could not find namespace prod1`);
-
-    await server.close();
   });
 
   test.each(['subgraph-admin', 'subgraph-publisher', 'subgraph-viewer'])(
     '%s should be able to list feature subgraphs from allowed namespaces',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph');
       const featureSubgraphName = genID('featureSubgraph');
@@ -261,8 +258,6 @@ describe('List feature subgraphs', (ctx) => {
 
       expect(listFeatureSubgraphsResp.response?.code).toBe(EnumStatusCode.OK);
       expect(listFeatureSubgraphsResp.count).toBe(1);
-
-      await server.close();
     },
   );
 });

@@ -198,6 +198,8 @@ describe.sequential('Delete user tests', (ctx) => {
 
   test('User and their organizations are deleted', async (testContext) => {
     const { client, server, users, keycloakClient, authenticator, realm } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const mainUserContext = users[TestUser.adminAliceCompanyA];
     const tempUserContext = await createTempUser(server.db, keycloakClient, realm, mainUserContext.organizationSlug);
 
@@ -225,12 +227,12 @@ describe.sequential('Delete user tests', (ctx) => {
     expect(orgMembersRes2.response?.code).toBe(EnumStatusCode.OK);
     expect(orgMembersRes2.members).toHaveLength(1);
     expect(orgMembersRes2.members[0].userID).toEqual(mainUserContext.userId);
-
-    await server.close();
   });
 
   test('User cannot be deleted if they are the only admin of a multi member org', async (testContext) => {
-    const { client, server, users, keycloakClient, authenticator, realm } = await SetupTest({ dbname });
+    const { client, server, users, keycloakClient, realm } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const mainUserContext = users[TestUser.adminAliceCompanyA];
     const tempUserContext = await createTempUser(server.db, keycloakClient, realm, mainUserContext.organizationSlug);
 
@@ -247,12 +249,12 @@ describe.sequential('Delete user tests', (ctx) => {
     expect(res.response?.details).toEqual(
       'Cannot delete because you are the only admin of organizations with several members: company-a.',
     );
-
-    await server.close();
   });
 
   test('API keys created by user is deleted upon deletion', async (testContext) => {
     const { client, server, users, keycloakClient, authenticator, realm } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const mainUserContext = users[TestUser.adminAliceCompanyA];
     const tempUserContext = await createTempUser(server.db, keycloakClient, realm, mainUserContext.organizationSlug);
 
@@ -274,12 +276,12 @@ describe.sequential('Delete user tests', (ctx) => {
     expect(apiKeysRes2.response?.code).toBe(EnumStatusCode.OK);
     expect(apiKeysRes2.apiKeys).toHaveLength(1);
     expect(apiKeysRes2.apiKeys[0].createdBy).toEqual(mainUserContext.email);
-
-    await server.close();
   });
 
   test('Compositions retains created by user email', async (testContext) => {
     const { client, server, users, keycloakClient, authenticator, realm } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const mainUserContext = users[TestUser.adminAliceCompanyA];
     const tempUserContext = await createTempUser(server.db, keycloakClient, realm, mainUserContext.organizationSlug);
 
@@ -319,8 +321,6 @@ describe.sequential('Delete user tests', (ctx) => {
     expect(compositionsRes.response?.code).toBe(EnumStatusCode.OK);
     expect(compositionsRes.compositions).toHaveLength(1);
     expect(compositionsRes.compositions[0].createdBy).toEqual(tempUserContext.email);
-
-    await server.close();
   });
 
   test('SSO configuration is deleted on keycloak', async (testContext) => {
@@ -328,6 +328,8 @@ describe.sequential('Delete user tests', (ctx) => {
       dbname,
       enabledFeatures: ['oidc'],
     });
+    testContext.onTestFinished(() => server.close());
+
     const mainUserContext = users[TestUser.adminAliceCompanyA];
     const tempUserContext = await createTempUser(server.db, keycloakClient, realm, mainUserContext.organizationSlug);
 
@@ -362,7 +364,5 @@ describe.sequential('Delete user tests', (ctx) => {
       realm,
     });
     expect(idp2).toBeNull();
-
-    await server.close();
   });
 });

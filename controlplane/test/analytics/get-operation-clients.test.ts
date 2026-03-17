@@ -34,8 +34,10 @@ describe('GetOperationClients', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should return ERR_ANALYTICS_DISABLED when ClickHouse client is not available', async () => {
+  test('Should return ERR_ANALYTICS_DISABLED when ClickHouse client is not available', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient: undefined });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -58,12 +60,12 @@ describe('GetOperationClients', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.ERR_ANALYTICS_DISABLED);
     expect(response.clients).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return ERR_NOT_FOUND when federated graph does not exist', async () => {
+  test('Should return ERR_NOT_FOUND when federated graph does not exist', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('nonExistentGraph');
 
     const response = await client.getOperationClients({
@@ -75,12 +77,12 @@ describe('GetOperationClients', () => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(response.response?.details).toContain(`Federated graph '${fedGraphName}' not found`);
     expect(response.clients).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return ERR when date range is invalid', async () => {
+  test('Should return ERR when date range is invalid', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -109,12 +111,12 @@ describe('GetOperationClients', () => {
     expect(response.response?.code).toBe(EnumStatusCode.ERR);
     expect(response.response?.details).toBe('Invalid date range');
     expect(response.clients).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return empty clients when no clients exist', async () => {
+  test('Should return empty clients when no clients exist', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -140,12 +142,12 @@ describe('GetOperationClients', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.clients).toEqual([]);
-
-    await server.close();
   });
 
-  test('Should return clients for an operation', async () => {
+  test('Should return clients for an operation', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -191,12 +193,12 @@ describe('GetOperationClients', () => {
     expect(response.clients[1]?.name).toBe('test-client');
     expect(response.clients[1]?.version).toBe('2.0.0');
     expect(response.clients[1]?.requestCount).toBe(BigInt(50));
-
-    await server.close();
   });
 
-  test('Should handle clients with empty name and version', async () => {
+  test('Should handle clients with empty name and version', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -233,12 +235,11 @@ describe('GetOperationClients', () => {
     expect(response.clients[0]?.name).toBe('');
     expect(response.clients[0]?.version).toBe('');
     expect(response.clients[0]?.requestCount).toBe(BigInt(100));
-
-    await server.close();
   });
 
-  test('Should handle clients with zero request count', async () => {
+  test('Should handle clients with zero request count', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -273,12 +274,12 @@ describe('GetOperationClients', () => {
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.clients).toHaveLength(1);
     expect(response.clients[0]?.requestCount).toBe(BigInt(0));
-
-    await server.close();
   });
 
-  test('Should handle date range correctly', async () => {
+  test('Should handle date range correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -316,12 +317,12 @@ describe('GetOperationClients', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.clients).toHaveLength(1);
-
-    await server.close();
   });
 
-  test('Should handle range parameter correctly', async () => {
+  test('Should handle range parameter correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -356,12 +357,12 @@ describe('GetOperationClients', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.clients).toHaveLength(1);
-
-    await server.close();
   });
 
-  test('Should handle operation hash with special characters', async () => {
+  test('Should handle operation hash with special characters', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -401,12 +402,12 @@ describe('GetOperationClients', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.clients).toHaveLength(1);
-
-    await server.close();
   });
 
-  test('Should handle operation name with special characters', async () => {
+  test('Should handle operation name with special characters', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -447,12 +448,12 @@ describe('GetOperationClients', () => {
 
     expect(response.response?.code).toBe(EnumStatusCode.OK);
     expect(response.clients).toHaveLength(1);
-
-    await server.close();
   });
 
-  test('Should handle multiple clients with same name but different versions', async () => {
+  test('Should handle multiple clients with same name but different versions', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
 
@@ -502,7 +503,5 @@ describe('GetOperationClients', () => {
     const testClientVersions = response.clients.filter((c) => c.name === 'test-client').map((c) => c.version);
     expect(testClientVersions).toContain('1.0.0');
     expect(testClientVersions).toContain('2.0.0');
-
-    await server.close();
   });
 });

@@ -1,6 +1,6 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -43,6 +43,7 @@ describe('Federated Graph', (ctx) => {
 
   test('Should be able to create a federated graph from subgraphs with matching labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const fedGraphName = genID('fedGraph');
@@ -83,12 +84,11 @@ describe('Federated Graph', (ctx) => {
     expect(graph.subgraphs.length).toBe(1);
     expect(graph.subgraphs[0].name).toBe(subgraph1Name);
     expect(graph.subgraphs[0].routingURL).toBe('http://localhost:8080');
-
-    await server.close();
   });
 
   test('Should be able to add subgraphs to an existing Federated Graph based on matching labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const fedGraphName = genID('fedGraph');
@@ -129,12 +129,11 @@ describe('Federated Graph', (ctx) => {
     expect(graph.subgraphs.length).toBe(1);
     expect(graph.subgraphs[0].name).toBe(subgraph1Name);
     expect(graph.subgraphs[0].routingURL).toBe('http://localhost:8080');
-
-    await server.close();
   });
 
   test('Subgraphs should not be composed into a federated graph until it is published', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -175,12 +174,11 @@ describe('Federated Graph', (ctx) => {
 
     expect(graph.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(graph.sdl).not.toBeDefined();
-
-    await server.close();
   });
 
   test('Should be able to fetch federated schema after publishing one of the two subgraphs, and after publishing both the subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -254,12 +252,11 @@ describe('Federated Graph', (ctx) => {
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
     expect(graph.sdl).toBeDefined();
     expect(graph.sdl).not.toBe('');
-
-    await server.close();
   });
 
   test('Should not be able to fetch federated schema before publishing the subgraphs and after publishing, deleting the subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -356,12 +353,11 @@ describe('Federated Graph', (ctx) => {
     });
     expect(graph.response?.code).toBe(EnumStatusCode.OK);
     expect(graph.sdl).toBeDefined();
-
-    await server.close();
   });
 
   test('Should be able to create a federated graph with a readme', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -386,12 +382,11 @@ describe('Federated Graph', (ctx) => {
     expect(graph.graph?.readme).toBe(readme);
     expect(graph.graph?.routingURL).toBe('http://localhost:8081');
     expect(graph.graph?.labelMatchers).toEqual([joinLabel(label)]);
-
-    await server.close();
   });
 
   test('Should be able to create a federated graph with a readme and update the readme later', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -425,12 +420,11 @@ describe('Federated Graph', (ctx) => {
     expect(graph.graph?.readme).toBe(updatedReadme);
     expect(graph.graph?.routingURL).toBe('http://localhost:8081');
     expect(graph.graph?.labelMatchers).toEqual([joinLabel(label)]);
-
-    await server.close();
   });
 
   test('Should be able to list federated graphs of different namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -508,12 +502,11 @@ describe('Federated Graph', (ctx) => {
 
     expect(listFedGraphsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(listFedGraphsResp.response?.details).toBe(`Could not find namespace prod1`);
-
-    await server.close();
   });
 
   test('Should be able to list federated graphs of different namespace when using legacy API key', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel();
@@ -596,14 +589,13 @@ describe('Federated Graph', (ctx) => {
 
     expect(listFedGraphsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(listFedGraphsResp.response?.details).toBe(`Could not find namespace prod1`);
-
-    await server.close();
   });
 
   test.each(['graph-admin', 'graph-viewer'])(
     '%s should be able to list federated graphs from allowed namespaces',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
       const label = genUniqueLabel();
@@ -681,13 +673,13 @@ describe('Federated Graph', (ctx) => {
 
       expect(listFedGraphsResp.response?.code).toBe(EnumStatusCode.OK);
       expect(listFedGraphsResp.graphs).toHaveLength(1);
-
-      await server.close();
     },
   );
 
   test('Should return an error if the graph name is invalid', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const label = genUniqueLabel();
 
     let createFedGraphRes = await client.createFederatedGraph({
@@ -725,7 +717,5 @@ describe('Federated Graph', (ctx) => {
     });
 
     expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.ERR_INVALID_NAME);
-
-    await server.close();
   });
 });

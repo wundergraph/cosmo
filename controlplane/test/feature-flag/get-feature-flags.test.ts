@@ -21,6 +21,7 @@ describe('List feature flags', (ctx) => {
 
   test('Should be able to list feature flags of different namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -109,7 +110,5 @@ describe('List feature flags', (ctx) => {
 
     expect(listFeatureFlagsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(listFeatureFlagsResp.response?.details).toBe(`Could not find namespace prod1`);
-
-    await server.close();
   });
 });

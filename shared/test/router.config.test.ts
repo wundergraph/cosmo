@@ -3,11 +3,7 @@ import * as path from 'node:path';
 import * as url from 'node:url';
 import { describe, expect, test } from 'vitest';
 import { printSchema } from 'graphql';
-import {
-  federateSubgraphs,
-  FederationSuccess,
-  LATEST_ROUTER_COMPATIBILITY_VERSION,
-} from '@wundergraph/composition';
+import { federateSubgraphs, FederationSuccess, LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
 import {
   EntityMapping,
   EnumMapping,

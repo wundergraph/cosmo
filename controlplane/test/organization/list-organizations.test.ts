@@ -14,14 +14,13 @@ describe('listOrganizations', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that the list of user organizations is returned successfully', async () => {
+  test('that the list of user organizations is returned successfully', async (testContext) => {
     const { client, server, users } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const listOrganizationsResponse = await client.listOrganizations({});
     expect(listOrganizationsResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(listOrganizationsResponse.organizations.length).toBe(1);
     expect(listOrganizationsResponse.organizations[0].id).toBe(users.adminAliceCompanyA.organizationId);
-
-    await server.close();
   });
 });

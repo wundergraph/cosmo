@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
@@ -52,6 +52,8 @@ describe('federated-graph version tests', () => {
       '%s should be able to read the version of a federated graph',
       async (role) => {
         const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+        onTestFinished(() => server.close());
+
         const namespace = genID('namespace').toLowerCase();
         await createNamespace(client, namespace);
         const subgraphName = genID('subgraph');
@@ -83,8 +85,6 @@ describe('federated-graph version tests', () => {
         expect(response.response!.code).toBe(EnumStatusCode.OK);
         expect(response.graph).toBeDefined();
         expect(response.graph!.routerCompatibilityVersion).toStrictEqual(ROUTER_COMPATIBILITY_VERSION_ONE);
-
-        await server.close();
       },
     );
 
@@ -92,6 +92,8 @@ describe('federated-graph version tests', () => {
       '%s should be able to read the version of a federated graph of allowed namespaces',
       async (role) => {
         const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+        onTestFinished(() => server.close());
+
         const namespace = genID('namespace').toLowerCase();
         await createNamespace(client, namespace);
         const subgraphName = genID('subgraph');
@@ -140,8 +142,6 @@ describe('federated-graph version tests', () => {
         response = await client.getFederatedGraphByName({ name: fedGraphName, namespace });
         expect(response.response).toBeDefined();
         expect(response.response!.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-        await server.close();
       },
     );
 
@@ -154,6 +154,8 @@ describe('federated-graph version tests', () => {
       'subgraph-viewer',
     ])('%s not should be able to read the version of a federated graph', async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+      onTestFinished(() => server.close());
+
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -184,14 +186,14 @@ describe('federated-graph version tests', () => {
 
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     });
   });
 
   describe('set tests', () => {
-    test('that an error is returned if an invalid router compatibility version integer is provided', async () => {
+    test('that an error is returned if an invalid router compatibility version integer is provided', async (testContext) => {
       const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -233,12 +235,12 @@ describe('federated-graph version tests', () => {
       expect(response.deploymentErrors).toHaveLength(0);
 
       await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
-
-      await server.close();
     });
 
-    test('that an error is returned if an invalid router compatibility version string is provided', async () => {
+    test('that an error is returned if an invalid router compatibility version string is provided', async (testContext) => {
       const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -280,14 +282,14 @@ describe('federated-graph version tests', () => {
       expect(response.deploymentErrors).toHaveLength(0);
 
       await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
-
-      await server.close();
     });
 
     test.each(['organization-admin', 'organization-developer', 'graph-admin'])(
       '%s should be able to update the router compatibility version',
       async (role) => {
         const { client, blobStorage, server, authenticator, users } = await SetupTest({ dbname, chClient });
+        onTestFinished(() => server.close());
+
         const namespace = genID('namespace').toLowerCase();
         await createNamespace(client, namespace);
         const subgraphName = genID('subgraph');
@@ -328,13 +330,13 @@ describe('federated-graph version tests', () => {
         expect(response.response!.code).toBe(EnumStatusCode.OK);
 
         await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
-
-        await server.close();
       },
     );
 
-    test('graph-admin should be able to update the router compatibility version on allowed namespace', async () => {
+    test('graph-admin should be able to update the router compatibility version on allowed namespace', async (testContext) => {
       const { client, blobStorage, server, authenticator, users } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -401,8 +403,6 @@ describe('federated-graph version tests', () => {
       });
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     });
 
     test.each([
@@ -416,6 +416,8 @@ describe('federated-graph version tests', () => {
       'subgraph-viewer',
     ])('%s should not be able to update the router compatibility version', async (role) => {
       const { client, blobStorage, server, authenticator, users } = await SetupTest({ dbname, chClient });
+      onTestFinished(() => server.close());
+
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -454,12 +456,12 @@ describe('federated-graph version tests', () => {
       });
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     });
 
-    test('that setting the same router compatibility version is idempotent and does not trigger further compositions', async () => {
+    test('that setting the same router compatibility version is idempotent and does not trigger further compositions', async (testContext) => {
       const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -501,8 +503,6 @@ describe('federated-graph version tests', () => {
       expect(response.deploymentErrors).toHaveLength(0);
 
       await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
-
-      await server.close();
     });
   });
 });

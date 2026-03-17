@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -25,6 +25,7 @@ describe('List Subgraphs', (ctx) => {
 
   test('Should be able to list subgraphs of different namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const label = genUniqueLabel();
@@ -98,12 +99,11 @@ describe('List Subgraphs', (ctx) => {
 
     expect(listSubgraphsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(listSubgraphsResp.response?.details).toBe(`Could not find namespace prod1`);
-
-    await server.close();
   });
 
   test('Should be able to list subgraphs of different namespace when using legacy API key', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const label = genUniqueLabel();
@@ -182,14 +182,13 @@ describe('List Subgraphs', (ctx) => {
 
     expect(listSubgraphsResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(listSubgraphsResp.response?.details).toBe(`Could not find namespace prod1`);
-
-    await server.close();
   });
 
   test.each(['subgraph-admin', 'subgraph-publisher', 'subgraph-viewer'])(
     '%s should be able to list subgraphs from allowed namespaces',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph');
       const label = genUniqueLabel();
@@ -264,13 +263,12 @@ describe('List Subgraphs', (ctx) => {
 
       expect(listSubgraphsResp.response?.code).toBe(EnumStatusCode.OK);
       expect(listSubgraphsResp.count).toBe(1);
-
-      await server.close();
     },
   );
 
-  test('Should not return duplicated subgraphs when tied to contract', async () => {
+  test('Should not return duplicated subgraphs when tied to contract', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -326,7 +324,5 @@ describe('List Subgraphs', (ctx) => {
     expect(getFederatedGraphByName.response?.code).toBe(EnumStatusCode.OK);
     expect(getFederatedGraphByName.subgraphs).toHaveLength(1);
     expect(getFederatedGraphByName.subgraphs.find((g) => g.name === subgraphName)).toBeDefined();
-
-    await server.close();
   });
 });

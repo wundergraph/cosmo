@@ -17,6 +17,7 @@ describe('Webhooks', (ctx) => {
 
   test('Should be able to create a webhook for a federated graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
 
@@ -54,12 +55,11 @@ describe('Webhooks', (ctx) => {
         },
       ],
     });
-
-    await server.close();
   });
 
   test('Should be possible to subscribe for a federated graph that belong to the same organization', async (testContext) => {
     const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const aliceFedGraphId = genID('fedGraph');
     const bobFedGraphId = genID('fedGraph');
@@ -125,12 +125,11 @@ describe('Webhooks', (ctx) => {
     });
 
     expect(createWebhook.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('Should not be possible to subscribe for a federated graph that dont belong to the user organization', async (testContext) => {
     const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const aliceFedGraphId = genID('fedGraph');
     const jimFedGraphId = genID('fedGraph');
@@ -196,12 +195,11 @@ describe('Webhooks', (ctx) => {
     });
 
     expect(createWebhook.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test('Should not be possible to create a webhook for a federated graph that dont belong to the user organization', async (testContext) => {
     const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const aliceFedGraphId = genID('fedGraph');
     const jimFedGraphId = genID('fedGraph');
@@ -267,12 +265,11 @@ describe('Webhooks', (ctx) => {
     });
 
     expect(createWebhook.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test('Should not be possible to update a webhook for a federated graph that dont belong to the user organization', async (testContext) => {
     const { client, server, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const aliceFedGraphId = genID('fedGraph');
     const jimFedGraphId = genID('fedGraph');
@@ -375,12 +372,11 @@ describe('Webhooks', (ctx) => {
     });
 
     expect(updateAliceWebhook.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 
   test('Should be able to create a webhook for proposal state updates', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
 
@@ -447,12 +443,11 @@ describe('Webhooks', (ctx) => {
     expect(proposalEvent).toBeDefined();
     expect(proposalEvent?.meta.case).toBe('proposalStateUpdated');
     expect(proposalEvent?.meta.value?.graphIds).toContain(graph.graph.id);
-
-    await server.close();
   });
 
   test('Should be able to update a webhook to include proposal state update events', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraphName = genID('fedGraph');
 
@@ -565,7 +560,5 @@ describe('Webhooks', (ctx) => {
     expect(proposalEvent).toBeDefined();
     expect(proposalEvent?.meta.case).toBe('proposalStateUpdated');
     expect(proposalEvent?.meta.value?.graphIds).toContain(graph.graph.id);
-
-    await server.close();
   });
 });

@@ -33,10 +33,11 @@ describe('Feature flag with gRPC service feature subgraph tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that a feature flag can be created with a feature subgraph based on a gRPC service subgraph', async () => {
+  test('that a feature flag can be created with a feature subgraph based on a gRPC service subgraph', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
     });
+    testContext.onTestFinished(() => server.close());
 
     // Generate unique names and labels
     const regularSubgraphName = genID('regular-subgraph');
@@ -261,7 +262,5 @@ describe('Feature flag with gRPC service feature subgraph tests', () => {
     // The federated graph should still have the base subgraphs
     // Feature subgraphs are not directly included in the federated graph
     expect(getFinalFedGraphResponse.subgraphs.length).toBe(2);
-
-    await server.close();
   });
 });

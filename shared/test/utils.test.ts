@@ -59,12 +59,7 @@ describe('normalizeURL', () => {
     expect(normalizeURL(input)).toBe(expected);
   });
 
-  test.each([
-    'invalid url',
-    '//localhost:3000',
-    '/?',
-    '/############'
-  ])('should throw for invalid url: %s', (input) => {
+  test.each(['invalid url', '//localhost:3000', '/?', '/############'])('should throw for invalid url: %s', (input) => {
     expect(() => normalizeURL(input)).toThrowError();
   });
 

@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -10,7 +10,6 @@ import {
 import {
   createBaseAndFeatureSubgraph,
   createNamespace,
-  createSubgraph,
   DEFAULT_NAMESPACE,
   DEFAULT_SUBGRAPH_URL_ONE,
   DEFAULT_SUBGRAPH_URL_THREE,
@@ -29,8 +28,9 @@ describe('Update feature subgraph tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that an error is returned if a non-extant feature subgraph is updated', async () => {
+  test('that an error is returned if a non-extant feature subgraph is updated', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const featureSubgraphName = genID('featureSubgraphName');
 
@@ -40,12 +40,11 @@ describe('Update feature subgraph tests', () => {
     });
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(createFederatedSubgraphResp.response?.details).toBe(`The subgraph "${featureSubgraphName}" was not found.`);
-
-    await server.close();
   });
 
-  test('that an error is returned when attempting to update a feature flag in a different namespace', async () => {
+  test('that an error is returned when attempting to update a feature flag in a different namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -67,12 +66,11 @@ describe('Update feature subgraph tests', () => {
     });
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(createFederatedSubgraphResp.response?.details).toBe(`The subgraph "${featureSubgraphName}" was not found.`);
-
-    await server.close();
   });
 
-  test('that an error is returned when attempting to update a feature subgraph with labels', async () => {
+  test('that an error is returned when attempting to update a feature subgraph with labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -109,14 +107,13 @@ describe('Update feature subgraph tests', () => {
     expect(featureSubgraphResponseThree.response?.details).toBe(
       `Feature subgraph labels cannot be changed directly. Feature subgraph labels are determined by the feature flag they compose.`,
     );
-
-    await server.close();
   });
 
   test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
     '%s should be able to update feature subgraph',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const baseSubgraphName = genID('subgraph');
       const featureSubgraphName = genID('featureSubgraph');
@@ -143,13 +140,12 @@ describe('Update feature subgraph tests', () => {
       const getSubgraphResponse = await client.getSubgraphByName({ name: featureSubgraphName });
       expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
       expect(getSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_THREE);
-
-      await server.close();
     },
   );
 
-  test('subgraph-admin should be able to update feature subgraph from allowed namespaces', async (role) => {
+  test('subgraph-admin should be able to update feature subgraph from allowed namespaces', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -184,12 +180,11 @@ describe('Update feature subgraph tests', () => {
     const getSubgraphResponse = await client.getSubgraphByName({ name: featureSubgraphName });
     expect(getSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_THREE);
-
-    await server.close();
   });
 
-  test('subgraph-admin should be able to update allowed feature subgraph', async (role) => {
+  test('subgraph-admin should be able to update allowed feature subgraph', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('subgraph');
     const baseSubgraphName2 = genID('subgraph2');
@@ -246,8 +241,6 @@ describe('Update feature subgraph tests', () => {
       routingUrl: DEFAULT_SUBGRAPH_URL_THREE,
     });
     expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test.each([
@@ -261,6 +254,7 @@ describe('Update feature subgraph tests', () => {
     'subgraph-viewer',
   ])('%s should not be able to update feature subgraph from allowed namespaces', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -286,7 +280,5 @@ describe('Update feature subgraph tests', () => {
       routingUrl: DEFAULT_SUBGRAPH_URL_THREE,
     });
     expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 });

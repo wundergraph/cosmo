@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -33,6 +33,7 @@ describe('List namespaces', (ctx) => {
     'subgraph-viewer',
   ])('%s should be able to retrieve all namespaces', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
 
     await createNamespace(client, 'prod');
     await createNamespace(client, 'stag');
@@ -48,12 +49,11 @@ describe('List namespaces', (ctx) => {
     expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getNamespacesResponse.namespaces).toBeDefined();
     expect(getNamespacesResponse.namespaces).toHaveLength(4);
-
-    await server.close();
   });
 
-  test('Should be able to retrieve all namespaces when using legacy API key', async () => {
+  test('Should be able to retrieve all namespaces when using legacy API key', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     await createNamespace(client, 'prod');
     await createNamespace(client, 'stag');
@@ -69,14 +69,13 @@ describe('List namespaces', (ctx) => {
     expect(getNamespacesResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(getNamespacesResponse.namespaces).toBeDefined();
     expect(getNamespacesResponse.namespaces).toHaveLength(4);
-
-    await server.close();
   });
 
   test.each(['namespace-admin', 'namespace-viewer', 'subgraph-admin', 'subgraph-publisher', 'subgraph-viewer'])(
     '%s should be able to retrieve only allowed namespaces',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       await createNamespace(client, 'stag');
@@ -101,8 +100,6 @@ describe('List namespaces', (ctx) => {
       expect(getNamespacesResponse.namespaces).toBeDefined();
       expect(getNamespacesResponse.namespaces).toHaveLength(1);
       expect(getNamespacesResponse.namespaces[0].name).toBe('dev');
-
-      await server.close();
     },
   );
 
@@ -110,6 +107,7 @@ describe('List namespaces', (ctx) => {
     '%s should be able to retrieve namespaces for allowed resources',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       await createNamespace(client, 'stag');
@@ -137,8 +135,6 @@ describe('List namespaces', (ctx) => {
       expect(getNamespacesResponse.namespaces).toBeDefined();
       expect(getNamespacesResponse.namespaces).toHaveLength(1);
       expect(getNamespacesResponse.namespaces[0].name).toBe('stag');
-
-      await server.close();
     },
   );
 
@@ -146,6 +142,7 @@ describe('List namespaces', (ctx) => {
     '%s should return only `default` when user does not have access to any valid namespace',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       await createNamespace(client, 'prod');
       await createNamespace(client, 'stag');
@@ -167,8 +164,6 @@ describe('List namespaces', (ctx) => {
       expect(getNamespacesResponse.namespaces).toBeDefined();
       expect(getNamespacesResponse.namespaces).toHaveLength(1);
       expect(getNamespacesResponse.namespaces[0].name).toBe('default');
-
-      await server.close();
     },
   );
 
@@ -176,6 +171,7 @@ describe('List namespaces', (ctx) => {
     '%s should be able to list namespaces where have been allowed federated graphs',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const fedGraphName = genID('federated-graph');
 
@@ -204,8 +200,6 @@ describe('List namespaces', (ctx) => {
       expect(getNamespacesResponse.namespaces).toBeDefined();
       expect(getNamespacesResponse.namespaces).toHaveLength(1);
       expect(getNamespacesResponse.namespaces[0].name).toBe('stag');
-
-      await server.close();
     },
   );
 
@@ -213,6 +207,7 @@ describe('List namespaces', (ctx) => {
     '%s should be able to list namespaces where have been allowed subgraphs',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph');
 
@@ -241,8 +236,6 @@ describe('List namespaces', (ctx) => {
       expect(getNamespacesResponse.namespaces).toBeDefined();
       expect(getNamespacesResponse.namespaces).toHaveLength(1);
       expect(getNamespacesResponse.namespaces[0].name).toBe('dev');
-
-      await server.close();
     },
   );
 });

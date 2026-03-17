@@ -32,13 +32,13 @@ describe('router compatibility-version list tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that a list of supported router compatibility versions is returned', async () => {
+  test('that a list of supported router compatibility versions is returned', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
+
     const response = await client.listRouterCompatibilityVersions({});
     expect(response.response).toBeDefined();
     expect(response.response!.code).toBe(EnumStatusCode.OK);
     expect(response.versions).toStrictEqual([...ROUTER_COMPATIBILITY_VERSIONS]);
-
-    await server.close();
   });
 });

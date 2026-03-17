@@ -56,8 +56,9 @@ describe('Composition error tests', (ctx) => {
     await afterAllSetup(dbname);
   });
 
-  test('that an error is returned if an Object extension orphan remains after federation', async () => {
+  test('that an error is returned if an Object extension orphan remains after federation', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
     const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
@@ -109,8 +110,6 @@ describe('Composition error tests', (ctx) => {
     expect(publishFederatedSubgraphResp.compositionErrors[0].message).toStrictEqual(
       noBaseDefinitionForExtensionError(OBJECT, 'User').message,
     );
-
-    await server.close();
   });
 
   test('that an error is returned when attempting federate a List type with a non-List type', () => {

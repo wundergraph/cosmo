@@ -42,6 +42,8 @@ describe('Delete Organization', (ctx) => {
       dbname,
       chClient,
     });
+    testContext.onTestFinished(() => server.close());
+
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
     const orgName = genID();
@@ -88,6 +90,7 @@ describe('Delete Organization', (ctx) => {
 
     expect(blobStorage.keys().includes(graphKey)).toEqual(true);
 
+    // used by the job
     const worker = createDeleteOrganizationWorker({
       redisConnection: server.redisForWorker,
       db: server.db,
@@ -97,6 +100,7 @@ describe('Delete Organization', (ctx) => {
       blobStorage,
       deleteOrganizationAuditLogsQueue: queues.deleteOrganizationAuditLogsQueue,
     });
+    testContext.onTestFinished(() => worker.close());
 
     const job = await orgRepo.queueOrganizationDeletion({
       organizationId: org!.id,
@@ -119,10 +123,6 @@ describe('Delete Organization', (ctx) => {
     expect(orgAfterDeletion).toBeNull();
 
     expect(blobStorage.keys().includes(graphKey)).toEqual(false);
-
-    await worker.close();
-
-    await server.close();
   });
 
   test('Should delete OIDC when deleting org', async (testContext) => {
@@ -130,6 +130,8 @@ describe('Delete Organization', (ctx) => {
       dbname,
       enabledFeatures: ['oidc'],
     });
+    testContext.onTestFinished(() => server.close());
+
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
     const orgName = genID();
@@ -163,6 +165,7 @@ describe('Delete Organization', (ctx) => {
     const provider = await oidcRepo.getOidcProvider({ organizationId: org!.id });
     expect(provider).toBeDefined();
 
+    // used by the job
     const worker = createDeleteOrganizationWorker({
       redisConnection: server.redisForWorker,
       db: server.db,
@@ -172,6 +175,7 @@ describe('Delete Organization', (ctx) => {
       blobStorage,
       deleteOrganizationAuditLogsQueue: queues.deleteOrganizationAuditLogsQueue,
     });
+    testContext.onTestFinished(() => worker.close());
 
     const job = await orgRepo.queueOrganizationDeletion({
       organizationId: org!.id,
@@ -192,10 +196,6 @@ describe('Delete Organization', (ctx) => {
 
     const orgAfterDeletion = await orgRepo.bySlug(orgName);
     expect(orgAfterDeletion).toBeNull();
-
-    await worker.close();
-
-    await server.close();
   });
 
   test('Should delete organization and Keycloak groups and roles', async (testContext) => {
@@ -203,6 +203,8 @@ describe('Delete Organization', (ctx) => {
       dbname,
       chClient,
     });
+    testContext.onTestFinished(() => server.close());
+
     const mainUserContext = users[TestUser.adminAliceCompanyA];
 
     const orgName = genID();
@@ -222,6 +224,7 @@ describe('Delete Organization', (ctx) => {
       organizationSlug: org!.slug,
     });
 
+    // used by the job
     const worker = createDeleteOrganizationWorker({
       redisConnection: server.redisForWorker,
       db: server.db,
@@ -231,6 +234,7 @@ describe('Delete Organization', (ctx) => {
       blobStorage,
       deleteOrganizationAuditLogsQueue: queues.deleteOrganizationAuditLogsQueue,
     });
+    testContext.onTestFinished(() => worker.close());
 
     const job = await orgRepo.queueOrganizationDeletion({
       organizationId: org!.id,
@@ -256,9 +260,5 @@ describe('Delete Organization', (ctx) => {
     });
 
     expect(kcOrgRoles).toHaveLength(0);
-
-    await worker.close();
-
-    await server.close();
   });
 });

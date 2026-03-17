@@ -44,6 +44,7 @@ describe('Namespace tests', (ctx) => {
 
   test('Creates graphs in the correct namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -82,12 +83,11 @@ describe('Namespace tests', (ctx) => {
     expect(devGraph.graph?.namespace).toBe(dev);
     expect(devGraph.subgraphs.length).toBe(1);
     expect(devGraph.subgraphs[0].name).toBe(subgraph2Name);
-
-    await server.close();
   });
 
   test('Ensure no duplicate graph exist in same namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -128,12 +128,11 @@ describe('Namespace tests', (ctx) => {
       routingUrl: 'http://localhost:8081',
     });
     expect(createSecondGraph.response?.code).toBe(EnumStatusCode.ERR_ALREADY_EXISTS);
-
-    await server.close();
   });
 
   test('Ensure duplicates can exist across namespaces', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -179,12 +178,11 @@ describe('Namespace tests', (ctx) => {
       routingUrl: 'http://localhost:8081',
     });
     expect(createSecondGraph.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
   test('Deleting namespace should delete all graphs in it', async (testContext) => {
     const { client, server, blobStorage } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -274,12 +272,11 @@ describe('Namespace tests', (ctx) => {
     const keys = blobStorage.keys();
     expect(keys.length).toBe(1);
     expect(keys[0]).toContain(graphsAfterDeleteRes.graphs[0].id);
-
-    await server.close();
   });
 
   test('Move federated graph to different namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -354,12 +351,11 @@ describe('Namespace tests', (ctx) => {
       namespace: devGraphInProd.graph?.namespace,
     });
     expect(sdlRes.sdl).toBe(expectedFederatedGraphSDL);
-
-    await server.close();
   });
 
   test('Move subgraph to different namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -450,7 +446,5 @@ describe('Namespace tests', (ctx) => {
       namespace: dev,
     });
     expect(fedGraph3AfterMove.subgraphs.length).toBe(0);
-
-    await server.close();
   });
 });

@@ -17,8 +17,9 @@ describe('getCompositionDetails', () => {
     await afterAllSetup(dbname);
   });
 
-  test('should return composition details for a valid composition', async () => {
+  test('should return composition details for a valid composition', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -58,12 +59,11 @@ describe('getCompositionDetails', () => {
     expect(detailsRes.compositionSubgraphs).toBeDefined();
     expect(detailsRes.compositionSubgraphs.length).toBe(1);
     expect(detailsRes.changeCounts).toBeDefined();
-
-    await server.close();
   });
 
-  test('should return not found error for non-existent composition', async () => {
+  test('should return not found error for non-existent composition', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const nonExistentId = randomUUID();
     const detailsRes = await client.getCompositionDetails({
@@ -73,12 +73,11 @@ describe('getCompositionDetails', () => {
 
     expect(detailsRes.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(detailsRes.response?.details).toBe(`Graph composition with '${nonExistentId}' does not exist`);
-
-    await server.close();
   });
 
-  test('should return not found error for non-existent namespace', async () => {
+  test('should return not found error for non-existent namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const detailsRes = await client.getCompositionDetails({
       compositionId: randomUUID(),
@@ -87,15 +86,14 @@ describe('getCompositionDetails', () => {
 
     expect(detailsRes.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(detailsRes.response?.details).toBe("Namespace 'non-existent-namespace' not found");
-
-    await server.close();
   });
 
-  test('should not allow access to compositions from different organization', async () => {
+  test('should not allow access to compositions from different organization', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({
       dbname,
       enableMultiUsers: true,
     });
+    testContext.onTestFinished(() => server.close());
 
     // Create a composition as Company A
     const subgraphName = genID('subgraph');
@@ -139,12 +137,11 @@ describe('getCompositionDetails', () => {
 
     // Should return not found (since it filters by organization)
     expect(detailsRes.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 
-  test('should include composition subgraphs information', async () => {
+  test('should include composition subgraphs information', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -196,12 +193,11 @@ describe('getCompositionDetails', () => {
     const subgraphNames = detailsRes.compositionSubgraphs.map((sg) => sg.name);
     expect(subgraphNames).toContain(subgraph1Name);
     expect(subgraphNames).toContain(subgraph2Name);
-
-    await server.close();
   });
 
-  test('should return empty feature flag compositions when none exist', async () => {
+  test('should return empty feature flag compositions when none exist', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const fedGraphName = genID('fedGraph');
@@ -237,7 +233,5 @@ describe('getCompositionDetails', () => {
     expect(detailsRes.response?.code).toBe(EnumStatusCode.OK);
     expect(detailsRes.featureFlagCompositions).toBeDefined();
     expect(detailsRes.featureFlagCompositions).toEqual([]);
-
-    await server.close();
   });
 });

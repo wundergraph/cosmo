@@ -24837,3 +24837,125 @@ export class ListOrganizationsResponse_OrganizationMembership extends Message<Li
   }
 }
 
+/**
+ * @generated from message wg.cosmo.platform.v1.RecomposeGraphRequest
+ */
+export class RecomposeGraphRequest extends Message<RecomposeGraphRequest> {
+  /**
+   * @generated from field: string name = 1;
+   */
+  name = "";
+
+  /**
+   * @generated from field: string namespace = 2;
+   */
+  namespace = "";
+
+  /**
+   * @generated from field: bool is_monograph = 3;
+   */
+  isMonograph = false;
+
+  /**
+   * @generated from field: optional int32 limit = 4;
+   */
+  limit?: number;
+
+  /**
+   * @generated from field: optional bool disable_resolvability_validation = 5;
+   */
+  disableResolvabilityValidation?: boolean;
+
+  constructor(data?: PartialMessage<RecomposeGraphRequest>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RecomposeGraphRequest";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "name", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 2, name: "namespace", kind: "scalar", T: 9 /* ScalarType.STRING */ },
+    { no: 3, name: "is_monograph", kind: "scalar", T: 8 /* ScalarType.BOOL */ },
+    { no: 4, name: "limit", kind: "scalar", T: 5 /* ScalarType.INT32 */, opt: true },
+    { no: 5, name: "disable_resolvability_validation", kind: "scalar", T: 8 /* ScalarType.BOOL */, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RecomposeGraphRequest {
+    return new RecomposeGraphRequest().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RecomposeGraphRequest {
+    return new RecomposeGraphRequest().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RecomposeGraphRequest {
+    return new RecomposeGraphRequest().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RecomposeGraphRequest | PlainMessage<RecomposeGraphRequest> | undefined, b: RecomposeGraphRequest | PlainMessage<RecomposeGraphRequest> | undefined): boolean {
+    return proto3.util.equals(RecomposeGraphRequest, a, b);
+  }
+}
+
+/**
+ * @generated from message wg.cosmo.platform.v1.RecomposeGraphResponse
+ */
+export class RecomposeGraphResponse extends Message<RecomposeGraphResponse> {
+  /**
+   * @generated from field: wg.cosmo.platform.v1.Response response = 1;
+   */
+  response?: Response;
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionError compositionErrors = 2;
+   */
+  compositionErrors: CompositionError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.DeploymentError deploymentErrors = 3;
+   */
+  deploymentErrors: DeploymentError[] = [];
+
+  /**
+   * @generated from field: repeated wg.cosmo.platform.v1.CompositionWarning compositionWarnings = 4;
+   */
+  compositionWarnings: CompositionWarning[] = [];
+
+  /**
+   * @generated from field: optional wg.cosmo.platform.v1.SubgraphPublishStats errorCounts = 5;
+   */
+  errorCounts?: SubgraphPublishStats;
+
+  constructor(data?: PartialMessage<RecomposeGraphResponse>) {
+    super();
+    proto3.util.initPartial(data, this);
+  }
+
+  static readonly runtime: typeof proto3 = proto3;
+  static readonly typeName = "wg.cosmo.platform.v1.RecomposeGraphResponse";
+  static readonly fields: FieldList = proto3.util.newFieldList(() => [
+    { no: 1, name: "response", kind: "message", T: Response },
+    { no: 2, name: "compositionErrors", kind: "message", T: CompositionError, repeated: true },
+    { no: 3, name: "deploymentErrors", kind: "message", T: DeploymentError, repeated: true },
+    { no: 4, name: "compositionWarnings", kind: "message", T: CompositionWarning, repeated: true },
+    { no: 5, name: "errorCounts", kind: "message", T: SubgraphPublishStats, opt: true },
+  ]);
+
+  static fromBinary(bytes: Uint8Array, options?: Partial<BinaryReadOptions>): RecomposeGraphResponse {
+    return new RecomposeGraphResponse().fromBinary(bytes, options);
+  }
+
+  static fromJson(jsonValue: JsonValue, options?: Partial<JsonReadOptions>): RecomposeGraphResponse {
+    return new RecomposeGraphResponse().fromJson(jsonValue, options);
+  }
+
+  static fromJsonString(jsonString: string, options?: Partial<JsonReadOptions>): RecomposeGraphResponse {
+    return new RecomposeGraphResponse().fromJsonString(jsonString, options);
+  }
+
+  static equals(a: RecomposeGraphResponse | PlainMessage<RecomposeGraphResponse> | undefined, b: RecomposeGraphResponse | PlainMessage<RecomposeGraphResponse> | undefined): boolean {
+    return proto3.util.equals(RecomposeGraphResponse, a, b);
+  }
+}
+

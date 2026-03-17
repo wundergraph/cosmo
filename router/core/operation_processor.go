@@ -22,7 +22,11 @@ import (
 	"github.com/dgraph-io/ristretto/v2"
 	"github.com/pkg/errors"
 	"github.com/tidwall/sjson"
+
 	fastjson "github.com/wundergraph/astjson"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/apollocompatibility"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
@@ -34,10 +38,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/middleware/operation_complexity"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/operationreport"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/variablesvalidation"
-
-	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
-	"github.com/wundergraph/cosmo/router/internal/unsafebytes"
-	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 var (
@@ -126,6 +126,7 @@ type OperationProcessorOptions struct {
 	DisableExposingVariablesContentOnValidationError       bool
 	RelaxSubgraphOperationFieldSelectionMergingNullability bool
 	ComplexityLimits                                       *config.ComplexityLimits
+	CostControl                                            *config.CostControl
 	ParserTokenizerLimits                                  astparser.TokenizerLimits
 	OperationNameLengthLimit                               int
 }
@@ -142,6 +143,7 @@ type OperationProcessor struct {
 	introspectionEnabled     bool
 	parseKitOptions          *parseKitOptions
 	complexityLimits         *config.ComplexityLimits
+	costControl              *config.CostControl
 	parserTokenizerLimits    astparser.TokenizerLimits
 	operationNameLengthLimit int
 }
@@ -1387,6 +1389,42 @@ func (o *OperationKit) runComplexityComparisons(complexityLimitConfig *config.Co
 	return nil
 }
 
+// ValidateStaticCost computes and validates that the estimated cost is within the configured limit.
+func (o *OperationKit) ValidateStaticCost(opCtx *operationContext) error {
+	costControl := o.operationProcessor.costControl
+	if costControl == nil || !costControl.Enabled {
+		return nil
+	}
+
+	// Compute and cache estimated cost once after planning
+	if opCtx.preparedPlan != nil && opCtx.preparedPlan.preparedPlan != nil {
+		if costCalc := opCtx.preparedPlan.preparedPlan.GetCostCalculator(); costCalc != nil {
+			opCtx.costEstimated = costCalc.EstimateCost(opCtx.planConfig, opCtx.variables)
+			opCtx.costEstimatedSet = true
+		}
+	}
+
+	if costControl.Mode != config.CostControlModeEnforce || costControl.MaxEstimatedLimit <= 0 {
+		return nil
+	}
+
+	if !opCtx.costEstimatedSet {
+		return &httpGraphqlError{
+			message:    "cost control is enabled in enforce mode but the cost calculator is unavailable",
+			statusCode: http.StatusInternalServerError,
+		}
+	}
+
+	if opCtx.costEstimated > costControl.MaxEstimatedLimit {
+		return &httpGraphqlError{
+			message:    fmt.Sprintf("The estimated query cost %d exceeds the maximum allowed limit %d", opCtx.costEstimated, costControl.MaxEstimatedLimit),
+			statusCode: http.StatusBadRequest,
+		}
+	}
+
+	return nil
+}
+
 var (
 	literalIF = []byte("if")
 )
@@ -1485,6 +1523,7 @@ func NewOperationProcessor(opts OperationProcessorOptions) *OperationProcessor {
 		parserTokenizerLimits:    opts.ParserTokenizerLimits,
 		operationNameLengthLimit: opts.OperationNameLengthLimit,
 		complexityLimits:         opts.ComplexityLimits,
+		costControl:              opts.CostControl,
 		parseKitOptions: &parseKitOptions{
 			apolloCompatibilityFlags:                               opts.ApolloCompatibilityFlags,
 			apolloRouterCompatibilityFlags:                         opts.ApolloRouterCompatibilityFlags,

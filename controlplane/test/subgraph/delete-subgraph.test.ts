@@ -42,6 +42,7 @@ describe('DeleteSubgraph', (ctx) => {
 
   test('Should be able to create a subgraph, publish the schema, create a federated graph and then delete a subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -94,12 +95,11 @@ describe('DeleteSubgraph', (ctx) => {
     });
     expect(getFederatedGraphResp.response?.code).toBe(EnumStatusCode.OK);
     expect(getFederatedGraphResp.subgraphs.length).toBe(0);
-
-    await server.close();
   });
 
   test('Should be able to delete a subgraph from multiple federated graphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraph1Name = genID('fedGraph1');
     const federatedGraph2Name = genID('fedGraph2');
@@ -191,12 +191,11 @@ describe('DeleteSubgraph', (ctx) => {
 
     expect(getGraph2Resp.response?.code).toBe(EnumStatusCode.OK);
     expect(getGraph2Resp.subgraphs.length).toBe(0);
-
-    await server.close();
   });
 
-  test('that deleting a subgraph also deletes any feature subgraphs for which it is the base subgraph', async () => {
+  test('that deleting a subgraph also deletes any feature subgraphs for which it is the base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('subgraph');
     const featureSubgraphNameOne = genID('featureSubgraphOne');
@@ -245,12 +244,11 @@ describe('DeleteSubgraph', (ctx) => {
       namespace: DEFAULT_NAMESPACE,
     });
     expect(getFeatureSubgraphByNameResponseThree.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 
-  test('Should be able to create a plugin and then delete it', async () => {
+  test('Should be able to create a plugin and then delete it', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, setupBilling: { plan: 'launch@1' } });
+    testContext.onTestFinished(() => server.close());
 
     const pluginName = genID('plugin');
     const pluginLabel = genUniqueLabel('plugin');
@@ -291,7 +289,5 @@ describe('DeleteSubgraph', (ctx) => {
     });
 
     expect(getDeletedPluginResp.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 });

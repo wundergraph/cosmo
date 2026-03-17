@@ -14,6 +14,8 @@ describe('Router compatibility version tests', () => {
       routerCompatibilityVersion: '1',
       subgraphs: [{}],
     } as Input;
-    expect(() => buildRouterConfig(input)).toThrowError('Normalization failed to return a ConfigurationDataByTypeName.');
+    expect(() => buildRouterConfig(input)).toThrowError(
+      'Normalization failed to return a ConfigurationDataByTypeName.',
+    );
   });
 });

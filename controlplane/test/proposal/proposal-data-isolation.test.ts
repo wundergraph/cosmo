@@ -38,13 +38,14 @@ describe('Proposal Data Isolation Tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should not allow access to proposals from different organization', async () => {
+  test('Should not allow access to proposals from different organization', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enableMultiUsers: true,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup for Company A
     const subgraphNameA = genID('subgraph-a');
@@ -135,17 +136,16 @@ describe('Proposal Data Isolation Tests', () => {
     });
     expect(getProposalResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(getProposalResponse.proposal).toBeUndefined();
-
-    await server.close();
   });
 
-  test('Should not allow updating proposals from different organization', async () => {
+  test('Should not allow updating proposals from different organization', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enableMultiUsers: true,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup for Company A
     const subgraphNameA = genID('subgraph-a');
@@ -256,17 +256,16 @@ describe('Proposal Data Isolation Tests', () => {
       },
     });
     expect(updateProposalResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 
-  test('Should not list proposals from different organization', async () => {
+  test('Should not list proposals from different organization', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enableMultiUsers: true,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup for Company A
     const subgraphNameA = genID('subgraph-a');
@@ -363,17 +362,16 @@ describe('Proposal Data Isolation Tests', () => {
     expect(getProposalsResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     // Should not return any proposals
     expect(getProposalsResponse.proposals.length).toBe(0);
-
-    await server.close();
   });
 
-  test('Should not access proposal checks from different organization', async () => {
+  test('Should not access proposal checks from different organization', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enableMultiUsers: true,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup for Company A
     const subgraphNameA = genID('subgraph-a');
@@ -464,17 +462,16 @@ describe('Proposal Data Isolation Tests', () => {
     });
     expect(getProposalChecksResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
     expect(getProposalChecksResponse.checks.length).toBe(0);
-
-    await server.close();
   });
 
-  test('Should not access namespace proposal config from different organization', async () => {
+  test('Should not access namespace proposal config from different organization', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enableMultiUsers: true,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Enable proposals for Company A's namespace
     const enableResponseA = await enableProposalsForNamespace(client);
@@ -506,16 +503,15 @@ describe('Proposal Data Isolation Tests', () => {
     // Company B's default namespace should have proposals disabled (not configured yet)
     expect(getConfigResponseB.response?.code).toBe(EnumStatusCode.OK);
     expect(getConfigResponseB.enabled).toBe(false);
-
-    await server.close();
   });
 
-  test('Should isolate proposals between different federated graphs in same organization', async () => {
+  test('Should isolate proposals between different federated graphs in same organization', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup first federated graph with unique subgraph
     const subgraphName1 = genID('subgraph-1');
@@ -792,17 +788,16 @@ describe('Proposal Data Isolation Tests', () => {
       },
     });
     expect(updateProposal1WrongFedGraph.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 
-  test('Should not allow approving or closing proposals from different organization', async () => {
+  test('Should not allow approving or closing proposals from different organization', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({
       dbname,
       enableMultiUsers: true,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup for Company A
     const subgraphNameA = genID('subgraph-a');
@@ -919,7 +914,5 @@ describe('Proposal Data Isolation Tests', () => {
       },
     });
     expect(closeResponse.response?.code).toBe(EnumStatusCode.ERR_NOT_FOUND);
-
-    await server.close();
   });
 });

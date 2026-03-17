@@ -1,5 +1,5 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -27,8 +27,9 @@ describe('Update feature flag tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that an error is returned if a feature flag that does not exist is updated', async () => {
+  test('that an error is returned if a feature flag that does not exist is updated', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -52,12 +53,11 @@ describe('Update feature flag tests', () => {
     expect(updateFeatureFlagResponse.response?.details).toBe(
       `The feature flag "${featureFlagName}" does not exist in the namespace "default".`,
     );
-
-    await server.close();
   });
 
-  test('that an error is returned if a feature flag is updated to contain duplicate feature subgraphs', async () => {
+  test('that an error is returned if a feature flag is updated to contain duplicate feature subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -82,12 +82,11 @@ describe('Update feature flag tests', () => {
     expect(updateFeatureFlagResponse.response?.details).toBe(
       '1. Feature subgraphs with the same base subgraph cannot compose the same feature flag.',
     );
-
-    await server.close();
   });
 
-  test('that an error is returned if a feature flag is updated to contain feature subgraphs that share the same base subgraph', async () => {
+  test('that an error is returned if a feature flag is updated to contain feature subgraphs that share the same base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphNameOne = genID('featureSubgraphOne');
@@ -121,12 +120,11 @@ describe('Update feature flag tests', () => {
     expect(updateFeatureFlagResponse.response?.details).toBe(
       '1. Feature subgraphs with the same base subgraph cannot compose the same feature flag.',
     );
-
-    await server.close();
   });
 
-  test('that an error is returned if a feature flag is updated to contain a base subgraph', async () => {
+  test('that an error is returned if a feature flag is updated to contain a base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -151,12 +149,11 @@ describe('Update feature flag tests', () => {
     expect(updateFeatureFlagResponse.response?.details).toBe(
       `1. The subgraph "${subgraphName}" is not a feature subgraph.`,
     );
-
-    await server.close();
   });
 
-  test('that updating a feature flag feature subgraphs array does not affect already set labels', async () => {
+  test('that updating a feature flag feature subgraphs array does not affect already set labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphNameOne = genID('featureSubgraphOne');
@@ -197,12 +194,11 @@ describe('Update feature flag tests', () => {
       featureSubgraphNameTwo,
     ]);
     expect(getFeatureFlagResponse.featureFlag?.labels).toEqual(labels);
-
-    await server.close();
   });
 
-  test('that updating a feature flag with labels does not affect the feature subgraphs array', async () => {
+  test('that updating a feature flag with labels does not affect the feature subgraphs array', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -234,12 +230,11 @@ describe('Update feature flag tests', () => {
       featureSubgraphName,
     ]);
     expect(getFeatureFlagResponse.featureFlag?.labels).toEqual(labels);
-
-    await server.close();
   });
 
-  test('that updating a feature flag with unset labels removes all existing labels', async () => {
+  test('that updating a feature flag with unset labels removes all existing labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -271,12 +266,11 @@ describe('Update feature flag tests', () => {
       featureSubgraphName,
     ]);
     expect(getFeatureFlagResponse.featureFlag?.labels).toStrictEqual([]);
-
-    await server.close();
   });
 
-  test('that updating a feature flag with unset labels removes all existing labels and ignores new labels', async () => {
+  test('that updating a feature flag with unset labels removes all existing labels and ignores new labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphNameOne = genID('featureSubgraphOne');
@@ -319,14 +313,13 @@ describe('Update feature flag tests', () => {
       featureSubgraphNameTwo,
     ]);
     expect(getFeatureFlagResponse.featureFlag?.labels).toStrictEqual([]);
-
-    await server.close();
   });
 
   test.each(['organization-admin', 'organization-developer'])(
     '%s should be able to update feature flag',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph');
       const featureSubgraphName = genID('featureSubgraph');
@@ -352,8 +345,6 @@ describe('Update feature flag tests', () => {
         featureSubgraphNames: [featureSubgraphName],
       });
       expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     },
   );
 
@@ -361,6 +352,7 @@ describe('Update feature flag tests', () => {
     '%s should be able to update feature flag can be updated with another feature subgraph',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph');
       const featureSubgraphName = genID('featureSubgraph');
@@ -398,8 +390,6 @@ describe('Update feature flag tests', () => {
       });
 
       expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     },
   );
 
@@ -415,6 +405,7 @@ describe('Update feature flag tests', () => {
     'subgraph-viewer',
   ])('%s should not be able to update feature flag', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -440,7 +431,5 @@ describe('Update feature flag tests', () => {
       featureSubgraphNames: [featureSubgraphName],
     });
     expect(updateFeatureFlagResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 });
