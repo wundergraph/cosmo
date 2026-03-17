@@ -9,6 +9,8 @@ import {
   DeploymentError,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { SubgraphCommandJsonOutput } from './core/types/types.js';
+import { wrapText } from './utils.js';
+import { TABLE_CONTENT_WIDTH } from './wrap-text.js';
 
 export const handleCompositionResult = ({
   responseCode,
@@ -88,7 +90,6 @@ export const handleCompositionResult = ({
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
           colWidths: [30, 30, 30, 120],
-          wordWrap: true,
         });
 
         console.log(pc.yellow(subgraphCompositionDetailedErrorMessage));
@@ -97,7 +98,7 @@ export const handleCompositionResult = ({
             compositionError.federatedGraphName,
             compositionError.namespace,
             compositionError.featureFlag || '-',
-            compositionError.message,
+            wrapText(compositionError.message, TABLE_CONTENT_WIDTH),
           ]);
         }
         // Don't exit here with 1 because the change was still applied
@@ -131,14 +132,13 @@ export const handleCompositionResult = ({
             pc.bold(pc.white('ERROR_MESSAGE')),
           ],
           colWidths: [30, 30, 120],
-          wordWrap: true,
         });
 
         for (const deploymentError of deploymentErrors) {
           deploymentErrorsTable.push([
             deploymentError.federatedGraphName,
             deploymentError.namespace,
-            deploymentError.message,
+            wrapText(deploymentError.message, TABLE_CONTENT_WIDTH),
           ]);
         }
         // Don't exit here with 1 because the change was still applied
@@ -184,7 +184,6 @@ export const handleCompositionResult = ({
         pc.bold(pc.white('WARNING_MESSAGE')),
       ],
       colWidths: [30, 30, 30, 120],
-      wordWrap: true,
     });
 
     console.log(pc.yellow(`The following warnings were produced while composing the federated graph:`));
@@ -193,7 +192,7 @@ export const handleCompositionResult = ({
         compositionWarning.federatedGraphName,
         compositionWarning.namespace,
         compositionWarning.featureFlag || '-',
-        compositionWarning.message,
+        wrapText(compositionWarning.message, TABLE_CONTENT_WIDTH),
       ]);
     }
     console.log(compositionWarningsTable.toString());
