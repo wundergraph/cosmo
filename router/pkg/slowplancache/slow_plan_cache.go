@@ -104,6 +104,10 @@ func (c *Cache[V]) Set(key uint64, value V, duration time.Duration) {
 		return
 	}
 
+	if duration < c.threshold {
+		return
+	}
+
 	select {
 	case c.writeCh <- setRequest[V]{key: key, value: value, dur: duration}:
 	default:
@@ -127,12 +131,8 @@ func (c *Cache[V]) Wait() {
 }
 
 // applySet performs the actual cache mutation. Must only be called from processWrites.
+// This will hold the lock while it is running
 func (c *Cache[V]) applySet(key uint64, value V, duration time.Duration) {
-	// Reject entries that don't meet the threshold
-	if duration < c.threshold {
-		return
-	}
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

@@ -3334,7 +3334,7 @@
         "slow_plan_cache_threshold": {
           "type": "string",
           "format": "go-duration",
-          "description": "The minimum planning duration for a query plan to be stored in the slow plan cache, protecting it from TinyLFU cache eviction.",
+          "description": "The minimum planning duration for a query plan to be stored in the slow plan cache.",
           "default": "100ms",
           "duration": {
             "minimum": "1ns"

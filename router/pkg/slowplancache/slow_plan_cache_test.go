@@ -1,6 +1,7 @@
 package slowplancache
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -272,42 +273,43 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 	c, err := New[*testPlan](100, 0)
 	require.NoError(t, err)
 	defer c.Close()
-	done := make(chan struct{})
+	var wg sync.WaitGroup
 
 	// Concurrent writers
-	for i := 0; i < 10; i++ {
-		go func(id int) {
-			defer func() { done <- struct{}{} }()
-			for j := 0; j < 100; j++ {
-				key := uint64(id*100 + j) //nolint:gosec // test code, no overflow risk
-				c.Set(key, &testPlan{content: "q"}, time.Duration(j)*time.Millisecond)
-			}
-		}(i)
-	}
-
-	// Concurrent readers
-	for i := 0; i < 10; i++ {
-		go func(id int) {
-			defer func() { done <- struct{}{} }()
-			for j := 0; j < 100; j++ {
-				c.Get(uint64(id*100 + j)) //nolint:gosec // test code, no overflow risk
-			}
-		}(i)
-	}
-
-	// Concurrent iterators
-	for i := 0; i < 5; i++ {
+	for i := range 10 {
+		wg.Add(1)
 		go func() {
-			defer func() { done <- struct{}{} }()
-			for range c.Values() {
+			defer wg.Done()
+			for j := range 100 {
+				key := uint64(i*100 + j) //nolint:gosec // test code, no overflow risk
+				c.Set(key, &testPlan{content: "q"}, time.Duration(j)*time.Millisecond)
 			}
 		}()
 	}
 
-	// Wait for all goroutines
-	for i := 0; i < 25; i++ {
-		<-done
+	// Concurrent readers
+	for i := range 10 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := range 100 {
+				c.Get(uint64(i*100 + j)) //nolint:gosec // test code, no overflow risk
+			}
+		}()
 	}
+
+	// Concurrent iterators
+	for range 5 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for range c.Values() {
+				_ = struct{}{} // prevent loop optimization
+			}
+		}()
+	}
+
+	wg.Wait()
 }
 
 func TestCache_InvalidSize(t *testing.T) {
