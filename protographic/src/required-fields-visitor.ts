@@ -110,6 +110,9 @@ export class RequiredFieldsVisitor {
   /** Mappings keyed by @key directive fields string */
   private mapping: RequiredFieldMappings = {};
 
+  /** Whether any field argument uses a protobuf wrapper type */
+  private _usesWrapperTypes = false;
+
   /**
    * Creates a new RequiredFieldsVisitor.
    *
@@ -194,6 +197,14 @@ export class RequiredFieldsVisitor {
    */
   public getMapping(): RequiredFieldMappings {
     return this.mapping;
+  }
+
+  /**
+   * Returns whether any field argument uses a protobuf wrapper type.
+   * Used by the caller to determine if the wrappers.proto import is needed.
+   */
+  public get usesWrapperTypes(): boolean {
+    return this._usesWrapperTypes;
   }
 
   /**
@@ -342,6 +353,9 @@ export class RequiredFieldsVisitor {
         messageName: requireArgsMessageName,
         fields: this.requiredField.args.map((d, i): ProtoMessageField => {
           const protoType = getProtoTypeFromGraphQL(false, d.type);
+          if (protoType.isWrapper) {
+            this._usesWrapperTypes = true;
+          }
           return {
             fieldName: graphqlArgumentToProtoField(d.name),
             typeName: protoType.typeName,
