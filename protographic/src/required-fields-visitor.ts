@@ -19,7 +19,7 @@ import {
   visit,
 } from 'graphql';
 import { FieldMapping } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
-import { CompositeMessageDefinition, CompositeMessageKind, ProtoMessage, RPCMethod, VisitContext } from './types.js';
+import { CompositeMessageDefinition, CompositeMessageKind, ProtoMessage, ProtoMessageField, RPCMethod, VisitContext } from './types.js';
 import { KEY_DIRECTIVE_NAME } from './string-constants.js';
 import {
   createEntityLookupRequestKeyMessageName,
@@ -30,7 +30,7 @@ import {
   formatKeyElements,
   graphqlArgumentToProtoField,
 } from './naming-conventions.js';
-import { getProtoTypeFromGraphQL } from './proto-utils.js';
+import { buildProtoMessage, getProtoTypeFromGraphQL } from './proto-utils.js';
 import { AbstractSelectionRewriter } from './abstract-selection-rewriter.js';
 
 /**
@@ -333,16 +333,12 @@ export class RequiredFieldsVisitor {
     if (this.requiredField.args.length > 0) {
       const requireArgsMessage: ProtoMessage = {
         messageName: requireArgsMessageName,
-        fields: [],
-      };
-
-      this.requiredField.args.forEach((d, i) => {
-        requireArgsMessage.fields.push({
+        fields: this.requiredField.args.map((d, i): ProtoMessageField => ({
           fieldName: graphqlArgumentToProtoField(d.name),
           typeName: getProtoTypeFromGraphQL(false, d.type, true).typeName,
           fieldNumber: i + 1,
-        });
-      });
+        }))
+      };
 
       this.messageDefinitions.push(requireArgsMessage);
     }
