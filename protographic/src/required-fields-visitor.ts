@@ -37,7 +37,7 @@ import {
   formatKeyElements,
   graphqlArgumentToProtoField,
 } from './naming-conventions.js';
-import { buildProtoMessage, getProtoTypeFromGraphQL } from './proto-utils.js';
+import { getProtoTypeFromGraphQL } from './proto-utils.js';
 import { AbstractSelectionRewriter } from './abstract-selection-rewriter.js';
 
 /**
@@ -312,9 +312,7 @@ export class RequiredFieldsVisitor {
         },
       ],
     };
-
     const requireArgsMessageName = `${requiredFieldsMethodName}Args`;
-
     if (this.requiredField.args.length > 0) {
       requestMessage.fields.push({
         fieldName: 'field_args',
