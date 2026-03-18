@@ -318,13 +318,11 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 	)
 
 	for g := range numGoroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for j := range opsPerRoutine {
 				runMixedOps(c, g*opsPerRoutine+j)
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
