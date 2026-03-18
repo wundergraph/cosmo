@@ -1,7 +1,6 @@
 // Tracking. This will be available if the following scripts are embedded though CUSTOM_HEAD_SCRIPTS
 // Reo, PostHog
 
-import posthog from 'posthog-js';
 import PostHogClient from './posthog';
 
 declare global {
@@ -16,24 +15,43 @@ const resetTracking = () => {
     return;
   }
 
-  posthog.reset();
+  PostHogClient().reset();
 };
 
-const identify = ({
-  email,
-  id,
-  organizationId,
-  organizationName,
-  organizationSlug,
-  plan,
-}: {
+type IdentifyUserInput = {
   id: string;
   email: string;
   organizationId: string;
   organizationName: string;
   organizationSlug: string;
   plan?: string;
-}) => {
+};
+
+const syncPostHogIdentity = (
+  posthogClient: ReturnType<typeof PostHogClient>,
+  { email, id, organizationId, organizationName, organizationSlug, plan }: IdentifyUserInput,
+) => {
+  const currentDistinctId = posthogClient.get_distinct_id();
+
+  if (currentDistinctId && currentDistinctId !== email) {
+    posthogClient.alias(email, currentDistinctId);
+  }
+
+  posthogClient.identify(email, {
+    id,
+    email,
+    organizationId,
+    organizationName,
+    organizationSlug,
+    plan,
+  });
+
+  if (organizationSlug) {
+    posthogClient.group('orgslug', organizationSlug);
+  }
+};
+
+const identify = (input: IdentifyUserInput) => {
   if (typeof window === 'undefined') {
     return;
   }
@@ -44,21 +62,11 @@ const identify = ({
 
   // Identify with Reo
   window.Reo?.identify({
-    username: email,
+    username: input.email,
     type: 'email',
   });
 
-  // Identify with PostHog
-  // We use the id posthog sets to identify the user. This way we do not lose cross domain tracking.
-  const posthog = PostHogClient();
-  posthog.identify(posthog.get_distinct_id(), {
-    id,
-    email,
-    organizationId,
-    organizationName,
-    organizationSlug,
-    plan,
-  });
+  syncPostHogIdentity(PostHogClient(), input);
 };
 
-export { resetTracking, identify };
+export { resetTracking, identify, syncPostHogIdentity };

@@ -1,7 +1,9 @@
 import crypto from 'node:crypto';
 import os from 'node:os';
 import { PostHog } from 'posthog-node';
+import jwtDecode from 'jwt-decode';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { DecodedAccessToken } from '../commands/auth/utils.js';
 import { config, getBaseHeaders, getLoginDetails } from './config.js';
 import { CreateClient } from './client/client.js';
 
@@ -12,6 +14,12 @@ const TELEMETRY_DISABLED = process.env.COSMO_TELEMETRY_DISABLED === 'true' || pr
 let client: PostHog | null = null;
 
 let apiClient: ReturnType<typeof CreateClient> | null = null;
+
+let identifiedEmail: string | null = null;
+
+let aliasedDistinctId: string | null = null;
+
+let groupedOrganizationSlug: string | null = null;
 
 type PostHogFetchOptions = {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH';
@@ -35,6 +43,13 @@ const buildPostHogOkResponse = () => ({
   text: () => Promise.resolve(''),
   json: () => Promise.resolve({}),
 });
+
+type TelemetryIdentity = {
+  distinctId: string;
+  email?: string;
+  organizationSlug?: string;
+  previousDistinctId?: string;
+};
 
 // PostHog logs flush failures directly; treat network issues as no-ops for CLI UX.
 // This will also make the retry mechanism ineffective.
@@ -114,21 +129,47 @@ export const initTelemetry = () => {
 
 /**
  * Generate a consistent distinct ID
- * Uses the platform API to get the organization slug if available
+ * Prefers the user email when available and attaches the current organization as a group.
  */
-const getIdentity = async (): Promise<string> => {
+const getEmailFromToken = (token?: string): string | undefined => {
+  if (!token) {
+    return undefined;
+  }
+
   try {
-    // First try to get the identity from the config file
-    const loginDetails = getLoginDetails();
-    if (loginDetails?.organizationSlug) {
-      return loginDetails.organizationSlug;
-    }
+    const decoded = jwtDecode<DecodedAccessToken>(token);
+    return decoded.email || undefined;
+  } catch {
+    return undefined;
+  }
+};
 
-    // If not found, the user might be using an API key.
-    // Call the whoAmI API to get organization information
+const getIdentityFromLoginDetails = (): TelemetryIdentity => {
+  const loginDetails = getLoginDetails();
+  const email = getEmailFromToken(loginDetails?.accessToken);
+  const organizationSlug = loginDetails?.organizationSlug || undefined;
 
+  return {
+    distinctId: email ?? organizationSlug ?? 'anonymous',
+    email,
+    organizationSlug,
+    previousDistinctId: email && organizationSlug ? organizationSlug : undefined,
+  };
+};
+
+const getIdentityFromApiKey = async (): Promise<TelemetryIdentity | null> => {
+  if (!config.apiKey) {
+    return null;
+  }
+
+  const email = getEmailFromToken(config.apiKey);
+
+  try {
     if (!apiClient) {
-      return 'anonymous';
+      return {
+        distinctId: email ?? 'anonymous',
+        email,
+      };
     }
 
     const resp = await apiClient.platform.whoAmI(
@@ -139,12 +180,74 @@ const getIdentity = async (): Promise<string> => {
     );
 
     if (resp.response?.code === EnumStatusCode.OK) {
-      return resp.organizationSlug;
+      const organizationSlug = resp.organizationSlug || undefined;
+
+      return {
+        distinctId: email ?? organizationSlug ?? 'anonymous',
+        email,
+        organizationSlug,
+        previousDistinctId: email && organizationSlug ? organizationSlug : undefined,
+      };
     }
 
-    return 'anonymous';
+    return {
+      distinctId: email ?? 'anonymous',
+      email,
+    };
   } catch {
-    return 'anonymous';
+    return {
+      distinctId: email ?? 'anonymous',
+      email,
+    };
+  }
+};
+
+const getIdentity = async (): Promise<TelemetryIdentity> => {
+  const apiKeyIdentity = await getIdentityFromApiKey();
+  if (apiKeyIdentity) {
+    return apiKeyIdentity;
+  }
+
+  return getIdentityFromLoginDetails();
+};
+
+const syncIdentity = (identity: TelemetryIdentity) => {
+  if (!client) {
+    return;
+  }
+
+  if (identity.email && identity.previousDistinctId && identity.previousDistinctId !== identity.email) {
+    const aliasKey = `${identity.previousDistinctId}->${identity.email}`;
+    if (aliasedDistinctId !== aliasKey) {
+      client.alias({
+        distinctId: identity.previousDistinctId,
+        alias: identity.email,
+      });
+      aliasedDistinctId = aliasKey;
+    }
+  }
+
+  if (identity.email && identifiedEmail !== identity.email) {
+    client.identify({
+      distinctId: identity.email,
+      properties: {
+        email: identity.email,
+        organizationSlug: identity.organizationSlug,
+      },
+    });
+    identifiedEmail = identity.email;
+  }
+
+  if (identity.organizationSlug && groupedOrganizationSlug !== identity.organizationSlug) {
+    client.groupIdentify({
+      groupType: 'orgslug',
+      groupKey: identity.organizationSlug,
+      properties: {
+        organizationSlug: identity.organizationSlug,
+      },
+      distinctId: identity.email ?? identity.distinctId,
+    });
+    groupedOrganizationSlug = identity.organizationSlug;
   }
 };
 
@@ -159,10 +262,16 @@ export const capture = async (eventName: string, properties: Record<string, any>
   try {
     const identity = await getIdentity();
     const metadata = getMetadata();
+    syncIdentity(identity);
 
     client.capture({
-      distinctId: identity,
+      distinctId: identity.distinctId,
       event: eventName,
+      groups: identity.organizationSlug
+        ? {
+            orgslug: identity.organizationSlug,
+          }
+        : undefined,
       properties: {
         ...metadata,
         ...properties,
