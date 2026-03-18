@@ -374,8 +374,6 @@ func TestCache_DoubleClose(t *testing.T) {
 	})
 }
 
-// 3.726 ns/op | 3.695 ns/op | 3.702 ns/op : SyncMap
-// 4.962 | 3.771 ns/op | 5.269 ns/op | 3.947 ns/op | 4.049 ns/op : Normal
 func BenchmarkCache_Set(b *testing.B) {
 	c, err := New[*testPlan](1000, 0)
 	require.NoError(b, err)
@@ -391,8 +389,6 @@ func BenchmarkCache_Set(b *testing.B) {
 	c.Wait()
 }
 
-// 4.399 ns/op | 4.602 ns/op | 4.454 ns/op | 4.506 ns/op : SyncMap
-// 4.683 ns/op | 5.099 ns/op | 5.055 ns/op | 4.546 ns/op : Mutexes
 func BenchmarkCache_Set_Eviction(b *testing.B) {
 	c, err := New[*testPlan](100, 0)
 	require.NoError(b, err)
@@ -408,8 +404,6 @@ func BenchmarkCache_Set_Eviction(b *testing.B) {
 	c.Wait()
 }
 
-// 17.14 ns/op | 17.11 ns/op | 17.65 ns/op : SyncMap
-// 14.79 ns/op | 16.58 ns/op | 15.15 ns/op : Mutexes
 func BenchmarkCache_Get_Hit(b *testing.B) {
 	c, err := New[*testPlan](1000, 0)
 	require.NoError(b, err)
@@ -427,8 +421,6 @@ func BenchmarkCache_Get_Hit(b *testing.B) {
 	}
 }
 
-// 6.644 ns/op | 6.507 ns/op | 6.496 ns/op : SyncMap
-// 15.00 ns/op | 14.83 ns/op | 14.73 ns/op : Mutexes
 func BenchmarkCache_Get_Miss(b *testing.B) {
 	c, err := New[*testPlan](1000, 0)
 	require.NoError(b, err)
@@ -441,8 +433,6 @@ func BenchmarkCache_Get_Miss(b *testing.B) {
 	}
 }
 
-// 7.874 ns/op | 8.178 ns/op | 7.957 ns/op : SyncMap
-// 4.882 ns/op | 4.816 ns/op | 5.666 ns/op : Mutexes
 func BenchmarkCache_Set_SameKey(b *testing.B) {
 	c, err := New[*testPlan](1000, 0)
 	require.NoError(b, err)
