@@ -494,6 +494,7 @@ export const ProposalDetails = ({
                                 linkedChecks.some(
                                   (linkedCheck) => linkedCheck.hasGraphPruningErrors && !linkedCheck.isForcedSuccess,
                                 ),
+                                checkExtensionErrorMessage
                               );
 
                               const path = `/${user?.currentOrganization.slug}/${graphData?.graph?.namespace}/graph/${graphData?.graph?.name}/checks/${id}`;
