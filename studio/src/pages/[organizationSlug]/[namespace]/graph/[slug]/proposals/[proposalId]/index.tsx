@@ -585,7 +585,10 @@ export const ProposalDetails = ({
                                       </Badge>
                                       <Badge
                                         variant="outline"
-                                        className={cn('gap-2 py-1.5', !checkExtensionDeliveryId && 'text-muted-foreground')}
+                                        className={cn(
+                                          'gap-2 py-1.5',
+                                          !checkExtensionDeliveryId && 'text-muted-foreground',
+                                        )}
                                       >
                                         {!checkExtensionDeliveryId ? (
                                           <NoSymbolIcon className="h-4 w-4" />
