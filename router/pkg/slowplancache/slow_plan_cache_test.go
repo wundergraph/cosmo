@@ -281,7 +281,7 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := range 100 {
-				key := uint64(i*100 + j) //nolint:gosec // test code, no overflow risk
+				key := uint64(i*100 + j) // test code, no overflow risk
 				c.Set(key, &testPlan{content: "q"}, time.Duration(j)*time.Millisecond)
 			}
 		}()
@@ -293,7 +293,7 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := range 100 {
-				c.Get(uint64(i*100 + j)) //nolint:gosec // test code, no overflow risk
+				c.Get(uint64(i*100 + j)) // test code, no overflow risk
 			}
 		}()
 	}
@@ -372,4 +372,83 @@ func TestCache_DoubleClose(t *testing.T) {
 		c.Close()
 		c.Close()
 	})
+}
+
+func BenchmarkCache_Set(b *testing.B) {
+	c, err := New[*testPlan](1000, 0)
+	require.NoError(b, err)
+	defer c.Close()
+
+	plan := &testPlan{content: "query { benchmarkField }"}
+
+	i := 0
+	for b.Loop() {
+		c.Set(uint64(i), plan, time.Duration(i)*time.Millisecond)
+		i++
+	}
+	c.Wait()
+}
+
+func BenchmarkCache_Set_Eviction(b *testing.B) {
+	c, err := New[*testPlan](100, 0)
+	require.NoError(b, err)
+	defer c.Close()
+
+	plan := &testPlan{content: "query { benchmarkField }"}
+
+	i := 0
+	for b.Loop() {
+		c.Set(uint64(i), plan, time.Duration(i)*time.Millisecond)
+		i++
+	}
+	c.Wait()
+}
+
+func BenchmarkCache_Get_Hit(b *testing.B) {
+	c, err := New[*testPlan](1000, 0)
+	require.NoError(b, err)
+	defer c.Close()
+
+	for i := range 1000 {
+		c.Set(uint64(i), &testPlan{content: "q"}, time.Duration(i+1)*time.Millisecond)
+	}
+	c.Wait()
+
+	i := 0
+	for b.Loop() {
+		c.Get(uint64(i % 1000))
+		i++
+	}
+}
+
+func BenchmarkCache_Get_Miss(b *testing.B) {
+	c, err := New[*testPlan](1000, 0)
+	require.NoError(b, err)
+	defer c.Close()
+
+	i := 0
+	for b.Loop() {
+		c.Get(uint64(i))
+		i++
+	}
+}
+
+func BenchmarkCache_Mixed(b *testing.B) {
+	c, err := New[*testPlan](1000, 0)
+	require.NoError(b, err)
+	defer c.Close()
+
+	plan := &testPlan{content: "query { benchmarkField }"}
+
+	i := 0
+	for b.Loop() {
+		key := uint64(i % 2000)
+		if i%3 == 0 {
+			c.Set(key, plan, time.Duration(i)*time.Millisecond)
+		} else {
+			c.Get(key)
+		}
+		i++
+	}
+	c.Wait()
 }
