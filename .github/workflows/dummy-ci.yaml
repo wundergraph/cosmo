@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/**'
       - '.github/workflows/image-release.yml'
+      - 'docs-website/**'
 jobs:
   build_test:
     timeout-minutes: 5

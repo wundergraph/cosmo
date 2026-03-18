@@ -10,33 +10,32 @@ import (
 	"maps"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"go.opentelemetry.io/otel/codes"
-
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 
 	"github.com/wundergraph/astjson"
-
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
-
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"github.com/wundergraph/cosmo/router/pkg/art"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/datasource/httpclient"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/graphqlerrors"
 )
 
 type PreHandlerOptions struct {
@@ -423,6 +422,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 			// Mark the root span of the router as failed, so we can easily identify failed requests
 			rtrace.AttachErrToSpan(routerSpan, err)
 
+			if h.operationProcessor.costControl != nil && h.operationProcessor.costControl.ExposeHeaders &&
+				// Report the estimated cost in case of errors.
+				// The actual cost is only available for successful requests.
+				requestContext.operation != nil && requestContext.operation.costEstimatedSet {
+				ww.Header().Set(CostEstimatedHeader, strconv.Itoa(requestContext.operation.costEstimated))
+			}
+
 			writeOperationError(r, ww, requestLogger, err, h.headerPropagation)
 			return
 		}
@@ -628,6 +634,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 		span.End()
 
 		requestContext.operation.persistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
+		requestContext.expressionContext.Request.Operation.PersistedOperationCacheHit = operationKit.parsedOperation.PersistedOperationCacheHit
 	}
 
 	// If the persistent operation is already in the cache, we skip the parse step
@@ -810,6 +817,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	engineNormalizeSpan.SetAttributes(otel.WgNormalizationCacheHit.Bool(cached))
 	requestContext.operation.normalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
+	requestContext.expressionContext.Request.Operation.NormalizationCacheHit = operationKit.parsedOperation.NormalizationCacheHit
 
 	/**
 	* Normalize the variables
@@ -832,6 +840,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	}
 	engineNormalizeSpan.SetAttributes(otel.WgVariablesNormalizationCacheHit.Bool(cached))
 	requestContext.operation.variablesNormalizationCacheHit = cached
+	requestContext.expressionContext.Request.Operation.VariablesNormalizationCacheHit = cached
 
 	// Update file upload paths if they were used in the nested field of the extracted variables.
 	for mapping := range slices.Values(uploadsMapping) {
@@ -883,6 +892,7 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	engineNormalizeSpan.SetAttributes(otel.WgVariablesRemappingCacheHit.Bool(cached))
 	requestContext.operation.variablesRemappingCacheHit = cached
+	requestContext.expressionContext.Request.Operation.VariablesRemappingCacheHit = cached
 	requestContext.operation.hash = operationKit.parsedOperation.ID
 	requestContext.operation.internalHash = operationKit.parsedOperation.InternalID
 	requestContext.operation.remapVariables = operationKit.parsedOperation.RemapVariables
@@ -1100,8 +1110,13 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.expressionContext.Request.Operation.PlanningTime = requestContext.operation.planningTime
 	setTelemetryAttributes(planCtx, requestContext, expr.BucketPlanningTime)
 
+	requestContext.expressionContext.Request.Operation.PlanCacheHit = requestContext.operation.planCacheHit
 	enginePlanSpan.SetAttributes(otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
 	enginePlanSpan.End()
+
+	if err := operationKit.ValidateStaticCost(requestContext.operation); err != nil {
+		return err
+	}
 
 	planningAttrs := *requestContext.telemetry.AcquireAttributes()
 	planningAttrs = append(planningAttrs, otel.WgEnginePlanCacheHit.Bool(requestContext.operation.planCacheHit))
