@@ -1300,7 +1300,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
     `);
   });
 
-  it('does not create a resolve mapping for a field with both args and @requires', () => {
+  it('maps entity with field containing both args and @requires', () => {
     const sdl = `
       directive @key(fields: String!) on OBJECT
 
@@ -1333,6 +1333,12 @@ describe('GraphQL Federation to Proto Mapping', () => {
             "requiredFieldMappings": [
               {
                 "fieldMapping": {
+                  "argumentMappings": [
+                    {
+                      "mapped": "slug",
+                      "original": "slug",
+                    },
+                  ],
                   "mapped": "post",
                   "original": "post",
                 },
