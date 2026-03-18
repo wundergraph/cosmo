@@ -374,6 +374,7 @@ func TestCache_DoubleClose(t *testing.T) {
 	})
 }
 
+// 3.726 ns/op | 3.695 ns/op | 3.702 ns/op : SyncMap
 func BenchmarkCache_Set(b *testing.B) {
 	c, err := New[*testPlan](1000, 0)
 	require.NoError(b, err)
@@ -389,6 +390,7 @@ func BenchmarkCache_Set(b *testing.B) {
 	c.Wait()
 }
 
+// 4.399 ns/op | 4.602 ns/op | 4.454 ns/op | 4.506 ns/op : SyncMap
 func BenchmarkCache_Set_Eviction(b *testing.B) {
 	c, err := New[*testPlan](100, 0)
 	require.NoError(b, err)
@@ -404,6 +406,7 @@ func BenchmarkCache_Set_Eviction(b *testing.B) {
 	c.Wait()
 }
 
+// 17.14 ns/op | 17.11 ns/op | 17.65 ns/op : SyncMap
 func BenchmarkCache_Get_Hit(b *testing.B) {
 	c, err := New[*testPlan](1000, 0)
 	require.NoError(b, err)
@@ -421,6 +424,7 @@ func BenchmarkCache_Get_Hit(b *testing.B) {
 	}
 }
 
+// 6.644 ns/op | 6.507 ns/op | 6.496 ns/op : SyncMap
 func BenchmarkCache_Get_Miss(b *testing.B) {
 	c, err := New[*testPlan](1000, 0)
 	require.NoError(b, err)
@@ -431,6 +435,26 @@ func BenchmarkCache_Get_Miss(b *testing.B) {
 		c.Get(uint64(i))
 		i++
 	}
+}
+
+// 7.874 ns/op | 8.178 ns/op | 7.957 ns/op : SyncMap
+func BenchmarkCache_Set_SameKey(b *testing.B) {
+	c, err := New[*testPlan](1000, 0)
+	require.NoError(b, err)
+	defer c.Close()
+
+	plan := &testPlan{content: "query { benchmarkField }"}
+
+	// Pre-populate so the key exists
+	c.Set(42, plan, 10*time.Millisecond)
+	c.Wait()
+
+	i := 0
+	for b.Loop() {
+		c.Set(42, plan, time.Duration(i)*time.Millisecond)
+		i++
+	}
+	c.Wait()
 }
 
 func BenchmarkCache_Mixed(b *testing.B) {
