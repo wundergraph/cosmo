@@ -28,8 +28,6 @@ An example federation of two simple subgraphs:
 import { federateSubgraphs, FederationResult, Subgraph } from '@wundergraph/composition';
 import { parse } from 'graphql';
 
-const result: FederationResult = federateSubgraphs([subgraphA, subgraphB]);
-
 const subgraphA: Subgraph = {
   name: 'subgraph-a',
   url: 'http://localhost:4001',
@@ -48,39 +46,47 @@ const subgraphB: Subgraph = {
     type Query {
       users: [User!]!
     }
-      
+
     type User @key(fields: "id") {
       id: ID!
       interests: [String!]!
     }
   `),
 };
+
+const result: FederationResult = federateSubgraphs({ subgraphs: [subgraphA, subgraphB] });
 ```
 
 ### FederationResult
 
-The `federateSubgraphs` function returns `FederationResult`, which is a union of `FederationResultSuccess` and
-`FederationResultFailure`. Both types in the union always define the following mutual properties:
+The `federateSubgraphs` function returns `FederationResult`, which is a union of `FederationSuccess` and
+`FederationFailure`. Both types in the union always define the following mutual properties:
 
 | property | Description                            | type           |
 | -------- | -------------------------------------- | -------------- |
 | success  | assertion of composition success       | boolean        |
 | warnings | array of composition warnings (if any) | Array<Warning> |
 
-#### FederationResultSuccess
+#### FederationSuccess
 
-If federation was successful, the return type is `FederationResultSuccess`.
+If federation was successful, the return type is `FederationSuccess`.
 
-| property             | Description                                               | type                  |
-| -------------------- | --------------------------------------------------------- | --------------------- |
-| federatedGraphAST    | an AST object representation of the federated graph sdl   | graphql.DocumentNode  |
-| federatedGraphSchema | a schema object representation of the federated graph sdl | graphql.GraphQLSchema |
-| success              | assertion that composition was successful                 | true                  |
-| warnings             | array of composition warnings (if any)                    | Array<Warning>        |
+| property                       | Description                                               | type                                 |
+| ------------------------------ | --------------------------------------------------------- | ------------------------------------ |
+| directiveDefinitionByName      | map of directive definitions by name                      | Map<string, DirectiveDefinitionNode> |
+| fieldConfigurations            | array of field configurations for the router              | Array<FieldConfiguration>            |
+| federatedGraphAST              | an AST object representation of the federated graph SDL   | graphql.DocumentNode                 |
+| federatedGraphClientSchema     | a schema object with client-facing types only             | graphql.GraphQLSchema                |
+| federatedGraphSchema           | a schema object representation of the federated graph SDL | graphql.GraphQLSchema                |
+| parentDefinitionDataByTypeName | map of parent type definition data by type name           | Map<string, ParentDefinitionData>    |
+| subgraphConfigBySubgraphName   | map of normalized subgraph config by subgraph name        | Map<string, SubgraphConfig>          |
+| shouldIncludeClientSchema      | whether the client schema should be included (optional)   | boolean \| undefined                 |
+| success                        | assertion that composition was successful                 | true                                 |
+| warnings                       | array of composition warnings (if any)                    | Array<Warning>                       |
 
-#### FederationResultFailure
+#### FederationFailure
 
-If federation was unsuccessful, the return type is `FederationResultFailure`.
+If federation was unsuccessful, the return type is `FederationFailure`.
 
 | property | Description                                 | type           |
 | -------- | ------------------------------------------- | -------------- |
@@ -96,10 +102,10 @@ In these cases, the errors array will be defined and populated.
 An example of a simple debugging framework might be:
 
 ```typescript
-import { federateSubgraphs, FederationResult, Subgraph } from '@wundergraph.composition';
+import { federateSubgraphs, FederationResult, Subgraph } from '@wundergraph/composition';
 import { print, printSchema } from 'graphql';
 
-const result: FederationResult = federateSubgraphs([subgraphA, subgraphB]);
+const result: FederationResult = federateSubgraphs({ subgraphs: [subgraphA, subgraphB] });
 
 if (result.success) {
   // Both options to print the federated graph as a string are included for documentational purposes only
@@ -126,7 +132,7 @@ Errors can happen in three main stages:
    (if this stage fails, federation will not be attempted)
 3. During the federation process itself.
 
-All errors will be appended to the `FederationResultFailure.errors` array.
+All errors will be appended to the `FederationFailure.errors` array.
 
 ## Subgraph object
 
