@@ -477,6 +477,8 @@ export const ProposalDetails = ({
                               checkedSubgraphs,
                               proposalMatch,
                               linkedChecks,
+                              checkExtensionDeliveryId,
+                              checkExtensionErrorMessage,
                             }) => {
                               const isSuccessful = isCheckSuccessful(
                                 isComposable,
@@ -580,6 +582,17 @@ export const ProposalDetails = ({
                                           getCheckIcon(!hasGraphPruningErrors)
                                         )}
                                         <span className="flex-1 truncate">Pruning Errors</span>
+                                      </Badge>
+                                      <Badge
+                                        variant="outline"
+                                        className={cn('gap-2 py-1.5', !checkExtensionDeliveryId && 'text-muted-foreground')}
+                                      >
+                                        {!checkExtensionDeliveryId ? (
+                                          <NoSymbolIcon className="h-4 w-4" />
+                                        ) : (
+                                          getCheckIcon(!checkExtensionErrorMessage)
+                                        )}
+                                        <span className="flex-1 truncate">Extension</span>
                                       </Badge>
                                     </div>
                                   </TableCell>
