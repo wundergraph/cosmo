@@ -19,7 +19,7 @@ const defaultTimeout = 5 * time.Second
 type SubscriptionEventUpdater interface {
 	Update(events []StreamEvent)
 	Complete()
-	Close(kind resolve.SubscriptionCloseKind)
+	Done()
 	SetHooks(hooks Hooks)
 }
 
@@ -84,8 +84,8 @@ func (s *subscriptionEventUpdater) Complete() {
 	s.eventUpdater.Complete()
 }
 
-func (s *subscriptionEventUpdater) Close(kind resolve.SubscriptionCloseKind) {
-	s.eventUpdater.Close(kind)
+func (s *subscriptionEventUpdater) Done() {
+	s.eventUpdater.Done()
 }
 
 func (s *subscriptionEventUpdater) SetHooks(hooks Hooks) {
@@ -124,7 +124,7 @@ func (s *subscriptionEventUpdater) updateSubscription(subscriptionCtx context.Co
 
 	// In case there was an error we close the affected subscription.
 	if err != nil {
-		s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindNormal, subID)
+		s.eventUpdater.CloseSubscription(subID)
 	}
 }
 
@@ -136,7 +136,7 @@ func (s *subscriptionEventUpdater) recoverPanic(subID resolve.SubscriptionIdenti
 			zap.Any("error", err),
 		)
 
-	s.eventUpdater.CloseSubscription(resolve.SubscriptionCloseKindDownstreamServiceError, subID)
+	s.eventUpdater.CloseSubscription(subID)
 }
 
 func NewSubscriptionEventUpdater(

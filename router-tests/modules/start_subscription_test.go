@@ -90,7 +90,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
@@ -183,7 +182,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
@@ -270,7 +268,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
@@ -381,7 +378,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
 			assert.Equal(t, int32(2), customModule.HookCallCount.Load())
@@ -473,7 +469,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())
@@ -511,7 +506,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			var subscriptionCountEmp struct {
 				CountEmp int `graphql:"countEmp(max: $max, intervalMilliseconds: $interval)"`
 			}
@@ -584,7 +578,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 				LogLevel: zapcore.InfoLevel,
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
-
 			var subscriptionCountEmp struct {
 				CountEmp int `graphql:"countEmp(max: $max, intervalMilliseconds: $interval)"`
 			}
@@ -594,7 +587,7 @@ func TestStartSubscriptionHook(t *testing.T) {
 
 			vars := map[string]interface{}{
 				"max":      0,
-				"interval": 0,
+				"interval": 500,
 			}
 
 			type subscriptionArgs struct {
@@ -632,7 +625,6 @@ func TestStartSubscriptionHook(t *testing.T) {
 			require.NoError(t, client.Close())
 			testenv.AwaitChannelWithT(t, time.Second*10, clientRunCh, func(t *testing.T, err error) {
 				require.NoError(t, err)
-
 			}, "unable to close client before timeout")
 
 			assert.Equal(t, int32(1), customModule.HookCallCount.Load())

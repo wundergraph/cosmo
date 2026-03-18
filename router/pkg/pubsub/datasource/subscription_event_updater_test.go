@@ -145,7 +145,7 @@ func TestSubscriptionEventUpdater_UpdateSubscriptions_WithHooks_Error(t *testing
 	mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
 		context.Background(): subId,
 	})
-	mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
+	mockUpdater.On("CloseSubscription", subId).Return()
 
 	// Should not call Update or UpdateSubscription on eventUpdater since hook fails
 	updater := NewSubscriptionEventUpdater(
@@ -165,7 +165,7 @@ func TestSubscriptionEventUpdater_UpdateSubscriptions_WithHooks_Error(t *testing
 	// Assert that Update and UpdateSubscription were not called on the eventUpdater
 	mockUpdater.AssertNotCalled(t, "Update")
 	mockUpdater.AssertNotCalled(t, "UpdateSubscription")
-	mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
+	mockUpdater.AssertCalled(t, "CloseSubscription", subId)
 }
 
 func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Success(t *testing.T) {
@@ -270,7 +270,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Error(t *testing.T) {
 	// Events from hook1 should still be sent despite the error
 	mockUpdater.On("UpdateSubscription", subId, []byte("original data")).Return()
 	// Subscription should be closed due to the error from hook1
-	mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
+	mockUpdater.On("CloseSubscription", subId).Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,
@@ -304,7 +304,7 @@ func TestSubscriptionEventUpdater_Update_WithMultipleHooks_Error(t *testing.T) {
 	// Verify events from hook1 were still sent
 	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("original data"))
 	// Verify subscription was closed due to hook1's error
-	mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
+	mockUpdater.AssertCalled(t, "CloseSubscription", subId)
 	// Verify Update was not called (since hooks are present)
 	mockUpdater.AssertNotCalled(t, "Update")
 }
@@ -330,16 +330,15 @@ func TestSubscriptionEventUpdater_Complete(t *testing.T) {
 	updater.Complete()
 }
 
-func TestSubscriptionEventUpdater_Close(t *testing.T) {
+func TestSubscriptionEventUpdaterDoneForwardsToDone(t *testing.T) {
 	mockUpdater := NewMockSubscriptionUpdater(t)
 	config := &testSubscriptionEventConfig{
 		providerID:   "test-provider",
 		providerType: ProviderTypeNats,
 		fieldName:    "testField",
 	}
-	closeKind := resolve.SubscriptionCloseKindNormal
 
-	mockUpdater.On("Close", closeKind).Return()
+	mockUpdater.On("Done").Return()
 
 	updater := NewSubscriptionEventUpdater(
 		config,
@@ -349,7 +348,7 @@ func TestSubscriptionEventUpdater_Close(t *testing.T) {
 		testEventBuilder,
 	)
 
-	updater.Close(closeKind)
+	updater.Done()
 }
 
 func TestSubscriptionEventUpdater_SetHooks(t *testing.T) {
@@ -530,7 +529,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookError_ClosesSubscription(
 	// Events are still sent even when hook returns error
 	mockUpdater.On("UpdateSubscription", subId, []byte("test data")).Return()
 	// Subscription should be closed due to the error
-	mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
+	mockUpdater.On("CloseSubscription", subId).Return()
 
 	updater := NewSubscriptionEventUpdater(config, Hooks{
 		OnReceiveEvents: OnReceiveEventsHooks{
@@ -543,7 +542,7 @@ func TestSubscriptionEventUpdater_Update_WithSingleHookError_ClosesSubscription(
 	// Verify events were still sent despite the error
 	mockUpdater.AssertCalled(t, "UpdateSubscription", subId, []byte("test data"))
 	// Verify subscription was closed due to the error
-	mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
+	mockUpdater.AssertCalled(t, "CloseSubscription", subId)
 	// Update should NOT be called when hooks are present
 	mockUpdater.AssertNotCalled(t, "Update")
 }
@@ -695,39 +694,6 @@ func TestSubscriptionEventUpdater_UpdateEvents_EmptyEvents(t *testing.T) {
 	mockUpdater.AssertNotCalled(t, "Update")
 }
 
-func TestSubscriptionEventUpdater_Close_WithDifferentCloseKinds(t *testing.T) {
-	testCases := []struct {
-		name      string
-		closeKind resolve.SubscriptionCloseKind
-	}{
-		{"Normal", resolve.SubscriptionCloseKindNormal},
-		{"DownstreamServiceError", resolve.SubscriptionCloseKindDownstreamServiceError},
-		{"GoingAway", resolve.SubscriptionCloseKindGoingAway},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			mockUpdater := NewMockSubscriptionUpdater(t)
-			config := &testSubscriptionEventConfig{
-				providerID:   "test-provider",
-				providerType: ProviderTypeNats,
-				fieldName:    "testField",
-			}
-
-			mockUpdater.On("Close", tc.closeKind).Return()
-
-			updater := NewSubscriptionEventUpdater(
-				config,
-				Hooks{},
-				mockUpdater,
-				zap.NewNop(),
-				testEventBuilder,
-			)
-
-			updater.Close(tc.closeKind)
-		})
-	}
-}
 
 func TestSubscriptionEventUpdater_UpdateSubscription_WithHookError_ClosesSubscription(t *testing.T) {
 	testCases := []struct {
@@ -777,11 +743,11 @@ func TestSubscriptionEventUpdater_UpdateSubscription_WithHookError_ClosesSubscri
 			mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
 				context.Background(): subId,
 			})
-			mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindNormal, subId).Return()
+			mockUpdater.On("CloseSubscription", subId).Return()
 
 			updater.Update(events)
 
-			mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindNormal, subId)
+			mockUpdater.AssertCalled(t, "CloseSubscription", subId)
 		})
 	}
 }
@@ -831,7 +797,7 @@ func TestSubscriptionEventUpdater_OnReceiveEvents_PanicRecovery(t *testing.T) {
 			mockUpdater.On("Subscriptions").Return(map[context.Context]resolve.SubscriptionIdentifier{
 				context.Background(): subId,
 			})
-			mockUpdater.On("CloseSubscription", resolve.SubscriptionCloseKindDownstreamServiceError, subId).Return()
+			mockUpdater.On("CloseSubscription", subId).Return()
 
 			updater := NewSubscriptionEventUpdater(
 				config,
@@ -854,7 +820,7 @@ func TestSubscriptionEventUpdater_OnReceiveEvents_PanicRecovery(t *testing.T) {
 			}, 10*time.Millisecond, time.Millisecond, "expected panic recovery log")
 
 			// Assert that subscription was closed due to panic
-			mockUpdater.AssertCalled(t, "CloseSubscription", resolve.SubscriptionCloseKindDownstreamServiceError, subId)
+			mockUpdater.AssertCalled(t, "CloseSubscription", subId)
 			mockUpdater.AssertNotCalled(t, "UpdateSubscription")
 
 			// Assert that panic was logged with correct details
