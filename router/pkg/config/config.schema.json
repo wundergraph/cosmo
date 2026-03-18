@@ -3337,7 +3337,7 @@
           "description": "The minimum planning duration for a query plan to be stored in the slow plan cache.",
           "default": "100ms",
           "duration": {
-            "minimum": "1ns"
+            "minimum": "0ns"
           }
         },
         "operation_hash_cache_size": {

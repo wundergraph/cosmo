@@ -18,7 +18,7 @@ type setRequest[V any] struct {
 	key    uint64
 	value  V
 	dur    time.Duration
-	waitCh chan struct{} // if non-nil, closed after this request is processed
+	waitCh chan struct{} // if non-nil, will be closed after previous requests in the buffer are processed
 }
 
 // Cache is a bounded map that holds expensive-to-compute values
