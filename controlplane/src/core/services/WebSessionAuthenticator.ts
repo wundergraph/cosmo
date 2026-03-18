@@ -1,13 +1,13 @@
 import cookie from 'cookie';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { UserSession } from '../../types/index.js';
 import { decrypt, userSessionCookieName } from '../crypto/jwt.js';
 import { UserRepository } from '../repositories/UserRepository.js';
 import * as schema from '../../db/schema.js';
 import AuthUtils from '../auth-utils.js';
 import { AuthenticationError } from '../errors/errors.js';
-import { EnumStatusCode } from '../../../../connect/src/wg/cosmo/common/common_pb.js';
 
 export const OrganizationSlugHeader = 'cosmo-org-slug';
 
