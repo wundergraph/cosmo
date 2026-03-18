@@ -1263,6 +1263,23 @@
                     }
                   }
                 },
+                "cost_stats": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure cost statistics for OTLP metrics.",
+                  "properties": {
+                    "estimated_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of estimated cost stats. The default value is false."
+                    },
+                    "actual_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of actual cost stats. The default value is false."
+                    }
+                  }
+                },
                 "exporters": {
                   "type": "array",
                   "description": "The exporters to use to export the metrics. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
@@ -1408,6 +1425,23 @@
                       "type": "boolean",
                       "default": false,
                       "description": "Enabling this will report additional engine metrics for WebSockets and SSE such as connections, subscriptions and triggers. The default value is false"
+                    }
+                  }
+                },
+                "cost_stats": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure cost statistics for Prometheus metrics.",
+                  "properties": {
+                    "estimated_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of estimated cost stats. The default value is false."
+                    },
+                    "actual_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of actual cost stats. The default value is false."
                     }
                   }
                 },
@@ -3083,6 +3117,61 @@
               "type": "boolean",
               "default": false,
               "description": "When set to true, complexity validation is ignored for all introspection queries."
+            }
+          }
+        },
+        "cost_control": {
+          "type": "object",
+          "description": "Cost control based on @cost and @listSize directives.",
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": { "enabled": { "const": true } },
+                "required": ["enabled"]
+              },
+              "then": {
+                "required": ["estimated_list_size"]
+              }
+            },
+            {
+              "if": {
+                "properties": { "mode": { "const": "enforce" } },
+                "required": ["mode"]
+              },
+              "then": {
+                "properties": {
+                  "max_estimated_limit": { "minimum": 1 }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, the router calculates costs for every operation."
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["measure", "enforce"],
+              "default": "measure",
+              "description": "Controls cost control behavior: 'measure' calculates costs without rejecting operations; 'enforce' rejects operations exceeding the estimated cost limit."
+            },
+            "max_estimated_limit": {
+              "type": "integer",
+              "description": "Maximum allowed estimated cost for a query. Required to be positive when mode is 'enforce'.",
+              "default": 0,
+              "minimum": 0
+            },
+            "estimated_list_size": {
+              "type": "integer",
+              "description": "Default assumed size for list fields when no @listSize directive is specified. Required for estimated cost calculation.",
+              "minimum": 1
+            },
+            "expose_headers": {
+              "type": "boolean",
+              "description": "Enable costs response headers for estimated and actuals operation costs."
             }
           }
         },

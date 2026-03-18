@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"golang.org/x/sync/singleflight"
+
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
 	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
@@ -13,7 +15,6 @@ import (
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/postprocess"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
-	"golang.org/x/sync/singleflight"
 )
 
 type planWithMetaData struct {
@@ -135,6 +136,9 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 	// in case of including the query plan, we don't want to cache this additional overhead
 
 	skipCache := options.TraceOptions.Enable || options.ExecutionOptions.IncludeQueryPlanInResponse
+
+	// Store plan config regardless of cache to enable costs calculation.
+	opContext.planConfig = p.executor.PlanConfig
 
 	if skipCache {
 		prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: false})

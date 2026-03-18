@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { allExternalFieldInstancesError, noBaseDefinitionForExtensionError, OBJECT } from '@wundergraph/composition';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import {
@@ -48,6 +48,7 @@ describe('CheckFederatedGraph', (ctx) => {
     '%s should be able to create a federated graph, subgraphs, publish the schema and then check the graph for composition errors',
     async (role) => {
       const { client, server, users, authenticator } = await SetupTest({ dbname, chClient });
+      onTestFinished(() => server.close());
 
       const federatedGraphName = genID('fedGraph');
 
@@ -143,13 +144,12 @@ describe('CheckFederatedGraph', (ctx) => {
         allExternalFieldInstancesError('User', new Map<string, Array<string>>([['totalProductsCreated', ['products']]]))
           .message,
       );
-
-      await server.close();
     },
   );
 
-  test('Should be able to create a federated graph, subgraphs, publish the schema and then check the graph for composition errors when using legacy API key', async (role) => {
+  test('Should be able to create a federated graph, subgraphs, publish the schema and then check the graph for composition errors when using legacy API key', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
 
@@ -245,12 +245,11 @@ describe('CheckFederatedGraph', (ctx) => {
       allExternalFieldInstancesError('User', new Map<string, Array<string>>([['totalProductsCreated', ['products']]]))
         .message,
     );
-
-    await server.close();
   });
 
-  test('graph-admin should be able to check the graph for composition errors on allowed namespaces', async (role) => {
+  test('graph-admin should be able to check the graph for composition errors on allowed namespaces', async (testContext) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
 
@@ -346,8 +345,6 @@ describe('CheckFederatedGraph', (ctx) => {
       allExternalFieldInstancesError('User', new Map<string, Array<string>>([['totalProductsCreated', ['products']]]))
         .message,
     );
-
-    await server.close();
   });
 
   test.each([
@@ -361,6 +358,7 @@ describe('CheckFederatedGraph', (ctx) => {
     'subgraph-viewer',
   ])('%s should not be able to check graphs for composition errors', async (role) => {
     const { client, server, users, authenticator } = await SetupTest({ dbname, chClient });
+    onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
 
@@ -442,12 +440,11 @@ describe('CheckFederatedGraph', (ctx) => {
       labelMatchers: ['team=A'],
     });
     expect(checkResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
-  test('Should handle composition when one of the subgraphs has an empty schema', async () => {
+  test('Should handle composition when one of the subgraphs has an empty schema', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const emptySubgraphName = genID('empty-subgraph');
     const validSubgraphName = genID('valid-subgraph');
@@ -507,13 +504,12 @@ describe('CheckFederatedGraph', (ctx) => {
     expect(checkValidResp.compositionErrors.length).toBe(0);
     expect(checkValidResp.subgraphs.length).toBe(1);
     expect(checkValidResp.subgraphs[0].name).toBe(validSubgraphName);
-
-    await server.close();
   });
 
   describe('Federated graph check with limit parameter', () => {
-    test('Should return all composition errors when no limit is provided', async () => {
+    test('Should return all composition errors when no limit is provided', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const federatedGraphName = genID('fedGraph');
       const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
@@ -552,12 +548,11 @@ describe('CheckFederatedGraph', (ctx) => {
       // Counts should reflect the actual total
       expect(checkResp.counts?.compositionErrors).toBe(2);
       expect(checkResp.counts?.compositionWarnings).toBeGreaterThanOrEqual(0);
-
-      await server.close();
     });
 
-    test('Should limit composition errors when limit is provided', async () => {
+    test('Should limit composition errors when limit is provided', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const federatedGraphName = genID('fedGraph');
       const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
@@ -596,12 +591,11 @@ describe('CheckFederatedGraph', (ctx) => {
       expect(checkResp.compositionErrors.length).toBe(1);
       // But counts should reflect the actual total
       expect(checkResp.counts?.compositionErrors).toBe(2);
-
-      await server.close();
     });
 
-    test('Should limit composition warnings when limit is provided', async () => {
+    test('Should limit composition warnings when limit is provided', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const federatedGraphName = genID('fedGraph');
       const label = genUniqueLabel();
@@ -662,12 +656,11 @@ describe('CheckFederatedGraph', (ctx) => {
       expect(checkResp.compositionWarnings.length).toBeLessThanOrEqual(1);
       // Counts should still reflect actual totals
       expect(checkResp.counts?.compositionWarnings).toBeGreaterThanOrEqual(0);
-
-      await server.close();
     });
 
-    test('Should return counts object even when composition succeeds', async () => {
+    test('Should return counts object even when composition succeeds', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const federatedGraphName = genID('fedGraph');
       const pandasSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/pandas.graphql'));
@@ -728,12 +721,11 @@ describe('CheckFederatedGraph', (ctx) => {
       expect(checkResp.counts?.nonBreakingChanges).toBe(0);
       expect(checkResp.counts?.graphPruneErrors).toBe(0);
       expect(checkResp.counts?.graphPruneWarnings).toBe(0);
-
-      await server.close();
     });
 
-    test('Should clamp limit to maximum allowed value', async () => {
+    test('Should clamp limit to maximum allowed value', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const federatedGraphName = genID('fedGraph');
       const subgraphName = genID('subgraph');
@@ -770,12 +762,11 @@ describe('CheckFederatedGraph', (ctx) => {
       // Should still work, limit will be clamped to 100,000
       expect(checkResp.response?.code).toBe(EnumStatusCode.OK);
       expect(checkResp.counts).toBeDefined();
-
-      await server.close();
     });
 
-    test('Should clamp limit of 0 to minimum of 1', async () => {
+    test('Should clamp limit of 0 to minimum of 1', async (testContext) => {
       const { client, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
 
       const federatedGraphName = genID('fedGraph');
       const productsSchemaBuffer = await readFile(join(process.cwd(), 'test/graphql/federationV1/products.graphql'));
@@ -814,8 +805,6 @@ describe('CheckFederatedGraph', (ctx) => {
       expect(checkResp.compositionErrors.length).toBe(1);
       // Counts should reflect the actual total
       expect(checkResp.counts?.compositionErrors).toBe(2);
-
-      await server.close();
     });
   });
 });

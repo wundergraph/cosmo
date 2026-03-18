@@ -35,6 +35,7 @@ describe('DeleteFederatedGraph', (ctx) => {
 
   test('Should be able to create a subgraph, publish the schema, create a federated graph and then delete a federated graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const federatedGraphName = genID('fedGraph');
     const subgraphName = genID('subgraph');
@@ -94,7 +95,5 @@ describe('DeleteFederatedGraph', (ctx) => {
       });
       expect(getSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
     }
-
-    await server.close();
   });
 });
