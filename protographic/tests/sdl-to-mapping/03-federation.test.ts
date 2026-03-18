@@ -1308,7 +1308,7 @@ describe('GraphQL Federation to Proto Mapping', () => {
         id: ID!
         name: String! @external
 
-        post(slug: String!): Post! @requires(fields: "name")
+        post(slug: String!, maxResults: Int!): Post! @requires(fields: "name")
       }
 
       type Post {
@@ -1337,6 +1337,10 @@ describe('GraphQL Federation to Proto Mapping', () => {
                     {
                       "mapped": "slug",
                       "original": "slug",
+                    },
+                    {
+                      "mapped": "max_results",
+                      "original": "maxResults",
                     },
                   ],
                   "mapped": "post",
@@ -1393,6 +1397,10 @@ describe('GraphQL Federation to Proto Mapping', () => {
                   {
                     "mapped": "slug",
                     "original": "slug",
+                  },
+                  {
+                    "mapped": "max_results",
+                    "original": "maxResults",
                   },
                 ],
                 "mapped": "post",
