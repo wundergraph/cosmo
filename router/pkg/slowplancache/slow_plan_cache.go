@@ -28,7 +28,7 @@ type setRequest[V any] struct {
 // It tracks the minimum-duration entry so that rejection of cheaper entries is O(1).
 type Cache[V any] struct {
 	entries   sync.Map // map[uint64]*Entry[V]
-	size      atomic.Int64
+	size      int64
 	maxSize   int64
 	threshold time.Duration
 	minKey    uint64
@@ -146,10 +146,10 @@ func (c *Cache[V]) applySet(key uint64, value V, duration time.Duration) {
 	}
 
 	// If not at capacity, just add and update min tracking
-	if c.size.Load() < c.maxSize {
+	if c.size < c.maxSize {
 		c.entries.Store(key, entry)
-		newSize := c.size.Add(1)
-		if newSize == 1 || duration < c.minDur {
+		c.size++
+		if c.size == 1 || duration < c.minDur {
 			c.minKey = key
 			c.minDur = duration
 		}
