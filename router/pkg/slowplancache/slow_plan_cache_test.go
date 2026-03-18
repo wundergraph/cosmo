@@ -268,6 +268,43 @@ func TestCache_MaxSizeOne(t *testing.T) {
 	require.True(t, ok)
 }
 
+// runMixedOps exercises all cache operations deterministically based on the counter i.
+// Operation distribution: ~29% writes, ~14% same-key writes, ~29% read hits,
+// ~14% read misses, ~14% iteration (80% full, 20% early stop) + occasional Wait.
+func runMixedOps(c *Cache[*testPlan], i int) {
+	plan := &testPlan{content: "q"}
+	op := i % 7
+	key := uint64(i % 2000)
+
+	switch {
+	case op < 2:
+		// ~29% writes with varying keys (triggers eviction when cache is full)
+		c.Set(key, plan, time.Duration(i%500+1)*time.Millisecond)
+	case op < 3:
+		// ~14% writes to same key (triggers update path and possible refreshMin)
+		c.Set(42, plan, time.Duration(i%500+1)*time.Millisecond)
+	case op < 5:
+		// ~29% reads that may hit
+		c.Get(uint64(i % 500))
+	case op < 6:
+		// ~14% reads that will mostly miss (keys beyond cache capacity)
+		c.Get(key + 1000)
+	default:
+		// ~14% iteration + Wait
+		if i%5 == 0 {
+			for range c.Values() {
+				break
+			}
+		} else {
+			for range c.Values() {
+			}
+		}
+		if i%13 == 0 {
+			c.Wait()
+		}
+	}
+}
+
 func TestCache_ConcurrentAccess(t *testing.T) {
 	t.Parallel()
 	c, err := New[*testPlan](100, 0)
@@ -275,41 +312,43 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 	defer c.Close()
 	var wg sync.WaitGroup
 
-	// Concurrent writers
-	for i := range 10 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := range 100 {
-				key := uint64(i*100 + j) // test code, no overflow risk
-				c.Set(key, &testPlan{content: "q"}, time.Duration(j)*time.Millisecond)
-			}
-		}()
-	}
+	const (
+		numGoroutines = 2000
+		opsPerRoutine = 5000
+	)
 
-	// Concurrent readers
-	for i := range 10 {
+	for g := range numGoroutines {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for j := range 100 {
-				c.Get(uint64(i*100 + j)) // test code, no overflow risk
-			}
-		}()
-	}
-
-	// Concurrent iterators
-	for range 5 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for range c.Values() {
-				_ = struct{}{} // prevent loop optimization
+			for j := range opsPerRoutine {
+				runMixedOps(c, g*opsPerRoutine+j)
 			}
 		}()
 	}
 
 	wg.Wait()
+}
+
+func BenchmarkCache_ConcurrentMixed(b *testing.B) {
+	c, err := New[*testPlan](1000, 0)
+	require.NoError(b, err)
+	defer c.Close()
+
+	// Pre-populate half the key space so we get a mix of hits and misses
+	for i := range 500 {
+		c.Set(uint64(i), &testPlan{content: "q"}, time.Duration(i+1)*time.Millisecond)
+	}
+	c.Wait()
+
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			runMixedOps(c, i)
+			i++
+		}
+	})
+	c.Wait()
 }
 
 func TestCache_InvalidSize(t *testing.T) {
