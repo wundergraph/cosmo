@@ -463,7 +463,7 @@ func BenchmarkCache_Set_SameKey(b *testing.B) {
 }
 
 // 19.22 ns/op | 21.75 ns/op | 18.95 ns/op : SyncMap
-// 3504 ns/op | 4020 ns/op | 3607 ns/op | 2738 ns/op : Mutexes
+// 43.91 ns/op | 41.16 ns/op | 39.43 ns/op : Mutexes
 func BenchmarkCache_Mixed(b *testing.B) {
 	c, err := New[*testPlan](1000, 0)
 	require.NoError(b, err)

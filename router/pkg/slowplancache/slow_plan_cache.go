@@ -131,8 +131,18 @@ func (c *Cache[V]) Wait() {
 }
 
 // applySet performs the actual cache mutation. Must only be called from processWrites.
-// This will hold the lock while it is running
 func (c *Cache[V]) applySet(key uint64, value V, duration time.Duration) {
+	needsRefreshMin := c.mutateEntries(key, value, duration)
+	if needsRefreshMin {
+		c.mu.RLock()
+		defer c.mu.RUnlock()
+		c.refreshMin()
+	}
+}
+
+// mutateEntries applies the cache mutation under the write lock and returns
+// whether refreshMin needs to be called afterwards.
+func (c *Cache[V]) mutateEntries(key uint64, value V, duration time.Duration) bool {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -144,10 +154,10 @@ func (c *Cache[V]) applySet(key uint64, value V, duration time.Duration) {
 
 			// If the minKey duration was increased, there can be a new minKey
 			if c.minKey == key {
-				c.refreshMin()
+				return true
 			}
 		}
-		return
+		return false
 	}
 
 	// If not at capacity, just add and update min tracking
@@ -157,22 +167,23 @@ func (c *Cache[V]) applySet(key uint64, value V, duration time.Duration) {
 			c.minKey = key
 			c.minDur = duration
 		}
-		return
+		return false
 	}
 
 	// At capacity: reject if new entry is not more expensive than the current minimum
 	if duration <= c.minDur {
-		return
+		return false
 	}
 
 	// When at max capacity
 	// Evict the minimum and insert the new entry
 	delete(c.entries, c.minKey)
 	c.entries[key] = &Entry[V]{value: value, duration: duration}
-	c.refreshMin()
+	return true
 }
 
-// refreshMin rescans the entries to find the new minimum. Must be called with mu held.
+// refreshMin rescans the entries to find the new minimum. Must only be called from processWrites.
+// Called without the lock: no writes occur during the scan (sole writer), and concurrent reads from Get are safe.
 func (c *Cache[V]) refreshMin() {
 	var (
 		minKey uint64
