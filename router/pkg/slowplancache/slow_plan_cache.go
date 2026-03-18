@@ -24,12 +24,12 @@ type setRequest[V any] struct {
 // Cache is a bounded map that holds expensive-to-compute values
 // that should not be subject to TinyLFU eviction in the main cache.
 // Writes are buffered through a channel and applied asynchronously by a
-// background goroutine, making Set non-blocking. Reads are protected by a RWMutex.
+// background goroutine, making Set non-blocking. Reads use sync.Map for lock-free access.
 // It tracks the minimum-duration entry so that rejection of cheaper entries is O(1).
 type Cache[V any] struct {
-	mu        sync.RWMutex
-	entries   map[uint64]*Entry[V]
-	maxSize   int
+	entries   sync.Map // map[uint64]*Entry[V]
+	size      atomic.Int64
+	maxSize   int64
 	threshold time.Duration
 	minKey    uint64
 	minDur    time.Duration
@@ -49,8 +49,7 @@ func New[V any](maxSize int, threshold time.Duration) (*Cache[V], error) {
 		return nil, fmt.Errorf("slow plan cache size must be at least 1, got %d", maxSize)
 	}
 	c := &Cache[V]{
-		entries:   make(map[uint64]*Entry[V], maxSize),
-		maxSize:   maxSize,
+		maxSize:   int64(maxSize),
 		threshold: threshold,
 		writeCh:   make(chan setRequest[V], defaultWriteBufferSize),
 		stop:      make(chan struct{}),
@@ -60,7 +59,7 @@ func New[V any](maxSize int, threshold time.Duration) (*Cache[V], error) {
 	return c, nil
 }
 
-// processWrites drains the write channel and applies sets under the write lock.
+// processWrites drains the write channel and applies sets.
 // It exits when the stop channel is closed.
 func (c *Cache[V]) processWrites() {
 	defer close(c.done)
@@ -85,16 +84,13 @@ func (c *Cache[V]) Get(key uint64) (V, bool) {
 		return zero, false
 	}
 
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	entry, ok := c.entries[key]
+	val, ok := c.entries.Load(key)
 	if !ok {
 		var zero V
 		return zero, false
 	}
 
-	return entry.value, true
+	return val.(*Entry[V]).value, true
 }
 
 // Set enqueues a write to the cache. The write is applied asynchronously.
@@ -132,58 +128,48 @@ func (c *Cache[V]) Wait() {
 
 // applySet performs the actual cache mutation. Must only be called from processWrites.
 func (c *Cache[V]) applySet(key uint64, value V, duration time.Duration) {
-	needsRefreshMin := c.mutateEntries(key, value, duration)
-	if needsRefreshMin {
-		c.mu.RLock()
-		defer c.mu.RUnlock()
-		c.refreshMin()
-	}
-}
-
-// mutateEntries applies the cache mutation under the write lock and returns
-// whether refreshMin needs to be called afterwards.
-func (c *Cache[V]) mutateEntries(key uint64, value V, duration time.Duration) bool {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	entry := &Entry[V]{value: value, duration: duration}
 
 	// If key already exists, update it
-	if currEntry, ok := c.entries[key]; ok {
+	if existing, ok := c.entries.Load(key); ok {
+		currEntry := existing.(*Entry[V])
 		// Consider worst case, if the previous run was faster then increase
 		if currEntry.duration < duration {
-			c.entries[key] = &Entry[V]{value: value, duration: duration}
+			c.entries.Store(key, entry)
 
 			// If the minKey duration was increased, there can be a new minKey
 			if c.minKey == key {
-				return true
+				c.refreshMin()
 			}
 		}
-		return false
+		return
 	}
 
 	// If not at capacity, just add and update min tracking
-	if len(c.entries) < c.maxSize {
-		c.entries[key] = &Entry[V]{value: value, duration: duration}
-		if len(c.entries) == 1 || duration < c.minDur {
+	if c.size.Load() < c.maxSize {
+		c.entries.Store(key, entry)
+		newSize := c.size.Add(1)
+		if newSize == 1 || duration < c.minDur {
 			c.minKey = key
 			c.minDur = duration
 		}
-		return false
+		return
 	}
 
 	// At capacity: reject if new entry is not more expensive than the current minimum
 	if duration <= c.minDur {
-		return false
+		return
 	}
 
 	// When at max capacity
 	// Evict the minimum and insert the new entry
-	delete(c.entries, c.minKey)
-	c.entries[key] = &Entry[V]{value: value, duration: duration}
-	return true
+	c.entries.Delete(c.minKey)
+	c.entries.Store(key, entry)
+	// size stays the same: deleted one, added one
+	c.refreshMin()
 }
 
 // refreshMin rescans the entries to find the new minimum. Must only be called from processWrites.
-// Called without the lock: no writes occur during the scan (sole writer), and concurrent reads from Get are safe.
 func (c *Cache[V]) refreshMin() {
 	var (
 		minKey uint64
@@ -191,13 +177,15 @@ func (c *Cache[V]) refreshMin() {
 		first  = true
 	)
 
-	for k, e := range c.entries {
+	c.entries.Range(func(k, v any) bool {
+		e := v.(*Entry[V])
 		if first || e.duration < minDur {
-			minKey = k
+			minKey = k.(uint64)
 			minDur = e.duration
 			first = false
 		}
-	}
+		return true
+	})
 
 	if !first {
 		c.minKey = minKey
@@ -205,29 +193,16 @@ func (c *Cache[V]) refreshMin() {
 	}
 }
 
-// Values returns an iterator over all cached values. The snapshot is taken
-// under the read lock, but iteration happens outside the lock to avoid
-// holding it during user code execution.
+// Values returns an iterator over all cached values.
 func (c *Cache[V]) Values() iter.Seq[V] {
 	return func(yield func(V) bool) {
 		if c == nil || c.closed.Load() {
 			return
 		}
 
-		// We extract this to a separate slice so we don't need to hold the lock
-		// since this would be expensive based on what the iterator is doing
-		c.mu.RLock()
-		values := make([]V, 0, len(c.entries))
-		for _, e := range c.entries {
-			values = append(values, e.value)
-		}
-		c.mu.RUnlock()
-
-		for _, v := range values {
-			if !yield(v) {
-				return
-			}
-		}
+		c.entries.Range(func(_, v any) bool {
+			return yield(v.(*Entry[V]).value)
+		})
 	}
 }
 
@@ -247,9 +222,5 @@ func (c *Cache[V]) Close() {
 		// This downside is also there in ristretto (if set is called concurrently)
 		// it is even documented in the ristretto code as a comment
 		close(c.writeCh)
-
-		c.mu.Lock()
-		c.entries = nil
-		c.mu.Unlock()
 	})
 }
