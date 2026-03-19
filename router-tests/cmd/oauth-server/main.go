@@ -120,9 +120,10 @@ type oauthHandler struct {
 }
 
 type client struct {
-	id     string
-	secret string
-	scope  string
+	id           string
+	secret       string
+	scope        string
+	redirectURIs []string
 }
 
 type authCode struct {
@@ -297,6 +298,29 @@ func (h *oauthHandler) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate that the redirect URI matches one of the client's registered redirect URIs.
+	h.mu.RLock()
+	c, ok := h.clients[clientID]
+	h.mu.RUnlock()
+	if !ok {
+		http.Error(w, "unknown client_id", http.StatusBadRequest)
+		return
+	}
+
+	if len(c.redirectURIs) > 0 {
+		redirectAllowed := false
+		for _, allowed := range c.redirectURIs {
+			if allowed == redirectURI {
+				redirectAllowed = true
+				break
+			}
+		}
+		if !redirectAllowed {
+			http.Error(w, "unregistered redirect_uri", http.StatusBadRequest)
+			return
+		}
+	}
+
 	code := randomHex(32)
 	h.mu.Lock()
 	h.codes[code] = &authCode{clientID: clientID, scope: scope, createdAt: time.Now()}
@@ -331,7 +355,7 @@ func (h *oauthHandler) handleRegister(w http.ResponseWriter, r *http.Request) {
 	secret := "secret-" + randomHex(24)
 
 	h.mu.Lock()
-	h.clients[id] = &client{id: id, secret: secret, scope: req.Scope}
+	h.clients[id] = &client{id: id, secret: secret, scope: req.Scope, redirectURIs: req.RedirectURIs}
 	h.mu.Unlock()
 
 	w.Header().Set("Content-Type", "application/json")
