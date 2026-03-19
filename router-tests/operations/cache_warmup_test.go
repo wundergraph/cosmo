@@ -979,6 +979,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 		}
 
 		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SlowPlanCacheSize = 100
+			},
 			RouterOptions: []core.Option{
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled:          true,
@@ -990,6 +993,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 					},
 				}),
 				core.WithConfigVersionHeader(true),
+				core.WithPlanningDurationOverride(func(_ string) time.Duration {
+					return 10 * time.Second
+				}),
 			},
 			RouterConfig: &testenv.RouterConfig{
 				ConfigPollerFactory: func(config *nodev1.RouterConfig) configpoller.ConfigPoller {
@@ -1125,6 +1131,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 		writeTestConfig(t, "initial", configFile)
 
 		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SlowPlanCacheSize = 100
+			},
 			RouterOptions: []core.Option{
 				core.WithConfigVersionHeader(true),
 				core.WithExecutionConfig(&core.ExecutionConfig{
@@ -1135,6 +1144,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 				core.WithCacheWarmupConfig(&config.CacheWarmupConfiguration{
 					Enabled:          true,
 					InMemoryFallback: true,
+				}),
+				core.WithPlanningDurationOverride(func(_ string) time.Duration {
+					return 10 * time.Second
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1169,6 +1181,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 		var impl *fakeSelfRegister = nil
 
 		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SlowPlanCacheSize = 100
+			},
 			CdnSever: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
 			})),
@@ -1188,6 +1203,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 							Enabled: true,
 						},
 					},
+				}),
+				core.WithPlanningDurationOverride(func(_ string) time.Duration {
+					return 10 * time.Second
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1222,6 +1240,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 		var impl *fakeSelfRegister = nil
 
 		testenv.Run(t, &testenv.Config{
+			ModifyEngineExecutionConfiguration: func(cfg *config.EngineExecutionConfiguration) {
+				cfg.SlowPlanCacheSize = 100
+			},
 			CdnSever: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusUnauthorized)
 			})),
@@ -1241,6 +1262,9 @@ func TestInMemoryPlanCacheFallback(t *testing.T) {
 							Enabled: true,
 						},
 					},
+				}),
+				core.WithPlanningDurationOverride(func(_ string) time.Duration {
+					return 10 * time.Second
 				}),
 			},
 		}, func(t *testing.T, xEnv *testenv.Environment) {
@@ -1292,7 +1316,9 @@ cache_warmup:
     cdn:
       enabled: false
 
-engine: 
+engine:
+  slow_plan_cache_threshold: "1ns"
+  slow_plan_cache_size: 100
   debug:
     enable_cache_response_headers: true
 `
@@ -1352,22 +1378,26 @@ func writeTestConfig(t *testing.T, version string, path string) {
 					RootNodes: []*nodev1.TypeField{
 						{
 							TypeName:   "Query",
-							FieldNames: []string{"hello"},
+							FieldNames: []string{"hello", "world"},
 						},
 					},
 					CustomStatic: &nodev1.DataSourceCustom_Static{
 						Data: &nodev1.ConfigurationVariable{
-							StaticVariableContent: `{"hello": "Hello!"}`,
+							StaticVariableContent: `{"hello": "Hello!", "world": "World!"}`,
 						},
 					},
 					Id: "0",
 				},
 			},
-			GraphqlSchema: "schema {\n  query: Query\n}\ntype Query {\n  hello: String\n}",
+			GraphqlSchema: "schema {\n  query: Query\n}\ntype Query {\n  hello: String\n  world: String\n}",
 			FieldConfigurations: []*nodev1.FieldConfiguration{
 				{
 					TypeName:  "Query",
 					FieldName: "hello",
+				},
+				{
+					TypeName:  "Query",
+					FieldName: "world",
 				},
 			},
 		},
