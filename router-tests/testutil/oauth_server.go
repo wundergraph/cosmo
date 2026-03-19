@@ -24,6 +24,7 @@ type OAuthClient struct {
 	ClientID     string   `json:"client_id"`
 	ClientSecret string   `json:"client_secret"`
 	GrantTypes   []string `json:"grant_types"`
+	RedirectURIs []string `json:"redirect_uris,omitempty"`
 	Scope        string   `json:"scope,omitempty"`
 }
 
@@ -286,6 +287,28 @@ func (s *OAuthTestServer) handleAuthorize(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	// Validate redirect_uri against registered URIs to prevent open redirects
+	s.mu.RLock()
+	c, ok := s.clients[clientID]
+	s.mu.RUnlock()
+	if !ok {
+		http.Error(w, "unknown client_id", http.StatusBadRequest)
+		return
+	}
+	if len(c.RedirectURIs) > 0 {
+		redirectAllowed := false
+		for _, allowed := range c.RedirectURIs {
+			if allowed == redirectURI {
+				redirectAllowed = true
+				break
+			}
+		}
+		if !redirectAllowed {
+			http.Error(w, "unregistered redirect_uri", http.StatusBadRequest)
+			return
+		}
+	}
+
 	// Generate authorization code
 	code := randomString(32)
 
@@ -334,6 +357,7 @@ func (s *OAuthTestServer) handleRegister(w http.ResponseWriter, r *http.Request)
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 		GrantTypes:   req.GrantTypes,
+		RedirectURIs: req.RedirectURIs,
 		Scope:        req.Scope,
 	}
 
