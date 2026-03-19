@@ -68,7 +68,7 @@ jobs:
 
       - name: Generate test configs from demo
         working-directory: ./router-tests
-        run: update-config-no-edg.sh
+        run: ./update-config-no-edg.sh
 
       - uses: ./.github/actions/git-dirty-check
         with:
@@ -164,7 +164,7 @@ jobs:
 
       - name: Generate test configs from demo
         working-directory: ./router-tests
-        run: update-config-no-edg.sh
+        run: ./update-config-no-edg.sh
 
       - uses: ./.github/actions/git-dirty-check
         with:
