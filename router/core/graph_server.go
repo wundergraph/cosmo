@@ -179,6 +179,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 		}
 	}
 
+	if err := grpcprotocol.Validate(r.grpcProtocol); err != nil {
+		return nil, fmt.Errorf("invalid grpc_protocol configuration: %w", err)
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	s := &graphServer{
 		context:                 ctx,
@@ -196,8 +200,9 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
 		},
-		storageProviders:  &r.storageProviders,
-		headerPropagation: r.headerPropagation,
+		storageProviders:   &r.storageProviders,
+		headerPropagation:  r.headerPropagation,
+		grpcProtocolConfig: r.grpcProtocol,
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -1282,12 +1287,30 @@ func (s *graphServer) buildGraphMux(
 		subgraphTippers[subgraph] = subgraphTransport
 	}
 
+	// Build HTTP clients for Connect subgraphs, matching the timeout and transport
+	// configuration applied to regular GraphQL subgraph clients.
+	connectDefaultHTTPClient := &http.Client{
+		Transport: s.baseTransport,
+		Timeout:   s.subgraphTransportOptions.RequestTimeout,
+	}
+	connectSubgraphHTTPClients := map[string]*http.Client{}
+	for subgraph, subgraphOpts := range s.subgraphTransportOptions.SubgraphMap {
+		transport, ok := s.subgraphTransports[subgraph]
+		if !ok {
+			transport = s.baseTransport
+		}
+		connectSubgraphHTTPClients[subgraph] = &http.Client{
+			Transport: transport,
+			Timeout:   subgraphOpts.RequestTimeout,
+		}
+	}
+
 	// Build Connect transports for subgraphs configured to use ConnectRPC protocol.
 	connectTransports := grpcprotocol.BuildConnectTransports(
 		s.grpcProtocolConfig,
 		collectGRPCSubgraphURLs(opts.EngineConfig, opts.ConfigSubgraphs),
-		nil, // per-subgraph HTTP clients are created by the factory resolver
-		nil, // default HTTP client — factory resolver handles this
+		connectSubgraphHTTPClients,
+		connectDefaultHTTPClient,
 	)
 
 	if err := s.setupConnector(ctx, opts.EngineConfig, opts.ConfigSubgraphs, telemetryAttExpressions, tracingAttExpressions, connectTransports); err != nil {

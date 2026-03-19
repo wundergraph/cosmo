@@ -149,6 +149,7 @@ type Config struct {
 	mcp                           config.MCPConfiguration
 	connectRPC                    config.ConnectRPCConfiguration
 	plugins                       config.PluginsConfiguration
+	grpcProtocol                  *config.GRPCProtocolConfig
 	tracingAttributes             []config.CustomAttribute
 	subscriptionHooks             subscriptionHooks
 }
