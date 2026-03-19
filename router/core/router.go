@@ -2264,6 +2264,12 @@ func WithConnectRPC(cfg config.ConnectRPCConfiguration) Option {
 	}
 }
 
+func WithGRPCProtocol(cfg *config.GRPCProtocolConfig) Option {
+	return func(r *Router) {
+		r.grpcProtocol = cfg
+	}
+}
+
 func WithDemoMode(demoMode bool) Option {
 	return func(r *Router) {
 		r.demoMode = demoMode
