@@ -77,6 +77,7 @@ type DefaultFactoryResolver struct {
 	transportFactory              ApiTransportFactory
 	defaultSubgraphRequestTimeout time.Duration
 	subscriptionClientOptions     []graphql_datasource.Options
+	connectTransports             map[string]grpcdatasource.RPCTransport
 }
 
 func NewDefaultFactoryResolver(
@@ -89,6 +90,7 @@ func NewDefaultFactoryResolver(
 	log *zap.Logger,
 	enableNetPoll bool,
 	instanceData InstanceData,
+	connectTransports map[string]grpcdatasource.RPCTransport,
 ) *DefaultFactoryResolver {
 	transportFactory := NewTransport(transportOptions)
 
@@ -164,10 +166,19 @@ func NewDefaultFactoryResolver(
 		transportFactory:              transportFactory,
 		defaultSubgraphRequestTimeout: transportOptions.SubgraphTransportOptions.RequestTimeout,
 		subscriptionClientOptions:     options,
+		connectTransports:             connectTransports,
 	}
 }
 
 func (d *DefaultFactoryResolver) ResolveGraphqlFactory(subgraphName string) (plan.PlannerFactory[graphql_datasource.Configuration], error) {
+	// Check Connect transports first — they use HTTP via the Connect protocol
+	// instead of native gRPC, so they bypass the gRPC connector entirely.
+	if d.connectTransports != nil {
+		if ct, ok := d.connectTransports[subgraphName]; ok {
+			return graphql_datasource.NewFactoryConnect(d.engineCtx, ct)
+		}
+	}
+
 	if d.connector != nil {
 		// If the connector is not nil, we try to get the provider for the subgraph.
 		// In case of a provider, we use the gRPC client provider to create the factory.
