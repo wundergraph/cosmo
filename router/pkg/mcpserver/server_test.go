@@ -89,14 +89,14 @@ func TestReload_NoToolDuplication(t *testing.T) {
 	require.NoError(t, err)
 
 	// First load
-	err = srv.Reload(&schemaDoc)
+	err = srv.Reload(&schemaDoc, nil)
 	require.NoError(t, err)
 
 	firstLoadTools := make([]string, len(srv.registeredTools))
 	copy(firstLoadTools, srv.registeredTools)
 
 	// Second load (simulates config reload)
-	err = srv.Reload(&schemaDoc)
+	err = srv.Reload(&schemaDoc, nil)
 	require.NoError(t, err)
 
 	// registeredTools should be identical after reload — no duplicates
@@ -134,7 +134,7 @@ func TestReload_ReservedToolNameCollision(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = srv.Reload(&schemaDoc)
+	err = srv.Reload(&schemaDoc, nil)
 	require.NoError(t, err)
 
 	// The operation "GetOperationInfo" (snake: "get_operation_info") should be skipped
@@ -177,7 +177,7 @@ func TestReload_PrefixModeAvoidsReservedNameCollision(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	err = srv.Reload(&schemaDoc)
+	err = srv.Reload(&schemaDoc, nil)
 	require.NoError(t, err)
 
 	// No collisions because the prefix disambiguates from the reserved name

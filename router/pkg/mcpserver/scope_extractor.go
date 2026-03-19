@@ -71,6 +71,8 @@ func (e *ScopeExtractor) ExtractScopesForOperation(operation *ast.Document) []Fi
 
 // ComputeCombinedScopes computes the Cartesian product of OR-groups across fields,
 // deduplicating scopes within each combined AND-group.
+// The product is unbounded at runtime because the composition layer already enforces
+// MAX_OR_SCOPES = 16 per field, capping the scope groups that reach the router config.
 func (e *ScopeExtractor) ComputeCombinedScopes(fieldReqs []FieldScopeRequirement) [][]string {
 	if len(fieldReqs) == 0 {
 		return nil

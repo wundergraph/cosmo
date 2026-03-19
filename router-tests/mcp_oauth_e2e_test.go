@@ -176,7 +176,7 @@ func TestMCPOAuthPerToolScopes(t *testing.T) {
 					Initialize: []string{"mcp:connect"},
 					ToolsCall:  []string{"mcp:tools:write"},
 				},
-				ScopeChallengeMode: "required_and_existing",
+				ScopeChallengeIncludeTokenScopes: true,
 			},
 		},
 		MCPAuthToken: initToken,

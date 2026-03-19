@@ -135,34 +135,6 @@ func (m *MCPAuthMiddleware) getScopeExtractor() *ScopeExtractor {
 	return m.scopeExtractor
 }
 
-// authenticateRequest extracts and validates the JWT token using the existing
-// authentication infrastructure from the router
-func (m *MCPAuthMiddleware) authenticateRequest(ctx context.Context) (authentication.Claims, error) {
-	// Extract headers from context (passed by mcp-go HTTP transport)
-	headers, err := headersFromContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("missing request headers: %w", err)
-	}
-
-	// Use the existing authenticator instead of manual token parsing
-	// This provides better error messages and supports multiple authentication schemes
-	provider := &mcpAuthProvider{headers: headers}
-	claims, err := m.authenticator.Authenticate(ctx, provider)
-	if err != nil {
-		return nil, fmt.Errorf("authentication failed: %w", err)
-	}
-
-	// If claims are empty, treat as authentication failure
-	if len(claims) == 0 {
-		return nil, fmt.Errorf("authentication failed: no valid credentials provided")
-	}
-
-	// Note: Scope validation is now handled at HTTP level, not here
-	// This is per MCP spec: authorization must be at HTTP level
-
-	return claims, nil
-}
-
 // HTTPMiddleware wraps HTTP handlers with authentication for ALL MCP operations
 // Per MCP specification: "authorization MUST be included in every HTTP request from client to server"
 func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
@@ -191,10 +163,9 @@ func (m *MCPAuthMiddleware) HTTPMiddleware(next http.Handler) http.Handler {
 		}
 
 		// Step 2: Parse JSON-RPC request to check method-level scopes
-		// Read body to extract method name (only if body exists)
-		// Use LimitReader to prevent memory exhaustion from oversized payloads
+		// Only parse body for POST requests with JSON content (SSE/GET requests have no JSON-RPC body)
 		var body []byte
-		if r.Body != nil {
+		if r.Method == http.MethodPost && r.Body != nil {
 			limitedReader := io.LimitReader(r.Body, maxBodyBytes+1)
 			body, err = io.ReadAll(limitedReader)
 			if err != nil {
@@ -294,9 +265,10 @@ func (m *MCPAuthMiddleware) sendUnauthorizedResponse(w http.ResponseWriter, err 
 		authHeader += fmt.Sprintf(`, resource_metadata="%s"`, m.resourceMetadataURL)
 	}
 
-	// Add optional error_description for debugging
+	// Add optional error_description for debugging (sanitize quotes per RFC 6750 quoted-string)
 	if err != nil {
-		authHeader += fmt.Sprintf(`, error_description="%s"`, err.Error())
+		desc := strings.ReplaceAll(err.Error(), `"`, `'`)
+		authHeader += fmt.Sprintf(`, error_description="%s"`, desc)
 	}
 
 	w.Header().Set("WWW-Authenticate", authHeader)
@@ -345,9 +317,10 @@ func (m *MCPAuthMiddleware) sendInsufficientScopeResponse(w http.ResponseWriter,
 		authHeader += fmt.Sprintf(`, resource_metadata="%s"`, m.resourceMetadataURL)
 	}
 
-	// Add optional error_description for human-readable message
+	// Add optional error_description for human-readable message (sanitize quotes per RFC 6750 quoted-string)
 	if err != nil {
-		authHeader += fmt.Sprintf(`, error_description="%s"`, err.Error())
+		desc := strings.ReplaceAll(err.Error(), `"`, `'`)
+		authHeader += fmt.Sprintf(`, error_description="%s"`, desc)
 	}
 
 	w.Header().Set("WWW-Authenticate", authHeader)
@@ -368,7 +341,8 @@ func (m *MCPAuthMiddleware) sendPerToolInsufficientScopeResponse(w http.Response
 		authHeader += fmt.Sprintf(`, resource_metadata="%s"`, m.resourceMetadataURL)
 	}
 
-	authHeader += fmt.Sprintf(`, error_description="insufficient scopes for tool %s"`, toolName)
+	sanitizedName := strings.ReplaceAll(toolName, `"`, `'`)
+	authHeader += fmt.Sprintf(`, error_description="insufficient scopes for tool %s"`, sanitizedName)
 
 	w.Header().Set("WWW-Authenticate", authHeader)
 	w.WriteHeader(http.StatusForbidden)
@@ -421,7 +395,7 @@ func (m *MCPAuthMiddleware) validateScopesForRequest(claims authentication.Claim
 	// Check if all required scopes are present
 	var missingScopes []string
 	for _, requiredScope := range requiredScopes {
-		if !contains(tokenScopes, requiredScope) {
+		if !slices.Contains(tokenScopes, requiredScope) {
 			missingScopes = append(missingScopes, requiredScope)
 		}
 	}
@@ -451,11 +425,6 @@ func extractScopes(claims authentication.Claims) []string {
 	// Use Fields() to split on any whitespace (spaces, tabs, newlines)
 	// and automatically filter out empty strings
 	return strings.Fields(scopeStr)
-}
-
-// contains checks if a slice contains a specific string
-func contains(slice []string, item string) bool {
-	return slices.Contains(slice, item)
 }
 
 // GetClaimsFromContext retrieves authenticated user claims from context
