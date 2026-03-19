@@ -1114,6 +1114,24 @@ type MCPServer struct {
 	BaseURL    string `yaml:"base_url,omitempty" env:"MCP_SERVER_BASE_URL"`
 }
 
+// GRPCProtocolConfig configures the transport protocol for gRPC subgraphs.
+// By default all gRPC subgraphs use native gRPC (HTTP/2 + Protobuf).
+// Setting the protocol to "connectrpc" switches a subgraph to the Connect protocol (HTTP/1.1).
+type GRPCProtocolConfig struct {
+	// Default protocol for all gRPC subgraphs ("grpc" or "connectrpc").
+	Default string `yaml:"default,omitempty" json:"default,omitempty"`
+	// DefaultEncoding for Connect subgraphs ("proto" or "json").
+	DefaultEncoding string `yaml:"default_encoding,omitempty" json:"default_encoding,omitempty"`
+	// Per-subgraph protocol and encoding overrides.
+	Subgraphs map[string]SubgraphGRPCProtocolConfig `yaml:"subgraphs,omitempty" json:"subgraphs,omitempty"`
+}
+
+// SubgraphGRPCProtocolConfig holds per-subgraph protocol/encoding settings.
+type SubgraphGRPCProtocolConfig struct {
+	Protocol string `yaml:"protocol,omitempty" json:"protocol,omitempty"`
+	Encoding string `yaml:"encoding,omitempty" json:"encoding,omitempty"`
+}
+
 type ConnectRPCConfiguration struct {
 	Enabled         bool                    `yaml:"enabled" envDefault:"false" env:"CONNECT_RPC_ENABLED"`
 	Server          ConnectRPCServer        `yaml:"server,omitempty" envPrefix:"CONNECT_RPC_SERVER_"`
@@ -1222,6 +1240,8 @@ type Config struct {
 	Plugins PluginsConfiguration `yaml:"plugins" envPrefix:"PLUGINS_"`
 
 	WatchConfig WatchConfig `yaml:"watch_config" envPrefix:"WATCH_CONFIG_"`
+
+	GRPCProtocol *GRPCProtocolConfig `yaml:"grpc_protocol,omitempty"`
 }
 
 type WatchConfig struct {
