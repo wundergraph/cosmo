@@ -297,7 +297,7 @@ describe('JsonCheckSchemaOutputBuilder', () => {
       const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setStatus(true);
       await b.write();
-      expect(spy).toHaveBeenCalledWith(b.build());
+      expect(spy).toHaveBeenCalledWith('{"status":"success","code":0,"rowLimit":10}');
     });
 
     it('writes JSON to file when outFile provided', async () => {
