@@ -1267,6 +1267,15 @@ func (s *graphServer) buildGraphMux(
 			Timeout:   subgraphOpts.RequestTimeout,
 		}
 	}
+	// Include subgraphs with per-subgraph TLS but no traffic shaping overrides.
+	for subgraph, transport := range s.subgraphTransports {
+		if _, exists := connectSubgraphHTTPClients[subgraph]; !exists {
+			connectSubgraphHTTPClients[subgraph] = &http.Client{
+				Transport: transport,
+				Timeout:   s.subgraphTransportOptions.RequestTimeout,
+			}
+		}
+	}
 
 	// Build Connect transports for subgraphs configured to use ConnectRPC protocol.
 	connectTransports := grpcprotocol.BuildConnectTransports(
