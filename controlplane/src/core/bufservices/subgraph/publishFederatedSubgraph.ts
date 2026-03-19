@@ -54,6 +54,7 @@ export function publishFederatedSubgraph(
       authContext.organizationId,
       opts.logger,
       opts.billingDefaultPlanId,
+      opts.webhookProxyUrl,
     );
     const auditLogRepo = new AuditLogRepository(opts.db);
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
