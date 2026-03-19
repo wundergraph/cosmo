@@ -52,8 +52,6 @@ type ResolverRoot interface {
 }
 
 type DirectiveRoot struct {
-	Cost     func(ctx context.Context, obj any, next graphql.Resolver, weight int) (res any, err error)
-	ListSize func(ctx context.Context, obj any, next graphql.Resolver, assumedSize *int, slicingArguments []string, sizedFields []string, requireOneSlicingArgument *bool) (res any, err error)
 }
 
 type ComplexityRoot struct {
@@ -1235,131 +1233,6 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
-func (ec *executionContext) dir_cost_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := ec.dir_cost_argsWeight(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["weight"] = arg0
-	return args, nil
-}
-func (ec *executionContext) dir_cost_argsWeight(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (int, error) {
-	if _, ok := rawArgs["weight"]; !ok {
-		var zeroVal int
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("weight"))
-	if tmp, ok := rawArgs["weight"]; ok {
-		return ec.unmarshalNInt2int(ctx, tmp)
-	}
-
-	var zeroVal int
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_listSize_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := ec.dir_listSize_argsAssumedSize(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["assumedSize"] = arg0
-	arg1, err := ec.dir_listSize_argsSlicingArguments(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["slicingArguments"] = arg1
-	arg2, err := ec.dir_listSize_argsSizedFields(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["sizedFields"] = arg2
-	arg3, err := ec.dir_listSize_argsRequireOneSlicingArgument(ctx, rawArgs)
-	if err != nil {
-		return nil, err
-	}
-	args["requireOneSlicingArgument"] = arg3
-	return args, nil
-}
-func (ec *executionContext) dir_listSize_argsAssumedSize(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*int, error) {
-	if _, ok := rawArgs["assumedSize"]; !ok {
-		var zeroVal *int
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("assumedSize"))
-	if tmp, ok := rawArgs["assumedSize"]; ok {
-		return ec.unmarshalOInt2ᚖint(ctx, tmp)
-	}
-
-	var zeroVal *int
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_listSize_argsSlicingArguments(
-	ctx context.Context,
-	rawArgs map[string]any,
-) ([]string, error) {
-	if _, ok := rawArgs["slicingArguments"]; !ok {
-		var zeroVal []string
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("slicingArguments"))
-	if tmp, ok := rawArgs["slicingArguments"]; ok {
-		return ec.unmarshalOString2ᚕstringᚄ(ctx, tmp)
-	}
-
-	var zeroVal []string
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_listSize_argsSizedFields(
-	ctx context.Context,
-	rawArgs map[string]any,
-) ([]string, error) {
-	if _, ok := rawArgs["sizedFields"]; !ok {
-		var zeroVal []string
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("sizedFields"))
-	if tmp, ok := rawArgs["sizedFields"]; ok {
-		return ec.unmarshalOString2ᚕstringᚄ(ctx, tmp)
-	}
-
-	var zeroVal []string
-	return zeroVal, nil
-}
-
-func (ec *executionContext) dir_listSize_argsRequireOneSlicingArgument(
-	ctx context.Context,
-	rawArgs map[string]any,
-) (*bool, error) {
-	if _, ok := rawArgs["requireOneSlicingArgument"]; !ok {
-		var zeroVal *bool
-		return zeroVal, nil
-	}
-
-	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("requireOneSlicingArgument"))
-	if tmp, ok := rawArgs["requireOneSlicingArgument"]; ok {
-		return ec.unmarshalOBoolean2ᚖbool(ctx, tmp)
-	}
-
-	var zeroVal *bool
-	return zeroVal, nil
-}
-
 func (ec *executionContext) field_Entity_findConsultancyByUpc_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1711,39 +1584,12 @@ func (ec *executionContext) field_Query_employee_argsID(
 	}
 
 	ctx = graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
-	directive0 := func(ctx context.Context) (any, error) {
-		tmp, ok := rawArgs["id"]
-		if !ok {
-			var zeroVal int
-			return zeroVal, nil
-		}
+	if tmp, ok := rawArgs["id"]; ok {
 		return ec.unmarshalNInt2int(ctx, tmp)
 	}
 
-	directive1 := func(ctx context.Context) (any, error) {
-		weight, err := ec.unmarshalNInt2int(ctx, 2)
-		if err != nil {
-			var zeroVal int
-			return zeroVal, err
-		}
-		if ec.directives.Cost == nil {
-			var zeroVal int
-			return zeroVal, errors.New("directive cost is not implemented")
-		}
-		return ec.directives.Cost(ctx, rawArgs, directive0, weight)
-	}
-
-	tmp, err := directive1(ctx)
-	if err != nil {
-		var zeroVal int
-		return zeroVal, graphql.ErrorOnPath(ctx, err)
-	}
-	if data, ok := tmp.(int); ok {
-		return data, nil
-	} else {
-		var zeroVal int
-		return zeroVal, graphql.ErrorOnPath(ctx, fmt.Errorf(`unexpected type %T from directive, should be int`, tmp))
-	}
+	var zeroVal int
+	return zeroVal, nil
 }
 
 func (ec *executionContext) field_Query_findEmployeesBy_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
@@ -3050,45 +2896,8 @@ func (ec *executionContext) _Employee_role(ctx context.Context, field graphql.Co
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return obj.Role, nil
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			assumedSize, err := ec.unmarshalOInt2ᚖint(ctx, 3)
-			if err != nil {
-				var zeroVal model.RoleType
-				return zeroVal, err
-			}
-			sizedFields, err := ec.unmarshalOString2ᚕstringᚄ(ctx, []any{"departments"})
-			if err != nil {
-				var zeroVal model.RoleType
-				return zeroVal, err
-			}
-			requireOneSlicingArgument, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
-			if err != nil {
-				var zeroVal model.RoleType
-				return zeroVal, err
-			}
-			if ec.directives.ListSize == nil {
-				var zeroVal model.RoleType
-				return zeroVal, errors.New("directive listSize is not implemented")
-			}
-			return ec.directives.ListSize(ctx, obj, directive0, assumedSize, nil, sizedFields, requireOneSlicingArgument)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(model.RoleType); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.RoleType`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return obj.Role, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3477,35 +3286,8 @@ func (ec *executionContext) _Engineer_departments(ctx context.Context, field gra
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return obj.Departments, nil
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			weight, err := ec.unmarshalNInt2int(ctx, 1)
-			if err != nil {
-				var zeroVal []model.Department
-				return zeroVal, err
-			}
-			if ec.directives.Cost == nil {
-				var zeroVal []model.Department
-				return zeroVal, errors.New("directive cost is not implemented")
-			}
-			return ec.directives.Cost(ctx, obj, directive0, weight)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]model.Department); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.Department`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return obj.Departments, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3771,35 +3553,8 @@ func (ec *executionContext) _Entity_findCosmoByUpc(ctx context.Context, field gr
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Entity().FindCosmoByUpc(rctx, fc.Args["upc"].(string))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			weight, err := ec.unmarshalNInt2int(ctx, 5)
-			if err != nil {
-				var zeroVal *model.Cosmo
-				return zeroVal, err
-			}
-			if ec.directives.Cost == nil {
-				var zeroVal *model.Cosmo
-				return zeroVal, errors.New("directive cost is not implemented")
-			}
-			return ec.directives.Cost(ctx, nil, directive0, weight)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Cosmo); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.Cosmo`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Entity().FindCosmoByUpc(rctx, fc.Args["upc"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4093,35 +3848,8 @@ func (ec *executionContext) _Marketer_departments(ctx context.Context, field gra
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return obj.Departments, nil
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			weight, err := ec.unmarshalNInt2int(ctx, 1)
-			if err != nil {
-				var zeroVal []model.Department
-				return zeroVal, err
-			}
-			if ec.directives.Cost == nil {
-				var zeroVal []model.Department
-				return zeroVal, errors.New("directive cost is not implemented")
-			}
-			return ec.directives.Cost(ctx, obj, directive0, weight)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]model.Department); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.Department`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return obj.Departments, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4525,35 +4253,8 @@ func (ec *executionContext) _Operator_departments(ctx context.Context, field gra
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return obj.Departments, nil
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			weight, err := ec.unmarshalNInt2int(ctx, 1)
-			if err != nil {
-				var zeroVal []model.Department
-				return zeroVal, err
-			}
-			if ec.directives.Cost == nil {
-				var zeroVal []model.Department
-				return zeroVal, errors.New("directive cost is not implemented")
-			}
-			return ec.directives.Cost(ctx, obj, directive0, weight)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]model.Department); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.Department`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return obj.Departments, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4756,35 +4457,8 @@ func (ec *executionContext) _Query_employee(ctx context.Context, field graphql.C
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Employee(rctx, fc.Args["id"].(int))
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			weight, err := ec.unmarshalNInt2int(ctx, 5)
-			if err != nil {
-				var zeroVal *model.Employee
-				return zeroVal, err
-			}
-			if ec.directives.Cost == nil {
-				var zeroVal *model.Employee
-				return zeroVal, errors.New("directive cost is not implemented")
-			}
-			return ec.directives.Cost(ctx, nil, directive0, weight)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.(*model.Employee); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.Employee`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Employee(rctx, fc.Args["id"].(int))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4943,40 +4617,8 @@ func (ec *executionContext) _Query_employees(ctx context.Context, field graphql.
 		}
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
-		directive0 := func(rctx context.Context) (any, error) {
-			ctx = rctx // use context from middleware stack in children
-			return ec.resolvers.Query().Employees(rctx)
-		}
-
-		directive1 := func(ctx context.Context) (any, error) {
-			assumedSize, err := ec.unmarshalOInt2ᚖint(ctx, 50)
-			if err != nil {
-				var zeroVal []*model.Employee
-				return zeroVal, err
-			}
-			requireOneSlicingArgument, err := ec.unmarshalOBoolean2ᚖbool(ctx, true)
-			if err != nil {
-				var zeroVal []*model.Employee
-				return zeroVal, err
-			}
-			if ec.directives.ListSize == nil {
-				var zeroVal []*model.Employee
-				return zeroVal, errors.New("directive listSize is not implemented")
-			}
-			return ec.directives.ListSize(ctx, nil, directive0, assumedSize, nil, nil, requireOneSlicingArgument)
-		}
-
-		tmp, err := directive1(rctx)
-		if err != nil {
-			return nil, graphql.ErrorOnPath(ctx, err)
-		}
-		if tmp == nil {
-			return nil, nil
-		}
-		if data, ok := tmp.([]*model.Employee); ok {
-			return data, nil
-		}
-		return nil, fmt.Errorf(`unexpected type %T from directive, should be []*github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.Employee`, tmp)
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Employees(rctx)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -8214,35 +7856,11 @@ func (ec *executionContext) unmarshalInputFindEmployeeCriteria(ctx context.Conte
 			it.ID = data
 		case "department":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("department"))
-			directive0 := func(ctx context.Context) (any, error) {
-				return ec.unmarshalODepartment2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx, v)
-			}
-
-			directive1 := func(ctx context.Context) (any, error) {
-				weight, err := ec.unmarshalNInt2int(ctx, 1)
-				if err != nil {
-					var zeroVal *model.Department
-					return zeroVal, err
-				}
-				if ec.directives.Cost == nil {
-					var zeroVal *model.Department
-					return zeroVal, errors.New("directive cost is not implemented")
-				}
-				return ec.directives.Cost(ctx, obj, directive0, weight)
-			}
-
-			tmp, err := directive1(ctx)
+			data, err := ec.unmarshalODepartment2ᚖgithubᚗcomᚋwundergraphᚋcosmoᚋdemoᚋpkgᚋsubgraphsᚋemployeesᚋsubgraphᚋmodelᚐDepartment(ctx, v)
 			if err != nil {
-				return it, graphql.ErrorOnPath(ctx, err)
+				return it, err
 			}
-			if data, ok := tmp.(*model.Department); ok {
-				it.Department = data
-			} else if tmp == nil {
-				it.Department = nil
-			} else {
-				err := fmt.Errorf(`unexpected type %T from directive, should be *github.com/wundergraph/cosmo/demo/pkg/subgraphs/employees/subgraph/model.Department`, tmp)
-				return it, graphql.ErrorOnPath(ctx, err)
-			}
+			it.Department = data
 		case "title":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("title"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
