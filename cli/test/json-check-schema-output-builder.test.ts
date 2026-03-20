@@ -1,16 +1,19 @@
 import { readFileSync, rmSync } from 'node:fs';
+import { create } from '@bufbuild/protobuf';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+
 import {
-  CheckOperationUsageStats,
-  CompositionError,
-  FederatedGraphSchemaChange,
-  GraphPruningIssue,
-  LintIssue,
-  SchemaChange,
+  CheckOperationUsageStatsSchema,
+  CompositionErrorSchema,
+  FederatedGraphSchemaChangeSchema,
+  GraphPruningIssueSchema,
+  LintIssueSchema,
+  SchemaChangeSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import {
   JsonCheckSchemaOutputBuilder,
   type JsonCheckSchemaOutputDescriptor,
@@ -110,13 +113,13 @@ describe('JsonCheckSchemaOutputBuilder', () => {
   });
 
   describe('schema changes', () => {
-    const change = new SchemaChange({
+    const change = create(SchemaChangeSchema, {
       changeType: 'FIELD_REMOVED',
       message: 'field removed',
       path: 'Query.foo',
       isBreaking: true,
     });
-    const nonChange = new SchemaChange({
+    const nonChange = create(SchemaChangeSchema, {
       changeType: 'FIELD_ADDED',
       message: 'field added',
       path: 'Query.bar',
@@ -146,13 +149,13 @@ describe('JsonCheckSchemaOutputBuilder', () => {
   });
 
   describe('composition', () => {
-    const err = new CompositionError({
+    const err = create(CompositionErrorSchema, {
       message: 'compose error',
       federatedGraphName: 'g',
       namespace: 'ns',
       featureFlag: '',
     });
-    const warn = new CompositionError({
+    const warn = create(CompositionErrorSchema, {
       message: 'compose warning',
       federatedGraphName: 'g',
       namespace: 'ns',
@@ -177,8 +180,8 @@ describe('JsonCheckSchemaOutputBuilder', () => {
   });
 
   describe('lint', () => {
-    const lintErr = new LintIssue({ message: 'lint error', lintRuleType: 'RULE_A' });
-    const lintWarn = new LintIssue({ message: 'lint warn', lintRuleType: 'RULE_B' });
+    const lintErr = create(LintIssueSchema, { message: 'lint error', lintRuleType: 'RULE_A' });
+    const lintWarn = create(LintIssueSchema, { message: 'lint warn', lintRuleType: 'RULE_B' });
 
     it('addLintErrors accumulates', () => {
       const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
@@ -196,13 +199,13 @@ describe('JsonCheckSchemaOutputBuilder', () => {
   });
 
   describe('graphPrune', () => {
-    const pruneErr = new GraphPruningIssue({
+    const pruneErr = create(GraphPruningIssueSchema, {
       message: 'prune error',
       graphPruningRuleType: 'RULE',
       federatedGraphName: 'g',
       fieldPath: 'f',
     });
-    const pruneWarn = new GraphPruningIssue({
+    const pruneWarn = create(GraphPruningIssueSchema, {
       message: 'prune warn',
       graphPruningRuleType: 'RULE',
       federatedGraphName: 'g',
@@ -235,7 +238,7 @@ describe('JsonCheckSchemaOutputBuilder', () => {
   });
 
   describe('composedSchemaBreakingChanges', () => {
-    const composedChange = new FederatedGraphSchemaChange({
+    const composedChange = create(FederatedGraphSchemaChangeSchema, {
       changeType: 'FIELD_TYPE_CHANGED',
       message: "Field 'User.username' changed type from 'String!' to 'String'",
       path: 'User.username',
@@ -250,7 +253,10 @@ describe('JsonCheckSchemaOutputBuilder', () => {
     });
 
     it('addComposedSchemaBreakingChanges preserves existing entries when called multiple times', () => {
-      const second = new FederatedGraphSchemaChange({ ...composedChange, federatedGraphName: 'other-fed' });
+      const second = create(
+        FederatedGraphSchemaChangeSchema,
+        { ...composedChange, federatedGraphName: 'other-fed' }
+      );
       const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.addComposedSchemaBreakingChanges([composedChange]).addComposedSchemaBreakingChanges([second]);
       const result = b.build().composedSchemaBreakingChanges!;
@@ -279,8 +285,8 @@ describe('JsonCheckSchemaOutputBuilder', () => {
     });
 
     it('setOperationUsageStats does not overwrite if already set', () => {
-      const stats1 = new CheckOperationUsageStats({ totalOperations: 5 });
-      const stats2 = new CheckOperationUsageStats({ totalOperations: 99 });
+      const stats1 = create(CheckOperationUsageStatsSchema, { totalOperations: 5 });
+      const stats2 = create(CheckOperationUsageStatsSchema, { totalOperations: 99 });
       const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setOperationUsageStats(stats1).setOperationUsageStats(stats2);
       expect(b.build().operationUsageStats?.totalOperations).toBe(5);
@@ -303,8 +309,8 @@ describe('JsonCheckSchemaOutputBuilder', () => {
     it('serializes LintIssue instances to plain objects in JSON output', async () => {
       const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
       const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
-      b.addLintErrors([new LintIssue({ message: 'lint error', lintRuleType: 'RULE_A' })]);
-      b.addLintWarnings([new LintIssue({ message: 'lint warn', lintRuleType: 'RULE_B' })]);
+      b.addLintErrors([create(LintIssueSchema, { message: 'lint error', lintRuleType: 'RULE_A' })]);
+      b.addLintWarnings([create(LintIssueSchema, { message: 'lint warn', lintRuleType: 'RULE_B' })]);
       await b.write();
 
       expect(spy).toHaveBeenCalledWith(

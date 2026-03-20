@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { create } from '@bufbuild/protobuf';
 import { existsSync } from 'node:fs';
 import Table from 'cli-table3';
 import { Command, program } from 'commander';
@@ -11,7 +12,7 @@ import {
   parseGraphQLWebsocketSubprotocol,
   splitLabel,
 } from '@wundergraph/cosmo-shared';
-import { SubgraphPublishStats, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { SubgraphPublishStatsSchema, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
 import { printTruncationWarning, validateSubscriptionProtocols } from '../../../utils.js';
@@ -192,7 +193,7 @@ export default (opts: BaseCommandOptions) => {
         if (options.failOnCompositionError) {
           // Only composition errors were displayed at this point, warnings come after switch
           printTruncationWarning({
-            displayedErrorCounts: new SubgraphPublishStats({
+            displayedErrorCounts: create(SubgraphPublishStatsSchema, {
               compositionErrors: resp.compositionErrors.length,
               compositionWarnings: 0,
               deploymentErrors: 0,
@@ -232,7 +233,7 @@ export default (opts: BaseCommandOptions) => {
         if (options.failOnAdmissionWebhookError) {
           // Only deployment errors were displayed at this point, warnings come after switch
           printTruncationWarning({
-            displayedErrorCounts: new SubgraphPublishStats({
+            displayedErrorCounts: create(SubgraphPublishStatsSchema, {
               compositionErrors: 0,
               compositionWarnings: 0,
               deploymentErrors: resp.deploymentErrors.length,
@@ -282,7 +283,7 @@ export default (opts: BaseCommandOptions) => {
     }
 
     // Determine what was actually displayed based on the response code
-    const displayedErrorCounts = new SubgraphPublishStats({
+    const displayedErrorCounts = create(SubgraphPublishStatsSchema, {
       compositionErrors:
         resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED ? resp.compositionErrors.length : 0,
       compositionWarnings: displayedWarnings,

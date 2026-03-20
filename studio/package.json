@@ -28,10 +28,10 @@
     "email": "info@wundergraph.com"
   },
   "dependencies": {
-    "@bufbuild/protobuf": "^1.9.0",
-    "@connectrpc/connect": "^1.4.0",
-    "@connectrpc/connect-query": "^1.4.1",
-    "@connectrpc/connect-web": "^1.4.0",
+    "@bufbuild/protobuf": "^2.2.2",
+    "@connectrpc/connect": "^2.0.0",
+    "@connectrpc/connect-query": "^2.0.0",
+    "@connectrpc/connect-web": "^2.0.0",
     "@headlessui/react": "^1.7.15",
     "@heroicons/react": "^2.0.18",
     "@hookform/resolvers": "^4.1.3",

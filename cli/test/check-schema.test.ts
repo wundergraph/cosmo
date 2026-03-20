@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { Command } from 'commander';
 import { beforeEach, afterEach, describe, expect, onTestFinished, test, vi, type MockInstance } from 'vitest';
 import { type PartialMessage } from '@bufbuild/protobuf';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { createClient, createRouterTransport } from '@connectrpc/connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { CheckSubgraphSchemaResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Client } from '../src/core/client/client.js';
@@ -75,7 +75,7 @@ async function runCheck(
   }
 
   const client: Client = {
-    platform: createPromiseClient(PlatformService, createMockTransport(response)),
+    platform: createClient(PlatformService, createMockTransport(response)),
   };
   const program = new Command();
   program.addCommand(CheckSchema({ client }));

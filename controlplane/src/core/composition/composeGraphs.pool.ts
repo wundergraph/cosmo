@@ -7,10 +7,12 @@
  * `.js` worker in production.
  */
 import { existsSync } from 'node:fs';
+import { fromJson } from '@bufbuild/protobuf';
 import { fileURLToPath } from 'node:url';
 import { availableParallelism } from 'node:os';
 import { Warning } from '@wundergraph/composition';
-import { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { RouterConfigSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import type { RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import WorkerPool from 'tinypool';
 import { FederatedGraphDTO } from '../../types/index.js';
 import { validateRouterCompatibilityVersion } from './composition.js';
@@ -108,7 +110,7 @@ export function deserializeRouterExecutionConfig(routerExecutionConfigJson?: Ret
     return;
   }
 
-  return RouterConfig.fromJson(routerExecutionConfigJson);
+  return fromJson(RouterConfigSchema, routerExecutionConfigJson);
 }
 
 export function composeGraphsInWorker(task: Omit<ComposeGraphsTaskInput, 'routerCompatibilityVersion'>) {

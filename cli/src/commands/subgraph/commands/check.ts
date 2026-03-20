@@ -1,9 +1,11 @@
 import { existsSync } from 'node:fs';
+import { create } from '@bufbuild/protobuf';
 import { readFile } from 'node:fs/promises';
 import { Command, program } from 'commander';
 import { resolve } from 'pathe';
 import pc from 'picocolors';
-import { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { VCSContextSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { VCSContext } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 import { config, getBaseHeaders } from '../../../core/config.js';
 import { BaseCommandOptions } from '../../../core/types/types.js';
@@ -70,7 +72,7 @@ export default (opts: BaseCommandOptions) => {
     let vcsContext: VCSContext | undefined;
 
     if (config.checkAuthor || config.checkCommitSha || config.checkBranch) {
-      vcsContext = new VCSContext({
+      vcsContext = create(VCSContextSchema, {
         author: config.checkAuthor,
         commitSha: config.checkCommitSha,
         branch: config.checkBranch,

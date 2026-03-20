@@ -397,9 +397,8 @@ const OperationsRightPanel = ({
     <div className="scrollbar-custom h-full space-y-4 overflow-y-auto px-1 md:px-0 md:pr-1">
       {selectedOperation ? (
         // Selected Operation State
-        <>
+        (<>
           {/* Operation Header */}
-
           <div className="flex flex-col gap-4 px-1 md:flex-row md:items-center md:justify-between md:gap-0">
             <div>
               <h3 className="text-lg font-semibold">{operationName || 'Unnamed Operation'}</h3>
@@ -440,33 +439,27 @@ const OperationsRightPanel = ({
               </Button>
             </div>
           </div>
-
           <Separator className="my-4" />
-
           {/* Client Usage Table - Always at the top */}
           <ClientUsageTable operationHash={selectedOperation.hash} operationName={operationName} />
-
           <Separator className="my-4" />
-
           {/* Deprecated Fields Table - Below Client Usage */}
           <DeprecatedFieldsTable operationHash={selectedOperation.hash} operationName={operationName} />
-
           <Separator className="my-4" />
-
           {/* Operation-specific Charts */}
           <div className="flex flex-col gap-4">
             <RequestMetricsCard data={data?.requests} syncId={syncId} showTopList={false} chartClassName="h-36" />
             <LatencyMetricsCard data={data?.latency} syncId={syncId} showTopList={false} chartClassName="h-36" />
             <ErrorMetricsCard data={data?.errors} syncId={syncId} showTopList={false} chartClassName="h-36" />
           </div>
-        </>
+        </>)
       ) : (
         // Default State - All Operations Charts
-        <div className="flex flex-col gap-4">
+        (<div className="flex flex-col gap-4">
           <RequestMetricsCard data={data?.requests} syncId={syncId} showTopList={false} chartClassName="h-36" />
           <LatencyMetricsCard data={data?.latency} syncId={syncId} showTopList={false} chartClassName="h-36" />
           <ErrorMetricsCard data={data?.errors} syncId={syncId} showTopList={false} chartClassName="h-36" />
-        </div>
+        </div>)
       )}
       {selectedOperation && (
         <OperationContentModal

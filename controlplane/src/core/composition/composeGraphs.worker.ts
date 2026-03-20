@@ -11,6 +11,7 @@
  * is safe for local modules. Value imports from npm packages are fine.
  */
 import { randomUUID } from 'node:crypto';
+import { create, fromJson } from '@bufbuild/protobuf';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
 import {
   federateSubgraphsContract,
@@ -18,7 +19,8 @@ import {
   newContractTagOptionsFromArrays,
 } from '@wundergraph/composition';
 import { buildRouterConfig, SubgraphKind } from '@wundergraph/cosmo-shared';
-import { GRPCMapping, ImageReference, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { GRPCMappingSchema, ImageReferenceSchema, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import type { GRPCMapping, ImageReference, RouterConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { parse } from 'graphql';
 import type { FederationResult, FederationResultWithContracts } from '@wundergraph/composition';
 import type { RouterSubgraph } from '@wundergraph/cosmo-shared';
@@ -32,7 +34,7 @@ import type {
 
 function parseGRPCMapping(mappings: string): GRPCMapping {
   try {
-    return GRPCMapping.fromJson(JSON.parse(mappings));
+    return fromJson(GRPCMappingSchema, JSON.parse(mappings));
   } catch (error) {
     throw new Error(`Failed to parse gRPC mappings: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
@@ -70,7 +72,7 @@ function subgraphDTOsToRouterSubgraphs(
         costs,
         protoSchema: subgraph.proto.schema,
         mapping: parseGRPCMapping(subgraph.proto.mappings),
-        imageReference: new ImageReference({
+        imageReference: create(ImageReferenceSchema, {
           repository: `${organizationId}/${subgraph.id}`,
           reference: subgraph.proto.pluginData.version,
         }),

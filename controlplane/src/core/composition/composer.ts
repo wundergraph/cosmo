@@ -1,4 +1,5 @@
 import type { UUID } from 'node:crypto';
+import { create } from '@bufbuild/protobuf';
 import {
   CompositionOptions,
   FieldConfiguration,
@@ -9,11 +10,19 @@ import {
 } from '@wundergraph/composition';
 import { FastifyBaseLogger } from 'fastify';
 import { GraphQLSchema } from 'graphql';
+
 import {
+  FeatureFlagRouterExecutionConfigSchema,
+  FeatureFlagRouterExecutionConfigsSchema,
+  RouterConfigSchema,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
+import type {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
   RouterConfig,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { FederatedGraphDTO, Label, SubgraphDTO } from '../../types/index.js';
 import { BlobStorage } from '../blobstorage/index.js';
@@ -75,7 +84,7 @@ export type ContractBaseCompositionData = {
 };
 
 export function routerConfigToFeatureFlagExecutionConfig(routerConfig: RouterConfig): FeatureFlagRouterExecutionConfig {
-  return new FeatureFlagRouterExecutionConfig({
+  return create(FeatureFlagRouterExecutionConfigSchema, {
     engineConfig: routerConfig.engineConfig,
     subgraphs: routerConfig.subgraphs,
     version: routerConfig.version,
@@ -156,7 +165,7 @@ export class Composer {
     baseCompositionRouterExecutionConfig: RouterConfig;
   }) {
     if (featureFlagRouterExecutionConfigByFeatureFlagName.size === 0) {
-      return new RouterConfig({
+      return create(RouterConfigSchema, {
         ...baseCompositionRouterExecutionConfig,
       });
     }
@@ -171,12 +180,12 @@ export class Composer {
         configByFeatureFlagName[featureFlagName] = featureFlagRouterConfigs[featureFlagName];
       }
     } else {
-      baseCompositionRouterExecutionConfig.featureFlagConfigs = new FeatureFlagRouterExecutionConfigs({
+      baseCompositionRouterExecutionConfig.featureFlagConfigs = create(FeatureFlagRouterExecutionConfigsSchema, {
         configByFeatureFlagName: featureFlagRouterConfigs,
       });
     }
 
-    return new RouterConfig({
+    return create(RouterConfigSchema, {
       ...baseCompositionRouterExecutionConfig,
     });
   }

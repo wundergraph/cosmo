@@ -15,8 +15,31 @@ import {
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
-import { PartialMessage } from '@bufbuild/protobuf';
+import { PartialMessage, create } from '@bufbuild/protobuf';
+
 import {
+  ConfigurationVariableSchema,
+  ConfigurationVariableKind,
+  CostConfigurationSchema,
+  DataSourceConfigurationSchema,
+  DataSourceCustom_GraphQLSchema,
+  DataSourceCustomEventsSchema,
+  DataSourceKind,
+  EngineConfigurationSchema,
+  FieldListSizeConfigurationSchema,
+  FieldWeightConfigurationSchema,
+  GraphQLSubscriptionConfiguration,
+  GRPCConfigurationSchema,
+  GRPCMapping,
+  HTTPMethod,
+  ImageReference,
+  InternedStringSchema,
+  PluginConfigurationSchema,
+  RouterConfigSchema,
+  TypeField,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
+import type {
   ConfigurationVariable,
   ConfigurationVariableKind,
   CostConfiguration,
@@ -37,6 +60,7 @@ import {
   RouterConfig,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
 import { invalidRouterCompatibilityVersion, normalizationFailureError } from './errors.js';
 import { configurationDatasToDataSourceConfiguration, generateFieldConfigurations } from './graphql-configuration.js';
 
@@ -52,15 +76,15 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
   ) {
     return undefined;
   }
-  return new CostConfiguration({
+  return create(CostConfigurationSchema, {
     fieldWeights: [...costs.fieldWeights.values()].map(
       (fw) =>
-        new FieldWeightConfiguration({
+        create(FieldWeightConfigurationSchema, {
           ...fw,
           argumentWeights: Object.fromEntries(fw.argumentWeights),
         }),
     ),
-    listSizes: [...costs.listSizes.values()].map((ls) => new FieldListSizeConfiguration(ls)),
+    listSizes: [...costs.listSizes.values()].map((ls) => create(FieldListSizeConfigurationSchema, ls)),
     typeWeights: Object.fromEntries(costs.typeWeights),
     directiveArgumentWeights: Object.fromEntries(costs.directiveArgumentWeights),
   });
@@ -144,7 +168,7 @@ export interface ComposedSubgraphGRPC {
 export const internString = (config: EngineConfiguration, str: string): InternedString => {
   const key = crypto.createHash('sha1').update(str).digest('hex');
   config.stringStorage[key] = str;
-  return new InternedString({
+  return create(InternedStringSchema, {
     key,
   });
 };
@@ -181,7 +205,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
   if (!ROUTER_COMPATIBILITY_VERSIONS.has(input.routerCompatibilityVersion as SupportedRouterCompatibilityVersion)) {
     throw invalidRouterCompatibilityVersion(input.routerCompatibilityVersion);
   }
-  const engineConfig = new EngineConfiguration({
+  const engineConfig = create(EngineConfigurationSchema, {
     defaultFlushInterval: BigInt(500),
     datasourceConfigurations: [],
     fieldConfigurations: [],
@@ -220,7 +244,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
           subgraph.websocketSubprotocol || 'auto',
         );
         // When changing this, please do it in the router subgraph override as well
-        subscriptionConfig.url = new ConfigurationVariable({
+        subscriptionConfig.url = create(ConfigurationVariableSchema, {
           kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
           staticVariableContent: subgraph.subscriptionUrl || subgraph.url,
         });
@@ -228,10 +252,10 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
         break;
       }
       case SubgraphKind.Plugin: {
-        grcpConfig = new GRPCConfiguration({
+        grcpConfig = create(GRPCConfigurationSchema, {
           mapping: subgraph.mapping,
           protoSchema: subgraph.protoSchema,
-          plugin: new PluginConfiguration({
+          plugin: create(PluginConfigurationSchema, {
             name: subgraph.name,
             version: subgraph.version,
             imageReference: subgraph.imageReference,
@@ -241,7 +265,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
         break;
       }
       case SubgraphKind.GRPC: {
-        grcpConfig = new GRPCConfiguration({
+        grcpConfig = create(GRPCConfigurationSchema, {
           mapping: subgraph.mapping,
           protoSchema: subgraph.protoSchema,
         });
@@ -256,7 +280,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
     let customEvents: DataSourceCustomEvents | undefined;
     if (events.kafka.length > 0 || events.nats.length > 0 || events.redis.length > 0) {
       kind = DataSourceKind.PUBSUB;
-      customEvents = new DataSourceCustomEvents({
+      customEvents = create(DataSourceCustomEventsSchema, {
         kafka: events.kafka,
         nats: events.nats,
         redis: events.redis,
@@ -281,7 +305,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       rootNodes.length = filtered;
     } else {
       kind = DataSourceKind.GRAPHQL;
-      customGraphql = new DataSourceCustom_GraphQL({
+      customGraphql = create(DataSourceCustom_GraphQLSchema, {
         customScalarTypeFields: [],
         federation: {
           enabled: true,
@@ -290,7 +314,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
         upstreamSchema,
         grpc: grcpConfig,
         fetch: {
-          url: new ConfigurationVariable({
+          url: create(ConfigurationVariableSchema, {
             kind: ConfigurationVariableKind.STATIC_CONFIGURATION_VARIABLE,
             staticVariableContent: subgraph.url,
           }),
@@ -304,7 +328,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       });
     }
 
-    const datasourceConfig = new DataSourceConfiguration({
+    const datasourceConfig = create(DataSourceConfigurationSchema, {
       // When changing the id, make sure to change it in the router subgraph override also
       // https://github.com/wundergraph/cosmo/blob/main/router/core/router.go#L342
       id: subgraph.id,
@@ -330,7 +354,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
   if (input.federatedClientSDL !== '') {
     engineConfig.graphqlClientSchema = input.federatedClientSDL;
   }
-  return new RouterConfig({
+  return create(RouterConfigSchema, {
     engineConfig,
     version: input.schemaVersionId,
     subgraphs: input.subgraphs.map((s) => ({

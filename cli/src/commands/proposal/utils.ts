@@ -1,9 +1,11 @@
 import { existsSync } from 'node:fs';
+import { create } from '@bufbuild/protobuf';
 import { readFile } from 'node:fs/promises';
 import { program } from 'commander';
 import pc from 'picocolors';
 import { resolve } from 'pathe';
-import { Label } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { LabelSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { Label } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { splitLabel } from '@wundergraph/cosmo-shared';
 
 // Define interfaces for parsing parameters
@@ -82,7 +84,7 @@ export const processProposalSubgraphs = async ({
       if (part.startsWith('labels:')) {
         const labelsStr = part.slice('labels:'.length);
         const labelStrings = labelsStr.trim().split(' ');
-        labels = labelStrings.map((label: string) => new Label(splitLabel(label)));
+        labels = labelStrings.map((label: string) => create(LabelSchema, splitLabel(label)));
       } else {
         const [key, value] = part.split(':');
         if (key && value) {

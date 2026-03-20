@@ -1,10 +1,10 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { PlainMessage, create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetNamespaceGraphPruningConfigRequest,
   GetNamespaceGraphPruningConfigResponse,
-  GraphPruningConfig,
+  GraphPruningConfigSchema,
   LintSeverity,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
@@ -50,7 +50,7 @@ export function getNamespaceGraphPruningConfig(
         code: EnumStatusCode.OK,
       },
       configs: graphPruningConfigs.map((l) => {
-        return new GraphPruningConfig({
+        return create(GraphPruningConfigSchema, {
           ruleName: l.ruleName,
           severityLevel: l.severity === 'error' ? LintSeverity.error : LintSeverity.warn,
           gracePeriodInDays: l.gracePeriodInDays,

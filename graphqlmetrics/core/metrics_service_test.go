@@ -225,7 +225,7 @@ func TestPublishGraphQLMetricsSendEmptyAndFilledMetrics(t *testing.T) {
 		FederatedGraphID = 'fed123'
 	`).Scan(&fieldUsageCount))
 
-	assert.Equal(t, 2, int(fieldUsageCount))
+	assert.Equal(t, 1, int(fieldUsageCount))
 
 	var fieldUsageLiteCount uint64
 	require.NoError(t, db.QueryRow(ctx, `

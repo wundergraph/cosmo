@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, test, expect } from 'vitest';
 import { Command } from 'commander';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { createClient, createRouterTransport } from '@connectrpc/connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { Client } from '../src/core/client/client.js';
 import FetchSchemaCommand from '../src/commands/graph/common/fetch-schema.js';
@@ -31,7 +31,7 @@ export const mockPlatformTransport = () =>
 describe('Fetch schema', () => {
   test('should return router schema', async () => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
       // @ts-ignore
       node: null,
     };
@@ -58,7 +58,7 @@ describe('Fetch schema', () => {
 
   test('should return client schema', async () => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
     };
 
     const program = new Command();

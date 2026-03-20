@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { create, fromJsonString } from '@bufbuild/protobuf';
 import { readFile, writeFile } from 'node:fs/promises';
 import {
   buildRouterConfig,
@@ -18,11 +19,19 @@ import * as yaml from 'js-yaml';
 import { basename, dirname, resolve } from 'pathe';
 import pc from 'picocolors';
 import { printSchemaWithDirectives } from '@graphql-tools/utils';
+
 import {
+  FeatureFlagRouterExecutionConfigSchema,
+  FeatureFlagRouterExecutionConfigsSchema,
+  GRPCMappingSchema,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
+import type {
   FeatureFlagRouterExecutionConfig,
   FeatureFlagRouterExecutionConfigs,
   GRPCMapping,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
 import Table from 'cli-table3';
 import { FederationSuccess, ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { BaseCommandOptions } from '../../../core/types/types.js';
@@ -300,7 +309,7 @@ async function toSubgraphMetadataGRPC(inputFileLocation: string, s: GRPCSubgraph
   validateGRPCSubgraph(inputFileLocation, s);
 
   const mappingFileContent = await readFile(resolve(inputFileLocation, s.grpc.mapping_file), 'utf8');
-  const mapping = GRPCMapping.fromJsonString(mappingFileContent);
+  const mapping = fromJsonString(GRPCMappingSchema, mappingFileContent);
 
   const protoSchemaFileContent = await readFile(resolve(inputFileLocation, s.grpc.proto_file), 'utf8');
   const sdl = await readFile(resolve(inputFileLocation, s.grpc.schema_file), 'utf8');
@@ -345,7 +354,7 @@ async function toSubgraphMetadataPlugin(
     protoSchema,
     version: s.plugin.version,
     sdl,
-    mapping: GRPCMapping.fromJsonString(mappingFile),
+    mapping: fromJsonString(GRPCMappingSchema, mappingFile),
   };
 }
 
@@ -513,7 +522,7 @@ async function buildFeatureFlagsConfig(
   subgraphs: SubgraphMetadata[],
   options: any,
 ): Promise<FeatureFlagRouterExecutionConfigs> {
-  const ffConfigs: FeatureFlagRouterExecutionConfigs = new FeatureFlagRouterExecutionConfigs();
+  const ffConfigs: FeatureFlagRouterExecutionConfigs = create(FeatureFlagRouterExecutionConfigsSchema);
 
   // @TODO This logic should exist only once in the shared package and reused across
   // control-plane and cli
@@ -671,7 +680,7 @@ async function buildFeatureFlagsConfig(
       }),
     });
 
-    ffConfigs.configByFeatureFlagName[ff.name] = new FeatureFlagRouterExecutionConfig({
+    ffConfigs.configByFeatureFlagName[ff.name] = create(FeatureFlagRouterExecutionConfigSchema, {
       version: featureRouterConfig.version,
       subgraphs: featureRouterConfig.subgraphs,
       engineConfig: featureRouterConfig.engineConfig,

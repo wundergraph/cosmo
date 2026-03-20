@@ -1,5 +1,30 @@
 import type * as grpc from '@grpc/grpc-js';
+
 import {
+  QueryCoursesRequest,
+  QueryCoursesResponseSchema,
+  QueryCourseRequest,
+  QueryCourseResponseSchema,
+  QueryLessonsRequest,
+  QueryLessonsResponseSchema,
+  QueryKillCoursesServiceRequest,
+  QueryKillCoursesServiceResponseSchema,
+  QueryThrowErrorCoursesRequest,
+  QueryThrowErrorCoursesResponse,
+  MutationAddCourseRequest,
+  MutationAddCourseResponseSchema,
+  MutationAddLessonRequest,
+  MutationAddLessonResponseSchema,
+  LookupEmployeeByIdRequest,
+  LookupEmployeeByIdResponseSchema,
+  CourseSchema,
+  LessonSchema,
+  EmployeeSchema,
+} from '../generated/service_pb.js';
+
+import { create } from '@bufbuild/protobuf';
+
+import type {
   QueryCoursesRequest,
   QueryCoursesResponse,
   QueryCourseRequest,
@@ -21,7 +46,7 @@ import {
   Employee,
 } from '../generated/service_pb.js';
 
-import { StringValue } from 'google-protobuf/google/protobuf/wrappers_pb.js';
+import { StringValueSchema } from 'google-protobuf/google/protobuf/wrappers_pb.js';
 import { CoursesServiceService } from '../generated/service_grpc_pb.js';
 import { PluginServer } from './plugin-server.js';
 
@@ -148,15 +173,15 @@ initializeSampleData();
 
 // Helper functions to convert data to protobuf messages
 function courseDataToCourse(data: CourseData): Course {
-  const course = new Course();
+  const course = create(CourseSchema);
   course.setId(data.id);
   course.setTitle(data.title);
   if (data.description) {
-    course.setDescription(new StringValue().setValue(data.description));
+    course.setDescription(create(StringValueSchema).setValue(data.description));
   }
 
   // Set instructor reference (stub for federation)
-  const instructor = new Employee();
+  const instructor = create(EmployeeSchema);
   instructor.setId(data.instructorId);
   course.setInstructor(instructor);
 
@@ -174,17 +199,17 @@ function courseDataToCourse(data: CourseData): Course {
 }
 
 function lessonDataToLesson(data: LessonData): Lesson {
-  const lesson = new Lesson();
+  const lesson = create(LessonSchema);
   lesson.setId(data.id);
   lesson.setCourseId(data.courseId);
   lesson.setTitle(data.title);
   if (data.description) {
-    lesson.setDescription(new StringValue().setValue(data.description));
+    lesson.setDescription(create(StringValueSchema).setValue(data.description));
   }
   lesson.setOrder(data.order);
 
   // Set course reference (stub for federation)
-  const course = new Course();
+  const course = create(CourseSchema);
   course.setId(data.courseId);
   lesson.setCourse(course);
 
@@ -192,7 +217,7 @@ function lessonDataToLesson(data: LessonData): Lesson {
 }
 
 function employeeDataToEmployee(data: EmployeeData): Employee {
-  const employee = new Employee();
+  const employee = create(EmployeeSchema);
   employee.setId(data.id);
 
   // Set taught courses
@@ -215,7 +240,7 @@ const pluginImplementation = {
     call: grpc.ServerUnaryCall<QueryCoursesRequest, QueryCoursesResponse>,
     callback: grpc.sendUnaryData<QueryCoursesResponse>
   ) => {
-    const response = new QueryCoursesResponse();
+    const response = create(QueryCoursesResponseSchema);
     const allCourses = Array.from(courses.values()).map(courseDataToCourse);
     response.setCoursesList(allCourses);
     callback(null, response);
@@ -227,7 +252,7 @@ const pluginImplementation = {
     callback: grpc.sendUnaryData<QueryCourseResponse>
   ) => {
     const id = call.request.getId();
-    const response = new QueryCourseResponse();
+    const response = create(QueryCourseResponseSchema);
     
     const courseData = courses.get(id);
     if (courseData) {
@@ -243,7 +268,7 @@ const pluginImplementation = {
     callback: grpc.sendUnaryData<QueryLessonsResponse>
   ) => {
     const courseId = call.request.getCourseId();
-    const response = new QueryLessonsResponse();
+    const response = create(QueryLessonsResponseSchema);
     
     const courseLessons = Array.from(lessons.values())
       .filter(l => l.courseId === courseId)
@@ -258,7 +283,7 @@ const pluginImplementation = {
     call: grpc.ServerUnaryCall<QueryKillCoursesServiceRequest, QueryKillCoursesServiceResponse>,
     callback: grpc.sendUnaryData<QueryKillCoursesServiceResponse>
   ) => {
-    const response = new QueryKillCoursesServiceResponse();
+    const response = create(QueryKillCoursesServiceResponseSchema);
     response.setKillCoursesService(true);
     callback(null, response);
     
@@ -302,7 +327,7 @@ const pluginImplementation = {
       employees.set(instructorId, { id: instructorId, taughtCourseIds: [newCourse.id] });
     }
     
-    const response = new MutationAddCourseResponse();
+    const response = create(MutationAddCourseResponseSchema);
     response.setAddCourse(courseDataToCourse(newCourse));
     callback(null, response);
   },
@@ -331,7 +356,7 @@ const pluginImplementation = {
       course.lessonIds.push(newLesson.id);
     }
     
-    const response = new MutationAddLessonResponse();
+    const response = create(MutationAddLessonResponseSchema);
     response.setAddLesson(lessonDataToLesson(newLesson));
     callback(null, response);
   },
@@ -341,7 +366,7 @@ const pluginImplementation = {
     call: grpc.ServerUnaryCall<LookupEmployeeByIdRequest, LookupEmployeeByIdResponse>,
     callback: grpc.sendUnaryData<LookupEmployeeByIdResponse>
   ) => {
-    const response = new LookupEmployeeByIdResponse();
+    const response = create(LookupEmployeeByIdResponseSchema);
     const results: Employee[] = [];
     
     for (const key of call.request.getKeysList()) {

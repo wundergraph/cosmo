@@ -2,15 +2,18 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as url from 'node:url';
 import { describe, expect, test } from 'vitest';
+import { create } from '@bufbuild/protobuf';
 import { printSchema } from 'graphql';
 import { federateSubgraphs, FederationSuccess, LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
+
 import {
-  EntityMapping,
-  EnumMapping,
-  GRPCMapping,
-  OperationMapping,
-  TypeFieldMapping,
+  EntityMappingSchema,
+  EnumMappingSchema,
+  GRPCMappingSchema,
+  OperationMappingSchema,
+  TypeFieldMappingSchema,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
 import { buildRouterConfig, ComposedSubgraph, ComposedSubgraphPlugin, SubgraphKind } from '../src';
 import { normalizationFailureError } from '../src/router-config/errors';
 import {
@@ -161,12 +164,12 @@ describe('Router Config Builder', () => {
       id: '3',
       name: 'inventory',
       version: '0.0.1',
-      mapping: new GRPCMapping({
-        entityMappings: [new EntityMapping({})],
-        enumMappings: [new EnumMapping({})],
-        operationMappings: [new OperationMapping({})],
+      mapping: create(GRPCMappingSchema, {
+        entityMappings: [create(EntityMappingSchema, {})],
+        enumMappings: [create(EnumMappingSchema, {})],
+        operationMappings: [create(OperationMappingSchema, {})],
         service: 'inventory',
-        typeFieldMappings: [new TypeFieldMapping({})],
+        typeFieldMappings: [create(TypeFieldMappingSchema, {})],
         version: 1,
       }),
       protoSchema: '',

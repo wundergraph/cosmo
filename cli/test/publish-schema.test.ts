@@ -3,8 +3,8 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, test, vi, type MockInstance } from 'vitest';
 import { Command } from 'commander';
 import { type PartialMessage } from '@bufbuild/protobuf';
-import { createPromiseClient, createRouterTransport } from '@connectrpc/connect';
-import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_connect';
+import { createClient, createRouterTransport } from '@connectrpc/connect';
+import { PlatformService } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { PublishFederatedSubgraphResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { dirname } from 'pathe';
@@ -42,7 +42,7 @@ async function runPublish(
   }
 
   const client: Client = {
-    platform: createPromiseClient(PlatformService, createMockTransport(response)),
+    platform: createClient(PlatformService, createMockTransport(response)),
   };
   const program = new Command();
   program.addCommand(PublishSchema({ client }));
@@ -65,7 +65,7 @@ export const mockPlatformTransport = () =>
 describe('Schema Command', () => {
   test('Publish Schema', () => {
     const client: Client = {
-      platform: createPromiseClient(PlatformService, mockPlatformTransport()),
+      platform: createClient(PlatformService, mockPlatformTransport()),
       // @ts-ignore
       node: null,
     };

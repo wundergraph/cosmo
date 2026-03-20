@@ -1,10 +1,10 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { PlainMessage, create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetAnalyticsViewRequest,
   GetAnalyticsViewResponse,
-  DateRange as DateRangeProto,
+  DateRangeSchema as DateRangeProtoSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OrganizationRepository } from '../../repositories/OrganizationRepository.js';
@@ -60,7 +60,7 @@ export function getAnalyticsView(
         req.config.range = range;
       }
       if (dateRange) {
-        req.config.dateRange = new DateRangeProto({
+        req.config.dateRange = create(DateRangeProtoSchema, {
           start: dateRange.start,
           end: dateRange.end,
         });

@@ -1,5 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { create } from '@bufbuild/protobuf';
+import { CompositionErrorSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { CompositionError } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 export class ServiceError extends Error {
   constructor(
@@ -39,7 +41,7 @@ export function isAuthorizationError(e: Error): e is AuthorizationError {
 }
 
 export function unsuccessfulBaseCompositionError(federatedGraphName: string, namespace = 'default'): CompositionError {
-  return new CompositionError({
+  return create(CompositionErrorSchema, {
     message:
       `The base composition for the latest publish to the federated graph "${federatedGraphName}" was unsuccessful.` +
       ` Consequently, all related potential compositions (feature flags and contracts) will be ignored.` +

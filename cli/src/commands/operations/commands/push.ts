@@ -1,16 +1,15 @@
 import crypto from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 
+import { create } from '@bufbuild/protobuf';
+
 import { Command } from 'commander';
 import pc from 'picocolors';
 import cliProgress from 'cli-progress';
 
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import {
-  PublishedOperation,
-  PublishedOperationStatus,
-  PersistedOperation,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { PublishedOperation, PublishedOperationStatus, PersistedOperationSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import type { PublishedOperation, PublishedOperationStatus, PersistedOperation } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
@@ -47,11 +46,9 @@ const parseApolloPersistedQueryManifest = (data: ApolloPersistedQueryManifest): 
   if (data.version !== 1) {
     throw new Error(`unknown Apollo persisted query manifest version ${data.version}`);
   }
-  return (
-    data.operations
-      ?.filter((op) => op.id && op.body)
-      .map((op) => new PersistedOperation({ id: op.id, contents: op.body })) ?? []
-  );
+  return (data.operations
+    ?.filter((op) => op.id && op.body)
+    .map((op) => create(PersistedOperationSchema, { id: op.id, contents: op.body })) ?? []);
 };
 
 const isRelayQueryMap = (data: any): boolean => {
@@ -66,7 +63,7 @@ const isRelayQueryMap = (data: any): boolean => {
 };
 
 const parseRelayQueryMap = (data: Array<any>): PersistedOperation[] => {
-  return data.map((x: any) => new PersistedOperation({ id: x[0], contents: x[1] }));
+  return data.map((x: any) => create(PersistedOperationSchema, { id: x[0], contents: x[1] }));
 };
 
 const isRelayQueryObject = (data: any): boolean => {
@@ -74,7 +71,7 @@ const isRelayQueryObject = (data: any): boolean => {
 };
 
 const parseRelayQueryObject = (data: any): PersistedOperation[] => {
-  return Object.keys(data).map((key) => new PersistedOperation({ id: key, contents: data[key] }));
+  return Object.keys(data).map((key) => create(PersistedOperationSchema, { id: key, contents: data[key] }));
 };
 
 const parseOperationsJson = (data: any): PersistedOperation[] => {
@@ -127,7 +124,7 @@ export const parseOperations = (contents: string): PersistedOperation[] => {
   } catch {
     // Assume it's plain graphql
     const id = crypto.createHash('sha256').update(contents).digest('hex');
-    return [new PersistedOperation({ id, contents })];
+    return [create(PersistedOperationSchema, { id, contents })];
   }
   return parseOperationsJson(data);
 };

@@ -1,8 +1,6 @@
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import {
-  OrganizationGroup,
-  UpdateOrganizationGroupRequest_GroupRule,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { create, fromJson } from '@bufbuild/protobuf';
+import { OrganizationGroup, UpdateOrganizationGroupRequest_GroupRuleSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Button } from '@/components/ui/button';
 import { InfoCircledIcon, PlusIcon } from '@radix-ui/react-icons';
 import { PencilIcon } from '@heroicons/react/24/outline';
@@ -76,7 +74,7 @@ function MemberGroupSheetContent({
   const [groupRules, setGroupRules] = useState<UpdateOrganizationGroupRequest_GroupRule[]>([
     ...group.rules.map(
       (r) =>
-        new UpdateOrganizationGroupRequest_GroupRule({
+        create(UpdateOrganizationGroupRequest_GroupRuleSchema, {
           role: r.role,
           namespaces: r.namespaces,
           resources: r.resources,
@@ -134,7 +132,6 @@ function MemberGroupSheetContent({
           )}
         </SheetDescription>
       </SheetHeader>
-
       {!rbac?.enabled && (
         <Alert className="mt-6">
           <InfoCircledIcon className="size-5" />
@@ -142,7 +139,6 @@ function MemberGroupSheetContent({
           <AlertDescription>You need to enable RBAC in the settings to be able to modify groups.</AlertDescription>
         </Alert>
       )}
-
       <div className="my-6 space-y-3">
         {groupRules.length > 0 &&
           groupRules.map((rule, index) => (
@@ -177,7 +173,7 @@ function MemberGroupSheetContent({
                   return;
                 }
 
-                setGroupRules([...groupRules, UpdateOrganizationGroupRequest_GroupRule.fromJson({})]);
+                setGroupRules([...groupRules, fromJson(UpdateOrganizationGroupRequest_GroupRuleSchema, {})]);
               }}
             >
               <PlusIcon className="size-4" />
@@ -186,7 +182,6 @@ function MemberGroupSheetContent({
           </div>
         )}
       </div>
-
       <SheetFooter className="gap-y-2">
         {rbac?.enabled && !group.builtin && (
           <>

@@ -1,4 +1,4 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { PlainMessage, create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -6,7 +6,7 @@ import {
   CreateProposalResponse,
   Label,
   ProposalNamingConvention,
-  ProposalSubgraph,
+  ProposalSubgraphSchema,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { Composer } from '../../composition/composer.js';
 import { AuditLogRepository } from '../../repositories/AuditLogRepository.js';
@@ -427,7 +427,7 @@ export function createProposal(
       composer,
       subgraphs: proposalSubgraphs.map(
         (subgraph) =>
-          new ProposalSubgraph({
+          create(ProposalSubgraphSchema, {
             name: subgraph.subgraphName,
             schemaSDL: subgraph.schemaSDL,
             labels: subgraph.labels,

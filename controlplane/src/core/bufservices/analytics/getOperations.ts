@@ -1,8 +1,19 @@
-/* eslint-disable camelcase */
-import { PlainMessage } from '@bufbuild/protobuf';
+import { PlainMessage, create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+
 import {
+  AnalyticsFilterSchema,
+  AnalyticsViewFilterOperator,
+  GetOperationsRequest,
+  GetOperationsResponse,
+  GetOperationsResponse_OperationSchema,
+  GetOperationsResponse_OperationType,
+  OperationsFetchBasedOn,
+  SortDirection,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
+import type {
   AnalyticsFilter,
   AnalyticsViewFilterOperator,
   GetOperationsRequest,
@@ -12,6 +23,7 @@ import {
   OperationsFetchBasedOn,
   SortDirection,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import { buildASTSchema } from '@wundergraph/composition';
 import { parse } from 'graphql';
 import { deafultRangeInHoursForGetOperations } from '../../constants.js';
@@ -153,7 +165,7 @@ export function getOperations(
       // Multiple filters with the same field are combined with OR
       for (const clientName of req.clientNames) {
         filters.push(
-          new AnalyticsFilter({
+          create(AnalyticsFilterSchema, {
             field: 'clientName',
             operator: AnalyticsViewFilterOperator.EQUALS,
             value: clientName,
@@ -249,7 +261,7 @@ export function getOperations(
         };
       }
 
-      computedOperations.push(new GetOperationsResponse_Operation(operationData));
+      computedOperations.push(create(GetOperationsResponse_OperationSchema, operationData));
     }
 
     let totalCount: number | undefined;

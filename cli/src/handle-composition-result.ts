@@ -1,14 +1,24 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+import { create } from '@bufbuild/protobuf';
 // eslint-disable-next-line import/named
 import { Ora } from 'ora';
 import Table from 'cli-table3';
 import pc from 'picocolors';
+
 import {
+  CompositionError,
+  CompositionWarning,
+  DeploymentError,
+  SubgraphPublishStatsSchema,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
+import type {
   CompositionError,
   CompositionWarning,
   DeploymentError,
   SubgraphPublishStats,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import { SubgraphCommandJsonOutput } from './core/types/types.js';
 import { printTruncationWarning } from './utils.js';
 
@@ -110,7 +120,7 @@ export function handleCompositionResult({
       if (failOnCompositionError) {
         // Only composition errors were displayed at this point; warnings come after the switch statement
         printTruncationWarning({
-          displayedErrorCounts: new SubgraphPublishStats({
+          displayedErrorCounts: create(SubgraphPublishStatsSchema, {
             compositionErrors: compositionErrors.length,
             compositionWarnings: 0,
             deploymentErrors: 0,
@@ -160,7 +170,7 @@ export function handleCompositionResult({
       if (failOnAdmissionWebhookError) {
         // Only deployment errors were displayed at this point; warnings come after the switch statement
         printTruncationWarning({
-          displayedErrorCounts: new SubgraphPublishStats({
+          displayedErrorCounts: create(SubgraphPublishStatsSchema, {
             compositionErrors: 0,
             compositionWarnings: 0,
             deploymentErrors: deploymentErrors.length,
@@ -225,7 +235,7 @@ export function handleCompositionResult({
   }
 
   // Determine what was actually displayed based on the response code
-  const displayedErrorCounts = new SubgraphPublishStats({
+  const displayedErrorCounts = create(SubgraphPublishStatsSchema, {
     compositionErrors: responseCode === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED ? compositionErrors.length : 0,
     compositionWarnings: displayedWarnings,
     deploymentErrors: responseCode === EnumStatusCode.ERR_DEPLOYMENT_FAILED ? deploymentErrors.length : 0,

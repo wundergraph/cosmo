@@ -1,7 +1,7 @@
 import { PlainMessage } from '@bufbuild/protobuf';
 import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
-import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_connect';
+import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { RegistrationInfo, SelfRegisterResponse } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { lru } from 'tiny-lru';
 import { FederatedGraphRepository } from '../repositories/FederatedGraphRepository.js';

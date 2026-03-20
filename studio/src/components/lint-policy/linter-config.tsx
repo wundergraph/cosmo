@@ -1,4 +1,5 @@
 import { docsBaseURL, lintCategories } from '@/lib/constants';
+import { create } from '@bufbuild/protobuf';
 import { cn, countLintConfigsByCategory } from '@/lib/utils';
 import { useMutation } from '@connectrpc/connect-query';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -6,11 +7,7 @@ import {
   configureNamespaceLintConfig,
   enableLintingForTheNamespace,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
-import {
-  GetNamespaceLintConfigResponse,
-  LintConfig,
-  LintSeverity,
-} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { GetNamespaceLintConfigResponse, LintConfigSchema, LintSeverity } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
@@ -89,7 +86,7 @@ export const LinterConfig = ({ data, refetch }: { data: GetNamespaceLintConfigRe
         return prevState;
       }
 
-      const updatedRule = new LintConfig({
+      const updatedRule = create(LintConfigSchema, {
         ...prevState[index],
         severityLevel: value === 'error' ? LintSeverity.error : LintSeverity.warn,
       });

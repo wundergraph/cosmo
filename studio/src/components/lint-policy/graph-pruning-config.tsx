@@ -1,4 +1,5 @@
 import { useFeature } from '@/hooks/use-feature';
+import { create } from '@bufbuild/protobuf';
 import { useFeatureLimit } from '@/hooks/use-feature-limit';
 import { useUser } from '@/hooks/use-user';
 import { docsBaseURL, graphPruningRules } from '@/lib/constants';
@@ -9,11 +10,13 @@ import {
   configureNamespaceGraphPruningConfig,
   enableGraphPruning,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+
 import {
   GetNamespaceGraphPruningConfigResponse,
-  GraphPruningConfig,
+  GraphPruningConfigSchema,
   LintSeverity,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
@@ -296,7 +299,7 @@ export const GraphPruningLintConfig = ({
                         checked={selectedPruneRules.some((l) => l.ruleName === rule.name)}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            const config = new GraphPruningConfig({
+                            const config = create(GraphPruningConfigSchema, {
                               ruleName: rule.name,
                               severityLevel: LintSeverity.warn,
                               gracePeriodInDays: 7,
@@ -321,7 +324,6 @@ export const GraphPruningLintConfig = ({
                       </div>
                     </div>
                     <div></div>
-
                     <div className="ml-8 flex gap-x-3 md:ml-0">
                       {rule.name !== 'REQUIRE_DEPRECATION_BEFORE_DELETION' && (
                         <>

@@ -48,12 +48,12 @@ export default (opts: BaseCommandOptions) => {
     if (options.out) {
       const output = resp.graphs.map(
         (g) =>
-          ({
+          (({
             name: g.name,
             labels: g.labels.map((l) => joinLabel(l)),
             routingURL: g.routingURL,
-            lastUpdatedAt: g.lastUpdatedAt,
-          }) as OutputFile[number],
+            lastUpdatedAt: g.lastUpdatedAt
+          }) as OutputFile[number]),
       );
       await writeFile(resolve(options.out), JSON.stringify(output));
       return;

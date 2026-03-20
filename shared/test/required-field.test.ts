@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest';
+import { create } from '@bufbuild/protobuf';
 import { RequiredFieldConfiguration } from '@wundergraph/composition';
-import { FieldCoordinates, FieldSetCondition, RequiredField } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import { FieldCoordinatesSchema, FieldSetConditionSchema, RequiredFieldSchema } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+import type { FieldCoordinates, FieldSetCondition, RequiredField } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import { addRequiredFields } from '../src/router-config/graphql-configuration';
 
 describe('Required field set proto generation tests', () => {
@@ -25,40 +27,40 @@ describe('Required field set proto generation tests', () => {
     const requiredFields: Array<RequiredField> = [];
     addRequiredFields(requiredFieldConfigurations, requiredFields, 'Q');
     expect(requiredFields).toStrictEqual([
-      new RequiredField({
+      create(RequiredFieldSchema, {
         conditions: [
-          new FieldSetCondition({
+          create(FieldSetConditionSchema, {
             fieldCoordinatesPath: [
-              new FieldCoordinates({
+              create(FieldCoordinatesSchema, {
                 fieldName: 'a',
                 typeName: 'Q',
               }),
-              new FieldCoordinates({
+              create(FieldCoordinatesSchema, {
                 fieldName: 'b',
                 typeName: 'A',
               }),
-              new FieldCoordinates({
+              create(FieldCoordinatesSchema, {
                 fieldName: 'c',
                 typeName: 'B',
               }),
-              new FieldCoordinates({
+              create(FieldCoordinatesSchema, {
                 fieldName: 'd',
                 typeName: 'C',
               }),
             ],
             fieldPath: ['a', 'b', 'c', 'd'],
           }),
-          new FieldSetCondition({
+          create(FieldSetConditionSchema, {
             fieldCoordinatesPath: [
-              new FieldCoordinates({
+              create(FieldCoordinatesSchema, {
                 fieldName: 'a',
                 typeName: 'Q',
               }),
-              new FieldCoordinates({
+              create(FieldCoordinatesSchema, {
                 fieldName: 'c',
                 typeName: 'A',
               }),
-              new FieldCoordinates({
+              create(FieldCoordinatesSchema, {
                 fieldName: 'd',
                 typeName: 'C',
               }),
@@ -85,7 +87,7 @@ describe('Required field set proto generation tests', () => {
     const requiredFields: Array<RequiredField> = [];
     addRequiredFields(requiredFieldConfigurations, requiredFields, 'Q');
     expect(requiredFields).toStrictEqual([
-      new RequiredField({
+      create(RequiredFieldSchema, {
         disableEntityResolver: true,
         fieldName: '',
         selectionSet: 'a { b { c { d } } }',

@@ -1,13 +1,23 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { PlainMessage, fromJson } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+
 import {
+  GetWorkspaceRequest,
+  GetWorkspaceResponse,
+  WorkspaceNamespaceSchema,
+  WorkspaceFederatedGraphSchema,
+  type WorkspaceSubgraph,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
+import type {
   GetWorkspaceRequest,
   GetWorkspaceResponse,
   WorkspaceNamespace,
   WorkspaceFederatedGraph,
-  type WorkspaceSubgraph,
+  WorkspaceSubgraph,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import type { RouterOptions } from '../../routes.js';
@@ -39,7 +49,7 @@ export function getWorkspace(
     // Initialize the response
     const result = namespaces
       .map((ns) =>
-        WorkspaceNamespace.fromJson({
+        fromJson(WorkspaceNamespaceSchema, {
           id: ns.id,
           name: ns.name,
           graphs: [],
@@ -81,7 +91,7 @@ export function getWorkspace(
 
         //
         namespace.graphs.push(
-          WorkspaceFederatedGraph.fromJson({
+          fromJson(WorkspaceFederatedGraphSchema, {
             id: graph.id,
             targetId: graph.targetId,
             name: graph.name,

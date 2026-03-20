@@ -1,24 +1,27 @@
 import { describe, it, expect, vi } from 'vitest';
+import { create } from '@bufbuild/protobuf';
 import type * as grpc from '@grpc/grpc-js';
+
 import {
-  QueryCoursesRequest,
+  QueryCoursesRequestSchema,
   QueryCoursesResponse,
-  QueryCourseRequest,
+  QueryCourseRequestSchema,
   QueryCourseResponse,
-  QueryLessonsRequest,
+  QueryLessonsRequestSchema,
   QueryLessonsResponse,
-  QueryKillCoursesServiceRequest,
+  QueryKillCoursesServiceRequestSchema,
   QueryKillCoursesServiceResponse,
-  QueryThrowErrorCoursesRequest,
+  QueryThrowErrorCoursesRequestSchema,
   QueryThrowErrorCoursesResponse,
-  MutationAddCourseRequest,
+  MutationAddCourseRequestSchema,
   MutationAddCourseResponse,
-  MutationAddLessonRequest,
+  MutationAddLessonRequestSchema,
   MutationAddLessonResponse,
-  LookupEmployeeByIdRequest,
-  LookupEmployeeByIdRequestKey,
+  LookupEmployeeByIdRequestSchema,
+  LookupEmployeeByIdRequestKeySchema,
   LookupEmployeeByIdResponse,
 } from '../generated/service_pb.js';
+
 import plugin from './plugin.js';
 
 // Helper to create mock gRPC call
@@ -52,7 +55,7 @@ function createMockCallback<T>(): { callback: grpc.sendUnaryData<T>; promise: Pr
 describe('Courses Plugin', () => {
   describe('Queries', () => {
     it('should return all courses', async () => {
-      const request = new QueryCoursesRequest();
+      const request = create(QueryCoursesRequestSchema);
       const call = createMockCall(request);
       const { callback, promise } = createMockCallback<QueryCoursesResponse>();
 
@@ -71,7 +74,7 @@ describe('Courses Plugin', () => {
     });
 
     it('should return a single course by ID', async () => {
-      const request = new QueryCourseRequest();
+      const request = create(QueryCourseRequestSchema);
       request.setId('1');
       const call = createMockCall(request);
       const { callback, promise } = createMockCallback<QueryCourseResponse>();
@@ -90,7 +93,7 @@ describe('Courses Plugin', () => {
     });
 
     it('should return lessons for a course', async () => {
-      const request = new QueryLessonsRequest();
+      const request = create(QueryLessonsRequestSchema);
       request.setCourseId('1');
       const call = createMockCall(request);
       const { callback, promise } = createMockCallback<QueryLessonsResponse>();
@@ -110,7 +113,7 @@ describe('Courses Plugin', () => {
     });
 
     it('should return true for killCoursesService', async () => {
-      const request = new QueryKillCoursesServiceRequest();
+      const request = create(QueryKillCoursesServiceRequestSchema);
       const call = createMockCall(request);
       const { callback, promise } = createMockCallback<QueryKillCoursesServiceResponse>();
 
@@ -127,7 +130,7 @@ describe('Courses Plugin', () => {
     });
 
     it('should throw error for throwErrorCourses', async () => {
-      const request = new QueryThrowErrorCoursesRequest();
+      const request = create(QueryThrowErrorCoursesRequestSchema);
       const call = createMockCall(request);
       const { callback, promise } = createMockCallback<QueryThrowErrorCoursesResponse>();
 
@@ -139,7 +142,7 @@ describe('Courses Plugin', () => {
 
   describe('Mutations', () => {
     it('should create a new course', async () => {
-      const request = new MutationAddCourseRequest();
+      const request = create(MutationAddCourseRequestSchema);
       request.setTitle('New Test Course');
       request.setInstructorId(1);
       const call = createMockCall(request);
@@ -158,7 +161,7 @@ describe('Courses Plugin', () => {
     });
 
     it('should create a new lesson', async () => {
-      const request = new MutationAddLessonRequest();
+      const request = create(MutationAddLessonRequestSchema);
       request.setCourseId('1');
       request.setTitle('New Test Lesson');
       request.setOrder(10);
@@ -180,8 +183,8 @@ describe('Courses Plugin', () => {
 
   describe('Lookups', () => {
     it('should lookup employees by ID and return taught courses', async () => {
-      const request = new LookupEmployeeByIdRequest();
-      const key1 = new LookupEmployeeByIdRequestKey();
+      const request = create(LookupEmployeeByIdRequestSchema);
+      const key1 = create(LookupEmployeeByIdRequestKeySchema);
       key1.setId('1');
       request.setKeysList([key1]);
       

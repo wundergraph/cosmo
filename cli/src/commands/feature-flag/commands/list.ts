@@ -44,13 +44,13 @@ export default (opts: BaseCommandOptions) => {
     if (options.out) {
       const output = resp.featureFlags.map(
         (f) =>
-          ({
+          (({
             name: f.name,
             labels: f.labels.map((l) => joinLabel(l)),
             isEnabled: f.isEnabled,
             lastUpdatedAt: f.updatedAt,
-            namespace: f.namespace,
-          }) as OutputFile[number],
+            namespace: f.namespace
+          }) as OutputFile[number]),
       );
       await writeFile(resolve(options.out), JSON.stringify(output));
       return;

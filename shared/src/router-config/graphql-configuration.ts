@@ -1,5 +1,29 @@
 import { Kind, TypeNode } from 'graphql';
+import { create } from '@bufbuild/protobuf';
+
 import {
+  ArgumentConfigurationSchema,
+  ArgumentSource,
+  AuthorizationConfigurationSchema,
+  DataSourceCustomEventsSchema,
+  EngineEventConfigurationSchema,
+  EntityInterfaceConfigurationSchema,
+  EventType,
+  FieldConfigurationSchema,
+  FieldCoordinatesSchema,
+  FieldSetConditionSchema,
+  KafkaEventConfigurationSchema,
+  NatsEventConfigurationSchema,
+  NatsStreamConfigurationSchema,
+  RedisEventConfigurationSchema,
+  RequiredFieldSchema,
+  ScopesSchema,
+  SubscriptionFieldConditionSchema,
+  SubscriptionFilterConditionSchema,
+  TypeFieldSchema,
+} from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
+import type {
   ArgumentConfiguration,
   ArgumentSource,
   AuthorizationConfiguration,
@@ -20,6 +44,7 @@ import {
   SubscriptionFilterCondition,
   TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
+
 import {
   ConfigurationData,
   FieldConfiguration as CompositionFieldConfiguration,
@@ -58,14 +83,14 @@ function generateFieldSetConditions(requiredField: RequiredFieldConfiguration): 
         );
       }
       fieldCoordinatesPath.push(
-        new FieldCoordinates({
+        create(FieldCoordinatesSchema, {
           fieldName: fieldCoordinates[1],
           typeName: fieldCoordinates[0],
         }),
       );
     }
     conditions.push(
-      new FieldSetCondition({
+      create(FieldSetConditionSchema, {
         fieldCoordinatesPath,
         fieldPath: fieldSetCondition.fieldPath,
       }),
@@ -85,7 +110,7 @@ export function addRequiredFields(
   for (const requiredField of requiredFields) {
     const conditions = generateFieldSetConditions(requiredField);
     target.push(
-      new RequiredField({
+      create(RequiredFieldSchema, {
         typeName,
         fieldName: requiredField.fieldName,
         selectionSet: requiredField.selectionSet,
@@ -118,7 +143,7 @@ export function configurationDatasToDataSourceConfiguration(
     childNodes: [],
     keys: [],
     provides: [],
-    events: new DataSourceCustomEvents({ nats: [], kafka: [], redis: [] }),
+    events: create(DataSourceCustomEventsSchema, { nats: [], kafka: [], redis: [] }),
     requires: [],
     entityInterfaces: [],
     interfaceObjects: [],
@@ -126,7 +151,7 @@ export function configurationDatasToDataSourceConfiguration(
   for (const data of dataByTypeName.values()) {
     const typeName = data.typeName;
     const fieldNames: string[] = [...data.fieldNames];
-    const typeField = new TypeField({ fieldNames, typeName });
+    const typeField = create(TypeFieldSchema, { fieldNames, typeName });
     if (data.externalFieldNames && data.externalFieldNames.size > 0) {
       typeField.externalFieldNames = [...data.externalFieldNames];
     }
@@ -139,7 +164,7 @@ export function configurationDatasToDataSourceConfiguration(
       output.childNodes.push(typeField);
     }
     if (data.entityInterfaceConcreteTypeNames) {
-      const entityInterfaceConfiguration = new EntityInterfaceConfiguration({
+      const entityInterfaceConfiguration = create(EntityInterfaceConfigurationSchema, {
         interfaceTypeName: typeName,
         concreteTypeNames: [...data.entityInterfaceConcreteTypeNames],
       });
@@ -157,8 +182,8 @@ export function configurationDatasToDataSourceConfiguration(
       switch (event.providerType) {
         case PROVIDER_TYPE_KAFKA: {
           kafkaEventConfigurations.push(
-            new KafkaEventConfiguration({
-              engineEventConfiguration: new EngineEventConfiguration({
+            create(KafkaEventConfigurationSchema, {
+              engineEventConfiguration: create(EngineEventConfigurationSchema, {
                 fieldName: event.fieldName,
                 providerId: event.providerId,
                 type: eventType(event.type),
@@ -171,8 +196,8 @@ export function configurationDatasToDataSourceConfiguration(
         }
         case PROVIDER_TYPE_NATS: {
           natsEventConfigurations.push(
-            new NatsEventConfiguration({
-              engineEventConfiguration: new EngineEventConfiguration({
+            create(NatsEventConfigurationSchema, {
+              engineEventConfiguration: create(EngineEventConfigurationSchema, {
                 fieldName: event.fieldName,
                 providerId: event.providerId,
                 type: eventType(event.type),
@@ -181,7 +206,7 @@ export function configurationDatasToDataSourceConfiguration(
               subjects: event.subjects,
               ...(event.streamConfiguration
                 ? {
-                    streamConfiguration: new NatsStreamConfiguration({
+                    streamConfiguration: create(NatsStreamConfigurationSchema, {
                       consumerInactiveThreshold: event.streamConfiguration.consumerInactiveThreshold,
                       consumerName: event.streamConfiguration.consumerName,
                       streamName: event.streamConfiguration.streamName,
@@ -194,8 +219,8 @@ export function configurationDatasToDataSourceConfiguration(
         }
         case PROVIDER_TYPE_REDIS: {
           redisEventConfigurations.push(
-            new RedisEventConfiguration({
-              engineEventConfiguration: new EngineEventConfiguration({
+            create(RedisEventConfigurationSchema, {
+              engineEventConfiguration: create(EngineEventConfigurationSchema, {
                 fieldName: event.fieldName,
                 providerId: event.providerId,
                 type: eventType(event.type),
@@ -225,34 +250,34 @@ export function generateFieldConfigurations(
   for (const compositionFieldConfiguration of fieldConfigurations) {
     const argumentConfigurations: ArgumentConfiguration[] = compositionFieldConfiguration.argumentNames.map(
       (argumentName: string) =>
-        new ArgumentConfiguration({
+        create(ArgumentConfigurationSchema, {
           name: argumentName,
           sourceType: ArgumentSource.FIELD_ARGUMENT,
         }),
     );
-    const fieldConfiguration = new FieldConfiguration({
+    const fieldConfiguration = create(FieldConfigurationSchema, {
       argumentsConfiguration: argumentConfigurations,
       fieldName: compositionFieldConfiguration.fieldName,
       typeName: compositionFieldConfiguration.typeName,
     });
     const requiredOrScopes =
       compositionFieldConfiguration.requiredScopes?.map(
-        (andScopes: string[]) => new Scopes({ requiredAndScopes: andScopes }),
+        (andScopes: string[]) => create(ScopesSchema, { requiredAndScopes: andScopes }),
       ) || [];
     const requiredOrScopesByOr =
       compositionFieldConfiguration.requiredScopesByOR?.map(
-        (andScopes: string[]) => new Scopes({ requiredAndScopes: andScopes }),
+        (andScopes: string[]) => create(ScopesSchema, { requiredAndScopes: andScopes }),
       ) || [];
     const hasRequiredOrScopes = requiredOrScopes.length > 0;
     if (compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes) {
-      fieldConfiguration.authorizationConfiguration = new AuthorizationConfiguration({
+      fieldConfiguration.authorizationConfiguration = create(AuthorizationConfigurationSchema, {
         requiresAuthentication: compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes,
         requiredOrScopes,
         requiredOrScopesByOr,
       });
     }
     if (compositionFieldConfiguration.subscriptionFilterCondition) {
-      const subscriptionFilterCondition = new SubscriptionFilterCondition();
+      const subscriptionFilterCondition = create(SubscriptionFilterConditionSchema);
       generateSubscriptionFilterCondition(
         subscriptionFilterCondition,
         compositionFieldConfiguration.subscriptionFilterCondition,
@@ -285,7 +310,7 @@ export function generateSubscriptionFilterCondition(
   if (condition.and !== undefined) {
     const protoAndConditions: SubscriptionFilterCondition[] = [];
     for (const andCondition of condition.and) {
-      const protoAndCondition = new SubscriptionFilterCondition();
+      const protoAndCondition = create(SubscriptionFilterConditionSchema);
       generateSubscriptionFilterCondition(protoAndCondition, andCondition);
       protoAndConditions.push(protoAndCondition);
     }
@@ -293,21 +318,21 @@ export function generateSubscriptionFilterCondition(
     return;
   }
   if (condition.in !== undefined) {
-    protoMessage.in = new SubscriptionFieldCondition({
+    protoMessage.in = create(SubscriptionFieldConditionSchema, {
       fieldPath: condition.in.fieldPath,
       json: JSON.stringify(condition.in.values),
     });
     return;
   }
   if (condition.not !== undefined) {
-    protoMessage.not = new SubscriptionFilterCondition();
+    protoMessage.not = create(SubscriptionFilterConditionSchema);
     generateSubscriptionFilterCondition(protoMessage.not, condition.not);
     return;
   }
   if (condition.or !== undefined) {
     const protoOrConditions: SubscriptionFilterCondition[] = [];
     for (const orCondition of condition.or) {
-      const protoOrCondition = new SubscriptionFilterCondition();
+      const protoOrCondition = create(SubscriptionFilterConditionSchema);
       generateSubscriptionFilterCondition(protoOrCondition, orCondition);
       protoOrConditions.push(protoOrCondition);
     }

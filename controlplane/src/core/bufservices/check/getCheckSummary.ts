@@ -1,13 +1,21 @@
-/* eslint-disable camelcase */
-import { PlainMessage } from '@bufbuild/protobuf';
+import { PlainMessage, create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
+
 import {
+  GetCheckSummaryRequest,
+  GetCheckSummaryResponse,
+  GetCheckSummaryResponse_AffectedGraphSchema,
+  LintSeverity,
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
+import type {
   GetCheckSummaryRequest,
   GetCheckSummaryResponse,
   GetCheckSummaryResponse_AffectedGraph,
   LintSeverity,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { NamespaceRepository } from '../../repositories/NamespaceRepository.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
@@ -182,7 +190,7 @@ export function getCheckSummary(
       checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking);
 
     affectedGraphs.push(
-      new GetCheckSummaryResponse_AffectedGraph({
+      create(GetCheckSummaryResponse_AffectedGraphSchema, {
         ...currentAffectedGraph,
         name: graph.name,
         isCheckSuccessful: isCheckSuccessful({
@@ -238,7 +246,7 @@ export function getCheckSummary(
         checkDetails.composedSchemaBreakingChanges.some((change) => change.isBreaking);
 
       affectedGraphs.push(
-        new GetCheckSummaryResponse_AffectedGraph({
+        create(GetCheckSummaryResponse_AffectedGraphSchema, {
           ...ag,
           name: fedGraph.name,
           isCheckSuccessful: isCheckSuccessful({

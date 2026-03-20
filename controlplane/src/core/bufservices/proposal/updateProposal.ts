@@ -1,9 +1,9 @@
-import { PlainMessage } from '@bufbuild/protobuf';
+import { PlainMessage, create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   Label,
-  ProposalSubgraph,
+  ProposalSubgraphSchema,
   UpdateProposalRequest,
   UpdateProposalResponse,
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -495,7 +495,7 @@ export function updateProposal(
         composer,
         subgraphs: proposalSubgraphs.map(
           (subgraph) =>
-            new ProposalSubgraph({
+            create(ProposalSubgraphSchema, {
               name: subgraph.subgraphName,
               schemaSDL: subgraph.schemaSDL,
               labels: subgraph.labels,
