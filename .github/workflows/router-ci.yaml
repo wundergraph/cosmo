@@ -63,8 +63,12 @@ jobs:
         with:
           bun-version: 1.2.15
 
-      - name: Generate code
+      - name: Generate Go code
         run: make generate-go
+
+      - name: Generate test configs from demo
+        working-directory: ./router-tests
+        run: ./update-config-no-edg.sh
 
       - uses: ./.github/actions/git-dirty-check
         with:
@@ -155,11 +159,16 @@ jobs:
         with:
           bun-version: 1.2.15
 
-      - name: Generate code
+      - name: Generate Go code
         run: make generate-go
 
-      - name: Check if git is not dirty after generating files
-        run: git diff --no-ext-diff --exit-code
+      - name: Generate test configs from demo
+        working-directory: ./router-tests
+        run: ./update-config-no-edg.sh
+
+      - uses: ./.github/actions/git-dirty-check
+        with:
+          package-name: router
 
       - name: Install dependencies
         working-directory: ./router
