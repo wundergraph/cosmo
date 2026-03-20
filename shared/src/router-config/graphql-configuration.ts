@@ -25,12 +25,10 @@ import {
 
 import type {
   ArgumentConfiguration,
-  ArgumentSource,
   AuthorizationConfiguration,
   DataSourceCustomEvents,
   EngineEventConfiguration,
   EntityInterfaceConfiguration,
-  EventType,
   FieldConfiguration,
   FieldCoordinates,
   FieldSetCondition,
@@ -261,12 +259,12 @@ export function generateFieldConfigurations(
       typeName: compositionFieldConfiguration.typeName,
     });
     const requiredOrScopes =
-      compositionFieldConfiguration.requiredScopes?.map(
-        (andScopes: string[]) => create(ScopesSchema, { requiredAndScopes: andScopes }),
+      compositionFieldConfiguration.requiredScopes?.map((andScopes: string[]) =>
+        create(ScopesSchema, { requiredAndScopes: andScopes }),
       ) || [];
     const requiredOrScopesByOr =
-      compositionFieldConfiguration.requiredScopesByOR?.map(
-        (andScopes: string[]) => create(ScopesSchema, { requiredAndScopes: andScopes }),
+      compositionFieldConfiguration.requiredScopesByOR?.map((andScopes: string[]) =>
+        create(ScopesSchema, { requiredAndScopes: andScopes }),
       ) || [];
     const hasRequiredOrScopes = requiredOrScopes.length > 0;
     if (compositionFieldConfiguration.requiresAuthentication || hasRequiredOrScopes) {

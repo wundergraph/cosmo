@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as url from 'node:url';
 import { describe, expect, test } from 'vitest';
-import { create } from '@bufbuild/protobuf';
+import { create, toJsonString } from '@bufbuild/protobuf';
 import { printSchema } from 'graphql';
 import { federateSubgraphs, FederationSuccess, LATEST_ROUTER_COMPATIBILITY_VERSION } from '@wundergraph/composition';
 
@@ -11,6 +11,7 @@ import {
   EnumMappingSchema,
   GRPCMappingSchema,
   OperationMappingSchema,
+  RouterConfigSchema,
   TypeFieldMappingSchema,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
@@ -102,9 +103,7 @@ describe('Router Config Builder', () => {
       federatedSDL: `type Query {}`,
       schemaVersionId: '',
     });
-    const json = routerConfig.toJsonString({
-      emitDefaultValues: false,
-    });
+    const json = toJsonString(RouterConfigSchema, routerConfig);
     const out = JSON.stringify(JSON.parse(json), null, 2);
     expect(out).matchSnapshot('router.config.json');
   });
@@ -190,9 +189,7 @@ describe('Router Config Builder', () => {
       federatedSDL: `type Query {}`,
       schemaVersionId: '',
     });
-    const json = routerConfig.toJsonString({
-      emitDefaultValues: false,
-    });
+    const json = toJsonString(RouterConfigSchema, routerConfig);
     const out = JSON.stringify(JSON.parse(json), null, 2);
     expect(out).matchSnapshot('router.config.json');
   });
@@ -244,9 +241,7 @@ describe('Router Config Builder', () => {
       federatedSDL: printSchema(result!.federatedGraphSchema),
       schemaVersionId: '',
     });
-    const json = routerConfig.toJsonString({
-      emitDefaultValues: false,
-    });
+    const json = toJsonString(RouterConfigSchema, routerConfig);
     const out = JSON.stringify(JSON.parse(json), null, 2);
     expect(out).matchSnapshot('router-no-client.config.json');
   });
@@ -298,9 +293,7 @@ describe('Router Config Builder', () => {
       federatedSDL: printSchema(result!.federatedGraphSchema),
       schemaVersionId: '',
     });
-    const json = routerConfig.toJsonString({
-      emitDefaultValues: false,
-    });
+    const json = toJsonString(RouterConfigSchema, routerConfig);
     const out = JSON.stringify(JSON.parse(json), null, 2);
     expect(out).matchSnapshot('router-with-tags.config.json');
   });
@@ -352,9 +345,7 @@ describe('Router Config Builder', () => {
       federatedSDL: printSchema(result!.federatedGraphSchema),
       schemaVersionId: '',
     });
-    const json = routerConfig.toJsonString({
-      emitDefaultValues: false,
-    });
+    const json = toJsonString(RouterConfigSchema, routerConfig);
     const out = JSON.stringify(JSON.parse(json), null, 2);
     expect(out).matchSnapshot('router-with-inaccessible.config.json');
   });

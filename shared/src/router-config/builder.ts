@@ -15,7 +15,7 @@ import {
   GraphQLWebsocketSubprotocol,
 } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GraphQLSchema, lexicographicSortSchema } from 'graphql';
-import { PartialMessage, create } from '@bufbuild/protobuf';
+import { create, type MessageInitShape } from '@bufbuild/protobuf';
 
 import {
   ConfigurationVariableSchema,
@@ -28,32 +28,26 @@ import {
   EngineConfigurationSchema,
   FieldListSizeConfigurationSchema,
   FieldWeightConfigurationSchema,
-  GraphQLSubscriptionConfiguration,
+  GraphQLSubscriptionConfigurationSchema,
   GRPCConfigurationSchema,
-  GRPCMapping,
   HTTPMethod,
-  ImageReference,
   InternedStringSchema,
   PluginConfigurationSchema,
   RouterConfigSchema,
-  TypeField,
 } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 
 import type {
   ConfigurationVariable,
-  ConfigurationVariableKind,
   CostConfiguration,
   DataSourceConfiguration,
   DataSourceCustom_GraphQL,
   DataSourceCustomEvents,
-  DataSourceKind,
   EngineConfiguration,
   FieldListSizeConfiguration,
   FieldWeightConfiguration,
   GraphQLSubscriptionConfiguration,
   GRPCConfiguration,
   GRPCMapping,
-  HTTPMethod,
   ImageReference,
   InternedString,
   PluginConfiguration,
@@ -77,12 +71,11 @@ function costsToCostConfiguration(costs?: Costs): CostConfiguration | undefined 
     return undefined;
   }
   return create(CostConfigurationSchema, {
-    fieldWeights: [...costs.fieldWeights.values()].map(
-      (fw) =>
-        create(FieldWeightConfigurationSchema, {
-          ...fw,
-          argumentWeights: Object.fromEntries(fw.argumentWeights),
-        }),
+    fieldWeights: [...costs.fieldWeights.values()].map((fw) =>
+      create(FieldWeightConfigurationSchema, {
+        ...fw,
+        argumentWeights: Object.fromEntries(fw.argumentWeights),
+      }),
     ),
     listSizes: [...costs.listSizes.values()].map((ls) => create(FieldListSizeConfigurationSchema, ls)),
     typeWeights: Object.fromEntries(costs.typeWeights),
@@ -222,7 +215,7 @@ export const buildRouterConfig = function (input: Input): RouterConfig {
       throw normalizationFailureError('GraphQLSchema');
     }
 
-    const subscriptionConfig: PartialMessage<GraphQLSubscriptionConfiguration> = {
+    const subscriptionConfig: MessageInitShape<typeof GraphQLSubscriptionConfigurationSchema> = {
       enabled: true,
     };
 
