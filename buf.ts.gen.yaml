@@ -3,9 +3,6 @@ plugins:
   - local: protoc-gen-es
     out: connect/src
     opt: target=ts
-  - local: protoc-gen-connect-es
-    out: connect/src
-    opt: target=ts
   - local: protoc-gen-connect-query
     out: connect/src
     opt: target=ts
