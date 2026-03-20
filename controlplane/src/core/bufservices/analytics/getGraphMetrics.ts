@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -15,10 +14,10 @@ export function getGraphMetrics(
   opts: RouterOptions,
   req: GetGraphMetricsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetGraphMetricsResponse>> {
+): Promise<GetGraphMetricsResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetGraphMetricsResponse>>(ctx, logger, async () => {
+  return handleError<GetGraphMetricsResponse>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

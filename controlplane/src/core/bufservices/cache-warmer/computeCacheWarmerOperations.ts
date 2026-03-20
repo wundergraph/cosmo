@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -17,10 +16,10 @@ export function computeCacheWarmerOperations(
   opts: RouterOptions,
   req: ComputeCacheWarmerOperationsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<ComputeCacheWarmerOperationsResponse>> {
+): Promise<ComputeCacheWarmerOperationsResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<ComputeCacheWarmerOperationsResponse>>(ctx, logger, async () => {
+  return handleError<ComputeCacheWarmerOperationsResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

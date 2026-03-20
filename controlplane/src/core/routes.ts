@@ -55,7 +55,7 @@ export interface RouterOptions {
 const handlerOptions: Partial<ConnectRouterOptions> = {
   maxTimeoutMs: 80_000,
   jsonOptions: {
-    emitDefaultValues: true,
+    alwaysEmitImplicit: true,
   },
 };
 

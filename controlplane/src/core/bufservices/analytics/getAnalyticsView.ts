@@ -1,4 +1,4 @@
-import { PlainMessage, create } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -16,10 +16,10 @@ export function getAnalyticsView(
   opts: RouterOptions,
   req: GetAnalyticsViewRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetAnalyticsViewResponse>> {
+): Promise<GetAnalyticsViewResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetAnalyticsViewResponse>>(ctx, logger, async () => {
+  return handleError<GetAnalyticsViewResponse>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

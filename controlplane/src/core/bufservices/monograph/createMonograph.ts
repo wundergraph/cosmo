@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -28,10 +27,10 @@ export function createMonograph(
   opts: RouterOptions,
   req: CreateMonographRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<CreateMonographResponse>> {
+): Promise<CreateMonographResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<CreateMonographResponse>>(ctx, logger, async () => {
+  return handleError<CreateMonographResponse>(ctx, logger, async () => {
     return await opts.db.transaction(async (tx) => {
       req.namespace = req.namespace || DefaultNamespace;
 

@@ -1,4 +1,4 @@
-import { PlainMessage, create } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
@@ -32,10 +32,10 @@ export function getCheckSummary(
   opts: RouterOptions,
   req: GetCheckSummaryRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetCheckSummaryResponse>> {
+): Promise<GetCheckSummaryResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetCheckSummaryResponse>>(ctx, logger, async () => {
+  return handleError<GetCheckSummaryResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

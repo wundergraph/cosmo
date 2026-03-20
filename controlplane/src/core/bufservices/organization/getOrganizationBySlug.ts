@@ -1,5 +1,4 @@
 import { HandlerContext } from '@connectrpc/connect';
-import { PlainMessage } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   GetOrganizationBySlugRequest,
@@ -13,10 +12,10 @@ export function getOrganizationBySlug(
   opts: RouterOptions,
   req: GetOrganizationBySlugRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetOrganizationBySlugResponse>> {
+): Promise<GetOrganizationBySlugResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetOrganizationBySlugResponse>>(ctx, logger, async () => {
+  return handleError<GetOrganizationBySlugResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

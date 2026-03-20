@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -16,10 +15,10 @@ export function getSubgraphCheckExtensionsConfig(
   opts: RouterOptions,
   req: GetSubgraphCheckExtensionsConfigRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetSubgraphCheckExtensionsConfigResponse>> {
+): Promise<GetSubgraphCheckExtensionsConfigResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetSubgraphCheckExtensionsConfigResponse>>(ctx, logger, async () => {
+  return handleError<GetSubgraphCheckExtensionsConfigResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

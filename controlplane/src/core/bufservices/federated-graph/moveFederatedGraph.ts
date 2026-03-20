@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -22,10 +21,10 @@ export function moveFederatedGraph(
   opts: RouterOptions,
   req: MoveGraphRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<MoveGraphResponse>> {
+): Promise<MoveGraphResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<MoveGraphResponse>>(ctx, logger, async () => {
+  return handleError<MoveGraphResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -127,9 +126,9 @@ export function moveFederatedGraph(
         opts.chClient!,
       );
 
-      const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
-      const allCompositionErrors: PlainMessage<CompositionError>[] = [];
-      const allCompositionWarnings: PlainMessage<CompositionWarning>[] = [];
+      const allDeploymentErrors: DeploymentError[] = [];
+      const allCompositionErrors: CompositionError[] = [];
+      const allCompositionWarnings: CompositionWarning[] = [];
 
       allCompositionErrors.push(...compositionErrors);
       allDeploymentErrors.push(...deploymentErrors);

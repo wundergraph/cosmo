@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -13,10 +12,10 @@ export function getSdlBySchemaVersion(
   opts: RouterOptions,
   req: GetSdlBySchemaVersionRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetSdlBySchemaVersionResponse>> {
+): Promise<GetSdlBySchemaVersionResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetSdlBySchemaVersionResponse>>(ctx, logger, async () => {
+  return handleError<GetSdlBySchemaVersionResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -19,10 +18,10 @@ export function getFederatedGraphs(
   opts: RouterOptions,
   req: GetFederatedGraphsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetFederatedGraphsResponse>> {
+): Promise<GetFederatedGraphsResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetFederatedGraphsResponse>>(ctx, logger, async () => {
+  return handleError<GetFederatedGraphsResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -53,7 +52,7 @@ export function getFederatedGraphs(
       rbac: authContext.rbac,
     });
 
-    const requestSeriesList: Record<string, PlainMessage<RequestSeriesItem>[]> = {};
+    const requestSeriesList: Record<string, RequestSeriesItem[]> = {};
 
     const { dateRange } = parseTimeFilters({
       start: subHours(new Date(), 4).toString(),

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -16,10 +15,10 @@ export function getFeatureFlagByName(
   opts: RouterOptions,
   req: GetFeatureFlagByNameRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetFeatureFlagByNameResponse>> {
+): Promise<GetFeatureFlagByNameResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetFeatureFlagByNameResponse>>(ctx, logger, async () => {
+  return handleError<GetFeatureFlagByNameResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const featureFlagRepo = new FeatureFlagRepository(logger, opts.db, authContext.organizationId);

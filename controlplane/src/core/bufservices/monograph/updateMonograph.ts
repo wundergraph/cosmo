@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -26,10 +25,10 @@ export function updateMonograph(
   opts: RouterOptions,
   req: UpdateMonographRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<UpdateMonographResponse>> {
+): Promise<UpdateMonographResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<UpdateMonographResponse>>(ctx, logger, async () => {
+  return handleError<UpdateMonographResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -16,10 +15,10 @@ export function getSubgraphMetricsErrorRate(
   opts: RouterOptions,
   req: GetSubgraphMetricsErrorRateRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetSubgraphMetricsErrorRateResponse>> {
+): Promise<GetSubgraphMetricsErrorRateResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetSubgraphMetricsErrorRateResponse>>(ctx, logger, async () => {
+  return handleError<GetSubgraphMetricsErrorRateResponse>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

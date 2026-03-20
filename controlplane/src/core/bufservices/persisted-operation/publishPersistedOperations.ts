@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { PlainMessage, create } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import pLimit from 'p-limit';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -37,7 +37,7 @@ export function publishPersistedOperations(
   opts: RouterOptions,
   req: PublishPersistedOperationsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<PublishPersistedOperationsResponse>> {
+): Promise<PublishPersistedOperationsResponse> {
   /**
    * Receives a federated graph name and a list of persisted operation contents.
    * First, it validates that the graph exists and all the operations are valid,
@@ -47,7 +47,7 @@ export function publishPersistedOperations(
    */
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<PublishPersistedOperationsResponse>>(ctx, logger, async () => {
+  return handleError<PublishPersistedOperationsResponse>(ctx, logger, async () => {
     req.namespace = req.namespace || DefaultNamespace;
 
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);

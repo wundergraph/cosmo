@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import axios, { AxiosError, AxiosInstance, AxiosResponse } from 'axios';
 import axiosRetry, { exponentialDelay } from 'axios-retry';
@@ -115,7 +114,7 @@ type Config = {
   url?: string;
   key?: string;
   allowedUserEvents?: string[];
-  meta: PlainMessage<EventMeta>['meta'];
+  meta: EventMeta['meta'];
   type: 'webhook' | 'slack';
 };
 
@@ -180,7 +179,7 @@ export class OrganizationWebhookService {
     });
 
     for (const config of orgConfigs) {
-      let meta: PlainMessage<EventMeta>['meta'];
+      let meta: EventMeta['meta'];
 
       switch (eventName) {
         case OrganizationEventName.FEDERATED_GRAPH_SCHEMA_UPDATED: {

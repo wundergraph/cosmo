@@ -1,4 +1,4 @@
-import { PlainMessage, create } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
@@ -29,10 +29,10 @@ export function getFederatedGraphById(
   opts: RouterOptions,
   req: GetFederatedGraphByIdRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetFederatedGraphByIdResponse>> {
+): Promise<GetFederatedGraphByIdResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetFederatedGraphByIdResponse>>(ctx, logger, async () => {
+  return handleError<GetFederatedGraphByIdResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -60,7 +60,7 @@ export function getFederatedGraphById(
       throw new UnauthorizedError();
     }
 
-    let requestSeries: PlainMessage<RequestSeriesItem>[] = [];
+    let requestSeries: RequestSeriesItem[] = [];
     if (req.includeMetrics && opts.chClient) {
       const analyticsDashRepo = new AnalyticsDashboardViewRepository(opts.chClient);
       requestSeries = await analyticsDashRepo.getWeeklyRequestSeries(federatedGraph.id, authContext.organizationId);

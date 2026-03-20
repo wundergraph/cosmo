@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -17,10 +16,10 @@ export function deleteCacheWarmerOperation(
   opts: RouterOptions,
   req: DeleteCacheWarmerOperationRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<DeleteCacheWarmerOperationResponse>> {
+): Promise<DeleteCacheWarmerOperationResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<DeleteCacheWarmerOperationResponse>>(ctx, logger, async () => {
+  return handleError<DeleteCacheWarmerOperationResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

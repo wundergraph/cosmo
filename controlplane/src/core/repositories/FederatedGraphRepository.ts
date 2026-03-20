@@ -1,6 +1,5 @@
 /* eslint-disable no-labels */
 import { KeyObject, randomUUID } from 'node:crypto';
-import { PlainMessage } from '@bufbuild/protobuf';
 import { FeatureFlagRouterExecutionConfig } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
 import {
   CompositionError,
@@ -205,9 +204,9 @@ export class FederatedGraphRepository {
     unsetLabelMatchers?: boolean;
   }): Promise<
     | {
-        compositionErrors: PlainMessage<CompositionError>[];
-        deploymentErrors: PlainMessage<DeploymentError>[];
-        compositionWarnings: PlainMessage<CompositionWarning>[];
+        compositionErrors: CompositionError[];
+        deploymentErrors: DeploymentError[];
+        compositionWarnings: CompositionWarning[];
       }
     | undefined
   > {
@@ -363,9 +362,9 @@ export class FederatedGraphRepository {
     chClient: ClickHouseClient,
     compositionOptions?: CompositionOptions,
   ): Promise<{
-    compositionErrors: PlainMessage<CompositionError>[];
-    deploymentErrors: PlainMessage<DeploymentError>[];
-    compositionWarnings: PlainMessage<CompositionWarning>[];
+    compositionErrors: CompositionError[];
+    deploymentErrors: DeploymentError[];
+    compositionWarnings: CompositionWarning[];
   }> {
     return this.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(this.logger, tx, this.organizationId);
@@ -1530,9 +1529,9 @@ export class FederatedGraphRepository {
         chClient,
       );
 
-      const allDeploymentErrors: PlainMessage<DeploymentError>[] = [];
-      const allCompositionErrors: PlainMessage<CompositionError>[] = [];
-      const allCompositionWarnings: PlainMessage<CompositionWarning>[] = [];
+      const allDeploymentErrors: DeploymentError[] = [];
+      const allCompositionErrors: CompositionError[] = [];
+      const allCompositionWarnings: CompositionWarning[] = [];
 
       parentLoop: for (const federatedGraph of federatedGraphs) {
         // Get published subgraphs for recomposition of the federated graph

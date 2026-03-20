@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { CreateAPIKeyRequest, CreateAPIKeyResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -15,10 +14,10 @@ export function createAPIKey(
   opts: RouterOptions,
   req: CreateAPIKeyRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<CreateAPIKeyResponse>> {
+): Promise<CreateAPIKeyResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<CreateAPIKeyResponse>>(ctx, logger, async () => {
+  return handleError<CreateAPIKeyResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

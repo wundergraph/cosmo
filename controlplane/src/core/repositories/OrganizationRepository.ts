@@ -1,4 +1,4 @@
-import { PartialMessage, PlainMessage } from '@bufbuild/protobuf';
+import { PartialMessage } from '@bufbuild/protobuf';
 import { EventMeta, OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
 import {
   Integration,
@@ -744,7 +744,7 @@ export class OrganizationRepository {
     });
   }
 
-  public async getWebhookMeta(id: string, organizationId: string): Promise<PlainMessage<EventMeta>[]> {
+  public async getWebhookMeta(id: string, organizationId: string): Promise<EventMeta[]> {
     const results = await this.db
       .select({
         graphId: schema.webhookGraphSchemaUpdate.federatedGraphId,
@@ -835,7 +835,7 @@ export class OrganizationRepository {
       },
     });
 
-    return meta as PlainMessage<EventMeta>[];
+    return meta as EventMeta[];
   }
 
   public async getWebhookConfigById(id: string, organizationId: string): Promise<WebhooksConfigDTO | null> {
@@ -1564,7 +1564,7 @@ export class OrganizationRepository {
     limit?: number;
     startDate: string;
     endDate: string;
-  }): Promise<{ deliveries: PlainMessage<WebhookDelivery>[]; totalCount: number }> {
+  }): Promise<{ deliveries: WebhookDelivery[]; totalCount: number }> {
     const conditions = and(
       eq(schema.webhookDeliveries.organizationId, input.organizationID),
       gt(schema.webhookDeliveries.createdAt, new Date(input.startDate)),

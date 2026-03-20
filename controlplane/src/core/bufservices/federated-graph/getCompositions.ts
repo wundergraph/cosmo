@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -17,10 +16,10 @@ export function getCompositions(
   opts: RouterOptions,
   req: GetCompositionsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetCompositionsResponse>> {
+): Promise<GetCompositionsResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetCompositionsResponse>>(ctx, logger, async () => {
+  return handleError<GetCompositionsResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -17,10 +16,10 @@ export function getDashboardAnalyticsView(
   opts: RouterOptions,
   req: GetDashboardAnalyticsViewRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetDashboardAnalyticsViewResponse>> {
+): Promise<GetDashboardAnalyticsViewResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetDashboardAnalyticsViewResponse>>(ctx, logger, async () => {
+  return handleError<GetDashboardAnalyticsViewResponse>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

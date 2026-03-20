@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import {
   AnalyticsFilter,
   AnalyticsViewColumn,
@@ -9,13 +8,13 @@ import {
 } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { DateRange, TimeFilters } from '../../../types/index.js';
 
-export type ColumnMetaData = Record<string, Partial<PlainMessage<AnalyticsViewColumn>>>;
+export type ColumnMetaData = Record<string, Partial<AnalyticsViewColumn>>;
 
 export type CoercedFilterValues = Record<string, string | number | boolean>;
 
 export type BaseFilters = Record<
   string,
-  PlainMessage<AnalyticsViewResultFilter> & {
+  AnalyticsViewResultFilter & {
     dbField: string;
     dbClause: 'where' | 'having';
   }
@@ -29,9 +28,9 @@ export type BaseFilters = Record<
  */
 export function buildAnalyticsViewFilters(
   rowTemplate: Record<string, any>,
-  filterTemplate: Record<string, PlainMessage<AnalyticsViewResultFilter>>,
-): PlainMessage<AnalyticsViewResultFilter>[] {
-  const filters: PlainMessage<AnalyticsViewResultFilter>[] = [];
+  filterTemplate: Record<string, AnalyticsViewResultFilter>,
+): AnalyticsViewResultFilter[] {
+  const filters: AnalyticsViewResultFilter[] = [];
 
   for (const filtersKey in rowTemplate) {
     if (filterTemplate[filtersKey]) {
@@ -55,8 +54,8 @@ export function buildAnalyticsViewFilters(
 export function buildAnalyticsViewColumns(
   rowTemplate: Record<string, any>,
   columnMetadata: ColumnMetaData,
-): PlainMessage<AnalyticsViewColumn>[] {
-  const columns: PlainMessage<AnalyticsViewColumn>[] = [];
+): AnalyticsViewColumn[] {
+  const columns: AnalyticsViewColumn[] = [];
 
   for (const column in rowTemplate) {
     const cm = columnMetadata[column];
@@ -107,8 +106,8 @@ export function fillColumnMetaData(columnMetadata: ColumnMetaData) {
 export function buildColumnsFromNames(
   columnNames: string[],
   columnMetadata: ColumnMetaData,
-): PlainMessage<AnalyticsViewColumn>[] {
-  const columns: PlainMessage<AnalyticsViewColumn>[] = [];
+): AnalyticsViewColumn[] {
+  const columns: AnalyticsViewColumn[] = [];
 
   for (const column of columnNames) {
     const cm = columnMetadata[column];
@@ -326,7 +325,7 @@ export function coerceFilterValues(
   return { result, filterMapper };
 }
 
-export function padMissingDatesForCurrentWeek(data: PlainMessage<RequestSeriesItem>[]) {
+export function padMissingDatesForCurrentWeek(data: RequestSeriesItem[]) {
   const dates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - i);

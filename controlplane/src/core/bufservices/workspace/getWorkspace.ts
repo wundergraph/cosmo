@@ -1,4 +1,4 @@
-import { PlainMessage, fromJson } from '@bufbuild/protobuf';
+import { fromJson } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
@@ -28,10 +28,10 @@ export function getWorkspace(
   opts: RouterOptions,
   req: GetWorkspaceRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetWorkspaceResponse>> {
+): Promise<GetWorkspaceResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetWorkspaceResponse>>(ctx, logger, async () => {
+  return handleError<GetWorkspaceResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -53,7 +53,7 @@ export function getWorkspace(
           id: ns.id,
           name: ns.name,
           graphs: [],
-        } satisfies PlainMessage<WorkspaceNamespace>),
+        } satisfies WorkspaceNamespace),
       )
       .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
@@ -103,10 +103,10 @@ export function getWorkspace(
                     id: subgraph.id,
                     targetId: subgraph.targetId,
                     name: subgraph.name,
-                  }) satisfies PlainMessage<WorkspaceSubgraph>,
+                  }) satisfies WorkspaceSubgraph,
               )
               .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' })),
-          } satisfies PlainMessage<WorkspaceFederatedGraph>),
+          } satisfies WorkspaceFederatedGraph),
         );
       }),
     );

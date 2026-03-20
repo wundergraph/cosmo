@@ -1,4 +1,4 @@
-import { PlainMessage, create } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { buildASTSchema } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 
@@ -756,8 +756,8 @@ export class SchemaCheckRepository {
     const graphPruneWarnings: GraphPruningIssue[] = [];
     const graphPruneErrors: GraphPruningIssue[] = [];
     const inspectedOperations: InspectorOperationResult[] = [];
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+    const compositionErrors: CompositionError[] = [];
+    const compositionWarnings: CompositionWarning[] = [];
 
     type ExtendedCheckSubgraph = CheckSubgraph & {
       lintIssues: SchemaLintIssues;

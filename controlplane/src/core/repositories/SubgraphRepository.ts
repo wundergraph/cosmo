@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   CheckSubgraphSchemaResponse,
@@ -249,15 +248,15 @@ export class SubgraphRepository {
     chClient: ClickHouseClient,
     compositionOptions?: CompositionOptions,
   ): Promise<{
-    compositionErrors: PlainMessage<CompositionError>[];
-    compositionWarnings: PlainMessage<CompositionWarning>[];
-    deploymentErrors: PlainMessage<DeploymentError>[];
+    compositionErrors: CompositionError[];
+    compositionWarnings: CompositionWarning[];
+    deploymentErrors: DeploymentError[];
     updatedFederatedGraphs: FederatedGraphDTO[];
     subgraphChanged: boolean;
   }> {
-    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+    const deploymentErrors: DeploymentError[] = [];
+    const compositionErrors: CompositionError[] = [];
+    const compositionWarnings: CompositionWarning[] = [];
     // The collection of federated graphs that will be potentially re-composed
     const updatedFederatedGraphs: FederatedGraphDTO[] = [];
     let subgraphChanged = false;
@@ -517,10 +516,10 @@ export class SubgraphRepository {
     chClient: ClickHouseClient,
     compositionOptions?: CompositionOptions,
   ): Promise<{
-    compositionErrors: PlainMessage<CompositionError>[];
+    compositionErrors: CompositionError[];
     updatedFederatedGraphs: FederatedGraphDTO[];
-    deploymentErrors: PlainMessage<DeploymentError>[];
-    compositionWarnings: PlainMessage<CompositionWarning>[];
+    deploymentErrors: DeploymentError[];
+    compositionWarnings: CompositionWarning[];
   }> {
     return this.db.transaction(async (tx) => {
       const updatedFederatedGraphs: FederatedGraphDTO[] = [];
@@ -1888,7 +1887,7 @@ export class SubgraphRepository {
     compositionOptions?: CompositionOptions;
     webhookService: OrganizationWebhookService;
   }): Promise<
-    PlainMessage<CheckSubgraphSchemaResponse> & {
+    CheckSubgraphSchemaResponse & {
       hasClientTraffic: boolean;
     }
   > {
@@ -2083,8 +2082,8 @@ export class SubgraphRepository {
 
     const trafficInspector = new SchemaUsageTrafficInspector(chClient!);
     const inspectedOperations: InspectorOperationResult[] = [];
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+    const compositionErrors: CompositionError[] = [];
+    const compositionWarnings: CompositionWarning[] = [];
 
     // For operations checks we only consider breaking changes from both subgraph and federated graph
     const subgraphInspectorChanges = trafficInspector.schemaChangesToInspectorChanges(

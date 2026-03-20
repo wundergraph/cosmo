@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetTraceRequest, GetTraceResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -10,10 +9,10 @@ export function getTrace(
   opts: RouterOptions,
   req: GetTraceRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetTraceResponse>> {
+): Promise<GetTraceResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetTraceResponse>>(ctx, logger, async () => {
+  return handleError<GetTraceResponse>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

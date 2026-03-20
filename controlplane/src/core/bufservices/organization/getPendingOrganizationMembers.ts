@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -13,10 +12,10 @@ export function getPendingOrganizationMembers(
   opts: RouterOptions,
   req: GetPendingOrganizationMembersRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetPendingOrganizationMembersResponse>> {
+): Promise<GetPendingOrganizationMembersResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetPendingOrganizationMembersResponse>>(ctx, logger, async () => {
+  return handleError<GetPendingOrganizationMembersResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

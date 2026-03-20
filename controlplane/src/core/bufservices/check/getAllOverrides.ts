@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -15,10 +14,10 @@ export function getAllOverrides(
   opts: RouterOptions,
   req: GetAllOverridesRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetAllOverridesResponse>> {
+): Promise<GetAllOverridesResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetAllOverridesResponse>>(ctx, logger, async () => {
+  return handleError<GetAllOverridesResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

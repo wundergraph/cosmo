@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -16,10 +15,10 @@ export function getSubgraphMetrics(
   opts: RouterOptions,
   req: GetSubgraphMetricsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetSubgraphMetricsResponse>> {
+): Promise<GetSubgraphMetricsResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetSubgraphMetricsResponse>>(ctx, logger, async () => {
+  return handleError<GetSubgraphMetricsResponse>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

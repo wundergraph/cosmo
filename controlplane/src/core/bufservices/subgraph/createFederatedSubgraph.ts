@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -32,10 +31,10 @@ export function createFederatedSubgraph(
   opts: RouterOptions,
   req: CreateFederatedSubgraphRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<CreateFederatedSubgraphResponse>> {
+): Promise<CreateFederatedSubgraphResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<CreateFederatedSubgraphResponse>>(ctx, logger, async () => {
+  return handleError<CreateFederatedSubgraphResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

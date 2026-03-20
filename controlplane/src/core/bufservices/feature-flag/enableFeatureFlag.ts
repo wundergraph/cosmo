@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -24,10 +23,10 @@ export function enableFeatureFlag(
   opts: RouterOptions,
   req: EnableFeatureFlagRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<EnableFeatureFlagResponse>> {
+): Promise<EnableFeatureFlagResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<EnableFeatureFlagResponse>>(ctx, logger, async () => {
+  return handleError<EnableFeatureFlagResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -111,9 +110,9 @@ export function enableFeatureFlag(
       featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
-    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+    const compositionErrors: CompositionError[] = [];
+    const deploymentErrors: DeploymentError[] = [];
+    const compositionWarnings: CompositionWarning[] = [];
 
     await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);

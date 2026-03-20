@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -30,10 +29,10 @@ export function checkFederatedGraph(
   opts: RouterOptions,
   req: CheckFederatedGraphRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<CheckFederatedGraphResponse>> {
+): Promise<CheckFederatedGraphResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<CheckFederatedGraphResponse>>(ctx, logger, async () => {
+  return handleError<CheckFederatedGraphResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -86,7 +85,7 @@ export function checkFederatedGraph(
 
     const subgraphsUsedForComposition = subgraphs.filter((s) => !!s.schemaSDL);
 
-    const subgraphsDetails: PlainMessage<Subgraph>[] = subgraphsUsedForComposition.map((s) => ({
+    const subgraphsDetails: Subgraph[] = subgraphsUsedForComposition.map((s) => ({
       id: s.id,
       name: s.name,
       routingURL: s.routingUrl,
@@ -142,7 +141,7 @@ export function checkFederatedGraph(
       composedSchemaBreakingChanges: 0,
     };
 
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+    const compositionWarnings: CompositionWarning[] = [];
     counts.compositionWarnings = compositionResult.warnings.length;
 
     const clampedWarnings = returnLimit ? compositionResult.warnings.slice(0, returnLimit) : compositionResult.warnings;
@@ -156,7 +155,7 @@ export function checkFederatedGraph(
     }
 
     if (!compositionResult.success) {
-      const compositionErrors: PlainMessage<CompositionError>[] = [];
+      const compositionErrors: CompositionError[] = [];
       counts.compositionErrors = compositionResult.errors.length;
 
       const clampedErrors = returnLimit ? compositionResult.errors.slice(0, returnLimit) : compositionResult.errors;

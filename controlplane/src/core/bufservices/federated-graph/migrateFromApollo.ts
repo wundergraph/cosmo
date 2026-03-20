@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName, PlatformEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -24,10 +23,10 @@ export function migrateFromApollo(
   opts: RouterOptions,
   req: MigrateFromApolloRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<MigrateFromApolloResponse>> {
+): Promise<MigrateFromApolloResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<MigrateFromApolloResponse>>(ctx, logger, async () => {
+  return handleError<MigrateFromApolloResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

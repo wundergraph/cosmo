@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetFieldUsageRequest, GetFieldUsageResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -13,10 +12,10 @@ export function getFieldUsage(
   opts: RouterOptions,
   req: GetFieldUsageRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetFieldUsageResponse>> {
+): Promise<GetFieldUsageResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetFieldUsageResponse>>(ctx, logger, async () => {
+  return handleError<GetFieldUsageResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

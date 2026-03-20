@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -16,12 +15,12 @@ export function getSubgraphSDLFromLatestComposition(
   opts: RouterOptions,
   req: GetSubgraphSDLFromLatestCompositionRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetSubgraphSDLFromLatestCompositionResponse>> {
+): Promise<GetSubgraphSDLFromLatestCompositionResponse> {
   req.namespace = req.namespace || DefaultNamespace;
 
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetSubgraphSDLFromLatestCompositionResponse>>(ctx, logger, async () => {
+  return handleError<GetSubgraphSDLFromLatestCompositionResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

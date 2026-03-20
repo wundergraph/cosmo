@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -17,10 +16,10 @@ export function getNamespaceProposalConfig(
   opts: RouterOptions,
   req: GetNamespaceProposalConfigRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetNamespaceProposalConfigResponse>> {
+): Promise<GetNamespaceProposalConfigResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetNamespaceProposalConfigResponse>>(ctx, logger, async () => {
+  return handleError<GetNamespaceProposalConfigResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const organizationRepo = new OrganizationRepository(logger, opts.db);

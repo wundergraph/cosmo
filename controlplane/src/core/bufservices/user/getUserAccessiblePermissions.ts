@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -15,10 +14,10 @@ export function getUserAccessiblePermissions(
   opts: RouterOptions,
   req: GetUserAccessiblePermissionsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetUserAccessiblePermissionsResponse>> {
+): Promise<GetUserAccessiblePermissionsResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetUserAccessiblePermissionsResponse>>(ctx, logger, async () => {
+  return handleError<GetUserAccessiblePermissionsResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
     const organizationRepository = new OrganizationRepository(logger, opts.db);

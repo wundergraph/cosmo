@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetRoutersRequest, GetRoutersResponse, Router } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -15,10 +14,10 @@ export function getRouters(
   opts: RouterOptions,
   req: GetRoutersRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetRoutersResponse>> {
+): Promise<GetRoutersResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetRoutersResponse>>(ctx, logger, async () => {
+  return handleError<GetRoutersResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -52,7 +51,7 @@ export function getRouters(
       throw new UnauthorizedError();
     }
 
-    const routers: PlainMessage<Router>[] = [];
+    const routers: Router[] = [];
 
     const routerRepo = new RouterMetricsRepository(opts.chClient);
     const routersDTOs = await routerRepo.getActiveRouters({

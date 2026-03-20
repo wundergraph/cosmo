@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetClientsRequest, GetClientsResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -11,10 +10,10 @@ export function getClients(
   opts: RouterOptions,
   req: GetClientsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetClientsResponse>> {
+): Promise<GetClientsResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetClientsResponse>>(ctx, logger, async () => {
+  return handleError<GetClientsResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

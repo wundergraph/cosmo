@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { buildASTSchema } from '@wundergraph/composition';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
@@ -20,10 +19,10 @@ export function getOperationDeprecatedFields(
   opts: RouterOptions,
   req: GetOperationDeprecatedFieldsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetOperationDeprecatedFieldsResponse>> {
+): Promise<GetOperationDeprecatedFieldsResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetOperationDeprecatedFieldsResponse>>(ctx, logger, async () => {
+  return handleError<GetOperationDeprecatedFieldsResponse>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -14,10 +13,10 @@ export function getOrganizationRequestsCount(
   opts: RouterOptions,
   req: GetOrganizationRequestsCountRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetOrganizationRequestsCountResponse>> {
+): Promise<GetOrganizationRequestsCountResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetOrganizationRequestsCountResponse>>(ctx, logger, async () => {
+  return handleError<GetOrganizationRequestsCountResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

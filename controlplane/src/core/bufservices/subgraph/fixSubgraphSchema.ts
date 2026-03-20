@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -23,10 +22,10 @@ export function fixSubgraphSchema(
   opts: RouterOptions,
   req: FixSubgraphSchemaRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<FixSubgraphSchemaResponse>> {
+): Promise<FixSubgraphSchemaResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<FixSubgraphSchemaResponse>>(ctx, logger, async () => {
+  return handleError<FixSubgraphSchemaResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 
@@ -184,7 +183,7 @@ export function fixSubgraphSchema(
       },
     );
 
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
+    const compositionErrors: CompositionError[] = [];
     for (const composition of result.compositions) {
       if (composition.errors.length > 0) {
         for (const error of composition.errors) {

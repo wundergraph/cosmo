@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -17,10 +16,10 @@ export function updateOrganizationGroup(
   opts: RouterOptions,
   req: UpdateOrganizationGroupRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<UpdateOrganizationGroupResponse>> {
+): Promise<UpdateOrganizationGroupResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<UpdateOrganizationGroupResponse>>(ctx, logger, async () => {
+  return handleError<UpdateOrganizationGroupResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

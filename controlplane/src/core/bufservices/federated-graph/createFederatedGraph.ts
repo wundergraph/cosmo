@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -25,10 +24,10 @@ export function createFederatedGraph(
   opts: RouterOptions,
   req: CreateFederatedGraphRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<CreateFederatedGraphResponse>> {
+): Promise<CreateFederatedGraphResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<CreateFederatedGraphResponse>>(ctx, logger, async () => {
+  return handleError<CreateFederatedGraphResponse>(ctx, logger, async () => {
     req.namespace = req.namespace || DefaultNamespace;
 
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -216,9 +215,9 @@ export function createFederatedGraph(
       featureId: COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID,
     });
 
-    const compositionErrors: PlainMessage<CompositionError>[] = [];
-    const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-    const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+    const compositionErrors: CompositionError[] = [];
+    const deploymentErrors: DeploymentError[] = [];
+    const compositionWarnings: CompositionWarning[] = [];
 
     await opts.db.transaction(async (tx) => {
       const fedGraphRepo = new FederatedGraphRepository(logger, tx, authContext.organizationId);

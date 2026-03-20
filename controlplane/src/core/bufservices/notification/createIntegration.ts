@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -16,10 +15,10 @@ export function createIntegration(
   opts: RouterOptions,
   req: CreateIntegrationRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<CreateIntegrationResponse>> {
+): Promise<CreateIntegrationResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<CreateIntegrationResponse>>(ctx, logger, async () => {
+  return handleError<CreateIntegrationResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

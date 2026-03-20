@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -13,10 +12,10 @@ export function getPlaygroundScripts(
   opts: RouterOptions,
   req: GetPlaygroundScriptsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetPlaygroundScriptsResponse>> {
+): Promise<GetPlaygroundScriptsResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetPlaygroundScriptsResponse>>(ctx, logger, async () => {
+  return handleError<GetPlaygroundScriptsResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -23,10 +22,10 @@ export function deleteFederatedSubgraph(
   opts: RouterOptions,
   req: DeleteFederatedSubgraphRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<DeleteFederatedSubgraphResponse>> {
+): Promise<DeleteFederatedSubgraphResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<DeleteFederatedSubgraphResponse>>(ctx, logger, async () => {
+  return handleError<DeleteFederatedSubgraphResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

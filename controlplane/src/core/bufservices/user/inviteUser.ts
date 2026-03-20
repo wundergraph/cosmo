@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { InviteUserRequest, InviteUserResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -12,10 +11,10 @@ export function inviteUser(
   opts: RouterOptions,
   req: InviteUserRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<InviteUserResponse>> {
+): Promise<InviteUserResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<InviteUserResponse>>(ctx, logger, async () => {
+  return handleError<InviteUserResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

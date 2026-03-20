@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { ServiceImpl } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { NodeService } from '@wundergraph/cosmo-connect/dist/node/v1/node_pb';
@@ -10,12 +9,12 @@ import type { RouterOptions } from '../routes.js';
 import { enrichLogger, getLogger, handleError } from '../util.js';
 
 export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeService>> {
-  const registrationInfoCache = lru<PlainMessage<RegistrationInfo>>(1000, 300_000);
+  const registrationInfoCache = lru<RegistrationInfo>(1000, 300_000);
   return {
     selfRegister: (req, ctx) => {
       let logger = getLogger(ctx, opts.logger);
 
-      return handleError<PlainMessage<SelfRegisterResponse>>(ctx, logger, async () => {
+      return handleError<SelfRegisterResponse>(ctx, logger, async () => {
         const authContext = await opts.authenticator.authenticateRouter(ctx.requestHeader);
         logger = enrichLogger(ctx, logger, authContext);
 
@@ -50,7 +49,7 @@ export default function (opts: RouterOptions): Partial<ServiceImpl<typeof NodeSe
           organizationID: authContext.organizationId,
         });
 
-        const registrationInfo: PlainMessage<RegistrationInfo> = {
+        const registrationInfo: RegistrationInfo = {
           accountLimits: {
             traceSamplingRate: (features['trace-sampling-rate'] as number) ?? 0.1,
           },

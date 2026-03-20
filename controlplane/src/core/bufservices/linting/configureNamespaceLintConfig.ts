@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -15,10 +14,10 @@ export function configureNamespaceLintConfig(
   opts: RouterOptions,
   req: ConfigureNamespaceLintConfigRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<ConfigureNamespaceLintConfigResponse>> {
+): Promise<ConfigureNamespaceLintConfigResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<ConfigureNamespaceLintConfigResponse>>(ctx, logger, async () => {
+  return handleError<ConfigureNamespaceLintConfigResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

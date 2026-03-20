@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -16,10 +15,10 @@ export function getOperationClients(
   opts: RouterOptions,
   req: GetOperationClientsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetOperationClientsResponse>> {
+): Promise<GetOperationClientsResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetOperationClientsResponse>>(ctx, logger, async () => {
+  return handleError<GetOperationClientsResponse>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

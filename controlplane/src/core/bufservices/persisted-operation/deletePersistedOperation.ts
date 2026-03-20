@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import type {
@@ -18,10 +17,10 @@ export function deletePersistedOperation(
   opts: RouterOptions,
   req: DeletePersistedOperationRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<DeletePersistedOperationResponse>> {
+): Promise<DeletePersistedOperationResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<DeletePersistedOperationResponse>>(ctx, logger, async () => {
+  return handleError<DeletePersistedOperationResponse>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {

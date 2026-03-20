@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -16,10 +15,10 @@ export function removeOperationOverrides(
   opts: RouterOptions,
   req: RemoveOperationOverridesRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<RemoveOperationOverridesResponse>> {
+): Promise<RemoveOperationOverridesResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<RemoveOperationOverridesResponse>>(ctx, logger, async () => {
+  return handleError<RemoveOperationOverridesResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

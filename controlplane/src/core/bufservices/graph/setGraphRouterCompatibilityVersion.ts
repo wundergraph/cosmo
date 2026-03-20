@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -20,10 +19,10 @@ export function setGraphRouterCompatibilityVersion(
   opts: RouterOptions,
   req: SetGraphRouterCompatibilityVersionRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<SetGraphRouterCompatibilityVersionResponse>> {
+): Promise<SetGraphRouterCompatibilityVersionResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<SetGraphRouterCompatibilityVersionResponse>>(ctx, logger, async () => {
+  return handleError<SetGraphRouterCompatibilityVersionResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

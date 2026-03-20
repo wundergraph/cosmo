@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { UpgradePlanRequest, UpgradePlanResponse } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -13,10 +12,10 @@ export function upgradePlan(
   opts: RouterOptions,
   req: UpgradePlanRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<UpgradePlanResponse>> {
+): Promise<UpgradePlanResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<UpgradePlanResponse>>(ctx, logger, async () => {
+  return handleError<UpgradePlanResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

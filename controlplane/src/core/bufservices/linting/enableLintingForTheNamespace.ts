@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -14,10 +13,10 @@ export function enableLintingForTheNamespace(
   opts: RouterOptions,
   req: EnableLintingForTheNamespaceRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<EnableLintingForTheNamespaceResponse>> {
+): Promise<EnableLintingForTheNamespaceResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<EnableLintingForTheNamespaceResponse>>(ctx, logger, async () => {
+  return handleError<EnableLintingForTheNamespaceResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

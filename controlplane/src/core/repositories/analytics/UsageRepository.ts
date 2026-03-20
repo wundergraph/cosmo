@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import {
   ClientWithOperations,
   FieldUsageMeta,
@@ -16,7 +15,7 @@ export class UsageRepository {
     whereSql: string,
     timeFilters: TimeFilters,
     params: Record<string, string | number | boolean>,
-  ): Promise<PlainMessage<RequestSeriesItem>[]> {
+  ): Promise<RequestSeriesItem[]> {
     const { dateRange, granule } = timeFilters;
     flipDateRangeValuesIfNeeded(dateRange);
 
@@ -61,7 +60,7 @@ export class UsageRepository {
     whereSql: string,
     timeFilters: TimeFilters,
     params: Record<string, string | number | boolean>,
-  ): Promise<PlainMessage<ClientWithOperations>[]> {
+  ): Promise<ClientWithOperations[]> {
     const {
       dateRange: { start, end },
     } = timeFilters;
@@ -117,7 +116,7 @@ export class UsageRepository {
     whereSql: string,
     timeFilters: TimeFilters,
     params: Record<string, string | number | boolean>,
-  ): Promise<PlainMessage<FieldUsageMeta> | undefined> {
+  ): Promise<FieldUsageMeta | undefined> {
     const {
       dateRange: { start, end },
     } = timeFilters;

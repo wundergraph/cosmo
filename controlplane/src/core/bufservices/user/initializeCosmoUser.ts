@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -13,9 +12,9 @@ export function initializeCosmoUser(
   opts: RouterOptions,
   req: InitializeCosmoUserRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<InitializeCosmoUserResponse>> {
+): Promise<InitializeCosmoUserResponse> {
   const logger = getLogger(ctx, opts.logger);
-  return handleError<PlainMessage<InitializeCosmoUserResponse>>(ctx, logger, async () => {
+  return handleError<InitializeCosmoUserResponse>(ctx, logger, async () => {
     const userInfo = await opts.authenticator.getUserInfo(req.token);
     if (!userInfo) {
       return {

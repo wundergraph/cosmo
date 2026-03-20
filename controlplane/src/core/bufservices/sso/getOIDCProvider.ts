@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -14,10 +13,10 @@ export function getOIDCProvider(
   opts: RouterOptions,
   req: GetOIDCProviderRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetOIDCProviderResponse>> {
+): Promise<GetOIDCProviderResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetOIDCProviderResponse>>(ctx, logger, async () => {
+  return handleError<GetOIDCProviderResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { OrganizationEventName } from '@wundergraph/cosmo-connect/dist/notifications/events_pb';
@@ -18,10 +17,10 @@ export function recomposeGraph(
   opts: RouterOptions,
   req: RecomposeGraphRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<RecomposeGraphResponse>> {
+): Promise<RecomposeGraphResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<RecomposeGraphResponse>>(ctx, logger, async () => {
+  return handleError<RecomposeGraphResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

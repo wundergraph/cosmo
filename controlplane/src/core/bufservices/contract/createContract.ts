@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -23,10 +22,10 @@ export function createContract(
   opts: RouterOptions,
   req: CreateContractRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<CreateContractResponse>> {
+): Promise<CreateContractResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<CreateContractResponse>>(ctx, logger, async () => {
+  return handleError<CreateContractResponse>(ctx, logger, async () => {
     req.namespace = req.namespace || DefaultNamespace;
 
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
@@ -190,9 +189,9 @@ export function createContract(
         targetNamespaceDisplayName: contractGraph.namespace,
       });
 
-      const compositionErrors: PlainMessage<CompositionError>[] = [];
-      const deploymentErrors: PlainMessage<DeploymentError>[] = [];
-      const compositionWarnings: PlainMessage<CompositionWarning>[] = [];
+      const compositionErrors: CompositionError[] = [];
+      const deploymentErrors: DeploymentError[] = [];
+      const compositionWarnings: CompositionWarning[] = [];
 
       const composition = await fedGraphRepo.composeAndDeployGraphs({
         actorId: authContext.userId,

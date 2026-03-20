@@ -1,4 +1,4 @@
-import { PlainMessage, create } from '@bufbuild/protobuf';
+import { create } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { GetProposalRequest, GetProposalResponse, ProposalSchema } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
@@ -12,10 +12,10 @@ export function getProposal(
   opts: RouterOptions,
   req: GetProposalRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetProposalResponse>> {
+): Promise<GetProposalResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<GetProposalResponse>>(ctx, logger, async () => {
+  return handleError<GetProposalResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

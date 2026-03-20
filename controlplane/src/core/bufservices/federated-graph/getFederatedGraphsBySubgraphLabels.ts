@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
@@ -16,12 +15,12 @@ export function getFederatedGraphsBySubgraphLabels(
   opts: RouterOptions,
   req: GetFederatedGraphsBySubgraphLabelsRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<GetFederatedGraphsBySubgraphLabelsResponse>> {
+): Promise<GetFederatedGraphsBySubgraphLabelsResponse> {
   let logger = getLogger(ctx, opts.logger);
 
   req.namespace = req.namespace || DefaultNamespace;
 
-  return handleError<PlainMessage<GetFederatedGraphsBySubgraphLabelsResponse>>(ctx, logger, async () => {
+  return handleError<GetFederatedGraphsBySubgraphLabelsResponse>(ctx, logger, async () => {
     const authContext = await opts.authenticator.authenticate(ctx.requestHeader);
     logger = enrichLogger(ctx, logger, authContext);
 

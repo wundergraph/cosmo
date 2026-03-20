@@ -1,4 +1,3 @@
-import { PlainMessage } from '@bufbuild/protobuf';
 import { HandlerContext } from '@connectrpc/connect';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import type {
@@ -19,10 +18,10 @@ export function checkPersistedOperationTraffic(
   opts: RouterOptions,
   req: CheckPersistedOperationTrafficRequest,
   ctx: HandlerContext,
-): Promise<PlainMessage<CheckPersistedOperationTrafficResponse>> {
+): Promise<CheckPersistedOperationTrafficResponse> {
   let logger = getLogger(ctx, opts.logger);
 
-  return handleError<PlainMessage<CheckPersistedOperationTrafficResponse>>(ctx, logger, async () => {
+  return handleError<CheckPersistedOperationTrafficResponse>(ctx, logger, async () => {
     if (!opts.chClient) {
       return {
         response: {
