@@ -141,7 +141,8 @@
                   },
                   "router/gRPC/grpc-services",
                   "router/gRPC/graphql-support",
-                  "router/gRPC/field-resolvers"
+                  "router/gRPC/field-resolvers",
+                  "router/gRPC/requires"
                 ]
               },
               "router/authentication-and-authorization",
@@ -408,6 +409,10 @@
                 "icon": "sign-post",
                 "pages": [
                   "federation/federation-directives-index",
+                  "federation/directives/key",
+                  "federation/directives/external",
+                  "federation/directives/provides",
+                  "federation/directives/requires",
                   "federation/directives/shareable",
                   "federation/directives/authenticated",
                   "federation/directives/requiresscopes",
