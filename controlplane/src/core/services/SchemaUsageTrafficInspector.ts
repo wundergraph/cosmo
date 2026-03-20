@@ -6,6 +6,7 @@ import {
 } from '@graphql-inspector/core';
 import type { NamedTypeNode, NonNullTypeNode, TypeNode } from 'graphql';
 import { parseType, print } from 'graphql';
+import pLimit from 'p-limit';
 import { SchemaCheckChangeAction } from '../../db/models.js';
 import { ClickHouseClient } from '../clickhouse/index.js';
 import { SchemaDiff } from '../composition/schemaCheck.js';
@@ -180,93 +181,109 @@ export class SchemaUsageTrafficInspector {
   ): Promise<Map<string, InspectorOperationResult[]>> {
     const results: Map<string, InspectorOperationResult[]> = new Map();
 
-    for (const change of changes) {
-      const where: string[] = [];
-      const params: Record<string, string | number | boolean> = {
-        daysToConsider: filter.daysToConsider,
-        federatedGraphId: filter.federatedGraphId,
-        organizationId: filter.organizationId,
-      };
-      if (filter.subgraphId) {
-        params.subgraphId = filter.subgraphId;
-      }
+    const limit = pLimit(10);
 
-      // Used for arguments usage check
-      if (change.path) {
-        // Escape single quotes in path segments and build the array
-        const escapedPath = change.path
-          .map((seg) => {
-            const escaped = seg.replace(/'/g, "''");
-            return `'${escaped}'`;
-          })
-          .join(',');
-        where.push(`startsWith(Path, [${escapedPath}]) AND length(Path) = ${change.path.length}`);
-      }
-      if (change.namedType) {
-        params.namedType = change.namedType;
-        where.push(`NamedType = {namedType:String}`);
-      }
-      if (change.typeName) {
-        params.typeName = change.typeName;
-        where.push(`hasAny(TypeNames, [{typeName:String}])`);
-      }
+    const tasks = changes.map((change) =>
+      limit(async () => {
+        const where: string[] = [];
+        const params: Record<string, string | number | boolean> = {
+          daysToConsider: filter.daysToConsider,
+          federatedGraphId: filter.federatedGraphId,
+          organizationId: filter.organizationId,
+        };
+        if (filter.subgraphId) {
+          params.subgraphId = filter.subgraphId;
+        }
 
-      // fieldName can be empty if a type was removed
-      if (change.fieldName) {
-        params.fieldName = change.fieldName;
-        where.push(`FieldName = {fieldName:String}`);
-      }
+        // Used for arguments usage check
+        if (change.path) {
+          // Escape single quotes in path segments and build the array
+          const escapedPath = change.path
+            .map((seg) => {
+              const escaped = seg.replace(/'/g, "''");
+              return `'${escaped}'`;
+            })
+            .join(',');
+          where.push(`startsWith(Path, [${escapedPath}]) AND length(Path) = ${change.path.length}`);
+        }
+        if (change.namedType) {
+          params.namedType = change.namedType;
+          where.push(`NamedType = {namedType:String}`);
+        }
+        if (change.typeName) {
+          params.typeName = change.typeName;
+          where.push(`hasAny(TypeNames, [{typeName:String}])`);
+        }
 
-      if (change.isInput) {
-        where.push(`IsInput = true`);
-      } else if (change.isArgument) {
-        where.push(`IsArgument = true`);
-      }
+        // fieldName can be empty if a type was removed
+        if (change.fieldName) {
+          params.fieldName = change.fieldName;
+          where.push(`FieldName = {fieldName:String}`);
+        }
 
-      if (change.isNull !== undefined) {
-        where.push(`IsNull = ${change.isNull}`);
-      }
-      where.push(`IsIndirectFieldUsage = false`);
+        if (change.isInput) {
+          where.push(`IsInput = true`);
+        } else if (change.isArgument) {
+          where.push(`IsArgument = true`);
+        }
 
-      const subgraphFilter = filter.subgraphId ? `hasAny(SubgraphIDs, [{subgraphId:String}]) AND` : '';
-      const query = `
-        SELECT OperationHash as operationHash,
-               last_value(OperationType) as operationType,
-               last_value(OperationName) as operationName,
-               min(toUnixTimestamp(Timestamp)) as firstSeen,
-               max(toUnixTimestamp(Timestamp)) as lastSeen
-        FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
-        WHERE
-          -- Filter first on date and customer to reduce the amount of data
-          Timestamp >= toStartOfDay(now()) - interval {daysToConsider:UInt32} day AND
-          FederatedGraphID = {federatedGraphId:String} AND
-          ${subgraphFilter}
-          OrganizationID = {organizationId:String} AND
-          ${where.join(' AND ')}
-        GROUP BY OperationHash
-    `;
+        if (change.isNull !== undefined) {
+          where.push(`IsNull = ${change.isNull}`);
+        }
+        where.push(`IsIndirectFieldUsage = false`);
 
-      const res: {
-        operationHash: string;
-        operationName: string;
-        operationType: string;
-        lastSeen: number;
-        firstSeen: number;
-      }[] = await this.client.queryPromise(query, params);
+        const subgraphFilter = filter.subgraphId ? `hasAny(SubgraphIDs, [{subgraphId:String}]) AND` : '';
+        const query = `
+          SELECT OperationHash as operationHash,
+                 last_value(OperationType) as operationType,
+                 last_value(OperationName) as operationName,
+                 min(toUnixTimestamp(Timestamp)) as firstSeen,
+                 max(toUnixTimestamp(Timestamp)) as lastSeen
+          FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
+          WHERE
+            -- Filter first on date and customer to reduce the amount of data
+            Timestamp >= toStartOfDay(now()) - interval {daysToConsider:UInt32} day AND
+            FederatedGraphID = {federatedGraphId:String} AND
+            ${subgraphFilter}
+            OrganizationID = {organizationId:String} AND
+            ${where.join(' AND ')}
+          GROUP BY OperationHash
+        `;
 
-      if (Array.isArray(res)) {
-        const ops = res.map((r) => ({
-          schemaChangeId: change.schemaChangeId,
-          hash: r.operationHash,
-          name: r.operationName,
-          type: r.operationType,
-          lastSeenAt: new Date(r.lastSeen * 1000),
-          firstSeenAt: new Date(r.firstSeen * 1000),
-          isSafeOverride: false,
-        }));
+        const res: {
+          operationHash: string;
+          operationName: string;
+          operationType: string;
+          lastSeen: number;
+          firstSeen: number;
+        }[] = await this.client.queryPromise(query, params);
 
-        if (ops.length > 0) {
-          results.set(change.schemaChangeId, [...(results.get(change.schemaChangeId) || []), ...ops]);
+        if (Array.isArray(res)) {
+          return res.map((r) => ({
+            schemaChangeId: change.schemaChangeId,
+            hash: r.operationHash,
+            name: r.operationName,
+            type: r.operationType,
+            lastSeenAt: new Date(r.lastSeen * 1000),
+            firstSeenAt: new Date(r.firstSeen * 1000),
+            isSafeOverride: false,
+          }));
+        }
+
+        return [];
+      }),
+    );
+
+    const taskResults = await Promise.all(tasks);
+
+    for (const ops of taskResults) {
+      if (ops.length > 0) {
+        const schemaChangeId = ops[0].schemaChangeId;
+        const existing = results.get(schemaChangeId);
+        if (existing) {
+          existing.push(...ops);
+        } else {
+          results.set(schemaChangeId, ops);
         }
       }
     }
