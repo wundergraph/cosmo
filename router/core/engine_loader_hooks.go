@@ -23,7 +23,6 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
@@ -159,7 +158,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	defer span.End()
 
 	commonAttrs := []attribute.KeyValue{
-		semconv.HTTPStatusCode(responseInfo.StatusCode),
+		attribute.Int("http.status_code", responseInfo.StatusCode),
 		rotel.WgSubgraphID.String(ds.ID),
 		rotel.WgSubgraphName.String(ds.Name),
 	}

@@ -5,17 +5,18 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
-	"google.golang.org/protobuf/encoding/protojson"
 	"io"
 	"net/http"
 	"net/url"
+
+	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"go.opentelemetry.io/otel/codes"
 	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
@@ -73,8 +74,8 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.O
 	}
 
 	span.SetAttributes(
-		semconv.HTTPURL(req.URL.String()),
-		semconv.HTTPMethod(http.MethodGet),
+		semconv.URLFull(req.URL.String()),
+		semconv.HTTPRequestMethodGet,
 		semconv12.HTTPHostKey.String(req.Host),
 	)
 
@@ -88,7 +89,7 @@ func (c *CDNSource) LoadItems(ctx context.Context, log *zap.Logger) ([]*nodev1.O
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	span.SetAttributes(semconv.HTTPStatusCode(resp.StatusCode))
+	span.SetAttributes(semconv.HTTPResponseStatusCode(resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
 		span.SetStatus(codes.Error, fmt.Sprintf("unexpected status code when loading persisted operation, statusCode: %d", resp.StatusCode))

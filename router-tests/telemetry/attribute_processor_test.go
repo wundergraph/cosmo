@@ -13,7 +13,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -177,7 +176,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			redactedIPCount := 0
 			for _, span := range sn {
 				for _, attr := range span.Attributes() {
-					if attr.Key == semconv.HTTPClientIPKey || attr.Key == semconv.NetSockPeerAddrKey {
+					if attr.Key == "http.client_ip" || attr.Key == "net.sock.peer.addr" {
 						redactedIPCount++
 						require.Equal(t, "[REDACTED]", attr.Value.AsString())
 					}
@@ -232,7 +231,7 @@ func TestAttributeProcessorIntegration(t *testing.T) {
 			hashedIPCount := 0
 			for _, span := range sn {
 				for _, attr := range span.Attributes() {
-					if attr.Key == semconv.HTTPClientIPKey || attr.Key == semconv.NetSockPeerAddrKey {
+					if attr.Key == "http.client_ip" || attr.Key == "net.sock.peer.addr" {
 						hashedIPCount++
 						value := attr.Value.AsString()
 						require.Len(t, value, 64)

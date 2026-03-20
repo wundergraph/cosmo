@@ -3,19 +3,20 @@ package plugintest
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/wundergraph/cosmo/router-plugin/config"
 	"github.com/wundergraph/cosmo/router-plugin/httpclient"
 	"github.com/wundergraph/cosmo/router-plugin/tracing"
 	plugin "github.com/wundergraph/cosmo/router-tests/plugintest/hello/generated"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
@@ -328,8 +329,8 @@ func TestTracing(t *testing.T) {
 				span := trace.SpanFromContext(ctx)
 				require.NotNil(t, span)
 				span.SetAttributes(
-					semconv.HTTPClientIPKey.String(httpClientIPKey),
-					semconv.NetSockPeerAddrKey.String(netSockPeerAddrKey),
+					attribute.Key("http.client_ip").String(httpClientIPKey),
+					attribute.Key("net.sock.peer.addr").String(netSockPeerAddrKey),
 				)
 
 				response := &plugin.QueryRunResponse{
@@ -352,8 +353,8 @@ func TestTracing(t *testing.T) {
 
 			baseSpan := sn[0]
 			require.Len(t, baseSpan.Attributes(), 2)
-			require.Contains(t, baseSpan.Attributes(), semconv.HTTPClientIPKey.String(httpClientIPKey))
-			require.Contains(t, baseSpan.Attributes(), semconv.NetSockPeerAddrKey.String(netSockPeerAddrKey))
+			require.Contains(t, baseSpan.Attributes(), attribute.Key("http.client_ip").String(httpClientIPKey))
+			require.Contains(t, baseSpan.Attributes(), attribute.Key("net.sock.peer.addr").String(netSockPeerAddrKey))
 		})
 
 		t.Run("when nil", func(t *testing.T) {
@@ -374,8 +375,8 @@ func TestTracing(t *testing.T) {
 				span := trace.SpanFromContext(ctx)
 				require.NotNil(t, span)
 				span.SetAttributes(
-					semconv.HTTPClientIPKey.String(httpClientIPKey),
-					semconv.NetSockPeerAddrKey.String(netSockPeerAddrKey),
+					attribute.Key("http.client_ip").String(httpClientIPKey),
+					attribute.Key("net.sock.peer.addr").String(netSockPeerAddrKey),
 				)
 
 				response := &plugin.QueryRunResponse{
@@ -398,8 +399,8 @@ func TestTracing(t *testing.T) {
 
 			baseSpan := sn[0]
 			require.Len(t, baseSpan.Attributes(), 2)
-			require.Contains(t, baseSpan.Attributes(), semconv.HTTPClientIPKey.String(httpClientIPKey))
-			require.Contains(t, baseSpan.Attributes(), semconv.NetSockPeerAddrKey.String(netSockPeerAddrKey))
+			require.Contains(t, baseSpan.Attributes(), attribute.Key("http.client_ip").String(httpClientIPKey))
+			require.Contains(t, baseSpan.Attributes(), attribute.Key("net.sock.peer.addr").String(netSockPeerAddrKey))
 		})
 
 		t.Run("with redact", func(t *testing.T) {
@@ -420,8 +421,8 @@ func TestTracing(t *testing.T) {
 				span := trace.SpanFromContext(ctx)
 				require.NotNil(t, span)
 				span.SetAttributes(
-					semconv.HTTPClientIPKey.String("127.2.2.5"),
-					semconv.NetSockPeerAddrKey.String("127.3.2.5"),
+					attribute.Key("http.client_ip").String("127.2.2.5"),
+					attribute.Key("net.sock.peer.addr").String("127.3.2.5"),
 				)
 
 				response := &plugin.QueryRunResponse{
@@ -444,8 +445,8 @@ func TestTracing(t *testing.T) {
 
 			baseSpan := sn[0]
 			require.Len(t, baseSpan.Attributes(), 2)
-			require.Contains(t, baseSpan.Attributes(), semconv.HTTPClientIPKey.String("[REDACTED]"))
-			require.Contains(t, baseSpan.Attributes(), semconv.NetSockPeerAddrKey.String("[REDACTED]"))
+			require.Contains(t, baseSpan.Attributes(), attribute.Key("http.client_ip").String("[REDACTED]"))
+			require.Contains(t, baseSpan.Attributes(), attribute.Key("net.sock.peer.addr").String("[REDACTED]"))
 		})
 
 		t.Run("with hash", func(t *testing.T) {
@@ -466,8 +467,8 @@ func TestTracing(t *testing.T) {
 				span := trace.SpanFromContext(ctx)
 				require.NotNil(t, span)
 				span.SetAttributes(
-					semconv.HTTPClientIPKey.String("127.2.2.5"),
-					semconv.NetSockPeerAddrKey.String("127.3.2.5"),
+					attribute.Key("http.client_ip").String("127.2.2.5"),
+					attribute.Key("net.sock.peer.addr").String("127.3.2.5"),
 				)
 
 				response := &plugin.QueryRunResponse{
@@ -490,8 +491,8 @@ func TestTracing(t *testing.T) {
 
 			baseSpan := sn[0]
 			require.Len(t, baseSpan.Attributes(), 2)
-			require.Contains(t, baseSpan.Attributes(), semconv.HTTPClientIPKey.String("70c76e7df1c5f51c716f98e4ec3372566a242d429de2cc87c683034df9a440f5"))
-			require.Contains(t, baseSpan.Attributes(), semconv.NetSockPeerAddrKey.String("a5ec9311d0d04e08d359e8135fda0e8426a797199eefe98f07ab95b7a1acdf59"))
+			require.Contains(t, baseSpan.Attributes(), attribute.Key("http.client_ip").String("70c76e7df1c5f51c716f98e4ec3372566a242d429de2cc87c683034df9a440f5"))
+			require.Contains(t, baseSpan.Attributes(), attribute.Key("net.sock.peer.addr").String("a5ec9311d0d04e08d359e8135fda0e8426a797199eefe98f07ab95b7a1acdf59"))
 		})
 	})
 
@@ -597,8 +598,8 @@ func TestTracing(t *testing.T) {
 			expectedSpanName := fmt.Sprintf("http.request - %s %s", expectedMethod, expectedUrl)
 
 			require.Equal(t, expectedSpanName, httpCallSpan1.Name())
-			require.Contains(t, httpCallSpan1.Attributes(), semconv.HTTPURLKey.String(expectedUrl))
-			require.Contains(t, httpCallSpan1.Attributes(), semconv.HTTPMethodKey.String(expectedMethod))
+			require.Contains(t, httpCallSpan1.Attributes(), attribute.Key("http.url").String(expectedUrl))
+			require.Contains(t, httpCallSpan1.Attributes(), attribute.Key("http.method").String(expectedMethod))
 
 			// Verify that the HTTP client spans are the actual occurences
 			httpCallInstances := 0

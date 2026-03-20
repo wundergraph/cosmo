@@ -17,8 +17,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
-
 	"github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/trace"
@@ -127,7 +125,7 @@ func (ct *CustomTransport) measureSubgraphMetrics(req *http.Request) func(err er
 		inFlightDone()
 
 		if resp != nil {
-			attributes = append(attributes, semconv.HTTPStatusCode(resp.StatusCode))
+			attributes = append(attributes, attribute.Int("http.status_code", resp.StatusCode))
 			o = otelmetric.WithAttributeSet(attribute.NewSet(attributes...))
 
 			ct.metricStore.MeasureResponseSize(req.Context(), resp.ContentLength, reqContext.telemetry.metricSliceAttrs, o)

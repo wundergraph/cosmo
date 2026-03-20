@@ -4,6 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/wundergraph/cosmo/router/pkg/trace/tracetest"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,8 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
-	semconv17 "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -44,14 +44,12 @@ func TestWrapHttpHandler(t *testing.T) {
 		assert.Equal(t, "", sn[0].Name())
 		assert.Equal(t, trace.SpanKindServer, sn[0].SpanKind())
 		assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
-		assert.Len(t, sn[0].Attributes(), 9)
 
-		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPMethodKey.String("GET"))
-		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPScheme("http"))
-		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPFlavorKey.String("1.1"))
-		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPTarget("/test?a=b"))
-		assert.Contains(t, sn[0].Attributes(), semconv17.HTTPStatusCode(200))
-		assert.Contains(t, sn[0].Attributes(), semconv12.HTTPHostKey.String("example.com"))
+		assert.Contains(t, sn[0].Attributes(), semconv.HTTPRequestMethodGet)
+		assert.Contains(t, sn[0].Attributes(), semconv.URLScheme("http"))
+		assert.Contains(t, sn[0].Attributes(), semconv.NetworkProtocolVersion("1.1"))
+		assert.Contains(t, sn[0].Attributes(), attribute.String("http.target", "/test?a=b"))
+		assert.Contains(t, sn[0].Attributes(), semconv.HTTPResponseStatusCode(200))
 	})
 
 	t.Run("set span status to error", func(t *testing.T) {
@@ -99,11 +97,11 @@ func TestWrapHttpHandler(t *testing.T) {
 			assert.Equal(t, test.expected, sn[0].Status())
 			assert.Equal(t, trace.SpanKindServer, sn[0].SpanKind())
 
-			assert.Contains(t, sn[0].Attributes(), semconv17.HTTPMethodKey.String("GET"))
-			assert.Contains(t, sn[0].Attributes(), semconv17.HTTPScheme("http"))
-			assert.Contains(t, sn[0].Attributes(), semconv17.HTTPFlavorKey.String("1.1"))
-			assert.Contains(t, sn[0].Attributes(), semconv17.HTTPTarget("/test?a=b"))
-			assert.Contains(t, sn[0].Attributes(), semconv17.HTTPStatusCode(statusCode))
+			assert.Contains(t, sn[0].Attributes(), semconv.HTTPRequestMethodGet)
+			assert.Contains(t, sn[0].Attributes(), semconv.URLScheme("http"))
+			assert.Contains(t, sn[0].Attributes(), semconv.NetworkProtocolVersion("1.1"))
+			assert.Contains(t, sn[0].Attributes(), attribute.String("http.target", "/test?a=b"))
+			assert.Contains(t, sn[0].Attributes(), semconv.HTTPResponseStatusCode(statusCode))
 
 			exporter.Reset()
 		}

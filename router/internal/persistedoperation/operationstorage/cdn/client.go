@@ -15,7 +15,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
 	"go.opentelemetry.io/otel/codes"
 	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 )
@@ -65,8 +65,8 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 	}
 
 	span.SetAttributes(
-		semconv.HTTPURL(req.URL.String()),
-		semconv.HTTPMethod(http.MethodGet),
+		semconv.URLFull(req.URL.String()),
+		semconv.HTTPRequestMethodGet,
 		semconv12.HTTPHostKey.String(req.Host),
 	)
 
@@ -82,7 +82,7 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 		_ = resp.Body.Close()
 	}()
 
-	span.SetAttributes(semconv.HTTPStatusCode(resp.StatusCode))
+	span.SetAttributes(semconv.HTTPResponseStatusCode(resp.StatusCode))
 
 	if resp.StatusCode != http.StatusOK {
 		span.SetStatus(codes.Error, fmt.Sprintf("unexpected status code when loading persisted operation, statusCode: %d", resp.StatusCode))

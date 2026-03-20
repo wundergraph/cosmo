@@ -3,8 +3,6 @@ package trace
 import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/attribute"
-	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
-	semconv17 "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 	"net/http"
 )
@@ -17,11 +15,12 @@ type Middleware struct {
 }
 
 // SensitiveAttributes that should be redacted by the OTEL http instrumentation package.
-// Take attention to the right version of the semconv package.
+// The semconv compat processor renames new attribute keys to old names before
+// redaction runs, so these use the old semconv key names.
 var SensitiveAttributes = []attribute.Key{
 	// Both can contain external IP addresses
-	semconv17.HTTPClientIPKey,
-	semconv17.NetSockPeerAddrKey,
+	"http.client_ip",
+	"net.sock.peer.addr",
 }
 
 func NewMiddleware(options ...MiddlewareOption) *Middleware {
@@ -45,10 +44,7 @@ func (h *Middleware) Handler(next http.Handler) http.Handler {
 		}
 
 		// Add request target as attribute, so we can filter by path and query
-		span.SetAttributes(semconv17.HTTPTarget(r.RequestURI))
-
-		// Add the host request header to the span
-		span.SetAttributes(semconv12.HTTPHostKey.String(r.Host))
+		span.SetAttributes(attribute.String("http.target", r.RequestURI))
 
 		// Process request
 		next.ServeHTTP(w, r)

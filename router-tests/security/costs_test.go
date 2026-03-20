@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
 
@@ -417,7 +416,7 @@ func TestOperationCost(t *testing.T) {
 					require.True(t, ok, "cost metric should have wg.client.version attribute")
 					require.Equal(t, "missing", val.AsString())
 
-					require.True(t, dp.Attributes.HasValue(semconv.HTTPStatusCodeKey),
+					require.True(t, dp.Attributes.HasValue("http.status_code"),
 						"cost metric should have http.status_code attribute")
 				}
 			})

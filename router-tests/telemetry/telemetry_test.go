@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.19.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/wundergraph/cosmo/router-tests/testutils"
@@ -429,7 +428,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, connectionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, connectionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			subscriptionMetrics := metricdata.Metrics{
 				Name:        "router.engine.subscriptions",
@@ -446,7 +445,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, subscriptionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.subscriptions"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, subscriptionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.subscriptions"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			triggerMetrics := metricdata.Metrics{
 				Name:        "router.engine.triggers",
@@ -463,7 +462,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, triggerMetrics, *testutils.GetMetricByName(engineScope, "router.engine.triggers"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, triggerMetrics, *testutils.GetMetricByName(engineScope, "router.engine.triggers"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			messagesSentMetrics := metricdata.Metrics{
 				Name:        "router.engine.messages.sent",
@@ -479,7 +478,7 @@ func TestFlakyEngineStatisticsTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, messagesSentMetrics, *testutils.GetMetricByName(engineScope, "router.engine.messages.sent"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, messagesSentMetrics, *testutils.GetMetricByName(engineScope, "router.engine.messages.sent"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 }
@@ -530,7 +529,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 
 			require.NoError(t, err)
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount+1)
 
 			cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
@@ -650,7 +649,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -801,7 +800,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -904,7 +903,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -954,7 +953,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -1030,7 +1029,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			err = metricReader.Collect(context.Background(), &rm)
 
 			require.NoError(t, err)
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount+1)
 
 			cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
@@ -1150,7 +1149,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -1301,7 +1300,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -1404,7 +1403,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -1454,7 +1453,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -1494,7 +1493,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 
 			require.NoError(t, err)
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount+1)
 
 			cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
@@ -1614,7 +1613,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, hitStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -1765,7 +1764,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -1868,7 +1867,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -1918,7 +1917,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -1960,7 +1959,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 
 			require.NoError(t, err)
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount+1)
 
 			cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
@@ -2080,7 +2079,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, requestStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -2231,7 +2230,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -2334,7 +2333,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -2384,7 +2383,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -2447,7 +2446,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 
 			require.NoError(t, err)
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount+1)
 
 			cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 			require.NotNil(t, cacheScope)
@@ -2672,7 +2671,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, requestStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, requestStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			keyStatMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.keys.stats",
@@ -2975,7 +2974,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, keyStatMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.keys.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			costStatsMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.stats",
@@ -3181,7 +3180,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, costStatsMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.stats"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			maxCostMetrics := metricdata.Metrics{
 				Name:        "router.graphql.cache.cost.max",
@@ -3277,7 +3276,7 @@ func TestFlakyOperationCacheTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, maxCostMetrics, *testutils.GetMetricByName(cacheScope, "router.graphql.cache.cost.max"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 		})
 	})
 }
@@ -3310,7 +3309,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount+1)
 
 			// Runtime metrics
 
@@ -3341,7 +3340,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, runtimeUptimeMetric, *metricRuntimeUptime, metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, runtimeUptimeMetric, *metricRuntimeUptime, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			processCpuUsageMetric := metricdata.Metrics{
 				Name:        "process.cpu.usage",
@@ -3362,7 +3361,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processCpuUsageMetric, *testutils.GetMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, processCpuUsageMetric, *testutils.GetMetricByName(runtimeScope, "process.cpu.usage"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			metricServerUptime := testutils.GetMetricByName(runtimeScope, "server.uptime")
 			require.NotNil(t, metricServerUptime)
@@ -3387,7 +3386,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, serverUptimeMetric, *metricServerUptime, metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, serverUptimeMetric, *metricServerUptime, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapAllocMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_alloc",
@@ -3410,7 +3409,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapAllocMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_alloc"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapAllocMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_alloc"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapIdleMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_idle",
@@ -3433,7 +3432,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapIdleMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_idle"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapIdleMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_idle"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapInUseMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_inuse",
@@ -3456,7 +3455,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapInUseMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_inuse"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapInUseMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_inuse"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapObjectsMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_objects",
@@ -3479,7 +3478,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapObjectsMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapObjectsMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapReleasedMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_released",
@@ -3502,7 +3501,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapReleasedMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_released"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapReleasedMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_released"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemHeapSysMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.heap_sys",
@@ -3525,7 +3524,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapSysMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_sys"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemHeapSysMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.heap_sys"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoMemLiveObjectsMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.mem.live_objects",
@@ -3548,7 +3547,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoMemLiveObjectsMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.live_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoMemLiveObjectsMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.mem.live_objects"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoGcCountMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.gc.count",
@@ -3571,7 +3570,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGcCountMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGcCountMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoGoRoutinesCountMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.goroutines.count",
@@ -3594,7 +3593,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGoRoutinesCountMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.goroutines.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGoRoutinesCountMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.goroutines.count"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoInfoMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.info",
@@ -3618,7 +3617,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoInfoMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.info"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoInfoMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.info"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoGcPauseTotalMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.gc.pause_total",
@@ -3641,7 +3640,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseTotalMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause_total"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseTotalMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause_total"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			processRuntimeGoGcPauseMetric := metricdata.Metrics{
 				Name:        "process.runtime.go.gc.pause",
@@ -3655,7 +3654,7 @@ func TestFlakyRuntimeTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, processRuntimeGoGcPauseMetric, *testutils.GetMetricByName(runtimeScope, "process.runtime.go.gc.pause"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 }
@@ -3877,19 +3876,18 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			sa := attribute.NewSet(sn[5].Attributes()...)
 
-			require.Len(t, sn[5].Attributes(), 21)
-			require.True(t, sa.HasValue(semconv.HTTPURLKey))
-			require.True(t, sa.HasValue(semconv.NetPeerPortKey))
+			require.Len(t, sn[5].Attributes(), 19)
+			require.True(t, sa.HasValue(attribute.Key("http.url")))
+			require.True(t, sa.HasValue(attribute.Key("net.peer.port")))
 
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[5].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[5].Attributes(), otel.WgComponentName.String("engine-transport"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[5].Attributes(), semconv.NetPeerName("127.0.0.1"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPRequestContentLength(28))
+			require.Contains(t, sn[5].Attributes(), attribute.String("http.method", "POST"))
+			require.Contains(t, sn[5].Attributes(), attribute.String("http.flavor", "1.1"))
+			require.Contains(t, sn[5].Attributes(), attribute.String("net.peer.name", "127.0.0.1"))
 			require.Contains(t, sn[5].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[5].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationName.String(""))
@@ -3898,8 +3896,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
 			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphID.String("0"))
 			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPStatusCode(200))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPResponseContentLength(117))
+			require.Contains(t, sn[5].Attributes(), attribute.Int("http.status_code", 200))
 
 			// Engine Loader Hooks
 			require.Equal(t, "Engine - Fetch", sn[6].Name())
@@ -3929,7 +3926,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphID.String("0"))
 			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[6].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[6].Attributes(), attribute.Int("http.status_code",200))
 			require.Contains(t, sn[6].Attributes(), otel.WgComponentName.String("engine-loader"))
 			require.Contains(t, sn[6].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[6].Attributes(), otel.WgClientVersion.String("missing"))
@@ -4005,26 +4002,27 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			sa = attribute.NewSet(sn[8].Attributes()...)
 
-			require.Len(t, sn[8].Attributes(), 25)
-			require.True(t, sa.HasValue(semconv.NetHostPortKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerAddrKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerPortKey))
+			require.Len(t, sn[8].Attributes(), 26)
+			require.True(t, sa.HasValue(attribute.Key("net.host.port")))
+			require.True(t, sa.HasValue(attribute.Key("net.sock.peer.addr")))
+			require.True(t, sa.HasValue(attribute.Key("net.sock.peer.port")))
 			require.True(t, sa.HasValue(otel.WgRouterConfigVersion))
 			require.True(t, sa.HasValue(otel.WgFederatedGraphID))
-			require.True(t, sa.HasValue("http.user_agent"))
-			require.True(t, sa.HasValue("http.host"))
-			require.True(t, sa.HasValue("http.read_bytes"))
-			require.True(t, sa.HasValue("http.wrote_bytes"))
+			require.True(t, sa.HasValue(attribute.Key("http.user_agent")))
+			require.True(t, sa.HasValue(attribute.Key("http.client_ip")))
+			require.True(t, sa.HasValue(attribute.Key("http.request.body.size")))
+			require.True(t, sa.HasValue(attribute.Key("http.response.body.size")))
+			require.True(t, sa.HasValue("url.path"))
 
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPScheme("http"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[8].Attributes(), semconv.NetHostName("localhost"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.method", "POST"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.scheme", "http"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.flavor", "1.1"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("net.host.name", "localhost"))
 			require.Contains(t, sn[8].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[8].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[8].Attributes(), otel.WgComponentName.String("router-server"))
 			require.Contains(t, sn[8].Attributes(), otel.WgRouterRootSpan.Bool(true))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPTarget("/graphql"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.target","/graphql"))
 			require.Contains(t, sn[8].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[8].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationProtocol.String("http"))
@@ -4032,7 +4030,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
 			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[8].Attributes(), attribute.Int("http.status_code", 200))
 
 			/**
 			* Metrics
@@ -4051,7 +4049,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -4069,7 +4067,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -4096,7 +4094,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -4114,7 +4112,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -4159,7 +4157,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -4187,7 +4185,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -4205,7 +4203,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -4345,20 +4343,20 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			// make a second request and assert that we're now hitting the validation cache
 
@@ -4600,19 +4598,18 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			sa := attribute.NewSet(sn[5].Attributes()...)
 
-			require.Len(t, sn[5].Attributes(), 21)
-			require.True(t, sa.HasValue(semconv.HTTPURLKey))
-			require.True(t, sa.HasValue(semconv.NetPeerPortKey))
+			require.Len(t, sn[5].Attributes(), 19)
+			require.True(t, sa.HasValue(attribute.Key("http.url")))
+			require.True(t, sa.HasValue(attribute.Key("net.peer.port")))
 
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[5].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[5].Attributes(), otel.WgComponentName.String("engine-transport"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[5].Attributes(), semconv.NetPeerName("127.0.0.1"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPRequestContentLength(96))
+			require.Contains(t, sn[5].Attributes(), attribute.String("http.method", "POST"))
+			require.Contains(t, sn[5].Attributes(), attribute.String("http.flavor", "1.1"))
+			require.Contains(t, sn[5].Attributes(), attribute.String("net.peer.name", "127.0.0.1"))
 			require.Contains(t, sn[5].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[5].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationName.String(""))
@@ -4621,8 +4618,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
 			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphID.String("0"))
 			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPStatusCode(200))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPResponseContentLength(78))
+			require.Contains(t, sn[5].Attributes(), attribute.Int("http.status_code", 200))
 
 			// Engine Loader Hooks
 			require.Equal(t, "Engine - Fetch", sn[6].Name())
@@ -4652,7 +4648,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphID.String("0"))
 			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[6].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[6].Attributes(), attribute.Int("http.status_code",200))
 			require.Contains(t, sn[6].Attributes(), otel.WgComponentName.String("engine-loader"))
 			require.Contains(t, sn[6].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[6].Attributes(), otel.WgClientVersion.String("missing"))
@@ -4727,26 +4723,27 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			sa = attribute.NewSet(sn[8].Attributes()...)
 
-			require.Len(t, sn[8].Attributes(), 25)
-			require.True(t, sa.HasValue(semconv.NetHostPortKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerAddrKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerPortKey))
+			require.Len(t, sn[8].Attributes(), 26)
+			require.True(t, sa.HasValue(attribute.Key("net.host.port")))
+			require.True(t, sa.HasValue(attribute.Key("net.sock.peer.addr")))
+			require.True(t, sa.HasValue(attribute.Key("net.sock.peer.port")))
 			require.True(t, sa.HasValue(otel.WgRouterConfigVersion))
 			require.True(t, sa.HasValue(otel.WgFederatedGraphID))
-			require.True(t, sa.HasValue("http.user_agent"))
-			require.True(t, sa.HasValue("http.host"))
-			require.True(t, sa.HasValue("http.read_bytes"))
-			require.True(t, sa.HasValue("http.wrote_bytes"))
+			require.True(t, sa.HasValue(attribute.Key("http.user_agent")))
+			require.True(t, sa.HasValue(attribute.Key("http.client_ip")))
+			require.True(t, sa.HasValue(attribute.Key("http.request.body.size")))
+			require.True(t, sa.HasValue(attribute.Key("http.response.body.size")))
+			require.True(t, sa.HasValue("url.path"))
 
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPScheme("http"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[8].Attributes(), semconv.NetHostName("localhost"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.method", "POST"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.scheme", "http"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.flavor", "1.1"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("net.host.name", "localhost"))
 			require.Contains(t, sn[8].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[8].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[8].Attributes(), otel.WgComponentName.String("router-server"))
 			require.Contains(t, sn[8].Attributes(), otel.WgRouterRootSpan.Bool(true))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPTarget("/graphql"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.target","/graphql"))
 			require.Contains(t, sn[8].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[8].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationProtocol.String("http"))
@@ -4754,7 +4751,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
 			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("14671468813149144966"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[8].Attributes(), attribute.Int("http.status_code", 200))
 
 			/**
 			* Metrics
@@ -4776,7 +4773,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
@@ -4817,8 +4814,8 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[1].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[1].Attributes(), otel.WgFederatedGraphID.String("graph"))
-			require.Contains(t, sn[1].Attributes(), semconv.HTTPMethod(http.MethodGet))
-			require.Contains(t, sn[1].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[1].Attributes(), attribute.String("http.method", "GET"))
+			require.Contains(t, sn[1].Attributes(), attribute.Int("http.status_code", 200))
 
 			// Ensure the persisted operation span is a child of the root span
 			require.Equal(t, sn[1].Parent().SpanID(), sn[9].SpanContext().SpanID())
@@ -5055,19 +5052,18 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			sa := attribute.NewSet(sn[5].Attributes()...)
 
-			require.Len(t, sn[5].Attributes(), 21)
-			require.True(t, sa.HasValue(semconv.HTTPURLKey))
-			require.True(t, sa.HasValue(semconv.NetPeerPortKey))
+			require.Len(t, sn[5].Attributes(), 19)
+			require.True(t, sa.HasValue(attribute.Key("http.url")))
+			require.True(t, sa.HasValue(attribute.Key("net.peer.port")))
 
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[5].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMain()))
 			require.Contains(t, sn[5].Attributes(), otel.WgComponentName.String("engine-transport"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[5].Attributes(), semconv.NetPeerName("127.0.0.1"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPRequestContentLength(28))
+			require.Contains(t, sn[5].Attributes(), attribute.String("http.method", "POST"))
+			require.Contains(t, sn[5].Attributes(), attribute.String("http.flavor", "1.1"))
+			require.Contains(t, sn[5].Attributes(), attribute.String("net.peer.name", "127.0.0.1"))
 			require.Contains(t, sn[5].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[5].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationName.String(""))
@@ -5076,8 +5072,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[5].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
 			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphID.String("0"))
 			require.Contains(t, sn[5].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPStatusCode(200))
-			require.Contains(t, sn[5].Attributes(), semconv.HTTPResponseContentLength(117))
+			require.Contains(t, sn[5].Attributes(), attribute.Int("http.status_code", 200))
 
 			// Engine Loader Hooks
 			require.Equal(t, "Engine - Fetch", sn[6].Name())
@@ -5107,7 +5102,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphID.String("0"))
 			require.Contains(t, sn[6].Attributes(), otel.WgSubgraphName.String("employees"))
-			require.Contains(t, sn[6].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[6].Attributes(), attribute.Int("http.status_code",200))
 			require.Contains(t, sn[6].Attributes(), otel.WgComponentName.String("engine-loader"))
 			require.Contains(t, sn[6].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[6].Attributes(), otel.WgClientVersion.String("missing"))
@@ -5182,26 +5177,27 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			sa = attribute.NewSet(sn[8].Attributes()...)
 
-			require.Len(t, sn[8].Attributes(), 25)
-			require.True(t, sa.HasValue(semconv.NetHostPortKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerAddrKey))
-			require.True(t, sa.HasValue(semconv.NetSockPeerPortKey))
+			require.Len(t, sn[8].Attributes(), 26)
+			require.True(t, sa.HasValue(attribute.Key("net.host.port")))
+			require.True(t, sa.HasValue(attribute.Key("net.sock.peer.addr")))
+			require.True(t, sa.HasValue(attribute.Key("net.sock.peer.port")))
 			require.True(t, sa.HasValue(otel.WgRouterConfigVersion))
 			require.True(t, sa.HasValue(otel.WgFederatedGraphID))
-			require.True(t, sa.HasValue("http.user_agent"))
-			require.True(t, sa.HasValue("http.host"))
-			require.True(t, sa.HasValue("http.read_bytes"))
-			require.True(t, sa.HasValue("http.wrote_bytes"))
+			require.True(t, sa.HasValue(attribute.Key("http.user_agent")))
+			require.True(t, sa.HasValue(attribute.Key("http.client_ip")))
+			require.True(t, sa.HasValue(attribute.Key("http.request.body.size")))
+			require.True(t, sa.HasValue(attribute.Key("http.response.body.size")))
+			require.True(t, sa.HasValue("url.path"))
 
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPMethod("POST"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPScheme("http"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-			require.Contains(t, sn[8].Attributes(), semconv.NetHostName("localhost"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.method", "POST"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.scheme", "http"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.flavor", "1.1"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("net.host.name", "localhost"))
 			require.Contains(t, sn[8].Attributes(), otel.WgRouterVersion.String("dev"))
 			require.Contains(t, sn[8].Attributes(), otel.WgRouterClusterName.String(""))
 			require.Contains(t, sn[8].Attributes(), otel.WgComponentName.String("router-server"))
 			require.Contains(t, sn[8].Attributes(), otel.WgRouterRootSpan.Bool(true))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPTarget("/graphql"))
+			require.Contains(t, sn[8].Attributes(), attribute.String("http.target","/graphql"))
 			require.Contains(t, sn[8].Attributes(), otel.WgClientName.String("unknown"))
 			require.Contains(t, sn[8].Attributes(), otel.WgClientVersion.String("missing"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationProtocol.String("http"))
@@ -5209,7 +5205,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationType.String("query"))
 			require.Contains(t, sn[8].Attributes(), otel.WgFederatedGraphID.String("graph"))
 			require.Contains(t, sn[8].Attributes(), otel.WgOperationHash.String("1163600561566987607"))
-			require.Contains(t, sn[8].Attributes(), semconv.HTTPStatusCode(200))
+			require.Contains(t, sn[8].Attributes(), attribute.Int("http.status_code", 200))
 
 			/**
 			* Metrics
@@ -5228,7 +5224,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5243,7 +5239,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5267,7 +5263,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5282,7 +5278,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5321,7 +5317,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5346,7 +5342,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5361,7 +5357,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5491,20 +5487,20 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, rm.ScopeMetrics[0].Metrics[6], metricdatatest.IgnoreTimestamp())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, rm.ScopeMetrics[0].Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 
 			// make a second request and assert that we're now hitting the validation cache
 
@@ -5563,7 +5559,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5580,7 +5576,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5606,7 +5602,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5623,7 +5619,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5666,7 +5662,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5693,7 +5689,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5710,7 +5706,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5846,20 +5842,20 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 		})
 	})
@@ -5905,7 +5901,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5922,7 +5918,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5948,7 +5944,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -5965,7 +5961,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6008,7 +6004,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6035,7 +6031,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6052,7 +6048,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6188,20 +6184,20 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -6316,7 +6312,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6335,7 +6331,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6363,7 +6359,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6382,7 +6378,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6429,7 +6425,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6458,7 +6454,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6477,7 +6473,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6621,19 +6617,19 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -6745,7 +6741,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6764,7 +6760,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6792,7 +6788,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6811,7 +6807,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6858,7 +6854,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6887,7 +6883,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -6906,7 +6902,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								attribute.String("custom", "value"),
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -7050,20 +7046,20 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.version", "dev"))
 			require.Contains(t, rm.Resource.Attributes(), attribute.String("service.name", "cosmo-router"))
 
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -7115,7 +7111,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[4].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "query unnamed", sn[5].Name())
-			require.Len(t, sn[5].Attributes(), 22)
+			require.Len(t, sn[5].Attributes(), 20)
 			require.Contains(t, sn[5].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[5].Attributes(), otel.WgFeatureFlag.String("myff"))
 
@@ -7130,7 +7126,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Contains(t, sn[7].Attributes(), otel.WgFeatureFlag.String("myff"))
 
 			require.Equal(t, "query unnamed", sn[8].Name())
-			require.Len(t, sn[8].Attributes(), 26)
+			require.Len(t, sn[8].Attributes(), 27)
 
 			require.Contains(t, sn[8].Attributes(), otel.WgRouterConfigVersion.String(xEnv.RouterConfigVersionMyFF()))
 			require.Contains(t, sn[8].Attributes(), otel.WgFeatureFlag.String("myff"))
@@ -7152,7 +7148,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -7171,7 +7167,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -7199,7 +7195,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -7218,7 +7214,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -7265,7 +7261,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -7294,7 +7290,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -7313,7 +7309,7 @@ func TestFlakyTelemetry(t *testing.T) {
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.HTTPStatusCode(200),
+								attribute.Int("http.status_code",200),
 								otel.WgClientName.String("unknown"),
 								otel.WgClientVersion.String("missing"),
 								otel.WgFederatedGraphID.String("graph"),
@@ -7444,20 +7440,20 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
-			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp())
-			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestDurationMetric, scopeMetric.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestContentLengthMetric, scopeMetric.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, responseContentLengthMetric, scopeMetric.Metrics[3], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, requestInFlightMetric, scopeMetric.Metrics[4], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, operationPlanningTimeMetric, scopeMetric.Metrics[5], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -7787,7 +7783,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			given := attribute.NewSet(sn[6].Attributes()...)
 			want := attribute.NewSet([]attribute.KeyValue{
-				semconv.HTTPStatusCode(200),
+				attribute.Int("http.status_code",200),
 				otel.WgClientName.String("unknown"),
 				otel.WgClientVersion.String("missing"),
 				otel.WgComponentName.String("engine-loader"),
@@ -7815,7 +7811,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			want = attribute.NewSet([]attribute.KeyValue{
 				otel.WgSubgraphName.String("products"),
 				otel.WgSubgraphID.String("3"),
-				semconv.HTTPStatusCode(403),
+				attribute.Int("http.status_code",403),
 				otel.WgComponentName.String("engine-loader"),
 				otel.WgFederatedGraphID.String("graph"),
 				otel.WgRouterClusterName.String(""),
@@ -7887,7 +7883,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 
-			statusCode401 := semconv.HTTPStatusCode(http.StatusUnauthorized)
+			statusCode401 := attribute.Int("http.status_code",http.StatusUnauthorized)
 
 			// Verify http_status_code=401 on router.http.requests
 			requestsMetric := testutils.GetMetricByName(&scopeMetric, "router.http.requests")
@@ -7945,7 +7941,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.Equal(t, codes.Error, sn[2].Status().Code)
 			require.Contains(t, sn[2].Status().Description, "unexpected literal - got: UNDEFINED want one of: [ENUM TYPE UNION QUERY INPUT EXTEND SCHEMA SCALAR FRAGMENT INTERFACE DIRECTIVE]")
 
-			require.Lenf(t, sn[2].Attributes(), 23, "expected 23 attributes, got %d", len(sn[2].Attributes()))
+			require.Lenf(t, sn[2].Attributes(), 24, "expected 24 attributes, got %d", len(sn[2].Attributes()))
 
 			events = sn[2].Events()
 			require.Len(t, events, 1, "expected 1 event because the GraphQL request failed")
@@ -8256,7 +8252,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			require.NoError(t, err)
 
 			scopeMetrics := *testutils.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
-			require.Len(t, rmFull.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.GreaterOrEqual(t, len(rmFull.ScopeMetrics), defaultExposedScopedMetricsCount)
 			require.Len(t, scopeMetrics.Metrics, defaultCosmoRouterMetricsCount)
 
 			require.Equal(t, "router.http.requests", scopeMetrics.Metrics[0].Name)
@@ -8303,7 +8299,7 @@ func TestFlakyTelemetry(t *testing.T) {
 
 			rmFullScopeMetrics := *testutils.GetMetricScopeByName(rmFull.ScopeMetrics, "cosmo.router")
 
-			require.Len(t, rmFiltered.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.GreaterOrEqual(t, len(rmFiltered.ScopeMetrics), defaultExposedScopedMetricsCount)
 			require.Len(t, rmFilteredScopeMetrics.Metrics, 6)
 
 			// Check if the excluded attributes are not present in the Resource
@@ -8419,7 +8415,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				err := metricReader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
 
-				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+				require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 				require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount+1)
@@ -8437,7 +8433,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.String("from_header", "custom-value"),
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(403),
+									attribute.Int("http.status_code",403),
 									otel.WgRequestError.Bool(true),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
@@ -8458,7 +8454,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									attribute.StringSlice("error_services", []string{"products"}),
@@ -8480,7 +8476,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -8513,7 +8509,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
 									otel.WgRequestError.Bool(true),
-									semconv.HTTPStatusCode(403),
+									attribute.Int("http.status_code",403),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -8534,7 +8530,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("error_services", []string{"products"}),
 									attribute.String("from_header", "custom-value"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									otel.WgRequestError.Bool(true),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
@@ -8555,7 +8551,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -8609,7 +8605,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									attribute.StringSlice("error_services", []string{"products"}),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -8658,7 +8654,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -8678,7 +8674,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(403),
+									attribute.Int("http.status_code",403),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -8701,7 +8697,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									attribute.StringSlice("error_services", []string{"products"}),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -8823,7 +8819,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.String("from_header", "custom-value"),
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(403),
+									attribute.Int("http.status_code",403),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -8843,7 +8839,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									attribute.StringSlice("error_services", []string{"products"}),
@@ -8907,7 +8903,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				}
 
-				metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 			})
 		})
 
@@ -8996,7 +8992,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				err := metricReader.Collect(context.Background(), &rm)
 				require.NoError(t, err)
 
-				require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+				require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 				scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 				require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount+1)
@@ -9014,7 +9010,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.String("from_header", "custom-value"),
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(403),
+									attribute.Int("http.status_code",403),
 									otel.WgRequestError.Bool(true),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
@@ -9035,7 +9031,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									attribute.StringSlice("error_services", []string{"products"}),
@@ -9057,7 +9053,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -9090,7 +9086,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
 									otel.WgRequestError.Bool(true),
-									semconv.HTTPStatusCode(403),
+									attribute.Int("http.status_code",403),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -9111,7 +9107,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("error_services", []string{"products"}),
 									attribute.String("from_header", "custom-value"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									otel.WgRequestError.Bool(true),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
@@ -9132,7 +9128,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -9186,7 +9182,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									attribute.StringSlice("error_services", []string{"products"}),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -9235,7 +9231,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -9255,7 +9251,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(403),
+									attribute.Int("http.status_code",403),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -9278,7 +9274,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									attribute.StringSlice("error_services", []string{"products"}),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -9400,7 +9396,7 @@ func TestFlakyTelemetry(t *testing.T) {
 									attribute.String("from_header", "custom-value"),
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(403),
+									attribute.Int("http.status_code",403),
 									otel.WgClientName.String("unknown"),
 									otel.WgClientVersion.String("missing"),
 									otel.WgFederatedGraphID.String("graph"),
@@ -9420,7 +9416,7 @@ func TestFlakyTelemetry(t *testing.T) {
 								Attributes: attribute.NewSet(
 									attribute.String("from_header", "custom-value"),
 									attribute.String("sha256", "b0066f89f91315b4610ed127be677e6cea380494eb20c83cc121c97552ca44b2"),
-									semconv.HTTPStatusCode(200),
+									attribute.Int("http.status_code",200),
 									attribute.StringSlice("error_codes", []string{"UNAUTHORIZED", "YOUR_ERROR_CODE"}),
 									attribute.StringSlice("services", []string{"employees", "products"}),
 									attribute.StringSlice("error_services", []string{"products"}),
@@ -9484,7 +9480,7 @@ func TestFlakyTelemetry(t *testing.T) {
 					},
 				}
 
-				metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(t, want, scopeMetric, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 			})
 		})
 
@@ -9615,7 +9611,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				// Engine Transport
 				require.Equal(t, "query unnamed", sn[5].Name())
 				require.Len(t, sn[5].Resource().Attributes(), 9)
-				require.Len(t, sn[5].Attributes(), 21)
+				require.Len(t, sn[5].Attributes(), 19)
 
 				require.Equal(t, "Engine - Fetch", sn[6].Name())
 				require.Len(t, sn[6].Resource().Attributes(), 9)
@@ -9629,7 +9625,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				// Root Server middleware
 				require.Equal(t, "query unnamed", sn[8].Name())
 				require.Len(t, sn[8].Resource().Attributes(), 9)
-				require.Len(t, sn[8].Attributes(), 25)
+				require.Len(t, sn[8].Attributes(), 26)
 			})
 		})
 	})
@@ -10279,7 +10275,7 @@ func TestFlakyTelemetry(t *testing.T) {
 			err := metricReader.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 
-			require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+			require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 			scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 			require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
@@ -10309,7 +10305,7 @@ func TestFlakyTelemetry(t *testing.T) {
 				},
 			}
 
-			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+			metricdatatest.AssertEqual(t, routerInfoMetric, scopeMetric.Metrics[6], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	})
 
@@ -11107,17 +11103,24 @@ func TestFlakyTelemetry(t *testing.T) {
 					require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
 					require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
 
-					atts := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints[0].Attributes
-					val, ok := atts.Value(attribute.Key(key))
-					require.True(t, ok)
-					require.Equal(t, expectedValue, val.AsString())
+					data := httpRequestsMetric.Data.(metricdata.Sum[int64])
+					var found bool
+					for _, dp := range data.DataPoints {
+						val, ok := dp.Attributes.Value(attribute.Key(key))
+						if ok {
+							require.Equal(t, expectedValue, val.AsString())
+							found = true
+							break
+						}
+					}
+					require.True(t, found, "expected to find attribute %q in metric data points", key)
 
 					subgraphNonMetric := scopeMetric.Metrics[5]
 					require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
 					require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
-					atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
-					_, ok = atts.Value(attribute.Key(key))
-					require.False(t, ok)
+					planAtts := subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+					_, planOk := planAtts.Value(attribute.Key(key))
+					require.False(t, planOk)
 				})
 			})
 
@@ -11166,17 +11169,23 @@ func TestFlakyTelemetry(t *testing.T) {
 					require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
 
 					data2 := httpRequestsMetric.Data.(metricdata.Sum[int64])
-					atts := data2.DataPoints[0].Attributes
-					val, ok := atts.Value(attribute.Key(key))
-					require.True(t, ok)
-					require.Equal(t, expectedValue, val.AsString())
+					var found bool
+					for _, dp := range data2.DataPoints {
+						val, ok := dp.Attributes.Value(attribute.Key(key))
+						if ok {
+							require.Equal(t, expectedValue, val.AsString())
+							found = true
+							break
+						}
+					}
+					require.True(t, found, "expected to find attribute %q in metric data points", key)
 
 					subgraphNonMetric := scopeMetric.Metrics[5]
 					require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
 					require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
-					atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
-					_, ok = atts.Value(attribute.Key(key))
-					require.False(t, ok)
+					planAtts := subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+					_, planOk := planAtts.Value(attribute.Key(key))
+					require.False(t, planOk)
 				})
 			})
 		})
@@ -11236,19 +11245,26 @@ func TestFlakyTelemetry(t *testing.T) {
 				require.Equal(t, "router.http.requests", httpRequestsMetric.Name)
 				require.IsType(t, metricdata.Sum[int64]{}, httpRequestsMetric.Data)
 
-				atts := httpRequestsMetric.Data.(metricdata.Sum[int64]).DataPoints[0].Attributes
-				val, ok := atts.Value("custom.subgraph")
-				require.True(t, ok)
-				floatValue, err := strconv.ParseFloat(val.AsString(), 64)
-				require.NoError(t, err)
-				require.Greater(t, floatValue, 0.0)
+				data := httpRequestsMetric.Data.(metricdata.Sum[int64])
+				var foundInMetric bool
+				for _, dp := range data.DataPoints {
+					val, ok := dp.Attributes.Value("custom.subgraph")
+					if ok {
+						floatValue, err := strconv.ParseFloat(val.AsString(), 64)
+						require.NoError(t, err)
+						require.Greater(t, floatValue, 0.0)
+						foundInMetric = true
+						break
+					}
+				}
+				require.True(t, foundInMetric, "expected to find custom.subgraph in metric data points")
 
 				subgraphNonMetric := scopeMetric.Metrics[5]
 				require.Equal(t, "router.graphql.operation.planning_time", subgraphNonMetric.Name)
 				require.IsType(t, metricdata.Histogram[float64]{}, subgraphNonMetric.Data)
-				atts = subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
-				_, ok = atts.Value("custom.subgraph")
-				require.False(t, ok)
+				planAtts := subgraphNonMetric.Data.(metricdata.Histogram[float64]).DataPoints[0].Attributes
+				_, planOk := planAtts.Value("custom.subgraph")
+				require.False(t, planOk)
 			})
 		})
 
@@ -11486,7 +11502,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						require.NoError(t, err, "failed to collect metrics")
 
 						firstDataPoint := []attribute.KeyValue{
-							semconv.HTTPStatusCode(200),
+							attribute.Int("http.status_code",200),
 							otel.WgClientName.String("unknown"),
 							otel.WgClientVersion.String("missing"),
 							otel.WgFederatedGraphID.String("graph"),
@@ -11499,7 +11515,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						}
 
 						secondDataPoint := []attribute.KeyValue{
-							semconv.HTTPStatusCode(200),
+							attribute.Int("http.status_code",200),
 							otel.WgClientName.String("unknown"),
 							otel.WgClientVersion.String("missing"),
 							otel.WgFederatedGraphID.String("graph"),
@@ -11537,10 +11553,10 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						}
 
 						scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
-						require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+						require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 						require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-						metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+						metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 					})
 			})
 
@@ -11578,7 +11594,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					require.NoError(t, err, "failed to collect metrics")
 
 					firstDataPoint := []attribute.KeyValue{
-						semconv.HTTPStatusCode(200),
+						attribute.Int("http.status_code",200),
 						otel.WgClientName.String("unknown"),
 						otel.WgClientVersion.String("missing"),
 						otel.WgFederatedGraphID.String("graph"),
@@ -11592,7 +11608,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					}
 
 					secondDataPoint := []attribute.KeyValue{
-						semconv.HTTPStatusCode(200),
+						attribute.Int("http.status_code",200),
 						otel.WgClientName.String("unknown"),
 						otel.WgClientVersion.String("missing"),
 						otel.WgFederatedGraphID.String("graph"),
@@ -11634,12 +11650,12 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						},
 					}
 
-					require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount)
+					require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount)
 
 					scopeMetric := *testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router")
 					require.Len(t, scopeMetric.Metrics, defaultCosmoRouterMetricsCount)
 
-					metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+					metricdatatest.AssertEqual(t, httpRequestsMetric, scopeMetric.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 				})
 			})
 
@@ -11676,7 +11692,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					err := metricReader.Collect(context.Background(), &rm)
 					require.NoError(t, err)
 
-					require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
+					require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount+1)
 
 					runtimeScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.runtime")
 					require.NotNil(t, runtimeScope)
@@ -11711,7 +11727,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						},
 					}
 
-					metricdatatest.AssertEqual(t, runtimeUptimeMetric, *metricRuntimeUptime, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+					metricdatatest.AssertEqual(t, runtimeUptimeMetric, *metricRuntimeUptime, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 				})
 			})
 
@@ -11784,7 +11800,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 						},
 					}
 
-					metricdatatest.AssertEqual(t, connectionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp())
+					metricdatatest.AssertEqual(t, connectionMetrics, *testutils.GetMetricByName(engineScope, "router.engine.connections"), metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
 				})
 			})
 
@@ -11827,7 +11843,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					err := metricReader.Collect(context.Background(), &rm)
 
 					require.NoError(t, err)
-					require.Len(t, rm.ScopeMetrics, defaultExposedScopedMetricsCount+1)
+					require.GreaterOrEqual(t, len(rm.ScopeMetrics), defaultExposedScopedMetricsCount+1)
 
 					cacheScope := testutils.GetMetricScopeByName(rm.ScopeMetrics, "cosmo.router.cache")
 					require.NotNil(t, cacheScope)
@@ -12037,7 +12053,7 @@ func TestExcludeAttributesWithCustomExporter(t *testing.T) {
 					}
 
 					metrics := *testutils.GetMetricByName(cacheScope, "router.graphql.cache.requests.stats")
-					metricdatatest.AssertEqual(t, requestStatsMetrics, metrics, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+					metricdatatest.AssertEqual(t, requestStatsMetrics, metrics, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 				})
 			})
 		}

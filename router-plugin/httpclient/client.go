@@ -12,9 +12,9 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 )
@@ -153,8 +153,8 @@ func (c *Client) Request(ctx context.Context, method, path string, body interfac
 	ctx, span = c.tracer.Start(ctx, fmt.Sprintf("http.request - %s %s", method, url),
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
-			semconv.HTTPMethodKey.String(method),
-			semconv.HTTPURLKey.String(url),
+			attribute.String("http.method", method),
+			attribute.String("http.url", url),
 		),
 	)
 	defer span.End()

@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -63,12 +63,11 @@ func TestTransport(t *testing.T) {
 		assert.Equal(t, "HTTP GET", sn[0].Name())
 		assert.Equal(t, trace.SpanKindClient, sn[0].SpanKind())
 		assert.Equal(t, sdktrace.Status{Code: codes.Unset}, sn[0].Status())
-		assert.Len(t, sn[0].Attributes(), 8)
 
-		assert.Contains(t, sn[0].Attributes(), semconv.HTTPMethodKey.String("GET"))
-		assert.Contains(t, sn[0].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-		assert.Contains(t, sn[0].Attributes(), semconv.HTTPURL(tsURL))
-		assert.Contains(t, sn[0].Attributes(), semconv.HTTPStatusCode(200))
+		assert.Contains(t, sn[0].Attributes(), semconv.HTTPRequestMethodGet)
+		assert.Contains(t, sn[0].Attributes(), semconv.NetworkProtocolVersion("1.1"))
+		assert.Contains(t, sn[0].Attributes(), semconv.URLFull(tsURL))
+		assert.Contains(t, sn[0].Attributes(), semconv.HTTPResponseStatusCode(200))
 		assert.Contains(t, sn[0].Attributes(), otel.WgComponentName.String("test"))
 	})
 
@@ -116,12 +115,11 @@ func TestTransport(t *testing.T) {
 		assert.Equal(t, "HTTP GET", sn[0].Name())
 		assert.Equal(t, trace.SpanKindClient, sn[0].SpanKind())
 		assert.Equal(t, sdktrace.Status{Code: codes.Error}, sn[0].Status())
-		assert.Len(t, sn[0].Attributes(), 8)
 
-		assert.Contains(t, sn[0].Attributes(), semconv.HTTPMethodKey.String("GET"))
-		assert.Contains(t, sn[0].Attributes(), semconv.HTTPFlavorKey.String("1.1"))
-		assert.Contains(t, sn[0].Attributes(), semconv.HTTPURL(tsURL))
-		assert.Contains(t, sn[0].Attributes(), semconv.HTTPStatusCode(http.StatusInternalServerError))
+		assert.Contains(t, sn[0].Attributes(), semconv.HTTPRequestMethodGet)
+		assert.Contains(t, sn[0].Attributes(), semconv.NetworkProtocolVersion("1.1"))
+		assert.Contains(t, sn[0].Attributes(), semconv.URLFull(tsURL))
+		assert.Contains(t, sn[0].Attributes(), semconv.HTTPResponseStatusCode(http.StatusInternalServerError))
 		assert.Contains(t, sn[0].Attributes(), otel.WgComponentName.String("test"))
 	})
 }

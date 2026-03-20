@@ -6,7 +6,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.uber.org/zap"
 
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
@@ -47,7 +46,7 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	attrs := *reqContext.telemetry.AcquireAttributes()
 	defer reqContext.telemetry.ReleaseAttributes(&attrs)
 
-	attrs = append(attrs, semconv.HTTPStatusCode(statusCode))
+	attrs = append(attrs, attribute.Int("http.status_code", statusCode))
 	attrs = append(attrs, reqContext.telemetry.metricAttrs...)
 
 	rm := m.routerMetrics.MetricStore()

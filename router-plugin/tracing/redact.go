@@ -2,17 +2,17 @@ package tracing
 
 import (
 	"context"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv17 "go.opentelemetry.io/otel/semconv/v1.17.0"
 )
 
 // SensitiveAttributes that should be redacted by the OTEL http instrumentation package.
-// Take attention to the right version of the semconv package.
+// These use old semconv key names for backward compatibility.
 var SensitiveAttributes = []attribute.Key{
 	// Both can contain external IP addresses
-	semconv17.HTTPClientIPKey,
-	semconv17.NetSockPeerAddrKey,
+	"http.client_ip",
+	"net.sock.peer.addr",
 }
 
 type RedactFunc func(key attribute.KeyValue) string
