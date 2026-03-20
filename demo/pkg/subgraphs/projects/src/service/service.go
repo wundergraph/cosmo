@@ -487,6 +487,69 @@ func (p *ProjectsService) LookupEmployeeById(ctx context.Context, req *service.L
 	return &service.LookupEmployeeByIdResponse{Result: result}, nil
 }
 
+// RequireEmployeeFilteredProjectSummaryById implements projects.ProjectsServiceServer.
+// It resolves the filteredProjectSummary field on Employee, which requires the `expertise` field
+// from the employees subgraph via @requires(fields: "expertise") and accepts a `tag` argument to filter.
+func (p *ProjectsService) RequireEmployeeFilteredProjectSummaryById(_ context.Context, req *service.RequireEmployeeFilteredProjectSummaryByIdRequest) (*service.RequireEmployeeFilteredProjectSummaryByIdResponse, error) {
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+
+	tagFilter := ""
+	if req.GetFieldArgs() != nil {
+		tagFilter = req.GetFieldArgs().GetTag()
+	}
+
+	result := make([]*service.RequireEmployeeFilteredProjectSummaryByIdResult, 0, len(req.Context))
+
+	for _, ctx := range req.Context {
+		keyID := ctx.GetKey().GetId()
+		if keyID == "" {
+			return nil, status.Errorf(codes.InvalidArgument, "missing employee id")
+		}
+		id, err := strconv.ParseInt(keyID, 10, 32)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid employee id %q: %v", keyID, err)
+		}
+
+		var matchingTags []string
+		emp := data.GetEmployeeByID(int32(id))
+		if emp != nil && emp.Projects != nil && emp.Projects.List != nil {
+			seen := make(map[string]struct{})
+			for _, project := range emp.Projects.List.Items {
+				if project.Tags == nil || project.Tags.List == nil {
+					continue
+				}
+				for _, tag := range project.Tags.List.Items {
+					if _, ok := seen[tag]; ok {
+						continue
+					}
+					seen[tag] = struct{}{}
+					if tagFilter == "" || strings.EqualFold(tag, tagFilter) {
+						matchingTags = append(matchingTags, tag)
+					}
+				}
+			}
+		}
+
+		employeeExpertise := ctx.GetFields().GetExpertise()
+		if employeeExpertise == "" {
+			employeeExpertise = "none"
+		}
+
+		var summary string
+		if len(matchingTags) > 0 {
+			summary = fmt.Sprintf("expertise: %s, filtered tags (tag=%s): [%s]", employeeExpertise, tagFilter, strings.Join(matchingTags, ", "))
+		} else {
+			summary = fmt.Sprintf("expertise: %s, no tags matched (tag=%s)", employeeExpertise, tagFilter)
+		}
+		result = append(result, &service.RequireEmployeeFilteredProjectSummaryByIdResult{
+			FilteredProjectSummary: summary,
+		})
+	}
+
+	return &service.RequireEmployeeFilteredProjectSummaryByIdResponse{Result: result}, nil
+}
+
 // RequireEmployeeTaggedProjectSummaryById implements projects.ProjectsServiceServer.
 // It resolves the taggedProjectSummary field on Employee, which requires the `tag` field
 // from the employees subgraph via @requires(fields: "tag").

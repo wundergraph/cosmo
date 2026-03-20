@@ -37,6 +37,7 @@ service ProjectsService {
   rpc QuerySearchProjects(QuerySearchProjectsRequest) returns (QuerySearchProjectsResponse) {}
   rpc QueryTasks(QueryTasksRequest) returns (QueryTasksResponse) {}
   rpc QueryTasksByPriority(QueryTasksByPriorityRequest) returns (QueryTasksByPriorityResponse) {}
+  rpc RequireEmployeeFilteredProjectSummaryById(RequireEmployeeFilteredProjectSummaryByIdRequest) returns (RequireEmployeeFilteredProjectSummaryByIdResponse) {}
   rpc RequireEmployeeTaggedProjectSummaryById(RequireEmployeeTaggedProjectSummaryByIdRequest) returns (RequireEmployeeTaggedProjectSummaryByIdResponse) {}
   rpc ResolveEmployeeAverageTaskCompletionDays(ResolveEmployeeAverageTaskCompletionDaysRequest) returns (ResolveEmployeeAverageTaskCompletionDaysResponse) {}
   rpc ResolveEmployeeCurrentWorkload(ResolveEmployeeCurrentWorkloadRequest) returns (ResolveEmployeeCurrentWorkloadResponse) {}
@@ -839,6 +840,35 @@ message RequireEmployeeTaggedProjectSummaryByIdResult {
 
 message RequireEmployeeTaggedProjectSummaryByIdFields {
   string expertise = 1;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdRequest {
+  // RequireEmployeeFilteredProjectSummaryByIdContext provides the context for the required fields method RequireEmployeeFilteredProjectSummaryById.
+  repeated RequireEmployeeFilteredProjectSummaryByIdContext context = 1;
+  // field_args provides the arguments for the required fields resolver field filteredProjectSummary of type Employee.
+  RequireEmployeeFilteredProjectSummaryByIdArgs field_args = 2;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdContext {
+  LookupEmployeeByIdRequestKey key = 1;
+  RequireEmployeeFilteredProjectSummaryByIdFields fields = 2;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdResponse {
+  // RequireEmployeeFilteredProjectSummaryByIdResult provides the result for the required fields method RequireEmployeeFilteredProjectSummaryById.
+  repeated RequireEmployeeFilteredProjectSummaryByIdResult result = 1;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdResult {
+  string filtered_project_summary = 1;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdFields {
+  string expertise = 1;
+}
+
+message RequireEmployeeFilteredProjectSummaryByIdArgs {
+  string tag = 1;
 }
 
 message Project {

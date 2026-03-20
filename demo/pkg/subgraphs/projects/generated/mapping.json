@@ -188,6 +188,21 @@
           "rpc": "RequireEmployeeTaggedProjectSummaryById",
           "request": "RequireEmployeeTaggedProjectSummaryByIdRequest",
           "response": "RequireEmployeeTaggedProjectSummaryByIdResponse"
+        },
+        {
+          "fieldMapping": {
+            "original": "filteredProjectSummary",
+            "mapped": "filtered_project_summary",
+            "argumentMappings": [
+              {
+                "original": "tag",
+                "mapped": "tag"
+              }
+            ]
+          },
+          "rpc": "RequireEmployeeFilteredProjectSummaryById",
+          "request": "RequireEmployeeFilteredProjectSummaryByIdRequest",
+          "response": "RequireEmployeeFilteredProjectSummaryByIdResponse"
         }
       ]
     },
@@ -974,6 +989,16 @@
           "original": "totalProjectCount",
           "mapped": "total_project_count",
           "argumentMappings": []
+        },
+        {
+          "original": "filteredProjectSummary",
+          "mapped": "filtered_project_summary",
+          "argumentMappings": [
+            {
+              "original": "tag",
+              "mapped": "tag"
+            }
+          ]
         }
       ]
     },

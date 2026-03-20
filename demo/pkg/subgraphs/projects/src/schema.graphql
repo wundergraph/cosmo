@@ -239,6 +239,7 @@ type Employee @key(fields: "id") {
 
   # Field requiring expertise from employees subgraph
   taggedProjectSummary: String! @requires(fields: "expertise")
+  filteredProjectSummary(tag: String!): String! @requires(fields: "expertise")
 
   # Computed fields with @connect__fieldResolver
   currentWorkload(includeCompleted: Boolean, projectId: ID): Int! @connect__fieldResolver(context: "id")
