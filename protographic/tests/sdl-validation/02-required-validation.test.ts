@@ -34,6 +34,37 @@ function buildSdl(requiresFields: string): string {
       `;
 }
 
+function buildUnionSdl(requiresFields: string): string {
+  return `
+        type Query {
+          user(id: ID!): User!
+        }
+
+        type User @key(fields: "id") {
+          id: ID!
+          result: SearchResult! @external
+          details: Details! @requires(fields: "${requiresFields}")
+        }
+
+        union SearchResult = Product | Article
+
+        type Product {
+          sku: String!
+          price: Float!
+        }
+
+        type Article {
+          title: String!
+          body: String!
+        }
+
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `;
+}
+
 describe('Validation of @requires directive', () => {
   test('should validate a schema with a required field', () => {
     const sdl = `
@@ -219,6 +250,60 @@ describe('Validation of @requires directive', () => {
       const result = visitor.visit();
 
       expect(result.errors).toHaveLength(0);
+    });
+  });
+
+  describe('union type __typename validation', () => {
+    test('__typename in parent field, missing in all fragments — no errors', () => {
+      const sdl = buildUnionSdl('result { __typename ... on Product { sku } ... on Article { title } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    test('__typename in each fragment, missing in parent — no errors', () => {
+      const sdl = buildUnionSdl('result { ... on Product { __typename sku } ... on Article { __typename title } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    test('__typename missing everywhere — 2 errors', () => {
+      const sdl = buildUnionSdl('result { ... on Product { sku } ... on Article { title } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(2);
+    });
+
+    test('__typename only in one fragment — 1 error for Article', () => {
+      const sdl = buildUnionSdl('result { ... on Product { __typename sku } ... on Article { title } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toContain('Article');
+    });
+
+    test('__typename in both parent and fragments — no errors', () => {
+      const sdl = buildUnionSdl(
+        'result { __typename ... on Product { __typename sku } ... on Article { __typename title } }',
+      );
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    test('single union member fragment missing __typename — 1 error', () => {
+      const sdl = buildUnionSdl('result { ... on Product { sku } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toContain('Product');
     });
   });
 });

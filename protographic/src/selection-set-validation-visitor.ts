@@ -3,15 +3,9 @@ import {
   ASTVisitor,
   DocumentNode,
   FieldNode,
-  GraphQLField,
-  GraphQLNamedType,
   GraphQLObjectType,
   GraphQLSchema,
-  GraphQLType,
   InlineFragmentNode,
-  isInterfaceType,
-  isNamedType,
-  isUnionType,
   Kind,
   SelectionSetNode,
   visit,
@@ -24,29 +18,23 @@ import { AbstractSelectionRewriter } from './abstract-selection-rewriter.js';
 /**
  * Validates selection sets within @requires directive field sets.
  *
- * This visitor traverses a parsed field set document and enforces constraints
- * specific to @requires directives:
- * - Abstract types (interfaces, unions) are not allowed
- * - Inline fragments are not allowed
+ * This visitor traverses a parsed field set document and ensures that inline
+ * fragments on composite types (interfaces, unions) include `__typename` for
+ * type discrimination in protobuf. The `__typename` field can appear either
+ * in the parent field's selection set or within each inline fragment's
+ * selection set — at least one of these locations must contain it.
  *
- * @example
- * ```typescript
- * const doc = parse('{ address { street city } }');
- * const visitor = new SelectionSetValidationVisitor(doc, ProductType);
- * visitor.visit();
- * const result = visitor.getValidationResult();
- * if (result.errors.length > 0) {
- *   console.error('Validation failed:', result.errors);
- * }
- * ```
+ * Before validation, the selection set is normalized by the
+ * {@link AbstractSelectionRewriter}, which distributes parent-level fields
+ * (including `__typename`) into each inline fragment.
  */
 export class SelectionSetValidationVisitor {
-  private currentType: GraphQLObjectType;
   private currentFieldSelectionSet: SelectionSetNode | undefined;
   private fieldSelectionSetStack: SelectionSetNode[] = [];
   private readonly operationDocument: DocumentNode;
 
   private readonly schema: GraphQLSchema;
+  private readonly objectType: GraphQLObjectType;
   private readonly fix: boolean = false;
 
   private validationResult: ValidationResult = {
@@ -59,10 +47,12 @@ export class SelectionSetValidationVisitor {
    *
    * @param operationDocument - The parsed GraphQL document representing the field set
    * @param objectType - The root GraphQL object type to validate against
+   * @param schema - The full GraphQL schema, used for normalization of abstract type selections
+   * @param fix - When true, missing `__typename` fields are added automatically instead of reporting errors
    */
   constructor(operationDocument: DocumentNode, objectType: GraphQLObjectType, schema: GraphQLSchema, fix: boolean) {
     this.operationDocument = operationDocument;
-    this.currentType = objectType;
+    this.objectType = objectType;
     this.schema = schema;
     this.fix = fix;
 
@@ -95,14 +85,14 @@ export class SelectionSetValidationVisitor {
    * This ensures consistent handling of interface and union type selections.
    */
   private normalizeSelectionSet(): void {
-    const visitor = new AbstractSelectionRewriter(this.operationDocument, this.schema, this.currentType);
+    const visitor = new AbstractSelectionRewriter(this.operationDocument, this.schema, this.objectType);
     visitor.normalize();
   }
 
   /**
    * Creates the AST visitor configuration for traversing the document.
    *
-   * @returns An ASTVisitor object with handlers for Field and SelectionSet nodes
+   * @returns An ASTVisitor object with enter/leave handlers for SelectionSet nodes
    */
   private createASTVisitor(): ASTVisitor {
     return {
@@ -178,7 +168,7 @@ export class SelectionSetValidationVisitor {
 
   /**
    * Handles leaving a selection set node during traversal.
-   * Restores the previous type context when ascending back up the tree.
+   * Restores the previous field selection set from the stack when leaving a field's selection set.
    *
    * @param ctx - The visit context containing the selection set node and its parent
    */
@@ -192,43 +182,6 @@ export class SelectionSetValidationVisitor {
     }
   }
 
-  /**
-   * Unwraps a GraphQL type to get its underlying named type.
-   * Strips NonNull and List wrappers to get the base type.
-   *
-   * @param type - The GraphQL type to unwrap
-   * @returns The underlying named type
-   */
-  private getUnderlyingType(type: GraphQLType): GraphQLNamedType {
-    while (!isNamedType(type)) {
-      type = type.ofType;
-    }
-
-    return type;
-  }
-
-  /**
-   * Retrieves the field definition for a field node from the current type.
-   * If the field is not found, a validation error is recorded and null is returned.
-   *
-   * @param node - The field node to look up
-   * @returns The GraphQL field definition, or null if not found
-   */
-  private getFieldDefinition(node: FieldNode): GraphQLField<any, any> | null {
-    const fieldDef = this.currentType.getFields()[node.name.value];
-    if (!fieldDef) {
-      this.validationResult.errors.push(`Field '${node.name.value}' not found on type '${this.currentType.name}'`);
-      return null;
-    }
-    return fieldDef;
-  }
-
-  /**
-   * Type guard to check if a node is an InlineFragmentNode.
-   *
-   * @param node - The AST node or array of nodes to check
-   * @returns True if the node is an InlineFragmentNode
-   */
   private isInlineFragment(node: ASTNode | readonly ASTNode[]): node is InlineFragmentNode {
     if (Array.isArray(node)) {
       return false;
@@ -237,33 +190,10 @@ export class SelectionSetValidationVisitor {
     return (node as ASTNode).kind === Kind.INLINE_FRAGMENT;
   }
 
-  private isSelectionSet(node: ASTNode | ReadonlyArray<ASTNode>): node is SelectionSetNode {
-    if (Array.isArray(node)) {
-      return false;
-    }
-    return (node as ASTNode).kind === Kind.SELECTION_SET;
-  }
-
-  /**
-   * Type guard to check if a node is a FieldNode.
-   *
-   * @param node - The AST node or array of nodes to check
-   * @returns True if the node is a FieldNode
-   */
   private isFieldNode(node: ASTNode | ReadonlyArray<ASTNode>): node is FieldNode {
     if (Array.isArray(node)) {
       return false;
     }
     return (node as ASTNode).kind === Kind.FIELD;
-  }
-
-  /**
-   * Checks if a named type is an abstract type (interface or union).
-   *
-   * @param node - The GraphQL named type to check
-   * @returns True if the type is an interface or union type
-   */
-  private isAbstractType(node: GraphQLNamedType): boolean {
-    return isInterfaceType(node) || isUnionType(node);
   }
 }
