@@ -91,9 +91,7 @@ interface MessageContext {
  */
 export class SDLValidationVisitor {
   private readonly schema: string;
-  private readonly fix: boolean;
   private readonly validationResult: ValidationResult;
-  private readonly fixes: Map<string, string> = new Map();
   private lintingRules: LintingRule<any>[] = [];
   private visitor: ASTVisitor;
   private parsedSchema: GraphQLSchema;
@@ -102,9 +100,8 @@ export class SDLValidationVisitor {
    * Creates a new SDL validation visitor for the given GraphQL schema
    * @param schema - The GraphQL schema string to validate
    */
-  constructor(schema: string, options?: { fix?: boolean }) {
+  constructor(schema: string) {
     this.schema = schema;
-    this.fix = options?.fix ?? false;
     this.validationResult = {
       errors: [],
       warnings: [],
@@ -199,7 +196,7 @@ export class SDLValidationVisitor {
       documentNode,
       this.parsedSchema.getType(parentNode.name.value) as GraphQLObjectType,
       this.parsedSchema,
-      this.fix,
+      false,
     );
 
     visitor.visit();
@@ -211,13 +208,6 @@ export class SDLValidationVisitor {
 
     for (const warning of warnings) {
       this.addWarning(warning, fieldSet.loc);
-    }
-
-    if (this.fix && visitor.hasAppliedFixes()) {
-      const fixedSelection = visitor.getFixedSelection();
-      // The printed document wraps the field set in `{ ... }`, strip the outer braces.
-      const stripped = fixedSelection.replace(/^{\n?/, '').replace(/\n?}$/, '').trim();
-      this.fixes.set(fieldSetValue, stripped);
     }
   }
 
@@ -674,14 +664,6 @@ export class SDLValidationVisitor {
    * Check if the validation found any critical errors
    * @returns true if errors were found, false otherwise
    */
-  /**
-   * Returns the map of original field set values to their fixed versions.
-   * Only populated when the visitor is created with `fix: true`.
-   */
-  public getFixedSelections(): ReadonlyMap<string, string> {
-    return this.fixes;
-  }
-
   public hasErrors(): boolean {
     return this.validationResult.errors.length > 0;
   }

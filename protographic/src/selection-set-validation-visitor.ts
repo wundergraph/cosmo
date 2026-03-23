@@ -48,7 +48,6 @@ export class SelectionSetValidationVisitor {
 
   private readonly schema: GraphQLSchema;
   private readonly fix: boolean = false;
-  private fixCount = 0;
 
   private validationResult: ValidationResult = {
     errors: [],
@@ -89,10 +88,6 @@ export class SelectionSetValidationVisitor {
 
   public getFixedSelection(): string {
     return print(this.operationDocument);
-  }
-
-  public hasAppliedFixes(): boolean {
-    return this.fixCount > 0;
   }
 
   /**
@@ -158,7 +153,6 @@ export class SelectionSetValidationVisitor {
       }
 
       this.ensureTypenameInSelection(ctx.node);
-      this.fixCount++;
     }
   }
 
