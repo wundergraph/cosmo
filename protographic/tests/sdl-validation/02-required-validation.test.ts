@@ -172,6 +172,7 @@ describe('Validation of @requires directive', () => {
 
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toContain('Dog');
+      expect(result.errors[0]).toContain('in "pet"');
     });
 
     test('single fragment missing __typename, no parent — 1 error', () => {
@@ -240,6 +241,8 @@ describe('Validation of @requires directive', () => {
       const result = visitor.visit();
 
       expect(result.errors).toHaveLength(2);
+      expect(result.errors[0]).toContain('in "pet.friend"');
+      expect(result.errors[1]).toContain('in "pet.friend"');
     });
 
     test('nested fragments with __typename in inner parent field — no errors', () => {
@@ -273,6 +276,33 @@ describe('Validation of @requires directive', () => {
       const result = visitor.visit();
 
       expect(result.errors).toHaveLength(4);
+      const petErrors = result.errors.filter((e) => e.includes('in "pet"') && !e.includes('in "pet.friend"'));
+      const petFriendErrors = result.errors.filter((e) => e.includes('in "pet.friend"'));
+      expect(petErrors).toHaveLength(2);
+      expect(petFriendErrors).toHaveLength(2);
+    });
+
+    test('triple nesting — path should be "pet.friend.friend"', () => {
+      const sdl = buildNestedSdl(
+        'pet { __typename ... on Cat { name friend { __typename ... on Dog { name friend { ... on Cat { name } } } } } ... on Dog { name } }',
+      );
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toContain('in "pet.friend.friend"');
+    });
+
+    test('fragments at different nesting levels produce distinct paths', () => {
+      // __typename missing at both levels
+      const sdl = buildNestedSdl('pet { ... on Cat { name friend { ... on Dog { name } } } ... on Dog { name } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      const petErrors = result.errors.filter((e) => e.includes('in "pet"') && !e.includes('in "pet.friend"'));
+      const petFriendErrors = result.errors.filter((e) => e.includes('in "pet.friend"'));
+      expect(petErrors).toHaveLength(2);
+      expect(petFriendErrors).toHaveLength(1);
     });
   });
 
@@ -308,6 +338,7 @@ describe('Validation of @requires directive', () => {
 
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0]).toContain('Article');
+      expect(result.errors[0]).toContain('in "result"');
     });
 
     test('__typename in both parent and fragments — no errors', () => {

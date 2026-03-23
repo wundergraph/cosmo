@@ -9,7 +9,6 @@ import {
   Kind,
   SelectionSetNode,
   visit,
-  print,
 } from 'graphql';
 import { VisitContext } from './types.js';
 import { ValidationResult } from './sdl-validation-visitor.js';
@@ -134,8 +133,10 @@ export class SelectionSetValidationVisitor {
       !this.selectionSetContainsTypename(this.currentFieldSelectionSet)
     ) {
       if (!this.fix) {
+        const fieldPath = this.getFieldPath(ctx.ancestors);
+        const pathSuffix = fieldPath ? ` in "${fieldPath}"` : '';
         this.validationResult.errors.push(
-          `Selection set must contain __typename for inline fragment ${ctx.parent.typeCondition?.name.value}`,
+          `Selection set must contain __typename for inline fragment ${ctx.parent.typeCondition?.name.value}${pathSuffix}`,
         );
         return;
       }
@@ -178,6 +179,16 @@ export class SelectionSetValidationVisitor {
     if (this.isFieldNode(ctx.parent)) {
       this.currentFieldSelectionSet = this.fieldSelectionSetStack.pop();
     }
+  }
+
+  private getFieldPath(ancestors: ReadonlyArray<ASTNode | ReadonlyArray<ASTNode>> | undefined): string {
+    if (!ancestors) {
+      return '';
+    }
+    return ancestors
+      .filter((a) => this.isFieldNode(a))
+      .map((f) => f.name.value)
+      .join('.');
   }
 
   private isInlineFragment(node: ASTNode | readonly ASTNode[]): node is InlineFragmentNode {
