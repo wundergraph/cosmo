@@ -278,6 +278,11 @@ type requestContext struct {
 	customFieldValueRenderer resolve.FieldValueRenderer
 	// forceSha256Compute indicates whether the Sha256Hash of the operation should definitely be computed
 	forceSha256Compute bool
+	// clientDisconnected indicates that the request context was canceled (context.Canceled)
+	// during request processing. This most commonly happens when a client disconnects, but can
+	// also occur during graceful server shutdown. In either case, the work was interrupted, not
+	// failed, so it should not inflate error metrics or mark spans as ERROR.
+	clientDisconnected bool
 }
 
 type headerBuilder struct {

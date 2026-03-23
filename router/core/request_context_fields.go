@@ -302,7 +302,7 @@ func LogLevelHandler(r *http.Request) zapcore.Level {
 		return zapcore.InfoLevel
 	}
 
-	if reqContext.error != nil {
+	if reqContext.error != nil && !reqContext.clientDisconnected {
 		return zapcore.ErrorLevel
 	}
 
