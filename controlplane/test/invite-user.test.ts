@@ -19,7 +19,7 @@ describe('InviteUser', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that an organization admin can invite other users to the organization', async () => {
+  test('that an organization admin can invite other users to the organization', async (testContext) => {
     const {
       authenticator,
       client,
@@ -27,6 +27,7 @@ describe('InviteUser', () => {
       server,
       users: { adminAliceCompanyA, adminJimCompanyB },
     } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -50,11 +51,9 @@ describe('InviteUser', () => {
 
     const existing = pendingInvitationsResponse.pendingInvitations.find((inv) => inv.email === adminJimCompanyB!.email);
     expect(existing).toBeDefined();
-
-    await server.close();
   });
 
-  test('that an organization developer cannot invite other users to the organization', async () => {
+  test('that an organization developer cannot invite other users to the organization', async (testContext) => {
     const {
       authenticator,
       client,
@@ -62,6 +61,7 @@ describe('InviteUser', () => {
       server,
       users: { devJoeCompanyA, adminJimCompanyB },
     } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -78,11 +78,9 @@ describe('InviteUser', () => {
     });
 
     expect(inviteUserResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
-  test('that an organization admin can remove a user invitation', async () => {
+  test('that an organization admin can remove a user invitation', async (testContext) => {
     const {
       authenticator,
       client,
@@ -90,6 +88,7 @@ describe('InviteUser', () => {
       server,
       users: { adminAliceCompanyA, adminJimCompanyB },
     } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -120,11 +119,9 @@ describe('InviteUser', () => {
     pendingInvitationsResponse = await client.getPendingOrganizationMembers({});
     expect(pendingInvitationsResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(pendingInvitationsResponse.pendingInvitations.length).toBe(0);
-
-    await server.close();
   });
 
-  test('that an organization developer cannot remove a user invitation', async () => {
+  test('that an organization developer cannot remove a user invitation', async (testContext) => {
     const {
       authenticator,
       client,
@@ -132,6 +129,7 @@ describe('InviteUser', () => {
       server,
       users: { adminAliceCompanyA, devJoeCompanyA, adminJimCompanyB },
     } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -159,11 +157,9 @@ describe('InviteUser', () => {
     authenticator.changeUserWithSuppliedContext(devJoeCompanyA!);
     const removeInvitationResponse = await client.removeInvitation({ email: adminJimCompanyB!.email });
     expect(removeInvitationResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
-  test('that an user can accept an organization invitation successfully', async () => {
+  test('that an user can accept an organization invitation successfully', async (testContext) => {
     const {
       authenticator,
       client,
@@ -171,6 +167,7 @@ describe('InviteUser', () => {
       server,
       users: { adminAliceCompanyA, adminJimCompanyB },
     } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -221,11 +218,9 @@ describe('InviteUser', () => {
 
     expect(listOrganizationsResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(listOrganizationsResponse.organizations).toHaveLength(2);
-
-    await server.close();
   });
 
-  test('that an user can reject an organization invitation successfully', async () => {
+  test('that an user can reject an organization invitation successfully', async (testContext) => {
     const {
       authenticator,
       client,
@@ -233,6 +228,7 @@ describe('InviteUser', () => {
       server,
       users: { adminAliceCompanyA, adminJimCompanyB },
     } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -283,15 +279,13 @@ describe('InviteUser', () => {
 
     expect(listOrganizationsResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(listOrganizationsResponse.organizations).toHaveLength(1);
-
-    await server.close();
   });
 
   // This test is related to organizations that started using SCIM after already having users added as part of the
   // organizations, SCIM still sent the invitation but the user was unable to accept it as they already were
   // members of the organization
 
-  test('that an user who is part of an organization can still accept invitations successfully', async () => {
+  test('that an user who is part of an organization can still accept invitations successfully', async (testContext) => {
     const {
       authenticator,
       client,
@@ -299,6 +293,7 @@ describe('InviteUser', () => {
       server,
       users: { adminAliceCompanyA, adminJimCompanyB },
     } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     const spy = vi.spyOn(mailerClient, 'sendInviteEmail');
     spy.mockImplementation(vi.fn());
@@ -362,7 +357,5 @@ describe('InviteUser', () => {
       organizationID: adminAliceCompanyA.organizationId,
     });
     expect(members.filter((m) => m.userID === adminJimCompanyB!.userId)).toHaveLength(1);
-
-    await server.close();
   });
 });

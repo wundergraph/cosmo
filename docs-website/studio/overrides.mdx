@@ -1,15 +1,19 @@
 ---
 title: "Overrides"
-description: "Override the result of breaking changes in schema checks for individual operations which you deem are safe. Overrides are active across all graphs in a namespace."
+description: "Override the result of operation checks for breaking changes that affect individual operations that you deem safe. Overrides are active across all graphs in a namespace."
 icon: overline
 ---
 
 ## Configuring overrides
 
-When you run a check against a subgraph, we detect breaking changes that affect operations. On the check page, you can configure overrides for each operation to ignore specific breaking changes in future checks.
+As part of a schema check, we detect breaking changes and then run operation checks to determine which operations are affected based on real traffic. On the check page, you can configure overrides to either ignore specific breaking changes for an operation or ignore the entire operation in future checks.
 
 <Info>
-  Applying overrides will not change the outcome of the check run. Only future checks will take them into account.
+  Overrides only apply to operation checks. Breaking changes will still be detected and reported — overrides let you either ignore specific breaking changes for an operation or ignore the entire operation during operation checks. They do not affect other parts of a schema check such as composition, breaking change detection, or linting.
+</Info>
+
+<Info>
+  Applying overrides will not change the outcome of the current check run. Only future checks will take them into account.
 </Info>
 
 <Frame>

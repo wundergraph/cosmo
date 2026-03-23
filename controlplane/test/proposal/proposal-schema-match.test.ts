@@ -132,13 +132,14 @@ describe('Proposal schema matching tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('should pass check with matching schema when proposal is approved and check severity is set to warn', async () => {
+  test('should pass check with matching schema when proposal is approved and check severity is set to warn', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -230,17 +231,16 @@ describe('Proposal schema matching tests', () => {
     expect(checkResponse2.proposalMatchMessage).toContain(
       `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
     );
-
-    await server.close();
   });
 
-  test('should fail check with non-matching schema when proposal is approved and check severity is set to error', async () => {
+  test('should fail check with non-matching schema when proposal is approved and check severity is set to error', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -331,17 +331,16 @@ describe('Proposal schema matching tests', () => {
 
     expect(checkResponse2.response?.code).toBe(EnumStatusCode.OK);
     expect(checkResponse2.proposalMatchMessage).toBeUndefined();
-
-    await server.close();
   });
 
-  test('should pass publish with matching schema when proposal is approved and publish severity is set to warn', async () => {
+  test('should pass publish with matching schema when proposal is approved and publish severity is set to warn', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -431,17 +430,16 @@ describe('Proposal schema matching tests', () => {
     });
     expect(publishResponse2.response?.code).toBe(EnumStatusCode.OK);
     expect(publishResponse2.proposalMatchMessage).toBeUndefined();
-
-    await server.close();
   });
 
-  test('should fail publish with non-matching schema when proposal is approved and publish severity is set to error', async () => {
+  test('should fail publish with non-matching schema when proposal is approved and publish severity is set to error', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -532,17 +530,16 @@ describe('Proposal schema matching tests', () => {
 
     expect(publishResponse2.response?.code).toBe(EnumStatusCode.OK);
     expect(publishResponse2.proposalMatchMessage).toBeUndefined();
-
-    await server.close();
   });
 
-  test('should handle multiple approved proposals and match any of them', async () => {
+  test('should handle multiple approved proposals and match any of them', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -667,17 +664,16 @@ describe('Proposal schema matching tests', () => {
     expect(checkResponse3.proposalMatchMessage).toBe(
       `The subgraph ${subgraphName}'s schema does not match to this subgraph's schema in any approved proposal.`,
     );
-
-    await server.close();
   });
 
-  test('should allow subgraph deletion with approved proposal when publish severity is set to warn', async () => {
+  test('should allow subgraph deletion with approved proposal when publish severity is set to warn', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -740,17 +736,16 @@ describe('Proposal schema matching tests', () => {
 
     expect(deleteResponse.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
     expect(deleteResponse.proposalMatchMessage).toBeUndefined();
-
-    await server.close();
   });
 
-  test('should allow subgraph deletion when no proposal exists but warn if publish severity is set to warn', async () => {
+  test('should allow subgraph deletion when no proposal exists but warn if publish severity is set to warn', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -793,17 +788,16 @@ describe('Proposal schema matching tests', () => {
     expect(deleteResponse.proposalMatchMessage).toBe(
       `The subgraph ${subgraphName} is not proposed to be deleted in any of the approved proposals.`,
     );
-
-    await server.close();
   });
 
-  test('should fail subgraph deletion without approved proposal when publish severity is set to error', async () => {
+  test('should fail subgraph deletion without approved proposal when publish severity is set to error', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -845,17 +839,16 @@ describe('Proposal schema matching tests', () => {
     expect(deleteResponse.response?.details).toBe(
       `The subgraph ${subgraphName} is not proposed to be deleted in any of the approved proposals.`,
     );
-
-    await server.close();
   });
 
-  test('should handle multiple approved proposals with deleted subgraphs', async () => {
+  test('should handle multiple approved proposals with deleted subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with multiple subgraphs
     const subgraph1Name = genID('subgraph1');
@@ -960,17 +953,16 @@ describe('Proposal schema matching tests', () => {
 
     expect(deleteResponse2.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
     expect(deleteResponse2.proposalMatchMessage).toBeUndefined();
-
-    await server.close();
   });
 
-  test('should handle schema check for a subgraph with an approved deletion proposal', async () => {
+  test('should handle schema check for a subgraph with an approved deletion proposal', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -1053,17 +1045,16 @@ describe('Proposal schema matching tests', () => {
     });
 
     expect(checkResponse2.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('should handle check with delete=true when no approved deletion proposal exists', async () => {
+  test('should handle check with delete=true when no approved deletion proposal exists', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const subgraphName = genID('subgraph1');
@@ -1174,11 +1165,9 @@ describe('Proposal schema matching tests', () => {
     expect(checkResponse3.response?.details).toBe(
       `The subgraph ${subgraphName} is not proposed to be deleted in any of the approved proposals.`,
     );
-
-    await server.close();
   });
 
-  test('should verify proposal schema matching is namespace-specific', async () => {
+  test('should verify proposal schema matching is namespace-specific', async (testContext) => {
     // This test verifies that proposal schema matching works correctly across namespaces.
     // Specifically, it tests that a schema approved in one namespace won't be considered
     // valid in another namespace, even with identical graph and subgraph names.
@@ -1188,6 +1177,7 @@ describe('Proposal schema matching tests', () => {
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Create two namespaces for testing isolation between them
     const namespace1 = DEFAULT_NAMESPACE;
@@ -1374,17 +1364,16 @@ describe('Proposal schema matching tests', () => {
     });
     expect(publishResponse4.response?.code).toBe(EnumStatusCode.OK);
     expect(publishResponse4.proposalMatchMessage).toBeUndefined();
-
-    await server.close();
   });
 
-  test('should match publishing a new subgraph with an approved proposal for a new subgraph', async () => {
+  test('should match publishing a new subgraph with an approved proposal for a new subgraph', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       chClient,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup a federated graph with a single subgraph
     const existingSubgraphName = genID('existing-subgraph');
@@ -1522,7 +1511,5 @@ describe('Proposal schema matching tests', () => {
     expect(publishResponse3.response?.details).toBe(
       `The subgraph ${newSubgraphName2}'s schema does not match to this subgraph's schema in any approved proposal.`,
     );
-
-    await server.close();
   });
 });
