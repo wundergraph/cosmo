@@ -638,45 +638,6 @@ export class SDLValidationVisitor {
   }
 
   /**
-   * Enable or disable a specific validation rule by name
-   * @param ruleName - The name of the rule to configure
-   * @param enabled - Whether the rule should be enabled
-   * @returns true if the rule was found and configured, false otherwise
-   */
-  public configureRule(ruleName: string, enabled: boolean): boolean {
-    const rule = this.lintingRules.find((gate) => gate.name === ruleName);
-    if (rule) {
-      rule.enabled = enabled;
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Get information about all available validation rules
-   * @returns Array of rule configurations
-   */
-  public getAvailableRules(): Readonly<LintingRule<any>[]> {
-    return Object.freeze([...this.lintingRules]);
-  }
-
-  /**
-   * Check if the validation found any critical errors
-   * @returns true if errors were found, false otherwise
-   */
-  public hasErrors(): boolean {
-    return this.validationResult.errors.length > 0;
-  }
-
-  /**
-   * Check if the validation found any warnings
-   * @returns true if warnings were found, false otherwise
-   */
-  public hasWarnings(): boolean {
-    return this.validationResult.warnings.length > 0;
-  }
-
-  /**
    * Add a warning to the validation results
    * @param message - The warning message
    * @param location - Optional source location where the issue was found

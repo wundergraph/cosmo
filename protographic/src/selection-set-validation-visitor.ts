@@ -76,10 +76,6 @@ export class SelectionSetValidationVisitor {
     return this.validationResult;
   }
 
-  public getFixedSelection(): string {
-    return print(this.operationDocument);
-  }
-
   /**
    * Normalizes the parsed field set operation by rewriting abstract selections.
    * This ensures consistent handling of interface and union type selections.
