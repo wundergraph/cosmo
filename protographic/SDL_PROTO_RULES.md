@@ -305,13 +305,13 @@ Example:
 
 Before proto generation, selections are normalized by distributing parent-level fields into each inline fragment. For example:
 
-```
+```graphql
 media { id ... on Book { author } ... on Movie { director } }
 ```
 
 Normalizes to:
 
-```
+```graphql
 media { ... on Book { id author } ... on Movie { id director } }
 ```
 
@@ -342,7 +342,10 @@ The interface or union type maps to a message with `oneof instance` containing e
 type Storage @key(fields: "id") {
   id: ID!
   primaryItem: StorageItem! @external
-  itemInfo: String! @requires(fields: "primaryItem { __typename ... on PalletItem { name palletCount } ... on ContainerItem { name containerSize } }")
+  itemInfo: String!
+    @requires(
+      fields: "primaryItem { __typename ... on PalletItem { name palletCount } ... on ContainerItem { name containerSize } }"
+    )
 }
 
 interface StorageItem {
