@@ -153,7 +153,7 @@ export class SDLValidationVisitor {
 
     const compositeTypeReflectionRule: LintingRule<Kind.FIELD_DEFINITION> = {
       name: 'use-of-typename',
-      description: 'Validates usage of __typename field which is not supported',
+      description: 'Validates that __typename is present for composite types in @requires selections',
       enabled: true,
       nodeKind: Kind.FIELD_DEFINITION,
       validationFunction: (ctx) => this.validateCompositeTypeReflection(ctx),
