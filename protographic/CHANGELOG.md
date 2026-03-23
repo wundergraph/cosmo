@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.19.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.18.2...@wundergraph/protographic@0.19.0) (2026-03-18)
+
+### Features
+
+* remove linting rules for composite types ([#2658](https://github.com/wundergraph/cosmo/issues/2658)) ([3426dd3](https://github.com/wundergraph/cosmo/commit/3426dd3223550f6789bbe906ac5878f55d87d1ca)) (@Noroth)
+
 ## [0.18.2](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.18.1...@wundergraph/protographic@0.18.2) (2026-03-17)
 
 **Note:** Version bump only for package @wundergraph/protographic
