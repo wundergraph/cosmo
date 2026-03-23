@@ -251,6 +251,29 @@ describe('Validation of @requires directive', () => {
 
       expect(result.errors).toHaveLength(0);
     });
+
+    test('sibling inline fragment after nested field uses parent __typename, not inner field', () => {
+      // __typename only on pet (outer), friend has no __typename.
+      // After leaving friend, currentFieldSelectionSet must restore to pet so Dog (sibling) passes.
+      const sdl = buildNestedSdl(
+        'pet { __typename ... on Cat { name friend { __typename ... on Dog { name } } } ... on Dog { name } }',
+      );
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    test('sibling inline fragment after nested field fails when neither level has __typename', () => {
+      // No __typename anywhere — inner fragments (2) and both outer fragments (2) should all fail
+      const sdl = buildNestedSdl(
+        'pet { ... on Cat { name friend { ... on Dog { name } ... on Cat { name } } } ... on Dog { name } }',
+      );
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(4);
+    });
   });
 
   describe('union type __typename validation', () => {

@@ -114,10 +114,12 @@ export class SelectionSetValidationVisitor {
       return;
     }
 
-    // We store the stack for field selection sets. We ignore the root selection set and the inline fragments in the stack
+    // We store the ancestor field selection sets on the stack so we can restore them when leaving a nested field.
     if (this.isFieldNode(ctx.parent)) {
+      if (this.currentFieldSelectionSet) {
+        this.fieldSelectionSetStack.push(this.currentFieldSelectionSet);
+      }
       this.currentFieldSelectionSet = ctx.node;
-      this.fieldSelectionSetStack.push(ctx.node);
       return;
     }
 
