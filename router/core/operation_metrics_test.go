@@ -101,7 +101,6 @@ type spyRouterMetrics struct {
 	schemaUsageHasError bool
 	promUsageCalled     bool
 	promUsageHasError   bool
-	requestErrorCalled  bool
 }
 
 func (m *spyRouterMetrics) StartOperation(_ *zap.Logger, _ int64, _ []attribute.KeyValue, _ otelmetric.AddOption) *OperationMetrics {

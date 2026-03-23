@@ -109,21 +109,6 @@ Both metrics share the same error classification: a request is counted as an err
   A response with HTTP status `200` can still be an error in GraphQL. If a subgraph returns errors in the response body that prevent successful data resolution, the request is tracked as an error in both spans and metrics.
 </Info>
 
-## Error Classification Summary
-
-| Scenario | Span Status | Error Metric | `wg.request.error` | HTTP Status | Log Level |
-|---|---|---|---|---|---|
-| Client disconnection | UNSET | No | not set | 408 | DEBUG |
-| Successful request | UNSET | No | not set | 200 | INFO |
-| Authentication failure | ERROR | Yes | `true` | 401 | ERROR |
-| Subgraph fetch error | ERROR | Yes | `true` | varies | ERROR |
-| Persisted operation error | ERROR | Yes | `true` | 200 | ERROR |
-| Operation parse/normalize/validate/plan error | ERROR | Yes | `true` | varies | ERROR |
-| GraphQL execution error | ERROR | Yes | `true` | 200 | ERROR |
-| Subscription failure | ERROR | Yes | `true` | 500 | ERROR |
-| Rate limit exceeded | ERROR | Yes | `true` | 429 | ERROR |
-| Batch request error | ERROR | Yes | `true` | 200 | ERROR |
-
 ## Subgraph-Level Error Tracking
 
 Subgraph errors are tracked at a more granular level on the **Engine - Fetch** span:

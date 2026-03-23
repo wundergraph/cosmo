@@ -171,7 +171,6 @@
                 "icon": "binary-circle-check",
                 "pages": [
                   "router/open-telemetry",
-                  "router/open-telemetry/span-error-status",
                   "router/open-telemetry/custom-attributes",
                   "router/open-telemetry/prometheus-otlp-ingestion",
                   "router/open-telemetry/setup-opentelemetry-collector"
@@ -182,6 +181,7 @@
                 "icon": "projector",
                 "pages": [
                   "router/metrics-and-monitoring",
+                  "router/metrics-and-monitoring/span-error-status",
                   "router/metrics-and-monitoring/prometheus-metric-reference",
                   "router/metrics-and-monitoring/grafana"
                 ]
