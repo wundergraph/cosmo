@@ -28,22 +28,22 @@ require (
 	github.com/vektah/gqlparser/v2 v2.5.30
 	github.com/wundergraph/astjson v1.1.0
 	github.com/wundergraph/cosmo/composition-go v0.0.0-20250820135159-bf8852195d3f
-	github.com/wundergraph/cosmo/demo v0.0.0-20260213130455-6e3277e7b850
+	github.com/wundergraph/cosmo/demo v0.0.0-20260319123623-f186a0f724f6
 	github.com/wundergraph/cosmo/demo/pkg/subgraphs/projects v0.0.0-20250715110703-10f2e5f9c79e
-	github.com/wundergraph/cosmo/router v0.0.0-20260213130455-6e3277e7b850
+	github.com/wundergraph/cosmo/router v0.0.0-20260319123623-f186a0f724f6
 	github.com/wundergraph/cosmo/router-plugin v0.0.0-20250808194725-de123ba1c65e
 	github.com/wundergraph/graphql-go-tools/v2 v2.0.0-rc.265.0.20260323083647-fd7e4633b488
-	go.opentelemetry.io/otel v1.36.0
-	go.opentelemetry.io/otel/sdk v1.36.0
-	go.opentelemetry.io/otel/sdk/metric v1.36.0
-	go.opentelemetry.io/otel/trace v1.36.0
+	go.opentelemetry.io/otel v1.39.0
+	go.opentelemetry.io/otel/sdk v1.39.0
+	go.opentelemetry.io/otel/sdk/metric v1.39.0
+	go.opentelemetry.io/otel/trace v1.39.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/net v0.46.0
-	golang.org/x/sys v0.37.0
-	google.golang.org/grpc v1.71.0
-	google.golang.org/protobuf v1.36.9
+	golang.org/x/net v0.48.0
+	golang.org/x/sys v0.39.0
+	google.golang.org/grpc v1.79.3
+	google.golang.org/protobuf v1.36.10
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -173,21 +173,21 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.23.1 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.33.0 // indirect
 	go.opentelemetry.io/otel/exporters/prometheus v0.50.0 // indirect
-	go.opentelemetry.io/otel/metric v1.36.0 // indirect
+	go.opentelemetry.io/otel/metric v1.39.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.4.0 // indirect
 	go.uber.org/automaxprocs v1.5.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/ratelimit v0.3.1 // indirect
 	go.withmatt.com/connect-brotli v0.4.0 // indirect
-	golang.org/x/crypto v0.43.0 // indirect
+	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/exp v0.0.0-20250813145105-42675adae3e6 // indirect
-	golang.org/x/mod v0.29.0 // indirect
-	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/text v0.30.0 // indirect
+	golang.org/x/mod v0.30.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 	golang.org/x/time v0.9.0 // indirect
-	golang.org/x/tools v0.38.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250811230008-5f3141c8851a // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250811230008-5f3141c8851a // indirect
+	golang.org/x/tools v0.39.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20251202230838-ff82c1b0f217 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251202230838-ff82c1b0f217 // indirect
 	gopkg.in/cenkalti/backoff.v1 v1.1.0 // indirect
 	rogchap.com/v8go v0.9.0 // indirect
 )

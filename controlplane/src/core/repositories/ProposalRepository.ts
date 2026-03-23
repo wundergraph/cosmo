@@ -586,6 +586,8 @@ export class ProposalRepository {
         hasLintErrors: schema.schemaChecks.hasLintErrors,
         hasGraphPruningErrors: schema.schemaChecks.hasGraphPruningErrors,
         clientTrafficCheckSkipped: schema.schemaChecks.clientTrafficCheckSkipped,
+        checkExtensionDeliveryId: schema.schemaChecks.checkExtensionDeliveryId,
+        checkExtensionErrorMessage: schema.schemaChecks.checkExtensionErrorMessage,
       })
       .from(schema.schemaChecks)
       .where(eq(schema.schemaChecks.id, latestCheck[0].schemaCheckId))
@@ -602,6 +604,8 @@ export class ProposalRepository {
     const hasLintErrors = Boolean(check[0].hasLintErrors);
     const hasGraphPruningErrors = Boolean(check[0].hasGraphPruningErrors);
     const clientTrafficCheckSkipped = Boolean(check[0].clientTrafficCheckSkipped);
+    const checkExtensionDeliveryId = check[0].checkExtensionDeliveryId || undefined;
+    const checkExtensionErrorMessage = check[0].checkExtensionErrorMessage || undefined;
 
     const schemaCheckRepo = new SchemaCheckRepository(this.db);
     const linkedChecks = await schemaCheckRepo.getLinkedSchemaChecks({
@@ -625,6 +629,8 @@ export class ProposalRepository {
       hasProposalMatchError: false,
       isLinkedTrafficCheckFailed,
       isLinkedPruningCheckFailed,
+      checkExtensionDeliveryId,
+      checkExtensionErrorMessage,
     });
 
     return {

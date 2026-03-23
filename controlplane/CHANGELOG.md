@@ -4,6 +4,13 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.208.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.207.0...controlplane@0.208.0) (2026-03-18)
+
+### Features
+
+* add subgraph check extension outcome to proposals screen ([#2661](https://github.com/wundergraph/cosmo/issues/2661)) ([638af2f](https://github.com/wundergraph/cosmo/commit/638af2fd85cfcf715eb887b3f0606a898b2f7999)) (@wilsonrivera)
+* update the `throw` statements for authentication errors ([#2662](https://github.com/wundergraph/cosmo/issues/2662)) ([b580b94](https://github.com/wundergraph/cosmo/commit/b580b949f2d333e1f585d49ce91726ebf659cec2)) (@wilsonrivera)
+
 # [0.207.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.206.0...controlplane@0.207.0) (2026-03-17)
 
 ### Features

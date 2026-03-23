@@ -555,6 +555,8 @@ export const isCheckSuccessful = ({
   hasProposalMatchError,
   isLinkedTrafficCheckFailed,
   isLinkedPruningCheckFailed,
+  checkExtensionDeliveryId,
+  checkExtensionErrorMessage,
 }: {
   isComposable: boolean;
   isBreaking: boolean;
@@ -565,9 +567,15 @@ export const isCheckSuccessful = ({
   hasProposalMatchError: boolean;
   isLinkedTrafficCheckFailed?: boolean;
   isLinkedPruningCheckFailed?: boolean;
+  checkExtensionDeliveryId?: string;
+  checkExtensionErrorMessage?: string;
 }) => {
   // if a subgraph is linked to another subgraph, then the status of the check depends on the traffic and pruning check of the linked subgraph
   if (isLinkedTrafficCheckFailed || isLinkedPruningCheckFailed) {
+    return false;
+  }
+
+  if (checkExtensionDeliveryId && checkExtensionErrorMessage) {
     return false;
   }
 

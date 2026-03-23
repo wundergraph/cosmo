@@ -1,0 +1,28 @@
+name: Demo CI
+on:
+  pull_request:
+    paths:
+      - "demo/**/*"
+      - ".github/workflows/demo-ci.yaml"
+
+concurrency:
+  group: ${{github.workflow}}-${{github.head_ref}}
+  cancel-in-progress: true
+
+env:
+  CI: true
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/go
+
+      - name: Generate code
+        working-directory: demo
+        run: make generate
+
+      - uses: ./.github/actions/git-dirty-check
+        with:
+          package-name: demo

@@ -12,6 +12,14 @@ runs:
     - run: git diff --no-ext-diff --exit-code
       id: git-dirty-check
       shell: bash
+    - run: |
+        FILES=$(git diff --name-only --no-ext-diff | sed 's/^/* /')
+        echo "files<<EOF" >> $GITHUB_OUTPUT
+        echo "$FILES" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+      id: dirty-files-list
+      shell: bash
+      if: failure() && steps.git-dirty-check.outcome == 'failure'
     - uses: marocchino/sticky-pull-request-comment@v2
       if: failure() && steps.git-dirty-check.outcome == 'failure'
       with:
@@ -24,6 +32,15 @@ runs:
           * Generated code not part of the PR, fix with: `make generate` and commit the changes
           * Dependency mismatch for tools (protoc, etc). Ensure your local machine has same versions of tools as CI does
           * Formatting drift, fix with `make format ${{ inputs.package-name }}` / `pnpm format ${{ inputs.package-name }}`
+
+          ---
+
+          <details>
+          <summary>Dirty files</summary>
+
+          ${{ steps.dirty-files-list.outputs.files }}
+
+          </details>
 
     - uses: marocchino/sticky-pull-request-comment@v2
       if: success() && steps.git-dirty-check.outcome == 'success'

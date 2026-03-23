@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/**'
       - '.github/workflows/image-release.yml'
+      - '.github/actions/**'
       - 'docs-website/**'
 jobs:
   build_test:

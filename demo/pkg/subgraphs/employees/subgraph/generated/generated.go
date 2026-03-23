@@ -958,6 +958,21 @@ var sources = []*ast.Source{
   ]
 )
 
+directive @cost(weight: Int!) on
+  | ARGUMENT_DEFINITION
+  | ENUM
+  | FIELD_DEFINITION
+  | INPUT_FIELD_DEFINITION
+  | OBJECT
+  | SCALAR
+
+directive @listSize(
+  assumedSize: Int,
+  slicingArguments: [String!],
+  sizedFields: [String!],
+  requireOneSlicingArgument: Boolean = true
+) on FIELD_DEFINITION
+
 directive @goField(
   forceResolver: Boolean
   name: String
@@ -967,9 +982,9 @@ directive @goField(
 directive @openfed__requireFetchReasons repeatable on FIELD_DEFINITION | INTERFACE | OBJECT
 
 type Query {
-  employee(id: Int!): Employee @openfed__requireFetchReasons
+  employee(id: Int! @cost(weight: 2)): Employee @cost(weight: 5) @openfed__requireFetchReasons
   employeeAsList(id: Int!): [Employee]
-  employees: [Employee]
+  employees: [Employee] @listSize(assumedSize: 50)
   products: [Products!]!
   teammates(team: Department!): [Employee!]!
   firstEmployee: Employee! @tag(name: "internal")
@@ -1005,7 +1020,7 @@ type Subscription {
   countFor(count: Int!): Int!
 }
 
-enum Department {
+enum Department @cost(weight: 1) {
   ENGINEERING
   MARKETING
   OPERATIONS
@@ -1085,7 +1100,7 @@ type Employee implements Identifiable @key(fields: "id") {
   id: Int!
   tag: String!
   expertise: String!
-  role: RoleType!
+  role: RoleType! @listSize(assumedSize: 3, sizedFields: ["departments"])
   notes: String @shareable
   updatedAt: String!
   startDate: String! @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
@@ -1120,7 +1135,7 @@ type Consultancy @key(fields: "upc") {
   isLeadAvailable: Boolean @requires(fields: "lead { isAvailable }")
 }
 
-type Cosmo implements IProduct @key(fields: "upc") {
+type Cosmo implements IProduct @key(fields: "upc") @cost(weight: 5) {
   upc: ID!
   engineers: [Employee!]!
   lead: Employee!

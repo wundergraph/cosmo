@@ -521,16 +521,31 @@ var sources = []*ast.Source{
 	{Name: "../schema.graphqls", Input: `extend schema
 @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
 
+directive @cost(weight: Int!) on
+  | ARGUMENT_DEFINITION
+  | ENUM
+  | FIELD_DEFINITION
+  | INPUT_FIELD_DEFINITION
+  | OBJECT
+  | SCALAR
+
+directive @listSize(
+  assumedSize: Int,
+  slicingArguments: [String!],
+  sizedFields: [String!],
+  requireOneSlicingArgument: Boolean = true
+) on FIELD_DEFINITION
+
 schema {
   query: Queries
   mutation: Mutation
 }
 
 type Queries {
-  productTypes: [Products!]!
+  productTypes: [Products!]! @listSize(assumedSize: 50)
   topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
   factTypes: [TopSecretFactType!]
-  sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @shareable
+  sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @listSize(slicingArguments: ["numOfA"]) @shareable
 }
 
 type Mutation {
@@ -558,7 +573,7 @@ interface TopSecretFact @authenticated {
   factType: TopSecretFactType
 }
 
-scalar FactContent @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
+scalar FactContent @cost(weight: 10) @requiresScopes(scopes: [["read:scalar"], ["read:all"]])
 
 type DirectiveFact implements TopSecretFact @authenticated {
   title: String!
@@ -601,7 +616,7 @@ type Consultancy @key(fields: "upc") {
   name: ProductName!
 }
 
-type Cosmo @key(fields: "upc") {
+type Cosmo @key(fields: "upc") @cost(weight: 8) {
   upc: ID!
   name: ProductName!
   repositoryURL: String!
@@ -6839,6 +6854,24 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 	_ = sel
 	_ = ctx
 	res := graphql.MarshalBoolean(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v any) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	_ = sel
+	_ = ctx
+	res := graphql.MarshalInt(*v)
 	return res
 }
 

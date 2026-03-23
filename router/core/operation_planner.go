@@ -3,12 +3,13 @@ package core
 import (
 	"errors"
 	"strconv"
+	"time"
 
 	"golang.org/x/sync/singleflight"
 
 	graphqlmetricsv1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/graphqlmetrics/v1"
 	"github.com/wundergraph/cosmo/router/pkg/graphqlschemausage"
-
+	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/ast"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/plan"
@@ -22,14 +23,20 @@ type planWithMetaData struct {
 	typeFieldUsageInfo                []*graphqlschemausage.TypeFieldUsageInfo
 	argumentUsageInfo                 []*graphqlmetricsv1.ArgumentUsageInfo
 	content                           string
+	operationName                     string
+	planningDuration                  time.Duration
 }
 
 type OperationPlanner struct {
-	sf               singleflight.Group
-	planCache        ExecutionPlanCache[uint64, *planWithMetaData]
-	executor         *Executor
-	trackUsageInfo   bool
-	operationContent bool
+	sf             singleflight.Group
+	planCache      ExecutionPlanCache[uint64, *planWithMetaData]
+	slowPlanCache  *slowplancache.Cache[*planWithMetaData]
+	executor       *Executor
+	trackUsageInfo bool
+
+	// planningDurationOverride, when set, replaces the measured planning duration.
+	// This is used in tests to simulate slow queries.
+	planningDurationOverride func(content string) time.Duration
 }
 
 type operationPlannerOpts struct {
@@ -47,17 +54,24 @@ type ExecutionPlanCache[K any, V any] interface {
 	Close()
 }
 
-func NewOperationPlanner(executor *Executor, planCache ExecutionPlanCache[uint64, *planWithMetaData], storeContent bool) *OperationPlanner {
+func NewOperationPlanner(
+	executor *Executor,
+	planCache ExecutionPlanCache[uint64, *planWithMetaData],
+	fallbackCache *slowplancache.Cache[*planWithMetaData],
+	planningDurationOverride func(content string) time.Duration,
+) *OperationPlanner {
 	return &OperationPlanner{
-		planCache:        planCache,
-		executor:         executor,
-		trackUsageInfo:   executor.TrackUsageInfo,
-		operationContent: storeContent,
+		planCache:                planCache,
+		executor:                 executor,
+		trackUsageInfo:           executor.TrackUsageInfo,
+		slowPlanCache:            fallbackCache,
+		planningDurationOverride: planningDurationOverride,
 	}
 }
 
-func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlannerOpts) (*planWithMetaData, error) {
-	doc, report := astparser.ParseGraphqlDocumentString(ctx.content)
+// planOperation performs the core planning work: parse, plan, and postprocess.
+func (p *OperationPlanner) planOperation(content string, name string, includeQueryPlan bool) (*planWithMetaData, error) {
+	doc, report := astparser.ParseGraphqlDocumentString(content)
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
 	}
@@ -67,16 +81,11 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlan
 		return nil, err
 	}
 
-	var (
-		preparedPlan plan.Plan
-	)
-
-	// create and postprocess the plan
-	// planning uses the router schema
-	if ctx.executionOptions.IncludeQueryPlanInResponse {
-		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report, plan.IncludeQueryPlanInResponse())
+	var preparedPlan plan.Plan
+	if includeQueryPlan {
+		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, name, &report, plan.IncludeQueryPlanInResponse())
 	} else {
-		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, ctx.name, &report)
+		preparedPlan = planner.Plan(&doc, p.executor.RouterSchema, name, &report)
 	}
 	if report.HasErrors() {
 		return nil, &reportError{report: &report}
@@ -84,19 +93,28 @@ func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlan
 	post := postprocess.NewProcessor(postprocess.CollectDataSourceInfo())
 	post.Process(preparedPlan)
 
-	out := &planWithMetaData{
+	return &planWithMetaData{
 		preparedPlan:      preparedPlan,
 		operationDocument: &doc,
 		schemaDocument:    p.executor.RouterSchema,
+	}, nil
+}
+
+func (p *OperationPlanner) preparePlan(ctx *operationContext, opts operationPlannerOpts) (*planWithMetaData, error) {
+	out, err := p.planOperation(ctx.content, ctx.name, ctx.executionOptions.IncludeQueryPlanInResponse)
+	if err != nil {
+		return nil, err
 	}
+
+	out.operationName = ctx.name
 
 	if opts.operationContent {
 		out.content = ctx.Content()
 	}
 
 	if p.trackUsageInfo {
-		out.typeFieldUsageInfo = graphqlschemausage.GetTypeFieldUsageInfo(preparedPlan)
-		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(&doc, p.executor.RouterSchema, ctx.variables, preparedPlan, ctx.remapVariables)
+		out.typeFieldUsageInfo = graphqlschemausage.GetTypeFieldUsageInfo(out.preparedPlan)
+		out.argumentUsageInfo, err = graphqlschemausage.GetArgumentUsageInfo(out.operationDocument, p.executor.RouterSchema, ctx.variables, out.preparedPlan, ctx.remapVariables)
 		if err != nil {
 			return nil, err
 		}
@@ -116,6 +134,7 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 	// if we have tracing enabled or want to include a query plan in the response we always prepare a new plan
 	// this is because in case of tracing, we're writing trace data to the plan
 	// in case of including the query plan, we don't want to cache this additional overhead
+
 	skipCache := options.TraceOptions.Enable || options.ExecutionOptions.IncludeQueryPlanInResponse
 
 	// Store plan config regardless of cache to enable costs calculation.
@@ -142,19 +161,40 @@ func (p *OperationPlanner) plan(opContext *operationContext, options PlanOptions
 	// try to get a prepared plan for this operation ID from the cache
 	cachedPlan, ok := p.planCache.Get(operationID)
 	if ok && cachedPlan != nil {
-		// re-use a prepared plan
+		// re-use a prepared plan from the main cache
 		opContext.preparedPlan = cachedPlan
 		opContext.planCacheHit = true
-	} else {
+	} else if p.slowPlanCache != nil {
+		if cachedPlan, ok = p.slowPlanCache.Get(operationID); ok {
+			// found in the plan fallback cache — re-use and re-insert into main cache
+			opContext.preparedPlan = cachedPlan
+			opContext.planCacheHit = true
+			p.planCache.Set(operationID, cachedPlan, 1)
+		}
+	}
+
+	if opContext.preparedPlan == nil {
 		// prepare a new plan using single flight
 		// this ensures that we only prepare the plan once for this operation ID
 		operationIDStr := strconv.FormatUint(operationID, 10)
 		sharedPreparedPlan, err, _ := p.sf.Do(operationIDStr, func() (interface{}, error) {
-			prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: p.operationContent})
+			start := time.Now()
+			prepared, err := p.preparePlan(opContext, operationPlannerOpts{operationContent: p.slowPlanCache != nil})
 			if err != nil {
 				return nil, err
 			}
+			prepared.planningDuration = time.Since(start)
+
+			// This is only used for test cases
+			if p.planningDurationOverride != nil {
+				prepared.planningDuration = p.planningDurationOverride(prepared.content)
+			}
+
+			// Set into the main cache after planningDuration is finalized,
+			// because the OnEvict callback reads planningDuration concurrently.
 			p.planCache.Set(operationID, prepared, 1)
+			p.slowPlanCache.Set(operationID, prepared, prepared.planningDuration)
+
 			return prepared, nil
 		})
 		if err != nil {

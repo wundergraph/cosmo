@@ -26,6 +26,10 @@ resolver:
   package: subgraph
 
 directives:
+  cost:
+    skip_runtime: true
+  listSize:
+    skip_runtime: true
   openfed__requireFetchReasons:
     skip_runtime: true
 

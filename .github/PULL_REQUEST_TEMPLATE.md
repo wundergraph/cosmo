@@ -28,6 +28,10 @@ Examples of good PR titles:
 - [ ] Documentation has been updated on [https://github.com/wundergraph/docs-website](https://github.com/wundergraph/docs-website).
 - [ ] I have read the [Contributors Guide](https://github.com/wundergraph/cosmo/blob/main/CONTRIBUTING.md).
 
+## Open Source AI Manifesto
+
+This project follows the principles of the [Open Source AI Manifesto](https://human-oss.dev). Please ensure your contribution aligns with its principles.
+
 <!--
 Please add any additional information or context regarding your changes here.
 -->

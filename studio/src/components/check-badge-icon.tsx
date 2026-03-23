@@ -26,7 +26,7 @@ const isCheckSuccessful = (
     !hasLintErrors &&
     !hasGraphPruningErrors &&
     !hasProposalMatchError &&
-    !checkExtensionError
+    !Boolean(checkExtensionError)
   );
 };
 

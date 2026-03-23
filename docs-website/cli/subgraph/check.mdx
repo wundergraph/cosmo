@@ -61,9 +61,11 @@ The `npx wgc subgraph check` command checks for breaking changes and composition
 
 * `-o, --out [string]`: Writes the JSON check result to a destination file. This option enables JSON output automatically.
 
-* `--suppress-warnings`: This flag suppresses any warnings produced by composition.
-
 * `--label [labels...]`: The labels to apply to the new subgraph. The labels are passed in the format `<key>=<value> <key>=<value>`. This parameter is always ignored if the subgraph already exists.
+
+* `--disable-resolvability-validation`: This flag disables the validation for whether all nodes of the federated graph are resolvable. Do not use unless troubleshooting.
+
+* `-l, --limit [number]`: The maximum number of entries to display for each category of results, such as schema changes, composed schema breaking changes, composition errors, composition warnings, lint issues, and graph pruning issues. Defaults to `50`.
 
 <Info>
    The check command requires either the `--schema` or `--delete` parameter.

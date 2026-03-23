@@ -507,39 +507,6 @@ describe('SDL Validation', () => {
     );
   });
 
-  test('should return an error if an abstract type is used in a requires directive', () => {
-    const sdl = `
-        type Query {
-            user: User!
-        }
-
-        type User @key(fields: "id name") {
-            id: ID!
-            pet: Animal! @external
-            name: String! @requires(fields: "pet { ... on Cat { name } }")
-        }
-
-        type Cat {
-            name: String!
-        }
-
-        type Dog {
-            name: String!
-        }
-
-        union Animal = Cat | Dog
-    `;
-
-    const visitor = new SDLValidationVisitor(sdl);
-    const result = visitor.visit();
-
-    expect(result.errors).toHaveLength(1);
-    expect(result.warnings).toHaveLength(0);
-    expect(result.errors[0]).toContain(
-      '[Error] Abstract types are not allowed in requires directives. Found Animal in User.pet at',
-    );
-  });
-
   test('should correctly handle nested fields in requires directives', () => {
     const sdl = `
     type Warehouse @key(fields: "id") {
@@ -561,51 +528,5 @@ describe('SDL Validation', () => {
 
     expect(result.errors).toHaveLength(0);
     expect(result.warnings).toHaveLength(0);
-  });
-
-  test('should return an error for invalid @requires field selection syntax', () => {
-    const sdl = `
-        type Query {
-            user: User!
-        }
-
-        type User @key(fields: "id") {
-            id: ID!
-            name: String! @external
-            age: Int! @requires(fields: "name {")
-        }
-    `;
-
-    const visitor = new SDLValidationVisitor(sdl);
-    const result = visitor.visit();
-
-    expect(result.errors).toHaveLength(1);
-    expect(result.warnings).toHaveLength(0);
-    expect(result.errors[0]).toContain('Invalid @requires field selection syntax');
-  });
-
-  test('should return an error for @requires with unclosed braces', () => {
-    const sdl = `
-        type Query {
-            user: User!
-        }
-
-        type User @key(fields: "id") {
-            id: ID!
-            details: Details! @external
-            computed: String! @requires(fields: "details { foo")
-        }
-
-        type Details {
-            foo: String!
-        }
-    `;
-
-    const visitor = new SDLValidationVisitor(sdl);
-    const result = visitor.visit();
-
-    expect(result.errors).toHaveLength(1);
-    expect(result.warnings).toHaveLength(0);
-    expect(result.errors[0]).toContain('Invalid @requires field selection syntax');
   });
 });

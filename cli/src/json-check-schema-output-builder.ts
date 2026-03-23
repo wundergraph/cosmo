@@ -199,13 +199,23 @@ export class JsonCheckSchemaOutputBuilder {
     return this.data;
   }
 
+  /**
+   * Writes valid JSON either to stdout or a file.
+   */
   async write(): Promise<void> {
-    const output = this.build();
-
     if (this.outFile) {
-      await writeFile(this.outFile, JSON.stringify(output, null, 2));
+      await writeFile(this.outFile, this.serializeOutput(true));
     } else {
-      console.log(output);
+      console.log(this.serializeOutput());
+    }
+  }
+
+  private serializeOutput(formatted = false): string {
+    try {
+      return JSON.stringify(this.build(), null, formatted ? 2 : 0);
+    } catch (err) {
+      console.error('Failed to serialize JSON data.');
+      throw err;
     }
   }
 }

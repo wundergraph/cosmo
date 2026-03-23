@@ -13,12 +13,8 @@ import {
   NamedTypeNode,
   GraphQLID,
   ConstArgumentNode,
-  GraphQLObjectType,
-  GraphQLSchema,
-  buildSchema,
 } from 'graphql';
-import { CONNECT_FIELD_RESOLVER, CONTEXT, FIELDS, REQUIRES_DIRECTIVE_NAME } from './string-constants.js';
-import { SelectionSetValidationVisitor } from './selection-set-validation-visitor.js';
+import { CONNECT_FIELD_RESOLVER, CONTEXT } from './string-constants.js';
 
 /**
  * Type mapping from Kind enum values to their corresponding AST node types
@@ -90,7 +86,6 @@ interface MessageContext {
  */
 export class SDLValidationVisitor {
   private readonly schema: string;
-  private readonly schemaObject: GraphQLSchema;
   private readonly validationResult: ValidationResult;
   private lintingRules: LintingRule<any>[] = [];
   private visitor: ASTVisitor;
@@ -101,7 +96,6 @@ export class SDLValidationVisitor {
    */
   constructor(schema: string) {
     this.schema = schema;
-    this.schemaObject = buildSchema(schema, { assumeValid: true, assumeValidSDL: true });
     this.validationResult = {
       errors: [],
       warnings: [],
@@ -149,21 +143,7 @@ export class SDLValidationVisitor {
       validationFunction: (ctx) => this.validateInvalidResolverContext(ctx),
     };
 
-    const disallowAbstractTypesForRequiresRule: LintingRule<Kind.FIELD_DEFINITION> = {
-      name: 'disallow-abstract-types-for-requires',
-      description: 'Validates that abstract types are not used in requires directives',
-      enabled: true,
-      nodeKind: Kind.FIELD_DEFINITION,
-      validationFunction: (ctx) => this.validateDisallowAbstractTypesForRequires(ctx),
-    };
-
-    this.lintingRules = [
-      objectTypeRule,
-      listTypeRule,
-      providesRule,
-      resolverContextRule,
-      disallowAbstractTypesForRequiresRule,
-    ];
+    this.lintingRules = [objectTypeRule, listTypeRule, providesRule, resolverContextRule];
   }
 
   /**
@@ -313,21 +293,6 @@ export class SDLValidationVisitor {
   }
 
   /**
-   * Validate `@requires` directive usage (currently not supported)
-   * @param ctx - The VisitContext containing the field definition node to check for `@requires` directive
-   * @private
-   */
-  private validateRequiresDirective(ctx: VisitContext<FieldDefinitionNode>): void {
-    const hasRequiresDirective = ctx.node.directives?.some(
-      (directive) => directive.name.value === REQUIRES_DIRECTIVE_NAME,
-    );
-
-    if (hasRequiresDirective) {
-      this.addWarning('Use of requires is not supported yet', ctx.node.loc);
-    }
-  }
-
-  /**
    * Validate `@provides` directive usage. This is not supported in connect subgraphs.
    * However `@requires` will be supported in the future.
    * @param ctx - The VisitContext containing the field definition node to check for @provides directive
@@ -404,51 +369,6 @@ export class SDLValidationVisitor {
           ctx.node.loc,
         );
       }
-    }
-  }
-
-  private validateDisallowAbstractTypesForRequires(ctx: VisitContext<FieldDefinitionNode>): void {
-    const requiredDirective = ctx.node.directives?.find(
-      (directive) => directive.name.value === REQUIRES_DIRECTIVE_NAME,
-    );
-    if (!requiredDirective) {
-      return;
-    }
-
-    const fieldSelections = requiredDirective.arguments?.find((arg) => arg.name.value === FIELDS)?.value;
-    if (!fieldSelections || fieldSelections.kind !== Kind.STRING) {
-      return;
-    }
-
-    const parentType = ctx.ancestors.at(-1);
-    if (!parentType) {
-      return;
-    }
-
-    if (!this.isASTObjectTypeNode(parentType)) {
-      return;
-    }
-
-    let operationDoc;
-    try {
-      operationDoc = parse(`{ ${fieldSelections.value} }`);
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : String(e);
-      this.addError(`Invalid @${REQUIRES_DIRECTIVE_NAME} field selection syntax: ${errorMessage}`, ctx.node.loc);
-      return;
-    }
-
-    const selectionSetValidationVisitor = new SelectionSetValidationVisitor(
-      operationDoc,
-      this.schemaObject.getType(parentType.name.value) as GraphQLObjectType,
-    );
-    selectionSetValidationVisitor.visit();
-    for (const error of selectionSetValidationVisitor.getValidationResult().errors) {
-      this.addError(error, ctx.node.loc);
-    }
-
-    for (const warning of selectionSetValidationVisitor.getValidationResult().warnings) {
-      this.addWarning(warning, ctx.node.loc);
     }
   }
 

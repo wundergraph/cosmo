@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.295.0](https://github.com/wundergraph/cosmo/compare/router@0.294.0...router@0.295.0) (2026-03-19)
+
+### Features
+
+* slow plan cache ([#2611](https://github.com/wundergraph/cosmo/issues/2611)) ([9a96032](https://github.com/wundergraph/cosmo/commit/9a9603285fdc457287b4153be615314022f4c529)) (@SkArchon)
+
 # [0.294.0](https://github.com/wundergraph/cosmo/compare/router@0.293.0...router@0.294.0) (2026-03-17)
 
 ### Features

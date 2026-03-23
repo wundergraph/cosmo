@@ -1584,6 +1584,8 @@ export class SchemaCheckRepository {
           hasGraphPruningErrors: !!check.hasGraphPruningErrors,
           clientTrafficCheckSkipped: !!check.clientTrafficCheckSkipped,
           hasProposalMatchError: check.proposalMatch === 'error',
+          checkExtensionDeliveryId: check.checkExtensionDeliveryId || undefined,
+          checkExtensionErrorMessage: check.checkExtensionErrorMessage || undefined,
         }),
         clientTrafficCheckSkipped: !!check.clientTrafficCheckSkipped,
         graphPruningCheckSkipped: !!check.graphPruningSkipped,

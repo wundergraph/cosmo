@@ -1,12 +1,14 @@
 #!/bin/bash
 
+set -e 
+
 # js composition
 
 ## using source code
 
 echo "Generating config using 'wgc router compose'"
 cd "../cli" || exit
-pnpx tsx --env-file ../cli/.env ../cli/src/index.ts router compose -i ../demo/graph.yaml -o ../router-tests/testenv/testdata/configWithEdfs.json
+pnpx tsx ../cli/src/index.ts router compose -i ../demo/graph.yaml -o ../router-tests/testenv/testdata/configWithEdfs.json
 
 ## using npm package
 

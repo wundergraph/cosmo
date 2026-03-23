@@ -3,12 +3,10 @@ package core
 import (
 	"sync"
 
-	"github.com/dgraph-io/ristretto/v2"
 	nodev1 "github.com/wundergraph/cosmo/router/gen/proto/wg/cosmo/node/v1"
+	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"go.uber.org/zap"
 )
-
-type planCache = *ristretto.Cache[uint64, *planWithMetaData]
 
 // ReloadPersistentState This file describes any configuration which should persist or be shared across router restarts
 type ReloadPersistentState struct {
@@ -34,6 +32,7 @@ func (s *ReloadPersistentState) CleanupFeatureFlags(routerCfg *nodev1.RouterConf
 	s.inMemoryPlanCacheFallback.cleanupUnusedFeatureFlags(routerCfg)
 }
 
+// This should always be called before graphMux.Shutdown() as ordering matters
 func (s *ReloadPersistentState) OnRouterConfigReload() {
 	// For cases of router config changes (not execution config), we shut down before creating the
 	// graph mux, because we need to initialize everything from the start
@@ -45,7 +44,8 @@ func (s *ReloadPersistentState) OnRouterConfigReload() {
 	s.inMemoryPlanCacheFallback.extractQueriesAndOverridePlanCache()
 }
 
-// InMemoryPlanCacheFallback is a store that stores either queries or references to the planner cache for use with the cache warmer
+// InMemoryPlanCacheFallback is a store that stores either queries or references to the planner cache for use with the cache warmer.
+// Only expensive queries (planning duration >= threshold) are persisted.
 type InMemoryPlanCacheFallback struct {
 	mu                    sync.RWMutex
 	queriesForFeatureFlag map[string]any
@@ -82,7 +82,8 @@ func (c *InMemoryPlanCacheFallback) IsEnabled() bool {
 	return c.queriesForFeatureFlag != nil
 }
 
-// getPlanCacheForFF gets the plan cache in the []*nodev1.Operation format for a specific feature flag key
+// getPlanCacheForFF gets the plan cache in the []*nodev1.Operation format for a specific feature flag key.
+// It handles both live expensive cache references and already-extracted operation snapshots.
 func (c *InMemoryPlanCacheFallback) getPlanCacheForFF(featureFlagKey string) []*nodev1.Operation {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -92,7 +93,7 @@ func (c *InMemoryPlanCacheFallback) getPlanCacheForFF(featureFlagKey string) []*
 	}
 
 	switch cache := c.queriesForFeatureFlag[featureFlagKey].(type) {
-	case planCache:
+	case *slowplancache.Cache[*planWithMetaData]:
 		return convertToNodeOperation(cache)
 	case []*nodev1.Operation:
 		return cache
@@ -107,7 +108,7 @@ func (c *InMemoryPlanCacheFallback) getPlanCacheForFF(featureFlagKey string) []*
 }
 
 // setPlanCacheForFF sets the plan cache for a specific feature flag key
-func (c *InMemoryPlanCacheFallback) setPlanCacheForFF(featureFlagKey string, cache planCache) {
+func (c *InMemoryPlanCacheFallback) setPlanCacheForFF(featureFlagKey string, cache *slowplancache.Cache[*planWithMetaData]) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -128,7 +129,7 @@ func (c *InMemoryPlanCacheFallback) extractQueriesAndOverridePlanCache() {
 
 	fallbackMap := make(map[string]any)
 	for k, v := range c.queriesForFeatureFlag {
-		if cache, ok := v.(planCache); ok {
+		if cache, ok := v.(*slowplancache.Cache[*planWithMetaData]); ok {
 			fallbackMap[k] = convertToNodeOperation(cache)
 		}
 	}
@@ -158,14 +159,13 @@ func (c *InMemoryPlanCacheFallback) cleanupUnusedFeatureFlags(routerCfg *nodev1.
 	}
 }
 
-func convertToNodeOperation(data planCache) []*nodev1.Operation {
+func convertToNodeOperation(data *slowplancache.Cache[*planWithMetaData]) []*nodev1.Operation {
 	items := make([]*nodev1.Operation, 0)
 
-	data.IterValues(func(v *planWithMetaData) (stop bool) {
+	for v := range data.Values() {
 		items = append(items, &nodev1.Operation{
 			Request: &nodev1.OperationRequest{Query: v.content},
 		})
-		return false
-	})
+	}
 	return items
 }

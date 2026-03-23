@@ -25,6 +25,12 @@ resolver:
   dir: subgraph
   package: subgraph
 
+directives:
+  cost:
+    skip_runtime: true
+  listSize:
+    skip_runtime: true
+
 # Optional: turn on use `gqlgen:"fieldName"` tags in your models
 # struct_tag: json
 
