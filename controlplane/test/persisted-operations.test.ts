@@ -3,9 +3,8 @@ import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi, type Mock } from 'vitest';
 import { ClickHouseClient } from '../src/core/clickhouse/index.js';
-import { MAX_MANIFEST_OPERATIONS } from '../src/core/repositories/OperationsRepository.js';
 import { FederatedGraphRepository } from '../src/core/repositories/FederatedGraphRepository.js';
-import { OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
+import { MAX_MANIFEST_OPERATIONS, OperationsRepository } from '../src/core/repositories/OperationsRepository.js';
 import {
   afterAllSetup,
   beforeAllSetup,

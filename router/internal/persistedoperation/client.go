@@ -91,7 +91,8 @@ func (c *Client) PersistedOperation(ctx context.Context, clientName string, sha2
 	}
 
 	if c.providerClient == nil {
-		// This can happen if we are using APQ client, without any persisted operation client. Otherwise, we should have a provider client and shouldn't reach here.
+		// This can happen if we are using APQ client without any persisted operation client,
+		// or if the PQL manifest is enabled but hasn't loaded yet (e.g. initial fetch failed).
 		return nil, c.APQEnabled(), nil
 	}
 

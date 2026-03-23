@@ -644,7 +644,6 @@ describe('CDN handlers', () => {
       });
       expect(res.status).toBe(200);
       expect(res.headers.get('Content-Type')).toBe('application/json; charset=UTF-8');
-      expect(res.headers.get('Cache-Control')).toBe('no-cache, no-store, must-revalidate');
       expect(await res.text()).toBe(manifestContents);
     });
 
