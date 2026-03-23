@@ -185,92 +185,106 @@ export class SchemaUsageTrafficInspector {
 
     const tasks = changes.map((change) =>
       limit(async () => {
-        const where: string[] = [];
-        const params: Record<string, string | number | boolean> = {
-          daysToConsider: filter.daysToConsider,
-          federatedGraphId: filter.federatedGraphId,
-          organizationId: filter.organizationId,
-        };
-        if (filter.subgraphId) {
-          params.subgraphId = filter.subgraphId;
-        }
+        try {
+          const where: string[] = [];
+          const params: Record<string, string | number | boolean> = {
+            daysToConsider: filter.daysToConsider,
+            federatedGraphId: filter.federatedGraphId,
+            organizationId: filter.organizationId,
+          };
+          if (filter.subgraphId) {
+            params.subgraphId = filter.subgraphId;
+          }
 
-        // Used for arguments usage check
-        if (change.path) {
-          // Escape single quotes in path segments and build the array
-          const escapedPath = change.path
-            .map((seg) => {
-              const escaped = seg.replace(/'/g, "''");
-              return `'${escaped}'`;
-            })
-            .join(',');
-          where.push(`startsWith(Path, [${escapedPath}]) AND length(Path) = ${change.path.length}`);
-        }
-        if (change.namedType) {
-          params.namedType = change.namedType;
-          where.push(`NamedType = {namedType:String}`);
-        }
-        if (change.typeName) {
-          params.typeName = change.typeName;
-          where.push(`hasAny(TypeNames, [{typeName:String}])`);
-        }
+          // Used for arguments usage check
+          if (change.path) {
+            // Escape single quotes in path segments and build the array
+            const escapedPath = change.path
+              .map((seg) => {
+                const escaped = seg.replace(/'/g, "''");
+                return `'${escaped}'`;
+              })
+              .join(',');
+            where.push(`startsWith(Path, [${escapedPath}]) AND length(Path) = ${change.path.length}`);
+          }
+          if (change.namedType) {
+            params.namedType = change.namedType;
+            where.push(`NamedType = {namedType:String}`);
+          }
+          if (change.typeName) {
+            params.typeName = change.typeName;
+            where.push(`hasAny(TypeNames, [{typeName:String}])`);
+          }
 
-        // fieldName can be empty if a type was removed
-        if (change.fieldName) {
-          params.fieldName = change.fieldName;
-          where.push(`FieldName = {fieldName:String}`);
-        }
+          // fieldName can be empty if a type was removed
+          if (change.fieldName) {
+            params.fieldName = change.fieldName;
+            where.push(`FieldName = {fieldName:String}`);
+          }
 
-        if (change.isInput) {
-          where.push(`IsInput = true`);
-        } else if (change.isArgument) {
-          where.push(`IsArgument = true`);
-        }
+          if (change.isInput) {
+            where.push(`IsInput = true`);
+          } else if (change.isArgument) {
+            where.push(`IsArgument = true`);
+          }
 
-        if (change.isNull !== undefined) {
-          where.push(`IsNull = ${change.isNull}`);
-        }
-        where.push(`IsIndirectFieldUsage = false`);
+          if (change.isNull !== undefined) {
+            where.push(`IsNull = ${change.isNull}`);
+          }
+          where.push(`IsIndirectFieldUsage = false`);
 
-        const subgraphFilter = filter.subgraphId ? `hasAny(SubgraphIDs, [{subgraphId:String}]) AND` : '';
-        const query = `
-          SELECT OperationHash as operationHash,
-                 last_value(OperationType) as operationType,
-                 last_value(OperationName) as operationName,
-                 min(toUnixTimestamp(Timestamp)) as firstSeen,
-                 max(toUnixTimestamp(Timestamp)) as lastSeen
-          FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
-          WHERE
-            -- Filter first on date and customer to reduce the amount of data
-            Timestamp >= toStartOfDay(now()) - interval {daysToConsider:UInt32} day AND
-            FederatedGraphID = {federatedGraphId:String} AND
-            ${subgraphFilter}
-            OrganizationID = {organizationId:String} AND
-            ${where.join(' AND ')}
-          GROUP BY OperationHash
-        `;
+          const subgraphFilter = filter.subgraphId ? `hasAny(SubgraphIDs, [{subgraphId:String}]) AND` : '';
+          const query = `
+            SELECT OperationHash as operationHash,
+                   last_value(OperationType) as operationType,
+                   last_value(OperationName) as operationName,
+                   min(toUnixTimestamp(Timestamp)) as firstSeen,
+                   max(toUnixTimestamp(Timestamp)) as lastSeen
+            FROM ${this.client.database}.gql_metrics_schema_usage_lite_1d_90d
+            WHERE
+              -- Filter first on date and customer to reduce the amount of data
+              Timestamp >= toStartOfDay(now()) - interval {daysToConsider:UInt32} day AND
+              FederatedGraphID = {federatedGraphId:String} AND
+              ${subgraphFilter}
+              OrganizationID = {organizationId:String} AND
+              ${where.join(' AND ')}
+            GROUP BY OperationHash
+          `;
 
-        const res: {
-          operationHash: string;
-          operationName: string;
-          operationType: string;
-          lastSeen: number;
-          firstSeen: number;
-        }[] = await this.client.queryPromise(query, params);
+          const res: {
+            operationHash: string;
+            operationName: string;
+            operationType: string;
+            lastSeen: number;
+            firstSeen: number;
+          }[] = await this.client.queryPromise(query, params);
 
-        if (Array.isArray(res)) {
-          return res.map((r) => ({
+          if (Array.isArray(res)) {
+            return res.map((r) => ({
+              schemaChangeId: change.schemaChangeId,
+              hash: r.operationHash,
+              name: r.operationName,
+              type: r.operationType,
+              lastSeenAt: new Date(r.lastSeen * 1000),
+              firstSeenAt: new Date(r.firstSeen * 1000),
+              isSafeOverride: false,
+            }));
+          }
+
+          return [];
+        } catch (err: any) {
+          const changeContext = {
             schemaChangeId: change.schemaChangeId,
-            hash: r.operationHash,
-            name: r.operationName,
-            type: r.operationType,
-            lastSeenAt: new Date(r.lastSeen * 1000),
-            firstSeenAt: new Date(r.firstSeen * 1000),
-            isSafeOverride: false,
-          }));
+            typeName: change.typeName,
+            fieldName: change.fieldName,
+            path: change.path,
+            namedType: change.namedType,
+          };
+          throw new Error(
+            `Schema usage query failed for change ${change.schemaChangeId}: ${err.message}`,
+            { cause: { originalError: err, changeContext } },
+          );
         }
-
-        return [];
       }),
     );
 
