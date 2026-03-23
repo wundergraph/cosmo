@@ -280,10 +280,9 @@ export class SchemaUsageTrafficInspector {
             path: change.path,
             namedType: change.namedType,
           };
-          throw new Error(
-            `Schema usage query failed for change ${change.schemaChangeId}: ${err.message}`,
-            { cause: { originalError: err, changeContext } },
-          );
+          throw new Error(`Schema usage query failed for change ${change.schemaChangeId}: ${err.message}`, {
+            cause: { originalError: err, changeContext },
+          });
         }
       }),
     );
