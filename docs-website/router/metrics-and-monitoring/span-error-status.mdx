@@ -90,24 +90,12 @@ When a request exceeds the configured rate limit, the span is marked as `ERROR`.
 
 When field-level authorization fails during resolution, the span is marked as `ERROR`.
 
-## Error Metrics Relationship
-
-The router tracks errors through two complementary mechanisms:
-
-### Span Attributes
-
-- `wg.request.error` (`true`/`false`): Set on spans to indicate whether the request resulted in an error. Only set to `true` for server-side errors, not client disconnections.
-
-### Metrics
+## Metrics
 
 - `router.http.requests.error`: A dedicated counter for failed requests. Incremented only for server-side errors.
 - `router.http.requests`: The general request counter. When an error occurs, the `wg.request.error=true` attribute is attached, allowing you to filter error vs non-error requests from the same metric.
 
 Both metrics share the same error classification: a request is counted as an error **only** when it is a server-side failure. Client disconnections are excluded.
-
-<Info>
-  A response with HTTP status `200` can still be an error in GraphQL. If a subgraph returns errors in the response body that prevent successful data resolution, the request is tracked as an error in both spans and metrics.
-</Info>
 
 ## Subgraph-Level Error Tracking
 
