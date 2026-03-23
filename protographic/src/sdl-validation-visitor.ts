@@ -53,8 +53,6 @@ interface LintingRule<K extends keyof KindToNodeTypeMap = keyof KindToNodeTypeMa
   name: string;
   /** Human-readable description of what this rule validates */
   description?: string;
-  /** Whether this validation rule is currently active */
-  enabled: boolean;
   /** The AST node kind this rule applies to */
   nodeKind: K;
   /** The validation function to execute for matching nodes */
@@ -122,7 +120,6 @@ export class SDLValidationVisitor {
     const objectTypeRule: LintingRule<Kind.OBJECT_TYPE_DEFINITION> = {
       name: 'nested-key-directives',
       description: 'Validates that @key directives do not contain nested field selections',
-      enabled: true,
       nodeKind: Kind.OBJECT_TYPE_DEFINITION,
       validationFunction: (ctx) => this.validateObjectTypeKeyDirectives(ctx),
     };
@@ -130,7 +127,6 @@ export class SDLValidationVisitor {
     const listTypeRule: LintingRule<Kind.LIST_TYPE> = {
       name: 'nullable-items-in-list-types',
       description: 'Validates that list types do not contain nullable items',
-      enabled: true,
       nodeKind: Kind.LIST_TYPE,
       validationFunction: (ctx) => this.validateListTypeNullability(ctx),
     };
@@ -138,7 +134,6 @@ export class SDLValidationVisitor {
     const providesRule: LintingRule<Kind.FIELD_DEFINITION> = {
       name: 'use-of-provides',
       description: 'Validates usage of @provides directive which is not yet supported',
-      enabled: true,
       nodeKind: Kind.FIELD_DEFINITION,
       validationFunction: (ctx) => this.validateProvidesDirective(ctx),
     };
@@ -146,7 +141,6 @@ export class SDLValidationVisitor {
     const resolverContextRule: LintingRule<Kind.FIELD_DEFINITION> = {
       name: 'use-of-invalid-resolver-context',
       description: 'Validates whether a resolver context can be extracted from a type',
-      enabled: true,
       nodeKind: Kind.FIELD_DEFINITION,
       validationFunction: (ctx) => this.validateInvalidResolverContext(ctx),
     };
@@ -154,7 +148,6 @@ export class SDLValidationVisitor {
     const compositeTypeReflectionRule: LintingRule<Kind.FIELD_DEFINITION> = {
       name: 'use-of-typename',
       description: 'Validates that __typename is present for composite types in @requires selections',
-      enabled: true,
       nodeKind: Kind.FIELD_DEFINITION,
       validationFunction: (ctx) => this.validateCompositeTypeReflection(ctx),
     };
@@ -279,7 +272,7 @@ export class SDLValidationVisitor {
    * @private
    */
   private executeValidationRules(ctx: VisitContext<ASTNode>): void {
-    const applicableRules = this.lintingRules.filter((rule) => rule.nodeKind === ctx.node.kind && rule.enabled);
+    const applicableRules = this.lintingRules.filter((rule) => rule.nodeKind === ctx.node.kind);
 
     for (const rule of applicableRules) {
       // Type assertion is safe here because we've filtered by nodeKind
