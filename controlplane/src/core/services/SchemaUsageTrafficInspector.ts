@@ -181,7 +181,7 @@ export class SchemaUsageTrafficInspector {
   ): Promise<Map<string, InspectorOperationResult[]>> {
     const results: Map<string, InspectorOperationResult[]> = new Map();
 
-    const limit = pLimit(10);
+    const limit = pLimit(5);
 
     const tasks = changes.map((change) =>
       limit(async () => {
