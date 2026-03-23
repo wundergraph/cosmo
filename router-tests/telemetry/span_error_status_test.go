@@ -57,21 +57,20 @@ func TestClientDisconnectionBehavior(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 
 			rootSpan := rootSpan(exporter.GetSpans().Snapshots())
+			require.NotNil(t, rootSpan, "expected root span to be exported for client disconnections")
 
-			if rootSpan != nil {
-				require.NotEqual(t, codes.Error, rootSpan.Status().Code,
-					"root span should not be marked as error for client disconnections")
+			require.NotEqual(t, codes.Error, rootSpan.Status().Code,
+				"root span should not be marked as error for client disconnections")
 
-				hasExceptionEvent := false
-				for _, event := range rootSpan.Events() {
-					if event.Name == "exception" {
-						hasExceptionEvent = true
-						break
-					}
+			hasExceptionEvent := false
+			for _, event := range rootSpan.Events() {
+				if event.Name == "exception" {
+					hasExceptionEvent = true
+					break
 				}
-				require.True(t, hasExceptionEvent,
-					"root span should have an exception event recorded for client disconnections")
 			}
+			require.True(t, hasExceptionEvent,
+				"root span should have an exception event recorded for client disconnections")
 		})
 	})
 
