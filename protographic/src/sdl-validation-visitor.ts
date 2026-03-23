@@ -191,13 +191,14 @@ export class SDLValidationVisitor {
       return;
     }
 
+    const objectType = this.parsedSchema.getType(parentNode.name.value) as GraphQLObjectType;
+    if (!objectType) {
+      this.addError('Invalid @requires directive: parent type not found', fieldSet.loc);
+      return;
+    }
+
     // Get the object type from the field set. This is the parent type name of the current field.
-    const visitor = new SelectionSetValidationVisitor(
-      documentNode,
-      this.parsedSchema.getType(parentNode.name.value) as GraphQLObjectType,
-      this.parsedSchema,
-      false,
-    );
+    const visitor = new SelectionSetValidationVisitor(documentNode, objectType, this.parsedSchema, false);
 
     visitor.visit();
 
