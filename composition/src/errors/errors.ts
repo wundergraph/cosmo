@@ -1760,7 +1760,6 @@ export function duplicateKeyFieldMappingErrorMessage(fieldCoords: string, keyFie
   return `Multiple arguments on field "${fieldCoords}" map to @key field "${keyField}".`;
 }
 
-
 // @cacheInvalidate is for side-effect operations — Query fields should use @queryCache instead
 export function cacheInvalidateOnNonMutationSubscriptionFieldErrorMessage(fieldCoords: string): string {
   return `@cacheInvalidate is only valid on Mutation or Subscription fields, found on "${fieldCoords}".`;
