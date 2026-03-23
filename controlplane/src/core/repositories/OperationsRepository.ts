@@ -1,10 +1,14 @@
+import crypto from 'node:crypto';
 import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { aliasedTable, and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
+import { FastifyBaseLogger } from 'fastify';
 import { DBSchemaChangeType } from '../../db/models.js';
 import * as schema from '../../db/schema.js';
 import { federatedGraphClients, federatedGraphPersistedOperations, users } from '../../db/schema.js';
+import type { BlobStorage } from '../blobstorage/index.js';
+import { createManifestBlobStoragePath } from '../bufservices/persisted-operation/utils.js';
 import {
   ClientDTO,
   PersistedOperationDTO,
@@ -14,6 +18,15 @@ import {
   UpdatedPersistedOperation,
 } from '../../types/index.js';
 import { SchemaCheckRepository } from './SchemaCheckRepository.js';
+
+export const MAX_MANIFEST_OPERATIONS = 3000;
+
+export interface PQLManifest {
+  version: 1;
+  revision: string;
+  generatedAt: string;
+  operations: Record<string, string>; // sha256 hash -> operation body
+}
 
 type ChangeOverride = IgnoreAllOverride & {
   changeType: DBSchemaChangeType;
@@ -530,6 +543,64 @@ export class OperationsRepository {
       .fullJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)))
       .leftJoin(changeCounts, and(eq(change.hash, changeCounts.hash), eq(change.namespaceId, changeCounts.namespaceId)))
       .orderBy(({ name, hash }) => [asc(name), asc(hash)]);
+  }
+
+  public async generateAndUploadManifest(params: {
+    organizationId: string;
+    blobStorage: BlobStorage;
+    logger: FastifyBaseLogger;
+  }): Promise<{ revision: string; operationCount: number }> {
+    const { organizationId, blobStorage, logger } = params;
+
+    const allOperations = await this.getAllPersistedOperationsForGraph();
+
+    if (allOperations.length === 0) {
+      logger.warn({ federatedGraphId: this.federatedGraphId }, 'No persisted operations with content found for manifest generation');
+    }
+
+    const truncated = allOperations.length > MAX_MANIFEST_OPERATIONS;
+    const includedOperations = truncated ? allOperations.slice(0, MAX_MANIFEST_OPERATIONS) : allOperations;
+
+    if (truncated) {
+      logger.warn(
+        { federatedGraphId: this.federatedGraphId, organizationId, total: allOperations.length, included: MAX_MANIFEST_OPERATIONS },
+        `Manifest truncated: found ${allOperations.length} operations, including only the first ${MAX_MANIFEST_OPERATIONS}`,
+      );
+    }
+
+    const operations: Record<string, string> = {};
+    for (const op of includedOperations) {
+      operations[op.hash] = op.operationContent;
+    }
+
+    // Compute revision as SHA256 of the deterministic JSON serialization (sorted keys)
+    const sortedKeys = Object.keys(operations).sort();
+    const sortedOperations: Record<string, string> = {};
+    for (const key of sortedKeys) {
+      sortedOperations[key] = operations[key];
+    }
+    const serialized = JSON.stringify(sortedOperations);
+    const revision = crypto.createHash('sha256').update(serialized).digest('hex');
+
+    const manifest: PQLManifest = {
+      version: 1,
+      revision,
+      generatedAt: new Date().toISOString(),
+      operations: sortedOperations,
+    };
+
+    const path = createManifestBlobStoragePath({ organizationId, fedGraphId: this.federatedGraphId });
+
+    await blobStorage.putObject({
+      key: path,
+      body: Buffer.from(JSON.stringify(manifest), 'utf8'),
+      contentType: 'application/json; charset=utf-8',
+      metadata: { version: revision },
+    });
+
+    logger.debug({ revision, operationCount: allOperations.length, path }, 'PQL manifest generated and uploaded');
+
+    return { revision, operationCount: allOperations.length };
   }
 
   private static createPersistedOperationDTO({

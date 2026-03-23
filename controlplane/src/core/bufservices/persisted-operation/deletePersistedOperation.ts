@@ -10,7 +10,6 @@ import { UnauthorizedError } from '../../errors/errors.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, getLogger, handleError } from '../../util.js';
-import { generateAndUploadManifest } from './generateManifest.js';
 import { createBlobStoragePath } from './utils.js';
 
 export function deletePersistedOperation(
@@ -89,9 +88,7 @@ export function deletePersistedOperation(
     }
 
     try {
-      await generateAndUploadManifest({
-        db: opts.db,
-        federatedGraphId: federatedGraph.id,
+      await operationsRepo.generateAndUploadManifest({
         organizationId: authContext.organizationId,
         blobStorage: opts.blobStorage,
         logger,
