@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { SetupTest } from '../test-util.js';
 import { afterAllSetup, beforeAllSetup, genID } from '../../src/core/test-util.js';
@@ -15,8 +15,9 @@ describe('Create organization', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should link Keycloak group when a new organization is created', async () => {
+  test('Should link Keycloak group when a new organization is created', async (testContext) => {
     const { client, server, keycloakClient, realm } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const orgName = genID('org');
     const createOrganizationResponse = await client.createOrganization({
@@ -36,12 +37,12 @@ describe('Create organization', () => {
     const kcGroup = await keycloakClient.client.groups.findOne({ realm, id: org!.kcGroupId! });
     expect(kcGroup).toBeDefined();
     expect(kcGroup?.subGroupCount).toBe(3);
-
-    await server.close();
   });
 
-  test('Should fail when provided a name with only spaces', async () => {
+  test('Should fail when provided a name with only spaces', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const createOrganizationResponse = await client.createOrganization({
       name: '             ',
       slug: genID('org'),
@@ -50,12 +51,12 @@ describe('Create organization', () => {
 
     expect(createOrganizationResponse.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
     expect(createOrganizationResponse.response?.details).toBe('Invalid name. It must be of 3-32 characters in length.');
-
-    await server.close();
   });
 
-  test('Should fail when provided a name that is too short', async () => {
+  test('Should fail when provided a name that is too short', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const createOrganizationResponse = await client.createOrganization({
       name: 'aa',
       slug: genID('org'),
@@ -64,12 +65,12 @@ describe('Create organization', () => {
 
     expect(createOrganizationResponse.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
     expect(createOrganizationResponse.response?.details).toBe('Invalid name. It must be of 3-32 characters in length.');
-
-    await server.close();
   });
 
-  test('Should fail when provided a name that is too long', async () => {
+  test('Should fail when provided a name that is too long', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const createOrganizationResponse = await client.createOrganization({
       name: 'a'.repeat(50),
       slug: genID('org'),
@@ -78,12 +79,12 @@ describe('Create organization', () => {
 
     expect(createOrganizationResponse.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
     expect(createOrganizationResponse.response?.details).toBe('Invalid name. It must be of 3-32 characters in length.');
-
-    await server.close();
   });
 
-  test('Should fail when provided a slug with only spaces', async () => {
+  test('Should fail when provided a slug with only spaces', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const createOrganizationResponse = await client.createOrganization({
       name: genID('org'),
       slug: '          ',
@@ -94,14 +95,14 @@ describe('Create organization', () => {
     expect(createOrganizationResponse.response?.details).toBe(
       'Slug should start and end with an alphanumeric character. Spaces and special characters other that hyphen not allowed.',
     );
-
-    await server.close();
   });
 
   test.each(['login', 'create', 'signup'])(
     'Should fail when creating an organization with the reserved slug "%s"',
     async (slug) => {
       const { client, server } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
       const createOrganizationResponse = await client.createOrganization({
         name: genID('org'),
         slug,
@@ -110,13 +111,13 @@ describe('Create organization', () => {
 
       expect(createOrganizationResponse.response?.code).toBe(EnumStatusCode.ERR_BAD_REQUEST);
       expect(createOrganizationResponse.response?.details).toBe('This slug is a reserved keyword.');
-
-      await server.close();
     },
   );
 
-  test('Should fail when provided a slug that is too short', async () => {
+  test('Should fail when provided a slug that is too short', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const createOrganizationResponse = await client.createOrganization({
       name: genID('org'),
       slug: 'aa',
@@ -127,12 +128,12 @@ describe('Create organization', () => {
     expect(createOrganizationResponse.response?.details).toBe(
       'Invalid slug. It must be of 3-32 characters in length, start and end with an alphanumeric character and may contain hyphens in between.',
     );
-
-    await server.close();
   });
 
-  test('Should fail when provided a slug that is too long', async () => {
+  test('Should fail when provided a slug that is too long', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const createOrganizationResponse = await client.createOrganization({
       name: genID('org'),
       slug: 'a'.repeat(50),
@@ -143,7 +144,5 @@ describe('Create organization', () => {
     expect(createOrganizationResponse.response?.details).toBe(
       'Invalid slug. It must be of 3-32 characters in length, start and end with an alphanumeric character and may contain hyphens in between.',
     );
-
-    await server.close();
   });
 });

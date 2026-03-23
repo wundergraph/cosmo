@@ -20,7 +20,7 @@ describe('Subscription filter proto generation tests', () => {
                   in: new SubscriptionFieldCondition({
                     fieldPath: ['name'],
                     json: `["Jens","Stefan"]`,
-                  })
+                  }),
                 }),
                 new SubscriptionFilterCondition({
                   in: new SubscriptionFieldCondition({

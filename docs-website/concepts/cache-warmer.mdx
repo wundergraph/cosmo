@@ -84,19 +84,16 @@ Users can manually recompute slow queries from the Cosmo Studio. Currently, reco
 
 ## In-Memory Fallback Cache Warming
 
-The in-memory fallback cache warming feature preserves the planner cache across hot config reloads and schema changes, allowing it to be rewarmed automatically and reducing latency spikes during restarts.
+The in-memory fallback cache warming feature uses the **[slow plan cache](#slow-plan-cache)** to preserve query plans across hot config reloads and schema changes, reducing latency spikes during restarts.
 
 ### How It Works
 
-After the router has started, the router can be reloaded for two reasons: either a config change or a schema change. Due to the structure of the router internals, we have two slight variations on how we handle the in-memory switchover cache warming:
+The in-memory fallback relies on the slow plan cache — a secondary, bounded cache that tracks queries whose planning time exceeds a configurable threshold (`slow_plan_cache_threshold`, default 100ms). During normal operation, this cache is populated in two ways:
 
-1. **Before Reload**: In case of config changes (from hot config reloading), the router extracts all queries from the current plan cache, preserving the queries that were in the planner cache before the cache is cleared for reloading.
+1. **On first plan**: When a query is planned and its planning duration exceeds the threshold, the plan is stored in both the main cache and the slow plan cache.
+2. **On eviction**: If the main TinyLFU cache evicts a plan that is in the slow plan cache, the query plan won't be recomputed and would simply be served from the slow plan cache.
 
-2. **During Reload**: The router with the updated config receives the queries from the previous plan cache that existed before reloading, and uses them to warm up its current plan cache before serving traffic.
-
-3. **Result**: The updated router reloads with a fully warmed cache, eliminating latency spikes that would normally occur during cold starts.
-
-**Important Limitation:** When using the in-memory fallback, the first start will still experience a cold start, as there is no prior populated planner cache. *Only subsequent reloads* will benefit from the in-memory fallback. This is why it works best when combined with CDN cache warming (the default configuration).
+When the router reloads, the slow plan cache contents are used to rewarm the cache.
 
 ### When to Use the In-Memory Fallback
 
@@ -106,7 +103,7 @@ When the in-memory fallback is used with the Cosmo Cloud CDN cache warmer, the f
 * Getting the list of operations from the CDN fails
 * The request to the CDN succeeds but does not return a list of operations (either no operations are cached or the manifest has not been created yet)
 
-In these cases, the router will use the fallback and load the list of operations from the in-memory fallback (if any operations exist).
+In these cases, the router will use the fallback and load the list of operations from the slow plan cache (if any operations exist).
 
 <Note>
     The in-memory fallback cannot be used as a fallback for sources other than the Cosmo Cloud CDN cache warmer.
@@ -115,13 +112,11 @@ In these cases, the router will use the fallback and load the list of operations
 ### Key Characteristics of In-Memory Fallback
 
 **Advantages:**
-- **Comprehensive coverage**: After the initial start, all queries that have been executed are preserved and warmed on reload, including both slow and fast queries. This provides broader coverage than CDN cache warming.
-- **Eliminates reload spikes**: You won't experience query planning spikes after configuration or schema reloads, as the cache persists across these changes.
-- **Built-in feature**: No enterprise plan required; it's available to all users and enabled by default.
+- **Coverage of expensive queries**: By default, queries with planning times above the threshold (100ms) are preserved and warmed on reload, protecting slow-to-plan queries from cold-start latency. Users can lower the threshold to any positive duration (e.g., `slow_plan_cache_threshold: 100ms`) to capture all queries. Users can also set the duration to 1 nanosecond (`slow_plan_cache_threshold: 1ns`), this would ensure that all queries are cached in the fallback, and thus would be available to rewarm the cache upon reloads.
+- **Eliminates reload spikes for expensive queries**: You won't experience query planning spikes for queries above the threshold after configuration or schema reloads. Users can tune the threshold to cover more or fewer queries.
 
 **Tradeoffs:**
 - **Cold start on first start**: The first router start will experience normal cache warming latency, as there's no existing cache to preserve.
-- **Cache can accumulate stale entries**: Without a full restart, the planner cache can eventually fill up with query plans for outdated or rarely-used queries. However, the cache uses a LFU (Least Frequently Used) eviction policy, ensuring that older, less-used items are removed when the cache reaches capacity.
 
 ### Configuration
 
@@ -157,3 +152,57 @@ cache_warmup:
     cdn:
       enabled: false
 ```
+
+## Slow Plan Cache
+
+When in-memory fallback is enabled, the cache the in memory fallback uses is the **Slow Plan Cache**. This is different from the main query plan cache which uses a TinyLFU (Least Frequently Used) eviction policy, which is optimized for frequently accessed items. However, this can cause problems for queries that are slow to plan but infrequently accessed — the LFU policy may evict them in favor of cheaper, more frequent queries. When an expensive query is evicted and re-requested, the router must re-plan it from scratch, causing a latency spike.
+
+The slow plan cache is a secondary cache that protects these slow-to-plan queries from eviction. It is automatically enabled when `in_memory_fallback` is set to `true`.
+
+### How It Works
+
+1. When a query is planned for the first time, its planning duration is measured.
+2. If the planning duration exceeds the configured threshold (`slow_plan_cache_threshold`, default 100ms), the query plan is stored in both the main cache and the slow plan cache.
+3. If the main cache later evicts this plan (due to LFU pressure from more frequent queries), the OnEvict hook pushes it to the slow plan cache (if it meets the threshold).
+4. On subsequent requests, if the plan is not found in the main cache, the router checks the slow plan cache before re-planning. If found, the plan is served immediately and re-inserted into the main cache.
+5. During config reloads, slow plan cache entries are used as the warmup source, ensuring slow queries survive cache rebuilds.
+
+### Cache Size and Eviction
+
+The slow plan cache has a configurable maximum size (`slow_plan_cache_size`, default 300). When the cache is full and a new expensive query needs to be added:
+
+- The new query's planning duration is compared to the shortest duration in the cache.
+- If the new query is more expensive (took longer to plan), it replaces the least expensive entry.
+- If the new query is cheaper or equal, it is not added. This ensures the cache always contains the most expensive queries.
+
+<Note>
+Whenever an existing item in the cache is attempted to be added to the cache while full, we will not remove the entry and will only update it's plan time duration if it was higher than the previous duration it took to plan. This way we only consider the worst case planning duration.
+</Note>
+
+### Configuration
+
+The slow plan cache is configured through the engine configuration:
+
+```yaml
+engine:
+  slow_plan_cache_size: 300  # Maximum entries (default: 300)
+  slow_plan_cache_threshold: 100ms    # Minimum planning time to qualify (default: 100ms)
+
+cache_warmup:
+  enabled: true
+  in_memory_fallback: true  # Required to enable the slow plan cache
+```
+
+For the full list of engine configuration options, see [Router Engine Configuration](/router/configuration#router-engine-configuration).
+
+### Tuning
+
+You can tune the threshold and cache size to control warmup coverage:
+
+- **Lower threshold → more queries protected**: Setting `slow_plan_cache_threshold: 1ns` captures all queries regardless of planning time. This gives you full "carry forward everything" behaviour similar to preserving the entire plan cache.
+- **Higher cache size → more entries held**: Increase `slow_plan_cache_size` to hold more entries. For full coverage, set it to match or exceed `execution_plan_cache_size`.
+- **Tradeoff**: Lower thresholds and larger cache sizes increase memory usage but provide broader warmup coverage.
+
+### Observability
+
+Slow plan cache hits are counted as regular plan cache hits — the `wg.engine.plan_cache_hit` attribute is set to `true` for hits from either the main cache or the slow plan cache. There is no separate observability signal for slow plan cache hits.

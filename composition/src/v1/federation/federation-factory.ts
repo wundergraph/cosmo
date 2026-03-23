@@ -2901,6 +2901,7 @@ export class FederationFactory {
     const subgraphConfigBySubgraphName = new Map<SubgraphName, SubgraphConfig>();
     for (const {
       configurationDataByTypeName,
+      costs,
       directiveDefinitionByName,
       isVersionTwo,
       name,
@@ -2909,11 +2910,12 @@ export class FederationFactory {
       schemaNode,
     } of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(name, {
-        configurationDataByTypeName: configurationDataByTypeName,
-        directiveDefinitionByName: directiveDefinitionByName,
-        isVersionTwo: isVersionTwo,
-        parentDefinitionDataByTypeName: parentDefinitionDataByTypeName,
-        schema: schema,
+        configurationDataByTypeName,
+        costs,
+        directiveDefinitionByName,
+        isVersionTwo,
+        parentDefinitionDataByTypeName,
+        schema,
         schemaNode,
       });
     }
@@ -3201,6 +3203,7 @@ export class FederationFactory {
     const subgraphConfigBySubgraphName = new Map<SubgraphName, SubgraphConfig>();
     for (const {
       configurationDataByTypeName,
+      costs,
       directiveDefinitionByName,
       isVersionTwo,
       name,
@@ -3210,6 +3213,7 @@ export class FederationFactory {
     } of this.internalSubgraphBySubgraphName.values()) {
       subgraphConfigBySubgraphName.set(name, {
         configurationDataByTypeName,
+        costs,
         directiveDefinitionByName,
         isVersionTwo,
         parentDefinitionDataByTypeName,

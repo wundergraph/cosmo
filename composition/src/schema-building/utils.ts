@@ -124,6 +124,17 @@ export function isTypeRequired(node: TypeNode): boolean {
   return node.kind === Kind.NON_NULL_TYPE;
 }
 
+export function isTypeNodeListType(node: TypeNode): boolean {
+  switch (node.kind) {
+    case Kind.LIST_TYPE:
+      return true;
+    case Kind.NON_NULL_TYPE:
+      return isTypeNodeListType(node.type);
+    default:
+      return false;
+  }
+}
+
 // TODO replace naïve comparison
 export function areDefaultValuesCompatible(typeNode: TypeNode, incomingDefaultValue: ConstValueNode): boolean {
   switch (typeNode.kind) {

@@ -1680,3 +1680,154 @@ access_logs:
 		}
 	})
 }
+
+func TestCostControlConfig(t *testing.T) {
+	t.Parallel()
+
+	t.Run("valid config with estimated_list_size when enabled", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("estimated_list_size is required when enabled", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/security/cost_control'")
+		require.ErrorContains(t, err, "missing property 'estimated_list_size'")
+	})
+
+	t.Run("estimated_list_size not required when disabled", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: false
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("estimated_list_size must be positive", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 0
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/security/cost_control/estimated_list_size'")
+		require.ErrorContains(t, err, "minimum")
+	})
+
+	t.Run("valid mode values are accepted", func(t *testing.T) {
+		t.Parallel()
+
+		for _, mode := range []string{"measure", "enforce"} {
+			f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+    mode: `+mode+`
+`)
+			_, err := LoadConfig([]string{f})
+			require.NoError(t, err, "mode %q should be valid", mode)
+		}
+	})
+
+	t.Run("invalid mode is rejected", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+    mode: invalid
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/security/cost_control/mode'")
+		require.ErrorContains(t, err, "value must be one of")
+	})
+
+	t.Run("max_estimated_limit must be positive when mode is enforce", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+    mode: enforce
+    max_estimated_limit: 0
+`)
+		_, err := LoadConfig([]string{f})
+		require.ErrorContains(t, err, "at '/security/cost_control/max_estimated_limit'")
+		require.ErrorContains(t, err, "minimum")
+	})
+
+	t.Run("max_estimated_limit zero is allowed when mode is measure", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+    mode: measure
+    max_estimated_limit: 0
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("valid enforce config", func(t *testing.T) {
+		t.Parallel()
+
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+security:
+  cost_control:
+    enabled: true
+    estimated_list_size: 10
+    mode: enforce
+    max_estimated_limit: 100
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+}

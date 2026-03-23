@@ -62,7 +62,7 @@ export class Authentication implements Authenticator {
       const organization = await this.orgRepo.bySlug(user.organizationSlug);
 
       if (!organization) {
-        throw new Error('Organization not found');
+        throw new AuthenticationError(EnumStatusCode.ERROR_NOT_AUTHENTICATED, 'Organization not found');
       }
 
       const cacheKey = `${user.userId}:${organization.id}`;

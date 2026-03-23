@@ -26,6 +26,10 @@
     "codeblocks": "system",
     "eyebrows": "breadcrumbs"
   },
+    "banner": {
+      "content": "Help map how teams scale Federated GraphQL in the State of Federation 2026 Survey. We donate $30 to UNICEF per response → [Take the survey](https://8bxwlo3ot55.typeform.com/to/zIJKRQUe).",
+      "dismissible": false 
+    },
   "contextual": {
     "options": ["copy", "view", "chatgpt", "claude"]
   },
@@ -220,7 +224,8 @@
                   "router/security",
                   "router/security/tls",
                   "router/security/config-validation-and-signing",
-                  "router/security/hardening-guide"
+                  "router/security/hardening-guide",
+                  "router/security/cost-control"
                 ]
               },
               {
