@@ -1,6 +1,6 @@
 # Entity Caching Configuration
 
-This document defines the operational configuration for entity caching in the cosmo router. For directive definitions, see [ENTITY_CACHING_DIRECTIVES.md](./ENTITY_CACHING_DIRECTIVES.md).
+This document defines the operational configuration for entity caching in the cosmo router. For directive definitions, see [directives.md](./directives.md).
 
 ---
 
