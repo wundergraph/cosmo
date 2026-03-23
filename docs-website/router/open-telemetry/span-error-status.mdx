@@ -11,13 +11,39 @@ The router uses OpenTelemetry spans to trace the full lifecycle of a GraphQL req
 
 Not every unsuccessful response marks a span as `ERROR`. The router distinguishes between:
 
-- **Server-side errors**: Failures caused by the router or its subgraphs (these mark spans as ERROR)
 - **Client-side events**: Events like client disconnections that are not server failures (these do NOT mark spans as ERROR)
-- **GraphQL spec-compliant errors**: Validation or parsing errors returned in the response body with HTTP 200 (these do NOT mark spans as ERROR at the router level)
+- **Server-side errors**: All other failures — caused by the router, its subgraphs, or invalid client input like malformed queries (these mark spans as ERROR)
+
+## When Spans Are NOT Marked as ERROR
+
+### Client Disconnection / Context Cancellation
+
+When a request's context is canceled (`context.Canceled`), the router does **not** mark the span as `ERROR` and does **not** increment error metrics. This typically occurs when:
+
+- A client disconnects during request processing (the most common cause)
+- The router is shutting down gracefully and cancels in-flight requests
+
+In both cases, the work was **interrupted**, not **failed** — marking it as an error would be misleading:
+
+- It would inflate error rates and trigger false alerts
+- It does not indicate a problem with the router or subgraphs
+- The router logs these events at `DEBUG` level, not `ERROR`
+
+The error is still recorded as a span **event** (via `RecordError`) so it remains visible in traces for debugging, but the span status stays `UNSET`.
+
+The response message is set to `"Client disconnected"` with HTTP status `408 Request Timeout` for observability, but this does not affect span status or error metrics.
+
+<Info>
+  This is distinct from **server timeouts** (`context.DeadlineExceeded`), which indicate that a configured deadline was exceeded. Timeouts ARE tracked as errors because they point to a subgraph or configuration issue that should be investigated.
+</Info>
+
+### Successful Requests
+
+Requests that complete successfully (HTTP 2xx, no subgraph errors) leave the span status as `UNSET` (the OpenTelemetry default for successful operations).
 
 ## When Spans Are Marked as ERROR
 
-The following scenarios set the span status to `ERROR` and record the error on both the span and error metrics:
+Any error not listed above is treated as a server-side error. The span status is set to `ERROR`, the error is recorded on the span, and error metrics are incremented. This includes but is not limited to:
 
 ### Authentication Failure
 
@@ -64,35 +90,6 @@ When a request exceeds the configured rate limit, the span is marked as `ERROR`.
 
 When field-level authorization fails during resolution, the span is marked as `ERROR`.
 
-## When Spans Are NOT Marked as ERROR
-
-### Client Disconnection / Context Cancellation
-
-When a request's context is canceled (`context.Canceled`), the router does **not** mark the span as `ERROR` and does **not** increment error metrics. This typically occurs when:
-
-- A client disconnects during request processing (the most common cause)
-- The router is shutting down gracefully and cancels in-flight requests
-
-In both cases, the work was **interrupted**, not **failed** — marking it as an error would be misleading:
-
-- It would inflate error rates and trigger false alerts
-- It does not indicate a problem with the router or subgraphs
-- The router logs these events at `DEBUG` level, not `ERROR`
-
-The response message is set to `"Client disconnected"` with HTTP status `408 Request Timeout` for observability, but this does not affect span status or error metrics.
-
-<Info>
-  This is distinct from **server timeouts** (`context.DeadlineExceeded`), which indicate that a configured deadline was exceeded. Timeouts ARE tracked as errors because they point to a subgraph or configuration issue that should be investigated.
-</Info>
-
-### GraphQL Validation and Parsing Errors (HTTP 200)
-
-Per the [GraphQL over HTTP specification](https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#response), validation and parsing errors are returned as part of the response body with HTTP `200`. These are considered spec-compliant responses and do not mark the root router span as `ERROR`.
-
-### Successful Requests
-
-Requests that complete successfully (HTTP 2xx, no subgraph errors) leave the span status as `UNSET` (the OpenTelemetry default for successful operations).
-
 ## Error Metrics Relationship
 
 The router tracks errors through two complementary mechanisms:
@@ -116,6 +113,8 @@ Both metrics share the same error classification: a request is counted as an err
 
 | Scenario | Span Status | Error Metric | `wg.request.error` | HTTP Status | Log Level |
 |---|---|---|---|---|---|
+| Client disconnection | UNSET | No | not set | 408 | DEBUG |
+| Successful request | UNSET | No | not set | 200 | INFO |
 | Authentication failure | ERROR | Yes | `true` | 401 | ERROR |
 | Subgraph fetch error | ERROR | Yes | `true` | varies | ERROR |
 | Persisted operation error | ERROR | Yes | `true` | 200 | ERROR |
@@ -124,9 +123,6 @@ Both metrics share the same error classification: a request is counted as an err
 | Subscription failure | ERROR | Yes | `true` | 500 | ERROR |
 | Rate limit exceeded | ERROR | Yes | `true` | 429 | ERROR |
 | Batch request error | ERROR | Yes | `true` | 200 | ERROR |
-| Client disconnection | UNSET | No | not set | 408 | DEBUG |
-| GraphQL validation error (200) | UNSET | No | not set | 200 | INFO |
-| Successful request | UNSET | No | not set | 200 | INFO |
 
 ## Subgraph-Level Error Tracking
 
