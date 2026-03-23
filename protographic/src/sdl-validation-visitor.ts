@@ -13,8 +13,13 @@ import {
   NamedTypeNode,
   GraphQLID,
   ConstArgumentNode,
+  GraphQLObjectType,
+  GraphQLSchema,
+  buildASTSchema,
 } from 'graphql';
-import { CONNECT_FIELD_RESOLVER, CONTEXT } from './string-constants.js';
+import { safeParse } from '@wundergraph/composition';
+import { CONNECT_FIELD_RESOLVER, CONTEXT, FIELDS, REQUIRES_DIRECTIVE_NAME } from './string-constants.js';
+import { SelectionSetValidationVisitor } from './selection-set-validation-visitor.js';
 
 /**
  * Type mapping from Kind enum values to their corresponding AST node types
@@ -86,20 +91,26 @@ interface MessageContext {
  */
 export class SDLValidationVisitor {
   private readonly schema: string;
+  private readonly fix: boolean;
   private readonly validationResult: ValidationResult;
+  private readonly fixes: Map<string, string> = new Map();
   private lintingRules: LintingRule<any>[] = [];
   private visitor: ASTVisitor;
+  private parsedSchema: GraphQLSchema;
 
   /**
    * Creates a new SDL validation visitor for the given GraphQL schema
    * @param schema - The GraphQL schema string to validate
    */
-  constructor(schema: string) {
+  constructor(schema: string, options?: { fix?: boolean }) {
     this.schema = schema;
+    this.fix = options?.fix ?? false;
     this.validationResult = {
       errors: [],
       warnings: [],
     };
+
+    this.parsedSchema = buildASTSchema(parse(schema), { assumeValid: true, assumeValidSDL: true });
 
     this.initializeLintingRules();
     this.visitor = this.createASTVisitor();
@@ -143,7 +154,71 @@ export class SDLValidationVisitor {
       validationFunction: (ctx) => this.validateInvalidResolverContext(ctx),
     };
 
-    this.lintingRules = [objectTypeRule, listTypeRule, providesRule, resolverContextRule];
+    const compositeTypeReflectionRule: LintingRule<Kind.FIELD_DEFINITION> = {
+      name: 'use-of-typename',
+      description: 'Validates usage of __typename field which is not supported',
+      enabled: true,
+      nodeKind: Kind.FIELD_DEFINITION,
+      validationFunction: (ctx) => this.validateCompositeTypeReflection(ctx),
+    };
+
+    this.lintingRules = [objectTypeRule, listTypeRule, providesRule, resolverContextRule, compositeTypeReflectionRule];
+  }
+
+  private validateCompositeTypeReflection(ctx: VisitContext<FieldDefinitionNode>): void {
+    const directive = ctx.node.directives?.find((directive) => directive.name.value === REQUIRES_DIRECTIVE_NAME);
+    if (!directive) {
+      return;
+    }
+
+    const fieldSet = directive.arguments?.find((arg) => arg.name.value === FIELDS);
+    if (!fieldSet) {
+      return;
+    }
+
+    if (fieldSet.value.kind !== Kind.STRING) {
+      this.addError('Invalid @requires directive: fields argument must be a string', fieldSet.loc);
+      return;
+    }
+
+    const fieldSetValue = fieldSet.value.value;
+    const { error, documentNode } = safeParse('{' + fieldSetValue + '}');
+    if (error || !documentNode) {
+      this.addError('Invalid @requires directive: fields argument must be a valid GraphQL selection set', fieldSet.loc);
+      return;
+    }
+
+    const parentNode = ctx.ancestors.at(-1);
+    if (!parentNode || !this.isASTObjectTypeNode(parentNode)) {
+      this.addError('Invalid @requires directive: fields argument must be a valid GraphQL selection set', fieldSet.loc);
+      return;
+    }
+
+    // Get the object type from the field set. This is the parent type name of the current field.
+    const visitor = new SelectionSetValidationVisitor(
+      documentNode,
+      this.parsedSchema.getType(parentNode.name.value) as GraphQLObjectType,
+      this.parsedSchema,
+      this.fix,
+    );
+
+    visitor.visit();
+
+    const { errors, warnings } = visitor.getValidationResult();
+    for (const error of errors) {
+      this.addError(error, fieldSet.loc);
+    }
+
+    for (const warning of warnings) {
+      this.addWarning(warning, fieldSet.loc);
+    }
+
+    if (this.fix && visitor.hasAppliedFixes()) {
+      const fixedSelection = visitor.getFixedSelection();
+      // The printed document wraps the field set in `{ ... }`, strip the outer braces.
+      const stripped = fixedSelection.replace(/^{\n?/, '').replace(/\n?}$/, '').trim();
+      this.fixes.set(fieldSetValue, stripped);
+    }
   }
 
   /**
@@ -599,6 +674,14 @@ export class SDLValidationVisitor {
    * Check if the validation found any critical errors
    * @returns true if errors were found, false otherwise
    */
+  /**
+   * Returns the map of original field set values to their fixed versions.
+   * Only populated when the visitor is created with `fix: true`.
+   */
+  public getFixedSelections(): ReadonlyMap<string, string> {
+    return this.fixes;
+  }
+
   public hasErrors(): boolean {
     return this.validationResult.errors.length > 0;
   }

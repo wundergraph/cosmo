@@ -1,0 +1,224 @@
+import { describe, expect, test } from 'vitest';
+import { SDLValidationVisitor } from '../../src/sdl-validation-visitor.js';
+
+function buildSdl(requiresFields: string): string {
+  return `
+        type Query {
+          user(id: ID!): User!
+        }
+
+        type User @key(fields: "id") {
+          id: ID!
+          pet: Animal! @external
+          details: Details! @requires(fields: "${requiresFields}")
+        }
+
+        interface Animal {
+          name: String!
+        }
+
+        type Cat implements Animal {
+          name: String!
+          catBreed: String!
+        }
+
+        type Dog implements Animal {
+          name: String!
+          dogBreed: String!
+        }
+
+        type Details {
+          firstName: String!
+          lastName: String!
+        }
+      `;
+}
+
+describe('Validation of @requires directive', () => {
+  test('should validate a schema with a required field', () => {
+    const sdl = `
+      type Query {
+        user(id: ID!): User!
+      }
+
+      type User @key(fields: "id") {
+        id: ID!
+        name: String! @external
+        age: Int! @requires(fields: "name")
+      }
+    `;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
+  });
+  test('should return an error if the selection set does not contain __typename for an inline fragment', () => {
+    const sdl = `
+      type Query {
+        user(id: ID!): User!
+      }
+
+      type User @key(fields: "id") {
+        id: ID!
+        pet: Animal! @external
+        details: Details! @requires(fields: "pet { ... on Cat { name catBreed } ... on Dog { name dogBreed } }")
+      }
+
+      interface Animal {
+        name: String!
+      }
+
+      type Cat implements Animal {
+        name: String!
+        catBreed: String!
+      }
+
+      type Dog implements Animal {
+        name: String!
+        dogBreed: String!
+      }
+
+      type Details {
+        firstName: String!
+        lastName: String!
+      }
+    `;
+
+    const visitor = new SDLValidationVisitor(sdl);
+    const result = visitor.visit();
+
+    expect(result.errors).toHaveLength(2);
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  describe('__typename validation for inline fragments', () => {
+    test('__typename in parent field, missing in all fragments — no errors', () => {
+      const sdl = buildSdl('pet { __typename ... on Cat { name } ... on Dog { name } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    test('__typename in each fragment, missing in parent — no errors', () => {
+      const sdl = buildSdl('pet { ... on Cat { __typename name } ... on Dog { __typename name } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    test('__typename in both parent and fragments — no errors', () => {
+      const sdl = buildSdl('pet { __typename ... on Cat { __typename name } ... on Dog { __typename name } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    test('__typename missing everywhere — 2 errors', () => {
+      const sdl = buildSdl('pet { ... on Cat { name } ... on Dog { name } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(2);
+    });
+
+    test('__typename in parent, one fragment also has it — no errors', () => {
+      const sdl = buildSdl('pet { __typename ... on Cat { __typename name } ... on Dog { name } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    test('__typename only in one fragment, no parent — 1 error for Dog', () => {
+      const sdl = buildSdl('pet { ... on Cat { __typename name } ... on Dog { name } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]).toContain('Dog');
+    });
+
+    test('single fragment missing __typename, no parent — 1 error', () => {
+      const sdl = buildSdl('pet { ... on Cat { name } }');
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(1);
+    });
+  });
+
+  describe('nested inline fragment __typename validation', () => {
+    const nestedSdl = `
+      type Query {
+        user(id: ID!): User!
+      }
+
+      type User @key(fields: "id") {
+        id: ID!
+        pet: Animal! @external
+        details: Details! @requires(fields: "PLACEHOLDER")
+      }
+
+      interface Animal {
+        name: String!
+        friend: Animal!
+      }
+
+      type Cat implements Animal {
+        name: String!
+        friend: Animal!
+        catBreed: String!
+      }
+
+      type Dog implements Animal {
+        name: String!
+        friend: Animal!
+        dogBreed: String!
+      }
+
+      type Details {
+        firstName: String!
+        lastName: String!
+      }
+    `;
+
+    function buildNestedSdl(requiresFields: string): string {
+      return nestedSdl.replace('PLACEHOLDER', requiresFields);
+    }
+
+    test('nested fragments with __typename at both levels — no errors', () => {
+      const sdl = buildNestedSdl(
+        'pet { __typename ... on Cat { name friend { __typename ... on Dog { name } ... on Cat { name } } } ... on Dog { name } }',
+      );
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(0);
+    });
+
+    test('nested fragments missing __typename at inner level — errors for inner fragments', () => {
+      const sdl = buildNestedSdl(
+        'pet { __typename ... on Cat { name friend { ... on Dog { name } ... on Cat { name } } } ... on Dog { name } }',
+      );
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(2);
+    });
+
+    test('nested fragments with __typename in inner parent field — no errors', () => {
+      const sdl = buildNestedSdl(
+        'pet { __typename ... on Cat { name friend { __typename ... on Dog { name } } } ... on Dog { name } }',
+      );
+      const visitor = new SDLValidationVisitor(sdl);
+      const result = visitor.visit();
+
+      expect(result.errors).toHaveLength(0);
+    });
+  });
+});
