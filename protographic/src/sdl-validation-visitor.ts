@@ -190,8 +190,7 @@ export class SDLValidationVisitor {
       return;
     }
 
-    // Get the object type from the field set. This is the parent type name of the current field.
-    const visitor = new SelectionSetValidationVisitor(documentNode, objectType, this.parsedSchema, false);
+    const visitor = new SelectionSetValidationVisitor(documentNode, objectType, this.parsedSchema);
 
     visitor.visit();
 

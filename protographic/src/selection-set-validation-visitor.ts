@@ -34,8 +34,6 @@ export class SelectionSetValidationVisitor {
 
   private readonly schema: GraphQLSchema;
   private readonly objectType: GraphQLObjectType;
-  private readonly fix: boolean = false;
-
   private validationResult: ValidationResult = {
     errors: [],
     warnings: [],
@@ -47,13 +45,11 @@ export class SelectionSetValidationVisitor {
    * @param operationDocument - The parsed GraphQL document representing the field set
    * @param objectType - The root GraphQL object type to validate against
    * @param schema - The full GraphQL schema, used for normalization of abstract type selections
-   * @param fix - When true, missing `__typename` fields are added automatically instead of reporting errors
    */
-  constructor(operationDocument: DocumentNode, objectType: GraphQLObjectType, schema: GraphQLSchema, fix: boolean) {
+  constructor(operationDocument: DocumentNode, objectType: GraphQLObjectType, schema: GraphQLSchema) {
     this.operationDocument = operationDocument;
     this.objectType = objectType;
     this.schema = schema;
-    this.fix = fix;
 
     this.normalizeSelectionSet();
   }
@@ -132,27 +128,12 @@ export class SelectionSetValidationVisitor {
       !this.selectionSetContainsTypename(ctx.node) &&
       !this.selectionSetContainsTypename(this.currentFieldSelectionSet)
     ) {
-      if (!this.fix) {
-        const fieldPath = this.getFieldPath(ctx.ancestors);
-        const pathSuffix = fieldPath ? ` in "${fieldPath}"` : '';
-        this.validationResult.errors.push(
-          `Selection set must contain __typename for inline fragment ${ctx.parent.typeCondition?.name.value}${pathSuffix}`,
-        );
-        return;
-      }
-
-      this.ensureTypenameInSelection(ctx.node);
+      const fieldPath = this.getFieldPath(ctx.ancestors);
+      const pathSuffix = fieldPath ? ` in "${fieldPath}"` : '';
+      this.validationResult.errors.push(
+        `Selection set must contain __typename for inline fragment ${ctx.parent.typeCondition?.name.value}${pathSuffix}`,
+      );
     }
-  }
-
-  private ensureTypenameInSelection(selectionSet: SelectionSetNode): void {
-    selectionSet.selections = [
-      {
-        kind: Kind.FIELD,
-        name: { kind: Kind.NAME, value: '__typename' },
-      },
-      ...selectionSet.selections,
-    ];
   }
 
   private selectionSetContainsTypename(selectionSet: SelectionSetNode | undefined): boolean {
