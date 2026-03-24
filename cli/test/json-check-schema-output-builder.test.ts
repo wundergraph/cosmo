@@ -297,7 +297,19 @@ describe('JsonCheckSchemaOutputBuilder', () => {
       const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
       b.setStatus(true);
       await b.write();
-      expect(spy).toHaveBeenCalledWith(b.build());
+      expect(spy).toHaveBeenCalledWith('{"status":"success","code":0,"rowLimit":10}');
+    });
+
+    it('serializes LintIssue instances to plain objects in JSON output', async () => {
+      const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
+      const b = new JsonCheckSchemaOutputBuilder(EnumStatusCode.OK, 10);
+      b.addLintErrors([new LintIssue({ message: 'lint error', lintRuleType: 'RULE_A' })]);
+      b.addLintWarnings([new LintIssue({ message: 'lint warn', lintRuleType: 'RULE_B' })]);
+      await b.write();
+
+      expect(spy).toHaveBeenCalledWith(
+        '{"status":"error","code":0,"rowLimit":10,"lint":{"errors":[{"lintRuleType":"RULE_A","severity":"warn","message":"lint error"}],"warnings":[{"lintRuleType":"RULE_B","severity":"warn","message":"lint warn"}]}}',
+      );
     });
 
     it('writes JSON to file when outFile provided', async () => {
