@@ -1831,3 +1831,172 @@ security:
 		require.NoError(t, err)
 	})
 }
+
+func TestMemoryProviderOnlyForEntityCaching(t *testing.T) {
+	t.Parallel()
+
+	t.Run("memory provider allowed for entity caching", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+entity_caching:
+  enabled: true
+  l2:
+    storage:
+      provider_id: "in-memory"
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("memory provider rejected for persisted_operations", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+persisted_operations:
+  storage:
+    provider_id: "in-memory"
+    object_prefix: "ops"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for persisted_operations.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
+	})
+
+	t.Run("memory provider rejected for automatic_persisted_queries", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+automatic_persisted_queries:
+  enabled: true
+  storage:
+    provider_id: "in-memory"
+    object_prefix: "apq"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for automatic_persisted_queries.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
+	})
+
+	t.Run("memory provider rejected for execution_config storage", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+execution_config:
+  storage:
+    provider_id: "in-memory"
+    object_path: "/config.json"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for execution_config.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
+	})
+
+	t.Run("memory provider rejected for connect_rpc storage", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+connect_rpc:
+  enabled: true
+  storage:
+    provider_id: "in-memory"
+  graphql_endpoint: "http://localhost:3002/graphql"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for connect_rpc.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
+	})
+
+	t.Run("memory provider rejected for mcp storage", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+mcp:
+  enabled: true
+  storage:
+    provider_id: "in-memory"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for mcp.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
+	})
+
+	t.Run("non-memory provider allowed everywhere", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+  redis:
+    - id: "my-redis"
+      urls:
+        - "redis://localhost:6379"
+
+persisted_operations:
+  storage:
+    provider_id: "my-redis"
+    object_prefix: "ops"
+`)
+		_, err := LoadConfig([]string{f})
+		require.NoError(t, err)
+	})
+
+	t.Run("multiple violations reported together", func(t *testing.T) {
+		t.Parallel()
+		f := createTempFileFromFixture(t, `
+version: "1"
+
+storage_providers:
+  memory:
+    - id: "in-memory"
+      max_size: "100MB"
+
+persisted_operations:
+  storage:
+    provider_id: "in-memory"
+    object_prefix: "ops"
+
+automatic_persisted_queries:
+  enabled: true
+  storage:
+    provider_id: "in-memory"
+    object_prefix: "apq"
+`)
+		_, err := LoadConfig([]string{f})
+		require.EqualError(t, err, `memory storage provider "in-memory" cannot be used for persisted_operations.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`+"\n"+`memory storage provider "in-memory" cannot be used for automatic_persisted_queries.storage: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)`)
+	})
+}

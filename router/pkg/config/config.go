@@ -997,22 +997,22 @@ type AutomaticPersistedQueriesConfig struct {
 }
 
 type EntityCachingConfiguration struct {
-	Enabled            bool                          `yaml:"enabled" envDefault:"false" env:"ENTITY_CACHING_ENABLED"`
-	GlobalCacheKeyPrefix string                      `yaml:"global_cache_key_prefix,omitempty" env:"ENTITY_CACHING_GLOBAL_CACHE_KEY_PREFIX"`
-	L1                 EntityCachingL1Configuration  `yaml:"l1"`
-	L2                 EntityCachingL2Configuration  `yaml:"l2"`
+	Enabled                bool                                 `yaml:"enabled" envDefault:"false" env:"ENTITY_CACHING_ENABLED"`
+	GlobalCacheKeyPrefix   string                               `yaml:"global_cache_key_prefix,omitempty" env:"ENTITY_CACHING_GLOBAL_CACHE_KEY_PREFIX"`
+	L1                     EntityCachingL1Configuration         `yaml:"l1"`
+	L2                     EntityCachingL2Configuration         `yaml:"l2"`
 	SubgraphCacheOverrides []EntityCachingSubgraphCacheOverride `yaml:"subgraph_cache_overrides,omitempty"`
 }
 
 type EntityCachingL1Configuration struct {
-	Enabled      bool  `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_L1_ENABLED"`
-	MaxSizeBytes int64 `yaml:"max_size_bytes" envDefault:"104857600" env:"ENTITY_CACHING_L1_MAX_SIZE_BYTES"` // default 100MB
+	Enabled bool        `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_L1_ENABLED"`
+	MaxSize BytesString `yaml:"max_size" envDefault:"100MB" env:"ENTITY_CACHING_L1_MAX_SIZE"`
 }
 
 type EntityCachingL2Configuration struct {
-	Enabled        bool                               `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_L2_ENABLED"`
-	Storage        EntityCachingL2StorageConfig        `yaml:"storage"`
-	CircuitBreaker EntityCachingCircuitBreakerConfig   `yaml:"circuit_breaker"`
+	Enabled        bool                              `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_L2_ENABLED"`
+	Storage        EntityCachingL2StorageConfig      `yaml:"storage"`
+	CircuitBreaker EntityCachingCircuitBreakerConfig `yaml:"circuit_breaker"`
 }
 
 type EntityCachingL2StorageConfig struct {
@@ -1414,5 +1414,58 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
 	}
 
+	if err := validateMemoryProviderUsage(&cfg.Config); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
+}
+
+// validateMemoryProviderUsage ensures memory storage providers are only used for entity caching.
+// Memory providers are in-process caches (Ristretto) that don't support the object storage semantics
+// required by persisted operations, execution config, APQ, MCP, and ConnectRPC.
+func validateMemoryProviderUsage(cfg *Config) error {
+	memoryIDs := make(map[string]bool, len(cfg.StorageProviders.Memory))
+	for _, m := range cfg.StorageProviders.Memory {
+		memoryIDs[m.ID] = true
+	}
+	if len(memoryIDs) == 0 {
+		return nil
+	}
+
+	type providerRef struct {
+		id      string
+		feature string
+	}
+
+	var refs []providerRef
+	if id := cfg.PersistedOperationsConfig.Storage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "persisted_operations.storage"})
+	}
+	if id := cfg.AutomaticPersistedQueries.Storage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "automatic_persisted_queries.storage"})
+	}
+	if id := cfg.ExecutionConfig.Storage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "execution_config.storage"})
+	}
+	if id := cfg.ExecutionConfig.FallbackStorage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "execution_config.fallback_storage"})
+	}
+	if id := cfg.MCP.Storage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "mcp.storage"})
+	}
+	if id := cfg.ConnectRPC.Storage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "connect_rpc.storage"})
+	}
+
+	var errs error
+	for _, ref := range refs {
+		if memoryIDs[ref.id] {
+			errs = errors.Join(errs, fmt.Errorf(
+				"memory storage provider %q cannot be used for %s: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)",
+				ref.id, ref.feature,
+			))
+		}
+	}
+	return errs
 }
