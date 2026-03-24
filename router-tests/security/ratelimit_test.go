@@ -724,7 +724,7 @@ func TestRateLimit(t *testing.T) {
 						RejectExceedingRequests: false,
 						Overrides: []config.RateLimitOverride{
 							{
-								Matching: "^.*:premium-.*",
+								Matching: "^premium-.*",
 								Rate:     4,
 								Burst:    4,
 								Period:   time.Second * 2,
