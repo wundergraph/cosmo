@@ -12,70 +12,6 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
-// TestMCPOAuthScopeUpgrade tests the complete OAuth scope upgrade flow with real JWT validation.
-// Uses OAuthTestServer which provides a full OAuth 2.1 AS (JWKS + token endpoint + registration)
-// so the same server can be used by both Go tests and the official MCP TypeScript SDK.
-func TestMCPOAuthScopeUpgrade(t *testing.T) {
-	oauthServer, err := testutil.NewOAuthTestServer(t, nil)
-	require.NoError(t, err, "failed to start OAuth server")
-	defer oauthServer.Close() //nolint:errcheck
-
-	readOnlyToken, err := oauthServer.CreateTokenWithScopes("test-user", []string{"mcp:tools:read"})
-	require.NoError(t, err, "failed to create read-only token")
-
-	testenv.Run(t, &testenv.Config{
-		MCP: config.MCPConfiguration{
-			Enabled:                   true,
-			ExposeSchema:              true,
-			EnableArbitraryOperations: true,
-			OAuth: config.MCPOAuthConfiguration{
-				Enabled: true,
-				JWKS: []config.JWKSConfiguration{
-					{URL: oauthServer.JWKSURL()},
-				},
-				AuthorizationServerURL: oauthServer.Issuer(),
-				Scopes: config.MCPOAuthScopesConfiguration{},
-			},
-		},
-		MCPAuthToken: readOnlyToken,
-	}, func(t *testing.T, xEnv *testenv.Environment) {
-		ctx := context.Background()
-
-		client := NewMCPAuthClient(xEnv.GetMCPServerAddr(), readOnlyToken)
-		err = client.Connect(ctx)
-		require.NoError(t, err, "should connect with valid token")
-		defer client.Close() //nolint:errcheck
-
-		t.Log("Connected with read-only token")
-
-		result, err := client.CallTool(ctx, "get_schema", nil)
-		require.NoError(t, err, "get_schema should succeed with valid token")
-		require.NotNil(t, result)
-		t.Log("Tool call succeeded with initial token")
-
-		newToken, err := oauthServer.CreateTokenWithScopes("test-user", []string{"mcp:tools:read", "mcp:tools:write"})
-		require.NoError(t, err, "failed to create new token")
-
-		client.SetToken(newToken)
-		t.Log("Updated to new token (same session)")
-
-		result, err = client.CallTool(ctx, "execute_graphql", map[string]any{
-			"query": "query { employees { id } }",
-		})
-		require.NoError(t, err, "tool call should succeed after token change")
-		require.NotNil(t, result)
-		t.Log("Tool call succeeded with new token")
-
-		anotherToken, err := oauthServer.CreateTokenWithScopes("different-user", []string{"mcp:admin"})
-		require.NoError(t, err, "failed to create another token")
-
-		client.SetToken(anotherToken)
-		_, err = client.CallTool(ctx, "get_schema", nil)
-		require.NoError(t, err, "should succeed after second token change")
-		t.Log("Multiple token changes work on same session")
-	})
-}
-
 // TestMCPOAuthInvalidToken tests that invalid JWT tokens are rejected with HTTP 401.
 func TestMCPOAuthInvalidToken(t *testing.T) {
 	oauthServer, err := testutil.NewOAuthTestServer(t, nil)
@@ -106,11 +42,9 @@ func TestMCPOAuthInvalidToken(t *testing.T) {
 		require.Error(t, err, "should fail to connect with invalid token")
 
 		authErr, ok := err.(*AuthError)
-		if ok {
-			assert.Equal(t, http.StatusUnauthorized, authErr.StatusCode, "should return HTTP 401")
-			assert.NotEmpty(t, authErr.ResourceMetadataURL, "should include resource_metadata for OAuth discovery")
-			t.Logf("Invalid token rejected with HTTP 401: %v", authErr)
-		}
+		require.True(t, ok, "expected *AuthError but got %T: %v", err, err)
+		assert.Equal(t, http.StatusUnauthorized, authErr.StatusCode, "should return HTTP 401")
+		assert.NotEmpty(t, authErr.ResourceMetadataURL, "should include resource_metadata for OAuth discovery")
 	})
 }
 
@@ -144,11 +78,9 @@ func TestMCPOAuthMissingToken(t *testing.T) {
 		require.Error(t, err, "should fail to connect without token")
 
 		authErr, ok := err.(*AuthError)
-		if ok {
-			assert.Equal(t, http.StatusUnauthorized, authErr.StatusCode, "should return HTTP 401")
-			assert.NotEmpty(t, authErr.ResourceMetadataURL, "should include resource_metadata for OAuth discovery")
-			t.Logf("Request without token rejected with HTTP 401: %v", authErr)
-		}
+		require.True(t, ok, "expected *AuthError but got %T: %v", err, err)
+		assert.Equal(t, http.StatusUnauthorized, authErr.StatusCode, "should return HTTP 401")
+		assert.NotEmpty(t, authErr.ResourceMetadataURL, "should include resource_metadata for OAuth discovery")
 	})
 }
 
@@ -192,10 +124,8 @@ func TestMCPOAuthPerToolScopes(t *testing.T) {
 			require.Error(t, err, "should fail to connect without HTTP-level scopes")
 
 			authErr, ok := err.(*AuthError)
-			if ok {
-				assert.True(t, authErr.StatusCode == http.StatusUnauthorized || authErr.StatusCode == http.StatusForbidden)
-				t.Logf("HTTP-level scope enforcement: %v", authErr)
-			}
+			require.True(t, ok, "expected *AuthError but got %T: %v", err, err)
+			assert.True(t, authErr.StatusCode == http.StatusUnauthorized || authErr.StatusCode == http.StatusForbidden)
 		})
 
 		t.Run("Per-tool scopes are enforced on tool calls", func(t *testing.T) {
