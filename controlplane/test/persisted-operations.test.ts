@@ -728,7 +728,7 @@ describe('Persisted operations', (ctx) => {
       expect(manifest2.revision).toBe(manifest1.revision);
     });
 
-    test('Should truncate the manifest to the max operation limit', async (testContext) => {
+    test('Should reject publish when operation limit would be exceeded', async (testContext) => {
       const { client, server, blobStorage, users } = await SetupTest({
         dbname,
         chClient,
@@ -747,39 +747,28 @@ describe('Persisted operations', (ctx) => {
       const fedGraph = await fedGraphRepo.byName(fedGraphName, 'default');
       expect(fedGraph).toBeDefined();
 
-      // Seed operations directly in the DB to avoid hitting the per-request
-      // limit of 100 repeatedly.
+      // Seed operations directly in the DB to fill up to the limit.
       const opsRepo = new OperationsRepository(db, fedGraph!.id);
       const clientId = await opsRepo.registerClient('test-client', user.userId);
 
-      const seedOps = Array.from({ length: MAX_MANIFEST_OPERATIONS + 1 }, (_, i) => ({
+      const seedOps = Array.from({ length: MAX_MANIFEST_OPERATIONS }, (_, i) => ({
         operationId: `seed-op-${i}`,
         hash: crypto.createHash('sha256').update(`seed-op-${i}`).digest('hex'),
         filePath: `seed-op-${i}.graphql`,
-        contents: `query { hello }`,
+        contents: `query SeedOp${i} { hello }`,
         operationNames: [`SeedOp${i}`],
       }));
       await opsRepo.updatePersistedOperations(clientId, user.userId, seedOps);
 
-      // Publish one operation via the API to trigger manifest generation.
+      // Publishing a new operation should be rejected because the limit is already reached.
       const resp = await client.publishPersistedOperations({
         fedGraphName,
         namespace: 'default',
         clientName: 'test-client',
-        operations: [{ id: genID('trigger'), contents: `query { hello }` }],
+        operations: [{ id: genID('trigger'), contents: `query ExceedsLimit { goodbye }` }],
       });
-      expect(resp.response?.code).toBe(EnumStatusCode.OK);
-
-      // The manifest should be truncated to MAX_MANIFEST_OPERATIONS.
-      const storageKeys = blobStorage.keys();
-      const manifestKey = storageKeys.find((key) => key.endsWith('/operations/manifest.json'));
-      expect(manifestKey).toBeDefined();
-
-      const blobObject = await blobStorage.getObject({ key: manifestKey! });
-      const text = await new Response(blobObject.stream).text();
-      const manifest = JSON.parse(text);
-
-      expect(Object.keys(manifest.operations).length).toBe(MAX_MANIFEST_OPERATIONS);
+      expect(resp.response?.code).toBe(EnumStatusCode.ERR);
+      expect(resp.response?.details).toContain('Operation limit exceeded');
     });
   });
 

@@ -14,7 +14,7 @@ import { buildASTSchema as graphQLBuildASTSchema, DocumentNode, parse, validate 
 import { PublishedOperationData, UpdatedPersistedOperation } from '../../../types/index.js';
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { DefaultNamespace } from '../../repositories/NamespaceRepository.js';
-import { OperationsRepository } from '../../repositories/OperationsRepository.js';
+import { MAX_MANIFEST_OPERATIONS, OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
 import { enrichLogger, extractOperationNames, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
@@ -157,6 +157,24 @@ export function publishPersistedOperations(
     const operationsByOperationId = new Map(
       operationsResult.map((op) => [op.operationId, { hash: op.hash, operationNames: op.operationNames }]),
     );
+
+    // Check if adding new operations would exceed the manifest limit
+    const allExistingOperations = await operationsRepo.getAllPersistedOperationsForGraph();
+    const existingHashes = new Set(allExistingOperations.map((op) => op.hash));
+    const newOperationCount = req.operations.filter((op) => {
+      const hash = crypto.createHash('sha256').update(op.contents).digest('hex');
+      return !existingHashes.has(hash);
+    }).length;
+
+    if (allExistingOperations.length + newOperationCount > MAX_MANIFEST_OPERATIONS) {
+      return {
+        response: {
+          code: EnumStatusCode.ERR,
+          details: `Operation limit exceeded: adding ${newOperationCount} new operations would bring the total to ${allExistingOperations.length + newOperationCount}, which exceeds the maximum of ${MAX_MANIFEST_OPERATIONS} operations per graph`,
+        },
+        operations: [],
+      };
+    }
 
     const processOperation = async (
       operation: PersistedOperation,
