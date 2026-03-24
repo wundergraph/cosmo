@@ -20,6 +20,7 @@ entity_caching:
   global_cache_key_prefix: ""    # Prefix for all L2 keys (e.g., schema hash for versioning)
   l1:
     enabled: true
+    max_size: "100MB"    # 100MB default
   l2:
     enabled: true
     storage:
@@ -57,13 +58,14 @@ The L1 cache is an in-memory per-request cache. It deduplicates entity fetches w
 | Field | Type | Default | Env | Description |
 |-------|------|---------|-----|-------------|
 | `l1.enabled` | bool | true | `ENTITY_CACHING_L1_ENABLED` | Enable/disable L1 per-request in-memory cache. |
+| `l1.max_size` | string | "100MB" | `ENTITY_CACHING_L1_MAX_SIZE` | Maximum size of the L1 cache. Supports human-readable byte strings (e.g., "100MB", "1GB"). |
 
 #### L2 Cache
 
 The L2 cache is a cross-request cache shared across all requests. It stores entity and root field data with TTL. L2 supports two storage backends:
 
 - **Redis** (`storage_providers.redis`): External shared cache across router instances. Recommended for production.
-- **Memory** (`storage_providers.memory`): In-process cache using [Ristretto](https://github.com/dgraph-io/ristretto). Not shared across instances — useful for development, testing, or single-instance deployments.
+- **Memory** (`storage_providers.memory`): In-process cache using [Ristretto](https://github.com/dgraph-io/ristretto). Not shared across instances — useful for development, testing, or single-instance deployments. Memory providers can **only** be used for entity caching — they cannot be referenced by persisted operations, execution config, APQ, MCP, or ConnectRPC storage.
 
 | Field | Type | Default | Env | Description |
 |-------|------|---------|-----|-------------|
@@ -102,6 +104,7 @@ storage_providers:
   memory:
     - id: "dev-cache"
       max_size: "100MB"           # Maximum cache size (default: 100MB)
+      # Note: memory providers can only be used for entity caching
 ```
 
 #### Metrics
@@ -136,6 +139,34 @@ Cache backend assignment is an operator concern — subgraph developers shouldn'
 3. **Global default**: `"default"` (the cache built from `l2.storage.provider_id`)
 
 The first non-empty match wins. If no override is configured, the entity uses the default cache.
+
+**Example resolution:**
+```
+Entity "Category" in subgraph "products":
+  1. Entity-level: storage_provider_id = "hot-cache"  → uses "hot-cache"
+
+Entity "Product" in subgraph "products":
+  1. Entity-level: not configured
+  2. Subgraph-level: storage_provider_id = "fast-cache"  → uses "fast-cache"
+
+Entity "Order" (not in any override):
+  1. Entity-level: not configured
+  2. Subgraph-level: not configured
+  3. Global default: l2.storage.provider_id = "default" → uses "default"
+```
+
+**Behavior summary:**
+
+| Scenario | Behavior |
+|----------|----------|
+| Entity not in overrides, subgraph not in overrides | Uses global `l2.storage.provider_id` |
+| Entity not in overrides, subgraph has `storage_provider_id` | Uses subgraph-level provider |
+| Entity has `storage_provider_id` | Uses entity-level provider (highest priority) |
+| Override references unknown subgraph | Warning log, router starts normally |
+| Override references unknown entity type | Warning log, router starts normally |
+| `storage_provider_id` references unknown provider | **Error** — router fails to start |
+| Memory provider as default, Redis for overrides | Supported — mix freely |
+| Redis provider as default, memory for overrides | Supported — mix freely |
 
 ```yaml
 entity_caching:
@@ -347,6 +378,7 @@ entity_caching:
   global_cache_key_prefix: "v1"  # Schema version prefix for all L2 keys
   l1:
     enabled: true
+    max_size: "100MB"    # 100MB
   l2:
     enabled: true
     storage:

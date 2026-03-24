@@ -150,6 +150,28 @@
               }
             }
           }
+        },
+        "memory": {
+          "type": "array",
+          "description": "In-process memory cache using Ristretto. Memory providers can only be used for entity caching (entity_caching.l2.storage or subgraph_cache_overrides). They cannot be used for persisted operations, execution config, APQ, MCP, or ConnectRPC storage. Useful for development, testing, or single-instance deployments.",
+          "items": {
+            "type": "object",
+            "required": [
+              "id"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "The provider ID. The provider ID is used to identify the provider in the configuration."
+              },
+              "max_size": {
+                "type": "string",
+                "description": "Maximum cache size. Supports human-readable byte strings (e.g., '100MB', '1GB'). Default: 100MB.",
+                "default": "100MB"
+              }
+            }
+          }
         }
       }
     },
@@ -260,6 +282,136 @@
             "object_prefix": {
               "type": "string",
               "description": "The prefix of the object in the storage provider location. The prefix is put in front of the operation SHA256 hash. /<prefix>/<sha256>"
+            }
+          }
+        }
+      }
+    },
+    "entity_caching": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Entity caching stores resolved entities in a multi-layer cache (L1 per-request, L2 cross-request) to avoid redundant subgraph fetches.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Global enable/disable flag for entity caching. When false, neither L1 nor L2 caching is available.",
+          "default": false
+        },
+        "global_cache_key_prefix": {
+          "type": "string",
+          "description": "Prefix prepended to all L2 cache keys. Can be used e.g. when the Redis instance is shared across multiple use cases."
+        },
+        "l1": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "L1 is an in-memory per-request cache. It deduplicates entity fetches within a single request.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable/disable L1 per-request in-memory cache.",
+              "default": true
+            },
+            "max_size": {
+              "type": "string",
+              "description": "Maximum size of the L1 cache. Supports human-readable byte strings (e.g., '100MB', '1GB').",
+              "default": "100MB",
+              "format": "bytes-string"
+            }
+          }
+        },
+        "l2": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "L2 is a cross-request cache shared across all requests. Supports Redis and in-memory (Ristretto) backends.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "description": "Enable/disable L2 external cache.",
+              "default": true
+            },
+            "storage": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Storage backend configuration for L2 cache.",
+              "properties": {
+                "provider_id": {
+                  "type": "string",
+                  "description": "References a storage_providers.redis or storage_providers.memory entry by ID."
+                },
+                "key_prefix": {
+                  "type": "string",
+                  "description": "Prefix for all entity cache keys in the storage backend.",
+                  "default": "cosmo_entity_cache"
+                }
+              }
+            },
+            "circuit_breaker": {
+              "type": "object",
+              "additionalProperties": false,
+              "description": "Circuit breaker for L2 cache operations. Protects against cascading latency when the cache backend is slow or unavailable.",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "description": "Enable/disable the L2 circuit breaker.",
+                  "default": false
+                },
+                "failure_threshold": {
+                  "type": "integer",
+                  "description": "Number of consecutive L2 operation failures that trips the breaker.",
+                  "default": 5,
+                  "minimum": 1
+                },
+                "cooldown_period": {
+                  "type": "string",
+                  "description": "How long the breaker stays open before allowing a probe request. Specified as a duration string (e.g., '10s', '1m').",
+                  "default": "10s",
+                  "duration": {
+                    "minimum": "1s"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "subgraph_cache_overrides": {
+          "type": "array",
+          "description": "Per-subgraph storage provider overrides. Resolution order: entity-level override > subgraph-level override > global default.",
+          "items": {
+            "type": "object",
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Subgraph name (must match a subgraph in the router config)."
+              },
+              "storage_provider_id": {
+                "type": "string",
+                "description": "Storage provider for all entities in this subgraph (unless overridden per-entity). References a storage_providers.redis or storage_providers.memory entry by ID."
+              },
+              "entities": {
+                "type": "array",
+                "description": "Per-entity storage provider overrides within this subgraph.",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "type"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "description": "Entity type name (must be a type with @entityCache in this subgraph)."
+                    },
+                    "storage_provider_id": {
+                      "type": "string",
+                      "description": "Storage provider for this specific entity type. Overrides the subgraph-level storage_provider_id."
+                    }
+                  }
+                }
+              }
             }
           }
         }
