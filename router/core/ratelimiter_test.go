@@ -4,24 +4,30 @@ import (
 	"context"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/go-redis/redis_rate/v10"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/wundergraph/cosmo/router/internal/expr"
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 )
 
 func expressionResolveContext(t *testing.T, header http.Header, claims map[string]any) *resolve.Context {
 	req, err := http.NewRequest(http.MethodGet, "http://localhost:3002/graphql", nil)
 	assert.NoError(t, err)
+
 	if header != nil {
 		req.Header = header
 	}
+
 	rcc := buildRequestContext(requestContextOptions{
 		r: req,
 	})
 	ctx := withRequestContext(context.Background(), rcc)
+
 	rc := &resolve.Context{
 		RateLimitOptions: resolve.RateLimitOptions{
 			RateLimitKey: "test",
@@ -31,6 +37,7 @@ func expressionResolveContext(t *testing.T, header http.Header, claims map[strin
 		rc = ContextWithClaims(rc, claims)
 		rcc.expressionContext.Request.Auth = expr.LoadAuth(rc.Context())
 	}
+
 	return rc.WithContext(ctx)
 }
 
@@ -38,6 +45,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 	t.Parallel()
 	t.Run("default", func(t *testing.T) {
 		t.Parallel()
+
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{})
 		assert.NoError(t, err)
 		key, err := rl.generateKey(expressionResolveContext(t, nil, nil))
@@ -46,6 +54,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 	})
 	t.Run("from header", func(t *testing.T) {
 		t.Parallel()
+
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.header.Get('Authorization')",
 			ExprManager:         expr.CreateNewExprManager(),
@@ -59,6 +68,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 	})
 	t.Run("from header number", func(t *testing.T) {
 		t.Parallel()
+
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.header.Get('Authorization')",
 			ExprManager:         expr.CreateNewExprManager(),
@@ -72,6 +82,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 	})
 	t.Run("from header whitespace", func(t *testing.T) {
 		t.Parallel()
+
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "trim(request.header.Get('Authorization'))",
 			ExprManager:         expr.CreateNewExprManager(),
@@ -85,6 +96,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 	})
 	t.Run("from claims", func(t *testing.T) {
 		t.Parallel()
+
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.auth.claims.sub",
 			ExprManager:         expr.CreateNewExprManager(),
@@ -98,6 +110,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 	})
 	t.Run("from claims invalid claim", func(t *testing.T) {
 		t.Parallel()
+
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.auth.claims.sub",
 			ExprManager:         expr.CreateNewExprManager(),
@@ -111,6 +124,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 	})
 	t.Run("from claims or X-Forwarded-For header claims present", func(t *testing.T) {
 		t.Parallel()
+
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.auth.claims.sub ?? request.header.Get('X-Forwarded-For')",
 			ExprManager:         expr.CreateNewExprManager(),
@@ -124,6 +138,7 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 	})
 	t.Run("from claims or X-Forwarded-For header claims not present", func(t *testing.T) {
 		t.Parallel()
+
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
 			KeySuffixExpression: "request.auth.claims.sub ?? request.header.Get('X-Forwarded-For')",
 			ExprManager:         expr.CreateNewExprManager(),
@@ -142,6 +157,7 @@ func ContextWithClaims(ctx *resolve.Context, claims map[string]any) *resolve.Con
 		claims: claims,
 	}
 	withScopes := authentication.NewContext(context.Background(), auth)
+
 	return ctx.WithContext(withScopes)
 }
 
@@ -165,4 +181,82 @@ func (f *FakeAuthenticator) SetScopes(scopes []string) {
 
 func (f *FakeAuthenticator) Scopes() []string {
 	return f.scopes
+}
+
+func TestRateLimiterResolveLimit(t *testing.T) {
+	t.Parallel()
+
+	defaultLimit := redis_rate.Limit{Rate: 10, Burst: 10, Period: time.Second}
+
+	t.Run("returns default when no overrides configured", func(t *testing.T) {
+		t.Parallel()
+
+		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{})
+		require.NoError(t, err)
+
+		got := rl.resolveLimit("any-key", defaultLimit)
+		assert.Equal(t, defaultLimit, got)
+	})
+
+	t.Run("returns matching override limit for key", func(t *testing.T) {
+		t.Parallel()
+
+		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			Overrides: []config.RateLimitOverride{
+				{Matching: "^premium-.*", Rate: 100, Burst: 100, Period: time.Second},
+				{Matching: "^internal-.*", Rate: 1000, Burst: 1000, Period: time.Second},
+			},
+		})
+		require.NoError(t, err)
+
+		got := rl.resolveLimit("premium-user-123", defaultLimit)
+		assert.Equal(t, redis_rate.Limit{Rate: 100, Burst: 100, Period: time.Second}, got)
+
+		got = rl.resolveLimit("internal-service", defaultLimit)
+		assert.Equal(t, redis_rate.Limit{Rate: 1000, Burst: 1000, Period: time.Second}, got)
+	})
+
+	t.Run("returns default when no override matches", func(t *testing.T) {
+		t.Parallel()
+
+		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			Overrides: []config.RateLimitOverride{
+				{Matching: "^premium-.*", Rate: 100, Burst: 100, Period: time.Second},
+			},
+		})
+		require.NoError(t, err)
+
+		got := rl.resolveLimit("regular-user", defaultLimit)
+		assert.Equal(t, defaultLimit, got)
+	})
+
+	t.Run("returns first match when multiple overrides match", func(t *testing.T) {
+		t.Parallel()
+
+		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			Overrides: []config.RateLimitOverride{
+				{Matching: "^premium-.*", Rate: 100, Burst: 100, Period: time.Second},
+				{Matching: "^premium-vip-.*", Rate: 500, Burst: 500, Period: time.Second},
+			},
+		})
+		require.NoError(t, err)
+
+		got := rl.resolveLimit("premium-vip-user", defaultLimit)
+		assert.Equal(t, redis_rate.Limit{Rate: 100, Burst: 100, Period: time.Second}, got)
+	})
+}
+
+func TestNewCosmoRateLimiter(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns error for invalid override pattern", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
+			Overrides: []config.RateLimitOverride{
+				{Matching: "[invalid", Rate: 10, Burst: 10, Period: time.Second},
+			},
+		})
+		require.ErrorContains(t, err, "invalid regex '[invalid' for rate limit override")
+	})
 }
