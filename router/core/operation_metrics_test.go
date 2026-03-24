@@ -24,8 +24,7 @@ func TestFinishSchemaUsageExport(t *testing.T) {
 		store := &spyMetricStore{}
 		rm := &spyRouterMetrics{store: store}
 		rc := newTestRequestContext(t)
-		rc.error = errors.New("context canceled")
-		rc.clientDisconnected = true
+		rc.error = context.Canceled
 
 		m := &OperationMetrics{
 			routerMetrics:            rm,

@@ -57,7 +57,7 @@ func WithReconnectConfig(reconnectTimeout time.Duration, pingInterval time.Durat
 
 var _ grpc.ClientConnInterface = &GRPCPluginClient{}
 
-const pluginNotActiveErrorMessage = "plugin is not active"
+var pluginNotActiveErr = errors.New("plugin is not active")
 
 type GRPCTraceAttributeGetter func(context.Context) (string, trace.SpanStartEventOption)
 
@@ -164,10 +164,10 @@ func (g *GRPCPluginClient) Invoke(ctx context.Context, method string, args any, 
 	}
 
 	if g.isClosed.Load() {
-		span.RecordError(errors.New(pluginNotActiveErrorMessage))
-		span.SetStatus(otelcodes.Error, pluginNotActiveErrorMessage)
+		span.RecordError(pluginNotActiveErr)
+		span.SetStatus(otelcodes.Error, pluginNotActiveErr.Error())
 
-		return status.Error(codes.Unavailable, pluginNotActiveErrorMessage)
+		return status.Error(codes.Unavailable, pluginNotActiveErr.Error())
 	}
 
 	g.mu.RLock()

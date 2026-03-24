@@ -79,14 +79,14 @@ func TestInvoke(t *testing.T) {
 		st, ok := status.FromError(err)
 		require.True(t, ok, "error should be a gRPC status")
 		require.Equal(t, grpccodes.Unavailable, st.Code())
-		require.Equal(t, pluginNotActiveErrorMessage, st.Message())
+		require.Equal(t, pluginNotActiveErr.Error(), st.Message())
 
 		spans := exporter.GetSpans()
 		require.Len(t, spans, 1)
 
 		span := spans[0]
 		require.Equal(t, codes.Error, span.Status.Code)
-		require.Equal(t, pluginNotActiveErrorMessage, span.Status.Description)
+		require.Equal(t, pluginNotActiveErr.Error(), span.Status.Description)
 
 		hasException := false
 		for _, event := range span.Events {

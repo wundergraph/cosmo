@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -58,7 +59,7 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 
 	// Client disconnections are not server-side errors and should not inflate error metrics.
 	// We still record request count and latency, but without the error attribute.
-	if reqContext.error != nil && !reqContext.clientDisconnected {
+	if reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled) {
 		rm.MeasureRequestError(ctx, sliceAttrs, o)
 
 		attrs = append(attrs, rotel.WgRequestError.Bool(true))
@@ -88,7 +89,7 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	// Client disconnections are excluded from the error flag to stay consistent with
 	// the error metrics above.
 	if reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
-		hasError := reqContext.error != nil && !reqContext.clientDisconnected
+		hasError := reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled)
 
 		// GraphQL metrics export (to metrics service)
 		if m.trackUsageInfo {

@@ -460,13 +460,13 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// Mark the root span of the router as failed, so we can easily identify failed requests.
 		// Client disconnections are not server-side errors and should not mark the root span as ERROR.
 		if requestContext.error != nil {
-			fromContext := trace.SpanFromContext(r.Context())
+			contextSpan := trace.SpanFromContext(r.Context())
 
-			if requestContext.clientDisconnected {
+			if errors.Is(requestContext.error, context.Canceled) {
 				// For disconnects just record the error but don't set the status
-				fromContext.RecordError(requestContext.error)
+				contextSpan.RecordError(requestContext.error)
 			} else {
-				rtrace.AttachErrToSpan(fromContext, requestContext.error)
+				rtrace.AttachErrToSpan(contextSpan, requestContext.error)
 			}
 		}
 	})

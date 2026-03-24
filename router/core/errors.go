@@ -123,21 +123,16 @@ func trackFinalResponseError(ctx context.Context, err error) {
 		return
 	}
 
-	// Client disconnections are not server-side errors. We still record the error
-	// on the request context for response handling and access logging, but we do not
-	// mark the span as ERROR or increment error metrics.
+	requestContext.SetError(err)
+
 	if errors.Is(err, context.Canceled) {
-		requestContext.SetError(err)
-		requestContext.clientDisconnected = true
 		return
 	}
 
-	span := trace.SpanFromContext(ctx)
-
-	requestContext.SetError(err)
 	requestContext.graphQLErrorServices = getAggregatedSubgraphServiceNames(requestContext.error)
 	requestContext.graphQLErrorCodes = getAggregatedSubgraphErrorCodes(requestContext.error)
 
+	span := trace.SpanFromContext(ctx)
 	rtrace.AttachErrToSpan(span, err)
 }
 
