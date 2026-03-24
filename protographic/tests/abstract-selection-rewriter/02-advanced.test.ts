@@ -1622,4 +1622,43 @@ describe('AbstractSelectionRewriter - Advanced Cases', () => {
       `);
     });
   });
+
+  describe('__typename in selection sets', () => {
+    it('should distribute __typename into inline fragments on interface fields', () => {
+      const input = `
+        departments {
+          members {
+            __typename
+            ... on Manager { level }
+            ... on Engineer { specialty }
+          }
+        }
+      `;
+
+      const result = normalizeFieldSet(input, 'Query');
+
+      expect(result).toMatchInlineSnapshot(`
+        "{
+          departments {
+            members {
+              ... on Contractor {
+                __typename
+              }
+              ... on Intern {
+                __typename
+              }
+              ... on Manager {
+                __typename
+                level
+              }
+              ... on Engineer {
+                __typename
+                specialty
+              }
+            }
+          }
+        }"
+      `);
+    });
+  });
 });
