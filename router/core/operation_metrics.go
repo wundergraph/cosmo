@@ -58,8 +58,9 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	o := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
 
 	// Client disconnections are not server-side errors and should not inflate error metrics.
-	// We still record request count and latency, but without the error attribute.
-	if reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled) {
+	isError := reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled)
+
+	if isError {
 		rm.MeasureRequestError(ctx, sliceAttrs, o)
 
 		attrs = append(attrs, rotel.WgRequestError.Bool(true))
@@ -89,16 +90,14 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	// Client disconnections are excluded from the error flag to stay consistent with
 	// the error metrics above.
 	if reqContext.operation != nil && !reqContext.operation.executionOptions.SkipLoader {
-		hasError := reqContext.error != nil && !errors.Is(reqContext.error, context.Canceled)
-
 		// GraphQL metrics export (to metrics service)
 		if m.trackUsageInfo {
-			m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, hasError, exportSynchronous)
+			m.routerMetrics.ExportSchemaUsageInfo(reqContext.operation, statusCode, isError, exportSynchronous)
 		}
 
 		// Prometheus metrics export (to local Prometheus metrics)
 		if m.prometheusTrackUsageInfo {
-			m.routerMetrics.ExportSchemaUsageInfoPrometheus(reqContext.operation, statusCode, hasError, exportSynchronous)
+			m.routerMetrics.ExportSchemaUsageInfoPrometheus(reqContext.operation, statusCode, isError, exportSynchronous)
 		}
 	}
 }
