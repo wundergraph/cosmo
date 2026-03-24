@@ -1,0 +1,30 @@
+---
+title: "Error Types"
+description: "Router error type classifications for metrics and expressions"
+icon: "triangle-exclamation"
+---
+
+When an error occurs during request processing, the router classifies it into one of the following types. This classification is available via:
+- **Expressions**: `request.errorType` and `subgraph.request.errorType` (see [Template Expressions](/router/configuration/template-expressions))
+- **Metrics**: the `wg.error.type` OTEL attribute (or `wg_error_type` in Prometheus)
+
+| Value | Description |
+|---|---|
+| `rate_limit` | The request was rejected because the client exceeded the configured rate limit. |
+| `unauthorized` | The request failed authentication or authorization. |
+| `context_canceled` | The request was canceled, typically because the client disconnected before the response was sent. |
+| `context_timeout` | The request timed out before a response could be produced. |
+| `upgrade_failed` | A WebSocket upgrade request to a subgraph failed. |
+| `edfs` | An error occurred in a Cosmo Streams (EDFS) data source. |
+| `invalid_ws_subprotocol` | The client requested an unsupported WebSocket subprotocol. |
+| `edfs_invalid_message` | A message received from a Cosmo Streams backend could not be parsed as valid JSON. |
+| `merge_result` | The router failed to merge results from multiple subgraph responses. |
+| `streams_handler_error` | An error occurred while handling a Cosmo Streams event. |
+| `operation_blocked` | The operation was rejected by the operation blocker (e.g. blocked operation type or safelist violation). |
+| `persisted_operation_not_found` | A persisted operation was requested but could not be found. |
+| `validation_error` | The GraphQL operation failed parsing or validation against the schema. |
+| `input_error` | The request body was malformed or otherwise invalid (e.g. invalid JSON, missing query). |
+| `subgraph_error` | One or more subgraphs returned an error during execution. |
+| `unknown` | An error occurred that does not match any known category. |
+| `publish_error` | A Cosmo Streams publish operation failed (Kafka, NATS, or Redis). Only appears on stream produce/consume metrics. |
+| `request_error` | A Cosmo Streams NATS request-reply operation failed. Only appears on stream produce/consume metrics. |

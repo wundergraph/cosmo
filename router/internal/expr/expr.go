@@ -72,6 +72,7 @@ type Request struct {
 	Operation Operation      `expr:"operation"`
 	Client    Client         `expr:"client"`
 	Error     error          `expr:"error"`
+	ErrorType string         `expr:"errorType"`
 }
 
 type Response struct {
@@ -137,6 +138,7 @@ type RequestAuth struct {
 
 type SubgraphRequest struct {
 	Error       error       `expr:"error"`
+	ErrorType   string      `expr:"errorType"`
 	ClientTrace ClientTrace `expr:"clientTrace"`
 }
 

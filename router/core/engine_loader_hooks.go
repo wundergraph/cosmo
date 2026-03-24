@@ -174,6 +174,7 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 	exprCtx.Subgraph.Id = ds.ID
 	exprCtx.Subgraph.Name = ds.Name
 	exprCtx.Subgraph.Request.Error = WrapExprError(responseInfo.Err)
+	exprCtx.Subgraph.Request.ErrorType = getErrorType(responseInfo.Err).String()
 
 	if value := ctx.Value(rcontext.FetchTimingKey); value != nil {
 		if fetchTiming, ok := value.(*atomic.Int64); ok {
@@ -293,7 +294,11 @@ func (f *engineLoaderHooks) OnFinished(ctx context.Context, ds resolve.DataSourc
 			metricSliceAttrs = append(metricSliceAttrs, attribute.StringSlice(v, errorCodesAttr))
 		}
 
-		f.metricStore.MeasureRequestError(ctx, metricSliceAttrs, metricAddOpt)
+		errType := getErrorType(responseInfo.Err)
+		errorTypeAttr := rotel.WgErrorType.String(errType.String())
+
+		metricAttrs = append(metricAttrs, errorTypeAttr)
+		f.metricStore.MeasureRequestError(ctx, metricSliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
 
 		metricAttrs = append(metricAttrs, rotel.WgRequestError.Bool(true))
 

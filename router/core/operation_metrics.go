@@ -57,7 +57,10 @@ func (m *OperationMetrics) Finish(reqContext *requestContext, statusCode int, re
 	o := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))
 
 	if reqContext.error != nil {
-		rm.MeasureRequestError(ctx, sliceAttrs, o)
+		errorTypeAttr := rotel.WgErrorType.String(getErrorType(reqContext.error).String())
+
+		attrs = append(attrs, errorTypeAttr)
+		rm.MeasureRequestError(ctx, sliceAttrs, otelmetric.WithAttributeSet(attribute.NewSet(attrs...)))
 
 		attrs = append(attrs, rotel.WgRequestError.Bool(true))
 		attrOpt := otelmetric.WithAttributeSet(attribute.NewSet(attrs...))

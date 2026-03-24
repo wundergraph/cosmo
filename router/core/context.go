@@ -354,6 +354,7 @@ func (c *requestContext) SetCustomFieldValueRenderer(renderer resolve.FieldValue
 func (c *requestContext) SetError(err error) {
 	c.error = err
 	c.expressionContext.Request.Error = err
+	c.expressionContext.Request.ErrorType = getErrorType(err).String()
 }
 
 func (c *requestContext) Operation() OperationContext {

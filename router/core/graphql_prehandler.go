@@ -521,15 +521,17 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	case http.MethodGet:
 		if err := operationKit.UnmarshalOperationFromURL(req.URL); err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("invalid GET request: %s", err),
-				statusCode: http.StatusBadRequest,
+				message:       fmt.Sprintf("invalid GET request: %s", err),
+				statusCode:    http.StatusBadRequest,
+				errorCategory: errorTypeInputError,
 			}
 		}
 	case http.MethodPost:
 		if err := operationKit.UnmarshalOperationFromBody(httpOperation.body); err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("invalid request body: %s", err),
-				statusCode: http.StatusBadRequest,
+				message:       fmt.Sprintf("invalid request body: %s", err),
+				statusCode:    http.StatusBadRequest,
+				errorCategory: errorTypeInputError,
 			}
 		}
 		// If we have files, we need to set them on the parsed operation
@@ -585,8 +587,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	if operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.HasHash() && operationKit.parsedOperation.Request.Query != "" {
 		if operationKit.parsedOperation.Sha256Hash != operationKit.parsedOperation.GraphQLRequestExtensions.PersistedQuery.Sha256Hash {
 			return &httpGraphqlError{
-				message:    "persistedQuery sha256 hash does not match query body",
-				statusCode: http.StatusBadRequest,
+				message:       "persistedQuery sha256 hash does not match query body",
+				statusCode:    http.StatusBadRequest,
+				errorCategory: errorTypeInputError,
 			}
 		}
 	}
@@ -596,8 +599,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 	requestContext.operation.variables, err = astjson.ParseBytes(operationKit.parsedOperation.Request.Variables)
 	if err != nil {
 		return &httpGraphqlError{
-			message:    fmt.Sprintf("error parsing variables: %s", err),
-			statusCode: http.StatusBadRequest,
+			message:       fmt.Sprintf("error parsing variables: %s", err),
+			statusCode:    http.StatusBadRequest,
+			errorCategory: errorTypeInputError,
 		}
 	}
 
@@ -755,8 +759,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	if req.Method == http.MethodGet && operationKit.parsedOperation.Type == "mutation" {
 		return &httpGraphqlError{
-			message:    "Mutations can only be sent over HTTP POST",
-			statusCode: http.StatusMethodNotAllowed,
+			message:       "Mutations can only be sent over HTTP POST",
+			statusCode:    http.StatusMethodNotAllowed,
+			errorCategory: errorTypeInputError,
 		}
 	}
 
@@ -765,8 +770,9 @@ func (h *PreHandler) handleOperation(req *http.Request, httpOperation *httpOpera
 
 	if err := h.operationBlocker.OperationIsBlocked(requestContext.logger, requestContext.expressionContext, operationKit.parsedOperation); err != nil {
 		return &httpGraphqlError{
-			message:    err.Error(),
-			statusCode: http.StatusOK,
+			message:       err.Error(),
+			statusCode:    http.StatusOK,
+			errorCategory: errorTypeOperationBlocked,
 		}
 	}
 

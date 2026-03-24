@@ -58,6 +58,7 @@ The `request` object is a read-only entity that provides details about the incom
 - `request.url.port`
 - `request.trace.sampled`
 - `request.error`
+- `request.errorType` — The [error type classification](#error-types) as a string. Only set when an error occurred.
 
 ### Operation Object
 
@@ -163,6 +164,7 @@ It contains the following properties:
 #### SubgraphRequest Properties
 
 - `subgraph.request.error` (error): Any error that occurred during the subgraph request
+- `subgraph.request.errorType` (string): The [error type classification](#error-types) for the subgraph request. Only set when an error occurred.
 - `subgraph.request.clientTrace` (ClientTrace): Contains tracing information about the client connection
 
 #### SubgraphResponse Properties
@@ -241,6 +243,22 @@ request.error != nil ? response.body.raw : ''
 
 You can use expressions to specify the conditions for retries upon subgraph request failures. However, this uses a different expression context, which can be found [here](/router/traffic-shaping/retry#conditional-retry-with-expressions).
 
+
+### Error Types
+
+See the [Error Types](/router/configuration/error-types) reference for the full list of error classifications available via `request.errorType` and `subgraph.request.errorType`.
+
+#### Example expressions
+
+```bash
+# Log the response body only for unauthorized errors
+request.errorType == 'unauthorized' ? response.body.raw : ''
+```
+
+```bash
+# Check if a subgraph had a timeout
+subgraph.request.errorType == 'context_timeout'
+```
 
 ### Additional Notes
 

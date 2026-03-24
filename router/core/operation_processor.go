@@ -328,15 +328,17 @@ func (o *OperationKit) unmarshalOperation() error {
 		err = json.Unmarshal(o.parsedOperation.Request.Extensions, &o.parsedOperation.GraphQLRequestExtensions)
 		if err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing extensions: %s", trimmedError(err)),
-				statusCode: http.StatusBadRequest,
+				message:       fmt.Sprintf("error parsing extensions: %s", trimmedError(err)),
+				statusCode:    http.StatusBadRequest,
+				errorCategory: errorTypeInputError,
 			}
 		}
 		if o.parsedOperation.GraphQLRequestExtensions.PersistedQuery != nil {
 			if !o.parsedOperation.GraphQLRequestExtensions.PersistedQuery.isValidHash() {
 				return &httpGraphqlError{
-					message:    "persistedQuery does not have a valid sha256 hash",
-					statusCode: http.StatusBadRequest,
+					message:       "persistedQuery does not have a valid sha256 hash",
+					statusCode:    http.StatusBadRequest,
+					errorCategory: errorTypeInputError,
 				}
 			}
 
@@ -344,8 +346,9 @@ func (o *OperationKit) unmarshalOperation() error {
 			o.parsedOperation.Request.Extensions, err = sjson.DeleteBytes(o.parsedOperation.Request.Extensions, "persistedQuery")
 			if err != nil {
 				return &httpGraphqlError{
-					message:    fmt.Sprintf("error deleting persistedQuery from extensions: %s", err),
-					statusCode: http.StatusBadRequest,
+					message:       fmt.Sprintf("error deleting persistedQuery from extensions: %s", err),
+					statusCode:    http.StatusBadRequest,
+					errorCategory: errorTypeInputError,
 				}
 			}
 		}
@@ -356,8 +359,9 @@ func (o *OperationKit) unmarshalOperation() error {
 		variables, err := fastjson.ParseBytes(o.parsedOperation.Request.Variables)
 		if err != nil {
 			return &httpGraphqlError{
-				message:    fmt.Sprintf("error parsing variables: %s", err),
-				statusCode: http.StatusBadRequest,
+				message:       fmt.Sprintf("error parsing variables: %s", err),
+				statusCode:    http.StatusBadRequest,
+				errorCategory: errorTypeInputError,
 			}
 		}
 		switch variables.Type() {
@@ -370,8 +374,9 @@ func (o *OperationKit) unmarshalOperation() error {
 			o.parsedOperation.Variables = variables.GetObject()
 		default:
 			return &httpGraphqlError{
-				message:    "variables must be a JSON object",
-				statusCode: http.StatusBadRequest,
+				message:       "variables must be a JSON object",
+				statusCode:    http.StatusBadRequest,
+				errorCategory: errorTypeInputError,
 			}
 		}
 	} else {
