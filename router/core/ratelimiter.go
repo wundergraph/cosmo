@@ -118,12 +118,12 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 		Period: ctx.RateLimitOptions.Period,
 	}
 
-	key, err := c.generateKey(ctx)
+	key, suffix, err := c.generateKey(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	limit := c.resolveLimit(key, defaultLimit)
+	limit := c.resolveLimit(suffix, defaultLimit)
 
 	allow, err := c.limiter.AllowN(ctx.Context(), key, limit, requestRate)
 	if err != nil {
@@ -143,27 +143,30 @@ func (c *CosmoRateLimiter) RateLimitPreFetch(ctx *resolve.Context, info *resolve
 	return &resolve.RateLimitDeny{}, nil
 }
 
-func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (string, error) {
+// generateKey returns the full Redis key and the suffix used for override matching.
+// When no key_suffix_expression is configured, the suffix equals the full key.
+func (c *CosmoRateLimiter) generateKey(ctx *resolve.Context) (fullKey, suffix string, err error) {
 	if c.keySuffixProgram == nil {
-		return ctx.RateLimitOptions.RateLimitKey, nil
+		key := ctx.RateLimitOptions.RateLimitKey
+		return key, key, nil
 	}
 
 	rc := getRequestContext(ctx.Context())
 	if rc == nil {
-		return "", errors.New("no request context")
+		return "", "", errors.New("no request context")
 	}
 
-	str, err := expr.ResolveStringExpression(c.keySuffixProgram, rc.expressionContext)
+	suffix, err = expr.ResolveStringExpression(c.keySuffixProgram, rc.expressionContext)
 	if err != nil {
-		return "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
+		return "", "", fmt.Errorf("failed to resolve key suffix expression: %w", err)
 	}
 
-	buf := bytes.NewBuffer(make([]byte, 0, len(ctx.RateLimitOptions.RateLimitKey)+len(str)+1))
+	buf := bytes.NewBuffer(make([]byte, 0, len(ctx.RateLimitOptions.RateLimitKey)+len(suffix)+1))
 	_, _ = buf.WriteString(ctx.RateLimitOptions.RateLimitKey)
 	_ = buf.WriteByte(':')
-	_, _ = buf.WriteString(str)
+	_, _ = buf.WriteString(suffix)
 
-	return buf.String(), nil
+	return buf.String(), suffix, nil
 }
 
 func (c *CosmoRateLimiter) RejectStatusCode() int {

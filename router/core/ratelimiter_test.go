@@ -43,16 +43,17 @@ func expressionResolveContext(t *testing.T, header http.Header, claims map[strin
 
 func TestRateLimiterGenerateKey(t *testing.T) {
 	t.Parallel()
-	t.Run("default", func(t *testing.T) {
+	t.Run("returns bare key when no suffix expression configured", func(t *testing.T) {
 		t.Parallel()
 
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(expressionResolveContext(t, nil, nil))
+		key, suffix, err := rl.generateKey(expressionResolveContext(t, nil, nil))
 		assert.NoError(t, err)
 		assert.Equal(t, "test", key)
+		assert.Equal(t, "test", suffix)
 	})
-	t.Run("from header", func(t *testing.T) {
+	t.Run("returns prefixed key and suffix from header", func(t *testing.T) {
 		t.Parallel()
 
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
@@ -60,13 +61,14 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		require.NoError(t, err)
-		key, err := rl.generateKey(
+		key, suffix, err := rl.generateKey(
 			expressionResolveContext(t, http.Header{"Authorization": []string{"token"}}, nil),
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:token", key)
+		assert.Equal(t, "token", suffix)
 	})
-	t.Run("from header number", func(t *testing.T) {
+	t.Run("returns prefixed key and suffix from header number", func(t *testing.T) {
 		t.Parallel()
 
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
@@ -74,13 +76,14 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
+		key, suffix, err := rl.generateKey(
 			expressionResolveContext(t, http.Header{"Authorization": []string{"123"}}, nil),
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:123", key)
+		assert.Equal(t, "123", suffix)
 	})
-	t.Run("from header whitespace", func(t *testing.T) {
+	t.Run("trims whitespace from header suffix", func(t *testing.T) {
 		t.Parallel()
 
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
@@ -88,13 +91,14 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
+		key, suffix, err := rl.generateKey(
 			expressionResolveContext(t, http.Header{"Authorization": []string{"  token  "}}, nil),
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:token", key)
+		assert.Equal(t, "token", suffix)
 	})
-	t.Run("from claims", func(t *testing.T) {
+	t.Run("returns prefixed key and suffix from claims", func(t *testing.T) {
 		t.Parallel()
 
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
@@ -102,13 +106,14 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
+		key, suffix, err := rl.generateKey(
 			expressionResolveContext(t, nil, map[string]any{"sub": "token"}),
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:token", key)
+		assert.Equal(t, "token", suffix)
 	})
-	t.Run("from claims invalid claim", func(t *testing.T) {
+	t.Run("returns error for invalid claim type", func(t *testing.T) {
 		t.Parallel()
 
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
@@ -116,13 +121,14 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
+		key, suffix, err := rl.generateKey(
 			expressionResolveContext(t, nil, map[string]any{"sub": 123}),
 		)
 		assert.Error(t, err)
 		assert.Empty(t, key)
+		assert.Empty(t, suffix)
 	})
-	t.Run("from claims or X-Forwarded-For header claims present", func(t *testing.T) {
+	t.Run("prefers claims over header when both present", func(t *testing.T) {
 		t.Parallel()
 
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
@@ -130,13 +136,14 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
+		key, suffix, err := rl.generateKey(
 			expressionResolveContext(t, http.Header{"X-Forwarded-For": []string{"192.168.0.1"}}, map[string]any{"sub": "token"}),
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:token", key)
+		assert.Equal(t, "token", suffix)
 	})
-	t.Run("from claims or X-Forwarded-For header claims not present", func(t *testing.T) {
+	t.Run("falls back to header when claims not present", func(t *testing.T) {
 		t.Parallel()
 
 		rl, err := NewCosmoRateLimiter(&CosmoRateLimiterOptions{
@@ -144,11 +151,12 @@ func TestRateLimiterGenerateKey(t *testing.T) {
 			ExprManager:         expr.CreateNewExprManager(),
 		})
 		assert.NoError(t, err)
-		key, err := rl.generateKey(
+		key, suffix, err := rl.generateKey(
 			expressionResolveContext(t, http.Header{"X-Forwarded-For": []string{"192.168.0.1"}}, nil),
 		)
 		assert.NoError(t, err)
 		assert.Equal(t, "test:192.168.0.1", key)
+		assert.Equal(t, "192.168.0.1", suffix)
 	})
 }
 

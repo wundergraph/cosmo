@@ -90,7 +90,7 @@ rate_limit:
 
 ### Per-Key Rate Limit Overrides
 
-You can apply different rate limits to specific keys by defining overrides under `simple_strategy`. Each override includes a `matching` field, a [Go regex](https://pkg.go.dev/regexp/syntax) tested against the resolved rate-limit key (after any `key_suffix_expression` is applied). The first matching override wins; unmatched keys fall back to the global defaults.
+You can apply different rate limits to specific keys by defining overrides under `simple_strategy`. Each override includes a `matching` field, a [Go regex](https://pkg.go.dev/regexp/syntax) tested against the suffix portion of the rate-limit key (the result of `key_suffix_expression`), not the full prefixed Redis key. The first matching override wins; unmatched keys fall back to the global defaults.
 
 ```yaml router.yaml
 rate_limit:
@@ -104,6 +104,7 @@ rate_limit:
     rate: 100
     burst: 200
     period: 1s
+    key_suffix_expression: "request.header.Get('X-Plan-Tier')"
     overrides:
       - matching: "^premium-.*"
         rate: 1000
