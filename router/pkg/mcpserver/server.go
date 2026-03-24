@@ -91,6 +91,8 @@ type Options struct {
 	OAuthConfig *config.MCPOAuthConfiguration
 	// ServerBaseURL is the base URL of this MCP server (for resource metadata)
 	ServerBaseURL string
+	// ResourceDocumentation is a URL to a human-readable page describing this resource
+	ResourceDocumentation string
 }
 
 // GraphQLSchemaServer represents an MCP server that works with GraphQL schemas and operations
@@ -117,8 +119,8 @@ type GraphQLSchemaServer struct {
 	cancel                    context.CancelFunc
 	oauthConfig               *config.MCPOAuthConfiguration
 	serverBaseURL             string
+	resourceDocumentation     string
 	authMiddleware            *MCPAuthMiddleware
-	scopeExtractor            *ScopeExtractor
 }
 
 type graphqlRequest struct {
@@ -220,7 +222,6 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 	// Create a cancellable context for managing the server lifecycle
 	ctx, cancel := context.WithCancel(context.Background())
 
-	// Add authentication middleware if OAuth is configured
 	var authMiddleware *MCPAuthMiddleware
 	if options.OAuthConfig != nil && options.OAuthConfig.Enabled {
 		if len(options.OAuthConfig.JWKS) == 0 {
@@ -268,28 +269,12 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 			resourceMetadataURL = fmt.Sprintf("%s/.well-known/oauth-protected-resource/mcp", options.ServerBaseURL)
 		}
 
-		// Create authentication middleware with scope configuration
-		// The middleware checks scopes at three levels:
-		// - initialize: scopes required for all HTTP requests
-		// - tools_list: scopes required for tools/list method
-		// - tools_call: scopes required for tools/call method (any tool)
-		scopeConfig := MCPScopeConfig{
-			Initialize:       options.OAuthConfig.Scopes.Initialize,
-			ToolsList:        options.OAuthConfig.Scopes.ToolsList,
-			ToolsCall:        options.OAuthConfig.Scopes.ToolsCall,
-			ExecuteGraphQL:   options.OAuthConfig.Scopes.ExecuteGraphQL,
-			GetOperationInfo: options.OAuthConfig.Scopes.GetOperationInfo,
-			GetSchema:        options.OAuthConfig.Scopes.GetSchema,
-		}
-		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, true, resourceMetadataURL, scopeConfig, options.OAuthConfig.ScopeChallengeIncludeTokenScopes)
+		authMiddleware, err = NewMCPAuthMiddleware(tokenDecoder, resourceMetadataURL, options.OAuthConfig.Scopes, options.OAuthConfig.ScopeChallengeIncludeTokenScopes)
 		if err != nil {
 			cancel() // Clean up the context if initialization fails
 			return nil, fmt.Errorf("failed to create auth middleware: %w", err)
 		}
 
-		// Store auth middleware for HTTP-level protection
-		// Note: We don't use tool middleware here because per MCP spec,
-		// ALL HTTP requests must be authenticated, not just tool calls
 		options.Logger.Info("MCP OAuth authentication enabled",
 			zap.Int("jwks_providers", len(options.OAuthConfig.JWKS)),
 			zap.String("authorization_server", options.OAuthConfig.AuthorizationServerURL))
@@ -335,6 +320,7 @@ func NewGraphQLSchemaServer(routerGraphQLEndpoint string, opts ...func(*Options)
 		cancel:                    cancel,
 		oauthConfig:               options.OAuthConfig,
 		serverBaseURL:             options.ServerBaseURL,
+		resourceDocumentation:     options.ResourceDocumentation,
 		authMiddleware:            authMiddleware,
 	}
 
@@ -436,6 +422,13 @@ func WithServerBaseURL(baseURL string) func(*Options) {
 	}
 }
 
+// WithResourceDocumentation sets the human-readable documentation URL for RFC 9728 metadata
+func WithResourceDocumentation(url string) func(*Options) {
+	return func(o *Options) {
+		o.ResourceDocumentation = url
+	}
+}
+
 // Serve starts the server with the configured options and returns the HTTP server.
 func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 	// Create custom HTTP server
@@ -460,32 +453,18 @@ func (s *GraphQLSchemaServer) Serve() (*http.Server, error) {
 
 	mux := http.NewServeMux()
 
-	// OAuth 2.0 Protected Resource Metadata endpoint (RFC 9728 Section 3.1)
-	// This endpoint is required for MCP clients to discover the authorization server.
-	// This endpoint is NOT protected by authentication (it's public discovery).
-	//
-	// Per RFC 9728, when a resource is served at a path other than /, the well-known
-	// URI must include the path suffix: /.well-known/oauth-protected-resource/mcp
+	// OAuth 2.0 Protected Resource Metadata (RFC 9728) — public discovery endpoint
 	if s.oauthConfig != nil && s.oauthConfig.Enabled && s.oauthConfig.AuthorizationServerURL != "" {
 		mux.Handle("/.well-known/oauth-protected-resource/mcp", middleware(http.HandlerFunc(s.handleProtectedResourceMetadata)))
-		s.logger.Info("OAuth 2.0 Protected Resource Metadata endpoint enabled (RFC 9728 path-aware)",
-			zap.String("path", "/.well-known/oauth-protected-resource/mcp"),
-			zap.String("authorization_server", s.oauthConfig.AuthorizationServerURL))
 	}
 
-	// MCP endpoint with HTTP-level authentication
-	// Per MCP spec: "authorization MUST be included in every HTTP request from client to server"
 	mcpHandler := http.Handler(streamableHTTPHandler)
-
-	// Apply authentication middleware if OAuth is enabled
 	if s.authMiddleware != nil {
 		mux.Handle("/mcp", middleware(s.authMiddleware.HTTPMiddleware(mcpHandler)))
-		s.logger.Info("MCP endpoint protected with OAuth authentication at HTTP level")
 	} else {
 		mux.Handle("/mcp", middleware(mcpHandler))
 	}
 
-	// Set the handler for the custom HTTP server
 	httpServer.Handler = mux
 
 	logger := []zap.Field{
@@ -541,16 +520,14 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document, fieldConfigs []*nodev
 	}
 
 	// Compute per-tool scope requirements from @requiresScopes directives
+	var scopeExtractor *ScopeExtractor
 	if len(fieldConfigs) > 0 {
 		s.operationsManager.ComputeToolScopes(fieldConfigs)
-		s.scopeExtractor = NewScopeExtractor(fieldConfigs, schema)
-	} else {
-		s.scopeExtractor = nil
+		scopeExtractor = NewScopeExtractor(fieldConfigs, schema)
 	}
 
-	// Pass scope extractor to auth middleware for runtime execute_graphql scope checking
 	if s.authMiddleware != nil {
-		s.authMiddleware.SetScopeExtractor(s.scopeExtractor)
+		s.authMiddleware.SetScopeExtractor(scopeExtractor)
 	}
 
 	s.server.RemoveTools(s.registeredTools...)
@@ -724,7 +701,6 @@ func (s *GraphQLSchemaServer) registerTools() error {
 			inputSchema = map[string]any{"type": "object", "properties": map[string]any{}}
 		}
 
-		idempotent := op.OperationType != "mutation"
 		openWorld := true
 		tool := &mcp.Tool{
 			Name:        toolName,
@@ -737,9 +713,6 @@ func (s *GraphQLSchemaServer) registerTools() error {
 				OpenWorldHint:  &openWorld,
 			},
 		}
-
-		// IdempotentHint uses the plain bool value, but keep it for later if needed
-		_ = idempotent
 
 		s.server.AddTool(tool, s.handleOperation(handler))
 
@@ -1116,12 +1089,14 @@ func (s *GraphQLSchemaServer) handleProtectedResourceMetadata(w http.ResponseWri
 		scopes = []string{} // Ensure non-nil for JSON encoding
 	}
 
+	mcpResourceURL := strings.TrimRight(resourceURL, "/") + "/mcp"
+
 	metadata := ProtectedResourceMetadata{
-		Resource:               resourceURL,
+		Resource:               mcpResourceURL,
 		AuthorizationServers:   []string{s.oauthConfig.AuthorizationServerURL},
 		BearerMethodsSupported: []string{"header"},
-		ResourceDocumentation:  fmt.Sprintf("%s/mcp", resourceURL),
-		ScopesSupported:        scopes, // Automatically derived from required scopes
+		ResourceDocumentation:  s.resourceDocumentation,
+		ScopesSupported:        scopes,
 	}
 
 	// Encode to buffer first so we can handle errors before writing headers

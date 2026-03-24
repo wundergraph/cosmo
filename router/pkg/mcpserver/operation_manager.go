@@ -92,9 +92,7 @@ func (om *OperationsManager) ComputeToolScopes(fieldConfigs []*nodev1.FieldConfi
 	extractor := NewScopeExtractor(fieldConfigs, om.schemaDoc)
 	for i := range om.operations {
 		fieldReqs := extractor.ExtractScopesForOperation(&om.operations[i].Document)
-		if len(fieldReqs) > 0 {
-			om.operations[i].RequiredScopes = extractor.ComputeCombinedScopes(fieldReqs)
-		}
+		om.operations[i].RequiredScopes = extractor.ComputeCombinedScopes(fieldReqs)
 	}
 }
 

@@ -2099,7 +2099,7 @@
                       "max_wait": {
                         "type": "string",
                         "description": "Maximum time to wait for a refresh permit before giving up.",
-                        "default": "10s",
+                        "default": "2m",
                         "duration": {
                           "minimum": "0s"
                         }
@@ -2107,7 +2107,7 @@
                       "interval": {
                         "type": "string",
                         "description": "Token refill interval for the rate limiter.",
-                        "default": "1m",
+                        "default": "30s",
                         "duration": {
                           "minimum": "1s"
                         }
@@ -2472,6 +2472,11 @@
           "default": false,
           "description": "When enabled, MCP tool names generated from GraphQL operations omit the 'execute_operation_' prefix. For example, the GraphQL operation 'GetUser' results in a tool named 'get_user' instead of 'execute_operation_get_user'."
         },
+        "resource_documentation": {
+          "type": "string",
+          "description": "A URL to a human-readable page describing this MCP resource, its access policies, and how to get started. Included in the RFC 9728 Protected Resource Metadata response if set.",
+          "format": "http-url"
+        },
         "oauth": {
           "type": "object",
           "description": "OAuth/JWKS authentication configuration for the MCP server. When enabled, MCP tool calls require valid JWT authentication and the server implements OAuth 2.0 discovery mechanisms (RFC 8414, RFC 9728).",
@@ -2617,7 +2622,7 @@
                       "max_wait": {
                         "type": "string",
                         "description": "Maximum time to wait for a refresh permit before giving up.",
-                        "default": "10s",
+                        "default": "2m",
                         "duration": {
                           "minimum": "0s"
                         }
@@ -2625,7 +2630,7 @@
                       "interval": {
                         "type": "string",
                         "description": "Token refill interval for the rate limiter.",
-                        "default": "1m",
+                        "default": "30s",
                         "duration": {
                           "minimum": "1s"
                         }
@@ -2696,9 +2701,17 @@
         "properties": {
           "server": {
             "required": ["base_url"]
+          },
+          "oauth": {
+            "properties": {
+              "jwks": {
+                "minItems": 1
+              }
+            },
+            "required": ["jwks"]
           }
         },
-        "required": ["server"]
+        "required": ["server", "oauth"]
       }
     },
     "connect_rpc": {
@@ -4102,7 +4115,7 @@
             "max_wait": {
               "type": "string",
               "description": "Maximum time to wait for a refresh permit before giving up.",
-              "default": "10s",
+              "default": "2m",
               "duration": {
                 "minimum": "0s"
               }
@@ -4110,7 +4123,7 @@
             "interval": {
               "type": "string",
               "description": "Token refill interval for the rate limiter.",
-              "default": "1m",
+              "default": "30s",
               "duration": {
                 "minimum": "1s"
               }
