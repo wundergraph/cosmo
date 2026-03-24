@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.209.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.209.0...controlplane@0.209.1) (2026-03-24)
+
+### Bug Fixes
+
+* handle arrayJoin of empty arrays in clickhouse queries ([#2682](https://github.com/wundergraph/cosmo/issues/2682)) ([733c14b](https://github.com/wundergraph/cosmo/commit/733c14b4710ed093f9ccee19836054f7e92647a4)) (@JivusAyrus)
+
 # [0.209.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.208.0...controlplane@0.209.0) (2026-03-23)
 
 ### Features
