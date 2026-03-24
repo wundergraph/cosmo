@@ -929,6 +929,7 @@ type AutomaticPersistedQueriesCacheConfig struct {
 
 type PQLManifestConfig struct {
 	Enabled      bool          `yaml:"enabled" envDefault:"false" env:"ENABLED"`
+	Path         string        `yaml:"path" env:"PATH"`
 	PollInterval time.Duration `yaml:"poll_interval" envDefault:"10s" env:"POLL_INTERVAL"`
 	PollJitter   time.Duration `yaml:"poll_jitter" envDefault:"5s" env:"POLL_JITTER"`
 }

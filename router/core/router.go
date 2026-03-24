@@ -1253,29 +1253,37 @@ func (r *Router) buildClients(ctx context.Context) error {
 	var pqlStore *pqlmanifest.Store
 
 	if r.persistedOperationsConfig.Manifest.Enabled {
-		if r.graphApiToken == "" {
-			return errors.New("graph token is required for PQL manifest")
-		}
-
-		fetcher, err := pqlmanifest.NewFetcher(r.cdnConfig.URL, r.graphApiToken, r.logger)
-		if err != nil {
-			return fmt.Errorf("failed to create PQL manifest fetcher: %w", err)
-		}
-
 		pqlStore = pqlmanifest.NewStore(r.logger)
 
-		poller := pqlmanifest.NewPoller(
-			fetcher, pqlStore,
-			r.persistedOperationsConfig.Manifest.PollInterval,
-			r.persistedOperationsConfig.Manifest.PollJitter,
-			r.logger,
-		)
+		manifestPath := r.persistedOperationsConfig.Manifest.Path
+		if manifestPath != "" {
+			if err := r.loadPQLManifestFromStorage(ctx, pqlStore, manifestPath, fileSystemProviders, s3Providers, cdnProviders); err != nil {
+				return err
+			}
+		} else {
+			// No path set — fetch manifest from CDN and poll for updates
+			if r.graphApiToken == "" {
+				return errors.New("graph token is required for PQL manifest")
+			}
 
-		if err := poller.FetchInitial(ctx); err != nil {
-			r.logger.Warn("Failed to fetch initial PQL manifest, will retry on next poll", zap.Error(err))
+			fetcher, err := pqlmanifest.NewFetcher(r.cdnConfig.URL, r.graphApiToken, r.logger)
+			if err != nil {
+				return fmt.Errorf("failed to create PQL manifest fetcher: %w", err)
+			}
+
+			poller := pqlmanifest.NewPoller(
+				fetcher, pqlStore,
+				r.persistedOperationsConfig.Manifest.PollInterval,
+				r.persistedOperationsConfig.Manifest.PollJitter,
+				r.logger,
+			)
+
+			if err := poller.FetchInitial(ctx); err != nil {
+				r.logger.Warn("Failed to fetch initial PQL manifest, will retry on next poll", zap.Error(err))
+			}
+
+			go poller.Poll(ctx)
 		}
-
-		go poller.Poll(ctx)
 
 		// When manifest is enabled, do not use CDN fetches for individual operations
 		pClient = nil
@@ -1309,6 +1317,64 @@ func (r *Router) buildClients(ctx context.Context) error {
 	if configPoller != nil {
 		r.configPoller = *configPoller
 	}
+
+	return nil
+}
+
+// loadPQLManifestFromStorage loads a PQL manifest from the configured storage provider.
+func (r *Router) loadPQLManifestFromStorage(
+	ctx context.Context,
+	pqlStore *pqlmanifest.Store,
+	manifestPath string,
+	fileSystemProviders map[string]config.FileSystemStorageProvider,
+	s3Providers map[string]config.S3StorageProvider,
+	cdnProviders map[string]config.CDNStorageProvider,
+) error {
+	storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
+	objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
+
+	resolveObjectPath := func(path string) string {
+		if objectPrefix != "" {
+			return objectPrefix + "/" + path
+		}
+		return path
+	}
+
+	var providerType string
+
+	if provider, ok := fileSystemProviders[storageProviderID]; ok {
+		providerType = "filesystem"
+		fullPath := provider.Path + "/" + resolveObjectPath(manifestPath)
+		if err := pqlStore.LoadFromFile(fullPath); err != nil {
+			return fmt.Errorf("failed to load PQL manifest from filesystem provider %q at %q: %w", storageProviderID, fullPath, err)
+		}
+	} else if provider, ok := s3Providers[storageProviderID]; ok {
+		providerType = "s3"
+		if err := pqlStore.LoadFromS3(ctx, provider, resolveObjectPath(manifestPath)); err != nil {
+			return fmt.Errorf("failed to load PQL manifest from S3 provider %q: %w", storageProviderID, err)
+		}
+	} else if provider, ok := cdnProviders[storageProviderID]; ok {
+		providerType = "cdn"
+		if r.graphApiToken == "" {
+			return errors.New("graph token is required to fetch PQL manifest from CDN")
+		}
+		if err := pqlStore.LoadFromCDN(ctx, provider.URL, r.graphApiToken, manifestPath); err != nil {
+			return fmt.Errorf("failed to load PQL manifest from CDN provider %q: %w", storageProviderID, err)
+		}
+	} else if storageProviderID == "" {
+		providerType = "file"
+		if err := pqlStore.LoadFromFile(manifestPath); err != nil {
+			return fmt.Errorf("failed to load PQL manifest from file %q: %w", manifestPath, err)
+		}
+	} else {
+		return fmt.Errorf("unknown storage provider id %q for PQL manifest", storageProviderID)
+	}
+
+	r.logger.Info("Loaded PQL manifest",
+		zap.String("source", providerType),
+		zap.String("provider_id", storageProviderID),
+		zap.Int("operations", pqlStore.OperationCount()),
+	)
 
 	return nil
 }
