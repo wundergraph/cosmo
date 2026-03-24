@@ -258,6 +258,59 @@ func TestApplyResponseRuleKeyValue(t *testing.T) {
 	})
 }
 
+func TestApplyResponseRuleSetNotForwarded(t *testing.T) {
+	t.Parallel()
+
+	newPropagation := func() *responseHeaderPropagation {
+		return &responseHeaderPropagation{
+			header: make(http.Header),
+			m:      &sync.Mutex{},
+		}
+	}
+
+	hp := &HeaderPropagation{}
+
+	t.Run("set does not write to client header", func(t *testing.T) {
+		t.Parallel()
+		prop := newPropagation()
+		rule := &config.ResponseHeaderRule{
+			Operation: config.HeaderRuleOperationSet,
+			Name:      "X-Custom",
+			Value:     "test-value",
+		}
+		hp.applyResponseRule(prop, &http.Response{}, rule)
+		require.Equal(t, "", prop.header.Get("X-Custom"))
+	})
+
+	t.Run("set Cache-Control writes to client header and sets flag", func(t *testing.T) {
+		t.Parallel()
+		prop := newPropagation()
+		rule := &config.ResponseHeaderRule{
+			Operation: config.HeaderRuleOperationSet,
+			Name:      "Cache-Control",
+			Value:     "max-age=300",
+		}
+		hp.applyResponseRule(prop, &http.Response{}, rule)
+		require.Equal(t, "max-age=300", prop.header.Get("Cache-Control"))
+		require.True(t, prop.setCacheControl)
+	})
+
+	t.Run("propagate still writes to client header", func(t *testing.T) {
+		t.Parallel()
+		prop := newPropagation()
+		rule := &config.ResponseHeaderRule{
+			Operation: config.HeaderRuleOperationPropagate,
+			Named:     "X-Custom",
+			Algorithm: config.ResponseHeaderRuleAlgorithmFirstWrite,
+		}
+		res := &http.Response{
+			Header: http.Header{"X-Custom": []string{"from-subgraph"}},
+		}
+		hp.applyResponseRule(prop, res, rule)
+		require.Equal(t, "from-subgraph", prop.header.Get("X-Custom"))
+	})
+}
+
 func TestPropagatedHeaders(t *testing.T) {
 	t.Parallel()
 

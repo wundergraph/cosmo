@@ -128,7 +128,7 @@ func TestHeaderSet(t *testing.T) {
 			})
 		})
 
-		t.Run("global set works", func(t *testing.T) {
+		t.Run("global set is internal only", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: global(customHeader, hobbyVal),
@@ -137,12 +137,12 @@ func TestHeaderSet(t *testing.T) {
 					Query: queryEmployeeWithHobby,
 				})
 				ch := strings.Join(res.Response.Header.Values(customHeader), ",")
-				require.Equal(t, hobbyVal, ch)
+				require.Equal(t, "", ch, "set response headers should not be forwarded to the client")
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})
 
-		t.Run("subgraph set works", func(t *testing.T) {
+		t.Run("subgraph set is internal only", func(t *testing.T) {
 			t.Parallel()
 			testenv.Run(t, &testenv.Config{
 				RouterOptions: partial(customHeader, employeeVal),
@@ -151,7 +151,7 @@ func TestHeaderSet(t *testing.T) {
 					Query: queryEmployeeWithHobby,
 				})
 				ch := strings.Join(res.Response.Header.Values(customHeader), ",")
-				require.Equal(t, employeeVal, ch)
+				require.Equal(t, "", ch, "set response headers should not be forwarded to the client")
 				require.Equal(t, `{"data":{"employee":{"id":1,"hobbies":[{},{"name":"Counter Strike"},{},{},{}]}}}`, res.Body)
 			})
 		})

@@ -457,9 +457,10 @@ func (h *HeaderPropagation) OnOriginResponse(resp *http.Response, ctx RequestCon
 func (h *HeaderPropagation) applyResponseRule(propagation *responseHeaderPropagation, res *http.Response, rule *config.ResponseHeaderRule) {
 	if rule.Operation == config.HeaderRuleOperationSet {
 		propagation.m.Lock()
-		propagation.header.Set(rule.Name, rule.Value)
 		if rule.Name == cacheControlKey {
-			// Handle the case where the cache control header is set explicitly
+			// Cache-Control set rules are forwarded to the client and disable the
+			// restrictive cache control algorithm.
+			propagation.header.Set(rule.Name, rule.Value)
 			propagation.setCacheControl = true
 		}
 		propagation.m.Unlock()

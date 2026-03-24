@@ -133,7 +133,7 @@ By combining these mechanisms, the algorithm ensures that data handling adheres 
 ### Overriding Cache Control Policy
 
 <Info>
-  By using the `set` operation in their header propagation rules, users can overwrite the cache control policy if necessary.
+  By using the `set` operation in their header propagation rules, users can override the cache control algorithm with an explicit value. When a `set` rule targets the `Cache-Control` header, the restrictive algorithm is skipped and the set value is forwarded to the client instead.
 </Info>
 
 For example, a configuration can be set like:
@@ -152,4 +152,4 @@ headers:
           value: "max-age=5400"
 ```
 
-For this configuration, any request which hits the `specific-subgraph` will have the desired subgraph cache control value set (`max-age=5400`).
+For this configuration, any request which hits the `specific-subgraph` will have `Cache-Control: max-age=5400` set on the client response, bypassing the restrictive cache control algorithm.
