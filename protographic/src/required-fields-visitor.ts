@@ -365,7 +365,7 @@ export class RequiredFieldsVisitor {
    * @throws Error if the field definition is not found on the current type
    */
   private onEnterField(ctx: VisitContext<FieldNode>): void {
-    if (!this.current) {
+    if (!this.current || ctx.node.name.value === '__typename') {
       return;
     }
 
