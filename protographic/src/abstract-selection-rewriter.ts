@@ -630,7 +630,7 @@ export class AbstractSelectionRewriter {
       // the wrong inline fragments.
       const fieldsToAdd = fields
         .filter((field) => !existingFields.has(field.name.value))
-        .filter((field) => inlineFragmentType.getFields()[field.name.value]);
+        .filter((field) => field.name.value === '__typename' || inlineFragmentType.getFields()[field.name.value]);
 
       // Add the interface fields to the fragment. We always prepend them for now.
       // TODO: Check if fields should be inserted in the order of appearance in the selection set.

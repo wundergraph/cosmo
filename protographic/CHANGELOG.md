@@ -4,6 +4,12 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.19.1](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.19.0...@wundergraph/protographic@0.19.1) (2026-03-24)
+
+### Bug Fixes
+
+* **protographic:** enforce using __typename in composite types for requires ([#2680](https://github.com/wundergraph/cosmo/issues/2680)) ([7cc0fdd](https://github.com/wundergraph/cosmo/commit/7cc0fdd95694bbcd5dae045ef43630fbe7692e98)) (@Noroth)
+
 # [0.19.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/protographic@0.18.2...@wundergraph/protographic@0.19.0) (2026-03-18)
 
 ### Features
