@@ -1418,4 +1418,43 @@ describe('SDL to Proto - Federation and Special Types', () => {
       }"
     `);
   });
+  test('should generate rpc method for required field with inline fragments and __typename', () => {
+    const sdl = `
+      type Storage @key(fields: "id") {
+        id: ID!
+        primaryItem: StorageItem! @external
+        itemInfo: String! @requires(fields: "primaryItem { __typename ... on PalletItem { name palletCount } ... on ContainerItem { name containerSize } }")
+      }
+
+      interface StorageItem {
+        name: String!
+      }
+
+      type PalletItem implements StorageItem {
+        name: String!
+        palletCount: Int!
+      }
+
+      type ContainerItem implements StorageItem {
+        name: String!
+        containerSize: String!
+      }
+    `;
+
+    const { proto: protoText } = compileGraphQLToProto(sdl);
+
+    // Validate Proto definition
+    expectValidProto(protoText);
+
+    // Should generate a Require RPC with oneof for the interface type
+    // __typename should be skipped in the proto generation
+    expect(protoText).toContain('rpc RequireStorageItemInfoById');
+    expect(protoText).toContain('RequireStorageItemInfoByIdFields');
+    expect(protoText).toContain('oneof instance');
+    expect(protoText).toContain('PalletItem');
+    expect(protoText).toContain('ContainerItem');
+    // __typename should NOT appear in proto
+    expect(protoText).not.toContain('__typename');
+    expect(protoText).not.toContain('typename');
+  });
 });
