@@ -725,9 +725,9 @@ func TestRateLimit(t *testing.T) {
 						Overrides: []config.RateLimitOverride{
 							{
 								Matching: "^.*:premium-.*",
-								Rate:       3,
-								Burst:      3,
-								Period:     time.Second * 2,
+								Rate:     4,
+								Burst:    4,
+								Period:   time.Second * 2,
 							},
 						},
 					},
@@ -760,7 +760,7 @@ func TestRateLimit(t *testing.T) {
 			require.NoError(t, err)
 			require.Contains(t, res.Body, `"errors"`)
 
-			// Premium user: override limit of 3, still has remaining after first request
+			// Premium user: override limit of 4, still has remaining after first request
 			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
 				Query:     `query ($n:Int!) { employee(id:$n) { id details { forename surname } } }`,
 				Variables: json.RawMessage(`{"n":1}`),
@@ -768,7 +768,7 @@ func TestRateLimit(t *testing.T) {
 				"X-Client-ID": "premium-user",
 			})
 			require.NoError(t, err)
-			require.Contains(t, res.Body, `"remaining":2`)
+			require.Contains(t, res.Body, `"remaining":3`)
 			require.NotContains(t, res.Body, `"errors"`)
 
 			res, err = xEnv.MakeGraphQLRequestWithHeaders(testenv.GraphQLRequest{
@@ -778,7 +778,7 @@ func TestRateLimit(t *testing.T) {
 				"X-Client-ID": "premium-user",
 			})
 			require.NoError(t, err)
-			require.Contains(t, res.Body, `"remaining":1`)
+			require.Contains(t, res.Body, `"remaining":2`)
 			require.NotContains(t, res.Body, `"errors"`)
 		})
 	})
@@ -857,7 +857,7 @@ func TestRateLimit(t *testing.T) {
 			t.Run("should fail with bad auth", func(t *testing.T) {
 				t.Parallel()
 
-				clusterUrlSlice = []string{"redis://cosmo1:test1@localhost:7001", "redis://cosmo:test@localhost:7003", "redis://cosmo2:test2@localhost:7002"}
+				clusterUrlSlice := []string{"redis://cosmo1:test1@localhost:7001", "redis://cosmo:test@localhost:7003", "redis://cosmo2:test2@localhost:7002"}
 
 				key := uuid.New().String()
 
