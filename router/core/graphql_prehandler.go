@@ -457,9 +457,17 @@ func (h *PreHandler) Handler(next http.Handler) http.Handler {
 		// and enrich the context to make it available in the request context as well for metrics etc.
 		next.ServeHTTP(ww, r)
 
-		// Mark the root span of the router as failed, so we can easily identify failed requests
+		// Mark the root span of the router as failed, so we can easily identify failed requests.
+		// Client disconnections are not server-side errors and should not mark the root span as ERROR.
 		if requestContext.error != nil {
-			rtrace.AttachErrToSpan(trace.SpanFromContext(r.Context()), requestContext.error)
+			contextSpan := trace.SpanFromContext(r.Context())
+
+			if errors.Is(requestContext.error, context.Canceled) {
+				// For disconnects just record the error but don't set the status
+				contextSpan.RecordError(requestContext.error)
+			} else {
+				rtrace.AttachErrToSpan(contextSpan, requestContext.error)
+			}
 		}
 	})
 }
