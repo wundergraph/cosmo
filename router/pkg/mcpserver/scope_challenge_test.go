@@ -332,7 +332,7 @@ func TestSatisfiesAnyGroup(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			got := SatisfiesAnyGroup(tt.tokenScopes, tt.orScopes)
+			got := SatisfiesAnyGroup(toSet(tt.tokenScopes), tt.orScopes)
 			assert.Equal(t, tt.want, got)
 		})
 	}

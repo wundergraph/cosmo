@@ -178,7 +178,8 @@
         "GetSchema": null
       },
       "ScopeChallengeIncludeTokenScopes": false
-    }
+    },
+    "ResourceDocumentation": ""
   },
   "ConnectRPC": {
     "Enabled": false,

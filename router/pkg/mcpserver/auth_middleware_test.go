@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 // mockTokenDecoder is a mock implementation of authentication.TokenDecoder for testing
@@ -35,32 +36,23 @@ func TestNewMCPAuthMiddleware(t *testing.T) {
 	tests := []struct {
 		name    string
 		decoder authentication.TokenDecoder
-		enabled bool
 		wantErr bool
 	}{
 		{
-			name:    "valid decoder and enabled",
+			name:    "valid decoder",
 			decoder: validDecoder,
-			enabled: true,
-			wantErr: false,
-		},
-		{
-			name:    "valid decoder and disabled",
-			decoder: validDecoder,
-			enabled: false,
 			wantErr: false,
 		},
 		{
 			name:    "nil decoder",
 			decoder: nil,
-			enabled: true,
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(tt.decoder, tt.enabled, "http://localhost:5025/.well-known/oauth-protected-resource/mcp", MCPScopeConfig{}, false)
+			middleware, err := NewMCPAuthMiddleware(tt.decoder, "http://localhost:5025/.well-known/oauth-protected-resource/mcp", config.MCPOAuthScopesConfiguration{}, false)
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Nil(t, middleware)
@@ -139,7 +131,7 @@ func TestExtractScopes(t *testing.T) {
 		{
 			name:   "no scope claim",
 			claims: authentication.Claims{},
-			want:   []string{},
+			want:   nil,
 		},
 		{
 			name: "empty scope string",
@@ -165,7 +157,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 
 	tests := []struct {
 		name                      string
-		scopes                    MCPScopeConfig
+		scopes                    config.MCPOAuthScopesConfiguration
 		setupDecoder              func() *mockTokenDecoder
 		setupRequest              func() *http.Request
 		wantStatusCode            int
@@ -173,7 +165,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 	}{
 		{
 			name:   "valid token without scopes",
-			scopes: MCPScopeConfig{},
+			scopes: config.MCPOAuthScopesConfiguration{},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
 					decodeFunc: func(token string) (authentication.Claims, error) {
@@ -193,7 +185,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 		},
 		{
 			name:   "missing auth header - 401 includes init scopes",
-			scopes: MCPScopeConfig{Initialize: []string{"mcp:connect"}},
+			scopes: config.MCPOAuthScopesConfiguration{Initialize: []string{"mcp:connect"}},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
 					decodeFunc: func(token string) (authentication.Claims, error) {
@@ -210,7 +202,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 		},
 		{
 			name:   "missing auth header - 401 without scopes when none configured",
-			scopes: MCPScopeConfig{},
+			scopes: config.MCPOAuthScopesConfiguration{},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
 					decodeFunc: func(token string) (authentication.Claims, error) {
@@ -227,7 +219,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 		},
 		{
 			name:   "invalid token - 401 includes init scopes",
-			scopes: MCPScopeConfig{Initialize: []string{"mcp:connect"}},
+			scopes: config.MCPOAuthScopesConfiguration{Initialize: []string{"mcp:connect"}},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
 					decodeFunc: func(token string) (authentication.Claims, error) {
@@ -245,7 +237,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 		},
 		{
 			name:   "insufficient init scopes - 403 with include token scopes enabled",
-			scopes: MCPScopeConfig{Initialize: []string{"mcp:connect"}},
+			scopes: config.MCPOAuthScopesConfiguration{Initialize: []string{"mcp:connect"}},
 			setupDecoder: func() *mockTokenDecoder {
 				return &mockTokenDecoder{
 					decodeFunc: func(token string) (authentication.Claims, error) {
@@ -269,7 +261,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 		},
 		{
 			name: "valid token with all required scopes",
-			scopes: MCPScopeConfig{
+			scopes: config.MCPOAuthScopesConfiguration{
 				Initialize: []string{"mcp:connect"},
 			},
 			setupDecoder: func() *mockTokenDecoder {
@@ -297,7 +289,7 @@ func TestMCPAuthMiddleware_HTTPMiddleware(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			decoder := tt.setupDecoder()
-			middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, tt.scopes, true)
+			middleware, err := NewMCPAuthMiddleware(decoder, testMetadataURL, tt.scopes, true)
 			assert.NoError(t, err)
 
 			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -341,7 +333,7 @@ func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
 		},
 	}
 
-	scopes := MCPScopeConfig{
+	scopes := config.MCPOAuthScopesConfiguration{
 		Initialize: []string{"mcp:connect"},
 		ToolsCall:  []string{"mcp:tools:write"},
 	}
@@ -448,7 +440,7 @@ func TestMCPAuthMiddleware_PerToolScopes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(validDecoder, true, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes)
+			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes)
 			assert.NoError(t, err)
 
 			// Set per-tool scopes
@@ -506,7 +498,7 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 		},
 	}
 
-	scopes := MCPScopeConfig{
+	scopes := config.MCPOAuthScopesConfiguration{
 		Initialize: []string{"mcp:connect"},
 		ToolsList:  []string{"mcp:tools:read"},
 		ToolsCall:  []string{"mcp:tools:write"},
@@ -577,7 +569,7 @@ func TestMCPAuthMiddleware_MethodLevelScopes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(validDecoder, true, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes)
+			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes)
 			assert.NoError(t, err)
 
 			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -621,7 +613,7 @@ func TestMCPAuthMiddleware_BuiltinToolScopes(t *testing.T) {
 		},
 	}
 
-	scopes := MCPScopeConfig{
+	scopes := config.MCPOAuthScopesConfiguration{
 		Initialize:       []string{"mcp:connect"},
 		ToolsCall:        []string{"mcp:tools:call"},
 		ExecuteGraphQL:   []string{"mcp:graphql:execute"},
@@ -685,7 +677,7 @@ func TestMCPAuthMiddleware_BuiltinToolScopes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(validDecoder, true, testMetadataURL, scopes, false)
+			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, false)
 			assert.NoError(t, err)
 
 			handler := middleware.HTTPMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

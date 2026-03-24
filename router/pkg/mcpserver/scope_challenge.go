@@ -1,15 +1,13 @@
 package mcpserver
 
-import "slices"
-
-// SatisfiesAnyGroup checks whether tokenScopes satisfies at least one AND-group
+// SatisfiesAnyGroup checks whether tokenScopeSet satisfies at least one AND-group
 // in the OR-of-AND scope requirements. Returns true if no requirements exist.
-func SatisfiesAnyGroup(tokenScopes []string, orScopes [][]string) bool {
+func SatisfiesAnyGroup(tokenScopeSet map[string]struct{}, orScopes [][]string) bool {
 	if len(orScopes) == 0 {
 		return true
 	}
 	for _, andGroup := range orScopes {
-		if satisfiesAll(tokenScopes, andGroup) {
+		if satisfiesAll(tokenScopeSet, andGroup) {
 			return true
 		}
 	}
@@ -23,8 +21,7 @@ func SatisfiesAnyGroup(tokenScopes []string, orScopes [][]string) bool {
 // Algorithm:
 //  1. For each AND-group, count how many scopes the token is missing.
 //  2. If any group has 0 missing, return nil (already satisfied).
-//  3. Pick the group with the fewest missing scopes.
-//  4. On ties, pick the first group (stable ordering).
+//  3. Pick the group with the fewest missing scopes (ties: first group wins).
 func BestScopeChallenge(tokenScopes []string, combinedOrScopes [][]string) []string {
 	if len(combinedOrScopes) == 0 {
 		return nil
@@ -68,30 +65,13 @@ func BestScopeChallengeWithExisting(tokenScopes []string, combinedOrScopes [][]s
 		return best
 	}
 
-	// Union: token scopes first, then any scopes from the best group not already present
-	seen := make(map[string]struct{}, len(tokenScopes)+len(best))
-	result := make([]string, 0, len(tokenScopes)+len(best))
-
-	for _, s := range tokenScopes {
-		if _, ok := seen[s]; !ok {
-			seen[s] = struct{}{}
-			result = append(result, s)
-		}
-	}
-	for _, s := range best {
-		if _, ok := seen[s]; !ok {
-			seen[s] = struct{}{}
-			result = append(result, s)
-		}
-	}
-
-	return result
+	return mergeAndDedup(tokenScopes, best)
 }
 
-// satisfiesAll returns true if tokenScopes contains every scope in required.
-func satisfiesAll(tokenScopes []string, required []string) bool {
+// satisfiesAll returns true if tokenScopeSet contains every scope in required.
+func satisfiesAll(tokenScopeSet map[string]struct{}, required []string) bool {
 	for _, r := range required {
-		if !slices.Contains(tokenScopes, r) {
+		if _, ok := tokenScopeSet[r]; !ok {
 			return false
 		}
 	}

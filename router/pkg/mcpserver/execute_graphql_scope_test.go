@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/wundergraph/cosmo/router/pkg/authentication"
+	"github.com/wundergraph/cosmo/router/pkg/config"
 )
 
 func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
@@ -42,7 +43,7 @@ func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
 		},
 	}
 
-	scopes := MCPScopeConfig{
+	scopes := config.MCPOAuthScopesConfiguration{
 		Initialize: []string{"mcp:connect"},
 		ToolsCall:  []string{"mcp:tools:write"},
 	}
@@ -139,7 +140,7 @@ func TestMCPAuthMiddleware_ExecuteGraphQLScopes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			middleware, err := NewMCPAuthMiddleware(validDecoder, true, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes)
+			middleware, err := NewMCPAuthMiddleware(validDecoder, testMetadataURL, scopes, tt.scopeChallengeIncludeTokenScopes)
 			assert.NoError(t, err)
 
 			// Set scope extractor for execute_graphql runtime checking
@@ -179,12 +180,12 @@ func TestMCPAuthMiddleware_ExecuteGraphQLNoExtractor(t *testing.T) {
 		},
 	}
 
-	scopes := MCPScopeConfig{
+	scopes := config.MCPOAuthScopesConfiguration{
 		Initialize: []string{"mcp:connect"},
 		ToolsCall:  []string{"mcp:tools:write"},
 	}
 
-	middleware, err := NewMCPAuthMiddleware(decoder, true, testMetadataURL, scopes, false)
+	middleware, err := NewMCPAuthMiddleware(decoder, testMetadataURL, scopes, false)
 	assert.NoError(t, err)
 	// Deliberately NOT setting a scope extractor
 
