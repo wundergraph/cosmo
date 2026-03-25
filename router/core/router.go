@@ -11,7 +11,6 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -1346,22 +1345,57 @@ func (r *Router) loadPQLManifestFromStorage(
 
 	if provider, ok := fileSystemProviders[storageProviderID]; ok {
 		providerType = "filesystem"
-		fullPath := filepath.Join(provider.Path, resolveObjectPath(manifestPath))
-		if err := pqlStore.LoadFromFile(fullPath); err != nil {
-			return fmt.Errorf("failed to load PQL manifest from filesystem provider %q at %q: %w", storageProviderID, fullPath, err)
+		fsClient, err := fs.NewClient(provider.Path, &fs.Options{
+			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create filesystem client for PQL manifest: %w", err)
+		}
+		data, err := fsClient.FetchManifest(manifestPath)
+		if err != nil {
+			return fmt.Errorf("failed to load PQL manifest from filesystem provider %q: %w", storageProviderID, err)
+		}
+		if err := pqlStore.LoadFromData(data); err != nil {
+			return fmt.Errorf("failed to parse PQL manifest from filesystem provider %q: %w", storageProviderID, err)
 		}
 	} else if provider, ok := s3Providers[storageProviderID]; ok {
 		providerType = "s3"
-		if err := pqlStore.LoadFromS3(ctx, provider, resolveObjectPath(manifestPath)); err != nil {
+		s3Client, err := s3.NewClient(provider.Endpoint, &s3.Options{
+			AccessKeyID:      provider.AccessKey,
+			SecretAccessKey:  provider.SecretKey,
+			Region:           provider.Region,
+			UseSSL:           provider.Secure,
+			BucketName:       provider.Bucket,
+			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
+			TraceProvider:    r.tracerProvider,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create S3 client for PQL manifest: %w", err)
+		}
+		data, err := s3Client.FetchManifest(ctx, resolveObjectPath(manifestPath))
+		if err != nil {
 			return fmt.Errorf("failed to load PQL manifest from S3 provider %q: %w", storageProviderID, err)
+		}
+		if err := pqlStore.LoadFromData(data); err != nil {
+			return fmt.Errorf("failed to parse PQL manifest from S3 provider %q: %w", storageProviderID, err)
 		}
 	} else if provider, ok := cdnProviders[storageProviderID]; ok {
 		providerType = "cdn"
 		if r.graphApiToken == "" {
 			return errors.New("graph token is required to fetch PQL manifest from CDN")
 		}
-		if err := pqlStore.LoadFromCDN(ctx, provider.URL, r.graphApiToken, resolveObjectPath(manifestPath)); err != nil {
+		cdnClient, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
+			Logger: r.logger,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to create CDN client for PQL manifest: %w", err)
+		}
+		data, err := cdnClient.FetchManifest(ctx, resolveObjectPath(manifestPath))
+		if err != nil {
 			return fmt.Errorf("failed to load PQL manifest from CDN provider %q: %w", storageProviderID, err)
+		}
+		if err := pqlStore.LoadFromData(data); err != nil {
+			return fmt.Errorf("failed to parse PQL manifest from CDN provider %q: %w", storageProviderID, err)
 		}
 	} else if storageProviderID == "" {
 		providerType = "file"

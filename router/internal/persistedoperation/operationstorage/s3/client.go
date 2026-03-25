@@ -108,4 +108,17 @@ func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash s
 	return []byte(po.Body), nil
 }
 
+// FetchManifest fetches a PQL manifest from S3 at the given object path and returns the raw bytes.
+func (c Client) FetchManifest(ctx context.Context, objectPath string) ([]byte, error) {
+	reader, err := c.client.GetObject(ctx, c.options.BucketName, objectPath, minio.GetObjectOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get manifest from S3: %w", err)
+	}
+	defer func() {
+		_ = reader.Close()
+	}()
+
+	return io.ReadAll(reader)
+}
+
 func (c Client) Close() {}

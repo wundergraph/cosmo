@@ -164,4 +164,45 @@ func NewClient(endpoint string, token string, opts Options) (*client, error) {
 	}, nil
 }
 
+// FetchManifest fetches a PQL manifest from the CDN at the given path and returns the raw bytes.
+func (cdn *client) FetchManifest(ctx context.Context, manifestPath string) ([]byte, error) {
+	manifestURL := cdn.cdnURL.ResolveReference(&url.URL{Path: manifestPath})
+
+	req, err := http.NewRequestWithContext(ctx, "GET", manifestURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
+	req.Header.Set("Accept-Encoding", "gzip")
+
+	resp, err := cdn.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("CDN returned status %d when fetching manifest", resp.StatusCode)
+	}
+
+	var reader io.Reader = resp.Body
+
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		r, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("could not create gzip reader: %w", err)
+		}
+		defer func() {
+			_ = r.Close()
+		}()
+		reader = r
+	}
+
+	return io.ReadAll(reader)
+}
+
 func (cdn *client) Close() {}
