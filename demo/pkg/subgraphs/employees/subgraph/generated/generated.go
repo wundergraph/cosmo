@@ -1419,7 +1419,7 @@ interface EmployeeWorkItem {
   priority: Int!
 }
 
-type TechnicalWorkItem implements EmployeeWorkItem {
+type TechnicalWorkItem implements EmployeeWorkItem @shareable {
   name: String!
   priority: Int!
   codeCount: Int!
@@ -1427,7 +1427,7 @@ type TechnicalWorkItem implements EmployeeWorkItem {
   specs: TechnicalSpecs!
 }
 
-type ManagementWorkItem implements EmployeeWorkItem {
+type ManagementWorkItem implements EmployeeWorkItem @shareable {
   name: String!
   priority: Int!
   teamSize: String!
@@ -1435,41 +1435,41 @@ type ManagementWorkItem implements EmployeeWorkItem {
   specs: ManagementSpecs!
 }
 
-type WorkItemHandler {
+type WorkItemHandler @shareable {
   name: String!
   assignedItem: EmployeeWorkItem!
 }
 
-type TechnicalSpecs {
+type TechnicalSpecs @shareable {
   name: String!
   complexity: Float!
   metrics: WorkMetrics!
 }
 
-type ManagementSpecs {
+type ManagementSpecs @shareable {
   name: String!
   scope: Float!
   metrics: WorkMetrics!
 }
 
-type WorkMetrics {
+type WorkMetrics @shareable {
   score: Float!
   efficiency: Float!
 }
 
 union WorkReviewResult = WorkApproval | WorkRejection
 
-type WorkApproval {
+type WorkApproval @shareable {
   comment: String!
   approvedAt: String!
 }
 
-type WorkRejection {
+type WorkRejection @shareable {
   reason: String!
   rejectionCode: String!
 }
 
-type WorkSetup {
+type WorkSetup @shareable {
   priority: String!
   primaryItem: EmployeeWorkItem!
 }
