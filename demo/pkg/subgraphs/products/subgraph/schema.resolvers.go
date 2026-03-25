@@ -124,8 +124,6 @@ func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResol
 // Queries returns generated.QueriesResolver implementation.
 func (r *Resolver) Queries() generated.QueriesResolver { return &queriesResolver{r} }
 
-type (
-	documentationResolver struct{ *Resolver }
-	mutationResolver      struct{ *Resolver }
-	queriesResolver       struct{ *Resolver }
-)
+type documentationResolver struct{ *Resolver }
+type mutationResolver struct{ *Resolver }
+type queriesResolver struct{ *Resolver }
