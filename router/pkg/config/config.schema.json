@@ -203,6 +203,10 @@
               "description": "Enable the PQL manifest feature.",
               "default": false
             },
+            "path": {
+              "type": "string",
+              "description": "The path to the PQL manifest JSON file."
+            },
             "poll_interval": {
               "type": "string",
               "format": "go-duration",
