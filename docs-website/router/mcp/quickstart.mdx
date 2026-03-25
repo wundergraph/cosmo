@@ -1,0 +1,173 @@
+---
+title: 'Quickstart'
+description: 'Get the Cosmo Router MCP Gateway running in 5 minutes. Create your first GraphQL operation and connect an AI tool.'
+icon: 'rocket'
+---
+
+This tutorial walks you through enabling MCP on the Cosmo Router, creating your first GraphQL operation, and connecting an AI tool to test it.
+
+## Prerequisites
+
+- A running Cosmo Router with a configured GraphQL schema (see [Router Introduction](/router/intro))
+- An AI tool that supports MCP (Claude Desktop, Cursor, Windsurf, VS Code, or similar)
+
+## Step 1: Create an Operations Directory
+
+Create a directory to store the GraphQL operations that will be exposed to AI models:
+
+```bash
+mkdir operations
+```
+
+## Step 2: Add Your First Operation
+
+Create a file `operations/getUsers.graphql` with a named GraphQL operation. The description string becomes the tool description that AI models see:
+
+```graphql
+"""
+Returns a list of all users in the system with their basic information.
+This is a read-only operation that doesn't modify any data.
+"""
+query GetUsers {
+  users {
+    id
+    name
+    email
+  }
+}
+```
+
+<Info>
+  Replace the operation above with a query that matches your actual GraphQL schema. The operation must be valid against
+  your schema.
+</Info>
+
+## Step 3: Configure the Router
+
+Add the MCP configuration to your `config.yaml`:
+
+```yaml
+mcp:
+  enabled: true
+  server:
+    listen_addr: 'localhost:5025'
+  graph_name: 'my-graph'
+  exclude_mutations: true # Start with read-only access
+  storage:
+    provider_id: 'mcp'
+
+storage_providers:
+  file_system:
+    - id: 'mcp'
+      path: 'operations'
+```
+
+<Tip>
+  Setting `exclude_mutations: true` is a good starting point. You can enable mutations later once you're comfortable
+  with the setup.
+</Tip>
+
+## Step 4: Start the Router
+
+Start (or restart) your Cosmo Router. You should see a log message indicating the MCP server is listening:
+
+```
+MCP server listening on localhost:5025
+```
+
+## Step 5: Connect Your AI Tool
+
+Choose your AI tool and add the MCP server configuration:
+
+<Tabs>
+  <Tab title="Cursor">
+    Go to **Settings** > **Tools & Integrations** > **MCP Servers** and add:
+
+    ```json
+    {
+      "mcpServers": {
+        "my-graph": {
+          "url": "http://localhost:5025/mcp"
+        }
+      }
+    }
+    ```
+
+    <Note>Requires Cursor v0.48.0+ for Streamable HTTP support.</Note>
+
+  </Tab>
+  <Tab title="Claude Desktop">
+    Go to **Settings** > **Developer** > **Edit Config** and add:
+
+    ```json
+    {
+      "mcpServers": {
+        "my-graph": {
+          "command": "npx",
+          "args": ["-y", "mcp-remote", "http://localhost:5025/mcp"]
+        }
+      }
+    }
+    ```
+
+    Restart Claude Desktop after saving.
+
+  </Tab>
+  <Tab title="VS Code">
+    Open **View** > **Command Palette** > **MCP: Add Server** and enter the URL:
+
+    ```
+    http://localhost:5025/mcp
+    ```
+
+    See the [VS Code MCP documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers) for details.
+
+  </Tab>
+  <Tab title="Windsurf">
+    Add to your MCP configuration:
+
+    ```json
+    {
+      "mcpServers": {
+        "my-graph": {
+          "serverUrl": "http://localhost:5025/mcp"
+        }
+      }
+    }
+    ```
+
+  </Tab>
+</Tabs>
+
+## Step 6: Test It
+
+In your AI tool, try a prompt like:
+
+```
+What tools are available? List all the operations I can use.
+```
+
+The AI model should discover your `GetUsers` operation (exposed as `execute_operation_get_users`) and be able to describe it. Then try:
+
+```
+Get all users from the system.
+```
+
+The AI model will call the `execute_operation_get_users` tool and return the results.
+
+## What's Next?
+
+<CardGroup cols={2}>
+  <Card title="Create More Operations" icon="file-code" href="/router/mcp/operations">
+    Learn how to write effective operations with descriptions, handle mutations, and organize your operations directory.
+  </Card>
+  <Card title="Full Configuration" icon="sliders-up" href="/router/mcp/configuration">
+    Explore all configuration options including session handling, storage providers, and advanced settings.
+  </Card>
+  <Card title="Secure with OAuth" icon="shield-check" href="/router/mcp/oauth">
+    Add OAuth 2.1 authorization with JWT validation and multi-level scope enforcement.
+  </Card>
+  <Card title="IDE Setup" icon="display-code" href="/router/mcp/ide-setup">
+    Detailed setup guides for each AI tool, including header forwarding and authentication.
+  </Card>
+</CardGroup>

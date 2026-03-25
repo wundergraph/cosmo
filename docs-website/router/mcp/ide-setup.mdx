@@ -1,0 +1,134 @@
+---
+title: 'IDE & AI Tool Setup'
+description: 'Connect Claude Desktop, Cursor, Windsurf, VS Code, and other AI tools to your MCP Gateway. Includes header forwarding for authentication and tracing.'
+icon: 'display-code'
+---
+
+This guide covers how to connect popular AI tools to your Cosmo Router MCP server and configure header forwarding for authentication, tracing, and custom headers.
+
+## Header Forwarding
+
+<Info>Available since Router [0.260.0](https://github.com/wundergraph/cosmo/releases/tag/router%400.260.0)</Info>
+
+The MCP server forwards most client headers to the Router — including authorization, custom, and tracing headers — but skips hop-by-hop and content negotiation headers (defined in [`headers.SkippedHeaders`](https://github.com/wundergraph/cosmo/blob/main/router/internal/headers/headers.go)). This allows you to:
+
+- Leverage all authentication and authorization capabilities of your Cosmo Router
+- Pass custom headers for tracing, debugging, or application-specific purposes
+- Maintain consistent security and observability across all API consumers
+
+<Info>
+  Headers are forwarded through the chain: MCP Client → MCP Server → Router → Subgraphs. The router's
+  [header forwarding rules](/router/proxy-capabilities/subgraph-request-header-operations) determine what ultimately
+  reaches your subgraphs.
+</Info>
+
+## IDE Setup Guides
+
+### Cursor
+
+<Note>Requires Cursor v0.48.0+ for Streamable HTTP support.</Note>
+
+Go to **Settings** > **Tools & Integrations** > **MCP Servers** and add the following to the `mcp.json` file:
+
+```json
+{
+  "mcpServers": {
+    "my-graph": {
+      "url": "http://localhost:5025/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY",
+        "X-Trace-Id": "cursor-session-123",
+        "X-Client": "cursor"
+      }
+    }
+  }
+}
+```
+
+All `headers` fields are optional — include only what your setup requires.
+
+### Claude Desktop
+
+Requires the latest version of Claude Desktop. Go to **Settings** > **Developer** and click on **Edit Config**. Add the following to the `claude_desktop_config.json` file:
+
+```json
+{
+  "mcpServers": {
+    "my-graph": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:5025/mcp"]
+    }
+  }
+}
+```
+
+After saving, **restart Claude Desktop** for changes to take effect.
+
+### Windsurf
+
+Windsurf supports Streamable HTTP servers with a `serverUrl` field:
+
+```json
+{
+  "mcpServers": {
+    "my-graph": {
+      "serverUrl": "http://localhost:5025/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_API_KEY",
+        "X-Trace-Id": "windsurf-session-456",
+        "X-Client": "windsurf"
+      }
+    }
+  }
+}
+```
+
+### VS Code
+
+Click **View** > **Command Palette** > **MCP: Add Server** and use the URL `http://localhost:5025/mcp` to complete the configuration.
+
+For more information, see the [VS Code MCP Servers documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers).
+
+### Other MCP-compatible Tools
+
+Other tools and AI models that support the MCP protocol typically provide similar ways to configure the server URL and authentication headers. Check the documentation for your specific AI tool for the exact configuration syntax.
+
+## Common Header Patterns
+
+### Authentication & Authorization
+
+Pass authorization tokens to secure your GraphQL operations:
+
+```json
+{
+  "headers": {
+    "Authorization": "Bearer YOUR_API_KEY"
+  }
+}
+```
+
+### Tracing
+
+Include trace IDs for request correlation and debugging:
+
+```json
+{
+  "headers": {
+    "X-Trace-Id": "trace-123",
+    "X-Request-Id": "req-456"
+  }
+}
+```
+
+### Custom Headers
+
+Pass application-specific headers for business logic:
+
+```json
+{
+  "headers": {
+    "X-Tenant-Id": "tenant-abc",
+    "X-Feature-Flag": "new-feature-enabled"
+  }
+}
+```

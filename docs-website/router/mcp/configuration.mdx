@@ -1,0 +1,128 @@
+---
+title: 'Configuration'
+description: 'Complete reference for all MCP Gateway configuration options, including session handling, storage providers, and environment variables.'
+icon: 'sliders-up'
+---
+
+## Basic Configuration
+
+To enable MCP in your Cosmo Router, add the following to your `config.yaml`:
+
+```yaml
+mcp:
+  enabled: true
+  server:
+    listen_addr: 'localhost:5025'
+  graph_name: 'my-graph'
+  exclude_mutations: true
+  storage:
+    provider_id: 'mcp'
+
+storage_providers:
+  file_system:
+    - id: 'mcp'
+      path: 'operations'
+```
+
+## Configuration Options
+
+| Option                        | Description                                                                                                                                                                                                                                                                  | Default          |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `enabled`                     | Enable or disable the MCP server                                                                                                                                                                                                                                             | `false`          |
+| `server.listen_addr`          | The address and port where the MCP server will listen for requests                                                                                                                                                                                                           | `localhost:5025` |
+| `server.base_url`             | The public base URL of the MCP server. **Required when OAuth is enabled.** Used for the RFC 9728 metadata endpoint and `resource_metadata` in `WWW-Authenticate` headers. Set this to your externally-reachable URL when behind a reverse proxy or load balancer.            | -                |
+| `router_url`                  | Custom URL to use for the router GraphQL endpoint in MCP responses. Use this when your router is behind a proxy.                                                                                                                                                             | -                |
+| `storage.provider_id`         | The ID of a storage provider to use for loading GraphQL operations. Only `file_system` providers are supported.                                                                                                                                                              | -                |
+| `session.stateless`           | Whether the MCP server should operate in stateless mode. When `true`, no server-side session state is maintained between requests.                                                                                                                                           | `true`           |
+| `graph_name`                  | The name of the graph this router exposes via MCP. Converted to kebab-case and used to build the MCP server name (`wundergraph-cosmo-<kebab-case-name>`) and for logging; it does not select a different graph. For example, `MyGraph` becomes `wundergraph-cosmo-my-graph`. | `mygraph`        |
+| `exclude_mutations`           | Whether to exclude mutation operations from being exposed                                                                                                                                                                                                                    | `false`          |
+| `enable_arbitrary_operations` | Enables the `execute_graphql` built-in tool, allowing clients to run arbitrary GraphQL operations beyond the pre-defined operation set.                                                                                                                                      | `false`          |
+| `expose_schema`               | Enables the `get_schema` built-in tool, exposing the full GraphQL schema to MCP clients.                                                                                                                                                                                     | `false`          |
+| `omit_tool_name_prefix`       | When enabled, MCP tool names omit the `execute_operation_` prefix. For example, `GetUser` becomes `get_user` instead of `execute_operation_get_user`. See [Operations — Omitting the Tool Name Prefix](/router/mcp/operations#omitting-the-tool-name-prefix).                | `false`          |
+
+For OAuth-specific configuration, see [OAuth 2.1 Authorization](/router/mcp/oauth).
+
+## Environment Variables
+
+All MCP options can also be set via environment variables:
+
+| Environment Variable              | Configuration Path                |
+| --------------------------------- | --------------------------------- |
+| `MCP_ENABLED`                     | `mcp.enabled`                     |
+| `MCP_SERVER_LISTEN_ADDR`          | `mcp.server.listen_addr`          |
+| `MCP_SERVER_BASE_URL`             | `mcp.server.base_url`             |
+| `MCP_ROUTER_URL`                  | `mcp.router_url`                  |
+| `MCP_STORAGE_PROVIDER_ID`         | `mcp.storage.provider_id`         |
+| `MCP_SESSION_STATELESS`           | `mcp.session.stateless`           |
+| `MCP_GRAPH_NAME`                  | `mcp.graph_name`                  |
+| `MCP_EXCLUDE_MUTATIONS`           | `mcp.exclude_mutations`           |
+| `MCP_ENABLE_ARBITRARY_OPERATIONS` | `mcp.enable_arbitrary_operations` |
+| `MCP_EXPOSE_SCHEMA`               | `mcp.expose_schema`               |
+| `MCP_OMIT_TOOL_NAME_PREFIX`       | `mcp.omit_tool_name_prefix`       |
+
+When OAuth is enabled, the following additional environment variables are available:
+
+| Environment Variable                             | Configuration Path                               |
+| ------------------------------------------------ | ------------------------------------------------ |
+| `MCP_OAUTH_ENABLED`                              | `mcp.oauth.enabled`                              |
+| `MCP_OAUTH_AUTHORIZATION_SERVER_URL`             | `mcp.oauth.authorization_server_url`             |
+| `MCP_OAUTH_SCOPE_CHALLENGE_INCLUDE_TOKEN_SCOPES` | `mcp.oauth.scope_challenge_include_token_scopes` |
+
+## Storage Providers
+
+MCP loads operations from a configured file system storage provider. This allows you to centralize the configuration of operation sources:
+
+```yaml
+storage_providers:
+  file_system:
+    - id: 'mcp'
+      path: 'operations' # Relative to the router binary
+```
+
+Then reference this storage provider in your MCP configuration:
+
+```yaml
+mcp:
+  storage:
+    provider_id: 'mcp'
+```
+
+A storage provider **must** be specified to load GraphQL operations. See [Storage Providers](/router/storage-providers) for more details on configuring storage providers.
+
+## Session Handling
+
+The MCP server uses the Streamable HTTP transport and maintains per-session state via the `Mcp-Session-Id` header. When deploying multiple Router instances, you need **sticky sessions** to ensure all requests for a session reach the same instance.
+
+To configure sticky sessions:
+
+1. The Router returns a unique `Mcp-Session-Id` response header when a session is established
+2. Clients must include that value in subsequent requests as the `Mcp-Session-Id` request header
+3. Your load balancer or reverse proxy must route requests with the same `Mcp-Session-Id` to the same instance
+
+For details, see your load balancer or reverse proxy documentation (e.g., [F5 NGINX Plus — MCP Session Affinity](https://community.f5.com/kb/technicalarticles/mcp-session-affinity-with-f5-nginx-plus/341961)).
+
+## CORS
+
+The MCP server automatically configures CORS to allow cross-origin requests from MCP clients. It sets `Access-Control-Allow-Origin: *` and allows the required MCP headers (`Mcp-Protocol-Version`, `Mcp-Session-Id`, `Authorization`, `Last-Event-ID`). The `Mcp-Session-Id` and `WWW-Authenticate` headers are exposed in responses. If you have additional CORS headers configured on the router, they are merged with the MCP-specific headers.
+
+## Full Configuration Example
+
+```yaml
+mcp:
+  enabled: true
+  server:
+    listen_addr: 'localhost:5025'
+  router_url: 'https://your-public-router-url.example.com/graphql'
+  graph_name: 'my-graph'
+  exclude_mutations: true
+  enable_arbitrary_operations: false
+  expose_schema: false
+  omit_tool_name_prefix: false
+  storage:
+    provider_id: 'mcp'
+
+storage_providers:
+  file_system:
+    - id: 'mcp'
+      path: 'operations'
+```
