@@ -289,3 +289,11 @@ jobs:
   seedOrganization:
     # -- Adds additional labels to the job (see: .Values.global.seed)
     additionalLabels: {}
+  # -- Scheduled CronJob to delete data (schema checks, audit logs, etc.) older than 90 days
+  cleanupOldData:
+    # -- Enables the cleanup CronJob
+    enabled: true
+    # -- Adds additional labels to the job
+    additionalLabels: {}
+    # -- Cron schedule (default: 1st of every month at midnight UTC)
+    schedule: '0 0 1 * *'
