@@ -1,0 +1,398 @@
+---
+title: 'OAuth 2.1 Authorization'
+description: 'Secure your MCP server with OAuth 2.1 authorization, JWKS-based JWT validation, multi-level scope enforcement, and RFC 9728 protected resource metadata.'
+icon: 'shield-check'
+---
+
+The MCP server supports OAuth 2.1 authorization, enabling integration with identity providers like Keycloak, Auth0, and Okta.
+
+<Info>OAuth is disabled by default. Existing MCP configurations continue to work unchanged.</Info>
+
+## Overview
+
+When OAuth is enabled, every HTTP request to the MCP server must include a valid JWT bearer token in the `Authorization` header. The server validates the token using configured JWKS providers and enforces scope requirements at multiple levels. All scope enforcement happens at the HTTP transport level per the MCP specification, returning `403 Forbidden` responses with `WWW-Authenticate` headers that enable [step-up authorization](#token-upgrade-flow).
+
+## Quick Start
+
+```yaml
+mcp:
+  enabled: true
+  server:
+    listen_addr: '0.0.0.0:5025'
+    base_url: 'https://mcp.example.com' # Required when OAuth is enabled
+  oauth:
+    enabled: true
+    authorization_server_url: 'https://auth.example.com'
+    scopes:
+      initialize:
+        - 'mcp:connect' # Required for all MCP requests
+      tools_list:
+        - 'mcp:tools:read' # Required to list available tools
+      tools_call:
+        - 'mcp:tools:execute' # Required to execute any tool
+    jwks:
+      - url: 'https://auth.example.com/.well-known/jwks.json'
+        refresh_interval: '1m'
+```
+
+## Configuration Options
+
+| Option                                       | Description                                                                                                                                                                                           | Default |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `oauth.enabled`                              | Enable OAuth 2.1 / JWKS-based authentication for the MCP server                                                                                                                                       | `false` |
+| `oauth.authorization_server_url`             | Base URL of the OAuth 2.0 authorization server. Advertised via the [RFC 9728 metadata endpoint](#rfc-9728-protected-resource-metadata) so clients can discover authorization endpoints.               | -       |
+| `oauth.scope_challenge_include_token_scopes` | When `true`, includes the token's existing scopes in the `scope` parameter of 403 responses. Works around MCP SDK scope accumulation bugs. See [Scope Challenge Behavior](#scope-challenge-behavior). | `false` |
+| `oauth.scopes.initialize`                    | Scopes required for **all** HTTP requests (checked before JSON-RPC parsing). This is the baseline scope needed to establish an MCP connection.                                                        | `[]`    |
+| `oauth.scopes.tools_list`                    | Scopes required for the `tools/list` MCP method.                                                                                                                                                      | `[]`    |
+| `oauth.scopes.tools_call`                    | Scopes required for the `tools/call` MCP method (any tool invocation). Per-tool and built-in tool scopes are enforced additively.                                                                     | `[]`    |
+| `oauth.scopes.execute_graphql`               | Scopes required to call the `execute_graphql` built-in tool. Additive to `tools_call`. Only relevant when `enable_arbitrary_operations` is `true`.                                                    | `[]`    |
+| `oauth.scopes.get_operation_info`            | Scopes required to call the `get_operation_info` built-in tool. Additive to `tools_call`.                                                                                                             | `[]`    |
+| `oauth.scopes.get_schema`                    | Scopes required to call the `get_schema` built-in tool. Additive to `tools_call`. Only relevant when `expose_schema` is `true`.                                                                       | `[]`    |
+| `oauth.jwks`                                 | List of JWKS providers for JWT verification. Supports remote JWKS URLs or symmetric secrets.                                                                                                          | `[]`    |
+
+## JWKS Configuration
+
+The `oauth.jwks` array configures one or more JWKS providers for JWT verification. The MCP OAuth config uses the **same `JWKSConfiguration` format** as the router's top-level [authentication configuration](/router/authentication-and-authorization), though it is configured independently. You can point the MCP JWKS to the same JWKS URL as your router authentication, or to a different identity provider entirely.
+
+For the full JWKS configuration reference including all options (`refresh_unknown_kid`, `allowed_use`, etc.), see [Router Authentication](/router/authentication-and-authorization).
+
+### Remote JWKS URL
+
+```yaml
+oauth:
+  jwks:
+    - url: 'https://auth.example.com/.well-known/jwks.json'
+      audiences:
+        - 'https://mcp.example.com'
+      algorithms:
+        - 'RS256'
+        - 'ES256'
+      refresh_interval: '1m' # How often to refresh the key set
+```
+
+| Field              | Description                                                   | Default    |
+| ------------------ | ------------------------------------------------------------- | ---------- |
+| `url`              | URL of the JWKS endpoint                                      | (required) |
+| `audiences`        | Allowed JWT `aud` claim values                                | (any)      |
+| `algorithms`       | Allowed signing algorithms (RS256, ES256, PS256, EdDSA, etc.) | (all)      |
+| `refresh_interval` | How often to refresh the JWKS key set                         | `1m`       |
+
+### Symmetric Secret
+
+For development or testing, you can use a shared symmetric secret instead of a remote JWKS endpoint:
+
+```yaml
+oauth:
+  jwks:
+    - secret: 'your-shared-secret'
+      symmetric_algorithm: 'HS256' # HS256, HS384, or HS512
+      header_key_id: 'my-key-id'
+```
+
+## Scope Enforcement
+
+Scopes are enforced at multiple levels, all at the HTTP transport layer per the MCP specification. Each level is **additive** — a request must satisfy all applicable scope gates.
+
+```
+HTTP Request
+  → Initialize scopes (all requests)
+    → Method scopes (tools/list, tools/call)
+      → Built-in tool scopes (execute_graphql, get_schema, get_operation_info)
+        → Per-tool scopes (from @requiresScopes on operation fields)
+          → Runtime scopes (execute_graphql only, per-query)
+```
+
+### Initialize Scopes (HTTP Level)
+
+The `scopes.initialize` list defines scopes required for **every** HTTP request to the MCP server. These are checked before the JSON-RPC payload is parsed, serving as the baseline authorization to establish an MCP connection.
+
+```yaml
+oauth:
+  scopes:
+    initialize:
+      - 'mcp:connect'
+```
+
+### Method-Level Scopes
+
+Additional scopes can be required for specific MCP methods:
+
+```yaml
+oauth:
+  scopes:
+    tools_list:
+      - 'mcp:tools:read' # Required to discover available tools
+    tools_call:
+      - 'mcp:tools:execute' # Required to execute any tool
+```
+
+When both `initialize` and method-level scopes are configured, the token must contain **all** of them. For example, calling `tools/call` requires both the `initialize` scopes and the `tools_call` scopes.
+
+<Info>
+  Scopes in the JWT must be provided as a **space-separated string** in the `scope` claim (per OAuth 2.0 convention).
+  Array-format scope claims are not supported.
+</Info>
+
+### Built-in Tool Scopes
+
+The MCP server provides three built-in tools: `execute_graphql`, `get_operation_info`, and `get_schema`. Each can have its own scope requirements, configured independently from `tools_call`:
+
+```yaml
+oauth:
+  scopes:
+    tools_call:
+      - 'mcp:tools:execute' # Base gate for any tool
+    execute_graphql:
+      - 'mcp:graphql:execute' # Additional scope for execute_graphql
+    get_operation_info:
+      - 'mcp:ops:read' # Additional scope for get_operation_info
+    get_schema:
+      - 'mcp:schema:read' # Additional scope for get_schema
+```
+
+Built-in tool scopes are **additive** to `tools_call` — the token must satisfy both. If `tools_call` is empty, only the built-in tool scope is checked.
+
+Scopes for `execute_graphql` are only relevant when `enable_arbitrary_operations: true`, and scopes for `get_schema` are only relevant when `expose_schema: true`. When the corresponding feature is disabled, the tool is not registered and its scopes are excluded from the `scopes_supported` metadata.
+
+### Per-Tool Scopes (from `@requiresScopes`)
+
+When your GraphQL schema uses the `@requiresScopes` directive on fields, the MCP server automatically extracts scope requirements for each tool at startup. If a tool's underlying GraphQL operation touches fields that require specific scopes, those scopes are enforced when the tool is called.
+
+For example, if your schema defines:
+
+```graphql
+type Query {
+  topSecretFacts: [Fact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
+  employee(id: ID!): Employee @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+}
+```
+
+And you have an operation `getTopSecretFacts.graphql` that queries `topSecretFacts`, calling that tool will require either `read:fact` OR `read:all` in addition to any `initialize` and `tools_call` scopes.
+
+The `@requiresScopes` directive uses OR-of-AND semantics. When an operation touches multiple fields with `@requiresScopes`, the MCP server computes the combined scope requirement using the [Cartesian product rules](/federation/directives/requiresscopes#combining-scopes-in-the-same-subgraph). For a full explanation of how scopes combine, see the [`@requiresScopes` directive documentation](/federation/directives/requiresscopes).
+
+Per-tool scopes are computed at startup (and on config reload), so they are enforced at the HTTP level with zero runtime overhead per request.
+
+### Runtime Scopes (`execute_graphql`)
+
+When `enable_arbitrary_operations` is enabled, the `execute_graphql` tool allows AI models to craft custom GraphQL queries. Since the server cannot know which fields will be queried ahead of time, scope checking happens at request time by parsing the GraphQL query and extracting `@requiresScopes` requirements for the fields it references.
+
+This runtime check uses the same [OR-of-AND semantics](/federation/directives/requiresscopes) and smart challenge selection as per-tool scopes. If the token lacks required scopes, the server returns a `403 Forbidden` with an appropriate scope challenge before the query is executed.
+
+<Info>
+  If the GraphQL query cannot be parsed, the request is passed through to the GraphQL engine, which handles the error.
+  Scope checking is best-effort and does not block malformed queries.
+</Info>
+
+### Scope Enforcement Summary
+
+| Level         | When Checked                    | Configured Via                                                                               | Failure Response              |
+| ------------- | ------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------- |
+| Initialize    | Every HTTP request              | `oauth.scopes.initialize`                                                                    | 403 with required scopes      |
+| Method        | `tools/list`, `tools/call`      | `oauth.scopes.tools_list`, `oauth.scopes.tools_call`                                         | 403 with required scopes      |
+| Built-in tool | `tools/call` for built-in tools | `oauth.scopes.execute_graphql`, `oauth.scopes.get_schema`, `oauth.scopes.get_operation_info` | 403 with required scopes      |
+| Per-tool      | `tools/call` for specific tool  | `@requiresScopes` in GraphQL schema                                                          | 403 with best scope challenge |
+| Runtime       | `execute_graphql` calls         | `@requiresScopes` in GraphQL schema                                                          | 403 with best scope challenge |
+
+## `get_operation_info` and Scope Discovery
+
+The `get_operation_info` tool includes scope requirements in its response, allowing AI models to discover what scopes a tool needs before calling it:
+
+```
+Required Scopes (OR-of-AND):
+  - read:employee AND read:private
+  OR
+  - read:all
+```
+
+## Token Upgrade Flow
+
+Tokens can be upgraded **on the same MCP session** without reconnecting:
+
+1. Client connects with a token that has `mcp:connect` scope
+2. Client calls `tools/call` and receives `403 Forbidden` with `insufficient_scope`
+3. Client obtains a new token with additional scopes from the authorization server
+4. Client retries with the new token on the same session (same `Mcp-Session-Id`)
+
+## Scope Challenge Behavior
+
+When the server returns a `403 Forbidden` response, the `WWW-Authenticate` header includes a `scope` parameter per [RFC 6750](https://datatracker.ietf.org/doc/rfc6750/) telling the client which scopes to request.
+
+For per-tool and runtime challenges where multiple scope groups can satisfy the requirement (OR-of-AND), the server selects the **best** group — the one requiring the fewest additional scopes based on what the token already has:
+
+1. For each AND-group, count how many scopes the token is **missing**
+2. Pick the group with the **fewest missing** scopes (ties go to the first group)
+
+For example, suppose a tool requires `(read:employee AND read:private AND read:fact) OR (read:all)` and a client presents a token with scopes `read:employee read:private`:
+
+| AND-group                                    | Missing scopes | Count |
+| -------------------------------------------- | -------------- | ----- |
+| `read:employee`, `read:private`, `read:fact` | `read:fact`    | 1     |
+| `read:all`                                   | `read:all`     | 1     |
+
+Both groups have 1 missing scope. The server picks the first, returning the **complete AND-group** (not just the missing scopes):
+
+```
+WWW-Authenticate: Bearer error="insufficient_scope", scope="read:employee read:private read:fact"
+```
+
+The client can then request the additional `read:fact` scope from the authorization server and retry.
+
+### `scope_challenge_include_token_scopes`
+
+Some MCP client SDKs do not correctly accumulate scopes when performing step-up authorization — they request **only** the scopes from the `WWW-Authenticate` challenge, discarding the scopes they already had. This causes a loop where gaining a new scope loses a previous one. This is a [known issue in the MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk/issues/1582).
+
+To work around this, set `scope_challenge_include_token_scopes: true` to include the token's existing scopes alongside the required scopes in the challenge.
+
+| Value             | Behavior                                                                                   | Trade-off                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `false` (default) | Returns only the scopes the operation requires (strict RFC 6750).                          | Spec-compliant and more secure, but requires the client to correctly accumulate scopes.                   |
+| `true`            | Returns the union of the token's existing scopes and the required scopes in the challenge. | More compatible with current MCP clients, but reveals the token's existing scopes in the response header. |
+
+```yaml
+oauth:
+  scope_challenge_include_token_scopes: true
+```
+
+<Warning>
+  Setting `scope_challenge_include_token_scopes: true` reveals the token's existing scopes in the `WWW-Authenticate`
+  response header. If this is a concern, leave it as `false` and ensure your MCP clients correctly accumulate scopes
+  when requesting new tokens.
+</Warning>
+
+## HTTP Error Responses
+
+### 401 Unauthorized
+
+Returned when the token is missing, invalid, expired, or signature verification fails.
+
+```
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Bearer realm="mcp", scope="mcp:connect", resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp"
+```
+
+The `scope` parameter contains the `initialize` scopes (minimum scopes needed to connect). The `resource_metadata` URL points to the [RFC 9728 metadata endpoint](#rfc-9728-protected-resource-metadata) for OAuth discovery.
+
+### 403 Forbidden
+
+Returned when the token is valid but lacks required scopes. The exact `scope` parameter depends on which level of enforcement rejected the request:
+
+**Method-level rejection** (e.g., missing `tools_call` scopes):
+
+```
+HTTP/1.1 403 Forbidden
+WWW-Authenticate: Bearer error="insufficient_scope", scope="mcp:tools:execute", resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp", error_description="missing required scopes: mcp:tools:execute"
+```
+
+**Per-tool rejection** (e.g., calling a tool that requires `read:fact`):
+
+```
+HTTP/1.1 403 Forbidden
+WWW-Authenticate: Bearer error="insufficient_scope", scope="read:fact", resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp", error_description="insufficient scopes for tool execute_operation_get_top_secret_facts"
+```
+
+The `scope` parameter always contains only the scopes needed for the specific operation that failed (unless `scope_challenge_include_token_scopes` is enabled).
+
+<Info>
+  Per the MCP specification, HTTP-level authentication failures return only HTTP status codes and headers — no JSON-RPC
+  response body is included.
+</Info>
+
+## RFC 9728 Protected Resource Metadata
+
+When OAuth is enabled and `authorization_server_url` is configured, the MCP server exposes a public (unauthenticated) metadata endpoint at:
+
+```
+GET /.well-known/oauth-protected-resource/mcp
+```
+
+This follows the [RFC 9728](https://datatracker.ietf.org/doc/rfc9728/) path-aware format. MCP clients use this endpoint to automatically discover the authorization server and all supported scopes.
+
+**Example response:**
+
+```json
+{
+  "resource": "https://mcp.example.com",
+  "authorization_servers": ["https://auth.example.com"],
+  "bearer_methods_supported": ["header"],
+  "resource_documentation": "https://mcp.example.com/mcp",
+  "scopes_supported": [
+    "mcp:connect",
+    "mcp:tools:execute",
+    "mcp:tools:read",
+    "read:all",
+    "read:employee",
+    "read:fact",
+    "read:private"
+  ]
+}
+```
+
+The `scopes_supported` field is **automatically computed** as the union of:
+
+- All configured static scopes (`initialize`, `tools_list`, `tools_call`)
+- All scopes extracted from `@requiresScopes` directives on fields used by registered operations
+
+This means MCP clients can request all supported scopes upfront during the initial OAuth authorization, avoiding step-up challenges entirely. The authorization server controls which scopes are actually granted based on the client's permissions and the user's consent.
+
+<Info>
+  Well-behaved MCP clients should read `scopes_supported` from the metadata endpoint and request all supported scopes
+  during the initial authorization. This avoids the step-up flow entirely when the authorization server grants all
+  requested scopes. The step-up flow with 403 challenges serves as a fallback when the client doesn't have all scopes
+  upfront.
+</Info>
+
+## Startup Validation
+
+The router performs startup validation when OAuth is enabled:
+
+- If `oauth.jwks` is empty, the router exits with a fatal error to prevent starting an unprotected endpoint
+- If `server.base_url` is empty, the router exits with a fatal error because it is required for RFC 9728 metadata discovery
+
+## Full Configuration Example
+
+```yaml
+mcp:
+  enabled: true
+  server:
+    listen_addr: '0.0.0.0:5025'
+    base_url: 'https://mcp.example.com'
+  graph_name: 'my-graph'
+  exclude_mutations: true
+  enable_arbitrary_operations: true # Enables execute_graphql tool
+  expose_schema: true # Enables get_schema tool
+  oauth:
+    enabled: true
+    authorization_server_url: 'https://auth.example.com'
+    scope_challenge_include_token_scopes: false # Set to true for MCP clients with scope accumulation bugs
+    scopes:
+      initialize:
+        - 'mcp:connect'
+      tools_list:
+        - 'mcp:tools:read'
+      tools_call:
+        - 'mcp:tools:execute'
+      # Built-in tool scopes (additive to tools_call)
+      execute_graphql:
+        - 'mcp:graphql:execute'
+      get_schema:
+        - 'mcp:schema:read'
+      get_operation_info:
+        - 'mcp:ops:read'
+    jwks:
+      - url: 'https://auth.example.com/.well-known/jwks.json'
+        audiences:
+          - 'https://mcp.example.com'
+        algorithms:
+          - 'RS256'
+        refresh_interval: '1m'
+  storage:
+    provider_id: 'mcp'
+  session:
+    stateless: true
+
+storage_providers:
+  file_system:
+    - id: 'mcp'
+      path: 'operations'
+```
