@@ -55,6 +55,7 @@ func (p *graphQLWSProtocol) Initialize() (json.RawMessage, error) {
 		return nil, fmt.Errorf("error reading connection_init: %w", err)
 	}
 	if msg.Type != graphQLWSMessageTypeConnectionInit {
+		_ = p.Close(4401, "Unauthorized")
 		return nil, fmt.Errorf("first message should be %s, got %s", graphQLWSMessageTypeConnectionInit, msg.Type)
 	}
 	if err := p.conn.WriteJSON(graphQLWSMessage{Type: graphQLWSMessageTypeConnectionAck}); err != nil {
@@ -78,8 +79,19 @@ func (p *graphQLWSProtocol) ReadMessage() (*Message, error) {
 		messageType = MessageTypeSubscribe
 	case graphQLWSMessageTypeComplete:
 		messageType = MessageTypeComplete
+	case graphQLWSMessageTypeConnectionInit:
+		_ = p.Close(4429, "Too many initialisation requests")
+		return nil, fmt.Errorf("duplicate connection_init")
 	default:
+		// graphql-transport-ws spec requires closing with 4400 for unknown types.
+		_ = p.Close(4400, "Invalid message type")
 		return nil, fmt.Errorf("unsupported message type %s", msg.Type)
+	}
+
+	if messageType == MessageTypeSubscribe || messageType == MessageTypeComplete {
+		if msg.ID == "" {
+			return nil, fmt.Errorf("missing id in %s message", msg.Type)
+		}
 	}
 
 	return &Message{

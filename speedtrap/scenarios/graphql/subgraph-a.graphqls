@@ -1,0 +1,20 @@
+extend schema
+  @link(
+    url: "https://specs.apollo.dev/federation/v2.5"
+    import: ["@shareable"]
+  )
+
+type Query {
+  _empty: Boolean @shareable
+}
+
+scalar JSON
+
+type Subscription {
+  streamA(key: String): StreamEvent
+}
+
+type StreamEvent @shareable {
+  key: String
+  contents: JSON
+}

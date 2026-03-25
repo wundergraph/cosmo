@@ -241,21 +241,21 @@ func AddCacheControlPolicyToRules(rules *config.HeaderRules, cacheControl config
 	return rules
 }
 
-func (hf *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*config.ResponseHeaderRule, []*config.RouterResponseHeaderRule) {
-	rhrs := hf.rules.All.Request
-	for _, subgraph := range hf.rules.Subgraphs {
+func (h *HeaderPropagation) getAllRules() ([]*config.RequestHeaderRule, []*config.ResponseHeaderRule, []*config.RouterResponseHeaderRule) {
+	rhrs := h.rules.All.Request
+	for _, subgraph := range h.rules.Subgraphs {
 		rhrs = append(rhrs, subgraph.Request...)
 	}
 
-	rhrrs := hf.rules.All.Response
-	for _, subgraph := range hf.rules.Subgraphs {
+	rhrrs := h.rules.All.Response
+	for _, subgraph := range h.rules.Subgraphs {
 		rhrrs = append(rhrrs, subgraph.Response...)
 	}
 
-	return rhrs, rhrrs, hf.rules.Router.Response
+	return rhrs, rhrrs, h.rules.Router.Response
 }
 
-func (hf *HeaderPropagation) processRule(rule config.HeaderRule, index int) error {
+func (h *HeaderPropagation) processRule(rule config.HeaderRule, index int) error {
 	switch rule.GetOperation() {
 	case config.HeaderRuleOperationSet:
 	case config.HeaderRuleOperationPropagate:
@@ -264,7 +264,7 @@ func (hf *HeaderPropagation) processRule(rule config.HeaderRule, index int) erro
 			if err != nil {
 				return fmt.Errorf("invalid regex '%s' for header rule %d: %w", rule.GetMatching(), index, err)
 			}
-			hf.regex[rule.GetMatching()] = regex
+			h.regex[rule.GetMatching()] = regex
 		}
 	default:
 		return fmt.Errorf("unhandled operation '%s' for header rule %+v", rule.GetOperation(), rule)
@@ -272,15 +272,15 @@ func (hf *HeaderPropagation) processRule(rule config.HeaderRule, index int) erro
 	return nil
 }
 
-func (hf *HeaderPropagation) collectRuleMatchers(rhrs []*config.RequestHeaderRule, rhrrs []*config.ResponseHeaderRule) error {
+func (h *HeaderPropagation) collectRuleMatchers(rhrs []*config.RequestHeaderRule, rhrrs []*config.ResponseHeaderRule) error {
 	for i, rule := range rhrs {
-		if err := hf.processRule(rule, i); err != nil {
+		if err := h.processRule(rule, i); err != nil {
 			return err
 		}
 	}
 
 	for i, rule := range rhrrs {
-		if err := hf.processRule(rule, i); err != nil {
+		if err := h.processRule(rule, i); err != nil {
 			return err
 		}
 	}
@@ -288,33 +288,33 @@ func (hf *HeaderPropagation) collectRuleMatchers(rhrs []*config.RequestHeaderRul
 	return nil
 }
 
-func (hf *HeaderPropagation) compileExpressionRules(requestRules []*config.RequestHeaderRule, routerResponseRules []*config.RouterResponseHeaderRule) error {
+func (h *HeaderPropagation) compileExpressionRules(requestRules []*config.RequestHeaderRule, routerResponseRules []*config.RouterResponseHeaderRule) error {
 	manager := expr.CreateNewExprManager()
 	for _, rule := range requestRules {
 		if rule.Expression == "" {
 			continue
 		}
-		if _, ok := hf.compiledRules[rule.Expression]; ok {
+		if _, ok := h.compiledRules[rule.Expression]; ok {
 			continue
 		}
 		program, err := manager.CompileExpression(rule.Expression, reflect.String)
 		if err != nil {
 			return fmt.Errorf("error compiling expression %s for header rule %s: %w", rule.Expression, rule.Name, err)
 		}
-		hf.compiledRules[rule.Expression] = program
+		h.compiledRules[rule.Expression] = program
 	}
 	for _, rule := range routerResponseRules {
 		if rule.Expression == "" {
 			continue
 		}
-		if _, ok := hf.compiledRouterResponseRules[rule.Expression]; ok {
+		if _, ok := h.compiledRouterResponseRules[rule.Expression]; ok {
 			continue
 		}
 		program, err := manager.CompileExpression(rule.Expression, reflect.String)
 		if err != nil {
 			return fmt.Errorf("error compiling expression %s for header rule %s: %w", rule.Expression, rule.Name, err)
 		}
-		hf.compiledRouterResponseRules[rule.Expression] = program
+		h.compiledRouterResponseRules[rule.Expression] = program
 	}
 	return nil
 }

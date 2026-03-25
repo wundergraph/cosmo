@@ -58,6 +58,7 @@ func (p *subscriptionsTransportWSProtocol) Initialize() (json.RawMessage, error)
 		return nil, fmt.Errorf("error reading connection_init: %w", err)
 	}
 	if msg.Type != subscriptionsTransportWSMessageTypeConnectionInit {
+		_ = p.Close(4401, "Unauthorized")
 		return nil, fmt.Errorf("first message should be %s, got %s", subscriptionsTransportWSMessageTypeConnectionInit, msg.Type)
 	}
 	if err := p.conn.WriteJSON(subscriptionsTransportWSMessage{Type: subscriptionsTransportWSMessageTypeConnectionAck}); err != nil {
@@ -79,7 +80,11 @@ func (p *subscriptionsTransportWSProtocol) ReadMessage() (*Message, error) {
 		messageType = MessageTypeSubscribe
 	case subscriptionsTransportWSMessageTypeStop:
 		messageType = MessageTypeComplete
+	case subscriptionsTransportWSMessageTypeConnectionInit:
+		_ = p.Close(4429, "Too many initialisation requests")
+		return nil, fmt.Errorf("duplicate connection_init")
 	default:
+		_ = p.Close(4400, "Invalid message type")
 		return nil, fmt.Errorf("unsupported message type %s", msg.Type)
 	}
 
