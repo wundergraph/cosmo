@@ -827,6 +827,7 @@ export const schemaChecks = pgTable(
   (t) => {
     return {
       targetIdIndex: index('sc_target_id_idx').on(t.targetId),
+      sceWebhookDeliveryIdIndex: index('sce_webhook_delivery_id_idx').on(t.checkExtensionDeliveryId),
     };
   },
 );
@@ -883,6 +884,7 @@ export const schemaCheckSubgraphs = pgTable(
     return {
       schemaCheckIdIndex: index('scs_schema_check_id_idx').on(t.schemaCheckId),
       subgraphIdIndex: index('scs_subgraph_id_idx').on(t.subgraphId),
+      namespaceIdIndex: index('scs_namespace_id_idx').on(t.namespaceId),
     };
   },
 );
@@ -1089,6 +1091,7 @@ export const schemaCheckChangeAction = pgTable(
   (t) => {
     return {
       schemaCheckIdIndex: index('scca_schema_check_id_idx').on(t.schemaCheckId),
+      schemaCheckSubgraphIdIndex: index('scca_schema_check_subgraph_id_idx').on(t.schemaCheckSubgraphId),
     };
   },
 );
@@ -2270,6 +2273,7 @@ export const schemaCheckLintAction = pgTable(
   (t) => {
     return {
       schemaCheckIdIndex: index('sclact_schema_check_id_idx').on(t.schemaCheckId),
+      schemaCheckSubgraphIdIndex: index('sclact_schema_check_subgraph_id_idx').on(t.schemaCheckSubgraphId),
     };
   },
 );
@@ -2315,6 +2319,7 @@ export const schemaCheckGraphPruningAction = pgTable(
     return {
       schemaCheckIdIndex: index('scgpa_schema_check_id_idx').on(t.schemaCheckId),
       federatedGraphIdIndex: index('scgpa_federated_graph_id_idx').on(t.federatedGraphId),
+      schemaCheckSubgraphIdIndex: index('scgpa_schema_check_subgraph_id_idx').on(t.schemaCheckSubgraphId),
     };
   },
 );
