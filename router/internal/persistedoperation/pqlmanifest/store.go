@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"sync/atomic"
 
@@ -105,7 +106,10 @@ func (s *Store) LoadFromS3(ctx context.Context, provider config.S3StorageProvide
 
 // LoadFromCDN fetches a manifest from a CDN endpoint and loads it into the store.
 func (s *Store) LoadFromCDN(ctx context.Context, cdnURL, token, manifestPath string) error {
-	reqURL := cdnURL + "/" + manifestPath
+	reqURL, err := url.JoinPath(cdnURL, manifestPath)
+	if err != nil {
+		return fmt.Errorf("failed to construct CDN URL: %w", err)
+	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {

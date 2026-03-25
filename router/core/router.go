@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -1333,18 +1335,18 @@ func (r *Router) loadPQLManifestFromStorage(
 	storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
 	objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
 
-	resolveObjectPath := func(path string) string {
+	resolveObjectPath := func(p string) string {
 		if objectPrefix != "" {
-			return objectPrefix + "/" + path
+			return path.Join(objectPrefix, p)
 		}
-		return path
+		return p
 	}
 
 	var providerType string
 
 	if provider, ok := fileSystemProviders[storageProviderID]; ok {
 		providerType = "filesystem"
-		fullPath := provider.Path + "/" + resolveObjectPath(manifestPath)
+		fullPath := filepath.Join(provider.Path, resolveObjectPath(manifestPath))
 		if err := pqlStore.LoadFromFile(fullPath); err != nil {
 			return fmt.Errorf("failed to load PQL manifest from filesystem provider %q at %q: %w", storageProviderID, fullPath, err)
 		}
@@ -1358,7 +1360,7 @@ func (r *Router) loadPQLManifestFromStorage(
 		if r.graphApiToken == "" {
 			return errors.New("graph token is required to fetch PQL manifest from CDN")
 		}
-		if err := pqlStore.LoadFromCDN(ctx, provider.URL, r.graphApiToken, manifestPath); err != nil {
+		if err := pqlStore.LoadFromCDN(ctx, provider.URL, r.graphApiToken, resolveObjectPath(manifestPath)); err != nil {
 			return fmt.Errorf("failed to load PQL manifest from CDN provider %q: %w", storageProviderID, err)
 		}
 	} else if storageProviderID == "" {

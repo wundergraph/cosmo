@@ -560,7 +560,7 @@ export class OperationsRepository {
 
     const operations: Record<string, string> = {};
     for (const op of allOperations) {
-      operations[op.hash] = op.operationContent;
+      operations[op.operationId] = op.operationContent;
     }
 
     // Compute revision as SHA256 of the deterministic JSON serialization (sorted keys)
