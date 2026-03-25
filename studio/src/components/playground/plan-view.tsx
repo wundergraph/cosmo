@@ -1,25 +1,22 @@
-import { useResolvedTheme } from "@/hooks/use-resolved-theme";
-import {
-  Bars3BottomLeftIcon,
-  ExclamationTriangleIcon,
-} from "@heroicons/react/24/outline";
-import Editor, { loader, useMonaco } from "@monaco-editor/react";
-import { useContext, useEffect, useMemo, useState } from "react";
-import { LuLayoutDashboard, LuNetwork } from "react-icons/lu";
-import { Edge, Node, ReactFlowProvider } from "reactflow";
-import { EmptyState } from "../empty-state";
-import { schemaViewerDarkTheme } from "../schema/monaco-dark-theme";
-import { CLI } from "../ui/cli";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
-import { FetchFlow, ReactFlowQueryPlanFetchNode } from "./fetch-flow";
-import { PlanPrinter } from "./prettyPrint";
-import { TraceContext } from "./trace-view";
-import { QueryPlan, QueryPlanFetchTypeNode } from "./types";
+import { useResolvedTheme } from '@/hooks/use-resolved-theme';
+import { Bars3BottomLeftIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import Editor, { loader, useMonaco } from '@monaco-editor/react';
+import { useContext, useEffect, useMemo, useState } from 'react';
+import { LuLayoutDashboard, LuNetwork } from 'react-icons/lu';
+import { Edge, Node, ReactFlowProvider } from 'reactflow';
+import { EmptyState } from '../empty-state';
+import { schemaViewerDarkTheme } from '../schema/monaco-dark-theme';
+import { CLI } from '../ui/cli';
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import { FetchFlow, ReactFlowQueryPlanFetchNode } from './fetch-flow';
+import { PlanPrinter } from './prettyPrint';
+import { TraceContext } from './trace-view';
+import { QueryPlan, QueryPlanFetchTypeNode } from './types';
 
 loader.config({
   paths: {
     // Load Monaco Editor from "public" directory
-    vs: "/monaco-editor/min/vs",
+    vs: '/monaco-editor/min/vs',
     // Load Monaco Editor from different CDN
     // vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs',
   },
@@ -34,8 +31,8 @@ const PlanTree = ({ queryPlan }: { queryPlan: QueryPlan }) => {
     const tempEdges: Edge[] = [];
 
     tempNodes.push({
-      id: "root",
-      type: "fetch",
+      id: 'root',
+      type: 'fetch',
       data: {
         ...queryPlan,
       },
@@ -50,7 +47,7 @@ const PlanTree = ({ queryPlan }: { queryPlan: QueryPlan }) => {
         const id = crypto.randomUUID();
         tempNodes.push({
           id,
-          type: "fetch",
+          type: 'fetch',
           data: {
             ...child,
           },
@@ -73,14 +70,14 @@ const PlanTree = ({ queryPlan }: { queryPlan: QueryPlan }) => {
       });
     };
 
-    parseNodes(queryPlan, "root");
+    parseNodes(queryPlan, 'root');
 
     if (queryPlan.trigger) {
       tempNodes.unshift({
-        id: "trigger",
-        type: "fetch",
+        id: 'trigger',
+        type: 'fetch',
         data: {
-          kind: "Trigger",
+          kind: 'Trigger',
           fetch: queryPlan.trigger,
         },
         position: {
@@ -93,8 +90,8 @@ const PlanTree = ({ queryPlan }: { queryPlan: QueryPlan }) => {
 
       tempEdges.unshift({
         id: `trigger-root`,
-        source: "trigger",
-        target: "root",
+        source: 'trigger',
+        target: 'root',
         animated: true,
       });
     }
@@ -138,16 +135,16 @@ export const PlanView = () => {
     })();
   }, [plan]);
 
-  const [view, setView] = useState<"tree" | "text">("tree");
+  const [view, setView] = useState<'tree' | 'text'>('tree');
 
   const selectedTheme = useResolvedTheme();
   const monaco = useMonaco();
   useEffect(() => {
     if (!monaco) return;
-    if (selectedTheme === "dark") {
-      monaco.editor.setTheme("wg-dark");
+    if (selectedTheme === 'dark') {
+      monaco.editor.setTheme('wg-dark');
     } else {
-      monaco.editor.setTheme("light");
+      monaco.editor.setTheme('light');
     }
   }, [selectedTheme, monaco]);
 
@@ -174,11 +171,7 @@ export const PlanView = () => {
 
   return (
     <div className="relative flex h-full w-full flex-1 flex-col font-sans">
-      <Tabs
-        defaultValue="tree"
-        className="absolute bottom-3 right-4 z-30 w-max"
-        onValueChange={(v: any) => setView(v)}
-      >
+      <Tabs defaultValue="tree" className="absolute bottom-3 right-4 z-30 w-max" onValueChange={(v: any) => setView(v)}>
         <TabsList className="grid w-full grid-cols-2 shadow-lg">
           <TabsTrigger value="tree">
             <div className="flex items-center gap-x-2">
@@ -194,14 +187,14 @@ export const PlanView = () => {
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      {view === "tree" && <PlanTree queryPlan={plan} />}
-      {view === "text" && (
+      {view === 'tree' && <PlanTree queryPlan={plan} />}
+      {view === 'text' && (
         <div className="scrollbar-custom h-full w-full overflow-auto rounded-xl">
           <Editor
-            theme={selectedTheme === "dark" ? "wg-dark" : "light"}
+            theme={selectedTheme === 'dark' ? 'wg-dark' : 'light'}
             className="scrollbar-custom h-full"
             language="customLang"
-            value={formattedPlan || ""}
+            value={formattedPlan || ''}
             options={{
               fontSize: 14,
               scrollbar: {
@@ -218,38 +211,35 @@ export const PlanView = () => {
               readOnly: true,
             }}
             beforeMount={(monaco) => {
-              monaco.editor.defineTheme("wg-dark", schemaViewerDarkTheme);
-              if (selectedTheme === "dark") {
-                monaco.editor.setTheme("wg-dark");
+              monaco.editor.defineTheme('wg-dark', schemaViewerDarkTheme);
+              if (selectedTheme === 'dark') {
+                monaco.editor.setTheme('wg-dark');
               }
 
               monaco.languages.register({
-                id: "customLang",
+                id: 'customLang',
               });
-              monaco.languages.setMonarchTokensProvider("customLang", {
+              monaco.languages.setMonarchTokensProvider('customLang', {
                 // Define some basic tokens
                 tokenizer: {
                   root: [
                     // Match keywords followed by (service
-                    [/\b(\w+)(?=\s*\(service)/, "keyword"],
+                    [/\b(\w+)(?=\s*\(service)/, 'keyword'],
 
                     // Match Flatten followed by (path
-                    [/\b(Flatten)(?=\s*\(path)/, "keyword"],
+                    [/\b(Flatten)(?=\s*\(path)/, 'keyword'],
 
                     // Match Sequence, Parallel, Single followed by {
-                    [/\b(QueryPlan|Sequence|Parallel)(?=\s*{)/, "keyword"],
+                    [/\b(QueryPlan|Sequence|Parallel)(?=\s*{)/, 'keyword'],
 
                     // Match keywords followed by { with previous line ending in }
-                    [/(?<=}\s*\n\s*)(\w+)/, "keyword"],
+                    [/(?<=}\s*\n\s*)(\w+)/, 'keyword'],
 
                     // Match service declarations: service: "serviceName"
-                    [
-                      /(service|path)(\s*:\s*)("[^"]*")/,
-                      ["identifier", "", "string.service"],
-                    ],
+                    [/(service|path)(\s*:\s*)("[^"]*")/, ['identifier', '', 'string.service']],
 
                     // Match variables: $variableName
-                    [/\$[a-zA-Z_]\w*/, "variable"],
+                    [/\$[a-zA-Z_]\w*/, 'variable'],
                   ],
                 },
               });

@@ -1,22 +1,23 @@
 import { randomUUID } from 'node:crypto';
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, onTestFinished, test, vi } from 'vitest';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { ROUTER_COMPATIBILITY_VERSION_ONE } from '@wundergraph/composition';
 import { ClickHouseClient } from '../../src/core/clickhouse/index.js';
 import {
   afterAllSetup,
-  beforeAllSetup, createTestGroup,
+  beforeAllSetup,
+  createTestGroup,
   createTestRBACEvaluator,
   genID,
-  genUniqueLabel
+  genUniqueLabel,
 } from '../../src/core/test-util.js';
 import {
   assertNumberOfCompositions,
   createFederatedGraph,
   createNamespace,
   createThenPublishSubgraph,
-  SetupTest
+  SetupTest,
 } from '../test-util.js';
 
 describe('federated-graph version tests', () => {
@@ -47,103 +48,102 @@ describe('federated-graph version tests', () => {
   });
 
   describe('get tests', () => {
-    test.each([
-      'organization-admin',
-      'organization-developer',
-      'organization-viewer',
-      'graph-admin',
-      'graph-viewer',
-    ])('%s should be able to read the version of a federated graph', async (role) => {
-      const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
-      const namespace = genID('namespace').toLowerCase();
-      await createNamespace(client, namespace);
-      const subgraphName = genID('subgraph');
-      const fedGraphName = genID('fedGraph');
-      const label = genUniqueLabel('label');
-      const subgraphSchemaSDL = 'type Query { hello: String! }';
+    test.each(['organization-admin', 'organization-developer', 'organization-viewer', 'graph-admin', 'graph-viewer'])(
+      '%s should be able to read the version of a federated graph',
+      async (role) => {
+        const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+        onTestFinished(() => server.close());
 
-      await createThenPublishSubgraph(
-        client,
-        subgraphName,
-        namespace,
-        subgraphSchemaSDL,
-        [label],
-        'http://localhost:8082',
-      );
+        const namespace = genID('namespace').toLowerCase();
+        await createNamespace(client, namespace);
+        const subgraphName = genID('subgraph');
+        const fedGraphName = genID('fedGraph');
+        const label = genUniqueLabel('label');
+        const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-      await createFederatedGraph(client, fedGraphName, namespace, [joinLabel(label)], 'http://localhost:8080');
+        await createThenPublishSubgraph(
+          client,
+          subgraphName,
+          namespace,
+          subgraphSchemaSDL,
+          [label],
+          'http://localhost:8082',
+        );
 
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({ role })),
-      });
+        await createFederatedGraph(client, fedGraphName, namespace, [joinLabel(label)], 'http://localhost:8080');
 
-      const response = await client.getFederatedGraphByName({
-        name: fedGraphName,
-        namespace,
-      });
-      expect(response.response).toBeDefined();
-      expect(response.response!.code).toBe(EnumStatusCode.OK);
-      expect(response.graph).toBeDefined();
-      expect(response.graph!.routerCompatibilityVersion).toStrictEqual(ROUTER_COMPATIBILITY_VERSION_ONE);
+        authenticator.changeUserWithSuppliedContext({
+          ...users.adminAliceCompanyA,
+          rbac: createTestRBACEvaluator(createTestGroup({ role })),
+        });
 
-      await server.close();
-    });
+        const response = await client.getFederatedGraphByName({
+          name: fedGraphName,
+          namespace,
+        });
+        expect(response.response).toBeDefined();
+        expect(response.response!.code).toBe(EnumStatusCode.OK);
+        expect(response.graph).toBeDefined();
+        expect(response.graph!.routerCompatibilityVersion).toStrictEqual(ROUTER_COMPATIBILITY_VERSION_ONE);
+      },
+    );
 
-    test.each([
-      'graph-admin',
-      'graph-viewer',
-    ])('%s should be able to read the version of a federated graph of allowed namespaces', async (role) => {
-      const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
-      const namespace = genID('namespace').toLowerCase();
-      await createNamespace(client, namespace);
-      const subgraphName = genID('subgraph');
-      const fedGraphName = genID('fedGraph');
-      const label = genUniqueLabel('label');
-      const subgraphSchemaSDL = 'type Query { hello: String! }';
+    test.each(['graph-admin', 'graph-viewer'])(
+      '%s should be able to read the version of a federated graph of allowed namespaces',
+      async (role) => {
+        const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+        onTestFinished(() => server.close());
 
-      const getNamespaceResponse = await client.getNamespace({ name: namespace });
-      expect(getNamespaceResponse.response?.code);
+        const namespace = genID('namespace').toLowerCase();
+        await createNamespace(client, namespace);
+        const subgraphName = genID('subgraph');
+        const fedGraphName = genID('fedGraph');
+        const label = genUniqueLabel('label');
+        const subgraphSchemaSDL = 'type Query { hello: String! }';
 
-      await createThenPublishSubgraph(
-        client,
-        subgraphName,
-        namespace,
-        subgraphSchemaSDL,
-        [label],
-        'http://localhost:8082',
-      );
+        const getNamespaceResponse = await client.getNamespace({ name: namespace });
+        expect(getNamespaceResponse.response?.code);
 
-      await createFederatedGraph(client, fedGraphName, namespace, [joinLabel(label)], 'http://localhost:8080');
+        await createThenPublishSubgraph(
+          client,
+          subgraphName,
+          namespace,
+          subgraphSchemaSDL,
+          [label],
+          'http://localhost:8082',
+        );
 
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({
-          role,
-          namespaces: [getNamespaceResponse.namespace!.id],
-        })),
-      });
+        await createFederatedGraph(client, fedGraphName, namespace, [joinLabel(label)], 'http://localhost:8080');
 
-      let response = await client.getFederatedGraphByName({
-        name: fedGraphName,
-        namespace,
-      });
-      expect(response.response).toBeDefined();
-      expect(response.response!.code).toBe(EnumStatusCode.OK);
-      expect(response.graph).toBeDefined();
-      expect(response.graph!.routerCompatibilityVersion).toStrictEqual(ROUTER_COMPATIBILITY_VERSION_ONE);
+        authenticator.changeUserWithSuppliedContext({
+          ...users.adminAliceCompanyA,
+          rbac: createTestRBACEvaluator(
+            createTestGroup({
+              role,
+              namespaces: [getNamespaceResponse.namespace!.id],
+            }),
+          ),
+        });
 
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({ role, namespaces: [randomUUID()], })),
-      });
+        let response = await client.getFederatedGraphByName({
+          name: fedGraphName,
+          namespace,
+        });
+        expect(response.response).toBeDefined();
+        expect(response.response!.code).toBe(EnumStatusCode.OK);
+        expect(response.graph).toBeDefined();
+        expect(response.graph!.routerCompatibilityVersion).toStrictEqual(ROUTER_COMPATIBILITY_VERSION_ONE);
 
-      response = await client.getFederatedGraphByName({ name: fedGraphName, namespace, });
-      expect(response.response).toBeDefined();
-      expect(response.response!.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+        authenticator.changeUserWithSuppliedContext({
+          ...users.adminAliceCompanyA,
+          rbac: createTestRBACEvaluator(createTestGroup({ role, namespaces: [randomUUID()] })),
+        });
 
-      await server.close();
-    });
+        response = await client.getFederatedGraphByName({ name: fedGraphName, namespace });
+        expect(response.response).toBeDefined();
+        expect(response.response!.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
+      },
+    );
 
     test.each([
       'organization-apikey-manager',
@@ -154,6 +154,8 @@ describe('federated-graph version tests', () => {
       'subgraph-viewer',
     ])('%s not should be able to read the version of a federated graph', async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname, chClient });
+      onTestFinished(() => server.close());
+
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -184,14 +186,14 @@ describe('federated-graph version tests', () => {
 
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     });
   });
 
   describe('set tests', () => {
-    test('that an error is returned if an invalid router compatibility version integer is provided', async () => {
-      const { client, blobStorage, server, } = await SetupTest({ dbname, chClient });
+    test('that an error is returned if an invalid router compatibility version integer is provided', async (testContext) => {
+      const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -233,12 +235,12 @@ describe('federated-graph version tests', () => {
       expect(response.deploymentErrors).toHaveLength(0);
 
       await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
-
-      await server.close();
     });
 
-    test('that an error is returned if an invalid router compatibility version string is provided', async () => {
-      const { client, blobStorage, server, } = await SetupTest({ dbname, chClient });
+    test('that an error is returned if an invalid router compatibility version string is provided', async (testContext) => {
+      const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -280,62 +282,61 @@ describe('federated-graph version tests', () => {
       expect(response.deploymentErrors).toHaveLength(0);
 
       await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
-
-      await server.close();
     });
 
-    test.each([
-      'organization-admin',
-      'organization-developer',
-      'graph-admin',
-    ])('%s should be able to update the router compatibility version', async (role) => {
+    test.each(['organization-admin', 'organization-developer', 'graph-admin'])(
+      '%s should be able to update the router compatibility version',
+      async (role) => {
+        const { client, blobStorage, server, authenticator, users } = await SetupTest({ dbname, chClient });
+        onTestFinished(() => server.close());
+
+        const namespace = genID('namespace').toLowerCase();
+        await createNamespace(client, namespace);
+        const subgraphName = genID('subgraph');
+        const fedGraphName = genID('fedGraph');
+        const label = genUniqueLabel('label');
+        const subgraphSchemaSDL = 'type Query { hello: String! }';
+
+        await createThenPublishSubgraph(
+          client,
+          subgraphName,
+          namespace,
+          subgraphSchemaSDL,
+          [label],
+          'http://localhost:8082',
+        );
+
+        await createFederatedGraph(client, fedGraphName, namespace, [joinLabel(label)], 'http://localhost:8080');
+        const federatedGraphResponse = await client.getFederatedGraphByName({
+          name: fedGraphName,
+          namespace,
+        });
+        expect(blobStorage.keys()).toHaveLength(1);
+        const baseGraphKey = blobStorage.keys()[0];
+        expect(baseGraphKey).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
+        await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
+
+        authenticator.changeUserWithSuppliedContext({
+          ...users.adminAliceCompanyA,
+          rbac: createTestRBACEvaluator(createTestGroup({ role })),
+        });
+
+        const response = await client.setGraphRouterCompatibilityVersion({
+          name: fedGraphName,
+          namespace,
+          version: ROUTER_COMPATIBILITY_VERSION_ONE,
+        });
+        expect(response.response).toBeDefined();
+        expect(response.response!.code).toBe(EnumStatusCode.OK);
+
+        await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
+      },
+    );
+
+    test('graph-admin should be able to update the router compatibility version on allowed namespace', async (testContext) => {
       const { client, blobStorage, server, authenticator, users } = await SetupTest({ dbname, chClient });
-      const namespace = genID('namespace').toLowerCase();
-      await createNamespace(client, namespace);
-      const subgraphName = genID('subgraph');
-      const fedGraphName = genID('fedGraph');
-      const label = genUniqueLabel('label');
-      const subgraphSchemaSDL = 'type Query { hello: String! }';
+      testContext.onTestFinished(() => server.close());
 
-      await createThenPublishSubgraph(
-        client,
-        subgraphName,
-        namespace,
-        subgraphSchemaSDL,
-        [label],
-        'http://localhost:8082',
-      );
-
-      await createFederatedGraph(client, fedGraphName, namespace, [joinLabel(label)], 'http://localhost:8080');
-      const federatedGraphResponse = await client.getFederatedGraphByName({
-        name: fedGraphName,
-        namespace,
-      });
-      expect(blobStorage.keys()).toHaveLength(1);
-      const baseGraphKey = blobStorage.keys()[0];
-      expect(baseGraphKey).toContain(`${federatedGraphResponse.graph!.id}/routerconfigs/latest.json`);
-      await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
-
-      authenticator.changeUserWithSuppliedContext({
-        ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({ role })),
-      });
-
-      const response = await client.setGraphRouterCompatibilityVersion({
-        name: fedGraphName,
-        namespace,
-        version: ROUTER_COMPATIBILITY_VERSION_ONE,
-      });
-      expect(response.response).toBeDefined();
-      expect(response.response!.code).toBe(EnumStatusCode.OK);
-
-      await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
-
-      await server.close();
-    });
-
-    test('graph-admin should be able to update the router compatibility version on allowed namespace', async () => {
-      const { client, blobStorage, server, authenticator, users } = await SetupTest({ dbname, chClient });
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -367,10 +368,12 @@ describe('federated-graph version tests', () => {
 
       authenticator.changeUserWithSuppliedContext({
         ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({
-          role: 'graph-admin',
-          namespaces: [getNamespaceResponse.namespace!.id],
-        })),
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role: 'graph-admin',
+            namespaces: [getNamespaceResponse.namespace!.id],
+          }),
+        ),
       });
 
       let response = await client.setGraphRouterCompatibilityVersion({
@@ -385,10 +388,12 @@ describe('federated-graph version tests', () => {
 
       authenticator.changeUserWithSuppliedContext({
         ...users.adminAliceCompanyA,
-        rbac: createTestRBACEvaluator(createTestGroup({
-          role: 'graph-admin',
-          namespaces: [randomUUID()],
-        })),
+        rbac: createTestRBACEvaluator(
+          createTestGroup({
+            role: 'graph-admin',
+            namespaces: [randomUUID()],
+          }),
+        ),
       });
 
       response = await client.setGraphRouterCompatibilityVersion({
@@ -398,8 +403,6 @@ describe('federated-graph version tests', () => {
       });
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     });
 
     test.each([
@@ -413,6 +416,8 @@ describe('federated-graph version tests', () => {
       'subgraph-viewer',
     ])('%s should not be able to update the router compatibility version', async (role) => {
       const { client, blobStorage, server, authenticator, users } = await SetupTest({ dbname, chClient });
+      onTestFinished(() => server.close());
+
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -451,12 +456,12 @@ describe('federated-graph version tests', () => {
       });
       expect(response.response).toBeDefined();
       expect(response.response!.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-      await server.close();
     });
 
-    test('that setting the same router compatibility version is idempotent and does not trigger further compositions', async () => {
-      const { client, blobStorage, server, } = await SetupTest({ dbname, chClient });
+    test('that setting the same router compatibility version is idempotent and does not trigger further compositions', async (testContext) => {
+      const { client, blobStorage, server } = await SetupTest({ dbname, chClient });
+      testContext.onTestFinished(() => server.close());
+
       const namespace = genID('namespace').toLowerCase();
       await createNamespace(client, namespace);
       const subgraphName = genID('subgraph');
@@ -498,8 +503,6 @@ describe('federated-graph version tests', () => {
       expect(response.deploymentErrors).toHaveLength(0);
 
       await assertNumberOfCompositions(client, fedGraphName, 1, namespace);
-
-      await server.close();
     });
   });
 });

@@ -26,7 +26,7 @@ func TestConnectRPC_ClientProtocols(t *testing.T) {
 		GraphQLHandler: EmployeeGraphQLHandler(),
 	})
 	defer ts.Close()
-	
+
 	err := ts.Start()
 	require.NoError(t, err)
 
@@ -126,7 +126,7 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
 			GraphQLHandler: ErrorGraphQLHandler("Employee not found"),
 		})
-		
+
 		err := ts.Start()
 		require.NoError(t, err)
 
@@ -169,11 +169,11 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 				"errors": [{"message": "Could not fetch pets"}]
 			}`))
 		}
-		
+
 		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
 			GraphQLHandler: handler,
 		})
-		
+
 		err := ts.Start()
 		require.NoError(t, err)
 
@@ -189,7 +189,7 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		_, err = client.GetEmployeeById(context.Background(), req)
 		// Per GraphQL spec, errors at top level should result in an error
 		require.Error(t, err)
-		
+
 		var connectErr *connect.Error
 		require.ErrorAs(t, err, &connectErr)
 		assert.Equal(t, connect.CodeUnknown, connectErr.Code())
@@ -225,7 +225,7 @@ func TestConnectRPC_ClientErrorHandling(t *testing.T) {
 		ts := NewTestConnectRPCServer(t, ConnectRPCServerOptions{
 			GraphQLHandler: HTTPErrorHandler(http.StatusInternalServerError, "Internal Server Error"),
 		})
-		
+
 		err := ts.Start()
 		require.NoError(t, err)
 

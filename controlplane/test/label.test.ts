@@ -38,6 +38,7 @@ describe('Labels', (ctx) => {
 
   test('Changing labels of federated should reassign subgraphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -99,12 +100,11 @@ describe('Labels', (ctx) => {
     // Only the subgraph2 should be assigned to the federated graph
     expect(updatedGraph.subgraphs.length).toBe(1);
     expect(updatedGraph.subgraphs[0].name).toBe(subgraph2Name);
-
-    await server.close();
   });
 
   test('Changing labels of subgraph should affect federated graphs', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');
@@ -207,12 +207,11 @@ describe('Labels', (ctx) => {
     });
     expect(federatedGraph3.response?.code).toBe(EnumStatusCode.OK);
     expect(federatedGraph3.subgraphs.length).toBe(0);
-
-    await server.close();
   });
 
   test('Assign graphs with multiple label matchers correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const subgraph1Name = genID('subgraph1');
     const subgraph2Name = genID('subgraph2');
@@ -279,12 +278,11 @@ describe('Labels', (ctx) => {
     expect(graph.subgraphs.length).toBe(2);
     expect(graph.subgraphs[0].name).toBe(subgraph1Name);
     expect(graph.subgraphs[1].name).toBe(subgraph2Name);
-
-    await server.close();
   });
 
   test('Graphs with empty label matchers should only compose subgraphs with empty labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');
@@ -330,8 +328,6 @@ describe('Labels', (ctx) => {
     expect(graph2.response?.code).toBe(EnumStatusCode.OK);
     expect(graph2.subgraphs.length).toBe(1);
     expect(graph2.subgraphs[0].name).toBe(subgraph2Name);
-
-    await server.close();
   });
 
   // Create 2 Graphs and 2 subgraphs
@@ -340,6 +336,7 @@ describe('Labels', (ctx) => {
   // The graph with empty matchers should have both subgraphs and the other should have none
   test('Should compose correct subgraphs after unsetting subgraph labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');
@@ -415,8 +412,6 @@ describe('Labels', (ctx) => {
     });
     expect(graph2AfterUnset.response?.code).toBe(EnumStatusCode.OK);
     expect(graph2AfterUnset.subgraphs.length).toBe(2);
-
-    await server.close();
   });
 
   // Create 2 Graphs and 2 subgraphs
@@ -425,6 +420,7 @@ describe('Labels', (ctx) => {
   // Both graphs should have the subgraph with no labels
   test('Should compose correct subgraphs after unsetting graph label matchers', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');
@@ -488,8 +484,6 @@ describe('Labels', (ctx) => {
     expect(graph1AfterUnset.graph?.labelMatchers.length).toBe(0);
     expect(graph1AfterUnset.subgraphs.length).toBe(1);
     expect(graph1AfterUnset.subgraphs[0].name).toBe(subgraph2Name);
-
-    await server.close();
   });
 
   // Create 2 Graphs and 2 subgraphs
@@ -500,6 +494,7 @@ describe('Labels', (ctx) => {
   // Each graph will have 1 subgraph
   test('Should compose correct subgraph after unsetting and re-adding subgraph labels', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraph1Name = genID('fedGraph1');
     const fedGraph2Name = genID('fedGraph2');
@@ -587,12 +582,11 @@ describe('Labels', (ctx) => {
     });
     expect(graph2AfterSet.response?.code).toBe(EnumStatusCode.OK);
     expect(graph2AfterSet.subgraphs.length).toBe(1);
-
-    await server.close();
   });
 
   test('Updating subgraph label should result in a single composition', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraph1Name = genID('fedGraph1');
     const subgraph1Name = genID('subgraph1');
@@ -639,12 +633,11 @@ describe('Labels', (ctx) => {
     });
     expect(updatedGraph.response?.code).toBe(EnumStatusCode.OK);
     expect(updatedGraph.compositions.length).toBe(2);
-
-    await server.close();
   });
 
   test('Updating federated graph with same label matchers should not cause composition', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraph1Name = genID('fedGraph1');
     const subgraph1Name = genID('subgraph1');
@@ -693,12 +686,11 @@ describe('Labels', (ctx) => {
     });
     expect(updatedGraph.response?.code).toBe(EnumStatusCode.OK);
     expect(updatedGraph.compositions.length).toBe(1);
-
-    await server.close();
   });
 
   test('Unsetting label matchers for graph with no matchers to begin with should not cause compositions', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraph1Name = genID('fedGraph1');
     const subgraph1Name = genID('subgraph1');
@@ -739,12 +731,11 @@ describe('Labels', (ctx) => {
     });
     expect(updatedGraph.response?.code).toBe(EnumStatusCode.OK);
     expect(updatedGraph.compositions.length).toBe(1);
-
-    await server.close();
   });
 
   test('Updating federated graph without any label matchers and also not unsetting should not cause compositions', async (testContext) => {
     const { client, server } = await SetupTest({ dbname, chClient });
+    testContext.onTestFinished(() => server.close());
 
     const fedGraph1Name = genID('fedGraph1');
     const subgraph1Name = genID('subgraph1');
@@ -793,8 +784,6 @@ describe('Labels', (ctx) => {
     });
     expect(updatedGraph.response?.code).toBe(EnumStatusCode.OK);
     expect(updatedGraph.compositions.length).toBe(1);
-
-    await server.close();
   });
 
   test('Check if label matchers changed', () => {

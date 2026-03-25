@@ -3,7 +3,9 @@ import {
   isValidLabelMatchers,
   mergeUrls,
   normalizeLabelMatchers,
-  isGoogleCloudStorageUrl, sanitizeReadme, isValidLocalhostOrSecureEndpoint,
+  isGoogleCloudStorageUrl,
+  sanitizeReadme,
+  isValidLocalhostOrSecureEndpoint,
 } from '../src/core/util.js';
 
 describe('Utils', () => {
@@ -88,6 +90,6 @@ command  2&gt;/dev/nul
 
     test('that a non-localhost endpoint with the protocol http return false', () => {
       expect(isValidLocalhostOrSecureEndpoint('http://example.com')).toBe(false);
-    })
+    });
   });
 });

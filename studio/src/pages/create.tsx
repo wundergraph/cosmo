@@ -1,49 +1,37 @@
-import { FullscreenLayout } from "@/components/layout/fullscreen-layout";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
-import { SubmitHandler, useZodForm } from "@/hooks/use-form";
-import { useUser } from "@/hooks/use-user";
-import { NextPageWithLayout } from "@/lib/page";
-import { getStripe } from "@/lib/stripe";
-import { cn } from "@/lib/utils";
-import {
-  ArrowLeftIcon,
-  CheckCircledIcon,
-  CheckIcon,
-} from "@radix-ui/react-icons";
-import { useQuery, useMutation } from "@connectrpc/connect-query";
-import { EnumStatusCode } from "@wundergraph/cosmo-connect/dist/common/common_pb";
+import { FullscreenLayout } from '@/components/layout/fullscreen-layout';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/use-toast';
+import { SubmitHandler, useZodForm } from '@/hooks/use-form';
+import { useUser } from '@/hooks/use-user';
+import { NextPageWithLayout } from '@/lib/page';
+import { getStripe } from '@/lib/stripe';
+import { cn } from '@/lib/utils';
+import { ArrowLeftIcon, CheckCircledIcon, CheckIcon } from '@radix-ui/react-icons';
+import { useQuery, useMutation } from '@connectrpc/connect-query';
+import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import {
   createOrganization,
   getBillingPlans,
-} from "@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery";
-import Link from "next/link";
-import { useRouter } from "next/router";
-import { PiCheck } from "react-icons/pi";
+} from '@wundergraph/cosmo-connect/dist/platform/v1/platform-PlatformService_connectquery';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { PiCheck } from 'react-icons/pi';
 
 const getPrice = (price?: number) => {
   switch (price) {
     case 0:
-      return "Free";
+      return 'Free';
     case -1:
-      return "Custom";
+      return 'Custom';
     default:
       return `$${price} / month`;
   }
 };
 
-import { z } from "zod";
+import { z } from 'zod';
 
 const CreateOrganization: NextPageWithLayout = () => {
   return (
@@ -85,31 +73,28 @@ const OrganizationForm = () => {
       .string()
       .trim()
       .min(3, {
-        message: "Organization name must be a minimum of 3 characters",
+        message: 'Organization name must be a minimum of 3 characters',
       })
-      .max(32, { message: "Organization name must be maximum 32 characters" }),
+      .max(32, { message: 'Organization name must be maximum 32 characters' }),
     slug: z
       .string()
       .trim()
       .toLowerCase()
       .regex(
-        new RegExp("^[a-z0-9]+(?:-[a-z0-9]+)*$"),
-        "Slug should start and end with an alphanumeric character. Spaces and special characters other that hyphen not allowed.",
+        new RegExp('^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+        'Slug should start and end with an alphanumeric character. Spaces and special characters other that hyphen not allowed.',
       )
       .min(3, {
-        message: "Organization slug must be a minimum of 3 characters",
+        message: 'Organization slug must be a minimum of 3 characters',
       })
-      .max(32, { message: "Organization slug must be maximum 32 characters" })
-      .refine(
-        (value) => !["login", "signup", "create", "account"].includes(value),
-        "This slug is a reserved keyword",
-      ),
+      .max(32, { message: 'Organization slug must be maximum 32 characters' })
+      .refine((value) => !['login', 'signup', 'create', 'account'].includes(value), 'This slug is a reserved keyword'),
     plan,
   });
 
   const form = useZodForm<OrganizationDetailsInput>({
     schema,
-    mode: "onChange",
+    mode: 'onChange',
   });
 
   const { mutate, isPending } = useMutation(createOrganization);
@@ -133,8 +118,8 @@ const OrganizationForm = () => {
             }
             router.replace(`/${data.slug}`);
             toast({
-              title: "Organization created",
-              description: "Your organization has been created.",
+              title: 'Organization created',
+              description: 'Your organization has been created.',
               duration: 3000,
             });
           } else if (d.response?.details) {
@@ -143,8 +128,7 @@ const OrganizationForm = () => {
         },
         onError: (error) => {
           toast({
-            description:
-              "Could not create the organization details. Please try again.",
+            description: 'Could not create the organization details. Please try again.',
             duration: 3000,
           });
         },
@@ -158,10 +142,7 @@ const OrganizationForm = () => {
 
   return (
     <Form {...form}>
-      <form
-        onSubmit={form.handleSubmit(onSubmit)}
-        className="flex flex-col gap-y-4"
-      >
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-y-4">
         <FormField
           control={form.control}
           name="name"
@@ -177,11 +158,11 @@ const OrganizationForm = () => {
                     const value = e.currentTarget.value;
                     field.onChange(e);
                     form.setValue(
-                      "slug",
+                      'slug',
                       value
                         .toLowerCase()
-                        .replaceAll(/[^a-zA-Z0-9 -]/g, "")
-                        .replaceAll(/\s+/g, "-"),
+                        .replaceAll(/[^a-zA-Z0-9 -]/g, '')
+                        .replaceAll(/\s+/g, '-'),
                       {
                         shouldValidate: true,
                       },
@@ -189,10 +170,7 @@ const OrganizationForm = () => {
                   }}
                 />
               </FormControl>
-              <FormDescription>
-                This is the visible name of your organization within WunderGraph
-                Cosmo.
-              </FormDescription>
+              <FormDescription>This is the visible name of your organization within WunderGraph Cosmo.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -207,10 +185,7 @@ const OrganizationForm = () => {
               <FormControl>
                 <Input {...field} />
               </FormControl>
-              <FormDescription>
-                This is the URL namespace of the organization within WunderGraph
-                Cosmo.
-              </FormDescription>
+              <FormDescription>This is the URL namespace of the organization within WunderGraph Cosmo.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -225,7 +200,7 @@ const OrganizationForm = () => {
               <FormItem>
                 <FormLabel>Plan</FormLabel>
                 <FormDescription>
-                  Select a plan for your organization.{" "}
+                  Select a plan for your organization.{' '}
                   <Link
                     href="https://wundergraph.com/pricing"
                     target="_blank"
@@ -239,19 +214,14 @@ const OrganizationForm = () => {
                     {availablePlans.map((plan) => (
                       <Card
                         key={plan.id}
-                        className={cn(
-                          "relative flex-1 cursor-pointer hover:border-border-emphasized",
-                          {
-                            "border-border-emphasized": plan.id === field.value,
-                          },
-                        )}
-                        onClick={() => form.setValue("plan", plan.id)}
+                        className={cn('relative flex-1 cursor-pointer hover:border-border-emphasized', {
+                          'border-border-emphasized': plan.id === field.value,
+                        })}
+                        onClick={() => form.setValue('plan', plan.id)}
                       >
                         <CardHeader>
                           <CardTitle>
-                            <span className="block text-sm font-normal text-muted-foreground">
-                              {plan.name}
-                            </span>
+                            <span className="block text-sm font-normal text-muted-foreground">{plan.name}</span>
                             <span>{getPrice(plan.price)}</span>
                           </CardTitle>
                         </CardHeader>
@@ -263,14 +233,9 @@ const OrganizationForm = () => {
                             .filter(({ description }) => !!description)
                             .map((feature) => {
                               return (
-                                <div
-                                  key={feature.id}
-                                  className="flex flex-row items-center gap-2"
-                                >
+                                <div key={feature.id} className="flex flex-row items-center gap-2">
                                   <PiCheck className="h-4 w-4 text-success" />
-                                  <span className="text-sm text-muted-foreground">
-                                    {feature.description}
-                                  </span>
+                                  <span className="text-sm text-muted-foreground">{feature.description}</span>
                                 </div>
                               );
                             })}
@@ -280,7 +245,7 @@ const OrganizationForm = () => {
                   </div>
                 </FormControl>
                 <FormDescription>
-                  Looking for enterprise plans?{" "}
+                  Looking for enterprise plans?{' '}
                   <Link
                     href="https://cal.com/stefan-avram-wundergraph/wundergraph-introduction?duration=30"
                     target="_blank"
@@ -294,15 +259,8 @@ const OrganizationForm = () => {
           />
         ) : null}
 
-        <Button
-          className="ml-auto"
-          isLoading={isPending}
-          type="submit"
-          disabled={!form.formState.isValid}
-        >
-          {availablePlans?.length
-            ? "Continue to payment"
-            : "Create organization"}
+        <Button className="ml-auto" isLoading={isPending} type="submit" disabled={!form.formState.isValid}>
+          {availablePlans?.length ? 'Continue to payment' : 'Create organization'}
         </Button>
       </form>
     </Form>

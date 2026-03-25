@@ -18,8 +18,14 @@ describe('Remove organization member', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that an organization admin can remove a member from the organization', async () => {
-    const { authenticator, client, server, users: { adminAliceCompanyA, adminBobCompanyA } } = await SetupTest({ dbname, enableMultiUsers: true, });
+  test('that an organization admin can remove a member from the organization', async (testContext) => {
+    const {
+      authenticator,
+      client,
+      server,
+      users: { adminAliceCompanyA, adminBobCompanyA },
+    } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     authenticator.changeUserWithSuppliedContext(adminAliceCompanyA!);
 
@@ -33,12 +39,16 @@ describe('Remove organization member', () => {
     orgMembersResponse = await client.getOrganizationMembers({});
     expect(orgMembersResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(orgMembersResponse.members.length).toBe(3);
-
-    await server.close();
   });
 
-  test('that an organization developer cannot remove a member from the organization', async () => {
-    const { authenticator, client, server, users: { adminAliceCompanyA, devJoeCompanyA, adminBobCompanyA } } = await SetupTest({ dbname, enableMultiUsers: true, });
+  test('that an organization developer cannot remove a member from the organization', async (testContext) => {
+    const {
+      authenticator,
+      client,
+      server,
+      users: { adminAliceCompanyA, devJoeCompanyA, adminBobCompanyA },
+    } = await SetupTest({ dbname, enableMultiUsers: true });
+    testContext.onTestFinished(() => server.close());
 
     authenticator.changeUserWithSuppliedContext(adminAliceCompanyA!);
 
@@ -54,7 +64,5 @@ describe('Remove organization member', () => {
     orgMembersResponse = await client.getOrganizationMembers({});
     expect(orgMembersResponse.response?.code).toBe(EnumStatusCode.OK);
     expect(orgMembersResponse.members.length).toBe(4);
-
-    await server.close();
   });
 });

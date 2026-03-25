@@ -1,0 +1,19 @@
+---
+title: "List Templates"
+icon: download
+sidebarTitle: List Templates
+description: "List all available gRPC service templates for the init command."
+---
+
+The `list-templates` command lists all available gRPC service templates that can be used with the `wgc grpc-service init` command.
+Templates are fetched from the [wundergraph/cosmo-templates](https://github.com/wundergraph/cosmo-templates) repository under the `grpc-service` directory.
+
+## Usage
+
+```bash
+wgc grpc-service list-templates
+```
+
+Once you've decided on a template, you can use the [init](/cli/grpc-service/init) command to scaffold a new gRPC service project from a template.
+
+See also: [gRPC Services](/router/gRPC/grpc-services) · [GraphQL Support for gRPC Integration](/router/gRPC/graphql-support)

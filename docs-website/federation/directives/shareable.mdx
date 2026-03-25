@@ -1,0 +1,176 @@
+---
+title: "@shareable"
+icon: "share-nodes"
+description: "@shareable is a federation V2-only directive. Examples and usages are outlined herein."
+---
+
+## Definition
+
+```graphql
+directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+```
+
+## Overview
+
+The `@shareable` directive declares that a field definition, or if declared on an object, _all currently_ defined field definitions for that object can be resolved by other subgraphs. However, it is the developer's responsibility to ensure that any such field definitions always resolve identically, regardless of which subgraph is ultimately resolving the field. Failure to make each resolver identical would cause different data to be returned indeterminately.
+
+### FIELD_DEFINITION declaration
+
+If the `@shareable` directive is declared on a field definition, the same field can be defined on the same named type from multiple subgraphs. All subgraphs that define a field in this way must be be capable of resolving that field. The resolver should also be identical across the subgraphs. For example:
+
+```graphql
+# subgraph 1
+directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+
+type User {
+    id: ID! @shareable
+}
+
+# subgraph 2
+directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+
+type User {
+    id: ID! @shareable
+}
+```
+
+In the example above, two subgraphs define the type `User` with the field `id`. This is valid because `id` has been declared _shareable_; _i.e_, that the field `id` can be resolved from multiple subgraphs.
+
+### OBJECT declaration
+
+If the `@shareable` directive is declared on an object type, _all_ fields currently\* defined on that type will be declared shareable. This is the same as declaring the `@shareable` separately to each current\* field definition. 
+
+\*If an object is extended, unless a field definition on the object extension is explicitly declared `@shareable`, it will not be considered shareable on the original object. This is true even if that object was originally declared `@shareable`. An example is shown below:
+
+```graphql
+# subgraph 1
+directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+
+# The whole object is declared shareable
+type User @shareable {
+    name: String!
+}
+
+extend type User {
+    age: Int!
+}
+
+extend type User {
+    id: ID! @shareable
+}
+
+# normalized subgraph
+directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+
+# Although the original object was declared shareable, because the extension does
+# not declare the field "age" as shareable, the object-wide shareable directive
+# is no longer applied
+type User {
+    name: String! @shareable
+    age: Int!
+    id: ID! @shareable
+}
+```
+
+In the example above, the `User` object has been declared `@shareable`. However, the first extension with the field `age` is _not_ declared `@shareable`. The second extension with the field `id` _is_ declared `@shareable`. Consequently, when these extensions are applied, the OBJECT location `@shareable` declaration is no longer applied, and the declarations are moved _only_ to the relevant fields. This produces the normalized `User` type where `name` and `id` are shareable but `age` is not.
+
+### Federation V1 subgraphs and shareable
+
+By default, all field definitions in a V1 subgraph are treated as shareable. For example:
+
+```graphql
+# V1 subgraph
+type User {
+    name: String!
+}
+
+# V2 subgraph 1
+directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+
+type User {
+    name: String! @shareable
+}
+
+# V2 subgraph 2
+directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+
+type User @shareable {
+    name: String!
+}
+```
+
+In the example above, the V1 subgraph cannot declare anything as `@shareable` (this directive is V2 exclusive). Consequently, for compatibility with V2 subgraphs, it is considered shareable by default. However, any V2 subgraph that declares a field that exists on the same type in another subgraph _must_ declare the `@shareable` directive on the object or on that field definition. Failure to do so will lead to a composition error.
+
+### Entity keys and shareable
+
+Fields that comprise part of at least one of the entity's primary keys are automatically considered shareable. For example:
+
+```graphql
+# subgraph 1
+directive @key(fields: String!) repeatable on OBJECT
+directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+
+type User @key(fields: "id") {
+    id: ID!
+    name: String! @shareable
+}
+
+# subgraph 2
+directive @key(fields: String!) repeatable on OBJECT
+directive @shareable repeatable on FIELD_DEFINITION | OBJECT
+
+type User @key(fields: "id") {
+    id: ID!
+    name: String! @shareable
+}
+```
+
+In the example above, `id` is part of at least one of the entity's primary key. Consequently, `id` is automatically considered shareable without any further declaration. However, the field `name`, which is not part of a primary key, must be declared with the `@shareable` directive.
+
+## Shared root type fields: resolving differently defined objects
+
+Imagine we have the following two subgraphs:
+
+```graphql
+# subgraph-1
+type Query {
+    friends: [Friend!]!
+}
+
+type Friend {
+    name: String!
+}
+```
+
+```graphql
+# subgraph-2
+type Friend {
+    age: Int!
+}
+```
+
+These subgraphs will fail to produce a federated graph. This is because the field `age` cannot be resolved for `Friend` when querying `friends` from `subgraph-1`. If a non-entity object type is defined differently across subgraphs, there is only one solution that ensures the type is always fully resolvable: shared root type fields. In the example above, each subgraph that differently defines the type `Friend` should include _all_ root type fields that can resolve `Friend`. Consequently, the following changes would allow a federated graph to be composed:
+
+```graphql
+# subgraph-1
+type Query {
+    friends: [Friend!]! @shareable
+}
+
+type Friend {
+    name: String!
+}
+```
+
+```graphql
+# subgraph-2
+type Query {
+    friends: [Friend!]! @shareable
+}
+
+type Friend {
+    age: Int!
+}
+```
+
+First, the `friends` root type field defined in `subgraph-1` is declared `shareable`; _i.e._, it can be resolved from multiple subgraphs. Next, this shareable root type field is added to `subgraph-2`. Now it is possible to resolve all fields of `Friend` from the `friend` root type field. Note that all such root type fields that can resolve `Friend` (be it nested or otherwise) would need to be defined (with `@shareable`) in each subgraph.

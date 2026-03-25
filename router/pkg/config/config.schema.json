@@ -20,7 +20,7 @@
       "properties": {
         "token": {
           "type": "string",
-          "description": "The token used to authenticate with other component from Cosmo. Can be ommitted if the router is started with a static execution config."
+          "description": "The token used to authenticate with other component from Cosmo. Can be omitted if the router is started with a static execution config."
         },
         "sign_key": {
           "type": "string",
@@ -1263,6 +1263,23 @@
                     }
                   }
                 },
+                "cost_stats": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure cost statistics for OTLP metrics.",
+                  "properties": {
+                    "estimated_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of estimated cost stats. The default value is false."
+                    },
+                    "actual_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of actual cost stats. The default value is false."
+                    }
+                  }
+                },
                 "exporters": {
                   "type": "array",
                   "description": "The exporters to use to export the metrics. If no exporters are specified, the default Cosmo Cloud exporter is used. If you override, please make sure to include the default exporter.",
@@ -1327,6 +1344,35 @@
                   "items": {
                     "type": "string"
                   }
+                },
+                "log_exporter": {
+                  "type": "object",
+                  "description": "Log exporter. When enabled, logs all collected metrics via the router's logger at each export interval.",
+                  "additionalProperties": false,
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enables the log exporter. The default value is false."
+                    },
+                    "exclude_metrics": {
+                      "type": "array",
+                      "description": "List of regex patterns for metric names to exclude from log output. Cannot be used together with include_metrics.",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "include_metrics": {
+                      "type": "array",
+                      "description": "List of regex patterns for metric names to include in log output. Only matching metrics will be logged. Cannot be used together with exclude_metrics.",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "not": {
+                    "required": ["exclude_metrics", "include_metrics"]
+                  }
                 }
               }
             },
@@ -1379,6 +1425,23 @@
                       "type": "boolean",
                       "default": false,
                       "description": "Enabling this will report additional engine metrics for WebSockets and SSE such as connections, subscriptions and triggers. The default value is false"
+                    }
+                  }
+                },
+                "cost_stats": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "description": "Configure cost statistics for Prometheus metrics.",
+                  "properties": {
+                    "estimated_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of estimated cost stats. The default value is false."
+                    },
+                    "actual_enabled": {
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Enable the collection of actual cost stats. The default value is false."
                     }
                   }
                 },
@@ -1639,6 +1702,11 @@
       "type": "boolean",
       "description": "Enable the JSON log format. The JSON log format is used to log the logs in JSON format. The default value is true. If the value is false, the logs are logged a human friendly text format.",
       "default": true
+    },
+    "log_service_name": {
+      "type": "string",
+      "description": "The service name used in the 'service' field of log entries. The default value is '@wundergraph/router'.",
+      "default": "@wundergraph/router"
     },
     "shutdown_delay": {
       "type": "string",
@@ -2546,6 +2614,11 @@
                         }
                       }
                     ]
+                  },
+                  "experiment_delete_durable_consumers_on_shutdown": {
+                    "type": "boolean",
+                    "description": "When enabled, all durable JetStream consumers created by this provider are deleted when the router shuts down normally. Defaults to false. NOTE: This option is experimental and may change in future versions.",
+                    "default": false
                   }
                 }
               }
@@ -3047,6 +3120,61 @@
             }
           }
         },
+        "cost_control": {
+          "type": "object",
+          "description": "Cost control based on @cost and @listSize directives.",
+          "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": { "enabled": { "const": true } },
+                "required": ["enabled"]
+              },
+              "then": {
+                "required": ["estimated_list_size"]
+              }
+            },
+            {
+              "if": {
+                "properties": { "mode": { "const": "enforce" } },
+                "required": ["mode"]
+              },
+              "then": {
+                "properties": {
+                  "max_estimated_limit": { "minimum": 1 }
+                }
+              }
+            }
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false,
+              "description": "When enabled, the router calculates costs for every operation."
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["measure", "enforce"],
+              "default": "measure",
+              "description": "Controls cost control behavior: 'measure' calculates costs without rejecting operations; 'enforce' rejects operations exceeding the estimated cost limit."
+            },
+            "max_estimated_limit": {
+              "type": "integer",
+              "description": "Maximum allowed estimated cost for a query. Required to be positive when mode is 'enforce'.",
+              "default": 0,
+              "minimum": 0
+            },
+            "estimated_list_size": {
+              "type": "integer",
+              "description": "Default assumed size for list fields when no @listSize directive is specified. Required for estimated cost calculation.",
+              "minimum": 1
+            },
+            "expose_headers": {
+              "type": "boolean",
+              "description": "Enable costs response headers for estimated and actuals operation costs."
+            }
+          }
+        },
         "operation_name_length_limit": {
           "type": "integer",
           "description": "The maximum allowed length of the operation name, 0 allows any length.",
@@ -3285,6 +3413,21 @@
           "type": "integer",
           "default": 1024,
           "description": "The size of the execution plan cache."
+        },
+        "slow_plan_cache_size": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 300,
+          "description": "The maximum number of entries in the slow plan cache."
+        },
+        "slow_plan_cache_threshold": {
+          "type": "string",
+          "format": "go-duration",
+          "description": "The minimum planning duration for a query plan to be stored in the slow plan cache.",
+          "default": "100ms",
+          "duration": {
+            "minimum": "0ns"
+          }
         },
         "operation_hash_cache_size": {
           "type": "integer",

@@ -4,6 +4,37 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.137.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.136.0...@wundergraph/cosmo-connect@0.137.0) (2026-03-17)
+
+### Features
+
+* expose costs ([#2470](https://github.com/wundergraph/cosmo/issues/2470)) ([d43aa40](https://github.com/wundergraph/cosmo/commit/d43aa40f2429fbb212e5618cd5586774e1b6ae7e)) (@ysmolski)
+
+# [0.136.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.135.0...@wundergraph/cosmo-connect@0.136.0) (2026-03-17)
+
+### Features
+
+* add graph recompose ([#2652](https://github.com/wundergraph/cosmo/issues/2652)) ([8bdb7d0](https://github.com/wundergraph/cosmo/commit/8bdb7d08485cb8bde84efb033663e49ed23e060f)) (@Aenimus)
+
+# [0.135.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.134.0...@wundergraph/cosmo-connect@0.135.0) (2026-03-12)
+
+### Features
+
+* add composedSchemaBreakingChanges to CreateProposalResponse ([#2640](https://github.com/wundergraph/cosmo/issues/2640)) ([2e0c11e](https://github.com/wundergraph/cosmo/commit/2e0c11ef59a294a726ec6b5dc45ee3b869d6cc46)) (@JivusAyrus)
+* add limit option for error/warning display in publish command ([#2634](https://github.com/wundergraph/cosmo/issues/2634)) ([1d0085d](https://github.com/wundergraph/cosmo/commit/1d0085d4de4db6ccab82bd42df5cd2a1500f3413)) (@JivusAyrus)
+
+# [0.134.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.133.0...@wundergraph/cosmo-connect@0.134.0) (2026-03-11)
+
+### Features
+
+* add composedSchemaBreakingChanges to UpdateProposalResponse ([#2627](https://github.com/wundergraph/cosmo/issues/2627)) ([2375cd8](https://github.com/wundergraph/cosmo/commit/2375cd845a9da0bd1933d6f3596b9a495a9228bd)) (@JivusAyrus)
+
+# [0.133.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.132.0...@wundergraph/cosmo-connect@0.133.0) (2026-03-04)
+
+### Features
+
+* add support for federated graph schema changes ([#2566](https://github.com/wundergraph/cosmo/issues/2566)) ([2f0a666](https://github.com/wundergraph/cosmo/commit/2f0a666d8c82d649707e57f6ccd085197e485da5)) (@JivusAyrus)
+
 # [0.132.0](https://github.com/wundergraph/cosmo/compare/@wundergraph/cosmo-connect@0.131.0...@wundergraph/cosmo-connect@0.132.0) (2026-03-02)
 
 ### Features

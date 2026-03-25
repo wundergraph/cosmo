@@ -1,6 +1,6 @@
-import { BREAK, ConstDirectiveNode, DocumentNode, Kind, OperationTypeNode, print, visit } from 'graphql';
+import { BREAK, type ConstDirectiveNode, type DocumentNode, Kind, OperationTypeNode, print, visit } from 'graphql';
 import { isKindAbstract, lexicographicallySortDocumentNode } from '../../ast/utils';
-import { NormalizationFactory } from './normalization-factory';
+import { type NormalizationFactory } from './normalization-factory';
 import {
   abstractTypeInKeyFieldSetErrorMessage,
   argumentsInKeyFieldSetErrorMessage,
@@ -17,8 +17,12 @@ import {
   unparsableFieldSetSelectionErrorMessage,
 } from '../../errors/errors';
 import { BASE_SCALARS, EDFS_ARGS_REGEXP } from '../constants/constants';
-import { RequiredFieldConfiguration } from '../../router-configuration/types';
-import { CompositeOutputData, DirectiveDefinitionData, InputValueData } from '../../schema-building/types';
+import { type RequiredFieldConfiguration } from '../../router-configuration/types';
+import {
+  type CompositeOutputData,
+  type DirectiveDefinitionData,
+  type InputValueData,
+} from '../../schema-building/types';
 import { getTypeNodeNamedTypeName } from '../../schema-building/ast';
 import {
   AUTHENTICATED_DEFINITION_DATA,
@@ -26,6 +30,7 @@ import {
   CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA,
   CONFIGURE_DESCRIPTION_DEFINITION_DATA,
   CONNECT_FIELD_RESOLVER_DEFINITION_DATA,
+  COST_DEFINITION_DATA,
   DEPRECATED_DEFINITION_DATA,
   EXTENDS_DEFINITION_DATA,
   EXTERNAL_DEFINITION_DATA,
@@ -35,6 +40,7 @@ import {
   KAFKA_SUBSCRIBE_DEFINITION_DATA,
   KEY_DEFINITION_DATA,
   LINK_DEFINITION_DATA,
+  LIST_SIZE_DEFINITION_DATA,
   NATS_PUBLISH_DEFINITION_DATA,
   NATS_REQUEST_DEFINITION_DATA,
   NATS_SUBSCRIBE_DEFINITION_DATA,
@@ -58,6 +64,7 @@ import {
   CONFIGURE_CHILD_DESCRIPTIONS,
   CONFIGURE_DESCRIPTION,
   CONNECT_FIELD_RESOLVER,
+  COST,
   DEPRECATED,
   EDFS_KAFKA_PUBLISH,
   EDFS_KAFKA_SUBSCRIBE,
@@ -73,6 +80,7 @@ import {
   INTERFACE_OBJECT,
   KEY,
   LINK,
+  LIST_SIZE,
   LITERAL_PERIOD,
   ONE_OF,
   OVERRIDE,
@@ -90,7 +98,7 @@ import {
   TYPENAME,
 } from '../../utils/string-constants';
 import { getValueOrDefault, kindToNodeType, numberToOrdinal } from '../../utils/utils';
-import { FieldSetData, KeyFieldSetData } from './types';
+import { type FieldSetData, type KeyFieldSetData } from './types';
 
 export function newFieldSetData(): FieldSetData {
   return {
@@ -230,7 +238,7 @@ export function validateKeyFieldSets(
             !externalFieldData.isUnconditionallyProvided
           ) {
             const conditionalData = nf.conditionalFieldDataByCoords.get(fieldCoords);
-            if (!conditionalData) {
+            if (!conditionalData && !nf.options.ignoreExternalKeys) {
               isUnconditionallyExternalKey = true;
               const edge = graphNode.headToTailEdges.get(fieldName);
               if (edge) {
@@ -429,6 +437,7 @@ export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefin
     [CONFIGURE_DESCRIPTION, CONFIGURE_DESCRIPTION_DEFINITION_DATA],
     [CONFIGURE_CHILD_DESCRIPTIONS, CONFIGURE_CHILD_DESCRIPTIONS_DEFINITION_DATA],
     [CONNECT_FIELD_RESOLVER, CONNECT_FIELD_RESOLVER_DEFINITION_DATA],
+    [COST, COST_DEFINITION_DATA],
     [DEPRECATED, DEPRECATED_DEFINITION_DATA],
     [EDFS_KAFKA_PUBLISH, KAFKA_PUBLISH_DEFINITION_DATA],
     [EDFS_KAFKA_SUBSCRIBE, KAFKA_SUBSCRIBE_DEFINITION_DATA],
@@ -443,6 +452,7 @@ export function initializeDirectiveDefinitionDatas(): Map<string, DirectiveDefin
     [INTERFACE_OBJECT, INTERFACE_OBJECT_DEFINITION_DATA],
     [KEY, KEY_DEFINITION_DATA],
     [LINK, LINK_DEFINITION_DATA],
+    [LIST_SIZE, LIST_SIZE_DEFINITION_DATA],
     [ONE_OF, ONE_OF_DEFINITION_DATA],
     [OVERRIDE, OVERRIDE_DEFINITION_DATA],
     [PROVIDES, PROVIDES_DEFINITION_DATA],

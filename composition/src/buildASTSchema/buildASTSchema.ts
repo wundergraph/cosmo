@@ -1,7 +1,7 @@
-import { DocumentNode, GraphQLSchema, specifiedDirectives } from 'graphql';
+import { type DocumentNode, GraphQLSchema, specifiedDirectives } from 'graphql';
 import { assertValidSDL } from 'graphql/validation/validate';
 import { extendSchemaImpl } from './extendSchema';
-import { GraphQLSchemaValidationOptions } from 'graphql/type/schema';
+import { type GraphQLSchemaValidationOptions } from 'graphql/type/schema';
 
 export interface BuildASTSchemaOptions extends GraphQLSchemaValidationOptions {
   addInvalidExtensionOrphans?: boolean;

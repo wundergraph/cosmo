@@ -16,7 +16,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/mitchellh/mapstructure"
 	"github.com/nats-io/nuid"
-	"github.com/wundergraph/cosmo/router/internal/track"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
@@ -40,6 +39,7 @@ import (
 	rd "github.com/wundergraph/cosmo/router/internal/rediscloser"
 	"github.com/wundergraph/cosmo/router/internal/retrytransport"
 	"github.com/wundergraph/cosmo/router/internal/stringsx"
+	"github.com/wundergraph/cosmo/router/internal/track"
 	"github.com/wundergraph/cosmo/router/pkg/config"
 	"github.com/wundergraph/cosmo/router/pkg/connectrpc"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
@@ -54,6 +54,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
+
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
 
@@ -525,6 +526,7 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
 	}
 
+
 	if r.securityConfiguration.DepthLimit != nil {
 		r.logger.Warn("The security configuration field 'depth_limit' is deprecated, and will be removed. Use 'security.complexity_limits.depth' instead.")
 
@@ -671,6 +673,11 @@ func (r *Router) initModules(ctx context.Context) error {
 					reqContext := getRequestContext(request.Context())
 					// Ensure we work with latest request in the chain to work with the right context
 					reqContext.request = request
+					// Propagate the writer so that when a module calls
+					// ctx.ResponseWriter() it receives the writer from the
+					// current middleware layer (e.g. a buffered writer from an
+					// outer module), not the one set by the pre-handler.
+					reqContext.responseWriter = writer
 					fn.Middleware(reqContext, handler)
 				})
 			})
@@ -678,10 +685,14 @@ func (r *Router) initModules(ctx context.Context) error {
 
 		if fn, ok := moduleInstance.(RouterOnRequestHandler); ok {
 			r.routerOnRequestHandlers = append(r.routerOnRequestHandlers, func(handler http.Handler) http.Handler {
-				return http.HandlerFunc(func(_ http.ResponseWriter, request *http.Request) {
+				return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 					reqContext := getRequestContext(request.Context())
 					// Ensure we work with latest request in the chain to work with the right context
 					reqContext.request = request
+					// Propagate the writer so that when a module calls
+					// ctx.ResponseWriter() it receives the writer from the
+					// current middleware layer, not the one set by the pre-handler.
+					reqContext.responseWriter = writer
 					fn.RouterOnRequest(reqContext, handler)
 				})
 			})
@@ -1053,8 +1064,10 @@ func (r *Router) bootstrap(ctx context.Context) error {
 		r.connectRPCServer = crpcServer
 	}
 
-	if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
-		r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
+	if _, isNoop := r.EngineStats.(*statistics.NoopEngineStats); isNoop {
+		if r.metricConfig.OpenTelemetry.EngineStats.Enabled() || r.metricConfig.Prometheus.EngineStats.Enabled() || r.engineExecutionConfiguration.Debug.ReportWebSocketConnections {
+			r.EngineStats = statistics.NewEngineStats(ctx, r.logger, r.engineExecutionConfiguration.Debug.ReportWebSocketConnections)
+		}
 	}
 
 	if r.engineExecutionConfiguration.Debug.ReportMemoryUsage {
@@ -1638,6 +1651,12 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	wg.Wait()
 
 	return err.ErrOrNil()
+}
+
+func WithEngineStats(stats statistics.EngineStatistics) Option {
+	return func(r *Router) {
+		r.EngineStats = stats
+	}
 }
 
 func WithListenerAddr(addr string) Option {
@@ -2227,6 +2246,14 @@ func WithCacheWarmupConfig(cfg *config.CacheWarmupConfiguration) Option {
 	}
 }
 
+// WithPlanningDurationOverride sets a function that overrides the measured planning duration.
+// Used in tests to simulate slow queries that exceed the expensive query threshold.
+func WithPlanningDurationOverride(fn func(content string) time.Duration) Option {
+	return func(r *Router) {
+		r.planningDurationOverride = fn
+	}
+}
+
 func WithMCP(cfg config.MCPConfiguration) Option {
 	return func(r *Router) {
 		r.mcp = cfg
@@ -2438,9 +2465,15 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 			},
 			Exporters:           openTelemetryExporters,
 			CircuitBreaker:      cfg.Metrics.OTLP.CircuitBreaker,
+			CostStats:           cfg.Metrics.OTLP.CostStats,
 			Streams:             cfg.Metrics.OTLP.Streams,
 			ExcludeMetrics:      cfg.Metrics.OTLP.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.OTLP.ExcludeMetricLabels,
+			LogExporter: rmetric.LogExporterConfig{
+				Enabled:        cfg.Metrics.OTLP.LogExporter.Enabled,
+				ExcludeMetrics: cfg.Metrics.OTLP.LogExporter.ExcludeMetrics,
+				IncludeMetrics: cfg.Metrics.OTLP.LogExporter.IncludeMetrics,
+			},
 		},
 		Prometheus: rmetric.PrometheusConfig{
 			Enabled:         cfg.Metrics.Prometheus.Enabled,
@@ -2452,6 +2485,7 @@ func MetricConfigFromTelemetry(cfg *config.Telemetry) *rmetric.Config {
 				Subscription: cfg.Metrics.Prometheus.EngineStats.Subscriptions,
 			},
 			CircuitBreaker:      cfg.Metrics.Prometheus.CircuitBreaker,
+			CostStats:           cfg.Metrics.Prometheus.CostStats,
 			ExcludeMetrics:      cfg.Metrics.Prometheus.ExcludeMetrics,
 			ExcludeMetricLabels: cfg.Metrics.Prometheus.ExcludeMetricLabels,
 			Streams:             cfg.Metrics.Prometheus.Streams,

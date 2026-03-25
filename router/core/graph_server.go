@@ -22,7 +22,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
-	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -55,8 +54,11 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
+	"github.com/wundergraph/cosmo/router/pkg/slowplancache"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/astparser"
 )
 
 const (
@@ -545,6 +547,7 @@ type graphMux struct {
 	mux *chi.Mux
 
 	planCache                   *ristretto.Cache[uint64, *planWithMetaData]
+	planFallbackCache           *slowplancache.Cache[*planWithMetaData]
 	persistedOperationCache     *ristretto.Cache[uint64, NormalizationCacheEntry]
 	normalizationCache          *ristretto.Cache[uint64, NormalizationCacheEntry]
 	complexityCalculationCache  *ristretto.Cache[uint64, ComplexityCacheEntry]
@@ -581,6 +584,14 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 			NumCounters:        srv.engineExecutionConfiguration.ExecutionPlanCacheSize * 10,
 			IgnoreInternalCost: true,
 			BufferItems:        64,
+		}
+		if srv.cacheWarmup != nil && srv.cacheWarmup.Enabled && srv.cacheWarmup.InMemoryFallback {
+			planCacheConfig.OnEvict = func(item *ristretto.Item[*planWithMetaData]) {
+				// This could be called before planFallbackCache is set, but it's not a problem
+				// because there is a nil guard inside, as well as items should not really be evicted
+				// on startup
+				s.planFallbackCache.Set(item.Key, item.Value, item.Value.planningDuration)
+			}
 		}
 		s.planCache, err = ristretto.NewCache[uint64, *planWithMetaData](planCacheConfig)
 		if err != nil {
@@ -668,21 +679,25 @@ func (s *graphMux) buildOperationCaches(srv *graphServer) (computeSha256 bool, e
 	}
 
 	// Currently, we only support custom attributes from the context for OTLP metrics
-	if len(srv.metricConfig.Attributes) > 0 {
+	if !computeSha256 && len(srv.metricConfig.Attributes) > 0 {
 		for _, customAttribute := range srv.metricConfig.Attributes {
 			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
 				computeSha256 = true
 				break
 			}
 		}
-	} else if srv.accessLogsConfig != nil {
+	}
+
+	if !computeSha256 && srv.accessLogsConfig != nil {
 		for _, customAttribute := range append(srv.accessLogsConfig.Attributes, srv.accessLogsConfig.SubgraphAttributes...) {
 			if customAttribute.ValueFrom != nil && customAttribute.ValueFrom.ContextField == ContextFieldOperationSha256 {
 				computeSha256 = true
 				break
 			}
 		}
-	} else if srv.persistedOperationsConfig.Safelist.Enabled || srv.persistedOperationsConfig.LogUnknown {
+	}
+
+	if srv.persistedOperationsConfig.Safelist.Enabled || srv.persistedOperationsConfig.LogUnknown {
 		// In these case, we'll want to compute the sha256 for every operation, in order to check that the operation
 		// is present in the Persisted Operation cache
 		computeSha256 = true
@@ -783,6 +798,7 @@ func (s *graphMux) configureCacheMetrics(srv *graphServer, baseOtelAttributes []
 
 func (s *graphMux) Shutdown(ctx context.Context) error {
 	s.planCache.Close()
+	s.planFallbackCache.Close()
 	s.persistedOperationCache.Close()
 	s.normalizationCache.Close()
 	s.variablesNormalizationCache.Close()
@@ -902,9 +918,11 @@ func (s *graphServer) buildGraphMux(
 		// but in this case we use the same metric store
 		otlpOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.OpenTelemetry.Enabled,
+			CostStats:            s.metricConfig.OpenTelemetry.CostStats,
 		}
 		promOpts := rmetric.MetricOpts{
 			EnableCircuitBreaker: s.metricConfig.Prometheus.Enabled,
+			CostStats:            s.metricConfig.Prometheus.CostStats,
 		}
 
 		m, err := rmetric.NewStore(otlpOpts, promOpts,
@@ -1226,6 +1244,7 @@ func (s *graphServer) buildGraphMux(
 		Events:                   s.eventsConfig,
 		SubgraphErrorPropagation: s.subgraphErrorPropagation,
 		StreamMetricStore:        gm.streamMetricStore,
+		CostControl:              s.securityConfiguration.CostControl,
 	}
 
 	// map[string]*http.Transport cannot be coerced into map[string]http.RoundTripper, unfortunately
@@ -1330,9 +1349,21 @@ func (s *graphServer) buildGraphMux(
 		DisableExposingVariablesContentOnValidationError:       s.engineExecutionConfiguration.DisableExposingVariablesContentOnValidationError,
 		RelaxSubgraphOperationFieldSelectionMergingNullability: s.engineExecutionConfiguration.RelaxSubgraphOperationFieldSelectionMergingNullability,
 		ComplexityLimits:                                       s.securityConfiguration.ComplexityLimits,
+		CostControl:                                            s.securityConfiguration.CostControl,
 	})
 
-	operationPlanner := NewOperationPlanner(executor, gm.planCache, opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled())
+	if opts.ReloadPersistentState.inMemoryPlanCacheFallback.IsEnabled() {
+		var err error
+		gm.planFallbackCache, err = slowplancache.New[*planWithMetaData](
+			int(s.engineExecutionConfiguration.SlowPlanCacheSize),
+			s.engineExecutionConfiguration.SlowPlanCacheThreshold,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create plan fallback cache: %w", err)
+		}
+	}
+
+	operationPlanner := NewOperationPlanner(executor, gm.planCache, gm.planFallbackCache, s.planningDurationOverride)
 
 	// We support the MCP only on the base graph. Feature flags are not supported yet.
 	if opts.IsBaseGraph() && s.mcpServer != nil {
@@ -1388,10 +1419,10 @@ func (s *graphServer) buildGraphMux(
 		//   - Using static execution config (not Cosmo): s.selfRegister == nil
 		//   - OR CDN cache warmer is explictly disabled
 		case s.cacheWarmup.InMemoryFallback && (s.selfRegister == nil || !s.cacheWarmup.Source.CdnSource.Enabled):
-			// We first utilize the existing plan cache (if it was already set, i.e., not on the first start) to create a list of queries
+			// We first utilize the existing cache (if it was already set, i.e., not on the first start) to create a list of queries
 			// and then reset the plan cache to the new plan cache for this start afterwards.
 			warmupConfig.Source = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
-			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+			opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planFallbackCache)
 		case s.cacheWarmup.Source.CdnSource.Enabled:
 			if s.graphApiToken == "" {
 				return nil, fmt.Errorf("graph token is required for cache warmup in order to communicate with the CDN")
@@ -1401,7 +1432,7 @@ func (s *graphServer) buildGraphMux(
 			// This is useful for when an issue occurs with the CDN when retrieving the required manifest
 			if s.cacheWarmup.InMemoryFallback {
 				warmupConfig.FallbackSource = NewPlanSource(opts.ReloadPersistentState.inMemoryPlanCacheFallback.getPlanCacheForFF(opts.FeatureFlagName))
-				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planCache)
+				opts.ReloadPersistentState.inMemoryPlanCacheFallback.setPlanCacheForFF(opts.FeatureFlagName, gm.planFallbackCache)
 			}
 			cdnSource, err := NewCDNSource(s.cdnConfig.URL, s.graphApiToken, s.logger)
 			if err != nil {
@@ -1444,6 +1475,7 @@ func (s *graphServer) buildGraphMux(
 		Log:                             s.logger,
 		EnableCacheResponseHeaders:      s.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders,
 		EnableResponseHeaderPropagation: s.headerRules != nil,
+		EnableCostResponseHeaders:       s.securityConfiguration.CostControl != nil && s.securityConfiguration.CostControl.ExposeHeaders,
 		EngineStats:                     s.engineStats,
 		TracerProvider:                  s.tracerProvider,
 		Authorizer:                      NewCosmoAuthorizer(authorizerOptions),

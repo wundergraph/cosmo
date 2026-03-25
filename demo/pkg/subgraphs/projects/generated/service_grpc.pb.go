@@ -44,15 +44,19 @@ const (
 	ProjectsService_QuerySearchProjects_FullMethodName                      = "/service.ProjectsService/QuerySearchProjects"
 	ProjectsService_QueryTasks_FullMethodName                               = "/service.ProjectsService/QueryTasks"
 	ProjectsService_QueryTasksByPriority_FullMethodName                     = "/service.ProjectsService/QueryTasksByPriority"
+	ProjectsService_RequireEmployeeTaggedProjectSummaryById_FullMethodName  = "/service.ProjectsService/RequireEmployeeTaggedProjectSummaryById"
 	ProjectsService_ResolveEmployeeAverageTaskCompletionDays_FullMethodName = "/service.ProjectsService/ResolveEmployeeAverageTaskCompletionDays"
 	ProjectsService_ResolveEmployeeCurrentWorkload_FullMethodName           = "/service.ProjectsService/ResolveEmployeeCurrentWorkload"
+	ProjectsService_ResolveEmployeeTotalProjectCount_FullMethodName         = "/service.ProjectsService/ResolveEmployeeTotalProjectCount"
 	ProjectsService_ResolveMilestoneDaysUntilDue_FullMethodName             = "/service.ProjectsService/ResolveMilestoneDaysUntilDue"
 	ProjectsService_ResolveMilestoneIsAtRisk_FullMethodName                 = "/service.ProjectsService/ResolveMilestoneIsAtRisk"
+	ProjectsService_ResolveProjectActiveMilestoneCount_FullMethodName       = "/service.ProjectsService/ResolveProjectActiveMilestoneCount"
 	ProjectsService_ResolveProjectCompletionRate_FullMethodName             = "/service.ProjectsService/ResolveProjectCompletionRate"
 	ProjectsService_ResolveProjectCriticalDeadline_FullMethodName           = "/service.ProjectsService/ResolveProjectCriticalDeadline"
 	ProjectsService_ResolveProjectEstimatedDaysRemaining_FullMethodName     = "/service.ProjectsService/ResolveProjectEstimatedDaysRemaining"
 	ProjectsService_ResolveProjectFilteredTasks_FullMethodName              = "/service.ProjectsService/ResolveProjectFilteredTasks"
 	ProjectsService_ResolveProjectSubProjects_FullMethodName                = "/service.ProjectsService/ResolveProjectSubProjects"
+	ProjectsService_ResolveProjectTaskCount_FullMethodName                  = "/service.ProjectsService/ResolveProjectTaskCount"
 	ProjectsService_ResolveProjectTopPriorityItem_FullMethodName            = "/service.ProjectsService/ResolveProjectTopPriorityItem"
 	ProjectsService_ResolveTaskIsBlocked_FullMethodName                     = "/service.ProjectsService/ResolveTaskIsBlocked"
 	ProjectsService_ResolveTaskTotalEffort_FullMethodName                   = "/service.ProjectsService/ResolveTaskTotalEffort"
@@ -94,15 +98,19 @@ type ProjectsServiceClient interface {
 	QuerySearchProjects(ctx context.Context, in *QuerySearchProjectsRequest, opts ...grpc.CallOption) (*QuerySearchProjectsResponse, error)
 	QueryTasks(ctx context.Context, in *QueryTasksRequest, opts ...grpc.CallOption) (*QueryTasksResponse, error)
 	QueryTasksByPriority(ctx context.Context, in *QueryTasksByPriorityRequest, opts ...grpc.CallOption) (*QueryTasksByPriorityResponse, error)
+	RequireEmployeeTaggedProjectSummaryById(ctx context.Context, in *RequireEmployeeTaggedProjectSummaryByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error)
 	ResolveEmployeeAverageTaskCompletionDays(ctx context.Context, in *ResolveEmployeeAverageTaskCompletionDaysRequest, opts ...grpc.CallOption) (*ResolveEmployeeAverageTaskCompletionDaysResponse, error)
 	ResolveEmployeeCurrentWorkload(ctx context.Context, in *ResolveEmployeeCurrentWorkloadRequest, opts ...grpc.CallOption) (*ResolveEmployeeCurrentWorkloadResponse, error)
+	ResolveEmployeeTotalProjectCount(ctx context.Context, in *ResolveEmployeeTotalProjectCountRequest, opts ...grpc.CallOption) (*ResolveEmployeeTotalProjectCountResponse, error)
 	ResolveMilestoneDaysUntilDue(ctx context.Context, in *ResolveMilestoneDaysUntilDueRequest, opts ...grpc.CallOption) (*ResolveMilestoneDaysUntilDueResponse, error)
 	ResolveMilestoneIsAtRisk(ctx context.Context, in *ResolveMilestoneIsAtRiskRequest, opts ...grpc.CallOption) (*ResolveMilestoneIsAtRiskResponse, error)
+	ResolveProjectActiveMilestoneCount(ctx context.Context, in *ResolveProjectActiveMilestoneCountRequest, opts ...grpc.CallOption) (*ResolveProjectActiveMilestoneCountResponse, error)
 	ResolveProjectCompletionRate(ctx context.Context, in *ResolveProjectCompletionRateRequest, opts ...grpc.CallOption) (*ResolveProjectCompletionRateResponse, error)
 	ResolveProjectCriticalDeadline(ctx context.Context, in *ResolveProjectCriticalDeadlineRequest, opts ...grpc.CallOption) (*ResolveProjectCriticalDeadlineResponse, error)
 	ResolveProjectEstimatedDaysRemaining(ctx context.Context, in *ResolveProjectEstimatedDaysRemainingRequest, opts ...grpc.CallOption) (*ResolveProjectEstimatedDaysRemainingResponse, error)
 	ResolveProjectFilteredTasks(ctx context.Context, in *ResolveProjectFilteredTasksRequest, opts ...grpc.CallOption) (*ResolveProjectFilteredTasksResponse, error)
 	ResolveProjectSubProjects(ctx context.Context, in *ResolveProjectSubProjectsRequest, opts ...grpc.CallOption) (*ResolveProjectSubProjectsResponse, error)
+	ResolveProjectTaskCount(ctx context.Context, in *ResolveProjectTaskCountRequest, opts ...grpc.CallOption) (*ResolveProjectTaskCountResponse, error)
 	ResolveProjectTopPriorityItem(ctx context.Context, in *ResolveProjectTopPriorityItemRequest, opts ...grpc.CallOption) (*ResolveProjectTopPriorityItemResponse, error)
 	ResolveTaskIsBlocked(ctx context.Context, in *ResolveTaskIsBlockedRequest, opts ...grpc.CallOption) (*ResolveTaskIsBlockedResponse, error)
 	ResolveTaskTotalEffort(ctx context.Context, in *ResolveTaskTotalEffortRequest, opts ...grpc.CallOption) (*ResolveTaskTotalEffortResponse, error)
@@ -366,6 +374,16 @@ func (c *projectsServiceClient) QueryTasksByPriority(ctx context.Context, in *Qu
 	return out, nil
 }
 
+func (c *projectsServiceClient) RequireEmployeeTaggedProjectSummaryById(ctx context.Context, in *RequireEmployeeTaggedProjectSummaryByIdRequest, opts ...grpc.CallOption) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RequireEmployeeTaggedProjectSummaryByIdResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_RequireEmployeeTaggedProjectSummaryById_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *projectsServiceClient) ResolveEmployeeAverageTaskCompletionDays(ctx context.Context, in *ResolveEmployeeAverageTaskCompletionDaysRequest, opts ...grpc.CallOption) (*ResolveEmployeeAverageTaskCompletionDaysResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResolveEmployeeAverageTaskCompletionDaysResponse)
@@ -386,6 +404,16 @@ func (c *projectsServiceClient) ResolveEmployeeCurrentWorkload(ctx context.Conte
 	return out, nil
 }
 
+func (c *projectsServiceClient) ResolveEmployeeTotalProjectCount(ctx context.Context, in *ResolveEmployeeTotalProjectCountRequest, opts ...grpc.CallOption) (*ResolveEmployeeTotalProjectCountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveEmployeeTotalProjectCountResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ResolveEmployeeTotalProjectCount_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *projectsServiceClient) ResolveMilestoneDaysUntilDue(ctx context.Context, in *ResolveMilestoneDaysUntilDueRequest, opts ...grpc.CallOption) (*ResolveMilestoneDaysUntilDueResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResolveMilestoneDaysUntilDueResponse)
@@ -400,6 +428,16 @@ func (c *projectsServiceClient) ResolveMilestoneIsAtRisk(ctx context.Context, in
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResolveMilestoneIsAtRiskResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_ResolveMilestoneIsAtRisk_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ResolveProjectActiveMilestoneCount(ctx context.Context, in *ResolveProjectActiveMilestoneCountRequest, opts ...grpc.CallOption) (*ResolveProjectActiveMilestoneCountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveProjectActiveMilestoneCountResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ResolveProjectActiveMilestoneCount_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -450,6 +488,16 @@ func (c *projectsServiceClient) ResolveProjectSubProjects(ctx context.Context, i
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ResolveProjectSubProjectsResponse)
 	err := c.cc.Invoke(ctx, ProjectsService_ResolveProjectSubProjects_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *projectsServiceClient) ResolveProjectTaskCount(ctx context.Context, in *ResolveProjectTaskCountRequest, opts ...grpc.CallOption) (*ResolveProjectTaskCountResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResolveProjectTaskCountResponse)
+	err := c.cc.Invoke(ctx, ProjectsService_ResolveProjectTaskCount_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -522,15 +570,19 @@ type ProjectsServiceServer interface {
 	QuerySearchProjects(context.Context, *QuerySearchProjectsRequest) (*QuerySearchProjectsResponse, error)
 	QueryTasks(context.Context, *QueryTasksRequest) (*QueryTasksResponse, error)
 	QueryTasksByPriority(context.Context, *QueryTasksByPriorityRequest) (*QueryTasksByPriorityResponse, error)
+	RequireEmployeeTaggedProjectSummaryById(context.Context, *RequireEmployeeTaggedProjectSummaryByIdRequest) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error)
 	ResolveEmployeeAverageTaskCompletionDays(context.Context, *ResolveEmployeeAverageTaskCompletionDaysRequest) (*ResolveEmployeeAverageTaskCompletionDaysResponse, error)
 	ResolveEmployeeCurrentWorkload(context.Context, *ResolveEmployeeCurrentWorkloadRequest) (*ResolveEmployeeCurrentWorkloadResponse, error)
+	ResolveEmployeeTotalProjectCount(context.Context, *ResolveEmployeeTotalProjectCountRequest) (*ResolveEmployeeTotalProjectCountResponse, error)
 	ResolveMilestoneDaysUntilDue(context.Context, *ResolveMilestoneDaysUntilDueRequest) (*ResolveMilestoneDaysUntilDueResponse, error)
 	ResolveMilestoneIsAtRisk(context.Context, *ResolveMilestoneIsAtRiskRequest) (*ResolveMilestoneIsAtRiskResponse, error)
+	ResolveProjectActiveMilestoneCount(context.Context, *ResolveProjectActiveMilestoneCountRequest) (*ResolveProjectActiveMilestoneCountResponse, error)
 	ResolveProjectCompletionRate(context.Context, *ResolveProjectCompletionRateRequest) (*ResolveProjectCompletionRateResponse, error)
 	ResolveProjectCriticalDeadline(context.Context, *ResolveProjectCriticalDeadlineRequest) (*ResolveProjectCriticalDeadlineResponse, error)
 	ResolveProjectEstimatedDaysRemaining(context.Context, *ResolveProjectEstimatedDaysRemainingRequest) (*ResolveProjectEstimatedDaysRemainingResponse, error)
 	ResolveProjectFilteredTasks(context.Context, *ResolveProjectFilteredTasksRequest) (*ResolveProjectFilteredTasksResponse, error)
 	ResolveProjectSubProjects(context.Context, *ResolveProjectSubProjectsRequest) (*ResolveProjectSubProjectsResponse, error)
+	ResolveProjectTaskCount(context.Context, *ResolveProjectTaskCountRequest) (*ResolveProjectTaskCountResponse, error)
 	ResolveProjectTopPriorityItem(context.Context, *ResolveProjectTopPriorityItemRequest) (*ResolveProjectTopPriorityItemResponse, error)
 	ResolveTaskIsBlocked(context.Context, *ResolveTaskIsBlockedRequest) (*ResolveTaskIsBlockedResponse, error)
 	ResolveTaskTotalEffort(context.Context, *ResolveTaskTotalEffortRequest) (*ResolveTaskTotalEffortResponse, error)
@@ -619,17 +671,26 @@ func (UnimplementedProjectsServiceServer) QueryTasks(context.Context, *QueryTask
 func (UnimplementedProjectsServiceServer) QueryTasksByPriority(context.Context, *QueryTasksByPriorityRequest) (*QueryTasksByPriorityResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method QueryTasksByPriority not implemented")
 }
+func (UnimplementedProjectsServiceServer) RequireEmployeeTaggedProjectSummaryById(context.Context, *RequireEmployeeTaggedProjectSummaryByIdRequest) (*RequireEmployeeTaggedProjectSummaryByIdResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RequireEmployeeTaggedProjectSummaryById not implemented")
+}
 func (UnimplementedProjectsServiceServer) ResolveEmployeeAverageTaskCompletionDays(context.Context, *ResolveEmployeeAverageTaskCompletionDaysRequest) (*ResolveEmployeeAverageTaskCompletionDaysResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveEmployeeAverageTaskCompletionDays not implemented")
 }
 func (UnimplementedProjectsServiceServer) ResolveEmployeeCurrentWorkload(context.Context, *ResolveEmployeeCurrentWorkloadRequest) (*ResolveEmployeeCurrentWorkloadResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveEmployeeCurrentWorkload not implemented")
 }
+func (UnimplementedProjectsServiceServer) ResolveEmployeeTotalProjectCount(context.Context, *ResolveEmployeeTotalProjectCountRequest) (*ResolveEmployeeTotalProjectCountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveEmployeeTotalProjectCount not implemented")
+}
 func (UnimplementedProjectsServiceServer) ResolveMilestoneDaysUntilDue(context.Context, *ResolveMilestoneDaysUntilDueRequest) (*ResolveMilestoneDaysUntilDueResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveMilestoneDaysUntilDue not implemented")
 }
 func (UnimplementedProjectsServiceServer) ResolveMilestoneIsAtRisk(context.Context, *ResolveMilestoneIsAtRiskRequest) (*ResolveMilestoneIsAtRiskResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveMilestoneIsAtRisk not implemented")
+}
+func (UnimplementedProjectsServiceServer) ResolveProjectActiveMilestoneCount(context.Context, *ResolveProjectActiveMilestoneCountRequest) (*ResolveProjectActiveMilestoneCountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectActiveMilestoneCount not implemented")
 }
 func (UnimplementedProjectsServiceServer) ResolveProjectCompletionRate(context.Context, *ResolveProjectCompletionRateRequest) (*ResolveProjectCompletionRateResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectCompletionRate not implemented")
@@ -645,6 +706,9 @@ func (UnimplementedProjectsServiceServer) ResolveProjectFilteredTasks(context.Co
 }
 func (UnimplementedProjectsServiceServer) ResolveProjectSubProjects(context.Context, *ResolveProjectSubProjectsRequest) (*ResolveProjectSubProjectsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectSubProjects not implemented")
+}
+func (UnimplementedProjectsServiceServer) ResolveProjectTaskCount(context.Context, *ResolveProjectTaskCountRequest) (*ResolveProjectTaskCountResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectTaskCount not implemented")
 }
 func (UnimplementedProjectsServiceServer) ResolveProjectTopPriorityItem(context.Context, *ResolveProjectTopPriorityItemRequest) (*ResolveProjectTopPriorityItemResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveProjectTopPriorityItem not implemented")
@@ -1126,6 +1190,24 @@ func _ProjectsService_QueryTasksByPriority_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_RequireEmployeeTaggedProjectSummaryById_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RequireEmployeeTaggedProjectSummaryByIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).RequireEmployeeTaggedProjectSummaryById(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_RequireEmployeeTaggedProjectSummaryById_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).RequireEmployeeTaggedProjectSummaryById(ctx, req.(*RequireEmployeeTaggedProjectSummaryByIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_ResolveEmployeeAverageTaskCompletionDays_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ResolveEmployeeAverageTaskCompletionDaysRequest)
 	if err := dec(in); err != nil {
@@ -1162,6 +1244,24 @@ func _ProjectsService_ResolveEmployeeCurrentWorkload_Handler(srv interface{}, ct
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProjectsService_ResolveEmployeeTotalProjectCount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveEmployeeTotalProjectCountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ResolveEmployeeTotalProjectCount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ResolveEmployeeTotalProjectCount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ResolveEmployeeTotalProjectCount(ctx, req.(*ResolveEmployeeTotalProjectCountRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _ProjectsService_ResolveMilestoneDaysUntilDue_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ResolveMilestoneDaysUntilDueRequest)
 	if err := dec(in); err != nil {
@@ -1194,6 +1294,24 @@ func _ProjectsService_ResolveMilestoneIsAtRisk_Handler(srv interface{}, ctx cont
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ProjectsServiceServer).ResolveMilestoneIsAtRisk(ctx, req.(*ResolveMilestoneIsAtRiskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ResolveProjectActiveMilestoneCount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveProjectActiveMilestoneCountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ResolveProjectActiveMilestoneCount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ResolveProjectActiveMilestoneCount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ResolveProjectActiveMilestoneCount(ctx, req.(*ResolveProjectActiveMilestoneCountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1284,6 +1402,24 @@ func _ProjectsService_ResolveProjectSubProjects_Handler(srv interface{}, ctx con
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ProjectsServiceServer).ResolveProjectSubProjects(ctx, req.(*ResolveProjectSubProjectsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ProjectsService_ResolveProjectTaskCount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResolveProjectTaskCountRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProjectsServiceServer).ResolveProjectTaskCount(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProjectsService_ResolveProjectTaskCount_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProjectsServiceServer).ResolveProjectTaskCount(ctx, req.(*ResolveProjectTaskCountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1450,6 +1586,10 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ProjectsService_QueryTasksByPriority_Handler,
 		},
 		{
+			MethodName: "RequireEmployeeTaggedProjectSummaryById",
+			Handler:    _ProjectsService_RequireEmployeeTaggedProjectSummaryById_Handler,
+		},
+		{
 			MethodName: "ResolveEmployeeAverageTaskCompletionDays",
 			Handler:    _ProjectsService_ResolveEmployeeAverageTaskCompletionDays_Handler,
 		},
@@ -1458,12 +1598,20 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _ProjectsService_ResolveEmployeeCurrentWorkload_Handler,
 		},
 		{
+			MethodName: "ResolveEmployeeTotalProjectCount",
+			Handler:    _ProjectsService_ResolveEmployeeTotalProjectCount_Handler,
+		},
+		{
 			MethodName: "ResolveMilestoneDaysUntilDue",
 			Handler:    _ProjectsService_ResolveMilestoneDaysUntilDue_Handler,
 		},
 		{
 			MethodName: "ResolveMilestoneIsAtRisk",
 			Handler:    _ProjectsService_ResolveMilestoneIsAtRisk_Handler,
+		},
+		{
+			MethodName: "ResolveProjectActiveMilestoneCount",
+			Handler:    _ProjectsService_ResolveProjectActiveMilestoneCount_Handler,
 		},
 		{
 			MethodName: "ResolveProjectCompletionRate",
@@ -1484,6 +1632,10 @@ var ProjectsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ResolveProjectSubProjects",
 			Handler:    _ProjectsService_ResolveProjectSubProjects_Handler,
+		},
+		{
+			MethodName: "ResolveProjectTaskCount",
+			Handler:    _ProjectsService_ResolveProjectTaskCount_Handler,
 		},
 		{
 			MethodName: "ResolveProjectTopPriorityItem",

@@ -25,6 +25,14 @@ import (
 	"go.uber.org/zap"
 )
 
+// reservedToolNames contains tool names that are internally registered by the MCP server
+// and must not be used by operations when omitToolNamePrefix is enabled.
+var reservedToolNames = []string{
+	"get_schema",
+	"execute_graphql",
+	"get_operation_info",
+}
+
 // requestHeadersKey is a custom context key for storing request headers.
 type requestHeadersKey struct{}
 
@@ -39,7 +47,6 @@ func requestHeadersFromRequest(ctx context.Context, r *http.Request) context.Con
 	headers := r.Header.Clone()
 	return withRequestHeaders(ctx, headers)
 }
-
 
 // headersFromContext extracts the request headers from the context.
 func headersFromContext(ctx context.Context) (http.Header, error) {
@@ -395,6 +402,7 @@ func (s *GraphQLSchemaServer) Reload(schema *ast.Document) error {
 	}
 
 	s.server.DeleteTools(s.registeredTools...)
+	s.registeredTools = nil
 
 	if err := s.registerTools(); err != nil {
 		return fmt.Errorf("failed to register tools: %w", err)
@@ -541,13 +549,12 @@ func (s *GraphQLSchemaServer) registerTools() error {
 		toolName := operationToolName
 		if !s.omitToolNamePrefix {
 			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
-		} else if slices.Contains(s.registeredTools, operationToolName) {
-			s.logger.Warn("Operation name collides with built-in MCP tool, using prefixed name",
+		} else if slices.Contains(s.registeredTools, operationToolName) || slices.Contains(reservedToolNames, operationToolName) {
+			s.logger.Error("Skipping operation due to tool name collision",
 				zap.String("operation", op.Name),
 				zap.String("conflicting_tool", operationToolName),
-				zap.String("using_name", fmt.Sprintf("execute_operation_%s", operationToolName)),
 			)
-			toolName = fmt.Sprintf("execute_operation_%s", operationToolName)
+			continue
 		}
 		tool := mcp.NewToolWithRawSchema(
 			toolName,

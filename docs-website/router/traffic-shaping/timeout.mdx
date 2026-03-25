@@ -1,0 +1,47 @@
+---
+title: "Timeout"
+description: "Configure subgraph timeouts according to your needs."
+icon: "clock"
+---
+
+## Subgraph timeouts
+
+Although the router comes with good defaults, you can change the timeouts according to your needs. For example, if you need to operate with very slow upstream services, you can increase `request_timeout`, which defines the maximum amount of time a request can take. Zero means no limit.
+
+```yaml
+traffic_shaping:
+  # Rules are applied to all subgraph requests.
+  all:
+    # Subgraph transport options
+    request_timeout: 60s
+    dial_timeout: 30s
+    keep_alive_idle_timeout: 0s
+    keep_alive_probe_interval: 30s
+    tls_handshake_timeout: 10s
+    response_header_timeout: 0s
+    expect_continue_timeout: 0s
+  subgraphs: # allows you to create subgraph specific traffic shaping rules
+    products: # Will only affect this subgraph and override the default settings
+      request_timeout: 60s
+      dial_timeout: 30s
+      keep_alive_idle_timeout: 0s
+      keep_alive_probe_interval:
+      tls_handshake_timeout: 10s
+      response_header_timeout: 0s
+      expect_continue_timeout: 0s
+```
+
+* `request_timeout`: The maximum amount of time a request can take. The timeout includes connection time, any redirects, and reading the response body.
+
+* `dial_timeout`: The maximum amount of time a dial will wait for a connect to complete
+
+* `keep_alive_idle_timeout`: The maximum amount of time an idle (keep-alive) connection will remain idle before closing itself.
+
+* `keep_alive_probe_interval`: Specifies the interval between keep-alive probes for an active network connection.
+
+* `tls_handshake_timeout`: Specifies the maximum amount of time waiting to wait for a TLS handshake.
+
+* `response_header_timeout`: If non-zero, specifies the amount of time to wait for a server's response headers after fully writing the request (including its body, if any).
+
+* `expect_continue_timeout`: If non-zero, specifies the amount of time to wait for a server's first response headers after fully writing the request headers if the request has an "Expect: 100-continue" header.
+

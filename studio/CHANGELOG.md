@@ -4,6 +4,79 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.162.0](https://github.com/wundergraph/cosmo/compare/studio@0.161.9...studio@0.162.0) (2026-03-18)
+
+### Features
+
+* add subgraph check extension outcome to proposals screen ([#2661](https://github.com/wundergraph/cosmo/issues/2661)) ([638af2f](https://github.com/wundergraph/cosmo/commit/638af2fd85cfcf715eb887b3f0606a898b2f7999)) (@wilsonrivera)
+
+## [0.161.9](https://github.com/wundergraph/cosmo/compare/studio@0.161.8...studio@0.161.9) (2026-03-17)
+
+**Note:** Version bump only for package studio
+
+## [0.161.8](https://github.com/wundergraph/cosmo/compare/studio@0.161.7...studio@0.161.8) (2026-03-17)
+
+**Note:** Version bump only for package studio
+
+## [0.161.7](https://github.com/wundergraph/cosmo/compare/studio@0.161.6...studio@0.161.7) (2026-03-17)
+
+**Note:** Version bump only for package studio
+
+## [0.161.6](https://github.com/wundergraph/cosmo/compare/studio@0.161.5...studio@0.161.6) (2026-03-12)
+
+**Note:** Version bump only for package studio
+
+## [0.161.5](https://github.com/wundergraph/cosmo/compare/studio@0.161.4...studio@0.161.5) (2026-03-12)
+
+### Bug Fixes
+
+* formatting in studio pt5 ([#2621](https://github.com/wundergraph/cosmo/issues/2621)) ([8aaff6c](https://github.com/wundergraph/cosmo/commit/8aaff6ccf6ac5c760170ed36d892e84f225393ff)) (@comatory)
+
+## [0.161.4](https://github.com/wundergraph/cosmo/compare/studio@0.161.3...studio@0.161.4) (2026-03-11)
+
+**Note:** Version bump only for package studio
+
+## [0.161.3](https://github.com/wundergraph/cosmo/compare/studio@0.161.2...studio@0.161.3) (2026-03-10)
+
+### Bug Fixes
+
+* formatting in studio (pt3) ([#2602](https://github.com/wundergraph/cosmo/issues/2602)) ([610f4c0](https://github.com/wundergraph/cosmo/commit/610f4c04791dc7d7e73feb2ad26752a798942e07)) (@comatory)
+* formatting in studio pt4 ([#2618](https://github.com/wundergraph/cosmo/issues/2618)) ([1dc4fe2](https://github.com/wundergraph/cosmo/commit/1dc4fe2916dffe5fda302a37bf7ee6bd5200206f)) (@comatory)
+
+## [0.161.2](https://github.com/wundergraph/cosmo/compare/studio@0.161.1...studio@0.161.2) (2026-03-10)
+
+**Note:** Version bump only for package studio
+
+## [0.161.1](https://github.com/wundergraph/cosmo/compare/studio@0.161.0...studio@0.161.1) (2026-03-09)
+
+### Bug Fixes
+
+* formatting in studio (pt2) ([#2601](https://github.com/wundergraph/cosmo/issues/2601)) ([ea70e91](https://github.com/wundergraph/cosmo/commit/ea70e910ded666db6eb1932e9104d8a4d552d23b)) (@comatory)
+
+# [0.161.0](https://github.com/wundergraph/cosmo/compare/studio@0.160.0...studio@0.161.0) (2026-03-05)
+
+### Features
+
+* add format script + optional git hooks ([#2579](https://github.com/wundergraph/cosmo/issues/2579)) ([edabd2b](https://github.com/wundergraph/cosmo/commit/edabd2bd8f775c5717ca785f16616cff6f7ae039)) (@comatory)
+
+# [0.160.0](https://github.com/wundergraph/cosmo/compare/studio@0.159.0...studio@0.160.0) (2026-03-04)
+
+### Features
+
+* add support for federated graph schema changes ([#2566](https://github.com/wundergraph/cosmo/issues/2566)) ([2f0a666](https://github.com/wundergraph/cosmo/commit/2f0a666d8c82d649707e57f6ccd085197e485da5)) (@JivusAyrus)
+
+# [0.159.0](https://github.com/wundergraph/cosmo/compare/studio@0.158.0...studio@0.159.0) (2026-03-04)
+
+### Features
+
+* ignore pascal case + input prefix lint rules for EDFS ([#2574](https://github.com/wundergraph/cosmo/issues/2574)) ([ffeaf59](https://github.com/wundergraph/cosmo/commit/ffeaf59e0efa1ee041a0867b3c2939cf3c2103a7)) (@comatory)
+
+# [0.158.0](https://github.com/wundergraph/cosmo/compare/studio@0.157.0...studio@0.158.0) (2026-03-03)
+
+### Features
+
+* show hub banner ([#2570](https://github.com/wundergraph/cosmo/issues/2570)) ([589af86](https://github.com/wundergraph/cosmo/commit/589af860d073e01d0e6ed2182bce38e4a0ad240d)) (@StarpTech)
+
 # [0.157.0](https://github.com/wundergraph/cosmo/compare/studio@0.156.1...studio@0.157.0) (2026-03-02)
 
 ### Features

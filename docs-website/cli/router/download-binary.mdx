@@ -1,0 +1,16 @@
+---
+title: "Download Binary"
+description: "Download-binary directly downloads the latest router executable of the appropriate architecture for your system."
+icon: file-arrow-down
+---
+
+## Usage
+
+```bash
+npx wgc router download-binary
+```
+
+## Description
+
+The latest available router (see [releases](https://github.com/wundergraph/cosmo/releases?q=router\&expanded=true)) of the appropriate architecture will be downloaded to the directory that is specified. The download contents will appear in a folder named "router". Your `.env` file should be placed adjacent to the executable, which should also contain the paths to your router execution config (and config.yaml, if any). See [router configuration](/router/configuration) for more details.
+

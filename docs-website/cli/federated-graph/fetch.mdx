@@ -1,0 +1,76 @@
+---
+title: "Fetch"
+description: "Fetches the latest valid SDL of a federated graph and all its subgraphs and the latest valid router config of a federated graph."
+icon: download
+---
+
+## Usage
+
+```bash
+npx wgc federated-graph fetch <name>
+```
+
+## Description
+
+The `npx wgc federated-graph fetch` command allows you to download the latest valid Schema Definition Language (SDL) of a federated graph and all its subgraphs and the latest valid router config of a federated graph from the Cosmo platform's control plane. The fetched SDL represents the unified schema of the federated graph. You can use this command to retrieve the SDL.
+
+## Parameters
+
+* `<name>`: The name of the federated graph you want to fetch. Replace `<name>` with the name of the federated graph you wish to retrieve the SDL for.
+
+## Options
+
+* `-n, --namespace` : The namespace of the federated graph (Default: "default").
+
+* `-o, --out` : Destination folder for the SDL of the federated graph and its subgraphs.
+
+* `-a, --apollo-compatibility` : Enable Apollo compatibility to generate the composition configs and script to generate schema using rover.
+
+* `-v, --federation-version`: The version of federation to be used by rover in the format "1", "2", or "2.x.y". Default is 2.5.0.
+
+## Apollo Compatibility
+
+This mode will help smooth migration from the Apollo router to the WunderGraph Cosmo router. Initially, the users can use the schema registry from Cosmo and use this mode to update their routers/gateways. Later they can move from Apollo Router/Gateway to WunderGraph Router.
+
+<Frame caption="Apollo Compatibility mode">
+  <img src="/images/tutorial/apollo-compatibility-cosmo-with-apollo-router-gateway.png" alt="Diagram showing Cosmo Schema Registry and WGC CLI generating an Apollo-compatible supergraph for the Apollo Router/Gateway, updated via webhook on schema change." title="Apollo compatibility — Cosmo with Apollo Router/Gateway" />
+</Frame>
+
+## Output
+
+The output of this command is stored in the structure mentioned below
+
+* **\<graph-name>-\<namespace>:&#x20;**&#x54;he top-level folder which contains 2 folders, subgraphs and supergraphs.
+
+  * **subgraphs** folder: This folder contains the files of all the subgraph's SDLs.
+
+  * **supergraph** folder: This folder contains the SDL, router config of the federated graph.
+
+    * cosmoSchema.graphql - The SDL of the federated graph.
+
+    * cosmoConfig.json - The router config of the federated graph.
+
+  * **cosmo-composition.yaml:&#x20;**&#x54;he Cosmo federated graph configuration file includes configuration options for each of your subgraphs. This file can be used to generate the router config using the [compose](/cli/router/compose) command.
+
+If **Apollo-compatibility mode** is enabled, the output will contain a few more folders/files, they are as follows:-
+
+* **rover-composition.yaml:&#x20;**&#x54;he Apollo supergraph configuration file includes configuration options for each of your subgraphs.
+
+* **scripts&#x20;**&#x66;older
+
+  * apollo.sh - This script is used to generate the supergraph schema using rover, and the generated file would be in the **supergraph** folder and the name of the file would be '**apolloSchema.graphql**'.
+
+## Examples
+
+```bash
+npx wgc federated-graph fetch production
+```
+
+Fetches the latest valid SDL and router config of the federated graph named "production" and SDL of all its subgraphs.
+
+```bash
+npx wgc federated-graph fetch production --apollo-compatibility -v 2.6.1
+```
+
+Fetches the latest valid SDL and router config of the federated graph named "production" and SDL of all its subgraphs. As Apollo compatibility mode is enabled, it generates the extra files mentioned above. Using the `-v` option, pass the version of the federation used by the rover, if not provided it falls back to "2.5.0".
+

@@ -27,6 +27,7 @@ export function getCheckOperations(
     const fedGraphRepo = new FederatedGraphRepository(logger, opts.db, authContext.organizationId);
     const subgraphRepo = new SubgraphRepository(logger, opts.db, authContext.organizationId);
     const schemaCheckRepo = new SchemaCheckRepository(opts.db);
+    const operationsRepo = new OperationsRepository(opts.db, authContext.organizationId);
 
     const graph = await fedGraphRepo.byName(req.graphName, req.namespace);
 
@@ -55,7 +56,13 @@ export function getCheckOperations(
       federatedGraphTargetId: graph.targetId,
       federatedGraphId: graph.id,
     });
-    const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId);
+    const checkDetails = await subgraphRepo.checkDetails(req.checkId, graph.targetId, {
+      federatedGraphId: graph.id,
+      federatedGraphName: graph.name,
+      namespaceId: graph.namespaceId,
+      schemaCheckRepo,
+      operationsRepo,
+    });
 
     if (!check || !checkDetails) {
       return {
@@ -86,8 +93,6 @@ export function getCheckOperations(
 
     const { trafficCheckDays } = await schemaCheckRepo.getFederatedGraphConfigForCheckId(req.checkId, graph.id);
 
-    const operationsRepo = new OperationsRepository(opts.db, graph.id);
-
     const overrides = await operationsRepo.getChangeOverrides({
       namespaceId: graph.namespaceId,
     });
@@ -115,7 +120,7 @@ export function getCheckOperations(
       },
       operations: affectedOperations.map((operation) => ({
         ...operation,
-        impactingChanges: checkDetails.changes
+        impactingChanges: [...checkDetails.changes, ...checkDetails.composedSchemaBreakingChanges]
           .filter(({ id }) => operation.schemaChangeIds.includes(id))
           .map((c) => ({
             ...c,

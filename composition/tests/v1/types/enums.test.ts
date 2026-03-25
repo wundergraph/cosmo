@@ -1,13 +1,13 @@
 import {
   duplicateEnumValueDefinitionError,
   ENUM,
-  EnumDefinitionData,
+  type EnumDefinitionData,
   incompatibleSharedEnumError,
   noBaseDefinitionForExtensionError,
   noDefinedEnumValuesError,
   parse,
   ROUTER_COMPATIBILITY_VERSION_ONE,
-  Subgraph,
+  type Subgraph,
 } from '../../../src';
 import { describe, expect, test } from 'vitest';
 import { INACCESSIBLE_DIRECTIVE, SCHEMA_QUERY_DEFINITION, TAG_DIRECTIVE } from '../utils/utils';

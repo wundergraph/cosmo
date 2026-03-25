@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -24,35 +24,34 @@ describe('Update subgraph tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test.each([
-    'organization-admin',
-    'organization-developer',
-    'subgraph-admin',
-  ])('%s should be able to update subgraph', async (role) => {
+  test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
+    '%s should be able to update subgraph',
+    async (role) => {
+      const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
+
+      const subgraphName = genID('subgraph');
+
+      await createEventDrivenGraph(client, subgraphName);
+
+      authenticator.changeUserWithSuppliedContext({
+        ...users.adminAliceCompanyA,
+        rbac: createTestRBACEvaluator(createTestGroup({ role })),
+      });
+
+      const createFederatedSubgraphResp = await client.updateSubgraph({
+        name: subgraphName,
+        namespace: DEFAULT_NAMESPACE,
+        readme: 'Test readme',
+      });
+
+      expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
+    },
+  );
+
+  test('Should be able to update subgraph using legacy', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
-
-    const subgraphName = genID('subgraph');
-
-    await createEventDrivenGraph(client, subgraphName);
-
-    authenticator.changeUserWithSuppliedContext({
-      ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({ role })),
-    });
-
-    const createFederatedSubgraphResp = await client.updateSubgraph({
-      name: subgraphName,
-      namespace: DEFAULT_NAMESPACE,
-      readme: 'Test readme',
-    });
-
-    expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
-  });
-
-  test('Should be able to update subgraph using legacy', async () => {
-    const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -70,12 +69,11 @@ describe('Update subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('subgraph-admin should be able to update subgraph on allowed namespace', async (role) => {
+  test('subgraph-admin should be able to update subgraph on allowed namespace', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -86,10 +84,12 @@ describe('Update subgraph tests', () => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role: 'subgraph-admin',
-        namespaces: [getNamespaceResponse.namespace!.id],
-      })),
+      rbac: createTestRBACEvaluator(
+        createTestGroup({
+          role: 'subgraph-admin',
+          namespaces: [getNamespaceResponse.namespace!.id],
+        }),
+      ),
     });
 
     let createFederatedSubgraphResp = await client.updateSubgraph({
@@ -102,10 +102,12 @@ describe('Update subgraph tests', () => {
 
     authenticator.changeUserWithSuppliedContext({
       ...users.adminAliceCompanyA,
-      rbac: createTestRBACEvaluator(createTestGroup({
-        role: 'subgraph-admin',
-        namespaces: [randomUUID()],
-      })),
+      rbac: createTestRBACEvaluator(
+        createTestGroup({
+          role: 'subgraph-admin',
+          namespaces: [randomUUID()],
+        }),
+      ),
     });
 
     createFederatedSubgraphResp = await client.updateSubgraph({
@@ -115,8 +117,6 @@ describe('Update subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test.each([
@@ -129,8 +129,9 @@ describe('Update subgraph tests', () => {
     'subgraph-publisher',
     'subgraph-checker',
     'subgraph-viewer',
-  ])('%s should not be able to update subgraph', async (role ) => {
+  ])('%s should not be able to update subgraph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -148,12 +149,11 @@ describe('Update subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
-  test('that an error is returned if an Event-Driven subgraph is updated with a routing URL', async () => {
+  test('that an error is returned if an Event-Driven subgraph is updated with a routing URL', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -166,12 +166,11 @@ describe('Update subgraph tests', () => {
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFederatedSubgraphResp.response?.details).toBe('Event-Driven Graphs must not define a routing URL');
-
-    await server.close();
   });
 
-  test('that an error is returned if an Event-Driven subgraph is updated with a subscription URL', async () => {
+  test('that an error is returned if an Event-Driven subgraph is updated with a subscription URL', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -183,13 +182,14 @@ describe('Update subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(createFederatedSubgraphResp.response?.details).toBe('Event-Driven Graphs must not define a subscription URL');
-
-    await server.close();
+    expect(createFederatedSubgraphResp.response?.details).toBe(
+      'Event-Driven Graphs must not define a subscription URL',
+    );
   });
 
-  test('that an error is returned if an Event-Driven subgraph is updated with a subscription protocol', async () => {
+  test('that an error is returned if an Event-Driven subgraph is updated with a subscription protocol', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -201,13 +201,14 @@ describe('Update subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(createFederatedSubgraphResp.response?.details).toBe('Event-Driven Graphs must not define a subscription protocol');
-
-    await server.close();
+    expect(createFederatedSubgraphResp.response?.details).toBe(
+      'Event-Driven Graphs must not define a subscription protocol',
+    );
   });
 
-  test('that an error is returned if an Event-Driven subgraph is updated with a websocket subprotocol', async () => {
+  test('that an error is returned if an Event-Driven subgraph is updated with a websocket subprotocol', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -219,14 +220,15 @@ describe('Update subgraph tests', () => {
     });
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
-    expect(createFederatedSubgraphResp.response?.details).toBe('Event-Driven Graphs must not define a websocket subprotocol');
-
-    await server.close();
+    expect(createFederatedSubgraphResp.response?.details).toBe(
+      'Event-Driven Graphs must not define a websocket subprotocol',
+    );
   });
 
   describe('GRPC Service subgraph update tests', () => {
-    test('Should not allow updating a GRPC service subgraph with HTTP/HTTPS routing URL', async () => {
+    test('Should not allow updating a GRPC service subgraph with HTTP/HTTPS routing URL', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       const grpcServiceName = genID('grpc-service');
       const grpcServiceLabel = genUniqueLabel('grpc-service');
@@ -261,12 +263,11 @@ describe('Update subgraph tests', () => {
 
       expect(updateResponseHttps.response?.code).toBe(EnumStatusCode.ERR);
       expect(updateResponseHttps.response?.details).toContain('Routing URL must follow gRPC naming scheme');
-
-      await server.close();
     });
 
-    test('Should allow updating a GRPC service subgraph with valid gRPC naming scheme URLs', async () => {
+    test('Should allow updating a GRPC service subgraph with valid gRPC naming scheme URLs', async (testContext) => {
       const { client, server } = await SetupTest({ dbname });
+      testContext.onTestFinished(() => server.close());
 
       const grpcServiceName = genID('grpc-service');
       const grpcServiceLabel = genUniqueLabel('grpc-service');
@@ -308,8 +309,6 @@ describe('Update subgraph tests', () => {
       });
 
       expect(updateResponseIpv4.response?.code).toBe(EnumStatusCode.OK);
-
-      await server.close();
     });
   });
 });

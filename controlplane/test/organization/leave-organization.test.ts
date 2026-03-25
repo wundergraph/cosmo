@@ -16,8 +16,12 @@ describe('Leave organization', () => {
     await afterAllSetup(dbname);
   });
 
-  test('Should remove member from organization groups when leaving', async () => {
-    const { client, server, keycloakClient, realm, users, authenticator } = await SetupTest({ dbname, enableMultiUsers: true });
+  test('Should remove member from organization groups when leaving', async (testContext) => {
+    const { client, server, keycloakClient, realm, users, authenticator } = await SetupTest({
+      dbname,
+      enableMultiUsers: true,
+    });
+    testContext.onTestFinished(() => server.close());
 
     const orgRepo = new OrganizationRepository(server.log, server.db);
     const orgGroupRepo = new OrganizationGroupRepository(server.db);
@@ -33,7 +37,7 @@ describe('Leave organization', () => {
     const orgMember = await orgRepo.addOrganizationMember({
       organizationID: org!.id,
       userID: users.adminJimCompanyB!.userId,
-    })
+    });
 
     expect(orgMember).toBeDefined();
 
@@ -58,7 +62,7 @@ describe('Leave organization', () => {
       organizationId: users.adminAliceCompanyA.organizationId,
       organizationName: users.adminAliceCompanyA.organizationName,
       organizationSlug: users.adminAliceCompanyA.organizationSlug,
-    })
+    });
 
     const leaveOrganizationResponse = await client.leaveOrganization({});
     expect(leaveOrganizationResponse.response?.code).toBe(EnumStatusCode.OK);
@@ -69,18 +73,17 @@ describe('Leave organization', () => {
 
     expect(kcUserGroups).toHaveLength(1);
     expect(viewerGroup).toBeUndefined();
-
-    await server.close();
   });
 
-  test('Owner should not be able to leave organization', async () => {
+  test('Owner should not be able to leave organization', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const leaveOrganizationResponse = await client.leaveOrganization({});
 
     expect(leaveOrganizationResponse.response?.code).toBe(EnumStatusCode.ERR);
-    expect(leaveOrganizationResponse.response?.details).toBe('Creator of a organization cannot leave the organization.');
-
-    await server.close();
+    expect(leaveOrganizationResponse.response?.details).toBe(
+      'Creator of a organization cannot leave the organization.',
+    );
   });
 });

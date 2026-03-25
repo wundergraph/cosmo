@@ -1,6 +1,6 @@
 {
   "name": "router",
-  "version": "0.286.0",
+  "version": "0.295.0",
   "private": true,
   "description": "The WunderGraph Router",
   "keywords": [
@@ -9,6 +9,7 @@
     "cosmo"
   ],
   "scripts": {
+    "format": "go fmt ./...",
     "postversion": "name=$(jq -r .name package.json); version=$(jq -r .version package.json); gh workflow run image-release.yml -F name=$name -F workingDirectory=router -F tag=$version -F dockerContext=router"
   },
   "author": {

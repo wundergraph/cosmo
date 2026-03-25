@@ -6,6 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, test } from 'vitest';
 import { afterAllSetup, beforeAllSetup, genID, genUniqueLabel } from '../src/core/test-util.js';
+import { COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID } from '../src/types/index.js';
 import { createNamespace, resolvabilitySDLOne, resolvabilitySDLTwo, SetupTest } from './test-util.js';
 
 let dbname = '';
@@ -43,6 +44,7 @@ describe('Federated Graph', (ctx) => {
 
   test('Webhook meta for monograph and federated graph should be stored and retrieved correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const monographName = genID('monograph');
     const fedGraphName = genID('fedGraph');
@@ -119,12 +121,11 @@ describe('Federated Graph', (ctx) => {
     });
     expect(webhookMetaRes.response?.code).toBe(EnumStatusCode.OK);
     expect(webhookMetaRes.eventsMeta).toMatchObject(eventsMeta);
-
-    await server.close();
   });
 
   test('Slack integration meta for monograph and federated graph should be stored and retrieved correctly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const monographName = genID('monograph');
     const fedGraphName = genID('fedGraph');
@@ -191,12 +192,12 @@ describe('Federated Graph', (ctx) => {
     expect(integrationsRes.response?.code).toBe(EnumStatusCode.OK);
     expect(integrationsRes.integrations.length).toBe(1);
     expect(integrationsRes.integrations[0].eventsMeta).toMatchObject(eventsMeta);
-
-    await server.close();
   });
 
-  test('that resolvability validation is disabled successfully', async () => {
+  test('that resolvability validation is disabled successfully', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
     const namespace = genID('namespace').toLowerCase();
     await createNamespace(client, namespace);
     const fedGraphName = genID('fedGraph');
@@ -262,7 +263,98 @@ describe('Federated Graph', (ctx) => {
 
     expect(publishResponseThree.response?.code).toBe(EnumStatusCode.OK);
     expect(publishResponseThree.compositionErrors).toHaveLength(0);
+  });
 
-    await server.close();
+  test('that true external entity key errors can be ignored with the composition feature flag', async (testContext) => {
+    const namespace = genID('namespace').toLowerCase();
+    const label = genUniqueLabel();
+    const graphName = genID('fedGraph');
+    const externalKeySubgraphName = genID('external-key');
+    const keySourceSubgraphName = genID('key-source');
+    const externalKeySDL = `
+      type Entity @key(fields: "id") {
+        id: ID! @external
+      }
+
+      type Query {
+        entities: [Entity!]!
+      }
+    `;
+    const keySourceSDL = `
+      type Entity @key(fields: "id") {
+        id: ID!
+        name: String!
+      }
+    `;
+
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    await createNamespace(client, namespace);
+
+    const publishExternalKeySubgraph = await client.publishFederatedSubgraph({
+      name: externalKeySubgraphName,
+      namespace,
+      labels: [label],
+      routingUrl: 'http://localhost:4001',
+      schema: externalKeySDL,
+    });
+    expect(publishExternalKeySubgraph.response?.code).toBe(EnumStatusCode.OK);
+
+    const publishKeySourceSubgraph = await client.publishFederatedSubgraph({
+      name: keySourceSubgraphName,
+      namespace,
+      labels: [label],
+      routingUrl: 'http://localhost:4002',
+      schema: keySourceSDL,
+    });
+    expect(publishKeySourceSubgraph.response?.code).toBe(EnumStatusCode.OK);
+
+    const createGraphWithoutFeature = await client.createFederatedGraph({
+      name: graphName,
+      namespace,
+      routingUrl: 'http://localhost:8080',
+      labelMatchers: [joinLabel(label)],
+    });
+    expect(createGraphWithoutFeature.response?.code).toBe(EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED);
+    expect(createGraphWithoutFeature.compositionErrors).toHaveLength(3);
+
+    const { client: featureClient, server: featureServer } = await SetupTest({
+      dbname,
+      enabledFeatures: [COMPOSITION_IGNORE_EXTERNAL_KEYS_FEATURE_ID],
+    });
+    testContext.onTestFinished(() => featureServer.close());
+
+    const featureNamespace = genID('namespace').toLowerCase();
+    const featureLabel = genUniqueLabel();
+
+    await createNamespace(featureClient, featureNamespace);
+
+    const featureExternalKeySubgraph = await featureClient.publishFederatedSubgraph({
+      name: genID('external-key'),
+      namespace: featureNamespace,
+      labels: [featureLabel],
+      routingUrl: 'http://localhost:4001',
+      schema: externalKeySDL,
+    });
+    expect(featureExternalKeySubgraph.response?.code).toBe(EnumStatusCode.OK);
+
+    const featureKeySourceSubgraph = await featureClient.publishFederatedSubgraph({
+      name: genID('key-source'),
+      namespace: featureNamespace,
+      labels: [featureLabel],
+      routingUrl: 'http://localhost:4002',
+      schema: keySourceSDL,
+    });
+    expect(featureKeySourceSubgraph.response?.code).toBe(EnumStatusCode.OK);
+
+    const createGraphWithFeature = await featureClient.createFederatedGraph({
+      name: genID('fedGraph'),
+      namespace: featureNamespace,
+      routingUrl: 'http://localhost:8080',
+      labelMatchers: [joinLabel(featureLabel)],
+    });
+    expect(createGraphWithFeature.response?.code).toBe(EnumStatusCode.OK);
+    expect(createGraphWithFeature.compositionErrors).toHaveLength(0);
   });
 });

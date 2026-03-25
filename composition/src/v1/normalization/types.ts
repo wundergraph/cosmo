@@ -1,16 +1,16 @@
 import {
-  ArgumentData,
-  CompositeOutputData,
-  DirectiveDefinitionData,
-  FieldData,
-  InputObjectDefinitionData,
-  InputValueData,
-  NodeData,
-  SchemaData,
+  type ArgumentData,
+  type CompositeOutputData,
+  type DirectiveDefinitionData,
+  type FieldData,
+  type InputObjectDefinitionData,
+  type InputValueData,
+  type NodeData,
+  type SchemaData,
 } from '../../schema-building/types';
-import { ConstDirectiveNode, DocumentNode, InputValueDefinitionNode, ValueNode } from 'graphql';
-import { RequiredFieldConfiguration } from '../../router-configuration/types';
-import { SubgraphName } from '../../types/types';
+import { type ConstDirectiveNode, type DocumentNode, type InputValueDefinitionNode, type ValueNode } from 'graphql';
+import { type RequiredFieldConfiguration } from '../../router-configuration/types';
+import { type DirectiveArgumentCoords, type SubgraphName } from '../../types/types';
 
 export type KeyFieldSetData = {
   documentNode: DocumentNode;
@@ -64,6 +64,20 @@ export type HandleRequiresScopesDirectiveParams = {
 
 export type HandleSemanticNonNullDirectiveParams = {
   data: FieldData;
+  directiveNode: ConstDirectiveNode;
+  errorMessages: Array<string>;
+};
+
+export type HandleCostDirectiveParams = {
+  data: NodeData | SchemaData;
+  directiveCoords: DirectiveArgumentCoords;
+  directiveNode: ConstDirectiveNode;
+  errorMessages: Array<string>;
+};
+
+export type HandleListSizeDirectiveParams = {
+  data: FieldData;
+  directiveCoords: DirectiveArgumentCoords;
   directiveNode: ConstDirectiveNode;
   errorMessages: Array<string>;
 };
