@@ -94,6 +94,27 @@ func (r *queriesResolver) SharedThings(ctx context.Context, numOfA int, numOfB i
 	return things, nil
 }
 
+// SlicedThings is the resolver for the slicedThings field.
+func (r *queriesResolver) SlicedThings(ctx context.Context, first *int, last *int) ([]*model.Thing, error) {
+	if first == nil && last == nil {
+		return nil, nil
+	}
+	var size int
+	if first != nil {
+		size = *first
+	} else {
+		size = *last
+	}
+	things := make([]*model.Thing, 0, size)
+	for i := 0; i < size; i++ {
+		thing := &model.Thing{
+			A: fmt.Sprintf("a-%d", i),
+		}
+		things = append(things, thing)
+	}
+	return things, nil
+}
+
 // Documentation returns generated.DocumentationResolver implementation.
 func (r *Resolver) Documentation() generated.DocumentationResolver { return &documentationResolver{r} }
 
@@ -103,6 +124,8 @@ func (r *Resolver) Mutation() generated.MutationResolver { return &mutationResol
 // Queries returns generated.QueriesResolver implementation.
 func (r *Resolver) Queries() generated.QueriesResolver { return &queriesResolver{r} }
 
-type documentationResolver struct{ *Resolver }
-type mutationResolver struct{ *Resolver }
-type queriesResolver struct{ *Resolver }
+type (
+	documentationResolver struct{ *Resolver }
+	mutationResolver      struct{ *Resolver }
+	queriesResolver       struct{ *Resolver }
+)
