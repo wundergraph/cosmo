@@ -16,6 +16,7 @@ import (
 
 	rErrors "github.com/wundergraph/cosmo/router/internal/errors"
 	"github.com/wundergraph/cosmo/router/pkg/config"
+	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	rotel "github.com/wundergraph/cosmo/router/pkg/otel"
 	"github.com/wundergraph/cosmo/router/pkg/statistics"
 
@@ -85,6 +86,17 @@ type HandlerOptions struct {
 
 	ApolloSubscriptionMultipartPrintBoundary bool
 	HeaderPropagation                        *HeaderPropagation
+
+	EntityCaching EntityCachingHandlerOptions
+}
+
+// EntityCachingHandlerOptions groups all entity caching configuration passed to the GraphQL handler.
+type EntityCachingHandlerOptions struct {
+	L1Enabled       bool
+	L2Enabled       bool
+	GlobalKeyPrefix string
+	KeyInterceptors []EntityCacheKeyInterceptor
+	Metrics         []*rmetric.EntityCacheMetrics
 }
 
 func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
@@ -106,6 +118,7 @@ func NewGraphQLHandler(opts HandlerOptions) *GraphQLHandler {
 		engineLoaderHooks:                        opts.EngineLoaderHooks,
 		apolloSubscriptionMultipartPrintBoundary: opts.ApolloSubscriptionMultipartPrintBoundary,
 		headerPropagation:                        opts.HeaderPropagation,
+		entityCaching:                            opts.EntityCaching,
 	}
 	return graphQLHandler
 }
@@ -138,6 +151,8 @@ type GraphQLHandler struct {
 	enableCostResponseHeaders       bool
 
 	apolloSubscriptionMultipartPrintBoundary bool
+
+	entityCaching EntityCachingHandlerOptions
 }
 
 func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -163,6 +178,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resolveCtx.InitialPayload = reqCtx.operation.initialPayload
 	resolveCtx.Extensions = reqCtx.operation.extensions
 	resolveCtx.ExecutionOptions = reqCtx.operation.executionOptions
+	resolveCtx.ExecutionOptions.Caching = h.cachingOptions(reqCtx)
 
 	if h.headerPropagation != nil {
 		resolveCtx.SubgraphHeadersBuilder = SubgraphHeadersBuilder(
@@ -262,6 +278,7 @@ func (h *GraphQLHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		graphqlExecutionSpan.SetAttributes(rotel.WgAcquireResolverWaitTimeMs.Int64(info.ResolveAcquireWaitTime.Milliseconds()))
 		graphqlExecutionSpan.SetAttributes(rotel.WgResolverDeduplicatedRequest.Bool(info.ResolveDeduplicated))
+		h.recordEntityCacheMetrics(resolveCtx)
 	case *plan.SubscriptionResponsePlan:
 		var (
 			writer resolve.SubscriptionResponseWriter
@@ -551,5 +568,41 @@ func (h *GraphQLHandler) setDebugCacheHeaders(w http.ResponseWriter, opCtx *oper
 		} else {
 			w.Header().Set(ExecutionPlanCacheHeader, "MISS")
 		}
+	}
+}
+
+// recordEntityCacheMetrics records OTEL metrics from the cache analytics snapshot.
+// TODO: Add entity analytics export here once the analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
+func (h *GraphQLHandler) recordEntityCacheMetrics(resolveCtx *resolve.Context) {
+	if len(h.entityCaching.Metrics) == 0 {
+		return
+	}
+	snapshot := resolveCtx.GetCacheStats()
+	ctx := resolveCtx.Context()
+	for _, m := range h.entityCaching.Metrics {
+		m.RecordSnapshot(ctx, snapshot)
+	}
+}
+
+func (h *GraphQLHandler) cachingOptions(reqCtx *requestContext) resolve.CachingOptions {
+	return resolve.CachingOptions{
+		EnableL1Cache:         h.entityCaching.L1Enabled,
+		EnableL2Cache:         h.entityCaching.L2Enabled,
+		EnableCacheAnalytics:  len(h.entityCaching.Metrics) > 0,
+		GlobalCacheKeyPrefix:  h.entityCaching.GlobalKeyPrefix,
+		L2CacheKeyInterceptor: h.buildL2CacheKeyInterceptor(reqCtx),
+	}
+}
+
+func (h *GraphQLHandler) buildL2CacheKeyInterceptor(reqCtx *requestContext) resolve.L2CacheKeyInterceptor {
+	if len(h.entityCaching.KeyInterceptors) == 0 {
+		return nil
+	}
+	return func(ctx context.Context, key string, info resolve.L2CacheKeyInterceptorInfo) string {
+		keys := [][]byte{[]byte(key)}
+		for _, interceptor := range h.entityCaching.KeyInterceptors {
+			keys = interceptor.OnEntityCacheKeys(keys, reqCtx)
+		}
+		return string(keys[0])
 	}
 }

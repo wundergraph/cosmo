@@ -88,6 +88,14 @@ const (
 	CacheMetricsOperationAttribute = attribute.Key("operation")
 )
 
+// Entity cache metrics attributes
+const (
+	EntityCacheCacheLevelAttribute  = attribute.Key("cache_level")
+	EntityCacheSourceAttribute      = attribute.Key("source")
+	EntityCacheCacheNameAttribute   = attribute.Key("cache_name")
+	EntityCacheEntityTypeAttribute  = attribute.Key("entity_type")
+)
+
 var (
 	RouterServerAttribute    = WgComponentName.String("router-server")
 	EngineTransportAttribute = WgComponentName.String("engine-transport")

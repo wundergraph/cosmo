@@ -62,10 +62,12 @@ type ExecutorBuildOptions struct {
 	TraceClientRequired            bool
 	PluginsEnabled                 bool
 	InstanceData                   InstanceData
+	EntityCacheInstances           map[string]resolve.LoaderCache
+	EntityCachingConfig            *config.EntityCachingConfiguration
 }
 
 func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *ExecutorBuildOptions) (*Executor, []pubsub_datasource.Provider, error) {
-	planConfig, providers, err := b.buildPlannerConfiguration(ctx, opts.EngineConfig, opts.Subgraphs, opts.RouterEngineConfig, opts.PluginsEnabled)
+	planConfig, providers, err := b.buildPlannerConfiguration(ctx, opts.EngineConfig, opts.Subgraphs, opts.RouterEngineConfig, opts.PluginsEnabled, opts.EntityCachingConfig)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to build planner configuration: %w", err)
 	}
@@ -90,6 +92,8 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 		PropagateFetchReasons:                  opts.RouterEngineConfig.Execution.EnableRequireFetchReasons,
 		ValidateRequiredExternalFields:         opts.RouterEngineConfig.Execution.ValidateRequiredExternalFields,
 		SetDeduplicationShardCountToGOMAXPROCS: true,
+		Caches:                                 opts.EntityCacheInstances,
+		EntityCacheConfigs:                     buildEntityCacheInvalidationConfigs(opts.EntityCachingConfig, opts.Subgraphs, opts.EngineConfig),
 	}
 
 	if opts.ApolloCompatibilityFlags.ValueCompletion.Enabled {
@@ -203,7 +207,7 @@ func (b *ExecutorConfigurationBuilder) Build(ctx context.Context, opts *Executor
 	}, providers, nil
 }
 
-func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineCfg *RouterEngineConfiguration, pluginsEnabled bool) (*plan.Configuration, []pubsub_datasource.Provider, error) {
+func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Context, engineConfig *nodev1.EngineConfiguration, subgraphs []*nodev1.Subgraph, routerEngineCfg *RouterEngineConfiguration, pluginsEnabled bool, entityCachingConfig *config.EntityCachingConfiguration) (*plan.Configuration, []pubsub_datasource.Provider, error) {
 	// this loader is used to take the engine config and create a plan config
 	// the plan config is what the engine uses to turn a GraphQL Request into an execution plan
 	// the plan config is stateful as it carries connection pools and other things
@@ -219,6 +223,7 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 		routerEngineCfg.Execution.EnableNetPoll,
 		b.instanceData,
 	), b.logger, b.subscriptionHooks)
+	loader.entityCachingConfig = entityCachingConfig
 
 	// this generates the plan config using the data source factories from the config package
 	planConfig, providers, err := loader.Load(engineConfig, subgraphs, routerEngineCfg, pluginsEnabled)
@@ -251,4 +256,59 @@ func (b *ExecutorConfigurationBuilder) buildPlannerConfiguration(ctx context.Con
 	}
 
 	return planConfig, providers, nil
+}
+
+func buildEntityCacheInvalidationConfigs(
+	cfg *config.EntityCachingConfiguration,
+	subgraphs []*nodev1.Subgraph,
+	engineConfig *nodev1.EngineConfiguration,
+) map[string]map[string]*resolve.EntityCacheInvalidationConfig {
+	if cfg == nil || !cfg.Enabled {
+		return nil
+	}
+	result := make(map[string]map[string]*resolve.EntityCacheInvalidationConfig)
+	for _, ds := range engineConfig.DatasourceConfigurations {
+		subgraphName := subgraphNameByID(subgraphs, ds.Id)
+		for _, ec := range ds.EntityCacheConfigurations {
+			if _, ok := result[subgraphName]; !ok {
+				result[subgraphName] = make(map[string]*resolve.EntityCacheInvalidationConfig)
+			}
+			result[subgraphName][ec.TypeName] = &resolve.EntityCacheInvalidationConfig{
+				CacheName:                   resolveEntityCacheProviderID(cfg, subgraphName, ec.TypeName),
+				IncludeSubgraphHeaderPrefix: ec.IncludeHeaders,
+			}
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func subgraphNameByID(subgraphs []*nodev1.Subgraph, id string) string {
+	for _, sg := range subgraphs {
+		if sg.Id == id {
+			return sg.Name
+		}
+	}
+	return ""
+}
+
+func resolveEntityCacheProviderID(cfg *config.EntityCachingConfiguration, subgraphName, typeName string) string {
+	for _, sg := range cfg.SubgraphCacheOverrides {
+		if sg.Name == subgraphName {
+			// Tier 1: entity-level override
+			for _, e := range sg.Entities {
+				if e.Type == typeName && e.StorageProviderID != "" {
+					return e.StorageProviderID
+				}
+			}
+			// Tier 2: subgraph-level override
+			if sg.StorageProviderID != "" {
+				return sg.StorageProviderID
+			}
+		}
+	}
+	// Tier 3: global default
+	return "default"
 }

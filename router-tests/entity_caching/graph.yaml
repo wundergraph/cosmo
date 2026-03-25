@@ -1,0 +1,14 @@
+version: 1
+subgraphs:
+  - name: items
+    routing_url: http://items.entity-cache-test.local/graphql
+    schema:
+      file: ./subgraphs/items/subgraph/schema.graphqls
+  - name: details
+    routing_url: http://details.entity-cache-test.local/graphql
+    schema:
+      file: ./subgraphs/details/subgraph/schema.graphqls
+  - name: inventory
+    routing_url: http://inventory.entity-cache-test.local/graphql
+    schema:
+      file: ./subgraphs/inventory/subgraph/schema.graphqls

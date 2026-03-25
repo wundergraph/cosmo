@@ -942,12 +942,34 @@
         "ClusterEnabled": false
       }
     ],
+    "Memory": null,
     "FileSystem": [
       {
         "ID": "mcp",
         "Path": "operations"
       }
     ]
+  },
+  "EntityCaching": {
+    "Enabled": false,
+    "GlobalCacheKeyPrefix": "",
+    "L1": {
+      "Enabled": true,
+      "MaxSize": 100000000
+    },
+    "L2": {
+      "Enabled": true,
+      "Storage": {
+        "ProviderID": "",
+        "KeyPrefix": "cosmo_entity_cache"
+      },
+      "CircuitBreaker": {
+        "Enabled": false,
+        "FailureThreshold": 5,
+        "CooldownPeriod": 10000000000
+      }
+    },
+    "SubgraphCacheOverrides": null
   },
   "ExecutionConfig": {
     "File": {

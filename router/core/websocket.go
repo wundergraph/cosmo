@@ -1039,6 +1039,7 @@ func (h *WebSocketConnectionHandler) executeSubscription(registration *Subscript
 	resolveCtx.TracingOptions = operationCtx.traceOptions
 	resolveCtx.Extensions = operationCtx.extensions
 	resolveCtx.ExecutionOptions = operationCtx.executionOptions
+	resolveCtx.ExecutionOptions.Caching = h.graphqlHandler.cachingOptions(reqContext)
 
 	if h.forwardInitialPayload && operationCtx.initialPayload != nil {
 		resolveCtx.InitialPayload = operationCtx.initialPayload

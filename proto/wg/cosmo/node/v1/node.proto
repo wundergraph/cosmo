@@ -91,6 +91,11 @@ message DataSourceConfiguration {
   repeated EntityInterfaceConfiguration entity_interfaces = 14;
   repeated EntityInterfaceConfiguration interface_objects = 15;
   CostConfiguration cost_configuration = 16;
+  // Entity caching configurations (from composition directives)
+  repeated EntityCacheConfiguration entity_cache_configurations = 17;
+  repeated RootFieldCacheConfiguration root_field_cache_configurations = 18;
+  repeated CachePopulateConfiguration cache_populate_configurations = 19;
+  repeated CacheInvalidateConfiguration cache_invalidate_configurations = 20;
 }
 
 message CostConfiguration {
@@ -189,6 +194,52 @@ message RequiredField {
 message EntityInterfaceConfiguration {
   string interface_type_name = 1;
   repeated string concrete_type_names = 2;
+}
+
+// Entity type caching configuration (from @entityCache directive)
+message EntityCacheConfiguration {
+  string type_name = 1;
+  int64 max_age_seconds = 2;
+  bool include_headers = 3;
+  bool partial_cache_load = 4;
+  bool shadow_mode = 5;
+  int64 negative_cache_ttl_seconds = 6;
+}
+
+// Root field caching configuration (from @queryCache directive)
+message RootFieldCacheConfiguration {
+  string field_name = 1;
+  int64 max_age_seconds = 2;
+  bool include_headers = 3;
+  bool shadow_mode = 4;
+  string entity_type_name = 5;
+  repeated EntityKeyMapping entity_key_mappings = 6;
+}
+
+// Maps entity key fields to query field arguments (from @is directive or auto-mapping)
+message EntityKeyMapping {
+  string entity_type_name = 1;
+  repeated EntityCacheFieldMapping field_mappings = 2;
+}
+
+// Maps a single entity @key field to an argument path
+message EntityCacheFieldMapping {
+  string entity_key_field = 1;
+  repeated string argument_path = 2;
+}
+
+// Mutation/subscription cache population configuration (from @cachePopulate directive)
+message CachePopulateConfiguration {
+  string field_name = 1;
+  string operation_type = 2;
+  optional int64 max_age_seconds = 3;
+}
+
+// Mutation/subscription cache invalidation configuration (from @cacheInvalidate directive)
+message CacheInvalidateConfiguration {
+  string field_name = 1;
+  string operation_type = 2;
+  string entity_type_name = 3;
 }
 
 message FetchConfiguration {

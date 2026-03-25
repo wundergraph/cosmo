@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -45,6 +46,7 @@ import (
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/configpoller"
 	"github.com/wundergraph/cosmo/router/pkg/controlplane/selfregister"
 	"github.com/wundergraph/cosmo/router/pkg/cors"
+	"github.com/wundergraph/cosmo/router/pkg/entitycache"
 	"github.com/wundergraph/cosmo/router/pkg/execution_config"
 	"github.com/wundergraph/cosmo/router/pkg/health"
 	"github.com/wundergraph/cosmo/router/pkg/mcpserver"
@@ -54,6 +56,7 @@ import (
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
 	"github.com/wundergraph/cosmo/router/pkg/trace/attributeprocessor"
 	"github.com/wundergraph/cosmo/router/pkg/watcher"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/netpoll"
 )
@@ -725,6 +728,10 @@ func (r *Router) initModules(ctx context.Context) error {
 			r.subscriptionHooks.onReceiveEvents.handlers = append(r.subscriptionHooks.onReceiveEvents.handlers, handler.OnReceiveEvents)
 		}
 
+		if interceptor, ok := moduleInstance.(EntityCacheKeyInterceptor); ok {
+			r.entityCacheKeyInterceptors = append(r.entityCacheKeyInterceptors, interceptor)
+		}
+
 		r.modules = append(r.modules, moduleInstance)
 
 		r.logger.Info("Module registered",
@@ -896,6 +903,8 @@ func (r *Router) bootstrap(ctx context.Context) error {
 
 		r.logger.Info("GraphQL schema coverage metrics enabled")
 	}
+
+	// TODO: Add entity analytics exporter setup here once the analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
 
 	// Create Prometheus metrics exporter for schema field usage
 	// Note: This is separate from the Prometheus meter provider which handles OTEL metrics
@@ -1282,6 +1291,105 @@ func (r *Router) buildClients() error {
 	return nil
 }
 
+// buildEntityCacheInstances creates Redis-backed LoaderCache instances from storage providers
+// based on the entity caching configuration. If pre-seeded instances are set (via WithEntityCacheInstances),
+// those are returned directly.
+func (r *Router) buildEntityCacheInstances() (map[string]resolve.LoaderCache, error) {
+	if r.entityCacheInstances != nil {
+		return r.entityCacheInstances, nil
+	}
+	if !r.entityCachingConfig.Enabled || !r.entityCachingConfig.L2.Enabled {
+		return nil, nil
+	}
+
+	caches := make(map[string]resolve.LoaderCache)
+	l2Cfg := r.entityCachingConfig.L2
+
+	// Build default cache from l2.storage.provider_id
+	if l2Cfg.Storage.ProviderID != "" {
+		cache, err := r.buildSingleEntityCache(l2Cfg.Storage.ProviderID, l2Cfg)
+		if err != nil {
+			return nil, fmt.Errorf("entity caching default provider: %w", err)
+		}
+		caches["default"] = cache
+	}
+
+	// Build per-subgraph/entity caches from subgraph_cache_overrides
+	for _, sg := range r.entityCachingConfig.SubgraphCacheOverrides {
+		// Collect unique provider IDs from subgraph-level and entity-level overrides
+		providerIDs := make(map[string]string) // providerID → context (for error messages)
+		if sg.StorageProviderID != "" && sg.StorageProviderID != "default" {
+			providerIDs[sg.StorageProviderID] = sg.Name
+		}
+		for _, entity := range sg.Entities {
+			if entity.StorageProviderID != "" && entity.StorageProviderID != "default" {
+				providerIDs[entity.StorageProviderID] = sg.Name + "." + entity.Type
+			}
+		}
+		for providerID, context := range providerIDs {
+			if _, exists := caches[providerID]; exists {
+				continue
+			}
+			cache, err := r.buildSingleEntityCache(providerID, l2Cfg)
+			if err != nil {
+				return nil, fmt.Errorf("entity caching provider %q for %s: %w",
+					providerID, context, err)
+			}
+			caches[providerID] = cache
+		}
+	}
+
+	return caches, nil
+}
+
+// buildSingleEntityCache creates a cache backed by either Redis or memory, with optional circuit breaker wrapping.
+func (r *Router) buildSingleEntityCache(providerID string, l2Cfg config.EntityCachingL2Configuration) (resolve.LoaderCache, error) {
+	var cache resolve.LoaderCache
+	if memProvider, ok := r.findMemoryProvider(providerID); ok {
+		mc, err := entitycache.NewMemoryEntityCache(int64(memProvider.MaxSize))
+		if err != nil {
+			return nil, fmt.Errorf("creating memory cache: %w", err)
+		}
+		cache = mc
+	} else {
+		client, err := r.findRedisClient(providerID)
+		if err != nil {
+			return nil, err
+		}
+		cache = entitycache.NewRedisEntityCache(client, l2Cfg.Storage.KeyPrefix)
+	}
+	if l2Cfg.CircuitBreaker.Enabled {
+		cache = entitycache.NewCircuitBreakerCache(cache, entitycache.CircuitBreakerConfig{
+			Enabled:          true,
+			FailureThreshold: l2Cfg.CircuitBreaker.FailureThreshold,
+			CooldownPeriod:   l2Cfg.CircuitBreaker.CooldownPeriod,
+		})
+	}
+	return cache, nil
+}
+
+func (r *Router) findRedisClient(providerID string) (rd.RDCloser, error) {
+	for _, provider := range r.storageProviders.Redis {
+		if provider.ID == providerID {
+			return rd.NewRedisCloser(&rd.RedisCloserOptions{
+				Logger:         r.logger,
+				URLs:           provider.URLs,
+				ClusterEnabled: provider.ClusterEnabled,
+			})
+		}
+	}
+	return nil, fmt.Errorf("storage provider %q not found in storage_providers (checked redis, memory)", providerID)
+}
+
+func (r *Router) findMemoryProvider(providerID string) (*config.MemoryStorageProvider, bool) {
+	for i := range r.storageProviders.Memory {
+		if r.storageProviders.Memory[i].ID == providerID {
+			return &r.storageProviders.Memory[i], true
+		}
+	}
+	return nil, false
+}
+
 // Start starts the router. It does block until the router has been initialized. After that the server is listening
 // on a separate goroutine. The server can be shutdown with Router.Shutdown(). Not safe for concurrent use.
 // During initialization, the router will register itself with the control plane and poll the config from the CDN
@@ -1644,6 +1752,15 @@ func (r *Router) Shutdown(ctx context.Context) error {
 	// Shutdown the CDN operation client and free up resources
 	if r.persistedOperationClient != nil {
 		r.persistedOperationClient.Close()
+	}
+
+	// Close entity cache instances that implement io.Closer (e.g. ristretto-backed MemoryEntityCache).
+	for _, cache := range r.entityCacheInstances {
+		if closer, ok := cache.(io.Closer); ok {
+			if closeErr := closer.Close(); closeErr != nil {
+				err.Append(fmt.Errorf("failed to close entity cache: %w", closeErr))
+			}
+		}
 	}
 
 	r.usage.Close()
@@ -2231,6 +2348,18 @@ func WithApolloRouterCompatibilityFlags(cfg config.ApolloRouterCompatibilityFlag
 func WithStorageProviders(cfg config.StorageProviders) Option {
 	return func(r *Router) {
 		r.storageProviders = cfg
+	}
+}
+
+func WithEntityCaching(cfg config.EntityCachingConfiguration) Option {
+	return func(r *Router) {
+		r.entityCachingConfig = cfg
+	}
+}
+
+func WithEntityCacheInstances(caches map[string]resolve.LoaderCache) Option {
+	return func(r *Router) {
+		r.entityCacheInstances = caches
 	}
 }
 

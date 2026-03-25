@@ -897,7 +897,13 @@ type StorageProviders struct {
 	S3         []S3StorageProvider         `yaml:"s3,omitempty"`
 	CDN        []CDNStorageProvider        `yaml:"cdn,omitempty"`
 	Redis      []RedisStorageProvider      `yaml:"redis,omitempty"`
+	Memory     []MemoryStorageProvider     `yaml:"memory,omitempty"`
 	FileSystem []FileSystemStorageProvider `yaml:"file_system,omitempty"`
+}
+
+type MemoryStorageProvider struct {
+	ID      string      `yaml:"id,omitempty" env:"STORAGE_PROVIDER_MEMORY_ID"`
+	MaxSize BytesString `yaml:"max_size" envDefault:"100MB" env:"STORAGE_PROVIDER_MEMORY_MAX_SIZE"`
 }
 
 type PersistedOperationsStorageConfig struct {
@@ -988,6 +994,47 @@ type AutomaticPersistedQueriesConfig struct {
 	Enabled bool                                   `yaml:"enabled" env:"APQ_ENABLED" envDefault:"false"`
 	Cache   AutomaticPersistedQueriesCacheConfig   `yaml:"cache"`
 	Storage AutomaticPersistedQueriesStorageConfig `yaml:"storage"`
+}
+
+type EntityCachingConfiguration struct {
+	Enabled                bool                                 `yaml:"enabled" envDefault:"false" env:"ENTITY_CACHING_ENABLED"`
+	GlobalCacheKeyPrefix   string                               `yaml:"global_cache_key_prefix,omitempty" env:"ENTITY_CACHING_GLOBAL_CACHE_KEY_PREFIX"`
+	L1                     EntityCachingL1Configuration         `yaml:"l1"`
+	L2                     EntityCachingL2Configuration         `yaml:"l2"`
+	SubgraphCacheOverrides []EntityCachingSubgraphCacheOverride `yaml:"subgraph_cache_overrides,omitempty"`
+}
+
+type EntityCachingL1Configuration struct {
+	Enabled bool        `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_L1_ENABLED"`
+	MaxSize BytesString `yaml:"max_size" envDefault:"100MB" env:"ENTITY_CACHING_L1_MAX_SIZE"`
+}
+
+type EntityCachingL2Configuration struct {
+	Enabled        bool                              `yaml:"enabled" envDefault:"true" env:"ENTITY_CACHING_L2_ENABLED"`
+	Storage        EntityCachingL2StorageConfig      `yaml:"storage"`
+	CircuitBreaker EntityCachingCircuitBreakerConfig `yaml:"circuit_breaker"`
+}
+
+type EntityCachingL2StorageConfig struct {
+	ProviderID string `yaml:"provider_id,omitempty" env:"ENTITY_CACHING_L2_STORAGE_PROVIDER_ID"`
+	KeyPrefix  string `yaml:"key_prefix,omitempty" envDefault:"cosmo_entity_cache" env:"ENTITY_CACHING_L2_STORAGE_KEY_PREFIX"`
+}
+
+type EntityCachingCircuitBreakerConfig struct {
+	Enabled          bool          `yaml:"enabled" envDefault:"false" env:"ENTITY_CACHING_L2_CIRCUIT_BREAKER_ENABLED"`
+	FailureThreshold int           `yaml:"failure_threshold" envDefault:"5" env:"ENTITY_CACHING_L2_CIRCUIT_BREAKER_FAILURE_THRESHOLD"`
+	CooldownPeriod   time.Duration `yaml:"cooldown_period" envDefault:"10s" env:"ENTITY_CACHING_L2_CIRCUIT_BREAKER_COOLDOWN_PERIOD"`
+}
+
+type EntityCachingSubgraphCacheOverride struct {
+	Name              string                      `yaml:"name"`
+	StorageProviderID string                      `yaml:"storage_provider_id,omitempty"`
+	Entities          []EntityCachingEntityConfig `yaml:"entities,omitempty"`
+}
+
+type EntityCachingEntityConfig struct {
+	Type              string `yaml:"type"`
+	StorageProviderID string `yaml:"storage_provider_id,omitempty" envDefault:""`
 }
 
 type AccessLogsConfig struct {
@@ -1214,6 +1261,7 @@ type Config struct {
 	SubgraphErrorPropagation SubgraphErrorPropagationConfiguration `yaml:"subgraph_error_propagation" envPrefix:"SUBGRAPH_ERROR_PROPAGATION_"`
 
 	StorageProviders               StorageProviders                `yaml:"storage_providers"`
+	EntityCaching                  EntityCachingConfiguration      `yaml:"entity_caching,omitempty"`
 	ExecutionConfig                ExecutionConfig                 `yaml:"execution_config"`
 	PersistedOperationsConfig      PersistedOperationsConfig       `yaml:"persisted_operations" envPrefix:"PERSISTED_OPERATIONS_"`
 	AutomaticPersistedQueries      AutomaticPersistedQueriesConfig `yaml:"automatic_persisted_queries"`
@@ -1366,5 +1414,58 @@ func LoadConfig(configFilePaths []string) (*LoadResult, error) {
 		cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields = unique.SliceElements(append(cfg.Config.SubgraphErrorPropagation.AllowedExtensionFields, "code", "stacktrace"))
 	}
 
+	if err := validateMemoryProviderUsage(&cfg.Config); err != nil {
+		return nil, err
+	}
+
 	return cfg, nil
+}
+
+// validateMemoryProviderUsage ensures memory storage providers are only used for entity caching.
+// Memory providers are in-process caches (Ristretto) that don't support the object storage semantics
+// required by persisted operations, execution config, APQ, MCP, and ConnectRPC.
+func validateMemoryProviderUsage(cfg *Config) error {
+	memoryIDs := make(map[string]bool, len(cfg.StorageProviders.Memory))
+	for _, m := range cfg.StorageProviders.Memory {
+		memoryIDs[m.ID] = true
+	}
+	if len(memoryIDs) == 0 {
+		return nil
+	}
+
+	type providerRef struct {
+		id      string
+		feature string
+	}
+
+	var refs []providerRef
+	if id := cfg.PersistedOperationsConfig.Storage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "persisted_operations.storage"})
+	}
+	if id := cfg.AutomaticPersistedQueries.Storage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "automatic_persisted_queries.storage"})
+	}
+	if id := cfg.ExecutionConfig.Storage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "execution_config.storage"})
+	}
+	if id := cfg.ExecutionConfig.FallbackStorage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "execution_config.fallback_storage"})
+	}
+	if id := cfg.MCP.Storage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "mcp.storage"})
+	}
+	if id := cfg.ConnectRPC.Storage.ProviderID; id != "" {
+		refs = append(refs, providerRef{id, "connect_rpc.storage"})
+	}
+
+	var errs error
+	for _, ref := range refs {
+		if memoryIDs[ref.id] {
+			errs = errors.Join(errs, fmt.Errorf(
+				"memory storage provider %q cannot be used for %s: memory providers are only supported for entity caching (entity_caching.l2.storage or subgraph_cache_overrides)",
+				ref.id, ref.feature,
+			))
+		}
+	}
+	return errs
 }

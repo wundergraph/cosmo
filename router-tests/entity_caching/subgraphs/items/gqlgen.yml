@@ -1,0 +1,47 @@
+schema:
+  - subgraph/*.graphqls
+
+exec:
+  filename: subgraph/generated/generated.go
+  package: generated
+
+federation:
+  filename: subgraph/generated/federation.go
+  package: generated
+  version: 2
+  options:
+    explicit_requires: true
+
+model:
+  filename: subgraph/model/models_gen.go
+  package: model
+
+resolver:
+  layout: follow-schema
+  dir: subgraph
+  package: subgraph
+
+directives:
+  entityCache:
+    skip_runtime: true
+  queryCache:
+    skip_runtime: true
+  cacheInvalidate:
+    skip_runtime: true
+  cachePopulate:
+    skip_runtime: true
+  is:
+    skip_runtime: true
+
+models:
+  ID:
+    model:
+      - github.com/99designs/gqlgen/graphql.ID
+      - github.com/99designs/gqlgen/graphql.Int
+      - github.com/99designs/gqlgen/graphql.Int64
+      - github.com/99designs/gqlgen/graphql.Int32
+  Int:
+    model:
+      - github.com/99designs/gqlgen/graphql.Int
+      - github.com/99designs/gqlgen/graphql.Int64
+      - github.com/99designs/gqlgen/graphql.Int32

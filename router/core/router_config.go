@@ -20,6 +20,7 @@ import (
 	rmetric "github.com/wundergraph/cosmo/router/pkg/metric"
 	"github.com/wundergraph/cosmo/router/pkg/pubsub/datasource"
 	rtrace "github.com/wundergraph/cosmo/router/pkg/trace"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel/propagation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -147,6 +148,9 @@ type Config struct {
 	plugins                       config.PluginsConfiguration
 	tracingAttributes             []config.CustomAttribute
 	subscriptionHooks             subscriptionHooks
+	entityCachingConfig           config.EntityCachingConfiguration
+	entityCacheInstances          map[string]resolve.LoaderCache
+	entityCacheKeyInterceptors    []EntityCacheKeyInterceptor
 }
 
 // Usage returns an anonymized version of the config for usage tracking

@@ -22,6 +22,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/klauspost/compress/gzhttp"
 	"github.com/klauspost/compress/gzip"
+	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"
 	"go.opentelemetry.io/otel/attribute"
 	otelmetric "go.opentelemetry.io/otel/metric"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -104,7 +105,11 @@ type (
 		traceDialer             *TraceDialer
 		connector               *grpcconnector.Connector
 		circuitBreakerManager   *circuit.Manager
-		headerPropagation       *HeaderPropagation
+		headerPropagation          *HeaderPropagation
+		entityCacheInstances       map[string]resolve.LoaderCache
+		entityCacheKeyInterceptors []EntityCacheKeyInterceptor
+		otlpEntityCacheMetrics     *rmetric.EntityCacheMetrics
+		promEntityCacheMetrics     *rmetric.EntityCacheMetrics
 	}
 )
 
@@ -193,8 +198,24 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 			HostName:      r.hostName,
 			ListenAddress: r.listenAddr,
 		},
-		storageProviders:  &r.storageProviders,
-		headerPropagation: r.headerPropagation,
+		storageProviders:           &r.storageProviders,
+		headerPropagation:          r.headerPropagation,
+		entityCacheKeyInterceptors: r.entityCacheKeyInterceptors,
+	}
+
+	entityCacheInstances, err := r.buildEntityCacheInstances()
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("failed to build entity cache instances: %w", err)
+	}
+	s.entityCacheInstances = entityCacheInstances
+
+	if entityCacheInstances != nil && r.entityCachingConfig.Enabled {
+		s.validateEntityCacheOverrides(
+			&r.entityCachingConfig,
+			routerConfig.GetSubgraphs(),
+			routerConfig.GetEngineConfig(),
+		)
 	}
 
 	baseOtelAttributes := []attribute.KeyValue{
@@ -249,6 +270,10 @@ func newGraphServer(ctx context.Context, r *Router, routerConfig *nodev1.RouterC
 
 	if err := s.setupEngineStatistics(mappedMetricAttributes); err != nil {
 		return nil, fmt.Errorf("failed to setup engine statistics: %w", err)
+	}
+
+	if err := s.setupEntityCacheMetrics(mappedMetricAttributes); err != nil {
+		return nil, fmt.Errorf("failed to setup entity cache metrics: %w", err)
 	}
 
 	if s.registrationInfo != nil {
@@ -538,6 +563,68 @@ func (s *graphServer) setupEngineStatistics(baseAttributes []attribute.KeyValue)
 	)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (s *graphServer) validateEntityCacheOverrides(
+	cfg *config.EntityCachingConfiguration,
+	configSubgraphs []*nodev1.Subgraph,
+	engineConfig *nodev1.EngineConfiguration,
+) {
+	// Build lookup: subgraph name set
+	subgraphNames := make(map[string]bool, len(configSubgraphs))
+	for _, sg := range configSubgraphs {
+		subgraphNames[sg.Name] = true
+	}
+
+	// Build lookup: subgraph name → set of entity type names
+	// Datasources are keyed by ID, not name — map via subgraphNameByID
+	entityTypesBySubgraph := make(map[string]map[string]bool)
+	for _, ds := range engineConfig.DatasourceConfigurations {
+		sgName := subgraphNameByID(configSubgraphs, ds.Id)
+		if sgName == "" {
+			continue
+		}
+		if entityTypesBySubgraph[sgName] == nil {
+			entityTypesBySubgraph[sgName] = make(map[string]bool)
+		}
+		for _, ec := range ds.EntityCacheConfigurations {
+			entityTypesBySubgraph[sgName][ec.TypeName] = true
+		}
+	}
+
+	for _, override := range cfg.SubgraphCacheOverrides {
+		if !subgraphNames[override.Name] {
+			s.logger.Warn("entity caching: subgraph_cache_overrides references unknown subgraph",
+				zap.String("subgraph", override.Name))
+			continue
+		}
+		for _, entity := range override.Entities {
+			if entities := entityTypesBySubgraph[override.Name]; entities == nil || !entities[entity.Type] {
+				s.logger.Warn("entity caching: subgraph_cache_overrides references unknown entity type",
+					zap.String("subgraph", override.Name),
+					zap.String("entity_type", entity.Type))
+			}
+		}
+	}
+}
+
+func (s *graphServer) setupEntityCacheMetrics(baseAttributes []attribute.KeyValue) error {
+	if !s.entityCachingConfig.Enabled {
+		return nil
+	}
+
+	var err error
+	s.otlpEntityCacheMetrics, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.otlpMeterProvider)
+	if err != nil {
+		return fmt.Errorf("failed to create entity cache metrics for OTLP: %w", err)
+	}
+
+	s.promEntityCacheMetrics, err = rmetric.NewEntityCacheMetrics(s.logger, baseAttributes, s.promMeterProvider)
+	if err != nil {
+		return fmt.Errorf("failed to create entity cache metrics for Prometheus: %w", err)
 	}
 
 	return nil
@@ -1313,6 +1400,8 @@ func (s *graphServer) buildGraphMux(
 			HeartbeatInterval:              s.subscriptionHeartbeatInterval,
 			PluginsEnabled:                 s.plugins.Enabled,
 			InstanceData:                   s.instanceData,
+			EntityCacheInstances:           s.entityCacheInstances,
+			EntityCachingConfig:            &s.entityCachingConfig,
 		},
 	)
 	if err != nil {
@@ -1500,6 +1589,22 @@ func (s *graphServer) buildGraphMux(
 
 	if s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled {
 		handlerOpts.ApolloSubscriptionMultipartPrintBoundary = s.apolloCompatibilityFlags.SubscriptionMultipartPrintBoundary.Enabled
+	}
+
+	if s.entityCachingConfig.Enabled {
+		handlerOpts.EntityCaching = EntityCachingHandlerOptions{
+			L1Enabled:       s.entityCachingConfig.L1.Enabled,
+			L2Enabled:       s.entityCachingConfig.L2.Enabled,
+			GlobalKeyPrefix: s.entityCachingConfig.GlobalCacheKeyPrefix,
+			KeyInterceptors: s.entityCacheKeyInterceptors,
+		}
+
+		for _, m := range []*rmetric.EntityCacheMetrics{s.otlpEntityCacheMetrics, s.promEntityCacheMetrics} {
+			if m != nil {
+				handlerOpts.EntityCaching.Metrics = append(handlerOpts.EntityCaching.Metrics, m)
+			}
+		}
+		// TODO: Add entity analytics exporter to handler options here once analytics pipeline is implemented (see ENTITY_CACHE_ANALYTICS.md).
 	}
 
 	graphqlHandler := NewGraphQLHandler(handlerOpts)
@@ -1878,6 +1983,18 @@ func (s *graphServer) Shutdown(ctx context.Context) error {
 
 	if s.prometheusEngineMetrics != nil {
 		if err := s.prometheusEngineMetrics.Shutdown(); err != nil {
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.otlpEntityCacheMetrics != nil {
+		if err := s.otlpEntityCacheMetrics.Shutdown(); err != nil {
+			finalErr = errors.Join(finalErr, err)
+		}
+	}
+
+	if s.promEntityCacheMetrics != nil {
+		if err := s.promEntityCacheMetrics.Shutdown(); err != nil {
 			finalErr = errors.Join(finalErr, err)
 		}
 	}

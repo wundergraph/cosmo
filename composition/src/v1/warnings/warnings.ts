@@ -190,6 +190,40 @@ export function singleSubgraphInputFieldOneOfWarning({
   });
 }
 
+// Warns when a @queryCache field cannot construct complete cache keys from its arguments.
+// This happens when the entity has @key fields that don't correspond to any argument (by name or @is mapping).
+// The field can still populate the cache (writes), but cannot serve reads from cache.
+export function incompleteQueryCacheKeyMappingWarning(
+  subgraphName: string,
+  fieldCoords: string,
+  entityType: string,
+  unmappedKeyField: string,
+): Warning {
+  return new Warning({
+    message:
+      `Field "${fieldCoords}" has @queryCache returning "${entityType}" but @key field "${unmappedKeyField}"` +
+      ` cannot be mapped to any argument. Cache reads are disabled for this field` +
+      ` (cache writes/population still work). Add an argument named "${unmappedKeyField}"` +
+      ` or use @is(field: "${unmappedKeyField}") to enable cache reads.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
+// Warns when @is(field: "x") is used on an argument already named "x" — the auto-mapping
+// would produce the same result, so @is adds no value and can be safely removed.
+export function redundantIsDirectiveWarning(subgraphName: string, argumentName: string, fieldCoords: string): Warning {
+  return new Warning({
+    message:
+      `Argument "${argumentName}" on field "${fieldCoords}" already matches @key field "${argumentName}" by name` +
+      ` — @is is redundant.`,
+    subgraph: {
+      name: subgraphName,
+    },
+  });
+}
+
 export function singleFederatedInputFieldOneOfWarning({
   fieldName,
   typeName,

@@ -1,0 +1,34 @@
+# yaml-language-server: $schema=./pkg/config/config.schema.json
+
+# Standalone entity caching config for local development and testing.
+# Start: go run ./cmd/router -config entity-caching.config.yaml
+#
+# Uses the entity caching test subgraphs (items, details, inventory).
+# Start them first: cd ../router-tests/entity_caching && go run ./cmd/subgraphs
+#
+# See docs/entity-caching/configuration.md for the full reference.
+
+version: "1"
+
+execution_config:
+  file:
+    path: "../router-tests/entity_caching/testdata/config.json"
+
+storage_providers:
+  memory:
+    - id: "default"
+      max_size: "100MB"
+
+entity_caching:
+  enabled: true
+  l1:
+    enabled: true
+  l2:
+    enabled: true
+    storage:
+      provider_id: "default"
+      key_prefix: "cosmo_entity_cache"
+    circuit_breaker:
+      enabled: false
+      failure_threshold: 5
+      cooldown_period: "10s"
