@@ -1,7 +1,7 @@
 import { EnumStatusCode } from '@wundergraph/cosmo-connect/dist/common/common_pb';
 import { joinLabel } from '@wundergraph/cosmo-shared';
 import { SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { afterAll, beforeAll, describe, expect, test } from 'vitest';
+import { afterAll, beforeAll, describe, expect, onTestFinished, test } from 'vitest';
 import {
   afterAllSetup,
   beforeAllSetup,
@@ -46,8 +46,9 @@ describe('Create feature subgraph tests', () => {
     await afterAllSetup(dbname);
   });
 
-  test('that an error is returned if a feature subgraph is created without a base graph', async () => {
+  test('that an error is returned if a feature subgraph is created without a base graph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -59,12 +60,11 @@ describe('Create feature subgraph tests', () => {
 
     expect(createFederatedSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFederatedSubgraphResp.response?.details).toBe('A feature subgraph requires a base subgraph.');
-
-    await server.close();
   });
 
-  test('that an error is returned if the base graph does not exist in the same namespace', async () => {
+  test('that an error is returned if the base graph does not exist in the same namespace', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -86,12 +86,11 @@ describe('Create feature subgraph tests', () => {
     expect(featureSubgraphResponse.response?.details).toBe(
       `Base subgraph "${subgraphName}" does not exist in the namespace "${namespace}".`,
     );
-
-    await server.close();
   });
 
-  test('that an error is returned if a feature subgraph is created without a routing URL', async () => {
+  test('that an error is returned if a feature subgraph is created without a routing URL', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -106,12 +105,11 @@ describe('Create feature subgraph tests', () => {
 
     expect(createFeatureSubgraphResp.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFeatureSubgraphResp.response?.details).toBe('A non-Event-Driven Graph must define a routing URL');
-
-    await server.close();
   });
 
-  test('that an error is returned if a feature subgraph is created with the same name as its base subgraph', async () => {
+  test('that an error is returned if a feature subgraph is created with the same name as its base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
 
@@ -128,12 +126,11 @@ describe('Create feature subgraph tests', () => {
     expect(featureSubgraphResponse.response?.details).toBe(
       `A subgraph with the name "${subgraphName}" already exists in the namespace "default".`,
     );
-
-    await server.close();
   });
 
-  test('that an error is returned if a feature subgraph is created with the same name as another subgraph', async () => {
+  test('that an error is returned if a feature subgraph is created with the same name as another subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphNameOne = genID('subgraphOne');
     const subgraphNameTwo = genID('subgraphTwo');
@@ -152,12 +149,11 @@ describe('Create feature subgraph tests', () => {
     expect(featureSubgraphResponse.response?.details).toBe(
       `A subgraph with the name "${subgraphNameTwo}" already exists in the namespace "default".`,
     );
-
-    await server.close();
   });
 
-  test('that an error is returned if a feature subgraph is created with the same name as another feature subgraph', async () => {
+  test('that an error is returned if a feature subgraph is created with the same name as another feature subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphNameOne = genID('subgraphOne');
     const featureSubgraphName = genID('featureSubgraphOne');
@@ -182,12 +178,11 @@ describe('Create feature subgraph tests', () => {
     expect(featureSubgraphResponseTwo.response?.details).toBe(
       `A feature subgraph with the name "${featureSubgraphName}" already exists in the namespace "default".`,
     );
-
-    await server.close();
   });
 
-  test('that a feature subgraph can be created and published with one command.', async () => {
+  test('that a feature subgraph can be created and published with one command.', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphNameOne = genID('subgraphOne');
     const featureSubgraphName = genID('featureSubgraphOne');
@@ -211,12 +206,11 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
     expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
-
-    await server.close();
   });
 
-  test('that a feature subgraph with out base subgraph cannot be created and published with one command.', async () => {
+  test('that a feature subgraph with out base subgraph cannot be created and published with one command.', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphNameOne = genID('subgraphOne');
     const featureSubgraphName = genID('featureSubgraphOne');
@@ -233,12 +227,11 @@ describe('Create feature subgraph tests', () => {
     expect(featureSubgraphResponseOne.response?.details).toBe(
       `Feature Subgraph ${featureSubgraphName} not found. If intended to create and publish, please pass the name of the base subgraph with --subgraph option.`,
     );
-
-    await server.close();
   });
 
-  test('that a feature subgraph with out a valid routing url cannot be created and published with one command.', async () => {
+  test('that a feature subgraph with out a valid routing url cannot be created and published with one command.', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const subgraphNameOne = genID('subgraphOne');
     const featureSubgraphName = genID('featureSubgraphOne');
@@ -255,23 +248,21 @@ describe('Create feature subgraph tests', () => {
     expect(featureSubgraphResponseOne.response?.details).toBe(
       `A valid, non-empty routing URL is required to create and publish a feature subgraph.`,
     );
-
-    await server.close();
   });
 
-  test('that a feature subgraph can be published even without a proposal', async () => {
+  test('that a feature subgraph can be published even without a proposal', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'enterprise' },
       enabledFeatures: ['proposals'],
     });
+    testContext.onTestFinished(() => server.close());
 
     // Setup: create a base subgraph and a federated graph
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
     const fedGraphName = genID('fedGraph');
     const label = genUniqueLabel('label');
-    const proposalName = genID('proposal');
 
     const baseSubgraphSDL = `
       type Query {
@@ -331,12 +322,11 @@ describe('Create feature subgraph tests', () => {
       schema: featureSubgraphSDL,
     });
     expect(publishFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.OK);
-
-    await server.close();
   });
 
-  test('that a feature subgraph inherits the STANDARD type from its base subgraph', async () => {
+  test('that a feature subgraph inherits the STANDARD type from its base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -369,15 +359,14 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
     expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.STANDARD);
-
-    await server.close();
   });
 
-  test('that a feature subgraph inherits the PLUGIN type from its base subgraph', async () => {
+  test('that a feature subgraph inherits the PLUGIN type from its base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('basePlugin');
     const featureSubgraphName = genID('featurePlugin');
@@ -414,15 +403,14 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
     expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
-
-    await server.close();
   });
 
-  test('that creating a feature subgraph from a plugin base fails when plugin limit is reached', async () => {
+  test('that creating a feature subgraph from a plugin base fails when plugin limit is reached', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'developer@1' }, // Developer plan allows max 3 plugins
     });
+    testContext.onTestFinished(() => server.close());
 
     const basePluginName = genID('basePlugin');
     const plugin1Name = genID('plugin1');
@@ -463,15 +451,14 @@ describe('Create feature subgraph tests', () => {
 
     expect(createFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR_LIMIT_REACHED);
     expect(createFeatureSubgraphResponse.response?.details).toBe('The organization reached the limit of plugins');
-
-    await server.close();
   });
 
-  test('that a feature subgraph based on a plugin does not require a routing URL', async () => {
+  test('that a feature subgraph based on a plugin does not require a routing URL', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const basePluginName = genID('basePlugin');
     const featureSubgraphName = genID('featurePlugin');
@@ -511,15 +498,14 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
     expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
     expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(''); // Feature plugin should also have empty routing URL
-
-    await server.close();
   });
 
-  test('that multiple feature subgraphs can inherit the same type from their base subgraph', async () => {
+  test('that multiple feature subgraphs can inherit the same type from their base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({
       dbname,
       setupBilling: { plan: 'launch@1' },
     });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('basePlugin');
     const featureSubgraphName1 = genID('featurePlugin1');
@@ -564,12 +550,11 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraph2Response.response?.code).toBe(EnumStatusCode.OK);
     expect(getFeatureSubgraph2Response.graph?.type).toBe(SubgraphType.GRPC_PLUGIN);
     expect(getFeatureSubgraph2Response.graph?.isFeatureSubgraph).toBe(true);
-
-    await server.close();
   });
 
-  test('that a feature subgraph inherits the GRPC_SERVICE type from its base subgraph', async () => {
+  test('that a feature subgraph inherits the GRPC_SERVICE type from its base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseGrpcServiceName = genID('baseGrpcService');
     const featureSubgraphName = genID('featureGrpcService');
@@ -609,12 +594,11 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
     expect(getFeatureSubgraphResponse.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
     expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_TWO);
-
-    await server.close();
   });
 
-  test('that a feature subgraph based on a gRPC service requires a routing URL', async () => {
+  test('that a feature subgraph based on a gRPC service requires a routing URL', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseGrpcServiceName = genID('baseGrpcService');
     const featureSubgraphName = genID('featureGrpcService');
@@ -646,12 +630,11 @@ describe('Create feature subgraph tests', () => {
     });
     expect(createFeatureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERR);
     expect(createFeatureSubgraphResponse.response?.details).toBe('A non-Event-Driven Graph must define a routing URL');
-
-    await server.close();
   });
 
-  test('that multiple feature subgraphs can inherit the GRPC_SERVICE type from their base subgraph', async () => {
+  test('that multiple feature subgraphs can inherit the GRPC_SERVICE type from their base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseGrpcServiceName = genID('baseGrpcService');
     const featureSubgraphName1 = genID('featureGrpcService1');
@@ -701,14 +684,13 @@ describe('Create feature subgraph tests', () => {
     expect(getFeatureSubgraph2Response.graph?.type).toBe(SubgraphType.GRPC_SERVICE);
     expect(getFeatureSubgraph2Response.graph?.isFeatureSubgraph).toBe(true);
     expect(getFeatureSubgraph2Response.graph?.routingURL).toBe(DEFAULT_GRPC_SUBGRAPH_URL_THREE);
-
-    await server.close();
   });
 
   test.each(['organization-admin', 'organization-developer', 'subgraph-admin'])(
     '%s should be able to create feature subgraph',
     async (role) => {
       const { client, server, authenticator, users } = await SetupTest({ dbname });
+      onTestFinished(() => server.close());
 
       const subgraphName = genID('subgraph');
       const featureSubgraphName = genID('featureSubgraph');
@@ -737,13 +719,12 @@ describe('Create feature subgraph tests', () => {
       expect(getFeatureSubgraphResponse.graph?.name).toBe(featureSubgraphName);
       expect(getFeatureSubgraphResponse.graph?.routingURL).toBe(DEFAULT_SUBGRAPH_URL_TWO);
       expect(getFeatureSubgraphResponse.graph?.isFeatureSubgraph).toBe(true);
-
-      await server.close();
     },
   );
 
-  test('subgraph-admin should be able to crete feature subgraph only on the allowed namespace', async (role) => {
+  test('subgraph-admin should be able to crete feature subgraph only on the allowed namespace', async (testContext) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const namespace = 'prod2';
     const subgraphName = genID('subgraph');
@@ -796,8 +777,6 @@ describe('Create feature subgraph tests', () => {
     });
 
     expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
   test.each([
@@ -811,6 +790,7 @@ describe('Create feature subgraph tests', () => {
     'subgraph-viewer',
   ])('%s should not be able to create feature subgraph', async (role) => {
     const { client, server, authenticator, users } = await SetupTest({ dbname });
+    onTestFinished(() => server.close());
 
     const subgraphName = genID('subgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -830,12 +810,11 @@ describe('Create feature subgraph tests', () => {
     });
 
     expect(featureSubgraphResponse.response?.code).toBe(EnumStatusCode.ERROR_NOT_AUTHORIZED);
-
-    await server.close();
   });
 
-  test('that an error is returned if a feature subgraph is used as a base subgraph', async () => {
+  test('that an error is returned if a feature subgraph is used as a base subgraph', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -865,12 +844,11 @@ describe('Create feature subgraph tests', () => {
     expect(secondFeatureSubgraphResponse.response?.details).toBe(
       `Base subgraph "${featureSubgraphName}" is a feature subgraph. Feature subgraphs cannot have feature subgraphs as their base.`,
     );
-
-    await server.close();
   });
 
-  test('that an error is returned if a feature subgraph is used as a base subgraph when publishing directly', async () => {
+  test('that an error is returned if a feature subgraph is used as a base subgraph when publishing directly', async (testContext) => {
     const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
 
     const baseSubgraphName = genID('baseSubgraph');
     const featureSubgraphName = genID('featureSubgraph');
@@ -902,7 +880,5 @@ describe('Create feature subgraph tests', () => {
     expect(secondFeatureSubgraphResponse.response?.details).toBe(
       `Base subgraph "${featureSubgraphName}" is a feature subgraph. Feature subgraphs cannot have feature subgraphs as their base.`,
     );
-
-    await server.close();
   });
 });

@@ -53,9 +53,13 @@ import {
   createReactivateOrganizationWorker,
   ReactivateOrganizationQueue,
 } from './workers/ReactivateOrganizationWorker.js';
+import { configureComposeGraphsPool, destroyComposeGraphsPool } from './composition/composeGraphs.pool.js';
 
 export interface BuildConfig {
   logger: LoggerOptions;
+  composition?: {
+    maxThreads: number;
+  };
   database: {
     url: string;
     tls?: {
@@ -157,6 +161,10 @@ const developmentLoggerOpts: LoggerOptions = {
 };
 
 export default async function build(opts: BuildConfig) {
+  configureComposeGraphsPool({
+    maxThreads: opts.composition?.maxThreads ?? 0,
+  });
+
   opts.logger = {
     timestamp: stdTimeFunctions.isoTime,
     formatters: {
@@ -175,6 +183,20 @@ export default async function build(opts: BuildConfig) {
     logger,
     // The maximum amount of time in *milliseconds* in which a plugin can load
     pluginTimeout: 10_000, // 10s
+  });
+
+  /**
+   * CVE-2026-25223 prevention
+   */
+  fastify.addHook('onRequest', async (request, reply) => {
+    const contentType = request.headers['content-type'];
+
+    const contentTypeNormalized = contentType || [];
+    const contentTypeValues = Array.isArray(contentTypeNormalized) ? contentTypeNormalized : [contentTypeNormalized];
+
+    if (contentTypeValues.some((v) => v.includes('\t'))) {
+      await reply.code(400).send({ error: 'Invalid Content-Type header' });
+    }
   });
 
   /**
@@ -535,6 +557,12 @@ export default async function build(opts: BuildConfig) {
     await Promise.all(bullWorkers.map((worker) => worker.close()));
 
     fastify.log.debug('Bull workers shut down');
+
+    fastify.log.debug('Shutting down composition worker pool');
+
+    await destroyComposeGraphsPool();
+
+    fastify.log.debug('Composition worker pool shut down');
   });
 
   return fastify;

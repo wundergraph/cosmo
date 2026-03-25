@@ -520,7 +520,6 @@ describe('Persisted operations', (ctx) => {
         chClient,
         enableMultiUsers: true,
       });
-
       testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
@@ -805,7 +804,6 @@ describe('Persisted operations', (ctx) => {
         dbname,
         chClient,
       });
-
       testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');
@@ -864,7 +862,6 @@ describe('Persisted operations', (ctx) => {
         dbname,
         chClient,
       });
-
       testContext.onTestFinished(() => server.close());
 
       const fedGraphName = genID('fedGraph');

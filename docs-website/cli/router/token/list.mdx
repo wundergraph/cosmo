@@ -1,0 +1,32 @@
+---
+title: "List"
+description: "Lists router tokens of a federated graph. Only shows metadata not the actual token."
+icon: list
+---
+
+## Usage
+
+```bash
+npx wgc router token list <name>
+```
+
+## Description
+
+The `npx wgc router token list` command lists all the tokens of a federated graph.
+
+## Parameters
+
+* `<name>`: The name of the federated graph.
+
+## Options
+
+`-n, --namespace` : The namespace of the federated graph (Default: "default").
+
+## Examples
+
+```bash
+npx wgc router token list production
+```
+
+Lists all the tokens of the federated graph named "production" within the *default* namespace.
+

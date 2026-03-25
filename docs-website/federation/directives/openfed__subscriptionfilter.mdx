@@ -1,0 +1,37 @@
+---
+title: "@openfed subscriptionFilter"
+description: "@openfed__subscriptionFilter is an Open Federation directive used to filter subscription events based on filter predicates."
+icon: filter
+---
+
+## Definition
+
+```graphql
+directive @openfed__subscriptionFilter(condition: openfed__SubscriptionFilterCondition!) on FIELD_DEFINITION
+
+scalar openfed__SubscriptionFilterValue
+
+input openfed__SubscriptionFieldCondition {
+    fieldPath: String!
+    values: [openfed__SubscriptionFilterValue]!
+}
+
+input openfed__SubscriptionFilterCondition {
+    AND: [openfed__SubscriptionFilterCondition!]
+    IN: openfed__SubscriptionFieldCondition
+    NOT: openfed__SubscriptionFilterCondition
+    OR: [openfed__SubscriptionFilterCondition!]
+}
+```
+
+## Overview
+
+The `@openfed__subscriptionFilter` directive declares that a field definition can be filtered by filter conditions. The directive can only be applied to [EDG](/federation/event-driven-federated-subscriptions) subscriptions.
+
+## Arguments
+
+|Argument Name|Argument Type|
+|---|---|
+|condition|openfed\_\_SubscriptionFilterCondition!|
+
+The `condition` argument requires an object representing the filter condition. This object can be nested to express OR, AND, and NOT conditions. Currently, only the IN comparison operator is supported. This operator can be used to validate if a value is inside a list.

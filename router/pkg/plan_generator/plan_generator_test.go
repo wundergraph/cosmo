@@ -10,11 +10,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/wundergraph/cosmo/router/core"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+
+	"github.com/wundergraph/cosmo/router/core"
 )
 
 func getTestDataDir() string {
@@ -217,9 +217,9 @@ func TestPlanGenerator(t *testing.T) {
 		_ = json.Unmarshal(resultsExpected, &resultsExpectedStruct)
 		require.Len(t, resultsStruct.Plans, len(resultsExpectedStruct.Plans))
 		for i := range resultsStruct.Plans {
-			assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
-			assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)
-			assert.Equal(t, resultsStruct.Plans[i].Warning, resultsExpectedStruct.Plans[i].Warning)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Plan, resultsStruct.Plans[i].Plan)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Error, resultsStruct.Plans[i].Error)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Warning, resultsStruct.Plans[i].Warning)
 		}
 	})
 
@@ -257,9 +257,9 @@ func TestPlanGenerator(t *testing.T) {
 		_ = json.Unmarshal(resultsExpected, &resultsExpectedStruct)
 		require.Len(t, resultsStruct.Plans, len(resultsExpectedStruct.Plans))
 		for i := range resultsStruct.Plans {
-			assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
-			assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)
-			assert.Equal(t, resultsStruct.Plans[i].Warning, resultsExpectedStruct.Plans[i].Warning)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Plan, resultsStruct.Plans[i].Plan)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Error, resultsStruct.Plans[i].Error)
+			assert.Equal(t, resultsExpectedStruct.Plans[i].Warning, resultsStruct.Plans[i].Warning)
 		}
 	})
 
@@ -294,9 +294,9 @@ func TestPlanGenerator(t *testing.T) {
 				resultsExpectedStruct := QueryPlanResults{}
 				_ = json.Unmarshal(expected, &resultsExpectedStruct)
 				for i := range resultsStruct.Plans {
-					assert.Equal(t, resultsStruct.Plans[i].Plan, resultsExpectedStruct.Plans[i].Plan)
-					assert.Equal(t, resultsStruct.Plans[i].Error, resultsExpectedStruct.Plans[i].Error)
-					assert.Equal(t, resultsStruct.Plans[i].Warning, resultsExpectedStruct.Plans[i].Warning)
+					assert.Equal(t, resultsExpectedStruct.Plans[i].Plan, resultsStruct.Plans[i].Plan)
+					assert.Equal(t, resultsExpectedStruct.Plans[i].Error, resultsStruct.Plans[i].Error)
+					assert.Equal(t, resultsExpectedStruct.Plans[i].Warning, resultsStruct.Plans[i].Warning)
 				}
 			})
 		}

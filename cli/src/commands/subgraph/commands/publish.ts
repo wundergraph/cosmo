@@ -11,44 +11,11 @@ import {
   parseGraphQLWebsocketSubprotocol,
   splitLabel,
 } from '@wundergraph/cosmo-shared';
-import { SubgraphType, SubgraphPublishStats } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
+import { SubgraphPublishStats, SubgraphType } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
 import { BaseCommandOptions } from '../../../core/types/types.js';
 import { getBaseHeaders } from '../../../core/config.js';
-import { validateSubscriptionProtocols } from '../../../utils.js';
-import { websocketSubprotocolDescription, limitMaxValue } from '../../../constants.js';
-
-const printTruncationWarning = (
-  counts: SubgraphPublishStats | undefined,
-  displayedCounts: {
-    compositionErrors: number;
-    compositionWarnings: number;
-    deploymentErrors: number;
-  },
-) => {
-  if (!counts) {
-    return;
-  }
-
-  const truncatedItems: string[] = [];
-
-  if (counts.compositionErrors > displayedCounts.compositionErrors) {
-    truncatedItems.push(
-      `composition errors (${displayedCounts.compositionErrors} of ${counts.compositionErrors} shown)`,
-    );
-  }
-  if (counts.compositionWarnings > displayedCounts.compositionWarnings) {
-    truncatedItems.push(
-      `composition warnings (${displayedCounts.compositionWarnings} of ${counts.compositionWarnings} shown)`,
-    );
-  }
-  if (counts.deploymentErrors > displayedCounts.deploymentErrors) {
-    truncatedItems.push(`deployment errors (${displayedCounts.deploymentErrors} of ${counts.deploymentErrors} shown)`);
-  }
-
-  if (truncatedItems.length > 0) {
-    console.log(pc.yellow(`\nNote: Some results were truncated: ${truncatedItems.join(', ')}.`));
-  }
-};
+import { printTruncationWarning, validateSubscriptionProtocols } from '../../../utils.js';
+import { limitMaxValue, websocketSubprotocolDescription } from '../../../constants.js';
 
 export default (opts: BaseCommandOptions) => {
   const command = new Command('publish');
@@ -224,10 +191,13 @@ export default (opts: BaseCommandOptions) => {
 
         if (options.failOnCompositionError) {
           // Only composition errors were displayed at this point, warnings come after switch
-          printTruncationWarning(resp.counts, {
-            compositionErrors: resp.compositionErrors.length,
-            compositionWarnings: 0,
-            deploymentErrors: 0,
+          printTruncationWarning({
+            displayedErrorCounts: new SubgraphPublishStats({
+              compositionErrors: resp.compositionErrors.length,
+              compositionWarnings: 0,
+              deploymentErrors: 0,
+            }),
+            totalErrorCounts: resp.counts,
           });
           program.error(pc.red(pc.bold('The command failed due to composition errors.')));
         }
@@ -261,10 +231,13 @@ export default (opts: BaseCommandOptions) => {
 
         if (options.failOnAdmissionWebhookError) {
           // Only deployment errors were displayed at this point, warnings come after switch
-          printTruncationWarning(resp.counts, {
-            compositionErrors: 0,
-            compositionWarnings: 0,
-            deploymentErrors: resp.deploymentErrors.length,
+          printTruncationWarning({
+            displayedErrorCounts: new SubgraphPublishStats({
+              compositionErrors: 0,
+              compositionWarnings: 0,
+              deploymentErrors: resp.deploymentErrors.length,
+            }),
+            totalErrorCounts: resp.counts,
           });
           program.error(pc.red(pc.bold('The command failed due to admission webhook errors.')));
         }
@@ -309,14 +282,14 @@ export default (opts: BaseCommandOptions) => {
     }
 
     // Determine what was actually displayed based on the response code
-    const displayedCounts = {
+    const displayedErrorCounts = new SubgraphPublishStats({
       compositionErrors:
         resp.response?.code === EnumStatusCode.ERR_SUBGRAPH_COMPOSITION_FAILED ? resp.compositionErrors.length : 0,
       compositionWarnings: displayedWarnings,
       deploymentErrors: resp.response?.code === EnumStatusCode.ERR_DEPLOYMENT_FAILED ? resp.deploymentErrors.length : 0,
-    };
+    });
 
-    printTruncationWarning(resp.counts, displayedCounts);
+    printTruncationWarning({ displayedErrorCounts, totalErrorCounts: resp.counts });
   });
 
   return command;

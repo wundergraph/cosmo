@@ -1,0 +1,293 @@
+---
+title: 'Logging'
+description: 'Enable and configure logging in gRPC plugins'
+icon: 'file-lines'
+---
+## Overview
+
+The Cosmo Router plugin framework provides built-in logging capabilities that integrate seamlessly with your plugin implementation. You can enable structured logging with different output formats and log levels to help with debugging and monitoring your plugins.
+
+## Logging Configuration
+
+Logging is configured when creating your plugin instance using one of the available logger options:
+
+### Standard Logger
+
+For structured JSON logging (recommended for all environments):
+
+```go
+func WithLogger(level hclog.Level)
+```
+
+### Custom Logger
+
+For advanced use cases where you need full control over the logger configuration:
+
+```go
+func WithCustomLogger(logger hclog.Logger)
+```
+
+The `WithCustomLogger` function accepts any implementation of the `hclog.Logger` interface, giving you complete flexibility in your logging setup. This means you can:
+
+- **Use** `hclog.New()` with custom configuration
+- **Implement** your own logger that wraps other **logging libraries** (`logrus`, `zap`, etc.)
+- **Create** adapters to existing logging infrastructure
+- **Build** specialized loggers for specific requirements (e.g., filtering, routing, formatting)
+
+<Info>
+**Important**: When using a custom logger with **non-JSON format**, you must disable timestamps in your logger configuration. The go-plugin framework parses log lines by checking if they start with the log level (e.g., `[TRACE]`, `[INFO]`). If timestamps are included, the line will start with the timestamp instead of the level, causing the plugin framework to always default to debug level.
+
+This restriction does **not** apply to JSON-formatted logs, as they use structured parsing instead of line prefix detection.
+</Info>
+
+## Log Levels
+
+The logging system supports standard log levels from the `hclog` package:
+
+| Level | Description |
+|-------|-------------|
+| `hclog.Trace` | Most verbose - detailed execution flow |
+| `hclog.Debug` | Debug information for troubleshooting |
+| `hclog.Info` | General informational messages |
+| `hclog.Warn` | Warning messages for potential issues |
+| `hclog.Error` | Error messages for failures |
+
+## Panic Recovery
+
+The plugin framework provides automatic panic recovery to ensure system stability. When a panic occurs within your plugin:
+
+- **Automatic Recovery**: The panic is caught and gracefully handled without terminating the plugin
+- **Comprehensive Logging**: Full stack traces are captured and logged for debugging
+- **Structured Error Data**: Plugin stack traces are included in a dedicated `plugin_stack` field, separate from the router's own error context
+
+This ensures that plugin failures are isolated and thoroughly documented for efficient troubleshooting while maintaining overall system reliability.
+
+## Plugin Setup
+
+Configure logging when creating your plugin instance by passing the logger option to `NewRouterPlugin`:
+
+<CodeGroup>
+
+```go main.go (Standard Logger)
+package main
+
+import (
+    "github.com/hashicorp/go-hclog"
+    "github.com/wundergraph/cosmo/router/pkg/routerplugin"
+)
+
+func main() {
+    registerFunc := func(s *grpc.Server) {
+		s.RegisterService(&projects.ProjectsService_ServiceDesc, &service.ProjectsService{
+			NextID: 1,
+		})
+	}
+
+    // Create plugin with JSON logging at Info level
+    pl, err := routerplugin.NewRouterPlugin(registerFunc,
+        routerplugin.WithLogger(hclog.Info),
+    )
+    if err != nil {
+        panic(err)
+    }
+    
+    // Start the plugin
+    pl.Serve()
+}
+```
+
+```go main.go (Custom Logger)
+package main
+
+import (
+    "github.com/hashicorp/go-hclog"
+    "github.com/wundergraph/cosmo/router/pkg/routerplugin"
+)
+
+func main() {
+  	registerFunc := func(s *grpc.Server) {
+		s.RegisterService(&projects.ProjectsService_ServiceDesc, &service.ProjectsService{
+			NextID: 1,
+		})
+	}
+
+    // Create custom JSON logger
+    customLogger := hclog.New(&hclog.LoggerOptions{
+        Name:            "my-plugin", 
+        Level:           hclog.Info,
+        IncludeLocation: true,
+        DisableTime:     false, // JSON logs can include timestamps
+        JSONFormat:      true,  // JSON format for structured logging
+    })
+
+    // Create plugin with custom logger
+    pl, err := routerplugin.NewRouterPlugin(registerFunc,
+        routerplugin.WithCustomLogger(customLogger),
+    )
+    if err != nil {
+        panic(err)
+    }
+    
+    // Start the plugin
+    pl.Serve()
+}
+```
+
+</CodeGroup>
+
+## Using the Logger
+
+The logger is automatically injected into the context of each gRPC endpoint. Extract it using `hclog.FromContext()`:
+
+```go
+// QueryProjectStatuses implements projects.ProjectsServiceServer.
+func (p *ProjectsService) QueryProjectStatuses(ctx context.Context, req *service.QueryProjectStatusesRequest) (*service.QueryProjectStatusesResponse, error) {
+    logger := hclog.FromContext(ctx)
+    logger.Info("QueryProjectStatuses called")
+    
+    // Log with additional context
+    logger.Info("Processing request", "project_count", len(req.GetProjects()))
+    
+    // Log warnings for potential issues
+    if len(req.GetProjects()) > 100 {
+        logger.Warn("Large number of projects requested", "count", len(req.GetProjects()))
+    }
+    
+    // Log errors
+    if err := validateRequest(req); err != nil {
+        logger.Error("Invalid request", "error", err)
+        return nil, err
+    }
+    
+    // Your business logic here...
+    
+    logger.Debug("Request processed successfully")
+    return &service.QueryProjectStatusesResponse{
+        // Your response
+    }, nil
+}
+```
+
+## Structured Logging
+
+Add structured context to your log messages using key-value pairs:
+
+```go
+func (p *ProjectsService) CreateProject(ctx context.Context, req *service.CreateProjectRequest) (*service.CreateProjectResponse, error) {
+    logger := hclog.FromContext(ctx)
+    
+    // Log with structured data
+    logger.Info("Creating new project", 
+        "name", req.GetInput().GetName(),
+        "description", req.GetInput().GetDescription(),
+        "user_id", getUserID(ctx),
+    )
+    
+    startTime := time.Now()
+    
+    // Business logic...
+    project, err := p.createProject(req.GetInput())
+    if err != nil {
+        logger.Error("Failed to create project",
+            "error", err,
+            "name", req.GetInput().GetName(),
+            "duration_ms", time.Since(startTime).Milliseconds(),
+        )
+        return nil, err
+    }
+    
+    logger.Info("Project created successfully",
+        "project_id", project.GetId(),
+        "name", project.GetName(),
+        "duration_ms", time.Since(startTime).Milliseconds(),
+    )
+    
+    return &service.CreateProjectResponse{
+        Project: project,
+    }, nil
+}
+```
+
+## Log Output Examples
+
+Since plugin logs are integrated into the router's zap logger, they will appear in the router's log output format. Here are examples of how your plugin logs will appear:
+
+```
+10:57:12 AM INFO darwin_arm64 grpcconnector/plugin_logger.go:48 QueryProjectStatuses called {"hostname": "cosmo", "pid": 71435, "service": "@wundergraph/router", "service_version": "dev", "timestamp": "2025-08-12T10:57:12.049+0200"}
+10:57:12 AM INFO darwin_arm64 grpcconnector/plugin_logger.go:48 Processing request {"hostname": "cosmo", "pid": 71435, "service": "@wundergraph/router", "service_version": "dev", "timestamp": "2025-08-12T10:57:12.050+0200", "project_count": 5}
+10:57:12 AM WARN darwin_arm64 grpcconnector/plugin_logger.go:48 Large number of projects requested {"hostname": "cosmo", "pid": 71435, "service": "@wundergraph/router", "service_version": "dev", "timestamp": "2025-08-12T10:57:12.051+0200", "count": 150}
+10:57:12 AM INFO darwin_arm64 grpcconnector/plugin_logger.go:48 Creating new project {"hostname": "cosmo", "pid": 71435, "service": "@wundergraph/router", "service_version": "dev", "timestamp": "2025-08-12T10:57:12.052+0200", "name": "My Project", "description": "A new project", "user_id": "user123"}
+10:57:12 AM INFO darwin_arm64 grpcconnector/plugin_logger.go:48 Project created successfully {"hostname": "cosmo", "pid": 71435, "service": "@wundergraph/router", "service_version": "dev", "timestamp": "2025-08-12T10:57:12.055+0200", "project_id": "proj_456", "name": "My Project", "duration_ms": 3}
+10:57:12 AM ERROR darwin_arm64 grpcconnector/plugin_logger.go:48 Failed to create project {"hostname": "cosmo", "pid": 71435, "service": "@wundergraph/router", "service_version": "dev", "timestamp": "2025-08-12T10:57:12.056+0200", "error": "database connection failed", "name": "Invalid Project", "duration_ms": 1}
+```
+
+As you can see, your plugin logs are seamlessly integrated with the router's logging system, including all the router metadata like hostname, PID, service information, and timestamps.
+
+## Best Practices
+
+### Log Level Guidelines
+
+- **Info**: Use for important business events (user actions, significant state changes)
+- **Debug**: Use for detailed execution flow during development
+- **Warn**: Use for recoverable issues or potential problems
+- **Error**: Use for actual errors that affect functionality
+- **Trace**: Use for very detailed debugging (usually disabled in production)
+
+### Structured Logging Tips
+
+```go
+// ✅ Good: Include relevant context
+logger.Info("User action completed", 
+    "action", "create_project",
+    "user_id", userID,
+    "project_id", projectID,
+    "duration_ms", duration.Milliseconds(),
+)
+
+// ❌ Avoid: Unstructured messages
+logger.Info(fmt.Sprintf("User %s created project %s in %v", userID, projectID, duration))
+
+// ✅ Good: Use consistent key names
+logger.Error("Database operation failed", "error", err, "table", "projects")
+
+// ❌ Avoid: Inconsistent or unclear keys
+logger.Error("DB error", "err", err, "tbl", "projects")
+```
+
+## Environment-Specific Configuration
+
+Consider different log levels for different environments:
+
+```go
+func getLogLevel() hclog.Level {
+    env := os.Getenv("ENVIRONMENT")
+    switch env {
+    case "production":
+        return hclog.Info
+    case "staging":
+        return hclog.Debug
+    case "development":
+        return hclog.Trace
+    default:
+        return hclog.Info
+    }
+}
+
+// Usage
+pl, err := routerplugin.NewRouterPlugin(registerFunc, 
+    routerplugin.WithLogger(getLogLevel()),
+)
+```
+
+## Integration with Monitoring
+
+When using JSON logging in production, the structured output integrates well with log aggregation systems like:
+
+- **ELK Stack** (Elasticsearch, Logstash, Kibana)
+- **Fluentd/Fluent Bit**
+- **Grafana Loki**
+- **Cloud logging services** (AWS CloudWatch, Google Cloud Logging, etc.)
+
+The structured JSON format makes it easy to query, filter, and create dashboards based on your plugin logs.
+
+See also: [Plugins](/router/gRPC/plugins) · [gRPC Services](/router/gRPC/grpc-services) · [GraphQL Support](/router/gRPC/graphql-support)

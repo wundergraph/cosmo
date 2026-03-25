@@ -15,8 +15,9 @@ import {
   ConstArgumentNode,
   GraphQLObjectType,
   GraphQLSchema,
-  buildSchema,
+  buildASTSchema,
 } from 'graphql';
+import { safeParse } from '@wundergraph/composition';
 import { CONNECT_FIELD_RESOLVER, CONTEXT, FIELDS, REQUIRES_DIRECTIVE_NAME } from './string-constants.js';
 import { SelectionSetValidationVisitor } from './selection-set-validation-visitor.js';
 
@@ -52,8 +53,6 @@ interface LintingRule<K extends keyof KindToNodeTypeMap = keyof KindToNodeTypeMa
   name: string;
   /** Human-readable description of what this rule validates */
   description?: string;
-  /** Whether this validation rule is currently active */
-  enabled: boolean;
   /** The AST node kind this rule applies to */
   nodeKind: K;
   /** The validation function to execute for matching nodes */
@@ -90,10 +89,10 @@ interface MessageContext {
  */
 export class SDLValidationVisitor {
   private readonly schema: string;
-  private readonly schemaObject: GraphQLSchema;
   private readonly validationResult: ValidationResult;
   private lintingRules: LintingRule<any>[] = [];
   private visitor: ASTVisitor;
+  private parsedSchema: GraphQLSchema;
 
   /**
    * Creates a new SDL validation visitor for the given GraphQL schema
@@ -101,11 +100,12 @@ export class SDLValidationVisitor {
    */
   constructor(schema: string) {
     this.schema = schema;
-    this.schemaObject = buildSchema(schema, { assumeValid: true, assumeValidSDL: true });
     this.validationResult = {
       errors: [],
       warnings: [],
     };
+
+    this.parsedSchema = buildASTSchema(parse(schema), { assumeValid: true, assumeValidSDL: true });
 
     this.initializeLintingRules();
     this.visitor = this.createASTVisitor();
@@ -120,7 +120,6 @@ export class SDLValidationVisitor {
     const objectTypeRule: LintingRule<Kind.OBJECT_TYPE_DEFINITION> = {
       name: 'nested-key-directives',
       description: 'Validates that @key directives do not contain nested field selections',
-      enabled: true,
       nodeKind: Kind.OBJECT_TYPE_DEFINITION,
       validationFunction: (ctx) => this.validateObjectTypeKeyDirectives(ctx),
     };
@@ -128,7 +127,6 @@ export class SDLValidationVisitor {
     const listTypeRule: LintingRule<Kind.LIST_TYPE> = {
       name: 'nullable-items-in-list-types',
       description: 'Validates that list types do not contain nullable items',
-      enabled: true,
       nodeKind: Kind.LIST_TYPE,
       validationFunction: (ctx) => this.validateListTypeNullability(ctx),
     };
@@ -136,7 +134,6 @@ export class SDLValidationVisitor {
     const providesRule: LintingRule<Kind.FIELD_DEFINITION> = {
       name: 'use-of-provides',
       description: 'Validates usage of @provides directive which is not yet supported',
-      enabled: true,
       nodeKind: Kind.FIELD_DEFINITION,
       validationFunction: (ctx) => this.validateProvidesDirective(ctx),
     };
@@ -144,26 +141,67 @@ export class SDLValidationVisitor {
     const resolverContextRule: LintingRule<Kind.FIELD_DEFINITION> = {
       name: 'use-of-invalid-resolver-context',
       description: 'Validates whether a resolver context can be extracted from a type',
-      enabled: true,
       nodeKind: Kind.FIELD_DEFINITION,
       validationFunction: (ctx) => this.validateInvalidResolverContext(ctx),
     };
 
-    const disallowAbstractTypesForRequiresRule: LintingRule<Kind.FIELD_DEFINITION> = {
-      name: 'disallow-abstract-types-for-requires',
-      description: 'Validates that abstract types are not used in requires directives',
-      enabled: true,
+    const compositeTypeReflectionRule: LintingRule<Kind.FIELD_DEFINITION> = {
+      name: 'use-of-typename',
+      description: 'Validates that __typename is present for composite types in @requires selections',
       nodeKind: Kind.FIELD_DEFINITION,
-      validationFunction: (ctx) => this.validateDisallowAbstractTypesForRequires(ctx),
+      validationFunction: (ctx) => this.validateCompositeTypeReflection(ctx),
     };
 
-    this.lintingRules = [
-      objectTypeRule,
-      listTypeRule,
-      providesRule,
-      resolverContextRule,
-      disallowAbstractTypesForRequiresRule,
-    ];
+    this.lintingRules = [objectTypeRule, listTypeRule, providesRule, resolverContextRule, compositeTypeReflectionRule];
+  }
+
+  private validateCompositeTypeReflection(ctx: VisitContext<FieldDefinitionNode>): void {
+    const directive = ctx.node.directives?.find((directive) => directive.name.value === REQUIRES_DIRECTIVE_NAME);
+    if (!directive) {
+      return;
+    }
+
+    const fieldSet = directive.arguments?.find((arg) => arg.name.value === FIELDS);
+    if (!fieldSet) {
+      return;
+    }
+
+    if (fieldSet.value.kind !== Kind.STRING) {
+      this.addError('Invalid @requires directive: fields argument must be a string', fieldSet.loc);
+      return;
+    }
+
+    const fieldSetValue = fieldSet.value.value;
+    const { error, documentNode } = safeParse('{' + fieldSetValue + '}');
+    if (error || !documentNode) {
+      this.addError('Invalid @requires directive: fields argument must be a valid GraphQL selection set', fieldSet.loc);
+      return;
+    }
+
+    const parentNode = ctx.ancestors.at(-1);
+    if (!parentNode || !this.isASTObjectTypeNode(parentNode)) {
+      this.addError('Invalid @requires directive: fields argument must be a valid GraphQL selection set', fieldSet.loc);
+      return;
+    }
+
+    const objectType = this.parsedSchema.getType(parentNode.name.value) as GraphQLObjectType;
+    if (!objectType) {
+      this.addError('Invalid @requires directive: parent type not found', fieldSet.loc);
+      return;
+    }
+
+    const visitor = new SelectionSetValidationVisitor(documentNode, objectType, this.parsedSchema);
+
+    visitor.visit();
+
+    const { errors, warnings } = visitor.getValidationResult();
+    for (const error of errors) {
+      this.addError(error, fieldSet.loc);
+    }
+
+    for (const warning of warnings) {
+      this.addWarning(warning, fieldSet.loc);
+    }
   }
 
   /**
@@ -233,7 +271,7 @@ export class SDLValidationVisitor {
    * @private
    */
   private executeValidationRules(ctx: VisitContext<ASTNode>): void {
-    const applicableRules = this.lintingRules.filter((rule) => rule.nodeKind === ctx.node.kind && rule.enabled);
+    const applicableRules = this.lintingRules.filter((rule) => rule.nodeKind === ctx.node.kind);
 
     for (const rule of applicableRules) {
       // Type assertion is safe here because we've filtered by nodeKind
@@ -309,21 +347,6 @@ export class SDLValidationVisitor {
     const keyFieldsValue = keyFields.value.value;
     if (keyFieldsValue.includes('{')) {
       this.addError('Nested key directives are not supported yet', keyFields.loc);
-    }
-  }
-
-  /**
-   * Validate `@requires` directive usage (currently not supported)
-   * @param ctx - The VisitContext containing the field definition node to check for `@requires` directive
-   * @private
-   */
-  private validateRequiresDirective(ctx: VisitContext<FieldDefinitionNode>): void {
-    const hasRequiresDirective = ctx.node.directives?.some(
-      (directive) => directive.name.value === REQUIRES_DIRECTIVE_NAME,
-    );
-
-    if (hasRequiresDirective) {
-      this.addWarning('Use of requires is not supported yet', ctx.node.loc);
     }
   }
 
@@ -404,51 +427,6 @@ export class SDLValidationVisitor {
           ctx.node.loc,
         );
       }
-    }
-  }
-
-  private validateDisallowAbstractTypesForRequires(ctx: VisitContext<FieldDefinitionNode>): void {
-    const requiredDirective = ctx.node.directives?.find(
-      (directive) => directive.name.value === REQUIRES_DIRECTIVE_NAME,
-    );
-    if (!requiredDirective) {
-      return;
-    }
-
-    const fieldSelections = requiredDirective.arguments?.find((arg) => arg.name.value === FIELDS)?.value;
-    if (!fieldSelections || fieldSelections.kind !== Kind.STRING) {
-      return;
-    }
-
-    const parentType = ctx.ancestors.at(-1);
-    if (!parentType) {
-      return;
-    }
-
-    if (!this.isASTObjectTypeNode(parentType)) {
-      return;
-    }
-
-    let operationDoc;
-    try {
-      operationDoc = parse(`{ ${fieldSelections.value} }`);
-    } catch (e) {
-      const errorMessage = e instanceof Error ? e.message : String(e);
-      this.addError(`Invalid @${REQUIRES_DIRECTIVE_NAME} field selection syntax: ${errorMessage}`, ctx.node.loc);
-      return;
-    }
-
-    const selectionSetValidationVisitor = new SelectionSetValidationVisitor(
-      operationDoc,
-      this.schemaObject.getType(parentType.name.value) as GraphQLObjectType,
-    );
-    selectionSetValidationVisitor.visit();
-    for (const error of selectionSetValidationVisitor.getValidationResult().errors) {
-      this.addError(error, ctx.node.loc);
-    }
-
-    for (const warning of selectionSetValidationVisitor.getValidationResult().warnings) {
-      this.addWarning(warning, ctx.node.loc);
     }
   }
 
@@ -650,45 +628,6 @@ export class SDLValidationVisitor {
    */
   private isASTObjectTypeNode(node: ASTNode | ReadonlyArray<ASTNode>): node is ObjectTypeDefinitionNode {
     return !Array.isArray(node) && 'kind' in node && node.kind === Kind.OBJECT_TYPE_DEFINITION;
-  }
-
-  /**
-   * Enable or disable a specific validation rule by name
-   * @param ruleName - The name of the rule to configure
-   * @param enabled - Whether the rule should be enabled
-   * @returns true if the rule was found and configured, false otherwise
-   */
-  public configureRule(ruleName: string, enabled: boolean): boolean {
-    const rule = this.lintingRules.find((gate) => gate.name === ruleName);
-    if (rule) {
-      rule.enabled = enabled;
-      return true;
-    }
-    return false;
-  }
-
-  /**
-   * Get information about all available validation rules
-   * @returns Array of rule configurations
-   */
-  public getAvailableRules(): Readonly<LintingRule<any>[]> {
-    return Object.freeze([...this.lintingRules]);
-  }
-
-  /**
-   * Check if the validation found any critical errors
-   * @returns true if errors were found, false otherwise
-   */
-  public hasErrors(): boolean {
-    return this.validationResult.errors.length > 0;
-  }
-
-  /**
-   * Check if the validation found any warnings
-   * @returns true if warnings were found, false otherwise
-   */
-  public hasWarnings(): boolean {
-    return this.validationResult.warnings.length > 0;
   }
 
   /**

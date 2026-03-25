@@ -1,0 +1,72 @@
+---
+title: "Response Payload Structure"
+sidebarTitle: Response Payload
+icon: reply
+description: "Definition of the response payload structure for Subgraph Check Extension."
+---
+
+When your server receives a request from the Subgraph Check Extension, it must respond with either `204 No Content`, which indicates that nothing changed, or `200 OK` with the structure described below.
+
+The response payload allows you to append a collection of **LintIssues** to the check, which will be displayed on the
+Check results page. To do this, the response must contain the `lintIssues` field with the **subgraph name** as the key
+and the **LintIssues** as the value.
+
+You can also return a collection of error messages to be displayed in the extension’s UI.
+
+The response payload must be a JSON object no larger than **5 MB**.
+
+## SubgraphCheckExtensionReply
+| Field        | Type                                                           | Description                                                                                                                                                                                                      |
+|--------------|----------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `errors`     | `string[]` or `undefined`                                      | An optional collection of errors caught by the check extension. When one or more errors are returned, the subgraph check extension reports the result as a failure.                                              |
+| `lintIssues` | `Record<string, `[`LintIssue[]`](#lintissue)`>` or `undefined` | An optional map of the lint issues by subgraph name that will be appended to the ones reported by the internal lint check. If you only want to see issues reported by your service, disable the `Lint Policies`. |
+
+## LintIssue
+| Field           | Type                                      | Description                                                                                                  |
+|-----------------|-------------------------------------------|--------------------------------------------------------------------------------------------------------------|
+| `lintRuleType`  | `string`                                  | A `string` representing the Lint rule. This can be anything that helps you identify the applied rule.        |
+| `severity`      | [`LintSeverity`](#lintseverity)           | The severity of the issue.                                                                                   |
+| `message`       | `string`                                  | A message providing context for the issue.                                                                   |
+| `issueLocation` | [`LintIssueLocation`](#lintissuelocation) | The location of the issue related to the schema. This helps highlight the issue on the check results screen. |
+
+### LintSeverity
+| Field   | Value | Description                |
+|---------|-------|----------------------------|
+| Warning | `0`   | Represents a lint warning. |
+| Error   | `1`   | Represents a lint error.   |
+
+### LintIssueLocation
+| Field       | Type                    | Description                              |
+|-------------|-------------------------|------------------------------------------|
+| `line`      | `number`                | The line number of the lint issue.       |
+| `column`    | `number`                | The column number of the lint issue.     |
+| `endLine`   | `number` or `undefined` | The end line number of the lint issue.   |
+| `endColumn` | `number` or `undefined` | The end column number of the lint issue. |
+
+## TypeScript definition
+
+```typescript
+interface LintIssue {
+  lintRuleType: string;
+  severity: LintSeverity;
+  message: string;
+  issueLocation: LintIssueLocation;
+}
+
+interface LintIssueLocation {
+  line: number;
+  column: number;
+  endLine?: number;
+  endColumn?: number;
+}
+
+enum LintSeverity {
+  Warning = 0,
+  Error = 1
+}
+
+interface SubgraphCheckExtensionReply {
+  errors?: string[];
+  lintIssues?: Record<string, LintIssue[]>;
+}
+```
