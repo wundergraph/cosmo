@@ -555,7 +555,10 @@ export class OperationsRepository {
     const allOperations = await this.getAllPersistedOperationsForGraph();
 
     if (allOperations.length === 0) {
-      logger.warn({ federatedGraphId: this.federatedGraphId }, 'No persisted operations with content found for manifest generation');
+      logger.warn(
+        { federatedGraphId: this.federatedGraphId },
+        'No persisted operations with content found for manifest generation',
+      );
     }
 
     const operations: Record<string, string> = {};
