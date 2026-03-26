@@ -1,5 +1,5 @@
 import { OverrideChange } from '@wundergraph/cosmo-connect/dist/platform/v1/platform_pb';
-import { aliasedTable, and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { aliasedTable, and, asc, count, desc, eq, isNull, sql } from 'drizzle-orm';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { PlainMessage } from '@bufbuild/protobuf';
 import { DBSchemaChangeType } from '../../db/models.js';
@@ -443,7 +443,7 @@ export class OperationsRepository {
     };
   }
 
-  public getConsolidatedOverridesView(data: { namespaceId: string }) {
+  public async getConsolidatedOverridesView(data: { namespaceId: string; limit: number; offset: number }) {
     const change = this.db
       .select({
         hash: schema.operationChangeOverrides.hash,
@@ -484,7 +484,7 @@ export class OperationsRepository {
     // We need to retrieve a consolidated view of overrides from both tables.
     // There is no guarantee that an entry for hash exists in both.
 
-    return this.db
+    const baseQuery = this.db
       .select({
         hash: sql<string>`coalesce(${change.hash}, ${ignore.hash})`,
         name: sql<string>`coalesce(${change.name}, ${ignore.name})`,
@@ -497,7 +497,23 @@ export class OperationsRepository {
       .from(change)
       .fullJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)))
       .leftJoin(changeCounts, and(eq(change.hash, changeCounts.hash), eq(change.namespaceId, changeCounts.namespaceId)))
-      .orderBy(({ name, hash }) => [asc(name), asc(hash)]);
+      .orderBy(({ name, hash }) => [asc(name), asc(hash)])
+      .limit(data.limit)
+      .offset(data.offset);
+
+    const countQuery = this.db
+      .select({
+        count: count(),
+      })
+      .from(change)
+      .fullJoin(ignore, and(eq(change.hash, ignore.hash), eq(change.namespaceId, ignore.namespaceId)));
+
+    const [overrides, countResult] = await Promise.all([baseQuery, countQuery]);
+
+    return {
+      overrides,
+      totalCount: countResult[0]?.count ?? 0,
+    };
   }
 
   private static createPersistedOperationDTO({

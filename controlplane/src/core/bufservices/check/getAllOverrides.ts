@@ -8,7 +8,7 @@ import {
 import { FederatedGraphRepository } from '../../repositories/FederatedGraphRepository.js';
 import { OperationsRepository } from '../../repositories/OperationsRepository.js';
 import type { RouterOptions } from '../../routes.js';
-import { enrichLogger, getLogger, handleError } from '../../util.js';
+import { clamp, enrichLogger, getLogger, handleError } from '../../util.js';
 import { UnauthorizedError } from '../../errors/errors.js';
 
 export function getAllOverrides(
@@ -33,6 +33,7 @@ export function getAllOverrides(
           details: 'Requested graph does not exist',
         },
         overrides: [],
+        totalCount: 0,
       };
     }
 
@@ -42,8 +43,14 @@ export function getAllOverrides(
 
     const operationsRepo = new OperationsRepository(opts.db, graph.id);
 
-    const overrides = await operationsRepo.getConsolidatedOverridesView({
+    // default to 10 if no limit is provided
+    const limit = clamp(req.limit || 10, 1, 50);
+    const offset = clamp(req.offset || 0, 0, 500_000);
+
+    const { overrides, totalCount } = await operationsRepo.getConsolidatedOverridesView({
       namespaceId: graph.namespaceId,
+      limit,
+      offset,
     });
 
     return {
@@ -51,6 +58,7 @@ export function getAllOverrides(
         code: EnumStatusCode.OK,
       },
       overrides,
+      totalCount,
     };
   });
 }
