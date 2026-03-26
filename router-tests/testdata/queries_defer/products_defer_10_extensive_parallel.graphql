@@ -1,7 +1,9 @@
 query {
   ... @defer {
     products {
-      ... @defer { upc }
+      ... on IProduct @defer {
+        upc
+      }
       ... on Cosmo {
         ... @defer { name }
         ... @defer { repositoryURL }
@@ -17,7 +19,9 @@ query {
   ... @defer {
     productTypes {
       __typename
-      ... @defer { upc }
+      ... on IProduct @defer {
+        upc
+      }
       ... on Documentation {
         ... @defer {
           url(product: COSMO)

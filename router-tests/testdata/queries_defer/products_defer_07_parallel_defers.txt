@@ -2,5 +2,17 @@
 --graphql
 Content-Type: application/json
 
-{"errors":[{"message":"cannot select field: upc on union: Products","path":["query","products"]}]}
+{"data":{"products":[{},{"name":"COSMO","upc":"cosmo"},{"owner":{"details":{"forename":"Jens"}},"clientLanguages":["RUST","TYPESCRIPT"],"unicode":"😀♥!\u0015\u0010🝥","upc":"sdk"}],"productTypes":[{"__typename":"Cosmo","upc":"cosmo"},{"__typename":"Consultancy","lead":{"details":{"forename":"Jens"}},"name":"CONSULTANCY"},{"__typename":"Documentation","url":"https://cosmo-docs.wundergraph.com/","urls":["https://cal.com/stefan-avram-wundergraph/wundergraph-introduction","https://github.com/wundergraph/graphql-go-tools/blob/master/README.md","N/A","https://docs.wundergraph.com/"]}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"repositoryURL":"https://github.com/wundergraph/cosmo"},"path":["products",1]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"lead":{"details":{"forename":"Dustin"}}},"path":["products",1]}],"hasNext":false}
+
+--graphql
 --graphql--

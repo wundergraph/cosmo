@@ -2,5 +2,22 @@
 --graphql
 Content-Type: application/json
 
-{"errors":[{"message":"Unknown type \"ProductType\".","path":["ProductType"]}]}
+{"data":{"products":[{},{"name":"COSMO","lead":{},"repositoryURL":"https://github.com/wundergraph/cosmo"},{"owner":{"details":{"forename":"Jens"}},"clientLanguages":["RUST","TYPESCRIPT"],"unicode":"😀♥!\u0015\u0010🝥"}],"productTypes":[{"__typename":"Cosmo"},{"__typename":"Consultancy","lead":{"details":{"forename":"Jens"}},"name":"CONSULTANCY"},{"__typename":"Documentation","url":"https://cosmo-docs.wundergraph.com/","urls":["https://cal.com/stefan-avram-wundergraph/wundergraph-introduction","https://github.com/wundergraph/graphql-go-tools/blob/master/README.md","N/A","https://docs.wundergraph.com/"]}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"upc":"cosmo"},"path":["products",1]},{"data":{"upc":"sdk"},"path":["products",2]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"details":{"forename":"Dustin"}},"path":["products",1,"lead"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"upc":"cosmo"},"path":["productTypes",0]}],"hasNext":false}
+
+--graphql
 --graphql--
