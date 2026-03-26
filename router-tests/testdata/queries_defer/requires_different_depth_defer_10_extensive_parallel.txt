@@ -12,11 +12,6 @@ Content-Type: application/json
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"name":"CONSULTANCY"},"path":["products",0]}],"hasNext":true}
-
---graphql
-Content-Type: application/json
-
 {"incremental":[{"data":{"isLeadAvailable":false},"path":["products",0]}],"hasNext":true}
 
 --graphql

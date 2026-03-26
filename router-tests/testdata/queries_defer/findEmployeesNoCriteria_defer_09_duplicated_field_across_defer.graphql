@@ -1,6 +1,6 @@
 query {
   findEmployees {
     details { forename }
-    ... @defer { details { location { language } } }
+    ... @defer { details { forename } }
   }
 }

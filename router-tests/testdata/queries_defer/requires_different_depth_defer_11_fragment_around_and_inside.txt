@@ -2,12 +2,7 @@
 --graphql
 Content-Type: application/json
 
-{"data":{"products":[{"__typename":"Consultancy"},{"__typename":"Cosmo"},{"__typename":"SDK"}]},"hasNext":true}
-
---graphql
-Content-Type: application/json
-
-{"incremental":[{"data":{"isLeadAvailable":false,"lead":{"id":1}},"path":["products",0]}],"hasNext":true}
+{"data":{"products":[{"__typename":"Consultancy","isLeadAvailable":false,"lead":{"__typename":"Employee","id":1}},{"__typename":"Cosmo"},{"__typename":"SDK"}]},"hasNext":true}
 
 --graphql
 Content-Type: application/json

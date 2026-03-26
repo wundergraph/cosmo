@@ -1,5 +1,4 @@
 fragment ConsultancyLead on Consultancy {
-  name
   lead {
     __typename
     id
@@ -9,6 +8,6 @@ fragment ConsultancyLead on Consultancy {
 
 query RequiresMood {
   products {
-    ...ConsultancyLead @defer
+    ... @defer { ...ConsultancyLead }
   }
 }

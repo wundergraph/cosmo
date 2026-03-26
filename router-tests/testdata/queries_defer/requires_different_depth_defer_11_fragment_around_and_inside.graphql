@@ -10,6 +10,6 @@ fragment ConsultancyDetails on Consultancy {
 query Requires {
   products {
     __typename
-    ...ConsultancyDetails @defer
+    ... @defer { ...ConsultancyDetails }
   }
 }

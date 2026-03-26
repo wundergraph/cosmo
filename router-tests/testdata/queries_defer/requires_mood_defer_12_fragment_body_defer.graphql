@@ -1,5 +1,4 @@
 fragment ConsultancyLead on Consultancy {
-  name
   lead {
     __typename
     id

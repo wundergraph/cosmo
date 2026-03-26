@@ -4,10 +4,12 @@ query Requires {
       __typename
       ... on Consultancy {
         isLeadAvailable
-        lead {
-          __typename
-          id
-          derivedMood
+        ... @defer {
+          lead {
+            __typename
+            id
+            derivedMood
+          }
         }
       }
     }

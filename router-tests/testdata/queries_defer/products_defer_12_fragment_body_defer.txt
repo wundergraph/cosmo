@@ -2,5 +2,5 @@
 --graphql
 Content-Type: application/json
 
-{"errors":[{"message":"cannot select field: upc on union: Products","path":["query","products"]}]}
+{"errors":[{"message":"Unknown type \"ProductType\".","path":["ProductType"]}]}
 --graphql--

@@ -1,14 +1,7 @@
 query RequiresMood {
-  ... @defer {
-    products {
-      ... on Consultancy {
-        name
-      }
-    }
-  }
-  ... @defer {
-    products {
-      ... on Consultancy {
+  products {
+    ... on Consultancy {
+      ... @defer {
         lead {
           __typename
           id

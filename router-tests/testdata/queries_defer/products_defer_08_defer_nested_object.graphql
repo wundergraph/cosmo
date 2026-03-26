@@ -6,10 +6,19 @@ query {
       repositoryURL
       ... @defer { lead { details { forename } } }
     }
+    ... on SDK {
+      owner { details { forename } }
+      clientLanguages
+      unicode
+    }
   }
   productTypes {
     __typename
-    ... on Documentation { url(product: COSMO) }
+    upc
+    ... on Documentation {
+      url(product: COSMO)
+      urls(products: [CONSULTANCY, ENGINE, HUMAN_RESOURCES, SDK])
+    }
     ... on Consultancy {
       name
       ... @defer { lead { details { forename } } }

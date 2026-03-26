@@ -5,9 +5,21 @@ fragment CosmoDetails on Cosmo {
 }
 
 fragment SDKDetails on SDK {
+  owner { details { forename } }
   clientLanguages
   unicode
-  owner { details { forename } }
+}
+
+fragment ProductTypeDetails on ProductType {
+  upc
+  ... on Documentation {
+    url(product: COSMO)
+    urls(products: [CONSULTANCY, ENGINE, HUMAN_RESOURCES, SDK])
+  }
+  ... on Consultancy {
+    lead { details { forename } }
+    name
+  }
 }
 
 query {
@@ -17,9 +29,7 @@ query {
     ...SDKDetails @defer
   }
   productTypes {
-    ... on Consultancy {
-      name
-      lead { details { forename } }
-    }
+    __typename
+    ...ProductTypeDetails @defer
   }
 }
