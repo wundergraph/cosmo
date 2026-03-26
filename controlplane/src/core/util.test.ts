@@ -5,6 +5,7 @@ import {
   isValidGrpcNamingScheme,
   isValidLabels,
   isValidNamespaceName,
+  normalizePagination,
 } from './util.js';
 import { organizationSlugSchema } from './constants.js';
 
@@ -489,6 +490,37 @@ describe('isValidGrpcNamingScheme', () => {
     test('should reject malformed URLs', () => {
       expect(isValidGrpcNamingScheme('://invalid')).toBe(false);
       expect(isValidGrpcNamingScheme('invalid:')).toBe(false);
+    });
+  });
+
+  describe('normalizePagination', () => {
+    test('should apply defaults when no values are provided', () => {
+      const result = normalizePagination({});
+      expect(result).toEqual({ limit: 10, offset: 0 });
+    });
+
+    test('should pass through valid values', () => {
+      const result = normalizePagination({ limit: 25, offset: 100 });
+      expect(result).toEqual({ limit: 25, offset: 100 });
+    });
+
+    test('should clamp limit to min/max bounds', () => {
+      expect(normalizePagination({ limit: 0 }).limit).toBe(10); // falsy → default
+      expect(normalizePagination({ limit: 100 }).limit).toBe(50); // above max
+    });
+
+    test('should clamp offset to max bound', () => {
+      expect(normalizePagination({ offset: 600_000 }).offset).toBe(500_000);
+    });
+
+    test('should respect custom maxLimit override', () => {
+      const result = normalizePagination({ limit: 300 }, { maxLimit: 200 });
+      expect(result.limit).toBe(200);
+    });
+
+    test('should respect custom maxOffset override', () => {
+      const result = normalizePagination({ offset: 2000 }, { maxOffset: 1000 });
+      expect(result.offset).toBe(1000);
     });
   });
 });
