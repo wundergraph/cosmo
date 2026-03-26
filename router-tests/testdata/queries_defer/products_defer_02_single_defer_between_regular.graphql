@@ -1,6 +1,8 @@
 query {
   products {
-    upc
+    ... on IProduct {
+      upc
+    }
     ... on Cosmo {
       name
       lead { details { forename } }
@@ -15,7 +17,9 @@ query {
   ... @defer {
     productTypes {
       __typename
-      upc
+      ... on IProduct {
+        upc
+      }
       ... on Documentation {
         url(product: COSMO)
         urls(products: [CONSULTANCY, ENGINE, HUMAN_RESOURCES, SDK])

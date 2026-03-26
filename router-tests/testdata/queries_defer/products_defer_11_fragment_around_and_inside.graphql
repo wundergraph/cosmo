@@ -11,7 +11,9 @@ fragment SDKDetails on SDK {
 }
 
 fragment ProductTypeDetails on ProductType {
-  upc
+  ... on IProduct {
+    upc
+  }
   ... on Documentation {
     url(product: COSMO)
     urls(products: [CONSULTANCY, ENGINE, HUMAN_RESOURCES, SDK])
@@ -24,7 +26,9 @@ fragment ProductTypeDetails on ProductType {
 
 query {
   products {
-    upc
+    ... on IProduct @defer {
+      upc
+    }
     ... @defer { ...CosmoDetails }
     ... @defer { ...SDKDetails }
   }
