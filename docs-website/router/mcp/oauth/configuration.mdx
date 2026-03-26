@@ -1,0 +1,195 @@
+---
+title: 'OAuth Configuration Reference'
+description: 'Complete reference for all MCP OAuth configuration options, JWKS settings, environment variables, error responses, and RFC 9728 metadata.'
+icon: 'sliders-up'
+---
+
+## Configuration Options
+
+| Option                                       | Description                                                                                                                                                                                                                   | Default |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- |
+| `oauth.enabled`                              | Enable OAuth 2.1 / JWKS-based authentication for the MCP server                                                                                                                                                               | `false` |
+| `oauth.authorization_server_url`             | Base URL of the OAuth 2.0 authorization server. Advertised via the [RFC 9728 metadata endpoint](#rfc-9728-protected-resource-metadata) so clients can discover authorization endpoints.                                       | -       |
+| `oauth.scope_challenge_include_token_scopes` | When `true`, includes the token's existing scopes in the `scope` parameter of 403 responses. Works around MCP SDK scope accumulation bugs. See [Scope Challenge Behavior](/router/mcp/oauth/scopes#scope-challenge-behavior). | `false` |
+| `oauth.scopes.initialize`                    | Scopes required for **all** HTTP requests (checked before JSON-RPC parsing). This is the baseline scope needed to establish an MCP connection.                                                                                | `[]`    |
+| `oauth.scopes.tools_list`                    | Scopes required for the `tools/list` MCP method.                                                                                                                                                                              | `[]`    |
+| `oauth.scopes.tools_call`                    | Scopes required for the `tools/call` MCP method (any tool invocation). Per-tool and built-in tool scopes are enforced additively.                                                                                             | `[]`    |
+| `oauth.scopes.execute_graphql`               | Scopes required to call the `execute_graphql` built-in tool. Additive to `tools_call`. Only relevant when `enable_arbitrary_operations` is `true`.                                                                            | `[]`    |
+| `oauth.scopes.get_operation_info`            | Scopes required to call the `get_operation_info` built-in tool. Additive to `tools_call`.                                                                                                                                     | `[]`    |
+| `oauth.scopes.get_schema`                    | Scopes required to call the `get_schema` built-in tool. Additive to `tools_call`. Only relevant when `expose_schema` is `true`.                                                                                               | `[]`    |
+| `oauth.jwks`                                 | List of JWKS providers for JWT verification. Supports remote JWKS URLs or symmetric secrets.                                                                                                                                  | `[]`    |
+
+## JWKS Configuration
+
+The `oauth.jwks` array configures one or more JWKS providers for JWT verification.
+
+### Remote JWKS URL
+
+```yaml
+oauth:
+  jwks:
+    - url: 'https://auth.example.com/.well-known/jwks.json'
+      audiences:
+        - 'https://mcp.example.com'
+      algorithms:
+        - 'RS256'
+        - 'ES256'
+      refresh_interval: '1m' # How often to refresh the key set
+```
+
+| Field              | Description                                                   | Default    |
+| ------------------ | ------------------------------------------------------------- | ---------- |
+| `url`              | URL of the JWKS endpoint                                      | (required) |
+| `audiences`        | Allowed JWT `aud` claim values                                | (any)      |
+| `algorithms`       | Allowed signing algorithms (RS256, ES256, PS256, EdDSA, etc.) | (all)      |
+| `refresh_interval` | How often to refresh the JWKS key set                         | `1m`       |
+
+For the full JWKS configuration reference including all options (`refresh_unknown_kid`, `allowed_use`, etc.), see [Router Authentication](/router/authentication-and-authorization).
+
+### Symmetric Secret
+
+For development or testing, you can use a shared symmetric secret instead of a remote JWKS endpoint:
+
+```yaml
+oauth:
+  jwks:
+    - secret: 'your-shared-secret'
+      symmetric_algorithm: 'HS256' # HS256, HS384, or HS512
+      header_key_id: 'my-key-id'
+```
+
+## Environment Variables
+
+| Environment Variable                             | Configuration Path                               |
+| ------------------------------------------------ | ------------------------------------------------ |
+| `MCP_OAUTH_ENABLED`                              | `mcp.oauth.enabled`                              |
+| `MCP_OAUTH_AUTHORIZATION_SERVER_URL`             | `mcp.oauth.authorization_server_url`             |
+| `MCP_OAUTH_SCOPE_CHALLENGE_INCLUDE_TOKEN_SCOPES` | `mcp.oauth.scope_challenge_include_token_scopes` |
+
+## HTTP Error Responses
+
+### 401 Unauthorized
+
+Returned when the token is missing, invalid, expired, or signature verification fails.
+
+```
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Bearer realm="mcp", scope="mcp:connect", resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp"
+```
+
+The `scope` parameter contains the `initialize` scopes (minimum scopes needed to connect). The `resource_metadata` URL points to the [RFC 9728 metadata endpoint](#rfc-9728-protected-resource-metadata) for OAuth discovery.
+
+### 403 Forbidden
+
+Returned when the token is valid but lacks required scopes. The exact `scope` parameter depends on which level of enforcement rejected the request:
+
+**Method-level rejection** (e.g., missing `tools_call` scopes):
+
+```
+HTTP/1.1 403 Forbidden
+WWW-Authenticate: Bearer error="insufficient_scope", scope="mcp:tools:execute", resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp", error_description="missing required scopes: mcp:tools:execute"
+```
+
+**Per-tool rejection** (e.g., calling a tool that requires `read:fact`):
+
+```
+HTTP/1.1 403 Forbidden
+WWW-Authenticate: Bearer error="insufficient_scope", scope="read:fact", resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp", error_description="insufficient scopes for tool execute_operation_get_top_secret_facts"
+```
+
+The `scope` parameter always contains only the scopes needed for the specific operation that failed (unless `scope_challenge_include_token_scopes` is enabled).
+
+<Info>
+  Per the MCP specification, HTTP-level authentication failures return only HTTP status codes and headers — no JSON-RPC
+  response body is included.
+</Info>
+
+## RFC 9728 Protected Resource Metadata
+
+When OAuth is enabled and `authorization_server_url` is configured, the MCP server exposes a public (unauthenticated) metadata endpoint at:
+
+```
+GET /.well-known/oauth-protected-resource/mcp
+```
+
+This follows the [RFC 9728](https://datatracker.ietf.org/doc/rfc9728/) path-aware format. MCP clients use this endpoint to automatically discover the authorization server and all supported scopes.
+
+**Example response:**
+
+```json
+{
+  "resource": "https://mcp.example.com",
+  "authorization_servers": ["https://auth.example.com"],
+  "bearer_methods_supported": ["header"],
+  "resource_documentation": "https://mcp.example.com/mcp",
+  "scopes_supported": [
+    "mcp:connect",
+    "mcp:tools:execute",
+    "mcp:tools:read",
+    "read:all",
+    "read:employee",
+    "read:fact",
+    "read:private"
+  ]
+}
+```
+
+The `scopes_supported` field is **automatically computed** as the union of:
+
+- All configured static scopes (`initialize`, `tools_list`, `tools_call`)
+- All scopes extracted from `@requiresScopes` directives on fields used by registered operations
+
+## Startup Validation
+
+The router performs startup validation when OAuth is enabled:
+
+- If `oauth.jwks` is empty, the router exits with a fatal error to prevent starting an unprotected endpoint
+- If `server.base_url` is empty, the router exits with a fatal error because it is required for RFC 9728 metadata discovery
+
+## Full Configuration Example
+
+```yaml
+mcp:
+  enabled: true
+  server:
+    listen_addr: '0.0.0.0:5025'
+    base_url: 'https://mcp.example.com'
+  graph_name: 'my-graph'
+  exclude_mutations: true
+  enable_arbitrary_operations: true # Enables execute_graphql tool
+  expose_schema: true # Enables get_schema tool
+  oauth:
+    enabled: true
+    authorization_server_url: 'https://auth.example.com'
+    scope_challenge_include_token_scopes: false # Set to true for MCP clients with scope accumulation bugs
+    scopes:
+      initialize:
+        - 'mcp:connect'
+      tools_list:
+        - 'mcp:tools:read'
+      tools_call:
+        - 'mcp:tools:execute'
+      # Built-in tool scopes (additive to tools_call)
+      execute_graphql:
+        - 'mcp:graphql:execute'
+      get_schema:
+        - 'mcp:schema:read'
+      get_operation_info:
+        - 'mcp:ops:read'
+    jwks:
+      - url: 'https://auth.example.com/.well-known/jwks.json'
+        audiences:
+          - 'https://mcp.example.com'
+        algorithms:
+          - 'RS256'
+        refresh_interval: '1m'
+  storage:
+    provider_id: 'mcp'
+  session:
+    stateless: true
+
+storage_providers:
+  file_system:
+    - id: 'mcp'
+      path: 'operations'
+```

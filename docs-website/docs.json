@@ -100,7 +100,16 @@
                   "router/mcp/quickstart",
                   "router/mcp/operations",
                   "router/mcp/configuration",
-                  "router/mcp/oauth",
+                  {
+                    "group": "OAuth 2.1",
+                    "icon": "shield-check",
+                    "pages": [
+                      "router/mcp/oauth/overview",
+                      "router/mcp/oauth/quickstart",
+                      "router/mcp/oauth/scopes",
+                      "router/mcp/oauth/configuration"
+                    ]
+                  },
                   "router/mcp/ide-setup"
                 ]
               },

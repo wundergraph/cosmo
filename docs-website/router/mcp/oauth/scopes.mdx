@@ -1,0 +1,171 @@
+---
+title: 'Scope Enforcement'
+description: 'How the MCP server enforces OAuth scopes at multiple levels — from connection to per-tool authorization — using an additive model with step-up token upgrades.'
+icon: 'layer-group'
+---
+
+The MCP server enforces scopes at multiple levels, all at the HTTP transport layer per the MCP specification. Each level is **additive** — a request must satisfy all applicable scope gates.
+
+## Enforcement Levels
+
+```
+HTTP Request
+  → Initialize scopes (all requests)
+    → Method scopes (tools/list, tools/call)
+      → Built-in tool scopes (execute_graphql, get_schema, get_operation_info)
+        → Per-tool scopes (from @requiresScopes on operation fields)
+          → Runtime scopes (execute_graphql only, per-query)
+```
+
+### Initialize Scopes
+
+The `scopes.initialize` list defines scopes required for **every** HTTP request to the MCP server. These are checked before the JSON-RPC payload is parsed, serving as the baseline authorization to establish an MCP connection.
+
+```yaml
+oauth:
+  scopes:
+    initialize:
+      - 'mcp:connect'
+```
+
+### Method-Level Scopes
+
+Additional scopes can be required for specific MCP methods:
+
+```yaml
+oauth:
+  scopes:
+    tools_list:
+      - 'mcp:tools:read' # Required to discover available tools
+    tools_call:
+      - 'mcp:tools:execute' # Required to execute any tool
+```
+
+When both `initialize` and method-level scopes are configured, the token must contain **all** of them. For example, calling `tools/call` requires both the `initialize` scopes and the `tools_call` scopes.
+
+<Info>
+  Scopes in the JWT must be provided as a **space-separated string** in the `scope` claim (per OAuth 2.0 convention).
+  Array-format scope claims are not supported.
+</Info>
+
+### Built-in Tool Scopes
+
+The MCP server provides three built-in tools: `execute_graphql`, `get_operation_info`, and `get_schema`. Each can have its own scope requirements:
+
+```yaml
+oauth:
+  scopes:
+    tools_call:
+      - 'mcp:tools:execute' # Base gate for any tool
+    execute_graphql:
+      - 'mcp:graphql:execute' # Additional scope for execute_graphql
+    get_operation_info:
+      - 'mcp:ops:read' # Additional scope for get_operation_info
+    get_schema:
+      - 'mcp:schema:read' # Additional scope for get_schema
+```
+
+Built-in tool scopes are **additive** to `tools_call` — the token must satisfy both. If `tools_call` is empty, only the built-in tool scope is checked.
+
+Scopes for `execute_graphql` are only relevant when `enable_arbitrary_operations: true`, and scopes for `get_schema` are only relevant when `expose_schema: true`. When the corresponding feature is disabled, the tool is not registered and its scopes are excluded from the `scopes_supported` metadata.
+
+### Per-Tool Scopes (from `@requiresScopes`)
+
+When your GraphQL schema uses the `@requiresScopes` directive on fields, the MCP server automatically extracts scope requirements for each tool at startup. If a tool's underlying GraphQL operation touches fields that require specific scopes, those scopes are enforced when the tool is called.
+
+For example, if your schema defines:
+
+```graphql
+type Query {
+  topSecretFacts: [Fact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
+  employee(id: ID!): Employee @requiresScopes(scopes: [["read:employee", "read:private"], ["read:all"]])
+}
+```
+
+And you have an operation `getTopSecretFacts.graphql` that queries `topSecretFacts`, calling that tool will require either `read:fact` OR `read:all` in addition to any `initialize` and `tools_call` scopes.
+
+The `@requiresScopes` directive uses OR-of-AND semantics. When an operation touches multiple fields with `@requiresScopes`, the MCP server computes the combined scope requirement using the [Cartesian product rules](/federation/directives/requiresscopes#combining-scopes-in-the-same-subgraph). For a full explanation of how scopes combine, see the [`@requiresScopes` directive documentation](/federation/directives/requiresscopes).
+
+Per-tool scopes are computed at startup (and on config reload), so they are enforced at the HTTP level with zero runtime overhead per request.
+
+### Runtime Scopes (`execute_graphql`)
+
+When `enable_arbitrary_operations` is enabled, the `execute_graphql` tool allows AI models to craft custom GraphQL queries. Since the server cannot know which fields will be queried ahead of time, scope checking happens at request time by parsing the GraphQL query and extracting `@requiresScopes` requirements for the fields it references.
+
+This runtime check uses the same [OR-of-AND semantics](/federation/directives/requiresscopes) and smart challenge selection as per-tool scopes. If the token lacks required scopes, the server returns a `403 Forbidden` with an appropriate scope challenge before the query is executed.
+
+<Info>
+  If the GraphQL query cannot be parsed, the request is passed through to the GraphQL engine, which handles the error.
+  Scope checking is best-effort and does not block malformed queries.
+</Info>
+
+## Scope Discovery with `get_operation_info`
+
+The `get_operation_info` tool includes scope requirements in its response, allowing AI models to discover what scopes a tool needs before calling it:
+
+```
+Required Scopes (OR-of-AND):
+  - read:employee AND read:private
+  OR
+  - read:all
+```
+
+## Summary
+
+| Level         | When Checked                    | Configured Via                                                                               | Failure Response              |
+| ------------- | ------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------------- |
+| Initialize    | Every HTTP request              | `oauth.scopes.initialize`                                                                    | 403 with required scopes      |
+| Method        | `tools/list`, `tools/call`      | `oauth.scopes.tools_list`, `oauth.scopes.tools_call`                                         | 403 with required scopes      |
+| Built-in tool | `tools/call` for built-in tools | `oauth.scopes.execute_graphql`, `oauth.scopes.get_schema`, `oauth.scopes.get_operation_info` | 403 with required scopes      |
+| Per-tool      | `tools/call` for specific tool  | `@requiresScopes` in GraphQL schema                                                          | 403 with best scope challenge |
+| Runtime       | `execute_graphql` calls         | `@requiresScopes` in GraphQL schema                                                          | 403 with best scope challenge |
+
+## Token Upgrade Flow
+
+Tokens can be upgraded **on the same MCP session** without reconnecting:
+
+1. Client connects with a token that has `mcp:connect` scope
+2. Client calls `tools/call` and receives `403 Forbidden` with `insufficient_scope`
+3. Client obtains a new token with additional scopes from the authorization server
+4. Client retries with the new token on the same session (same `Mcp-Session-Id`)
+
+## Scope Challenge Behavior
+
+When the server returns a `403 Forbidden` response, the `WWW-Authenticate` header includes a `scope` parameter per [RFC 6750](https://datatracker.ietf.org/doc/rfc6750/) telling the client which scopes to request.
+
+For per-tool and runtime challenges where multiple scope groups can satisfy the requirement (OR-of-AND), the server selects the **best** group — the one requiring the fewest additional scopes based on what the token already has:
+
+1. For each AND-group, count how many scopes the token is **missing**
+2. Pick the group with the **fewest missing** scopes (ties go to the first group)
+
+For example, suppose a tool requires `(read:employee AND read:private AND read:fact) OR (read:all)` and a client presents a token with scopes `read:employee read:private`:
+
+| AND-group                                    | Missing scopes | Count |
+| -------------------------------------------- | -------------- | ----- |
+| `read:employee`, `read:private`, `read:fact` | `read:fact`    | 1     |
+| `read:all`                                   | `read:all`     | 1     |
+
+Both groups have 1 missing scope. The server picks the first, returning the **complete AND-group** (not just the missing scopes):
+
+```
+WWW-Authenticate: Bearer error="insufficient_scope", scope="read:employee read:private read:fact"
+```
+
+The client can then request the additional `read:fact` scope from the authorization server and retry.
+
+### `scope_challenge_include_token_scopes`
+
+Some MCP client SDKs do not correctly accumulate scopes when performing step-up authorization — they request **only** the scopes from the `WWW-Authenticate` challenge, discarding the scopes they already had. This causes a loop where gaining a new scope loses a previous one. This is a [known issue in the MCP TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk/issues/1582).
+
+To work around this, set `scope_challenge_include_token_scopes: true` to include the token's existing scopes alongside the required scopes in the challenge.
+
+| Value             | Behavior                                                                                   | Trade-off                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `false` (default) | Returns only the scopes the operation requires (strict RFC 6750).                          | Spec-compliant and more secure, but requires the client to correctly accumulate scopes.                   |
+| `true`            | Returns the union of the token's existing scopes and the required scopes in the challenge. | More compatible with current MCP clients, but reveals the token's existing scopes in the response header. |
+
+<Warning>
+  Setting `scope_challenge_include_token_scopes: true` reveals the token's existing scopes in the `WWW-Authenticate`
+  response header. If this is a concern, leave it as `false` and ensure your MCP clients correctly accumulate scopes
+  when requesting new tokens.
+</Warning>
