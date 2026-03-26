@@ -64,7 +64,7 @@ headers:
 
 ### What does the snippet do?
 
-With `all` we address all subgraph responses. Next, we can define several rules on the response headers. The operation `propagate` forwards matching subgraph response headers to the client. The operation `set` injects a header value into the subgraph response so it can be processed by downstream rules (e.g., the cache control algorithm or propagate rules).
+With `all` we address all subgraph responses. Next, we can define several rules on the response headers. The operation `propagate` forwards matching subgraph response headers to the client. The operation `set` injects a header value into the subgraph response — for `Cache-Control`, this value is picked up by the cache control algorithm; for other headers, the value is not forwarded to the client unless a separate `propagate` rule matches it.
 
 The `subgraphs` section allows to propagate headers for specific subgraphs. The name must match with the subgraph name in the Studio.
 

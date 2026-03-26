@@ -154,10 +154,7 @@ type HeaderPropagation struct {
 	// Precomputed request rule presence for fast-path checks
 	hasAllRequestRules      bool
 	subgraphHasRequestRules map[string]bool
-	// postResponseRules runs after all other response rules (All + Subgraph-specific).
-	// Used by cache_control_policy so that set rules have already injected
-	// values into res.Header before the algorithm reads them.
-	postResponseRules *PostResponseRules
+	postResponseRules       *PostResponseRules
 }
 
 // PostResponseRules holds response rules that execute after all user-defined
