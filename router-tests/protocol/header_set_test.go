@@ -220,6 +220,44 @@ func TestHeaderSet(t *testing.T) {
 			})
 		})
 
+		t.Run("subgraph set Cache-Control feeds into restrictive algorithm", func(t *testing.T) {
+			t.Parallel()
+			// A subgraph-level set rule injects Cache-Control into the employees
+			// response. The cache control algorithm (which runs after all user
+			// rules) sees this value and uses it in the restrictive merge.
+			testenv.Run(t, &testenv.Config{
+				CacheControlPolicy: config.CacheControlPolicy{
+					Enabled: true,
+					Value:   "max-age=300, public",
+				},
+				RouterOptions: []core.Option{
+					core.WithHeaderRules(config.HeaderRules{
+						Subgraphs: map[string]*config.GlobalHeaderRule{
+							"employees": {
+								Response: []*config.ResponseHeaderRule{
+									{
+										Operation: config.HeaderRuleOperationSet,
+										Name:      "Cache-Control",
+										Value:     "max-age=45, public",
+									},
+								},
+							},
+						},
+					}),
+				},
+			}, func(t *testing.T, xEnv *testenv.Environment) {
+				res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+					Query: queryEmployeeWithHobby,
+				})
+				cc := res.Response.Header.Get("Cache-Control")
+				// The set rule injects max-age=45 on the employees subgraph.
+				// The hobbies subgraph has no Cache-Control, so it uses the
+				// default (max-age=300). The algorithm picks the most
+				// restrictive: max-age=45.
+				require.Equal(t, "max-age=45, public", cc, "subgraph-level set should feed into the cache control algorithm")
+			})
+		})
+
 		t.Run("set overwrites existing subgraph response header", func(t *testing.T) {
 			t.Parallel()
 			// The employees subgraph returns X-Custom-Header: original-value.
