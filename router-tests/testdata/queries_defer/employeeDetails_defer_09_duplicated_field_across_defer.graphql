@@ -4,7 +4,10 @@ query {
     hobbies { __typename }
     ... @defer {
       hobbies {
-        employees { id details { forename } }
+        employees {
+          id
+          details { forename }
+        }
       }
       notes
     }

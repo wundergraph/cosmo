@@ -2,12 +2,7 @@
 --graphql
 Content-Type: application/json
 
-{"data":{},"hasNext":true}
-
---graphql
-Content-Type: application/json
-
-{"incremental":[{"data":{"products":[{"name":"CONSULTANCY"},{},{}]},"path":[]}],"hasNext":true}
+{"data":{"products":[{},{},{}]},"hasNext":true}
 
 --graphql
 Content-Type: application/json

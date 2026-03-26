@@ -1,7 +1,7 @@
 query {
   a: findEmployees(criteria: { hasPets: true }) {
     details { forename }
-    ... @defer { details { location { language } } }
+    ... @defer { details { forename } }
   }
   b: findEmployees(criteria: { hasPets: false, nationality: GERMAN, nested: { maritalStatus: MARRIED } }) {
     details { forename }

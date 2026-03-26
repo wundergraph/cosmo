@@ -4,15 +4,32 @@ fragment CosmoDetails on Cosmo {
   ... @defer { lead { details { forename } } }
 }
 
+fragment SDKDetails on SDK {
+  clientLanguages
+  unicode
+  owner { details { forename } }
+}
+
+fragment ProductTypeDetails on ProductType {
+  upc
+  ... on Documentation {
+    url(product: COSMO)
+    urls(products: [CONSULTANCY, ENGINE, HUMAN_RESOURCES, SDK])
+  }
+  ... on Consultancy {
+    lead { details { forename } }
+    name
+  }
+}
+
 query {
   products {
     upc
-    ...CosmoDetails @defer
+    ... @defer { ...CosmoDetails }
+    ... @defer { ...SDKDetails }
   }
   productTypes {
-    ... on Consultancy {
-      name
-      lead { details { forename } }
-    }
+    __typename
+    ...ProductTypeDetails
   }
 }

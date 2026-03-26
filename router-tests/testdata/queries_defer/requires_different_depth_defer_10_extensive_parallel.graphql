@@ -3,7 +3,6 @@ query Requires {
     products {
       __typename
       ... on Consultancy {
-        ... @defer { name }
         ... @defer { isLeadAvailable }
         ... @defer {
           lead {

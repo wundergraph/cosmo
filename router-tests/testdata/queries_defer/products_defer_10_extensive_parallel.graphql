@@ -16,7 +16,14 @@ query {
   }
   ... @defer {
     productTypes {
-      ... on Documentation { ... @defer { url(product: COSMO) } }
+      __typename
+      ... @defer { upc }
+      ... on Documentation {
+        ... @defer {
+          url(product: COSMO)
+          urls(products: [CONSULTANCY, ENGINE, HUMAN_RESOURCES, SDK])
+        }
+      }
       ... on Consultancy {
         ... @defer { name }
         ... @defer { lead { details { forename } } }

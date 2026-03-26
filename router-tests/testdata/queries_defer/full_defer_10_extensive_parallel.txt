@@ -7,32 +7,11 @@ Content-Type: application/json
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"employees":[{"id":1,"details":{"forename":"Jens"}},{"id":2,"details":{"forename":"Dustin"}},{"id":3,"details":{"forename":"Stefan"}},{"id":4,"details":{"forename":"Björn"}},{"id":5,"details":{"forename":"Sergiy"}},{"id":7,"details":{"forename":"Suvij"}},{"id":8,"details":{"forename":"Nithin"}},{"id":10,"details":{"forename":"Eelco"}},{"id":11,"details":{"forename":"Alexandra"}},{"id":12,"details":{"forename":"David"}}]},"path":[]}],"hasNext":true}
+{"incremental":[{"data":{"employees":[{},{},{},{},{},{},{},{},{},{}],"employee":{},"teammates":[{},{}],"productTypes":[{},{"lead":{"details":{"forename":"Jens"}},"name":"CONSULTANCY"},{"url":"https://docs.wundergraph.com/","urls":["https://cosmo-docs.wundergraph.com/","https://wundergraph.com/pricing"]}],"a":[{}],"b":[{}]},"path":[]}],"hasNext":true}
 
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"employee":{"id":1,"details":{"forename":"Jens","location":{"language":"German"}}}},"path":[]}],"hasNext":true}
+{"incremental":[{"data":{"id":4},"path":["teammates",0],"errors":[{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",0,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",1,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",2,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",3,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",4,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",5,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",6,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",7,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",8,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",9,"role"]}]},{"data":{"id":11},"path":["teammates",1],"errors":[{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",0,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",1,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",2,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",3,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",4,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",5,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",6,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",7,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",8,"role"]},{"message":"Cannot return null for non-nullable field 'Query.employees.role'.","path":["employees",9,"role"]}]}],"hasNext":false}
 
 --graphql
-Content-Type: application/json
-
-{"incremental":[{"data":{"teammates":[{"id":4,"details":{"forename":"Björn"},"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"details":{"forename":"Alexandra"},"products":["FINANCE"]}]},"path":[]}],"hasNext":true}
-
---graphql
-Content-Type: application/json
-
-{"incremental":[{"data":{"productTypes":[{},{"name":"CONSULTANCY","lead":{"details":{"forename":"Jens"}}},{"url":"https://docs.wundergraph.com/"}]},"path":[]}],"hasNext":true}
-
---graphql
-Content-Type: application/json
-
-{"incremental":[{"data":{"a":[{"details":{"forename":"Sergiy"}}]},"path":[]}],"hasNext":true}
-
---graphql
-Content-Type: application/json
-
-{"incremental":[{"data":{"b":[{"details":{"forename":"Björn"}}]},"path":[]}],"hasNext":false}
-
---graphql
---graphql--

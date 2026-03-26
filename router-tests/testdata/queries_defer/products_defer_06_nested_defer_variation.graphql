@@ -4,13 +4,28 @@ query {
       upc
       ... on Cosmo {
         name
-        ... @defer { repositoryURL lead { details { forename } } }
+        ... @defer {
+          repositoryURL
+          lead { details { forename } }
+        }
+      }
+      ... on SDK {
+        owner { details { forename } }
+        clientLanguages
+        unicode
       }
     }
   }
   productTypes {
     __typename
-    ... on Documentation { url(product: COSMO) }
-    ... on Consultancy { name lead { details { forename } } }
+    upc
+    ... on Documentation {
+      url(product: COSMO)
+      urls(products: [CONSULTANCY, ENGINE, HUMAN_RESOURCES, SDK])
+    }
+    ... on Consultancy {
+      lead { details { forename } }
+      name
+    }
   }
 }

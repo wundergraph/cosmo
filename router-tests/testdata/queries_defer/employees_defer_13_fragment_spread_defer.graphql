@@ -1,17 +1,41 @@
-fragment EngineerRole on Engineer {
-  departments
-  title
-  engineerType
+fragment EmployeeDetails on Employee {
+  details {
+    forename
+    surname
+    location { key { name } language }
+    hasChildren
+    maritalStatus
+    nationality
+    pets {
+      class
+      gender
+      name
+      ... on Cat { type }
+      ... on Dog { breed }
+      ... on Alligator { dangerous }
+    }
+  }
+  role {
+    departments
+    title
+    ... on Engineer { engineerType }
+    ... on Operator { operatorType }
+  }
+  hobbies {
+    ... on Exercise { category }
+    ... on Flying { planeModels yearsOfExperience }
+    ... on Gaming { genres name yearsOfExperience }
+    ... on Other { name }
+    ... on Programming { languages }
+    ... on Travelling { countriesLived { language } }
+  }
+  products
 }
 
 query {
   employees {
     id
-    details { forename }
-    role {
-      departments
-      title
-      ...EngineerRole @defer
-    }
+    notes
+    ...EmployeeDetails @defer
   }
 }

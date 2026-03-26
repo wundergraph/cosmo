@@ -2,7 +2,7 @@
 --graphql
 Content-Type: application/json
 
-{"data":{"products":[{"name":"CONSULTANCY","lead":{"__typename":"Employee","id":1}},{},{}]},"hasNext":true}
+{"data":{"products":[{"lead":{"__typename":"Employee","id":1}},{},{}]},"hasNext":true}
 
 --graphql
 Content-Type: application/json

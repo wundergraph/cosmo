@@ -4,7 +4,6 @@ query RequiresMood {
       lead { __typename id }
       ... @defer {
         lead { derivedMood }
-        name
       }
     }
   }
