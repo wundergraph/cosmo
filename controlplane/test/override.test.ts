@@ -240,4 +240,87 @@ describe('Overrides', (ctx) => {
     expect(overridesRes.overrides[1].changesOverrideCount).toBe(0);
     expect(overridesRes.overrides[1].hasIgnoreAllOverride).toBe(true);
   });
+
+  test('Should paginate overrides with limit and offset', async (testContext) => {
+    const { client, server } = await SetupTest({ dbname });
+    testContext.onTestFinished(() => server.close());
+
+    const fedGraphName = genID('fedGraph');
+    const label = genUniqueLabel();
+
+    const createFedGraphRes = await client.createFederatedGraph({
+      name: fedGraphName,
+      namespace: 'default',
+      routingUrl: 'http://localhost:8081',
+      labelMatchers: [joinLabel(label)],
+    });
+    expect(createFedGraphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    const graphRes = await client.getFederatedGraphByName({
+      name: fedGraphName,
+      namespace: 'default',
+    });
+    expect(graphRes.response?.code).toBe(EnumStatusCode.OK);
+
+    // Create 3 overrides
+    for (let i = 1; i <= 3; i++) {
+      const res = await client.createOperationOverrides({
+        graphName: graphRes.graph?.name,
+        namespace: graphRes.graph?.namespace,
+        operationHash: `hash${i}`,
+        operationName: `op${i}`,
+        changes: [
+          {
+            changeType: 'FIELD_TYPE_CHANGED',
+            path: `A.field${i}`,
+          },
+        ],
+      });
+      expect(res.response?.code).toBe(EnumStatusCode.OK);
+    }
+
+    // Fetch all without pagination params — should return all 3
+    const allRes = await client.getAllOverrides({
+      graphName: graphRes.graph?.name,
+      namespace: graphRes.graph?.namespace,
+    });
+    expect(allRes.response?.code).toBe(EnumStatusCode.OK);
+    expect(allRes.totalCount).toBe(3);
+    expect(allRes.overrides.map((o) => o.hash)).toEqual(['hash1', 'hash2', 'hash3']);
+
+    // Fetch first page with limit 2
+    const page1 = await client.getAllOverrides({
+      graphName: graphRes.graph?.name,
+      namespace: graphRes.graph?.namespace,
+      limit: 2,
+      offset: 0,
+    });
+    expect(page1.response?.code).toBe(EnumStatusCode.OK);
+    expect(page1.overrides.length).toBe(2);
+    expect(page1.totalCount).toBe(3);
+    expect(page1.overrides.map((o) => o.hash)).toEqual(['hash1', 'hash2']);
+
+    // Fetch second page with limit 2, offset 2
+    const page2 = await client.getAllOverrides({
+      graphName: graphRes.graph?.name,
+      namespace: graphRes.graph?.namespace,
+      limit: 2,
+      offset: 2,
+    });
+    expect(page2.response?.code).toBe(EnumStatusCode.OK);
+    expect(page2.overrides.length).toBe(1);
+    expect(page2.totalCount).toBe(3);
+    expect(page2.overrides.map((o) => o.hash)).toEqual(['hash3']);
+
+    // Fetch with offset beyond total — should return empty but correct totalCount
+    const page3 = await client.getAllOverrides({
+      graphName: graphRes.graph?.name,
+      namespace: graphRes.graph?.namespace,
+      limit: 10,
+      offset: 10,
+    });
+    expect(page3.response?.code).toBe(EnumStatusCode.OK);
+    expect(page3.overrides.length).toBe(0);
+    expect(page3.totalCount).toBe(3);
+  });
 });
