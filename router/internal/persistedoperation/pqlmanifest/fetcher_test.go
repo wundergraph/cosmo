@@ -102,8 +102,7 @@ func TestFetch_NoIfNoneMatchOnFirstRequest(t *testing.T) {
 	f := newTestFetcher(server.URL)
 
 	// Wrap to capture headers
-	var origHandler http.Handler
-	origHandler = server.Config.Handler
+	var origHandler http.Handler = server.Config.Handler
 	server.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		receivedHeaders = r.Header
 		origHandler.ServeHTTP(w, r)
