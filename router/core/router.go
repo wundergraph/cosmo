@@ -528,7 +528,6 @@ func NewRouter(opts ...Option) (*Router, error) {
 		r.engineExecutionConfiguration.Debug.EnableCacheResponseHeaders = true
 	}
 
-
 	if r.securityConfiguration.DepthLimit != nil {
 		r.logger.Warn("The security configuration field 'depth_limit' is deprecated, and will be removed. Use 'security.complexity_limits.depth' instead.")
 
@@ -1155,6 +1154,9 @@ func (r *Router) buildClients(ctx context.Context) error {
 		fileSystemProviders[provider.ID] = provider
 	}
 
+	// Create the storage client for persisted operations based on the configured provider.
+	// The same client is reused for manifest fetching when the manifest feature is enabled,
+	// since both features are exclusive (manifest replaces individual operation fetches).
 	var pClient persistedoperation.StorageClient
 
 	if !r.persistedOperationsConfig.Disabled {
@@ -1167,7 +1169,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 				Logger: r.logger,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create CDN client: %w", err)
 			}
 			pClient = c
 
@@ -1186,7 +1188,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 				TraceProvider:    r.tracerProvider,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create S3 client: %w", err)
 			}
 			pClient = c
 
@@ -1198,7 +1200,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 				ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create filesystem client: %w", err)
 			}
 			pClient = c
 
@@ -1214,7 +1216,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 				Logger: r.logger,
 			})
 			if err != nil {
-				return err
+				return fmt.Errorf("failed to create CDN client: %w", err)
 			}
 			pClient = c
 
@@ -1255,16 +1257,40 @@ func (r *Router) buildClients(ctx context.Context) error {
 
 	var pqlStore *pqlmanifest.Store
 
-	if r.persistedOperationsConfig.Manifest.Enabled {
+	if r.persistedOperationsConfig.Manifest.Enabled && !r.persistedOperationsConfig.Disabled {
+		const manifestFileName = "manifest.json"
+
 		pqlStore = pqlmanifest.NewStore(r.logger)
 
-		manifestPath := r.persistedOperationsConfig.Manifest.Path
-		if manifestPath != "" {
-			if err := r.loadPQLManifestFromStorage(ctx, pqlStore, manifestPath, fileSystemProviders, s3Providers, cdnProviders); err != nil {
-				return err
+		storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
+
+		if _, ok := fileSystemProviders[storageProviderID]; ok {
+			return fmt.Errorf("filesystem storage provider %q is not supported for PQL manifest; use S3 or CDN instead", storageProviderID)
+		}
+
+		if storageProviderID != "" {
+			// An explicit storage provider is configured — use the already-created client to fetch the manifest once at startup.
+			objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
+			objectPath := manifestFileName
+			if objectPrefix != "" {
+				objectPath = path.Join(objectPrefix, manifestFileName)
 			}
+
+			data, err := pClient.FetchManifest(ctx, objectPath)
+			if err != nil {
+				return fmt.Errorf("failed to fetch PQL manifest from storage provider %q: %w",
+					r.persistedOperationsConfig.Storage.ProviderID, err)
+			}
+			if err := pqlStore.LoadFromData(data); err != nil {
+				return fmt.Errorf("failed to parse PQL manifest from storage provider %q: %w",
+					r.persistedOperationsConfig.Storage.ProviderID, err)
+			}
+			r.logger.Info("Loaded PQL manifest from storage provider",
+				zap.String("provider_id", r.persistedOperationsConfig.Storage.ProviderID),
+				zap.Int("operations", pqlStore.OperationCount()),
+			)
 		} else {
-			// No path set — fetch manifest from CDN and poll for updates
+			// No storage provider configured — fetch manifest from Cosmo CDN and poll for updates.
 			if r.graphApiToken == "" {
 				return errors.New("graph token is required for PQL manifest")
 			}
@@ -1288,7 +1314,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 			go poller.Poll(ctx)
 		}
 
-		// When manifest is enabled, do not use CDN fetches for individual operations
+		// Manifest is authoritative — individual operation fetches are not needed.
 		pClient = nil
 	}
 
@@ -1320,99 +1346,6 @@ func (r *Router) buildClients(ctx context.Context) error {
 	if configPoller != nil {
 		r.configPoller = *configPoller
 	}
-
-	return nil
-}
-
-// loadPQLManifestFromStorage loads a PQL manifest from the configured storage provider.
-func (r *Router) loadPQLManifestFromStorage(
-	ctx context.Context,
-	pqlStore *pqlmanifest.Store,
-	manifestPath string,
-	fileSystemProviders map[string]config.FileSystemStorageProvider,
-	s3Providers map[string]config.S3StorageProvider,
-	cdnProviders map[string]config.CDNStorageProvider,
-) error {
-	storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
-	objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
-
-	resolveObjectPath := func(p string) string {
-		if objectPrefix != "" {
-			return path.Join(objectPrefix, p)
-		}
-		return p
-	}
-
-	var providerType string
-
-	if provider, ok := fileSystemProviders[storageProviderID]; ok {
-		providerType = "filesystem"
-		fsClient, err := fs.NewClient(provider.Path, &fs.Options{
-			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create filesystem client for PQL manifest: %w", err)
-		}
-		data, err := fsClient.FetchManifest(manifestPath)
-		if err != nil {
-			return fmt.Errorf("failed to load PQL manifest from filesystem provider %q: %w", storageProviderID, err)
-		}
-		if err := pqlStore.LoadFromData(data); err != nil {
-			return fmt.Errorf("failed to parse PQL manifest from filesystem provider %q: %w", storageProviderID, err)
-		}
-	} else if provider, ok := s3Providers[storageProviderID]; ok {
-		providerType = "s3"
-		s3Client, err := s3.NewClient(provider.Endpoint, &s3.Options{
-			AccessKeyID:      provider.AccessKey,
-			SecretAccessKey:  provider.SecretKey,
-			Region:           provider.Region,
-			UseSSL:           provider.Secure,
-			BucketName:       provider.Bucket,
-			ObjectPathPrefix: r.persistedOperationsConfig.Storage.ObjectPrefix,
-			TraceProvider:    r.tracerProvider,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create S3 client for PQL manifest: %w", err)
-		}
-		data, err := s3Client.FetchManifest(ctx, resolveObjectPath(manifestPath))
-		if err != nil {
-			return fmt.Errorf("failed to load PQL manifest from S3 provider %q: %w", storageProviderID, err)
-		}
-		if err := pqlStore.LoadFromData(data); err != nil {
-			return fmt.Errorf("failed to parse PQL manifest from S3 provider %q: %w", storageProviderID, err)
-		}
-	} else if provider, ok := cdnProviders[storageProviderID]; ok {
-		providerType = "cdn"
-		if r.graphApiToken == "" {
-			return errors.New("graph token is required to fetch PQL manifest from CDN")
-		}
-		cdnClient, err := cdn.NewClient(provider.URL, r.graphApiToken, cdn.Options{
-			Logger: r.logger,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create CDN client for PQL manifest: %w", err)
-		}
-		data, err := cdnClient.FetchManifest(ctx, resolveObjectPath(manifestPath))
-		if err != nil {
-			return fmt.Errorf("failed to load PQL manifest from CDN provider %q: %w", storageProviderID, err)
-		}
-		if err := pqlStore.LoadFromData(data); err != nil {
-			return fmt.Errorf("failed to parse PQL manifest from CDN provider %q: %w", storageProviderID, err)
-		}
-	} else if storageProviderID == "" {
-		providerType = "file"
-		if err := pqlStore.LoadFromFile(manifestPath); err != nil {
-			return fmt.Errorf("failed to load PQL manifest from file %q: %w", manifestPath, err)
-		}
-	} else {
-		return fmt.Errorf("unknown storage provider id %q for PQL manifest", storageProviderID)
-	}
-
-	r.logger.Info("Loaded PQL manifest",
-		zap.String("source", providerType),
-		zap.String("provider_id", storageProviderID),
-		zap.Int("operations", pqlStore.OperationCount()),
-	)
 
 	return nil
 }

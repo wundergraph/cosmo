@@ -24,12 +24,12 @@ type Options struct {
 	Logger *zap.Logger
 }
 
-// Deprecated: The CDN-based persisted operation client is deprecated.
+// Deprecated: The CDN-based persisted operation Client is deprecated.
 // The router now downloads all operations at once via the PQL manifest, avoiding
-// per-request CDN latency. This client is kept for backward compatibility.
-var _ persistedoperation.StorageClient = (*client)(nil)
+// per-request CDN latency. This Client is kept for backward compatibility.
+var _ persistedoperation.StorageClient = (*Client)(nil)
 
-type client struct {
+type Client struct {
 	cdnURL              *url.URL
 	authenticationToken string
 	// federatedGraphID is the ID of the federated graph that was obtained
@@ -42,7 +42,39 @@ type client struct {
 	logger         *zap.Logger
 }
 
-func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+// NewClient creates a new CDN Client. URL is the URL of the CDN.
+// Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
+func NewClient(endpoint string, token string, opts Options) (*Client, error) {
+	u, err := url.Parse(endpoint)
+	if err != nil {
+		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
+	}
+
+	if opts.Logger == nil {
+		opts.Logger = zap.NewNop()
+	}
+
+	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
+	if err != nil {
+		return nil, err
+	}
+
+	logger := opts.Logger.With(
+		zap.String("component", "persisted_operations_client"),
+		zap.String("url", endpoint),
+	)
+
+	return &Client{
+		cdnURL:              u,
+		authenticationToken: token,
+		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
+		organizationID:      url.PathEscape(claims.OrganizationID),
+		httpClient:          httpclient.NewRetryableHTTPClient(logger),
+		logger:              logger,
+	}, nil
+}
+
+func (cdn *Client) PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 	content, err := cdn.persistedOperation(ctx, clientName, sha256Hash)
 	if err != nil {
 		return nil, err
@@ -51,7 +83,7 @@ func (cdn *client) PersistedOperation(ctx context.Context, clientName string, sh
 	return content, nil
 }
 
-func (cdn *client) persistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
+func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error) {
 
 	span := trace.SpanFromContext(ctx)
 
@@ -73,9 +105,7 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 		semconv12.HTTPHostKey.String(req.Host),
 	)
 
-	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
-	req.Header.Set("Accept-Encoding", "gzip")
+	cdn.setCDNHeaders(req)
 
 	resp, err := cdn.httpClient.Do(req)
 	if err != nil {
@@ -105,18 +135,11 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 		return nil, fmt.Errorf("unexpected status code when loading persisted operation, statusCode: %d", resp.StatusCode)
 	}
 
-	var reader io.Reader = resp.Body
-
-	if resp.Header.Get("Content-Encoding") == "gzip" {
-		r, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return nil, errors.New("could not create gzip reader. " + err.Error())
-		}
-		defer func() {
-			_ = r.Close()
-		}()
-		reader = r
+	reader, cleanup, err := gzipAwareReader(resp)
+	if err != nil {
+		return nil, err
 	}
+	defer cleanup()
 
 	body, err := io.ReadAll(reader)
 	if err != nil {
@@ -132,50 +155,16 @@ func (cdn *client) persistedOperation(ctx context.Context, clientName string, sh
 	return []byte(po.Body), nil
 }
 
-// NewClient creates a new CDN client. URL is the URL of the CDN.
-// Token is the token used to authenticate with the CDN, the same as the GRAPH_API_TOKEN
-func NewClient(endpoint string, token string, opts Options) (*client, error) {
-	u, err := url.Parse(endpoint)
-	if err != nil {
-		return nil, fmt.Errorf("invalid CDN URL %q: %w", endpoint, err)
-	}
-
-	if opts.Logger == nil {
-		opts.Logger = zap.NewNop()
-	}
-
-	claims, err := jwt.ExtractFederatedGraphTokenClaims(token)
-	if err != nil {
-		return nil, err
-	}
-
-	logger := opts.Logger.With(
-		zap.String("component", "persisted_operations_client"),
-		zap.String("url", endpoint),
-	)
-
-	return &client{
-		cdnURL:              u,
-		authenticationToken: token,
-		federatedGraphID:    url.PathEscape(claims.FederatedGraphID),
-		organizationID:      url.PathEscape(claims.OrganizationID),
-		httpClient:          httpclient.NewRetryableHTTPClient(logger),
-		logger:              logger,
-	}, nil
-}
-
 // FetchManifest fetches a PQL manifest from the CDN at the given path and returns the raw bytes.
-func (cdn *client) FetchManifest(ctx context.Context, manifestPath string) ([]byte, error) {
+func (cdn *Client) FetchManifest(ctx context.Context, manifestPath string) ([]byte, error) {
 	manifestURL := cdn.cdnURL.ResolveReference(&url.URL{Path: manifestPath})
 
-	req, err := http.NewRequestWithContext(ctx, "GET", manifestURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, "POST", manifestURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
-	req.Header.Set("Accept-Encoding", "gzip")
+	cdn.setCDNHeaders(req)
 
 	resp, err := cdn.httpClient.Do(req)
 	if err != nil {
@@ -186,23 +175,36 @@ func (cdn *client) FetchManifest(ctx context.Context, manifestPath string) ([]by
 	}()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("CDN returned status %d when fetching manifest", resp.StatusCode)
+		return nil, fmt.Errorf("CDN returned status %d when fetching persistent operation manifest", resp.StatusCode)
 	}
 
-	var reader io.Reader = resp.Body
-
-	if resp.Header.Get("Content-Encoding") == "gzip" {
-		r, err := gzip.NewReader(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("could not create gzip reader: %w", err)
-		}
-		defer func() {
-			_ = r.Close()
-		}()
-		reader = r
+	reader, cleanup, err := gzipAwareReader(resp)
+	if err != nil {
+		return nil, err
 	}
+	defer cleanup()
 
 	return io.ReadAll(reader)
 }
 
-func (cdn *client) Close() {}
+// setCDNHeaders sets the common headers for CDN requests.
+func (cdn *Client) setCDNHeaders(req *http.Request) {
+	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+	req.Header.Add("Authorization", "Bearer "+cdn.authenticationToken)
+	req.Header.Set("Accept-Encoding", "gzip")
+}
+
+// gzipAwareReader returns a reader that transparently decompresses the response body
+// if the response is gzip-encoded, along with a cleanup function that must be deferred.
+func gzipAwareReader(resp *http.Response) (io.Reader, func(), error) {
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		r, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, nil, fmt.Errorf("could not create gzip reader: %w", err)
+		}
+		return r, func() { _ = r.Close() }, nil
+	}
+	return resp.Body, func() {}, nil
+}
+
+func (cdn *Client) Close() {}

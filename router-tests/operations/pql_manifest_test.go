@@ -119,6 +119,36 @@ func TestPQLManifest(t *testing.T) {
 		})
 	})
 
+	t.Run("defaults to Cosmo CDN when no storage provider configured", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(manifestConfig),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				OperationName: []byte(`"Employees"`),
+				Extensions:    []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "dc67510fb4289672bea757e862d6b00e83db5d3cbbcfb15260601b6f29bb2b8f"}}`),
+				Header:        header,
+			})
+			require.NoError(t, err)
+			require.Equal(t, expectedEmployeesBody, res.Body)
+
+			hasManifestRequest := false
+			for _, req := range getCDNRequests(t, xEnv.CDN.URL) {
+				if strings.Contains(req, "/operations/manifest.json") {
+					hasManifestRequest = true
+				}
+				require.False(t, strings.Contains(req, "/operations/my-client/"),
+					"expected no individual operation CDN requests, but got: %s", req)
+			}
+			require.True(t, hasManifestRequest, "CDN should be called for manifest when no storage provider is configured")
+		})
+	})
+
 	t.Run("safelist with manifest allows known queries", func(t *testing.T) {
 		t.Parallel()
 		testenv.Run(t, &testenv.Config{
@@ -204,6 +234,39 @@ func TestPQLManifest(t *testing.T) {
 			require.Len(t, logEntries, 1)
 			requestContext := logEntries[0].ContextMap()
 			require.Equal(t, nonPersistedQuery, requestContext["query"])
+		})
+	})
+
+	t.Run("log_unknown with manifest returns not found for hash-only request", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Manifest: config.PQLManifestConfig{
+						Enabled:      true,
+						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
+					},
+					LogUnknown: true,
+				}),
+			},
+			LogObservation: testenv.LogObservationConfig{
+				Enabled:  true,
+				LogLevel: zapcore.WarnLevel,
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			header := make(http.Header)
+			header.Add("graphql-client-name", "my-client")
+
+			// Hash-only request with no query body — should return PersistedQueryNotFound, not "empty request body"
+			res := xEnv.MakeGraphQLRequestOK(testenv.GraphQLRequest{
+				Extensions: []byte(`{"persistedQuery": {"version": 1, "sha256Hash": "0000000000000000000000000000000000000000000000000000000000000000"}}`),
+				Header:     header,
+			})
+			require.Equal(t, persistedNotFoundResp, res.Body)
+
+			logEntries := xEnv.Observer().FilterMessageSnippet("Unknown persisted operation found").All()
+			require.Len(t, logEntries, 1)
 		})
 	})
 
@@ -461,6 +524,65 @@ func TestPQLManifest(t *testing.T) {
 				})
 				assert.Equal(ct, persistedNotFoundResp, res.Body)
 			}, 5*time.Second, 100*time.Millisecond)
+		})
+	})
+
+	t.Run("disabled persisted operations suppresses manifest", func(t *testing.T) {
+		t.Parallel()
+		testenv.Run(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Disabled: true,
+					Manifest: config.PQLManifestConfig{
+						Enabled:      true,
+						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
+					},
+				}),
+			},
+		}, func(t *testing.T, xEnv *testenv.Environment) {
+			// With persisted operations disabled, manifest should not load.
+			// A regular query should still work.
+			res, err := xEnv.MakeGraphQLRequest(testenv.GraphQLRequest{
+				Query: "query { employees { id } }",
+			})
+			require.NoError(t, err)
+			require.Equal(t, expectedEmployeesBody, res.Body)
+
+			// No manifest requests should be made to CDN
+			hasManifestRequest := false
+			for _, req := range getCDNRequests(t, xEnv.CDN.URL) {
+				if strings.Contains(req, "/operations/manifest.json") {
+					hasManifestRequest = true
+				}
+			}
+			require.False(t, hasManifestRequest, "CDN should not fetch manifest when persisted operations are disabled")
+		})
+	})
+
+	t.Run("filesystem provider rejected for manifest", func(t *testing.T) {
+		t.Parallel()
+		testenv.FailsOnStartup(t, &testenv.Config{
+			RouterOptions: []core.Option{
+				core.WithPersistedOperationsConfig(config.PersistedOperationsConfig{
+					Manifest: config.PQLManifestConfig{
+						Enabled:      true,
+						PollInterval: 10 * time.Second,
+						PollJitter:   5 * time.Second,
+					},
+					Storage: config.PersistedOperationsStorageConfig{
+						ProviderID: "local",
+					},
+				}),
+				core.WithStorageProviders(config.StorageProviders{
+					FileSystem: []config.FileSystemStorageProvider{
+						{ID: "local", Path: "."},
+					},
+				}),
+			},
+		}, func(t *testing.T, err error) {
+			require.ErrorContains(t, err, "filesystem storage provider")
+			require.ErrorContains(t, err, "not supported for PQL manifest")
 		})
 	})
 }

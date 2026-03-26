@@ -70,7 +70,7 @@ func (c client) persistedOperation(clientName string, sha256Hash string) ([]byte
 }
 
 // FetchManifest reads a PQL manifest from the filesystem at the given path and returns the raw bytes.
-func (c client) FetchManifest(manifestPath string) ([]byte, error) {
+func (c client) FetchManifest(_ context.Context, manifestPath string) ([]byte, error) {
 	fullPath := filepath.Join(c.path, c.options.ObjectPathPrefix, manifestPath)
 	return os.ReadFile(fullPath)
 }

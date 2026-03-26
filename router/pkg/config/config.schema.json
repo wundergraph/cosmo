@@ -181,7 +181,7 @@
         },
         "storage": {
           "description": "The storage provider for persisted operation. Only one provider can be active. When no provider is specified, the router will fallback to the Cosmo CDN provider to download the persisted operations.",
-          "required": ["provider_id", "object_prefix"],
+          "required": ["provider_id"],
           "properties": {
             "provider_id": {
               "description": "The ID of the storage provider. The ID must match the ID of the storage provider in the storage_providers section.",
@@ -202,10 +202,6 @@
               "type": "boolean",
               "description": "Enable the PQL manifest feature.",
               "default": false
-            },
-            "path": {
-              "type": "string",
-              "description": "The path to the PQL manifest JSON file."
             },
             "poll_interval": {
               "type": "string",

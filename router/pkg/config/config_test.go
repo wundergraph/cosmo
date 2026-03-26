@@ -505,7 +505,7 @@ persisted_operations:
 	require.NoError(t, err, &js)
 }
 
-func TestInvalidPersistedOperations(t *testing.T) {
+func TestPersistedOperationsStorageWithoutObjectPrefix(t *testing.T) {
 	t.Parallel()
 
 	f := createTempFileFromFixture(t, `
@@ -525,12 +525,9 @@ persisted_operations:
     size: 100MB
   storage:
     provider_id: s3
-    # Missing object_prefix
 `)
 	_, err := LoadConfig([]string{f})
-	var js *jsonschema.ValidationError
-	require.ErrorAs(t, err, &js)
-	require.Equal(t, "at '/persisted_operations/storage': missing property 'object_prefix'", js.Causes[0].Error())
+	require.NoError(t, err)
 }
 
 func TestValidExecutionConfig(t *testing.T) {
