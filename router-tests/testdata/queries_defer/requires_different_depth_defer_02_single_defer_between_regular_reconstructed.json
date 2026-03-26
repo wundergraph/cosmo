@@ -5,6 +5,7 @@
         "__typename": "Consultancy",
         "isLeadAvailable": false,
         "lead": {
+          "__typename": "Employee",
           "id": 1,
           "derivedMood": "HAPPY"
         }

@@ -7,7 +7,7 @@ Content-Type: application/json
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"products":[{"lead":{"id":1,"derivedMood":"HAPPY"},"isLeadAvailable":false},{},{}]},"path":[]}],"hasNext":false}
+{"incremental":[{"data":{"products":[{"__typename":"Consultancy","lead":{"__typename":"Employee","id":1,"derivedMood":"HAPPY"},"isLeadAvailable":false},{"__typename":"Cosmo"},{"__typename":"SDK"}]},"path":[]}],"hasNext":false}
 
 --graphql
 --graphql--

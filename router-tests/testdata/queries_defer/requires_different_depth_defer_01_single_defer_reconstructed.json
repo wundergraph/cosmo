@@ -4,6 +4,7 @@
       {
         "__typename": "Consultancy",
         "lead": {
+          "__typename": "Employee",
           "id": 1,
           "derivedMood": "HAPPY"
         },

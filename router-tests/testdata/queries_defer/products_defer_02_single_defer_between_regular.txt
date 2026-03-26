@@ -7,7 +7,7 @@ Content-Type: application/json
 --graphql
 Content-Type: application/json
 
-{"incremental":[{"data":{"productTypes":[{"upc":"cosmo"},{"lead":{"details":{"forename":"Jens"}},"name":"CONSULTANCY"},{"url":"https://cosmo-docs.wundergraph.com/","urls":["https://cal.com/stefan-avram-wundergraph/wundergraph-introduction","https://github.com/wundergraph/graphql-go-tools/blob/master/README.md","N/A","https://docs.wundergraph.com/"]}]},"path":[]}],"hasNext":false}
+{"incremental":[{"data":{"productTypes":[{"__typename":"Cosmo","upc":"cosmo"},{"__typename":"Consultancy","lead":{"details":{"forename":"Jens"}},"name":"CONSULTANCY"},{"__typename":"Documentation","url":"https://cosmo-docs.wundergraph.com/","urls":["https://cal.com/stefan-avram-wundergraph/wundergraph-introduction","https://github.com/wundergraph/graphql-go-tools/blob/master/README.md","N/A","https://docs.wundergraph.com/"]}]},"path":[]}],"hasNext":false}
 
 --graphql
 --graphql--

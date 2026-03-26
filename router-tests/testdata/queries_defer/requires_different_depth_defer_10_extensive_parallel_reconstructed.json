@@ -2,13 +2,19 @@
   "data": {
     "products": [
       {
+        "__typename": "Consultancy",
         "isLeadAvailable": false,
         "lead": {
+          "__typename": "Employee",
           "id": 1
         }
       },
-      {},
-      {}
+      {
+        "__typename": "Cosmo"
+      },
+      {
+        "__typename": "SDK"
+      }
     ]
   },
   "errors": [
