@@ -1,0 +1,15 @@
+{
+  "data": {
+    "products": [
+      {
+        "isLeadAvailable": false,
+        "lead": {
+          "id": 1,
+          "derivedMood": "HAPPY"
+        }
+      },
+      {},
+      {}
+    ]
+  }
+}

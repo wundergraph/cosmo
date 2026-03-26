@@ -1,0 +1,10 @@
+{
+  "errors": [
+    {
+      "message": "Unknown type \"ProductType\".",
+      "path": [
+        "ProductType"
+      ]
+    }
+  ]
+}

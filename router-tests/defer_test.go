@@ -35,11 +35,14 @@ func TestDeferTestdataQueries(t *testing.T) {
 			continue
 		}
 
+		// "full_defer_01_single_defer" → source = "full"
+		source, _, found := strings.Cut(name, "_defer_")
+		if !found {
+			continue
+		}
+
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-
-			// "full_defer_01_single_defer" → source = "full"
-			source, _, _ := strings.Cut(name, "_defer_")
 
 			gMultipart := goldie.New(
 				t,
@@ -50,7 +53,7 @@ func TestDeferTestdataQueries(t *testing.T) {
 			gFull := goldie.New(
 				t,
 				goldie.WithFixtureDir("testdata/queries_defer"),
-				goldie.WithNameSuffix("_original.json"),
+				goldie.WithNameSuffix(".json"),
 				goldie.WithDiffEngine(goldie.ClassicDiff),
 			)
 
@@ -89,7 +92,18 @@ func TestDeferTestdataQueries(t *testing.T) {
 					require.NoError(t, err)
 
 					actual := normalizeJSON(t, reconstructed)
-					gFull.Assert(t, source, actual)
+
+					gFull.Assert(t, name+"_reconstructed", actual)
+
+					// compare with original
+					if false {
+						expected, err := os.ReadFile(gFull.GoldenFileName(t, source+"_original"))
+						require.NoError(t, err)
+						// manually assert to never update original when update flag is specified
+						if diff := goldie.Diff(goldie.ClassicDiff, string(actual), string(expected)); diff != "" {
+							t.Fatal(diff)
+						}
+					}
 				})
 			})
 		})
