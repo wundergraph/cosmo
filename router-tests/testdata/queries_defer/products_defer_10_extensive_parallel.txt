@@ -2,5 +2,16 @@
 --graphql
 Content-Type: application/json
 
-{"errors":[{"message":"cannot select field: upc on union: Products","path":["query","products"]}]}
---graphql--
+{"data":{},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"products":[{},{},{}]},"path":[]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[],"hasNext":false}
+
+--graphql
