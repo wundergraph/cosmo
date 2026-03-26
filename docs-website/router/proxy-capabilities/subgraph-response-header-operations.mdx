@@ -110,7 +110,7 @@ The `set` value is **not** forwarded to the client response.
 
 
 <Warning>
-You can use `set`, to set a header value and then use a `propagate` rule to propagate that same header to the client. Howevever we would caution against doing this, as no client header will be propagated in case no subgraph was actually called.
+You can use `set` to set a header value and then use a `propagate` rule to forward that same header to the client. However, we would caution against this, as the header will not be propagated if no subgraph was actually called.
 </Warning>
 
 ### Configuration
