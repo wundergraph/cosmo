@@ -2375,7 +2375,7 @@ func (e *Environment) MakeGraphQLDeferRequest(method string, body io.Reader) *ht
 	require.NoError(e.t, err)
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "multipart/mixed;deferSpec=20220824, application/json")
+	req.Header.Set("Accept", "multipart/mixed")
 	req.Header.Set("Connection", "keep-alive")
 
 	return req

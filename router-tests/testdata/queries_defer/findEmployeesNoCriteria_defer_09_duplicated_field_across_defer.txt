@@ -1,13 +1,1 @@
-
---graphql
-Content-Type: application/json
-
-{"data":{"findEmployees":[{"details":{"forename":"Jens"}},{"details":{"forename":"Dustin"}},{"details":{"forename":"Stefan"}},{"details":{"forename":"Björn"}},{"details":{"forename":"Sergiy"}},{"details":{"forename":"Suvij"}},{"details":{"forename":"Nithin"}},{"details":{"forename":"Eelco"}},{"details":{"forename":"Alexandra"}},{"details":{"forename":"David"}}]},"hasNext":true}
-
---graphql
-Content-Type: application/json
-
-{"incremental":[{"data":{"location":{"language":"German"}},"path":["findEmployees",0,"details"]},{"data":{"location":{"language":"German"}},"path":["findEmployees",1,"details"]},{"data":{"location":{"language":"English"}},"path":["findEmployees",2,"details"]},{"data":{"location":{"language":"German"}},"path":["findEmployees",3,"details"]},{"data":{"location":{"language":"Ukrainian"}},"path":["findEmployees",4,"details"]},{"data":{"location":{"language":"Hindi"}},"path":["findEmployees",5,"details"]},{"data":{"location":{"language":"Hindi"}},"path":["findEmployees",6,"details"]},{"data":{"location":{"language":"Dutch"}},"path":["findEmployees",7,"details"]},{"data":{"location":{"language":"German"}},"path":["findEmployees",8,"details"]},{"data":{"location":{"language":"English"}},"path":["findEmployees",9,"details"]}],"hasNext":false}
-
---graphql
---graphql--
+{"data":{"findEmployees":[{"details":{"forename":"Jens"}},{"details":{"forename":"Dustin"}},{"details":{"forename":"Stefan"}},{"details":{"forename":"Björn"}},{"details":{"forename":"Sergiy"}},{"details":{"forename":"Suvij"}},{"details":{"forename":"Nithin"}},{"details":{"forename":"Eelco"}},{"details":{"forename":"Alexandra"}},{"details":{"forename":"David"}}]}}
