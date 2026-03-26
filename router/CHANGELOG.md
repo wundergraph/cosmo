@@ -4,6 +4,22 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.296.0](https://github.com/wundergraph/cosmo/compare/router@0.295.0...router@0.296.0) (2026-03-26)
+
+### Bug Fixes
+
+* documenting and updating span / metric error cases ([#2681](https://github.com/wundergraph/cosmo/issues/2681)) ([d413a26](https://github.com/wundergraph/cosmo/commit/d413a269fa5fb657d883be1eb5bf008e016ecbb0)) (@SkArchon)
+
+### Features
+
+* **router:** validate slicing arguments in Cost Control ([#2692](https://github.com/wundergraph/cosmo/issues/2692)) ([4416030](https://github.com/wundergraph/cosmo/commit/44160304075c3505862c000e4f78c7c802b42ea7)) (@ysmolski)
+
+# [0.295.0](https://github.com/wundergraph/cosmo/compare/router@0.294.0...router@0.295.0) (2026-03-19)
+
+### Features
+
+* slow plan cache ([#2611](https://github.com/wundergraph/cosmo/issues/2611)) ([9a96032](https://github.com/wundergraph/cosmo/commit/9a9603285fdc457287b4153be615314022f4c529)) (@SkArchon)
+
 # [0.294.0](https://github.com/wundergraph/cosmo/compare/router@0.293.0...router@0.294.0) (2026-03-17)
 
 ### Features

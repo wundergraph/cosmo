@@ -1,6 +1,21 @@
 extend schema
 @link(url: "https://specs.apollo.dev/federation/v2.5", import: ["@authenticated", "@composeDirective", "@external", "@extends", "@inaccessible", "@interfaceObject", "@override", "@provides", "@key", "@requires", "@requiresScopes", "@shareable", "@tag"])
 
+directive @cost(weight: Int!) on
+  | ARGUMENT_DEFINITION
+  | ENUM
+  | FIELD_DEFINITION
+  | INPUT_FIELD_DEFINITION
+  | OBJECT
+  | SCALAR
+
+directive @listSize(
+  assumedSize: Int,
+  slicingArguments: [String!],
+  sizedFields: [String!],
+  requireOneSlicingArgument: Boolean = true
+) on FIELD_DEFINITION
+
 schema {
   query: Queries
   mutation: Mutation
@@ -11,6 +26,7 @@ type Queries {
   topSecretFederationFacts: [TopSecretFact!]! @requiresScopes(scopes: [["read:fact"], ["read:all"]])
   factTypes: [TopSecretFactType!]
   sharedThings(numOfA: Int! numOfB: Int!): [Thing!]! @listSize(slicingArguments: ["numOfA"]) @shareable
+  slicedThings(first: Int, last: Int): [Thing] @listSize(slicingArguments: ["first", "last"])
 }
 
 type Mutation {

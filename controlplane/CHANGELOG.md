@@ -4,6 +4,25 @@ Binaries are attached to the github release otherwise all images can be found [h
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.209.1](https://github.com/wundergraph/cosmo/compare/controlplane@0.209.0...controlplane@0.209.1) (2026-03-24)
+
+### Bug Fixes
+
+* handle arrayJoin of empty arrays in clickhouse queries ([#2682](https://github.com/wundergraph/cosmo/issues/2682)) ([733c14b](https://github.com/wundergraph/cosmo/commit/733c14b4710ed093f9ccee19836054f7e92647a4)) (@JivusAyrus)
+
+# [0.209.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.208.0...controlplane@0.209.0) (2026-03-23)
+
+### Features
+
+* improve efficiency of operation check by parallelizing processing of changes ([#2676](https://github.com/wundergraph/cosmo/issues/2676)) ([1ca1fd0](https://github.com/wundergraph/cosmo/commit/1ca1fd0d41292f784e9f05610674ddf08b611021)) (@JivusAyrus)
+
+# [0.208.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.207.0...controlplane@0.208.0) (2026-03-18)
+
+### Features
+
+* add subgraph check extension outcome to proposals screen ([#2661](https://github.com/wundergraph/cosmo/issues/2661)) ([638af2f](https://github.com/wundergraph/cosmo/commit/638af2fd85cfcf715eb887b3f0606a898b2f7999)) (@wilsonrivera)
+* update the `throw` statements for authentication errors ([#2662](https://github.com/wundergraph/cosmo/issues/2662)) ([b580b94](https://github.com/wundergraph/cosmo/commit/b580b949f2d333e1f585d49ce91726ebf659cec2)) (@wilsonrivera)
+
 # [0.207.0](https://github.com/wundergraph/cosmo/compare/controlplane@0.206.0...controlplane@0.207.0) (2026-03-17)
 
 ### Features
