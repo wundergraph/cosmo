@@ -25,11 +25,12 @@ func TestPoller_FetchInitial(t *testing.T) {
 	defer server.Close()
 
 	f := newTestFetcher(server.URL)
-	store := NewStore(zap.NewNop())
-	poller := NewPoller(f, store, 10*time.Second, 1*time.Second, zap.NewNop())
+	poller := NewPoller(f, 10*time.Second, 1*time.Second, zap.NewNop())
 
 	err := poller.FetchInitial(context.Background())
 	require.NoError(t, err)
+
+	store := f.Store()
 	require.True(t, store.IsLoaded())
 	require.Equal(t, m.Revision, store.Revision())
 	require.Equal(t, len(m.Operations), store.OperationCount())
@@ -42,12 +43,11 @@ func TestPoller_FetchInitialError(t *testing.T) {
 	defer server.Close()
 
 	f := newTestFetcher(server.URL)
-	store := NewStore(zap.NewNop())
-	poller := NewPoller(f, store, 10*time.Second, 1*time.Second, zap.NewNop())
+	poller := NewPoller(f, 10*time.Second, 1*time.Second, zap.NewNop())
 
 	err := poller.FetchInitial(context.Background())
 	require.Error(t, err)
-	require.False(t, store.IsLoaded())
+	require.False(t, f.Store().IsLoaded())
 }
 
 func TestPoller_PollUpdatesManifest(t *testing.T) {
@@ -83,12 +83,13 @@ func TestPoller_PollUpdatesManifest(t *testing.T) {
 	defer server.Close()
 
 	f := newTestFetcher(server.URL)
-	store := NewStore(zap.NewNop())
-	poller := NewPoller(f, store, 50*time.Millisecond, 1*time.Millisecond, zap.NewNop())
+	poller := NewPoller(f, 50*time.Millisecond, 1*time.Millisecond, zap.NewNop())
 
 	// Initial fetch
 	err := poller.FetchInitial(context.Background())
 	require.NoError(t, err)
+
+	store := f.Store()
 	require.Equal(t, manifestV1.Revision, store.Revision())
 	require.Equal(t, len(manifestV1.Operations), store.OperationCount())
 
@@ -131,8 +132,7 @@ func TestPoller_PollStopsOnContextCancel(t *testing.T) {
 	defer server.Close()
 
 	f := newTestFetcher(server.URL)
-	store := NewStore(zap.NewNop())
-	poller := NewPoller(f, store, 50*time.Millisecond, 1*time.Millisecond, zap.NewNop())
+	poller := NewPoller(f, 50*time.Millisecond, 1*time.Millisecond, zap.NewNop())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go poller.Poll(ctx)
@@ -170,13 +170,13 @@ func TestPoller_PollContinuesOnFetchError(t *testing.T) {
 	defer server.Close()
 
 	f := newTestFetcher(server.URL)
-	store := NewStore(zap.NewNop())
-	poller := NewPoller(f, store, 50*time.Millisecond, 1*time.Millisecond, zap.NewNop())
+	poller := NewPoller(f, 50*time.Millisecond, 1*time.Millisecond, zap.NewNop())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go poller.Poll(ctx)
 
+	store := f.Store()
 	require.Eventually(t, func() bool {
 		return store.IsLoaded() && store.Revision() == m.Revision
 	}, 5*time.Second, 10*time.Millisecond)

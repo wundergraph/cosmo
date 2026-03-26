@@ -27,7 +27,7 @@ func (e PersistentOperationNotFoundError) Error() string {
 
 type StorageClient interface {
 	PersistedOperation(ctx context.Context, clientName string, sha256Hash string) ([]byte, error)
-	FetchManifest(ctx context.Context, objectPath string) ([]byte, error)
+	ReadManifest(ctx context.Context, objectPath string) (*pqlmanifest.Manifest, error)
 	Close()
 }
 

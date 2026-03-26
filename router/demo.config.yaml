@@ -5,6 +5,10 @@
 
 version: "1"
 
+persisted_operations:
+  manifest:
+    enabled: true
+
 events:
   providers:
     nats:

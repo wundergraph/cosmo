@@ -10,6 +10,7 @@ import (
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -108,8 +109,8 @@ func (c Client) persistedOperation(ctx context.Context, clientName, sha256Hash s
 	return []byte(po.Body), nil
 }
 
-// FetchManifest fetches a PQL manifest from S3 at the given object path and returns the raw bytes.
-func (c Client) FetchManifest(ctx context.Context, objectPath string) ([]byte, error) {
+// ReadManifest fetches and parses a PQL manifest from S3 at the given object path.
+func (c Client) ReadManifest(ctx context.Context, objectPath string) (*pqlmanifest.Manifest, error) {
 	reader, err := c.client.GetObject(ctx, c.options.BucketName, objectPath, minio.GetObjectOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get manifest from S3: %w", err)
@@ -118,7 +119,12 @@ func (c Client) FetchManifest(ctx context.Context, objectPath string) ([]byte, e
 		_ = reader.Close()
 	}()
 
-	return io.ReadAll(reader)
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read manifest from S3: %w", err)
+	}
+
+	return pqlmanifest.ParseManifest(data)
 }
 
 func (c Client) Close() {}

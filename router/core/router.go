@@ -1260,8 +1260,6 @@ func (r *Router) buildClients(ctx context.Context) error {
 	if r.persistedOperationsConfig.Manifest.Enabled && !r.persistedOperationsConfig.Disabled {
 		const manifestFileName = "manifest.json"
 
-		pqlStore = pqlmanifest.NewStore(r.logger)
-
 		storageProviderID := r.persistedOperationsConfig.Storage.ProviderID
 
 		if _, ok := fileSystemProviders[storageProviderID]; ok {
@@ -1269,24 +1267,23 @@ func (r *Router) buildClients(ctx context.Context) error {
 		}
 
 		if storageProviderID != "" {
-			// An explicit storage provider is configured — use the already-created client to fetch the manifest once at startup.
+			// An explicit storage provider is configured — read the manifest once at startup.
 			objectPrefix := r.persistedOperationsConfig.Storage.ObjectPrefix
 			objectPath := manifestFileName
 			if objectPrefix != "" {
 				objectPath = path.Join(objectPrefix, manifestFileName)
 			}
 
-			data, err := pClient.FetchManifest(ctx, objectPath)
+			manifest, err := pClient.ReadManifest(ctx, objectPath)
 			if err != nil {
 				return fmt.Errorf("failed to fetch PQL manifest from storage provider %q: %w",
-					r.persistedOperationsConfig.Storage.ProviderID, err)
+					storageProviderID, err)
 			}
-			if err := pqlStore.LoadFromData(data); err != nil {
-				return fmt.Errorf("failed to parse PQL manifest from storage provider %q: %w",
-					r.persistedOperationsConfig.Storage.ProviderID, err)
-			}
+
+			pqlStore = pqlmanifest.NewStore(r.logger)
+			pqlStore.Load(manifest)
 			r.logger.Info("Loaded PQL manifest from storage provider",
-				zap.String("provider_id", r.persistedOperationsConfig.Storage.ProviderID),
+				zap.String("provider_id", storageProviderID),
 				zap.Int("operations", pqlStore.OperationCount()),
 			)
 		} else {
@@ -1301,7 +1298,7 @@ func (r *Router) buildClients(ctx context.Context) error {
 			}
 
 			poller := pqlmanifest.NewPoller(
-				fetcher, pqlStore,
+				fetcher,
 				r.persistedOperationsConfig.Manifest.PollInterval,
 				r.persistedOperationsConfig.Manifest.PollJitter,
 				r.logger,
@@ -1312,6 +1309,8 @@ func (r *Router) buildClients(ctx context.Context) error {
 			}
 
 			go poller.Poll(ctx)
+
+			pqlStore = fetcher.Store()
 		}
 
 		// Manifest is authoritative — individual operation fetches are not needed.

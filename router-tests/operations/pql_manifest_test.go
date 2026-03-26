@@ -588,10 +588,10 @@ func TestPQLManifest(t *testing.T) {
 
 		cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, "/operations/manifest.json") {
-				w.WriteHeader(http.StatusInternalServerError)
+				// Return 404 (not 500) to avoid retryablehttp's 5 retries with exponential backoff.
+				w.WriteHeader(http.StatusNotFound)
 				return
 			}
-			// Serve other CDN requests normally
 			w.WriteHeader(http.StatusNotFound)
 		}))
 		defer cdnServer.Close()
@@ -608,7 +608,7 @@ func TestPQLManifest(t *testing.T) {
 				}),
 			},
 		}, func(t *testing.T, err error) {
-			require.ErrorContains(t, err, "failed to fetch initial PQL manifest")
+			require.ErrorContains(t, err, "PQL manifest not found on CDN")
 		})
 	})
 }

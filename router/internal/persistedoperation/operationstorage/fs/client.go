@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 )
 
 type client struct {
@@ -69,10 +70,8 @@ func (c client) persistedOperation(clientName string, sha256Hash string) ([]byte
 	return []byte(po.Body), nil
 }
 
-// FetchManifest reads a PQL manifest from the filesystem at the given path and returns the raw bytes.
-func (c client) FetchManifest(_ context.Context, manifestPath string) ([]byte, error) {
-	fullPath := filepath.Join(c.path, c.options.ObjectPathPrefix, manifestPath)
-	return os.ReadFile(fullPath)
+func (c client) ReadManifest(_ context.Context, _ string) (*pqlmanifest.Manifest, error) {
+	return nil, fmt.Errorf("filesystem storage provider does not support reading manifests; use S3 or CDN instead")
 }
 
 func (c client) Close() {}

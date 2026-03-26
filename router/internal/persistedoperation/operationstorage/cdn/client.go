@@ -13,6 +13,7 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/httpclient"
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"github.com/wundergraph/cosmo/router/internal/persistedoperation"
+	"github.com/wundergraph/cosmo/router/internal/persistedoperation/pqlmanifest"
 	"go.opentelemetry.io/otel/codes"
 	semconv12 "go.opentelemetry.io/otel/semconv/v1.12.0"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -40,6 +41,7 @@ type Client struct {
 	organizationID string
 	httpClient     *http.Client
 	logger         *zap.Logger
+	fetcher        *pqlmanifest.Fetcher
 }
 
 // NewClient creates a new CDN Client. URL is the URL of the CDN.
@@ -64,6 +66,11 @@ func NewClient(endpoint string, token string, opts Options) (*Client, error) {
 		zap.String("url", endpoint),
 	)
 
+	fetcher, err := pqlmanifest.NewFetcher(endpoint, token, logger)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create manifest fetcher: %w", err)
+	}
+
 	return &Client{
 		cdnURL:              u,
 		authenticationToken: token,
@@ -71,6 +78,7 @@ func NewClient(endpoint string, token string, opts Options) (*Client, error) {
 		organizationID:      url.PathEscape(claims.OrganizationID),
 		httpClient:          httpclient.NewRetryableHTTPClient(logger),
 		logger:              logger,
+		fetcher:             fetcher,
 	}, nil
 }
 
@@ -155,38 +163,6 @@ func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sh
 	return []byte(po.Body), nil
 }
 
-// FetchManifest fetches a PQL manifest from the CDN at the given path and returns the raw bytes.
-func (cdn *Client) FetchManifest(ctx context.Context, manifestPath string) ([]byte, error) {
-	manifestURL := cdn.cdnURL.ResolveReference(&url.URL{Path: manifestPath})
-
-	req, err := http.NewRequestWithContext(ctx, "GET", manifestURL.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	cdn.setCDNHeaders(req)
-
-	resp, err := cdn.httpClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("CDN returned status %d when fetching persistent operation manifest", resp.StatusCode)
-	}
-
-	reader, cleanup, err := gzipAwareReader(resp)
-	if err != nil {
-		return nil, err
-	}
-	defer cleanup()
-
-	return io.ReadAll(reader)
-}
-
 // setCDNHeaders sets the common headers for CDN requests.
 func (cdn *Client) setCDNHeaders(req *http.Request) {
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
@@ -205,6 +181,24 @@ func gzipAwareReader(resp *http.Response) (io.Reader, func(), error) {
 		return r, func() { _ = r.Close() }, nil
 	}
 	return resp.Body, func() {}, nil
+}
+
+// ReadManifest fetches the PQL manifest from the CDN, delegating to the manifest Fetcher.
+// The objectPath parameter is unused — the Fetcher constructs the path from JWT claims.
+func (cdn *Client) ReadManifest(ctx context.Context, _ string) (*pqlmanifest.Manifest, error) {
+	manifest, _, err := cdn.fetcher.Fetch(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+	if manifest == nil {
+		return nil, fmt.Errorf("no manifest returned from CDN")
+	}
+	return manifest, nil
+}
+
+// Fetcher returns the manifest fetcher for use with polling.
+func (cdn *Client) Fetcher() *pqlmanifest.Fetcher {
+	return cdn.fetcher
 }
 
 func (cdn *Client) Close() {}

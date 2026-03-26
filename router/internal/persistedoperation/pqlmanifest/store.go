@@ -57,18 +57,25 @@ func (s *Store) LoadFromFile(path string) error {
 	return s.LoadFromData(data)
 }
 
-// LoadFromData parses and validates manifest JSON data and loads it into the store.
-func (s *Store) LoadFromData(data []byte) error {
+// ParseManifest parses and validates manifest JSON data.
+func ParseManifest(data []byte) (*Manifest, error) {
 	var manifest Manifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		return fmt.Errorf("failed to parse manifest: %w", err)
+		return nil, fmt.Errorf("failed to parse manifest: %w", err)
 	}
-
 	if err := validateManifest(&manifest); err != nil {
-		return fmt.Errorf("invalid manifest: %w", err)
+		return nil, fmt.Errorf("invalid manifest: %w", err)
 	}
+	return &manifest, nil
+}
 
-	s.Load(&manifest)
+// LoadFromData parses and validates manifest JSON data and loads it into the store.
+func (s *Store) LoadFromData(data []byte) error {
+	manifest, err := ParseManifest(data)
+	if err != nil {
+		return err
+	}
+	s.Load(manifest)
 	return nil
 }
 
