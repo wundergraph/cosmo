@@ -764,7 +764,7 @@ describe('Persisted operations', (ctx) => {
         fedGraphName,
         namespace: 'default',
         clientName: 'test-client',
-        operations: [{ id: genID('trigger'), contents: `query ExceedsLimit { goodbye }` }],
+        operations: [{ id: genID('trigger'), contents: `query ExceedsLimit { hello }` }],
       });
       expect(resp.response?.code).toBe(EnumStatusCode.ERR);
       expect(resp.response?.details).toContain('Operation limit exceeded');

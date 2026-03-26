@@ -545,6 +545,7 @@
     },
     "Manifest": {
       "Enabled": false,
+      "Path": "",
       "PollInterval": 10000000000,
       "PollJitter": 5000000000
     }
