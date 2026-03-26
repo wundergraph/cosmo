@@ -1,0 +1,211 @@
+{
+  "data": {
+    "employees": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ],
+    "employee": {},
+    "teammates": [
+      {
+        "id": 4
+      },
+      {
+        "id": 11
+      }
+    ],
+    "productTypes": [
+      {},
+      {
+        "lead": {
+          "details": {
+            "forename": "Jens"
+          }
+        },
+        "name": "CONSULTANCY"
+      },
+      {
+        "url": "https://docs.wundergraph.com/",
+        "urls": [
+          "https://cosmo-docs.wundergraph.com/",
+          "https://wundergraph.com/pricing"
+        ]
+      }
+    ],
+    "a": [
+      {}
+    ],
+    "b": [
+      {}
+    ]
+  },
+  "errors": [
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        0,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        1,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        2,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        3,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        4,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        5,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        6,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        7,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        8,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        9,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        0,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        1,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        2,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        3,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        4,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        5,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        6,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        7,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        8,
+        "role"
+      ]
+    },
+    {
+      "message": "Cannot return null for non-nullable field 'Query.employees.role'.",
+      "path": [
+        "employees",
+        9,
+        "role"
+      ]
+    }
+  ]
+}

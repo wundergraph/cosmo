@@ -1,0 +1,14 @@
+{
+  "data": {
+    "products": [
+      {
+        "lead": {
+          "id": 1,
+          "derivedMood": "HAPPY"
+        }
+      },
+      {},
+      {}
+    ]
+  }
+}

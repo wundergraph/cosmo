@@ -1,6 +1,16 @@
 {
   "data": {
-    "a": [
+    "findEmployees": [
+      {
+        "details": {
+          "forename": "Jens"
+        }
+      },
+      {
+        "details": {
+          "forename": "Dustin"
+        }
+      },
       {
         "details": {
           "forename": "Stefan"
@@ -18,29 +28,24 @@
       },
       {
         "details": {
-          "forename": "Eelco"
+          "forename": "Suvij"
         }
       },
       {
         "details": {
-          "forename": "David"
+          "forename": "Nithin"
         }
-      }
-    ],
-    "d": [],
-    "b": [
+      },
       {
         "details": {
-          "forename": "Jens"
+          "forename": "Eelco"
         }
       },
       {
         "details": {
           "forename": "Alexandra"
         }
-      }
-    ],
-    "c": [
+      },
       {
         "details": {
           "forename": "David"

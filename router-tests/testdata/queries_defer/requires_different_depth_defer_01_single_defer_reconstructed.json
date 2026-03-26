@@ -1,0 +1,20 @@
+{
+  "data": {
+    "products": [
+      {
+        "__typename": "Consultancy",
+        "lead": {
+          "id": 1,
+          "derivedMood": "HAPPY"
+        },
+        "isLeadAvailable": false
+      },
+      {
+        "__typename": "Cosmo"
+      },
+      {
+        "__typename": "SDK"
+      }
+    ]
+  }
+}
