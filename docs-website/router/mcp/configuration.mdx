@@ -40,7 +40,7 @@ storage_providers:
 | `expose_schema`               | Enables the `get_schema` built-in tool, exposing the full GraphQL schema to MCP clients.                                                                                                                                                                                     | `false`          |
 | `omit_tool_name_prefix`       | When enabled, MCP tool names omit the `execute_operation_` prefix. For example, `GetUser` becomes `get_user` instead of `execute_operation_get_user`. See [Operations — Omitting the Tool Name Prefix](/router/mcp/operations#omitting-the-tool-name-prefix).                | `false`          |
 
-For OAuth-specific configuration, see [OAuth 2.1 Authorization](/router/mcp/oauth).
+For OAuth-specific configuration, see [OAuth 2.1 Authorization](/router/mcp/oauth/overview).
 
 ## Environment Variables
 
@@ -60,13 +60,7 @@ All MCP options can also be set via environment variables:
 | `MCP_EXPOSE_SCHEMA`               | `mcp.expose_schema`               |
 | `MCP_OMIT_TOOL_NAME_PREFIX`       | `mcp.omit_tool_name_prefix`       |
 
-When OAuth is enabled, the following additional environment variables are available:
-
-| Environment Variable                             | Configuration Path                               |
-| ------------------------------------------------ | ------------------------------------------------ |
-| `MCP_OAUTH_ENABLED`                              | `mcp.oauth.enabled`                              |
-| `MCP_OAUTH_AUTHORIZATION_SERVER_URL`             | `mcp.oauth.authorization_server_url`             |
-| `MCP_OAUTH_SCOPE_CHALLENGE_INCLUDE_TOKEN_SCOPES` | `mcp.oauth.scope_challenge_include_token_scopes` |
+For OAuth-related environment variables, see [OAuth Configuration Reference](/router/mcp/oauth/configuration#environment-variables).
 
 ## Storage Providers
 
