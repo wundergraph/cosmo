@@ -1,0 +1,13 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{"employees":[{"id":1,"details":{"forename":"Jens","location":{"language":"German"}}},{"id":2,"details":{"forename":"Dustin","location":{"language":"German"}}},{"id":3,"details":{"forename":"Stefan","location":{"language":"English"}}},{"id":4,"details":{"forename":"Björn","location":{"language":"German"}}},{"id":5,"details":{"forename":"Sergiy","location":{"language":"Ukrainian"}}},{"id":7,"details":{"forename":"Suvij","location":{"language":"Hindi"}}},{"id":8,"details":{"forename":"Nithin","location":{"language":"Hindi"}}},{"id":10,"details":{"forename":"Eelco","location":{"language":"Dutch"}}},{"id":11,"details":{"forename":"Alexandra","location":{"language":"German"}}},{"id":12,"details":{"forename":"David","location":{"language":"English"}}}],"teammates":[{"id":4,"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},{"id":11,"products":["FINANCE"]}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"notes":"Jens notes resolved by products"},"path":["employees",0]},{"data":{"notes":"Dustin notes resolved by products"},"path":["employees",1]},{"data":{"notes":"Stefan notes resolved by products"},"path":["employees",2]},{"data":{"notes":"Björn notes resolved by products"},"path":["employees",3]},{"data":{"notes":"Sergiy notes resolved by products"},"path":["employees",4]},{"data":{"notes":"Suvij notes resolved by products"},"path":["employees",5]},{"data":{"notes":"Nithin notes resolved by products"},"path":["employees",6]},{"data":{"notes":"Eelco notes resolved by products"},"path":["employees",7]},{"data":{"notes":"Alexandra notes resolved by products"},"path":["employees",8]},{"data":{"notes":"David notes resolved by products"},"path":["employees",9]}],"hasNext":false}
+
+--graphql
+--graphql--

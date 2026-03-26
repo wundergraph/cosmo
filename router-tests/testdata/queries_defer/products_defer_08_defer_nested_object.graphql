@@ -1,0 +1,18 @@
+query {
+  products {
+    upc
+    ... on Cosmo {
+      name
+      repositoryURL
+      ... @defer { lead { details { forename } } }
+    }
+  }
+  productTypes {
+    __typename
+    ... on Documentation { url(product: COSMO) }
+    ... on Consultancy {
+      name
+      ... @defer { lead { details { forename } } }
+    }
+  }
+}

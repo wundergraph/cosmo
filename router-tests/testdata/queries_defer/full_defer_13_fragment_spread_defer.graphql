@@ -1,0 +1,18 @@
+fragment EmployeeDetailsFragment on Employee {
+  details {
+    forename
+    location { language }
+  }
+  notes
+}
+
+query {
+  employees {
+    id
+    ...EmployeeDetailsFragment @defer
+  }
+  teammates(team: OPERATIONS) {
+    id
+    products
+  }
+}

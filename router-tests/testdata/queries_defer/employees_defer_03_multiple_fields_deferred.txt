@@ -1,0 +1,13 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{"employees":[{"id":1,"details":{"forename":"Jens","surname":"Neuse"}},{"id":2,"details":{"forename":"Dustin","surname":"Deus"}},{"id":3,"details":{"forename":"Stefan","surname":"Avram"}},{"id":4,"details":{"forename":"Björn","surname":"Schwenzer"}},{"id":5,"details":{"forename":"Sergiy","surname":"Petrunin"}},{"id":7,"details":{"forename":"Suvij","surname":"Surya"}},{"id":8,"details":{"forename":"Nithin","surname":"Kumar"}},{"id":10,"details":{"forename":"Eelco","surname":"Wiersma"}},{"id":11,"details":{"forename":"Alexandra","surname":"Neuse"}},{"id":12,"details":{"forename":"David","surname":"Stutt"}}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"hobbies":[{"category":"SPORT"},{"genres":["FPS"],"name":"Counter Strike"},{},{"languages":["GO","TYPESCRIPT"]},{}],"products":["CONSULTANCY","COSMO","ENGINE","MARKETING","SDK"]},"path":["employees",0]},{"data":{"hobbies":[{"category":"STRENGTH_TRAINING"},{"genres":["FPS"],"name":"Counter Strike"},{"languages":["GO","RUST"]}],"products":["COSMO","SDK"]},"path":["employees",1]},{"data":{"hobbies":[{"category":"HIKING"},{"category":"SPORT"},{},{}],"products":["CONSULTANCY","MARKETING"]},"path":["employees",2]},{"data":{"hobbies":[{"category":"HIKING"},{},{}],"products":["FINANCE","HUMAN_RESOURCES","MARKETING"]},"path":["employees",3]},{"data":{"hobbies":[{},{},{}],"products":["ENGINE","SDK"]},"path":["employees",4]},{"data":{"hobbies":[{"genres":["BOARD"],"name":"Chess"},{}],"products":["COSMO","SDK"]},"path":["employees",5]},{"data":{"hobbies":[{"category":"STRENGTH_TRAINING"},{"genres":["ADVENTURE","RPG","SIMULATION","STRATEGY"],"name":"Miscellaneous"},{}],"products":["COSMO","SDK"]},"path":["employees",6]},{"data":{"hobbies":[{"languages":["TYPESCRIPT"]},{"category":"CALISTHENICS"},{"category":"HIKING"},{"category":"STRENGTH_TRAINING"},{},{}],"products":["CONSULTANCY","COSMO","SDK"]},"path":["employees",7]},{"data":{"hobbies":[{}],"products":["FINANCE"]},"path":["employees",8]},{"data":{"hobbies":[{"languages":["CSHARP","GO","RUST","TYPESCRIPT"]},{"category":"STRENGTH_TRAINING"},{"genres":["ADVENTURE","BOARD","CARD","ROGUELITE","RPG","SIMULATION","STRATEGY"],"name":"Miscellaneous"},{}],"products":["CONSULTANCY","COSMO","ENGINE","SDK"]},"path":["employees",9]}],"hasNext":false}
+
+--graphql
+--graphql--

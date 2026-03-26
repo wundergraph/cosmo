@@ -1,0 +1,25 @@
+fragment CosmoDetails on Cosmo {
+  name
+  repositoryURL
+  lead { details { forename } }
+}
+
+fragment SDKDetails on SDK {
+  clientLanguages
+  unicode
+  owner { details { forename } }
+}
+
+query {
+  products {
+    upc
+    ...CosmoDetails @defer
+    ...SDKDetails @defer
+  }
+  productTypes {
+    ... on Consultancy {
+      name
+      lead { details { forename } }
+    }
+  }
+}

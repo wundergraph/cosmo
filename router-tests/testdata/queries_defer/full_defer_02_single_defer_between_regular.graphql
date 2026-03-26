@@ -1,0 +1,17 @@
+query {
+  employees { id details { forename } }
+  ... @defer {
+    productTypes {
+      ... on Documentation { url(product: SDK) }
+      ... on Consultancy { name lead { details { forename } } }
+    }
+  }
+  employee(id: 1) { id details { forename location { language } } }
+  teammates(team: OPERATIONS) { id details { forename } products }
+  a: findEmployees(criteria: { hasPets: true, nationality: UKRAINIAN, nested: { maritalStatus: ENGAGED } }) {
+    details { forename }
+  }
+  b: findEmployees(criteria: { hasPets: true, nationality: GERMAN, nested: { maritalStatus: MARRIED, hasChildren: true } }) {
+    details { forename }
+  }
+}

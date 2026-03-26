@@ -1,0 +1,18 @@
+
+--graphql
+Content-Type: application/json
+
+{"data":{"employees":[{"id":1,"details":{"forename":"Jens"},"role":{}},{"id":2,"details":{"forename":"Dustin"},"role":{}},{"id":3,"details":{"forename":"Stefan"},"role":{}},{"id":4,"details":{"forename":"Björn"},"role":{}},{"id":5,"details":{"forename":"Sergiy"},"role":{}},{"id":7,"details":{"forename":"Suvij"},"role":{}},{"id":8,"details":{"forename":"Nithin"},"role":{}},{"id":10,"details":{"forename":"Eelco"},"role":{}},{"id":11,"details":{"forename":"Alexandra"},"role":{}},{"id":12,"details":{"forename":"David"},"role":{}}]},"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"departments":["ENGINEERING","MARKETING"],"title":["Founder","CEO"]},"path":["employees",0,"role"]},{"data":{"departments":["ENGINEERING"],"title":["Co-founder","Tech Lead"]},"path":["employees",1,"role"]},{"data":{"departments":["ENGINEERING"],"title":["Senior GO Engineer"]},"path":["employees",4,"role"]},{"data":{"departments":["ENGINEERING"],"title":["Software Engineer"]},"path":["employees",5,"role"]},{"data":{"departments":["ENGINEERING"],"title":["Software Engineer"]},"path":["employees",6,"role"]},{"data":{"departments":["ENGINEERING"],"title":["Senior Frontend Engineer"]},"path":["employees",7,"role"]},{"data":{"departments":["ENGINEERING"],"title":["Software Engineer"]},"path":["employees",9,"role"]}],"hasNext":true}
+
+--graphql
+Content-Type: application/json
+
+{"incremental":[{"data":{"engineerType":"BACKEND"},"path":["employees",0,"role"]},{"data":{"engineerType":"FULLSTACK"},"path":["employees",1,"role"]},{"data":{"engineerType":"BACKEND"},"path":["employees",4,"role"]},{"data":{"engineerType":"FULLSTACK"},"path":["employees",5,"role"]},{"data":{"engineerType":"FULLSTACK"},"path":["employees",6,"role"]},{"data":{"engineerType":"FRONTEND"},"path":["employees",7,"role"]},{"data":{"engineerType":"FULLSTACK"},"path":["employees",9,"role"]}],"hasNext":false}
+
+--graphql
+--graphql--
