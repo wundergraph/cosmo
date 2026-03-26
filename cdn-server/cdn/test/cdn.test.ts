@@ -571,31 +571,27 @@ describe('CDN handlers', () => {
 
     test('it returns a 401 if no Authorization header is provided', async () => {
       const res = await app.request(requestPath, {
-        method: 'POST',
-        body: JSON.stringify({}),
+        method: 'GET',
       });
       expect(res.status).toBe(401);
     });
 
     test('it returns a 401 if an invalid Authorization header is provided', async () => {
       const res = await app.request(requestPath, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token.slice(0, -1)}}`,
         },
-        body: JSON.stringify({}),
       });
       expect(res.status).toBe(401);
     });
 
     test('it returns a 400 if the graph or organization ids does not match with the JWT payload', async () => {
       const res = await app.request(`/foo/bar/operations/manifest.json`, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
       });
       expect(res.status).toBe(400);
     });
@@ -609,17 +605,15 @@ describe('CDN handlers', () => {
         .setProtectedHeader({ alg: 'HS256' })
         .sign(new TextEncoder().encode(secretKey));
       const res = await app.request(requestPath, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
       });
       expect(res.status).toBe(401);
     });
 
-    test('it returns the manifest on first request without revision', async () => {
+    test('it returns the manifest with ETag on first request', async () => {
       const manifestContents = JSON.stringify({
         version: 1,
         revision: 'abc123',
@@ -635,36 +629,35 @@ describe('CDN handlers', () => {
       });
 
       const res = await app.request(requestPath, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
       });
       expect(res.status).toBe(200);
       expect(res.headers.get('Content-Type')).toBe('application/json; charset=UTF-8');
+      expect(res.headers.get('ETag')).toBe('"abc123"');
       expect(await res.text()).toBe(manifestContents);
     });
 
-    test('it returns 304 when revision matches the current revision', async () => {
+    test('it returns 304 with ETag when If-None-Match matches', async () => {
       blobStorage.objects.set(`${organizationId}/${federatedGraphId}/operations/manifest.json`, {
         buffer: Buffer.from(JSON.stringify({ version: 1, revision: 'abc123', operations: {} })),
         metadata: { version: 'abc123' },
       });
 
       const res = await app.request(requestPath, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          'If-None-Match': '"abc123"',
         },
-        body: JSON.stringify({ revision: 'abc123' }),
       });
       expect(res.status).toBe(304);
+      expect(res.headers.get('ETag')).toBe('"abc123"');
     });
 
-    test('it returns 200 when revision does not match the current revision', async () => {
+    test('it returns 200 with new ETag when If-None-Match does not match', async () => {
       const manifestContents = JSON.stringify({
         version: 1,
         revision: 'def456',
@@ -680,15 +673,50 @@ describe('CDN handlers', () => {
       });
 
       const res = await app.request(requestPath, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          'If-None-Match': '"old-revision"',
         },
-        body: JSON.stringify({ revision: 'old-revision' }),
       });
       expect(res.status).toBe(200);
+      expect(res.headers.get('ETag')).toBe('"def456"');
       expect(await res.text()).toBe(manifestContents);
+    });
+
+    test('ETag round-trip: fetch returns ETag, re-fetch with that ETag returns 304', async () => {
+      const manifestContents = JSON.stringify({
+        version: 1,
+        revision: 'rev-round-trip',
+        generatedAt: '2025-01-01T00:00:00.000Z',
+        operations: { hash1: 'query { hello }' },
+      });
+
+      blobStorage.objects.set(`${organizationId}/${federatedGraphId}/operations/manifest.json`, {
+        buffer: Buffer.from(manifestContents),
+        metadata: { version: 'rev-round-trip' },
+      });
+
+      // First request: no ETag, should get 200 with ETag
+      const res1 = await app.request(requestPath, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      expect(res1.status).toBe(200);
+      const etag = res1.headers.get('ETag');
+      expect(etag).toBe('"rev-round-trip"');
+      expect(await res1.text()).toBe(manifestContents);
+
+      // Second request: send ETag back as If-None-Match, should get 304
+      const res2 = await app.request(requestPath, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'If-None-Match': etag!,
+        },
+      });
+      expect(res2.status).toBe(304);
+      expect(res2.headers.get('ETag')).toBe(etag);
     });
 
     test('it returns a 404 if the manifest does not exist', async () => {
@@ -702,12 +730,10 @@ describe('CDN handlers', () => {
       });
 
       const res = await otherApp.request(requestPath, {
-        method: 'POST',
+        method: 'GET',
         headers: {
           Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({}),
       });
       expect(res.status).toBe(404);
     });

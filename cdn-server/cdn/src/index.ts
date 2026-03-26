@@ -276,15 +276,14 @@ const persistedOperationsManifest = (storage: BlobStorage) => {
 
     const key = `${organizationId}/${federatedGraphId}/operations/manifest.json`;
 
-    const body = await c.req.json();
+    const ifNoneMatch = c.req.header('If-None-Match');
+    const clientVersion = ifNoneMatch?.replace(/^"(.*)"$/, '$1') || null;
 
     let isModified = true;
 
-    // Only check if revision is specified otherwise we assume the router
-    // starts for the first time, and we need to return the manifest anyway.
-    if (body?.revision) {
+    if (clientVersion) {
       try {
-        isModified = await storage.headObject({ context: c, key, version: body.revision });
+        isModified = await storage.headObject({ context: c, key, version: clientVersion });
       } catch (e: any) {
         if (e instanceof BlobNotFoundError) {
           return c.notFound();
@@ -294,6 +293,7 @@ const persistedOperationsManifest = (storage: BlobStorage) => {
     }
 
     if (!isModified) {
+      c.header('ETag', `"${clientVersion}"`);
       return c.body(null, 304);
     }
 
@@ -308,6 +308,9 @@ const persistedOperationsManifest = (storage: BlobStorage) => {
       throw e;
     }
 
+    if (blobObject.metadata?.version) {
+      c.header('ETag', `"${blobObject.metadata.version}"`);
+    }
     c.header('Content-Type', 'application/json; charset=UTF-8');
 
     return stream(c, async (stream) => {
@@ -358,7 +361,7 @@ export const cdn = <E extends Env, S extends Schema = {}, BasePath extends strin
   const manifestPath = '/:organization_id/:federated_graph_id/operations/manifest.json';
   hono
     .use(manifestPath, jwtMiddleware(opts.authJwtSecret))
-    .post(manifestPath, persistedOperationsManifest(opts.blobStorage));
+    .get(manifestPath, persistedOperationsManifest(opts.blobStorage));
 
   const operations = '/:organization_id/:federated_graph_id/operations/:client_id/:operation{.+\\.json$}';
   const latestValidRouterConfigs = '/:organization_id/:federated_graph_id/routerconfigs/latest.json';

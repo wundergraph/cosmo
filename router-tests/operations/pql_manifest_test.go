@@ -448,13 +448,6 @@ func TestPQLManifest(t *testing.T) {
 
 		cdnServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if strings.HasSuffix(r.URL.Path, "/operations/manifest.json") {
-				// Read the request body to check revision
-				body, _ := io.ReadAll(r.Body)
-				var reqBody struct {
-					Revision string `json:"revision"`
-				}
-				_ = json.Unmarshal(body, &reqBody)
-
 				manifest := currentManifest.Load().([]byte)
 
 				// Parse manifest to get its revision
@@ -463,12 +456,16 @@ func TestPQLManifest(t *testing.T) {
 				}
 				_ = json.Unmarshal(manifest, &m)
 
-				if reqBody.Revision == m.Revision {
+				// Check If-None-Match header for ETag-based conditional request
+				ifNoneMatch := r.Header.Get("If-None-Match")
+				if ifNoneMatch == `"`+m.Revision+`"` {
+					w.Header().Set("ETag", ifNoneMatch)
 					w.WriteHeader(http.StatusNotModified)
 					return
 				}
 
 				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("ETag", `"`+m.Revision+`"`)
 				w.WriteHeader(http.StatusOK)
 				_, _ = w.Write(manifest)
 				return

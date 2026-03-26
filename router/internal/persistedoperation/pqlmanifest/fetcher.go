@@ -1,7 +1,6 @@
 package pqlmanifest
 
 import (
-	"bytes"
 	"compress/gzip"
 	"context"
 	"encoding/json"
@@ -15,10 +14,6 @@ import (
 	"github.com/wundergraph/cosmo/router/internal/jwt"
 	"go.uber.org/zap"
 )
-
-type manifestRequestBody struct {
-	Revision string `json:"revision,omitempty"`
-}
 
 type Fetcher struct {
 	cdnURL              *url.URL
@@ -65,28 +60,23 @@ func NewFetcher(endpoint, token string, logger *zap.Logger) (*Fetcher, error) {
 	}, nil
 }
 
-// Fetch downloads the manifest from the CDN. It POSTs to /{orgId}/{fedGraphId}/operations/manifest.json
-// with Bearer auth, sending the current revision in the request body. The CDN returns 304 Not Modified
-// when the revision matches, avoiding a full download. Returns (manifest, changed, err).
+// Fetch downloads the manifest from the CDN. It GETs /{orgId}/{fedGraphId}/operations/manifest.json
+// with Bearer auth, using If-None-Match for conditional requests. The CDN returns 304 Not Modified
+// when the ETag matches, avoiding a full download. Returns (manifest, changed, err).
 func (f *Fetcher) Fetch(ctx context.Context, currentRevision string) (*Manifest, bool, error) {
 	manifestPath := fmt.Sprintf("/%s/%s/operations/manifest.json", f.organizationID, f.federatedGraphID)
 	manifestURL := f.cdnURL.ResolveReference(&url.URL{Path: manifestPath})
 
-	reqBody, err := json.Marshal(manifestRequestBody{
-		Revision: currentRevision,
-	})
-	if err != nil {
-		return nil, false, fmt.Errorf("could not marshal request body: %w", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", manifestURL.String(), bytes.NewReader(reqBody))
+	req, err := http.NewRequestWithContext(ctx, "GET", manifestURL.String(), nil)
 	if err != nil {
 		return nil, false, err
 	}
 
-	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
-	req.Header.Add("Authorization", "Bearer "+f.authenticationToken)
+	req.Header.Set("Authorization", "Bearer "+f.authenticationToken)
 	req.Header.Set("Accept-Encoding", "gzip")
+	if currentRevision != "" {
+		req.Header.Set("If-None-Match", `"`+currentRevision+`"`)
+	}
 
 	resp, err := f.httpClient.Do(req)
 	if err != nil {
