@@ -159,7 +159,7 @@ func (cdn *Client) persistedOperation(ctx context.Context, clientName string, sh
 func (cdn *Client) FetchManifest(ctx context.Context, manifestPath string) ([]byte, error) {
 	manifestURL := cdn.cdnURL.ResolveReference(&url.URL{Path: manifestPath})
 
-	req, err := http.NewRequestWithContext(ctx, "POST", manifestURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", manifestURL.String(), nil)
 	if err != nil {
 		return nil, err
 	}
